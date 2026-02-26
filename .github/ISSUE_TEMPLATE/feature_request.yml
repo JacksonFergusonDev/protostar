@@ -1,0 +1,24 @@
+name: Feature Request
+description: Propose a new language module, IDE integration, or preset.
+title: "feat: <short description>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Proposing an addition to the Accretion Engine**
+        Protostar thrives on vertical integration. If you are proposing a new language or framework, please outline the exact files/commands it requires.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The Problem (Logistical Entropy)
+      description: What manual configuration are you constantly doing that Protostar should automate?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Implementation
+      description: What specific CLI commands (e.g., `cargo init`) and ignores (e.g., `node_modules/`) does this require?
+    validations:
+      required: true

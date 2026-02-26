@@ -1,49 +1,27 @@
 # 🌟 Protostar (v0.1.0)
 
+[![CI](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
+[![Release](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Uses Rich](https://img.shields.io/badge/uses-rich-0A0A0A?logo=rich&logoColor=white)](https://github.com/Textualize/rich)
 
-**High-velocity, deterministic environment scaffolding.**
+**A modular CLI tool for quickly scaffolding software environments.**
 
-> **Starting a new project often introduces immediate logistical entropy: configuring linters, generating ignores, setting up virtual environments, and linking IDEs. This is pure noise.**
->
-> **Protostar is an accretion engine for software environments. It vertically integrates your OS, IDE, and Language toolchains into a strict dependency graph, allowing you to instantly extract the Signal (writing code) from the Noise (configuration).**
+Setting up a new project often requires the same manual steps: configuring linters, writing `.gitignore` files, setting up virtual environments, and linking IDEs. Protostar automates this boilerplate so you can skip the setup and get straight to writing code.
 
 ---
 
-## ⚙️ Engineering Philosophy: Deterministic Scaffolding
+## 💡 Design Philosophy
 
-This system is designed to apply the rigor of physical supply chains and scientific modeling to software initialization. It guarantees that environments are generated safely, without destructive disk I/O or race conditions.
+While Protostar is a lightweight utility, it was built around two specific structural concepts:
 
-### 1. Additive Manifestation (The State Engine)
+### 1. Deterministic Execution
 
-Most bootstrapping scripts aggressively run shell commands in sequence, failing unpredictably if a dependency is missing.
+Most bootstrapping scripts run a sequence of shell commands and fail unpredictably if a dependency is missing. Protostar separates state definition from execution. It uses an internal `EnvironmentManifest` where modules (Python, Rust, Linux, etc.) append their requirements. Disk I/O and subprocesses only occur at the very end, ensuring the environment is generated safely without clobbering existing files.
 
-- **The Invariant:** Disk I/O must only occur when the entire desired state is known and validated.
-- **The Implementation:** Protostar uses an `EnvironmentManifest`. Modules (Python, Rust, VS Code, Linux) do not execute commands; they *append* their requirements to this central state object. Only when the manifest is fully resolved does the orchestrator execute the system tasks.
+### 2. Signal vs. Noise
 
-### 2. Vertical Integration
-
-Environments are not flat; they are stacked.
-
-- **The Mechanism:** Protostar separates concerns into three distinct strata: **OS Layer** (handling `.DS_Store` or `*~`), **Language Layer** (handling compilers and package managers like `uv` or `cargo`), and **IDE Layer** (handling workspace exclusions like `.vscode/settings.json`).
-- **The Topology:** These layers stack seamlessly. You can combine multiple languages without their configuration files colliding.
-
-### 3. Entropy Reduction (Scientific Presets)
-
-Setting up a data analysis pipeline requires a predictable, immutable stack. Protostar features dependency presets (e.g., `--scientific`) that automatically inject a locked matrix of analytical tools (`numpy`, `pandas`, `scipy`, `matplotlib`) so you can begin statistical modeling immediately.
-
----
-
-## ⚡ Features
-
-- **Zero-Friction Ignition:** Spin up a fully configured workspace in seconds using ultra-fast package managers like `uv`.
-- **Modular Ecosystem:** Natively supports Python, Rust, Node.js (npm/pnpm/yarn), C/C++, and LaTeX.
-- **IDE Awareness:** Automatically generates workspace settings for VS Code/Cursor and handles indexing exclusions for JetBrains IDEs.
-- **Non-Destructive:** Safely deep-merges JSON configurations (like `settings.json`) and deduplicates `.gitignore` entries without clobbering your existing work.
-- **Rich Observability:** Swallows the noisy `stdout` of underlying package managers, presenting a clean, deterministic UI with clear success/failure states.
+Project configuration is necessary noise; writing logic is the signal. By vertically integrating the OS, IDE, and Language strata into a single command, Protostar attempts to reduce the logistical entropy of starting a new repository.
 
 ---
 
@@ -51,30 +29,38 @@ Setting up a data analysis pipeline requires a predictable, immutable stack. Pro
 
 ### macOS (Homebrew)
 
-Install via Homebrew alongside Git Pulsar.
+If you are on macOS, you can install via Homebrew:
 
 ```bash
 brew tap jacksonfergusondev/tap
 brew install protostar
 ```
 
-### Linux / Generic
+### Universal (uv)
 
-Install via `uv` (recommended for isolated CLI tools).
+For isolated CLI tool installation on any OS, `uv` is recommended:
 
 ```bash
 uv tool install protostar
 ```
 
+### Universal (pip)
+
+You can also install it into your active environment using standard pip:
+
+```bash
+pip install protostar
+```
+
 ---
 
-## 🚀 The Protostar Workflow
+## 🚀 Usage
 
-Protostar is designed to be executed the moment you `mkdir` a new project.
+Protostar is designed to be run right after you `mkdir` a new project.
 
-### 1. The Standard Ignition
+### Basic Scaffolding
 
-Navigate to your empty project directory and declare your languages. The OS and IDE layers are automatically inferred from your system and global config.
+Navigate to your empty directory and specify the languages you are using. The OS and IDE configurations are automatically inferred from your system and global settings.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -82,17 +68,17 @@ cd orbital-mechanics-sim
 protostar --python --cpp
 ```
 
-*Protostar will initialize `uv`, scaffold a Python environment, configure C++ build exclusions, and generate your `.vscode/settings.json`.*
+*Result: Initializes `uv`, scaffolds a Python environment, configures C++ build exclusions, and generates your `.vscode/settings.json`.*
 
-### 2. The Scientific Preset
+### The Scientific Preset
 
-Need to jump straight into data analysis or signal processing? Use the scientific preset to pre-load the analytical stack.
+If you are building a data analysis pipeline, use the scientific preset to pre-load a standard analytical stack.
 
 ```bash
 protostar --python --scientific
 ```
 
-*Installs the Python scientific stack (`numpy`, `scipy`, `pandas`, `matplotlib`, `seaborn`, `ipykernel`) instantly.*
+*Result: Installs the Python scientific stack (`numpy`, `scipy`, `pandas`, `matplotlib`, `seaborn`, `ipykernel`) into the new environment.*
 
 ---
 
@@ -111,9 +97,7 @@ protostar --python --scientific
 
 ## ⚙️ Configuration
 
-Set your global defaults so you never have to specify your IDE or package manager manually.
-
-### `~/.config/protostar/config.toml`
+You can set global defaults in `~/.config/protostar/config.toml` so you don't have to specify your IDE or package manager preferences manually.
 
 ```toml
 [env]
@@ -128,10 +112,18 @@ node_package_manager = "npm"
 
 ## 🤝 Collaboration & Extension
 
-This tool is built on a highly decoupled `BootstrapModule` architecture. Adding a new language or framework is as simple as creating a new module class that appends to the `EnvironmentManifest`.
+This tool uses a decoupled `BootstrapModule` architecture. Adding support for a new language or framework requires writing a single class that appends rules to the `EnvironmentManifest`. Feel free to open an issue or pull request if you'd like to see a specific toolchain supported.
 
-See the source code for examples on how to write custom integration layers.
+## 📧 Contact
+
+### Jackson Ferguson
+
+- **GitHub:** [@JacksonFergusonDev](https://github.com/JacksonFergusonDev)
+- **LinkedIn:** [Jackson Ferguson](https://www.linkedin.com/in/jackson--ferguson/)
+- **Email:** <jackson.ferguson0@gmail.com>
+
+---
 
 ## 📄 License
 
-MIT © [Jackson Ferguson](https://github.com/jacksonfergusondev)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
