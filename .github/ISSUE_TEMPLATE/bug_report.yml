@@ -1,0 +1,51 @@
+name: Bug Report
+description: Report a reproducible issue with environment scaffolding.
+title: "bug: <short description>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you for reporting an issue.** To help reduce debugging entropy, please provide the exact state of your environment.
+  - type: input
+    id: version
+    attributes:
+      label: Protostar Version
+      description: What version of Protostar are you running?
+      placeholder: "e.g., 0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS
+        - Linux
+        - Windows (WSL)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command Executed
+      description: What exact command did you run?
+      placeholder: "protostar --python --scientific"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior / Traceback
+      description: What actually happened? Paste any error output here.
+      render: shell
+    validations:
+      required: true
