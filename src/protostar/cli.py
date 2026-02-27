@@ -5,6 +5,10 @@ from typing import TYPE_CHECKING
 
 from rich.console import Console
 
+from protostar.presets.astro import AstroPreset
+from protostar.presets.dsp import DspPreset
+from protostar.presets.embedded import EmbeddedPreset
+
 from .config import ProtostarConfig
 from .modules import (
     BootstrapModule,
@@ -89,6 +93,15 @@ def handle_init(args: argparse.Namespace) -> None:
     # 3. Preset Layers
     if args.scientific:
         presets.append(ScientificPreset())
+
+    if args.astro:
+        presets.append(AstroPreset())
+
+    if args.dsp:
+        presets.append(DspPreset())
+
+    if args.embedded:
+        presets.append(EmbeddedPreset())
 
     # 4. IDE Layer
     if ide_mod := get_ide_module(config.ide):
@@ -250,7 +263,25 @@ def main() -> None:
         "-s",
         "--scientific",
         action="store_true",
-        help="Inject scientific computing dependencies (Python)",
+        help="Inject scientific computing dependencies",
+    )
+    preset_group.add_argument(
+        "-a",
+        "--astro",
+        action="store_true",
+        help="Inject astrophysics and observational data dependencies",
+    )
+    preset_group.add_argument(
+        "-d",
+        "--dsp",
+        action="store_true",
+        help="Inject digital signal processing and audio analysis tools",
+    )
+    preset_group.add_argument(
+        "-e",
+        "--embedded",
+        action="store_true",
+        help="Inject host-side embedded hardware interface tools",
     )
 
     init_parser.set_defaults(func=handle_init)
