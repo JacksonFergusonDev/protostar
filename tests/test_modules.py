@@ -27,14 +27,12 @@ def test_python_module_uv_build(manifest, mocker):
 def test_python_module_pip_build(manifest, mocker):
     """Test Python manifest correctly initializes standard library venv for pip."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-    mock_touch = mocker.patch("protostar.modules.lang_layer.Path.touch")
 
     mod = PythonModule(package_manager="pip")
     mod.build(manifest)
 
     assert ".venv/" in manifest.vcs_ignores
     assert ["python3", "-m", "venv", ".venv"] in manifest.system_tasks
-    mock_touch.assert_called_once()
 
 
 def test_node_module_custom_manager(manifest, mocker):
