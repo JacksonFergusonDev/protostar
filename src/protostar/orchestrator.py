@@ -27,9 +27,9 @@ class Orchestrator:
         """Initializes the orchestrator with the requested modules and presets.
 
         Args:
-            modules (list[BootstrapModule]): The initialized stack layers.
-            presets (list[PresetModule] | None, optional): Domain-specific presets.
-            docker (bool, optional): Whether to scaffold Docker context exclusions.
+            modules: The ordered stack of bootstrap layers to execute.
+            presets: Domain-specific dependency and directory presets. Defaults to an empty list.
+            docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
         """
         self.modules = modules
         self.presets = presets or []

@@ -14,6 +14,7 @@ class MacOSModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "macOS"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
@@ -28,6 +29,7 @@ class LinuxModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "Linux"
 
     def build(self, manifest: "EnvironmentManifest") -> None:

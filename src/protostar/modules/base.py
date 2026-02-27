@@ -9,7 +9,11 @@ logger = logging.getLogger("protostar")
 
 
 class BootstrapModule(abc.ABC):
-    """Abstract base class for all environment bootstrapping modules."""
+    """Appends module-specific requirements to the environment manifest.
+
+    Args:
+        manifest: The centralized state object to append requirements to.
+    """
 
     cli_flags: ClassVar[tuple[str, ...]] = ()
     """The CLI flags to trigger this module (e.g., ('-p', '--python'))."""

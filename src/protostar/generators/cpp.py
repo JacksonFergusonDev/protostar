@@ -13,9 +13,23 @@ class CppClassGenerator(TargetGenerator):
 
     @property
     def target_name(self) -> str:
+        """Returns the generator's target name."""
         return "cpp-class"
 
     def execute(self, identifier: str | None, config: ProtostarConfig) -> list[Path]:
+        """Generates a paired C++ header and implementation file.
+
+        Args:
+            identifier: The PascalCase class name to scaffold.
+            config: The active Protostar configuration.
+
+        Returns:
+            A list containing the created .hpp and .cpp paths.
+
+        Raises:
+            ValueError: If no identifier is provided.
+            FileExistsError: If either file already exists.
+        """
         if not identifier:
             raise ValueError("A class name must be provided for C++ scaffolding.")
 
@@ -58,9 +72,22 @@ class CMakeGenerator(TargetGenerator):
 
     @property
     def target_name(self) -> str:
+        """Returns the generator's target name."""
         return "cmake"
 
     def execute(self, identifier: str | None, config: ProtostarConfig) -> list[Path]:
+        """Generates a CMakeLists.txt targeting local C++ sources.
+
+        Args:
+            identifier: Optional project name, defaults to 'ProtostarApp'.
+            config: The active Protostar configuration.
+
+        Returns:
+            A list containing the created CMakeLists.txt path.
+
+        Raises:
+            FileExistsError: If CMakeLists.txt already exists.
+        """
         target_path = Path("CMakeLists.txt")
         if target_path.exists():
             raise FileExistsError("CMakeLists.txt already exists in this directory.")

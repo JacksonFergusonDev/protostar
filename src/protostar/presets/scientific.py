@@ -19,6 +19,7 @@ class ScientificPreset(PresetModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable preset name."""
         return "Scientific"
 
     def build(self, manifest: "EnvironmentManifest") -> None:

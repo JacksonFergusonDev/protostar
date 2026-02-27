@@ -14,10 +14,12 @@ class VSCodeModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "VS Code"
 
     @property
     def aliases(self) -> list[str]:
+        """Returns CLI aliases that activate this module."""
         return ["vscode", "cursor"]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
@@ -39,10 +41,12 @@ class JetBrainsModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "JetBrains"
 
     @property
     def aliases(self) -> list[str]:
+        """Returns CLI aliases that activate this module."""
         return ["jetbrains"]
 
     def build(self, manifest: "EnvironmentManifest") -> None:

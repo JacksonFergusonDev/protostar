@@ -38,7 +38,7 @@ class EnvironmentManifest:
         self.ide_settings[key] = value
 
     def add_system_task(self, command: list[str]) -> None:
-        """Queues a shell command to be executed (e.g., ['uv', 'init'])."""
+        """Queues a shell command for execution during the realization phase."""
         self.system_tasks.append(command)
 
     def add_dependency(self, package: str) -> None:

@@ -6,10 +6,10 @@ if TYPE_CHECKING:
 
 
 class PresetModule(abc.ABC):
-    """Abstract base class for environment dependency and directory presets.
+    """Appends module-specific requirements to the environment manifest.
 
-    Presets are decoupled from language modules and evaluate independently
-    during the manifest aggregation phase to inject tools and scaffolding.
+    Args:
+        manifest: The centralized state object to append requirements to.
     """
 
     cli_flags: ClassVar[tuple[str, ...]] = ()
