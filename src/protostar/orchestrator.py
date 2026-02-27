@@ -6,6 +6,7 @@ from rich.console import Console
 
 from .manifest import EnvironmentManifest
 from .modules import BootstrapModule
+from .presets.base import PresetModule
 from .system import run_quiet
 
 logger = logging.getLogger("protostar")
@@ -15,13 +16,17 @@ console = Console()
 class Orchestrator:
     """Manages the lifecycle of the environment scaffolding process."""
 
-    def __init__(self, modules: list[BootstrapModule]):
-        """Initializes the orchestrator with the requested modules.
+    def __init__(
+        self, modules: list[BootstrapModule], presets: list[PresetModule] | None = None
+    ):
+        """Initializes the orchestrator with the requested modules and presets.
 
         Args:
             modules (list[BootstrapModule]): The initialized stack layers.
+            presets (list[PresetModule] | None, optional): Domain-specific presets.
         """
         self.modules = modules
+        self.presets = presets or []
         self.manifest = EnvironmentManifest()
 
     def run(self) -> None:
@@ -36,6 +41,10 @@ class Orchestrator:
             # Phase 2: Manifest Aggregation
             for mod in self.modules:
                 mod.build(self.manifest)
+
+            for preset in self.presets:
+                logger.debug(f"Building {preset.name} preset.")
+                preset.build(self.manifest)
 
             # Phase 3: System Execution
             self._execute_tasks()
