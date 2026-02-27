@@ -88,3 +88,20 @@ def test_orchestrator_writes_vscode_settings(mocker):
 
     assert "**/.venv" in parsed_write["files.exclude"]
     assert "**/node_modules" in parsed_write["search.exclude"]
+
+
+def test_orchestrator_creates_directories(mocker):
+    """Test that the orchestrator generates all requested workspace directories."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # Queue directory scaffolding
+    orchestrator.manifest.add_directory("data")
+    orchestrator.manifest.add_directory("src/core")
+
+    mock_mkdir = mocker.patch("protostar.orchestrator.Path.mkdir")
+
+    orchestrator._create_directories()
+
+    assert mock_mkdir.call_count == 2
+    mock_mkdir.assert_any_call(parents=True, exist_ok=True)
