@@ -134,23 +134,30 @@ def main() -> None:
 
     # Language flags
     init_parser.add_argument(
-        "--python", action="store_true", help="Scaffold a Python (uv) environment"
+        "-p", "--python", action="store_true", help="Scaffold a Python (uv) environment"
     )
     init_parser.add_argument(
-        "--rust", action="store_true", help="Scaffold a Rust (cargo) environment"
+        "-r", "--rust", action="store_true", help="Scaffold a Rust (cargo) environment"
     )
     init_parser.add_argument(
-        "--node", action="store_true", help="Scaffold a Node.js environment"
+        "-n", "--node", action="store_true", help="Scaffold a Node.js environment"
     )
     init_parser.add_argument(
-        "--cpp", action="store_true", help="Scaffold a C/C++ environment footprint"
+        "-c",
+        "--cpp",
+        action="store_true",
+        help="Scaffold a C/C++ environment footprint",
     )
     init_parser.add_argument(
-        "--latex", action="store_true", help="Scaffold a LaTeX environment footprint"
+        "-l",
+        "--latex",
+        action="store_true",
+        help="Scaffold a LaTeX environment footprint",
     )
 
     # Presets
     init_parser.add_argument(
+        "-s",
         "--scientific",
         action="store_true",
         help="Inject scientific computing dependencies (Python)",
