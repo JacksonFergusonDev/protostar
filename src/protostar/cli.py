@@ -19,10 +19,10 @@ from .modules import (
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
-from .presets.scientific import SCIENTIFIC_PACKAGES
+from .presets import PresetModule, ScientificPreset
 
 if TYPE_CHECKING:
-    from .manifest import EnvironmentManifest
+    pass
 
 console = Console()
 
@@ -48,10 +48,11 @@ def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments.
 
     Dynamically constructs the environment manifest by mapping user flags
-    to the respective language, OS, and IDE bootstrap modules.
+    to the respective language, OS, IDE, and preset modules.
     """
     config = ProtostarConfig.load()
     modules: list[BootstrapModule] = []
+    presets: list[PresetModule] = []
 
     # 1. Base OS Layer
     modules.append(get_os_module())
@@ -59,30 +60,7 @@ def handle_init(args: argparse.Namespace) -> None:
     # 2. Language Layers
     has_language = False
     if args.python:
-        python_mod = PythonModule()
-        if args.scientific:
-            # We intercept the build phase slightly to inject the preset
-            # without requiring a dedicated preset module class.
-            original_build = python_mod.build
-
-            def hooked_build(manifest: "EnvironmentManifest") -> None:
-                """Appends core Python settings, scientific dependencies, and pipeline directories."""
-                original_build(manifest)
-
-                for pkg in SCIENTIFIC_PACKAGES:
-                    manifest.add_dependency(pkg)
-
-                # Scaffold standard data analysis pipeline directories
-                for directory in ["data", "notebooks", "src"]:
-                    manifest.add_directory(directory)
-
-                # Ignore large or binary data files common in analysis pipelines
-                for artifact in ["*.csv", "*.parquet", "*.nc"]:
-                    manifest.add_vcs_ignore(artifact)
-
-            python_mod.build = hooked_build  # type: ignore
-
-        modules.append(python_mod)
+        modules.append(PythonModule())
         has_language = True
 
     if args.rust:
@@ -108,12 +86,16 @@ def handle_init(args: argparse.Namespace) -> None:
         console.print("Run [bold cyan]protostar init --help[/bold cyan] for options.")
         sys.exit(1)
 
-    # 3. IDE Layer
+    # 3. Preset Layers
+    if args.scientific:
+        presets.append(ScientificPreset())
+
+    # 4. IDE Layer
     if ide_mod := get_ide_module(config.ide):
         modules.append(ide_mod)
 
     # Execute
-    engine = Orchestrator(modules)
+    engine = Orchestrator(modules, presets)
     engine.run()
 
 
