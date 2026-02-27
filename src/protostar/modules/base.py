@@ -1,6 +1,6 @@
 import abc
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -9,12 +9,13 @@ logger = logging.getLogger("protostar")
 
 
 class BootstrapModule(abc.ABC):
-    """Abstract base class for all environment bootstrapping modules.
+    """Abstract base class for all environment bootstrapping modules."""
 
-    Modules represent a specific layer of the tech stack (OS, IDE, or Language)
-    and are responsible for verifying dependencies and mutating the global
-    manifest with required configurations.
-    """
+    cli_flags: ClassVar[tuple[str, ...]] = ()
+    """The CLI flags to trigger this module (e.g., ('-p', '--python'))."""
+
+    cli_help: ClassVar[str] = ""
+    """The help description for the CLI flag."""
 
     @property
     @abc.abstractmethod

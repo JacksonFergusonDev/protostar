@@ -14,6 +14,9 @@ logger = logging.getLogger("protostar")
 class PythonModule(BootstrapModule):
     """Configures a modern Python environment using uv."""
 
+    cli_flags = ("-p", "--python")
+    cli_help = "Scaffold a Python (uv) environment"
+
     @property
     def name(self) -> str:
         return "Python"
@@ -48,6 +51,9 @@ class PythonModule(BootstrapModule):
 class RustModule(BootstrapModule):
     """Configures a Rust environment using Cargo."""
 
+    cli_flags = ("-r", "--rust")
+    cli_help = "Scaffold a Rust (cargo) environment"
+
     @property
     def name(self) -> str:
         return "Rust"
@@ -73,8 +79,20 @@ class RustModule(BootstrapModule):
 class NodeModule(BootstrapModule):
     """Configures a Node.js/TypeScript environment."""
 
-    def __init__(self, package_manager: str = "npm"):
-        self.package_manager = package_manager
+    cli_flags = ("-n", "--node")
+    cli_help = "Scaffold a Node.js environment"
+
+    def __init__(self, package_manager: str | None = None):
+        self._package_manager = package_manager
+
+    @property
+    def package_manager(self) -> str:
+        """Lazily evaluates the requested package manager from global config."""
+        if self._package_manager is None:
+            from protostar.config import ProtostarConfig
+
+            self._package_manager = ProtostarConfig.load().node_package_manager
+        return self._package_manager
 
     @property
     def name(self) -> str:
@@ -107,6 +125,9 @@ class NodeModule(BootstrapModule):
 class CppModule(BootstrapModule):
     """Configures a C/C++ environment footprint."""
 
+    cli_flags = ("-c", "--cpp")
+    cli_help = "Scaffold a C/C++ environment footprint"
+
     @property
     def name(self) -> str:
         return "C/C++"
@@ -123,6 +144,9 @@ class CppModule(BootstrapModule):
 
 class LatexModule(BootstrapModule):
     """Configures a LaTeX environment footprint."""
+
+    cli_flags = ("-l", "--latex")
+    cli_help = "Scaffold a LaTeX environment footprint"
 
     @property
     def name(self) -> str:

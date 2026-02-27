@@ -14,6 +14,9 @@ logger = logging.getLogger("protostar")
 class AstroPreset(PresetModule):
     """Injects core astrophysics dependencies and standard observational directories."""
 
+    cli_flags = ("-a", "--astro")
+    cli_help = "Inject astrophysics dependencies"
+
     @property
     def name(self) -> str:
         return "Astrophysics"

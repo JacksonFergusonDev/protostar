@@ -8,24 +8,17 @@ from protostar.generators import GENERATOR_REGISTRY
 
 from .config import ProtostarConfig
 from .modules import (
+    LANG_MODULES,
     BootstrapModule,
-    CppModule,
     JetBrainsModule,
-    LatexModule,
     LinuxModule,
     MacOSModule,
-    NodeModule,
-    PythonModule,
-    RustModule,
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
 from .presets import (
-    AstroPreset,
-    DspPreset,
-    EmbeddedPreset,
+    PRESETS,
     PresetModule,
-    ScientificPreset,
 )
 
 console = Console()
@@ -58,8 +51,8 @@ def get_ide_module(ide_preference: str) -> BootstrapModule | None:
 def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments.
 
-    Dynamically constructs the environment manifest by mapping user flags
-    to the respective language, OS, IDE, and preset modules.
+    Dynamically constructs the environment manifest by evaluating flags mapped
+    to the respective language, OS, IDE, and preset registries.
     """
     config = ProtostarConfig.load()
     modules: list[BootstrapModule] = []
@@ -70,25 +63,10 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 2. Language Layers
     has_language = False
-    if args.python:
-        modules.append(PythonModule())
-        has_language = True
-
-    if args.rust:
-        modules.append(RustModule())
-        has_language = True
-
-    if args.node:
-        modules.append(NodeModule(package_manager=config.node_package_manager))
-        has_language = True
-
-    if args.cpp:
-        modules.append(CppModule())
-        has_language = True
-
-    if args.latex:
-        modules.append(LatexModule())
-        has_language = True
+    for mod in LANG_MODULES:
+        if mod.cli_flags and getattr(args, mod.__class__.__name__, False):
+            modules.append(mod)
+            has_language = True
 
     if not has_language:
         console.print(
@@ -98,17 +76,9 @@ def handle_init(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     # 3. Preset Layers
-    if args.scientific:
-        presets.append(ScientificPreset())
-
-    if args.astro:
-        presets.append(AstroPreset())
-
-    if args.dsp:
-        presets.append(DspPreset())
-
-    if args.embedded:
-        presets.append(EmbeddedPreset())
+    for preset in PRESETS:
+        if preset.cli_flags and getattr(args, preset.__class__.__name__, False):
+            presets.append(preset)
 
     # 4. IDE Layer
     if ide_mod := get_ide_module(config.ide):
@@ -188,56 +158,27 @@ def main() -> None:
         formatter_class=ProtoHelpFormatter,
     )
 
-    # Conceptual grouping for language footprints
+    # Dynamically mount Language flags
     lang_group = init_parser.add_argument_group("Language Footprints")
-    lang_group.add_argument(
-        "-p", "--python", action="store_true", help="Scaffold a Python (uv) environment"
-    )
-    lang_group.add_argument(
-        "-r", "--rust", action="store_true", help="Scaffold a Rust (cargo) environment"
-    )
-    lang_group.add_argument(
-        "-n", "--node", action="store_true", help="Scaffold a Node.js environment"
-    )
-    lang_group.add_argument(
-        "-c",
-        "--cpp",
-        action="store_true",
-        help="Scaffold a C/C++ environment footprint",
-    )
-    lang_group.add_argument(
-        "-l",
-        "--latex",
-        action="store_true",
-        help="Scaffold a LaTeX environment footprint",
-    )
+    for mod in LANG_MODULES:
+        if mod.cli_flags:
+            lang_group.add_argument(
+                *mod.cli_flags,
+                action="store_true",
+                help=mod.cli_help,
+                dest=mod.__class__.__name__,
+            )
 
-    # Conceptual grouping for dependency injections
+    # Dynamically mount Preset flags
     preset_group = init_parser.add_argument_group("Dependency Presets")
-    preset_group.add_argument(
-        "-s",
-        "--scientific",
-        action="store_true",
-        help="Inject scientific computing dependencies",
-    )
-    preset_group.add_argument(
-        "-a",
-        "--astro",
-        action="store_true",
-        help="Inject astrophysics and observational data dependencies",
-    )
-    preset_group.add_argument(
-        "-d",
-        "--dsp",
-        action="store_true",
-        help="Inject digital signal processing and audio analysis tools",
-    )
-    preset_group.add_argument(
-        "-e",
-        "--embedded",
-        action="store_true",
-        help="Inject host-side embedded hardware interface tools",
-    )
+    for preset in PRESETS:
+        if preset.cli_flags:
+            preset_group.add_argument(
+                *preset.cli_flags,
+                action="store_true",
+                help=preset.cli_help,
+                dest=preset.__class__.__name__,
+            )
 
     # Conceptual grouping for context artifacts
     context_group = init_parser.add_argument_group("Context Scaffolding")

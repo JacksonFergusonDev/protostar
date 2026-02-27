@@ -14,6 +14,9 @@ logger = logging.getLogger("protostar")
 class DspPreset(PresetModule):
     """Injects waveform, MIDI, and spectral analysis dependencies."""
 
+    cli_flags = ("-d", "--dsp")
+    cli_help = "Inject digital signal processing dependencies"
+
     @property
     def name(self) -> str:
         return "Digital Signal Processing"
