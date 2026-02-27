@@ -60,17 +60,25 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4"]
-ignore = ["E501"]
+select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
+ignore = [
+    "E501",
+    "D100",   # Missing docstring in public module
+    "D104",   # Missing docstring in public package
+    "D107",   # Missing docstring in __init__
+]
 
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.isort]
 known-first-party = ["protostar"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = ["T201"]
+"tests/*.py" = ["T201", "D"]
 
 [tool.ruff.format]
 quote-style = "double"
