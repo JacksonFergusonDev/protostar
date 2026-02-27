@@ -119,10 +119,23 @@ def handle_init(args: argparse.Namespace) -> None:
 
 def handle_generate(args: argparse.Namespace) -> None:
     """Handles the 'generate' subcommand for post-setup file scaffolding."""
-    # Future routing for boilerplate generation will go here.
-    console.print(
-        "[yellow]Generate command is not yet implemented. Stay tuned.[/yellow]"
-    )
+    config = ProtostarConfig.load()
+
+    if args.target == "tex":
+        from .modules.lang_layer import generate_latex_boilerplate
+
+        filename = args.name or "main.tex"
+        preset = config.presets.get("latex", "minimal")
+
+        try:
+            out_path = generate_latex_boilerplate(filename, preset)
+            console.print(f"[bold green]Generated:[/bold green] {out_path}")
+        except FileExistsError as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+    else:
+        console.print(
+            f"[red]Generator target '{args.target}' is not yet implemented.[/red]"
+        )
 
 
 def handle_config(args: argparse.Namespace) -> None:
@@ -214,6 +227,19 @@ def main() -> None:
         description="Generates boilerplate code or files based on the configured environment.",
         formatter_class=ProtoHelpFormatter,
     )
+
+    # Establish the positional schema for generator targeting
+    generate_parser.add_argument(
+        "target",
+        choices=["tex"],
+        help="The boilerplate target to evaluate and generate.",
+    )
+    generate_parser.add_argument(
+        "name",
+        nargs="?",
+        help="The primary identifier or filename for the output.",
+    )
+
     generate_parser.set_defaults(func=handle_generate)
 
     # --- Config Subparser ---
