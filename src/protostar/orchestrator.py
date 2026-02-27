@@ -59,7 +59,7 @@ class Orchestrator:
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
-        if not self.manifest.ignored_paths:
+        if not self.manifest.vcs_ignores:
             return
 
         gitignore = Path(".gitignore")
@@ -68,7 +68,7 @@ class Orchestrator:
         if gitignore.exists():
             existing_content = gitignore.read_text()
 
-        missing = [p for p in self.manifest.ignored_paths if p not in existing_content]
+        missing = [p for p in self.manifest.vcs_ignores if p not in existing_content]
 
         if missing:
             with gitignore.open("a") as f:

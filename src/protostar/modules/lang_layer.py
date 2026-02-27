@@ -29,11 +29,17 @@ class PythonModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues uv initialization and ignores virtual environment artifacts."""
         logger.debug("Building Python language layer.")
-        manifest.add_ignore(".venv/")
-        manifest.add_ignore("__pycache__/")
-        manifest.add_ignore("*.ipynb_checkpoints")
-        manifest.add_ignore(".ruff_cache/")
-        manifest.add_ignore(".mypy_cache/")
+
+        artifacts = [
+            ".venv/",
+            "__pycache__/",
+            "*.ipynb_checkpoints",
+            ".ruff_cache/",
+            ".mypy_cache/",
+        ]
+        for artifact in artifacts:
+            manifest.add_vcs_ignore(artifact)
+            manifest.add_workspace_hide(artifact)
 
         if not Path("pyproject.toml").exists():
             manifest.add_system_task(["uv", "init", "--no-workspace"])
@@ -57,7 +63,8 @@ class RustModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues cargo initialization and ignores target artifacts."""
         logger.debug("Building Rust language layer.")
-        manifest.add_ignore("target/")
+        manifest.add_vcs_ignore("target/")
+        manifest.add_workspace_hide("target/")
 
         if not Path("Cargo.toml").exists():
             manifest.add_system_task(["cargo", "init"])
@@ -84,9 +91,11 @@ class NodeModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues package initialization and ignores node_modules."""
         logger.debug(f"Building Node language layer using {self.package_manager}.")
-        manifest.add_ignore("node_modules/")
-        manifest.add_ignore("dist/")
-        manifest.add_ignore(".next/")
+
+        artifacts = ["node_modules/", "dist/", ".next/"]
+        for artifact in artifacts:
+            manifest.add_vcs_ignore(artifact)
+            manifest.add_workspace_hide(artifact)
 
         if not Path("package.json").exists():
             cmd = [self.package_manager, "init"]
@@ -105,11 +114,11 @@ class CppModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Ignores standard C/C++ build outputs and IDE command caches."""
         logger.debug("Building C/C++ language layer.")
-        manifest.add_ignore("build/")
-        manifest.add_ignore("*.o")
-        manifest.add_ignore("*.out")
-        manifest.add_ignore(".cache/")
-        manifest.add_ignore("compile_commands.json")
+
+        artifacts = ["build/", "*.o", "*.out", ".cache/", "compile_commands.json"]
+        for artifact in artifacts:
+            manifest.add_vcs_ignore(artifact)
+            manifest.add_workspace_hide(artifact)
 
 
 class LatexModule(BootstrapModule):
@@ -122,11 +131,17 @@ class LatexModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Ignores LaTeX compiler auxiliary and log files."""
         logger.debug("Building LaTeX language layer.")
-        manifest.add_ignore("*.aux")
-        manifest.add_ignore("*.fdb_latexmk")
-        manifest.add_ignore("*.fls")
-        manifest.add_ignore("*.log")
-        manifest.add_ignore("*.synctex.gz")
-        manifest.add_ignore("*.bbl")
-        manifest.add_ignore("*.blg")
-        manifest.add_ignore("*.out")
+
+        artifacts = [
+            "*.aux",
+            "*.fdb_latexmk",
+            "*.fls",
+            "*.log",
+            "*.synctex.gz",
+            "*.bbl",
+            "*.blg",
+            "*.out",
+        ]
+        for artifact in artifacts:
+            manifest.add_vcs_ignore(artifact)
+            manifest.add_workspace_hide(artifact)
