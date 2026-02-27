@@ -2,6 +2,7 @@ import json
 
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
+from protostar.presets.base import PresetModule
 
 
 class DummyModule(BootstrapModule):
@@ -20,25 +21,68 @@ class DummyModule(BootstrapModule):
         manifest.add_dependency("dummy-pkg")
 
 
+class DummyPreset(PresetModule):
+    """A mock preset for testing the orchestrator lifecycle."""
+
+    @property
+    def name(self):
+        return "DummyPreset"
+
+    def build(self, manifest):
+        manifest.add_dependency("dummy-preset-pkg")
+
+
 def test_orchestrator_lifecycle(mocker):
     """Test that the orchestrator calls pre_flight, build, and executes tasks."""
     mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
     mocker.patch("protostar.orchestrator.Orchestrator._write_ignores")
+    mocker.patch("protostar.orchestrator.Orchestrator._write_docker_artifacts")
     mocker.patch("protostar.orchestrator.Orchestrator._write_ide_settings")
 
     dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod])
+    dummy_preset = DummyPreset()
+
+    # Pass both the module and the preset
+    orchestrator = Orchestrator([dummy_mod], presets=[dummy_preset])
 
     orchestrator.run()
 
     assert dummy_mod.pre_flight_called is True
     assert "dummy_file.txt" in orchestrator.manifest.vcs_ignores
 
-    # Verify tasks and dependencies were executed
+    # Verify tasks and dependencies were executed (1 from module, 1 from preset)
     mock_run_quiet.assert_any_call(["echo", "dummy"], "Executing echo")
     mock_run_quiet.assert_any_call(
-        ["uv", "add", "dummy-pkg"], "Resolving and installing 1 dependencies"
+        ["uv", "add", "dummy-pkg", "dummy-preset-pkg"],
+        "Resolving and installing 2 dependencies",
     )
+
+
+def test_orchestrator_writes_dockerignore(mocker):
+    """Test that the orchestrator aggregates base ignores and vcs ignores for docker."""
+    dummy_mod = DummyModule()
+
+    # Initialize with the docker flag set to True
+    orchestrator = Orchestrator([dummy_mod], docker=True)
+    orchestrator.manifest.add_vcs_ignore("custom_build_artifact/")
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.Path.read_text", return_value=".env\n")
+
+    mock_file = mocker.mock_open()
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+
+    orchestrator._write_docker_artifacts()
+
+    # Verify what was written to the .dockerignore file
+    written_data = mock_file().write.call_args[0][0]
+
+    # Should contain our custom manifest ignore
+    assert "custom_build_artifact/" in written_data
+
+    # Should contain the standard daemon exclusions appended by the orchestrator
+    assert ".git/" in written_data
+    assert "README*" in written_data
 
 
 def test_orchestrator_writes_gitignore(mocker):

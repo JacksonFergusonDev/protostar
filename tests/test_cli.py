@@ -2,43 +2,49 @@ import argparse
 
 from protostar.cli import handle_init
 from protostar.modules import PythonModule
+from protostar.presets import (
+    AstroPreset,
+    DspPreset,
+    EmbeddedPreset,
+    ScientificPreset,
+)
 
 
-def test_scientific_init_hook(mocker):
-    """Test the --scientific flag injects data directories and vcs ignores."""
-    # Mock Orchestrator to intercept the built manifest before execution
+def test_handle_init_dispatch(mocker):
+    """Test that CLI flags correctly instantiate modules, presets, and docker settings."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
+    # Simulate running `proto init -p -s -a -d -e --docker`
     args = argparse.Namespace(
         python=True,
-        scientific=True,
         rust=False,
         node=False,
         cpp=False,
         latex=False,
+        scientific=True,
+        astro=True,
+        dsp=True,
+        embedded=True,
+        docker=True,
     )
 
     handle_init(args)
 
-    # Extract the modules list passed to the Orchestrator
+    # Extract the arguments passed to Orchestrator(modules, presets, docker=...)
     modules = mock_orchestrator.call_args[0][0]
-    python_mod = next(m for m in modules if isinstance(m, PythonModule))
+    presets = mock_orchestrator.call_args[0][1]
+    kwargs = mock_orchestrator.call_args[1]
 
-    # Manually execute the hooked build sequence against a mock manifest
-    from protostar.manifest import EnvironmentManifest
+    # Verify Language Module
+    assert any(isinstance(m, PythonModule) for m in modules)
 
-    manifest = EnvironmentManifest()
-    python_mod.build(manifest)
+    # Verify Presets
+    assert any(isinstance(p, ScientificPreset) for p in presets)
+    assert any(isinstance(p, AstroPreset) for p in presets)
+    assert any(isinstance(p, DspPreset) for p in presets)
+    assert any(isinstance(p, EmbeddedPreset) for p in presets)
 
-    # Verify data pipeline architecture was injected
-    assert "astropy" in manifest.dependencies
-    assert "data" in manifest.directories
-    assert "notebooks" in manifest.directories
-
-    # Verify binary data formats are excluded from VCS
-    assert "*.csv" in manifest.vcs_ignores
-    assert "*.parquet" in manifest.vcs_ignores
-    assert "*.nc" in manifest.vcs_ignores
+    # Verify Context Artifact Flags
+    assert kwargs.get("docker") is True
