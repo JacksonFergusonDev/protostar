@@ -1,5 +1,6 @@
 import json
 
+from protostar.config import ProtostarConfig
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
 from protostar.presets.base import PresetModule
@@ -39,6 +40,10 @@ def test_orchestrator_lifecycle(mocker):
     mocker.patch("protostar.orchestrator.Orchestrator._write_docker_artifacts")
     mocker.patch("protostar.orchestrator.Orchestrator._write_ide_settings")
 
+    # Mock the global config lookup inside _install_dependencies
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
     dummy_mod = DummyModule()
     dummy_preset = DummyPreset()
 
@@ -56,6 +61,41 @@ def test_orchestrator_lifecycle(mocker):
         ["uv", "add", "dummy-pkg", "dummy-preset-pkg"],
         "Resolving and installing 2 dependencies",
     )
+
+
+def test_orchestrator_install_dependencies_pip_freeze(mocker):
+    """Test that the orchestrator executes a local pip installation and writes a freeze state."""
+    mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
+    mock_run = mocker.patch("protostar.orchestrator.subprocess.run")
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+    mocker.patch(
+        "protostar.orchestrator.Path.exists", return_value=True
+    )  # Assume .venv/bin/pip exists
+
+    # Mock config to force pip route
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
+
+    mock_run.return_value.stdout = "dummy-pkg==1.0.0"
+
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # Manually populate the manifest since we are bypassing the phase 2 build() lifecycle
+    orchestrator.manifest.add_dependency("dummy-pkg")
+
+    # Execute just the injection pipeline
+    orchestrator._install_dependencies()
+
+    mock_run_quiet.assert_called_once_with(
+        [".venv/bin/pip", "install", "dummy-pkg"],
+        "Resolving and installing 1 dependencies",
+    )
+
+    mock_run.assert_called_once_with(
+        [".venv/bin/pip", "freeze"], capture_output=True, text=True, check=True
+    )
+    mock_write.assert_called_once_with("dummy-pkg==1.0.0")
 
 
 def test_orchestrator_writes_dockerignore(mocker):

@@ -9,6 +9,7 @@ def test_config_load_defaults(mocker):
     config = ProtostarConfig.load()
     assert config.ide == "vscode"
     assert config.node_package_manager == "npm"
+    assert config.python_package_manager == "uv"
     assert config.presets == {}
 
 
@@ -18,7 +19,11 @@ def test_config_merge_cascade(mocker):
 
     # Mock the global config payload
     global_payload = {
-        "env": {"ide": "cursor", "node_package_manager": "pnpm"},
+        "env": {
+            "ide": "cursor",
+            "python_package_manager": "pip",
+            "node_package_manager": "pnpm",
+        },
         "presets": {"latex": "minimal", "cpp": "standard"},
     }
 
@@ -35,11 +40,10 @@ def test_config_merge_cascade(mocker):
 
     config = ProtostarConfig.load()
 
-    # Verify the cascade execution
-    assert config.ide == "jetbrains"  # Overridden by local
-    assert config.node_package_manager == "pnpm"  # Persisted from global
+    assert config.ide == "jetbrains"
+    assert config.python_package_manager == "pip"
+    assert config.node_package_manager == "pnpm"
 
-    # Verify the presets dictionary was merged, not clobbered
     assert config.presets["latex"] == "science"
     assert config.presets["cpp"] == "standard"
 
