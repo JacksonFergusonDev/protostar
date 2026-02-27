@@ -6,10 +6,14 @@ from .dsp import DspPreset
 from .embedded import EmbeddedPreset
 from .scientific import ScientificPreset
 
+PRESETS: tuple[PresetModule, ...] = (
+    ScientificPreset(),
+    AstroPreset(),
+    DspPreset(),
+    EmbeddedPreset(),
+)
+
 __all__ = [
     "PresetModule",
-    "ScientificPreset",
-    "AstroPreset",
-    "DspPreset",
-    "EmbeddedPreset",
+    "PRESETS",
 ]

@@ -14,6 +14,9 @@ logger = logging.getLogger("protostar")
 class EmbeddedPreset(PresetModule):
     """Injects serial communication and hardware telemetry dependencies."""
 
+    cli_flags = ("-e", "--embedded")
+    cli_help = "Inject embedded hardware dependencies"
+
     @property
     def name(self) -> str:
         return "Embedded Hardware"

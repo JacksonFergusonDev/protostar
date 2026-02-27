@@ -1,9 +1,11 @@
 import json
 import logging
+import subprocess
 from pathlib import Path
 
 from rich.console import Console
 
+from .config import ProtostarConfig
 from .manifest import EnvironmentManifest
 from .modules import BootstrapModule
 from .presets.base import PresetModule
@@ -167,10 +169,33 @@ class Orchestrator:
         if not self.manifest.dependencies:
             return
 
-        # Assuming uv is the primary driver for dependency injection
-        # if python dependencies were requested.
-        cmd = ["uv", "add"] + self.manifest.dependencies
-        run_quiet(
-            cmd,
-            f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
-        )
+        config = ProtostarConfig.load()
+
+        if config.python_package_manager == "uv":
+            cmd = ["uv", "add"] + self.manifest.dependencies
+            run_quiet(
+                cmd,
+                f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
+            )
+        else:
+            venv_pip = Path(".venv/bin/pip")
+            pip_cmd = str(venv_pip) if venv_pip.exists() else "pip"
+
+            cmd = [pip_cmd, "install"] + self.manifest.dependencies
+
+            run_quiet(
+                cmd,
+                f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
+            )
+
+            # Freeze the state to mirror uv's declarative pyproject.toml updates
+            try:
+                result = subprocess.run(
+                    [pip_cmd, "freeze"], capture_output=True, text=True, check=True
+                )
+                Path("requirements.txt").write_text(result.stdout)
+                logger.debug("Successfully froze dependencies to requirements.txt")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to freeze dependencies to requirements.txt: {e}"
+                )

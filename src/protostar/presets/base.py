@@ -1,5 +1,5 @@
 import abc
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -11,6 +11,12 @@ class PresetModule(abc.ABC):
     Presets are decoupled from language modules and evaluate independently
     during the manifest aggregation phase to inject tools and scaffolding.
     """
+
+    cli_flags: ClassVar[tuple[str, ...]] = ()
+    """The CLI flags to trigger this preset (e.g., ('-a', '--astro'))."""
+
+    cli_help: ClassVar[str] = ""
+    """The help description for the CLI flag."""
 
     @property
     @abc.abstractmethod

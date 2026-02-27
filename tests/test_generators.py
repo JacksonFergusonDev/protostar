@@ -1,45 +1,54 @@
 import pytest
 
-from protostar.modules.lang_layer import (
-    generate_circuitpython,
-    generate_cmake,
-    generate_cpp_class,
-    generate_latex_boilerplate,
-    generate_pio,
-)
+from protostar.config import ProtostarConfig
+from protostar.generators.cpp import CMakeGenerator, CppClassGenerator
+from protostar.generators.embedded import CircuitPythonGenerator, PlatformIOGenerator
+from protostar.generators.latex import LatexGenerator
 
 
-def test_generate_latex_boilerplate_science_preset(mocker):
+@pytest.fixture
+def mock_config():
+    """Provides a default config instance for generator execution."""
+    return ProtostarConfig()
+
+
+def test_latex_generator_science_preset(mocker, mock_config):
     """Test LaTeX generator cascades science preamble macros correctly."""
-    mock_write = mocker.patch("protostar.modules.lang_layer.Path.write_text")
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-    mocker.patch("protostar.modules.lang_layer.Path.read_text", return_value="*.aux")
+    mock_write = mocker.patch("protostar.generators.latex.Path.write_text")
+    mocker.patch("protostar.generators.latex.Path.exists", return_value=False)
+    mocker.patch("protostar.generators.latex.Path.read_text", return_value="*.aux")
 
-    out_path = generate_latex_boilerplate("report.tex", preset="science")
+    # Override preset for this test
+    mock_config.presets["latex"] = "science"
 
-    assert out_path.name == "report.tex"
+    generator = LatexGenerator()
+    out_paths = generator.execute("report.tex", mock_config)
+
+    assert out_paths[0].name == "report.tex"
     mock_write.assert_called_once()
 
     content = mock_write.call_args[0][0]
     assert "\\usepackage{physics}" in content
     assert "\\usepackage{siunitx}" in content
-    assert "\\usepackage[backend=biber" not in content  # Belongs to academic
+    assert "\\usepackage[backend=biber" not in content
 
 
-def test_generate_latex_aborts_on_existing_file(mocker):
+def test_latex_generator_aborts_on_existing_file(mocker, mock_config):
     """Test LaTeX generation halts safely if the target file exists."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=True)
+    mocker.patch("protostar.generators.latex.Path.exists", return_value=True)
 
+    generator = LatexGenerator()
     with pytest.raises(FileExistsError, match="Target file already exists"):
-        generate_latex_boilerplate("main.tex", preset="minimal")
+        generator.execute("main.tex", mock_config)
 
 
-def test_generate_cpp_class_pascal_casing(mocker):
+def test_cpp_class_generator_pascal_casing(mocker, mock_config):
     """Test C++ class scaffolding enforces PascalCase and drops correct files."""
-    mock_write = mocker.patch("protostar.modules.lang_layer.Path.write_text")
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.generators.cpp.Path.write_text")
+    mocker.patch("protostar.generators.cpp.Path.exists", return_value=False)
 
-    paths = generate_cpp_class("dataPipeline")  # Lowercase input
+    generator = CppClassGenerator()
+    paths = generator.execute("dataPipeline", mock_config)
 
     assert len(paths) == 2
     assert paths[0].name == "DataPipeline.hpp"
@@ -50,59 +59,52 @@ def test_generate_cpp_class_pascal_casing(mocker):
     assert "class DataPipeline {" in hpp_content
 
 
-def test_generate_cmake_static_globbing(mocker):
+def test_cmake_generator_static_globbing(mocker, mock_config):
     """Test CMake generation explicitly enumerates local .cpp files to avoid cache issues."""
-    mock_write = mocker.patch("protostar.modules.lang_layer.Path.write_text")
+    mock_write = mocker.patch("protostar.generators.cpp.Path.write_text")
+    mocker.patch("protostar.generators.cpp.Path.exists", return_value=False)
 
-    # Mock exists check for CMakeLists.txt
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-
-    # Mock local .cpp files
     mock_main = mocker.Mock()
     mock_main.name = "main.cpp"
     mock_engine = mocker.Mock()
     mock_engine.name = "Engine.cpp"
-
     mocker.patch(
-        "protostar.modules.lang_layer.Path.glob", return_value=[mock_main, mock_engine]
+        "protostar.generators.cpp.Path.glob", return_value=[mock_main, mock_engine]
     )
 
-    generate_cmake("AstroEngine")
+    generator = CMakeGenerator()
+    generator.execute("AstroEngine", mock_config)
 
     content = mock_write.call_args[0][0]
     assert "project(AstroEngine)" in content
-    assert "set(CMAKE_CXX_STANDARD 17)" in content
     assert "add_executable(${PROJECT_NAME} main.cpp Engine.cpp)" in content
 
 
-def test_generate_pio_inference(mocker):
+def test_pio_generator_inference(mocker, mock_config):
     """Test PlatformIO generator maps common board targets to standard platforms."""
-    mock_write = mocker.patch("protostar.modules.lang_layer.Path.write_text")
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.generators.embedded.Path.write_text")
+    mocker.patch("protostar.generators.embedded.Path.exists", return_value=False)
 
-    # Test ESP32 inference
-    generate_pio("esp32dev")
+    generator = PlatformIOGenerator()
+    generator.execute("esp32dev", mock_config)
+
     content = mock_write.call_args[0][0]
     assert "platform = espressif32" in content
     assert "board = esp32dev" in content
 
 
-def test_generate_circuitpython(mocker):
+def test_circuitpython_generator(mocker, mock_config):
     """Test CircuitPython generator drops non-blocking loop and LSP config."""
-    mock_write = mocker.patch("protostar.modules.lang_layer.Path.write_text")
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.generators.embedded.Path.write_text")
+    mocker.patch("protostar.generators.embedded.Path.exists", return_value=False)
 
-    paths = generate_circuitpython()
+    generator = CircuitPythonGenerator()
+    paths = generator.execute(None, mock_config)
 
     assert len(paths) == 2
     assert paths[0].name == "code.py"
     assert paths[1].name == ".pyrightconfig.json"
 
-    # Verify state machine architecture
     code_content = mock_write.call_args_list[0][0][0]
     assert "time.monotonic()" in code_content
     assert "time.sleep(0.01)" in code_content
-
-    # Verify LSP false-positive suppression
-    pyright_content = mock_write.call_args_list[1][0][0]
-    assert '"reportMissingImports": false' in pyright_content

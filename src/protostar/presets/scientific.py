@@ -14,6 +14,9 @@ logger = logging.getLogger("protostar")
 class ScientificPreset(PresetModule):
     """Injects core scientific dependencies and standard pipeline directories."""
 
+    cli_flags = ("-s", "--scientific")
+    cli_help = "Inject scientific computing dependencies"
+
     @property
     def name(self) -> str:
         return "Scientific"

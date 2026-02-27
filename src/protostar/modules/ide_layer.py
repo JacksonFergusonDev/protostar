@@ -16,13 +16,16 @@ class VSCodeModule(BootstrapModule):
     def name(self) -> str:
         return "VS Code"
 
+    @property
+    def aliases(self) -> list[str]:
+        return ["vscode", "cursor"]
+
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Maps manifest workspace hides to VS Code exclusion rules."""
         logger.debug("Building VS Code IDE layer.")
 
         exclusions = {}
         for pattern in manifest.workspace_hides:
-            # Strip trailing slashes for standard VS Code globbing
             clean_pattern = pattern.rstrip("/")
             exclusions[f"**/{clean_pattern}"] = True
 
@@ -37,6 +40,10 @@ class JetBrainsModule(BootstrapModule):
     @property
     def name(self) -> str:
         return "JetBrains"
+
+    @property
+    def aliases(self) -> list[str]:
+        return ["jetbrains"]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends the .idea/ directory to the global ignore and hide lists."""

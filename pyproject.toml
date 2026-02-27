@@ -80,6 +80,9 @@ line-ending = "auto"
 
 [tool.mypy]
 python_version = "3.12"
+pretty = true
+show_error_codes = true
+show_error_context = true
 warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true

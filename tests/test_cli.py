@@ -1,7 +1,7 @@
 import argparse
 
-from protostar.cli import handle_init
-from protostar.modules import PythonModule
+from protostar.cli import get_ide_module, handle_init
+from protostar.modules import JetBrainsModule, PythonModule, VSCodeModule
 from protostar.presets import (
     AstroPreset,
     DspPreset,
@@ -11,22 +11,23 @@ from protostar.presets import (
 
 
 def test_handle_init_dispatch(mocker):
-    """Test that CLI flags correctly instantiate modules, presets, and docker settings."""
+    """Test that dynamically generated CLI flags instantiate modules and presets."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
     # Simulate running `proto init -p -s -a -d -e --docker`
+    # The dest attributes are now dynamically mapped to the class names
     args = argparse.Namespace(
-        python=True,
-        rust=False,
-        node=False,
-        cpp=False,
-        latex=False,
-        scientific=True,
-        astro=True,
-        dsp=True,
-        embedded=True,
+        PythonModule=True,
+        RustModule=False,
+        NodeModule=False,
+        CppModule=False,
+        LatexModule=False,
+        ScientificPreset=True,
+        AstroPreset=True,
+        DspPreset=True,
+        EmbeddedPreset=True,
         docker=True,
     )
 
@@ -48,3 +49,15 @@ def test_handle_init_dispatch(mocker):
 
     # Verify Context Artifact Flags
     assert kwargs.get("docker") is True
+
+
+def test_get_ide_module_dispatch():
+    """Test that IDE aliases correctly resolve to their respective module classes."""
+    vscode_mod = get_ide_module("cursor")
+    assert isinstance(vscode_mod, VSCodeModule)
+
+    jetbrains_mod = get_ide_module("jetbrains")
+    assert isinstance(jetbrains_mod, JetBrainsModule)
+
+    unknown_mod = get_ide_module("eclipse")
+    assert unknown_mod is None
