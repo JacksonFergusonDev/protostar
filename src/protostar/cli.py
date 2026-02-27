@@ -1,13 +1,8 @@
 import argparse
 import sys
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
 
 from rich.console import Console
-
-from protostar.presets.astro import AstroPreset
-from protostar.presets.dsp import DspPreset
-from protostar.presets.embedded import EmbeddedPreset
 
 from .config import ProtostarConfig
 from .modules import (
@@ -23,10 +18,13 @@ from .modules import (
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
-from .presets import PresetModule, ScientificPreset
-
-if TYPE_CHECKING:
-    pass
+from .presets import (
+    AstroPreset,
+    DspPreset,
+    EmbeddedPreset,
+    PresetModule,
+    ScientificPreset,
+)
 
 console = Console()
 
@@ -108,7 +106,7 @@ def handle_init(args: argparse.Namespace) -> None:
         modules.append(ide_mod)
 
     # Execute
-    engine = Orchestrator(modules, presets)
+    engine = Orchestrator(modules, presets, docker=args.docker)
     engine.run()
 
 
@@ -282,6 +280,14 @@ def main() -> None:
         "--embedded",
         action="store_true",
         help="Inject host-side embedded hardware interface tools",
+    )
+
+    # Conceptual grouping for context artifacts
+    context_group = init_parser.add_argument_group("Context Scaffolding")
+    context_group.add_argument(
+        "--docker",
+        action="store_true",
+        help="Generate a .dockerignore based on the environment footprint",
     )
 
     init_parser.set_defaults(func=handle_init)
