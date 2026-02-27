@@ -64,7 +64,7 @@ cd orbital-mechanics-sim
 protostar init --python --cpp
 ```
 
-*Result: Initializes `uv`, scaffolds a Python environment, configures C++ build exclusions, and generates your `.vscode/settings.json`.*
+*Result: Initializes `uv` (or `pip`), scaffolds a Python environment, configures C++ build exclusions, and generates your `.vscode/settings.json`.*
 
 ### Domain-Specific Presets & Docker Context
 
@@ -94,7 +94,7 @@ protostar generate cpp-class TelemetryIngestor
 
 | Category | Flag | Description |
 | :--- | :--- | :--- |
-| **Language** | `--python`, `-p` | Scaffolds a Python environment using `uv`. Ignores caches and venvs. |
+| **Language** | `--python`, `-p` | Scaffolds a Python environment (`uv` or `pip`). Ignores caches and venvs. |
 | **Language** | `--rust`, `-r` | Scaffolds a Rust environment using `cargo`. Ignores target directories. |
 | **Language** | `--node`, `-n` | Scaffolds a Node.js/TS environment. Ignores `node_modules` and `dist/`. |
 | **Language** | `--cpp`, `-c` | Configures a C/C++ footprint (ignores `build/`, `*.o`, `compile_commands.json`). |
@@ -126,6 +126,9 @@ You can set global defaults by running `protostar config`, which opens `~/.confi
 # Options: "vscode", "cursor", "jetbrains", "none"
 ide = "vscode"
 
+# Options: "uv", "pip"
+python_package_manager = "uv"
+
 # Options: "npm", "pnpm", "yarn"
 node_package_manager = "npm"
 
@@ -138,7 +141,7 @@ latex = "minimal"
 
 ## 🤝 Collaboration & Extension
 
-This tool uses a decoupled architecture. Adding support for a new language requires writing a single `BootstrapModule`, and adding a new dependency pipeline requires writing a single `PresetModule`. Both independently append rules to the `EnvironmentManifest`. Feel free to open an issue or pull request if you'd like to see a specific toolchain supported.
+This tool uses a decoupled architecture. The CLI parser dynamically evaluates the module registries at runtime. Adding support for a new language requires writing a single `BootstrapModule` class, and adding a new dependency pipeline requires writing a single `PresetModule`. Both independently append rules to the `EnvironmentManifest` without requiring modifications to the core orchestration engine. Feel free to open an issue or pull request if you'd like to see a specific toolchain supported.
 
 ## 📧 Contact
 
