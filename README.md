@@ -16,8 +16,9 @@ Setting up a new project often requires the same manual steps: configuring linte
 Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
 
 1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
-1. **Deterministic Execution:** Most bootstrapping scripts run a sequence of shell commands and fail unpredictably if a dependency is missing. Protostar separates state definition from execution. It uses an internal `EnvironmentManifest` where modules append their requirements. Disk I/O and subprocesses only occur at the very end.
-1. **Signal vs. Noise:** Project configuration is necessary noise; writing logic is the signal. By vertically integrating the OS, IDE, Language, and Domain strata into a single command, Protostar collapses the logistical entropy of starting a new repository.
+1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
+1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv` or `cargo`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
+1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, and safely aborts if generated files already exist.
 
 ---
 
@@ -139,9 +140,22 @@ latex = "minimal"
 
 ---
 
-## 🤝 Collaboration & Extension
+## 🤝 Collaboration
 
-This tool uses a decoupled architecture. The CLI parser dynamically evaluates the module registries at runtime. Adding support for a new language requires writing a single `BootstrapModule` class, and adding a new dependency pipeline requires writing a single `PresetModule`. Both independently append rules to the `EnvironmentManifest` without requiring modifications to the core orchestration engine. Feel free to open an issue or pull request if you'd like to see a specific toolchain supported.
+This tool uses a highly decoupled, plugin-style architecture. The CLI parser dynamically evaluates module registries at runtime.
+
+- **To add support for a new language:** Subclass `BootstrapModule`.
+- **To add a new dependency pipeline:** Subclass `PresetModule`.
+
+Both independently append rules to the `EnvironmentManifest` without requiring modifications to the core orchestration engine. Modules are strictly isolated and interact only via the manifest interface.
+
+We maintain strict engineering standards to ensure reliability:
+
+- **Static Typing:** 100% type-hinted, strictly enforced via `mypy`.
+- **Isolated Testing:** `pytest` test suite utilizing `tmp_path` for disk I/O sandboxing and `pytest-mock` to prevent host-machine side effects.
+- **Formatting & Linting:** Automated via `ruff` in our pre-commit hooks and CI pipelines.
+
+Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for full details on our development setup, architectural rules, and pull request guidelines. Feel free to open an issue or PR if you'd like to see a specific toolchain supported.
 
 ## 📧 Contact
 
