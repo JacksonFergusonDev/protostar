@@ -66,12 +66,8 @@ class PythonModule(BootstrapModule):
         if self.package_manager == "uv":
             if not Path("pyproject.toml").exists():
                 manifest.add_system_task(["uv", "init", "--no-workspace"])
-        elif self.package_manager == "pip":
-            if not Path(".venv").exists():
-                # Explicitly invoke the POSIX python3 executable
-                manifest.add_system_task(["python3", "-m", "venv", ".venv"])
-            if not Path("requirements.txt").exists():
-                Path("requirements.txt").touch()
+        elif self.package_manager == "pip" and not Path(".venv").exists():
+            manifest.add_system_task(["python3", "-m", "venv", ".venv"])
 
 
 class RustModule(BootstrapModule):
