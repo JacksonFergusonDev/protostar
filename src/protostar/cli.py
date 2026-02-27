@@ -39,12 +39,19 @@ def get_os_module() -> BootstrapModule:
 
 
 def get_ide_module(ide_preference: str) -> BootstrapModule | None:
-    """Returns the IDE module based on the user's global configuration."""
+    """Returns the IDE module based on the user's global configuration.
+
+    Dynamically resolves the target module by evaluating the aliases declared
+    on each IDE class.
+    """
     ide = ide_preference.lower()
-    if ide in ("vscode", "cursor"):
-        return VSCodeModule()
-    elif ide == "jetbrains":
-        return JetBrainsModule()
+
+    # Iterate over supported IDE modules to find an alias match
+    for ide_class in (VSCodeModule, JetBrainsModule):
+        instance = ide_class()
+        if ide in instance.aliases:
+            return instance
+
     return None
 
 

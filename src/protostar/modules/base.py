@@ -22,6 +22,14 @@ class BootstrapModule(abc.ABC):
         """Returns the human-readable identifier for the module."""
         pass
 
+    @property
+    def aliases(self) -> list[str]:
+        """Returns a list of configuration aliases that map to this module.
+
+        Used for dynamic resolution from the global configuration file.
+        """
+        return []
+
     def pre_flight(self) -> None:  # noqa: B027
         """Verifies system prerequisites before manifest building begins.
 
