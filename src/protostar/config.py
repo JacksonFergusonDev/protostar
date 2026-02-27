@@ -1,11 +1,22 @@
 import logging
+import os
+import subprocess
 import tomllib
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 logger = logging.getLogger("protostar")
 
-CONFIG_FILE = Path.home() / ".config/protostar/config.toml"
+# Platform-agnostic resolution leveraging standard XDG-like fallbacks
+CONFIG_FILE = Path.home() / ".config" / "protostar" / "config.toml"
+
+DEFAULT_CONFIG_CONTENT = """[env]
+# Preferred IDE: 'vscode', 'cursor', 'jetbrains', or 'none'
+ide = "vscode"
+
+# Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
+node_package_manager = "npm"
+"""
 
 
 @dataclass
@@ -48,3 +59,30 @@ class ProtostarConfig:
             logger.warning(f"Failed to load config from {CONFIG_FILE}: {e}")
 
         return instance
+
+    @staticmethod
+    def open_in_editor() -> None:
+        """Opens the global configuration file in the system's default editor.
+
+        Ensures the parent directory exists and seeds a default configuration
+        template if the file is missing.
+        """
+        if not CONFIG_FILE.parent.exists():
+            CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        if not CONFIG_FILE.exists():
+            CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
+            logger.info(f"Initialized default configuration at {CONFIG_FILE}")
+
+        # Fallback to nano if $EDITOR isn't exported in the user's shell profile
+        editor = os.environ.get("EDITOR", "nano")
+
+        try:
+            subprocess.run([editor, str(CONFIG_FILE)], check=True)
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Editor '{editor}' exited with non-zero status: {e}")
+        except FileNotFoundError:
+            logger.error(
+                f"Could not resolve editor '{editor}'. "
+                "Ensure your $EDITOR environment variable is set to a valid executable."
+            )

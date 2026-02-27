@@ -115,6 +115,11 @@ def handle_generate(args: argparse.Namespace) -> None:
     )
 
 
+def handle_config(args: argparse.Namespace) -> None:
+    """Handles the 'config' subcommand to manage global CLI settings."""
+    ProtostarConfig.open_in_editor()
+
+
 def main() -> None:
     """Main entry point for the Protostar CLI."""
     parser = argparse.ArgumentParser(
@@ -172,6 +177,14 @@ def main() -> None:
         description="Generates boilerplate code or files based on the configured environment.",
     )
     generate_parser.set_defaults(func=handle_generate)
+
+    # --- Config Subparser ---
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Manage global Protostar configuration.",
+        description="Opens the global configuration file in your system's default $EDITOR.",
+    )
+    config_parser.set_defaults(func=handle_config)
 
     # Dynamic dispatch based on the invoked subparser
     args = parser.parse_args()
