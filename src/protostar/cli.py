@@ -1,5 +1,6 @@
 import argparse
 import sys
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from rich.console import Console
@@ -120,14 +121,38 @@ def handle_config(args: argparse.Namespace) -> None:
     ProtostarConfig.open_in_editor()
 
 
+class ProtoHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """Custom help formatter for Protostar CLI.
+
+    Inherits from RawDescriptionHelpFormatter to respect explicit line breaks
+    in docstrings/descriptions while overriding default verbose prefixes.
+    """
+
+    def add_usage(
+        self,
+        usage: str | None,
+        actions: Iterable[argparse.Action],
+        groups: Iterable[argparse._MutuallyExclusiveGroup],
+        prefix: str | None = None,
+    ) -> None:
+        """Overrides the default 'usage: ' prefix for a cleaner aesthetic."""
+        if prefix is None:
+            prefix = "Usage: "
+        super().add_usage(usage, actions, groups, prefix)
+
+
 def main() -> None:
     """Main entry point for the Protostar CLI."""
     parser = argparse.ArgumentParser(
-        description="High-velocity environment scaffolding."
+        description="High-velocity environment scaffolding.",
+        formatter_class=ProtoHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(
-        dest="command", required=True, title="Subcommands"
+        dest="command",
+        required=True,
+        title="Subcommands",
+        metavar="<command>",
     )
 
     # --- Init Subparser ---
@@ -135,33 +160,36 @@ def main() -> None:
         "init",
         help="Initialize a new environment and aggregate manifest configurations.",
         description="Scaffolds base configurations, dependencies, and environment files.",
+        formatter_class=ProtoHelpFormatter,
     )
 
-    # Language flags
-    init_parser.add_argument(
+    # Conceptual grouping for language footprints
+    lang_group = init_parser.add_argument_group("Language Footprints")
+    lang_group.add_argument(
         "-p", "--python", action="store_true", help="Scaffold a Python (uv) environment"
     )
-    init_parser.add_argument(
+    lang_group.add_argument(
         "-r", "--rust", action="store_true", help="Scaffold a Rust (cargo) environment"
     )
-    init_parser.add_argument(
+    lang_group.add_argument(
         "-n", "--node", action="store_true", help="Scaffold a Node.js environment"
     )
-    init_parser.add_argument(
+    lang_group.add_argument(
         "-c",
         "--cpp",
         action="store_true",
         help="Scaffold a C/C++ environment footprint",
     )
-    init_parser.add_argument(
+    lang_group.add_argument(
         "-l",
         "--latex",
         action="store_true",
         help="Scaffold a LaTeX environment footprint",
     )
 
-    # Presets
-    init_parser.add_argument(
+    # Conceptual grouping for dependency injections
+    preset_group = init_parser.add_argument_group("Dependency Presets")
+    preset_group.add_argument(
         "-s",
         "--scientific",
         action="store_true",
@@ -175,6 +203,7 @@ def main() -> None:
         "generate",
         help="Generate boilerplate files and project scaffolding.",
         description="Generates boilerplate code or files based on the configured environment.",
+        formatter_class=ProtoHelpFormatter,
     )
     generate_parser.set_defaults(func=handle_generate)
 
@@ -183,6 +212,7 @@ def main() -> None:
         "config",
         help="Manage global Protostar configuration.",
         description="Opens the global configuration file in your system's default $EDITOR.",
+        formatter_class=ProtoHelpFormatter,
     )
     config_parser.set_defaults(func=handle_config)
 
