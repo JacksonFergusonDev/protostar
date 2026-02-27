@@ -66,10 +66,19 @@ def handle_init(args: argparse.Namespace) -> None:
             original_build = python_mod.build
 
             def hooked_build(manifest: "EnvironmentManifest") -> None:
-                """Appends core Python settings and scientific dependencies."""
+                """Appends core Python settings, scientific dependencies, and pipeline directories."""
                 original_build(manifest)
+
                 for pkg in SCIENTIFIC_PACKAGES:
                     manifest.add_dependency(pkg)
+
+                # Scaffold standard data analysis pipeline directories
+                for directory in ["data", "notebooks", "src"]:
+                    manifest.add_directory(directory)
+
+                # Ignore large or binary data files common in analysis pipelines
+                for artifact in ["*.csv", "*.parquet", "*.nc"]:
+                    manifest.add_vcs_ignore(artifact)
 
             python_mod.build = hooked_build  # type: ignore
 

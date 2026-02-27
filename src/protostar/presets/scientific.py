@@ -7,4 +7,5 @@ SCIENTIFIC_PACKAGES = [
     "pandas",
     "scipy",
     "ipykernel",
+    "astropy",
 ]
