@@ -43,38 +43,12 @@ def get_ide_module(ide_preference: str) -> BootstrapModule | None:
     return None
 
 
-def main() -> None:
-    """Main entry point for the Protostar CLI."""
-    parser = argparse.ArgumentParser(
-        description="High-velocity environment scaffolding."
-    )
+def handle_init(args: argparse.Namespace) -> None:
+    """Handles the 'init' subcommand to scaffold environments.
 
-    # Language flags
-    parser.add_argument(
-        "--python", action="store_true", help="Scaffold a Python (uv) environment"
-    )
-    parser.add_argument(
-        "--rust", action="store_true", help="Scaffold a Rust (cargo) environment"
-    )
-    parser.add_argument(
-        "--node", action="store_true", help="Scaffold a Node.js environment"
-    )
-    parser.add_argument(
-        "--cpp", action="store_true", help="Scaffold a C/C++ environment footprint"
-    )
-    parser.add_argument(
-        "--latex", action="store_true", help="Scaffold a LaTeX environment footprint"
-    )
-
-    # Presets
-    parser.add_argument(
-        "--scientific",
-        action="store_true",
-        help="Inject scientific computing dependencies (Python)",
-    )
-
-    args = parser.parse_args()
-
+    Dynamically constructs the environment manifest by mapping user flags
+    to the respective language, OS, and IDE bootstrap modules.
+    """
     config = ProtostarConfig.load()
     modules: list[BootstrapModule] = []
 
@@ -121,7 +95,7 @@ def main() -> None:
         console.print(
             "[yellow]Please specify at least one language flag (e.g., --python, --rust).[/yellow]"
         )
-        console.print("Run [bold cyan]protostar --help[/bold cyan] for options.")
+        console.print("Run [bold cyan]protostar init --help[/bold cyan] for options.")
         sys.exit(1)
 
     # 3. IDE Layer
@@ -131,6 +105,70 @@ def main() -> None:
     # Execute
     engine = Orchestrator(modules)
     engine.run()
+
+
+def handle_generate(args: argparse.Namespace) -> None:
+    """Handles the 'generate' subcommand for post-setup file scaffolding."""
+    # Future routing for boilerplate generation will go here.
+    console.print(
+        "[yellow]Generate command is not yet implemented. Stay tuned.[/yellow]"
+    )
+
+
+def main() -> None:
+    """Main entry point for the Protostar CLI."""
+    parser = argparse.ArgumentParser(
+        description="High-velocity environment scaffolding."
+    )
+
+    subparsers = parser.add_subparsers(
+        dest="command", required=True, title="Subcommands"
+    )
+
+    # --- Init Subparser ---
+    init_parser = subparsers.add_parser(
+        "init",
+        help="Initialize a new environment and aggregate manifest configurations.",
+        description="Scaffolds base configurations, dependencies, and environment files.",
+    )
+
+    # Language flags
+    init_parser.add_argument(
+        "--python", action="store_true", help="Scaffold a Python (uv) environment"
+    )
+    init_parser.add_argument(
+        "--rust", action="store_true", help="Scaffold a Rust (cargo) environment"
+    )
+    init_parser.add_argument(
+        "--node", action="store_true", help="Scaffold a Node.js environment"
+    )
+    init_parser.add_argument(
+        "--cpp", action="store_true", help="Scaffold a C/C++ environment footprint"
+    )
+    init_parser.add_argument(
+        "--latex", action="store_true", help="Scaffold a LaTeX environment footprint"
+    )
+
+    # Presets
+    init_parser.add_argument(
+        "--scientific",
+        action="store_true",
+        help="Inject scientific computing dependencies (Python)",
+    )
+
+    init_parser.set_defaults(func=handle_init)
+
+    # --- Generate Subparser ---
+    generate_parser = subparsers.add_parser(
+        "generate",
+        help="Generate boilerplate files and project scaffolding.",
+        description="Generates boilerplate code or files based on the configured environment.",
+    )
+    generate_parser.set_defaults(func=handle_generate)
+
+    # Dynamic dispatch based on the invoked subparser
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":
