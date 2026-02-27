@@ -159,6 +159,32 @@ def handle_generate(args: argparse.Namespace) -> None:
         except FileExistsError as e:
             console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
 
+    elif args.target == "pio":
+        from .modules.lang_layer import generate_pio
+
+        if not args.name:
+            console.print(
+                "[bold red]Generation Aborted:[/bold red] A board target is required "
+                "(e.g., `proto generate pio pico`)."
+            )
+            return
+
+        try:
+            out_path = generate_pio(args.name)
+            console.print(f"[bold green]Generated:[/bold green] {out_path}")
+        except (FileExistsError, ValueError) as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
+    elif args.target == "circuitpython":
+        from .modules.lang_layer import generate_circuitpython
+
+        try:
+            out_paths = generate_circuitpython()
+            for path in out_paths:
+                console.print(f"[bold green]Generated:[/bold green] {path}")
+        except FileExistsError as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
     else:
         console.print(
             f"[red]Generator target '{args.target}' is not yet implemented.[/red]"
@@ -255,9 +281,10 @@ def main() -> None:
         formatter_class=ProtoHelpFormatter,
     )
 
+    # Expand the target choices to include embedded targets
     generate_parser.add_argument(
         "target",
-        choices=["tex", "cpp-class", "cmake"],
+        choices=["tex", "cpp-class", "cmake", "pio", "circuitpython"],
         help="The boilerplate target to evaluate and generate.",
     )
     generate_parser.add_argument(

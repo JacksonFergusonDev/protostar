@@ -340,3 +340,115 @@ add_executable(${{PROJECT_NAME}} {source_list})
 
     target_path.write_text(cmake_content)
     return target_path
+
+
+def generate_circuitpython() -> list[Path]:
+    """Generates a CircuitPython boilerplate with a non-blocking state machine.
+
+    Outputs a `code.py` containing a standard delta-time execution loop
+    suitable for embedded sensors or controllers, alongside a `.pyrightconfig.json`
+    to suppress false-positive LSP errors for hardware-specific modules.
+
+    Returns:
+        list[Path]: Paths to the generated files.
+
+    Raises:
+        FileExistsError: If `code.py` already exists in the current directory.
+    """
+    code_path = Path("code.py")
+    if code_path.exists():
+        raise FileExistsError("code.py already exists in this directory.")
+
+    code_content = """import time
+import board
+import digitalio
+
+# Initialize hardware peripherals here
+# led = digitalio.DigitalInOut(board.LED)
+# led.direction = digitalio.Direction.OUTPUT
+
+def main():
+    \"\"\"Main execution loop utilizing a non-blocking delta-time architecture.\"\"\"
+    last_tick = time.monotonic()
+    interval = 1.0  # State execution interval in seconds
+
+    while True:
+        current_time = time.monotonic()
+        
+        # Non-blocking state machine condition
+        if current_time - last_tick >= interval:
+            # Execute periodic hardware state updates or telemetry acquisitions
+            # led.value = not led.value
+            
+            last_tick = current_time
+            
+        # Yield briefly to allow background system tasks (USB/BLE) to process
+        time.sleep(0.01)
+
+if __name__ == "__main__":
+    main()
+"""
+    code_path.write_text(code_content)
+
+    generated_files = [code_path]
+
+    pyright_path = Path(".pyrightconfig.json")
+    if not pyright_path.exists():
+        pyright_content = """{
+    "reportMissingImports": false,
+    "reportMissingModuleSource": false
+}
+"""
+        pyright_path.write_text(pyright_content)
+        generated_files.append(pyright_path)
+
+    return generated_files
+
+
+def generate_pio(board_target: str) -> Path:
+    """Generates a standard PlatformIO environment configuration.
+
+    Infers the underlying hardware platform based on common board prefixes
+    to accelerate the environment bootstrap.
+
+    Args:
+        board_target (str): The PlatformIO board identifier (e.g., 'pico', 'esp32dev').
+
+    Returns:
+        Path: The path to the generated platformio.ini file.
+
+    Raises:
+        FileExistsError: If a platformio.ini already exists.
+        ValueError: If no board target is specified.
+    """
+    if not board_target:
+        raise ValueError(
+            "A board target must be specified (e.g., `proto generate pio esp32dev`)."
+        )
+
+    target_path = Path("platformio.ini")
+    if target_path.exists():
+        raise FileExistsError("platformio.ini already exists in this directory.")
+
+    # Infer architecture platform from the board identifier
+    platform = "atmelavr"
+    if "esp32" in board_target.lower():
+        platform = "espressif32"
+    elif "pico" in board_target.lower() or "rp2040" in board_target.lower():
+        platform = "raspberrypi"
+
+    ini_content = f"""; PlatformIO Project Configuration File
+;
+;   Build options: build flags, source filter
+;   Upload options: custom upload port, speed and extra flags
+;   Library options: dependencies, extra library storages
+;   Advanced options: extra scripting
+
+[env:{board_target}]
+platform = {platform}
+board = {board_target}
+framework = arduino
+monitor_speed = 115200
+"""
+    target_path.write_text(ini_content)
+    return target_path
