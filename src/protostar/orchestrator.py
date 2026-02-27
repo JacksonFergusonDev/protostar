@@ -39,6 +39,7 @@ class Orchestrator:
 
             # Phase 3: System Execution
             self._execute_tasks()
+            self._create_directories()
             self._write_ignores()
             self._write_ide_settings()
             self._install_dependencies()
@@ -50,6 +51,16 @@ class Orchestrator:
         except Exception as e:
             console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
             logger.debug("Stack trace:", exc_info=True)
+
+    def _create_directories(self) -> None:
+        """Scaffolds all queued directories in the local workspace."""
+        if not self.manifest.directories:
+            return
+
+        for dir_path in self.manifest.directories:
+            path = Path(dir_path)
+            path.mkdir(parents=True, exist_ok=True)
+            logger.debug(f"Scaffolded directory: {path}")
 
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""

@@ -66,10 +66,19 @@ def handle_init(args: argparse.Namespace) -> None:
             original_build = python_mod.build
 
             def hooked_build(manifest: "EnvironmentManifest") -> None:
-                """Appends core Python settings and scientific dependencies."""
+                """Appends core Python settings, scientific dependencies, and pipeline directories."""
                 original_build(manifest)
+
                 for pkg in SCIENTIFIC_PACKAGES:
                     manifest.add_dependency(pkg)
+
+                # Scaffold standard data analysis pipeline directories
+                for directory in ["data", "notebooks", "src"]:
+                    manifest.add_directory(directory)
+
+                # Ignore large or binary data files common in analysis pipelines
+                for artifact in ["*.csv", "*.parquet", "*.nc"]:
+                    manifest.add_vcs_ignore(artifact)
 
             python_mod.build = hooked_build  # type: ignore
 
@@ -110,10 +119,76 @@ def handle_init(args: argparse.Namespace) -> None:
 
 def handle_generate(args: argparse.Namespace) -> None:
     """Handles the 'generate' subcommand for post-setup file scaffolding."""
-    # Future routing for boilerplate generation will go here.
-    console.print(
-        "[yellow]Generate command is not yet implemented. Stay tuned.[/yellow]"
-    )
+    config = ProtostarConfig.load()
+
+    if args.target == "tex":
+        from .modules.lang_layer import generate_latex_boilerplate
+
+        filename = args.name or "main.tex"
+        preset = config.presets.get("latex", "minimal")
+
+        try:
+            out_path = generate_latex_boilerplate(filename, preset)
+            console.print(f"[bold green]Generated:[/bold green] {out_path}")
+        except FileExistsError as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+    elif args.target == "cpp-class":
+        from .modules.lang_layer import generate_cpp_class
+
+        if not args.name:
+            console.print(
+                "[bold red]Generation Aborted:[/bold red] A class name is required "
+                "(e.g., `proto generate cpp-class DataIngestor`)."
+            )
+            return
+
+        try:
+            out_paths = generate_cpp_class(args.name)
+            for path in out_paths:
+                console.print(f"[bold green]Generated:[/bold green] {path}")
+        except (FileExistsError, ValueError) as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
+    elif args.target == "cmake":
+        from .modules.lang_layer import generate_cmake
+
+        project_name = args.name or "ProtostarApp"
+        try:
+            out_path = generate_cmake(project_name)
+            console.print(f"[bold green]Generated:[/bold green] {out_path}")
+        except FileExistsError as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
+    elif args.target == "pio":
+        from .modules.lang_layer import generate_pio
+
+        if not args.name:
+            console.print(
+                "[bold red]Generation Aborted:[/bold red] A board target is required "
+                "(e.g., `proto generate pio pico`)."
+            )
+            return
+
+        try:
+            out_path = generate_pio(args.name)
+            console.print(f"[bold green]Generated:[/bold green] {out_path}")
+        except (FileExistsError, ValueError) as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
+    elif args.target == "circuitpython":
+        from .modules.lang_layer import generate_circuitpython
+
+        try:
+            out_paths = generate_circuitpython()
+            for path in out_paths:
+                console.print(f"[bold green]Generated:[/bold green] {path}")
+        except FileExistsError as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
+    else:
+        console.print(
+            f"[red]Generator target '{args.target}' is not yet implemented.[/red]"
+        )
 
 
 def handle_config(args: argparse.Namespace) -> None:
@@ -205,6 +280,19 @@ def main() -> None:
         description="Generates boilerplate code or files based on the configured environment.",
         formatter_class=ProtoHelpFormatter,
     )
+
+    # Expand the target choices to include embedded targets
+    generate_parser.add_argument(
+        "target",
+        choices=["tex", "cpp-class", "cmake", "pio", "circuitpython"],
+        help="The boilerplate target to evaluate and generate.",
+    )
+    generate_parser.add_argument(
+        "name",
+        nargs="?",
+        help="The primary identifier or filename for the output.",
+    )
+
     generate_parser.set_defaults(func=handle_generate)
 
     # --- Config Subparser ---

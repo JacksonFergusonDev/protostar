@@ -50,3 +50,19 @@ def test_add_dependency_deduplication(manifest):
 
     assert len(manifest.dependencies) == 2
     assert manifest.dependencies == ["numpy", "pandas"]
+
+
+def test_manifest_directories_initialization(manifest):
+    """Test that the manifest initializes the directories set."""
+    assert isinstance(manifest.directories, set)
+
+
+def test_add_directory(manifest):
+    """Test that directories are correctly queued and deduplicated."""
+    manifest.add_directory("data")
+    manifest.add_directory("data")  # Should not duplicate
+    manifest.add_directory("src")
+
+    assert len(manifest.directories) == 2
+    assert "data" in manifest.directories
+    assert "src" in manifest.directories
