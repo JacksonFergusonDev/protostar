@@ -1,7 +1,6 @@
 import argparse
 import sys
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
 
 from rich.console import Console
 
@@ -19,10 +18,13 @@ from .modules import (
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
-from .presets.scientific import SCIENTIFIC_PACKAGES
-
-if TYPE_CHECKING:
-    from .manifest import EnvironmentManifest
+from .presets import (
+    AstroPreset,
+    DspPreset,
+    EmbeddedPreset,
+    PresetModule,
+    ScientificPreset,
+)
 
 console = Console()
 
@@ -48,10 +50,11 @@ def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments.
 
     Dynamically constructs the environment manifest by mapping user flags
-    to the respective language, OS, and IDE bootstrap modules.
+    to the respective language, OS, IDE, and preset modules.
     """
     config = ProtostarConfig.load()
     modules: list[BootstrapModule] = []
+    presets: list[PresetModule] = []
 
     # 1. Base OS Layer
     modules.append(get_os_module())
@@ -59,30 +62,7 @@ def handle_init(args: argparse.Namespace) -> None:
     # 2. Language Layers
     has_language = False
     if args.python:
-        python_mod = PythonModule()
-        if args.scientific:
-            # We intercept the build phase slightly to inject the preset
-            # without requiring a dedicated preset module class.
-            original_build = python_mod.build
-
-            def hooked_build(manifest: "EnvironmentManifest") -> None:
-                """Appends core Python settings, scientific dependencies, and pipeline directories."""
-                original_build(manifest)
-
-                for pkg in SCIENTIFIC_PACKAGES:
-                    manifest.add_dependency(pkg)
-
-                # Scaffold standard data analysis pipeline directories
-                for directory in ["data", "notebooks", "src"]:
-                    manifest.add_directory(directory)
-
-                # Ignore large or binary data files common in analysis pipelines
-                for artifact in ["*.csv", "*.parquet", "*.nc"]:
-                    manifest.add_vcs_ignore(artifact)
-
-            python_mod.build = hooked_build  # type: ignore
-
-        modules.append(python_mod)
+        modules.append(PythonModule())
         has_language = True
 
     if args.rust:
@@ -108,12 +88,25 @@ def handle_init(args: argparse.Namespace) -> None:
         console.print("Run [bold cyan]protostar init --help[/bold cyan] for options.")
         sys.exit(1)
 
-    # 3. IDE Layer
+    # 3. Preset Layers
+    if args.scientific:
+        presets.append(ScientificPreset())
+
+    if args.astro:
+        presets.append(AstroPreset())
+
+    if args.dsp:
+        presets.append(DspPreset())
+
+    if args.embedded:
+        presets.append(EmbeddedPreset())
+
+    # 4. IDE Layer
     if ide_mod := get_ide_module(config.ide):
         modules.append(ide_mod)
 
     # Execute
-    engine = Orchestrator(modules)
+    engine = Orchestrator(modules, presets, docker=args.docker)
     engine.run()
 
 
@@ -268,7 +261,33 @@ def main() -> None:
         "-s",
         "--scientific",
         action="store_true",
-        help="Inject scientific computing dependencies (Python)",
+        help="Inject scientific computing dependencies",
+    )
+    preset_group.add_argument(
+        "-a",
+        "--astro",
+        action="store_true",
+        help="Inject astrophysics and observational data dependencies",
+    )
+    preset_group.add_argument(
+        "-d",
+        "--dsp",
+        action="store_true",
+        help="Inject digital signal processing and audio analysis tools",
+    )
+    preset_group.add_argument(
+        "-e",
+        "--embedded",
+        action="store_true",
+        help="Inject host-side embedded hardware interface tools",
+    )
+
+    # Conceptual grouping for context artifacts
+    context_group = init_parser.add_argument_group("Context Scaffolding")
+    context_group.add_argument(
+        "--docker",
+        action="store_true",
+        help="Generate a .dockerignore based on the environment footprint",
     )
 
     init_parser.set_defaults(func=handle_init)

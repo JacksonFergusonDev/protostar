@@ -6,6 +6,7 @@ from rich.console import Console
 
 from .manifest import EnvironmentManifest
 from .modules import BootstrapModule
+from .presets.base import PresetModule
 from .system import run_quiet
 
 logger = logging.getLogger("protostar")
@@ -15,13 +16,22 @@ console = Console()
 class Orchestrator:
     """Manages the lifecycle of the environment scaffolding process."""
 
-    def __init__(self, modules: list[BootstrapModule]):
-        """Initializes the orchestrator with the requested modules.
+    def __init__(
+        self,
+        modules: list[BootstrapModule],
+        presets: list[PresetModule] | None = None,
+        docker: bool = False,
+    ):
+        """Initializes the orchestrator with the requested modules and presets.
 
         Args:
             modules (list[BootstrapModule]): The initialized stack layers.
+            presets (list[PresetModule] | None, optional): Domain-specific presets.
+            docker (bool, optional): Whether to scaffold Docker context exclusions.
         """
         self.modules = modules
+        self.presets = presets or []
+        self.docker = docker
         self.manifest = EnvironmentManifest()
 
     def run(self) -> None:
@@ -37,10 +47,15 @@ class Orchestrator:
             for mod in self.modules:
                 mod.build(self.manifest)
 
+            for preset in self.presets:
+                logger.debug(f"Building {preset.name} preset.")
+                preset.build(self.manifest)
+
             # Phase 3: System Execution
             self._execute_tasks()
             self._create_directories()
             self._write_ignores()
+            self._write_docker_artifacts()
             self._write_ide_settings()
             self._install_dependencies()
 
@@ -90,6 +105,34 @@ class Orchestrator:
                 )
                 f.write(prefix + "\n".join(missing) + "\n")
             logger.debug(f"Appended {len(missing)} items to .gitignore")
+
+    def _write_docker_artifacts(self) -> None:
+        """Generates a .dockerignore to optimize container build contexts."""
+        if not self.docker:
+            return
+
+        dockerignore = Path(".dockerignore")
+        existing_content = ""
+
+        if dockerignore.exists():
+            existing_content = dockerignore.read_text()
+
+        # Combine manifest ignores with standard daemon context bloat exclusions
+        base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
+        combined_ignores = self.manifest.vcs_ignores | base_ignores
+
+        missing = [p for p in combined_ignores if p not in existing_content]
+
+        if missing:
+            with dockerignore.open("a") as f:
+                prefix = (
+                    "\n"
+                    if existing_content and not existing_content.endswith("\n")
+                    else ""
+                )
+                # Sort for clean diffs and readability
+                f.write(prefix + "\n".join(sorted(missing)) + "\n")
+            logger.debug(f"Appended {len(missing)} items to .dockerignore")
 
     def _write_ide_settings(self) -> None:
         """Writes the aggregated IDE configuration to the appropriate local files."""
