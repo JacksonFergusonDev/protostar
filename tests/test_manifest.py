@@ -1,19 +1,30 @@
 def test_manifest_initialization(manifest):
     """Test that the manifest initializes with empty, correct data structures."""
-    assert isinstance(manifest.ignored_paths, set)
+    assert isinstance(manifest.vcs_ignores, set)
+    assert isinstance(manifest.workspace_hides, set)
     assert isinstance(manifest.ide_settings, dict)
     assert isinstance(manifest.dependencies, list)
     assert isinstance(manifest.system_tasks, list)
 
 
-def test_add_ignore(manifest):
-    """Test that ignore patterns are correctly added and deduplicated."""
-    manifest.add_ignore(".DS_Store")
-    manifest.add_ignore(".DS_Store")  # Should not duplicate
-    manifest.add_ignore("node_modules/")
+def test_add_vcs_ignore(manifest):
+    """Test that VCS ignore patterns are correctly added and deduplicated."""
+    manifest.add_vcs_ignore(".DS_Store")
+    manifest.add_vcs_ignore(".DS_Store")  # Should not duplicate
+    manifest.add_vcs_ignore("node_modules/")
 
-    assert len(manifest.ignored_paths) == 2
-    assert ".DS_Store" in manifest.ignored_paths
+    assert len(manifest.vcs_ignores) == 2
+    assert ".DS_Store" in manifest.vcs_ignores
+
+
+def test_add_workspace_hide(manifest):
+    """Test that workspace hides are correctly added and deduplicated."""
+    manifest.add_workspace_hide(".venv/")
+    manifest.add_workspace_hide(".venv/")  # Should not duplicate
+    manifest.add_workspace_hide("build/")
+
+    assert len(manifest.workspace_hides) == 2
+    assert ".venv/" in manifest.workspace_hides
 
 
 def test_add_ide_setting(manifest):

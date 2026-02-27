@@ -15,7 +15,7 @@ class DummyModule(BootstrapModule):
         self.pre_flight_called = True
 
     def build(self, manifest):
-        manifest.add_ignore("dummy_file.txt")
+        manifest.add_vcs_ignore("dummy_file.txt")
         manifest.add_system_task(["echo", "dummy"])
         manifest.add_dependency("dummy-pkg")
 
@@ -32,7 +32,7 @@ def test_orchestrator_lifecycle(mocker):
     orchestrator.run()
 
     assert dummy_mod.pre_flight_called is True
-    assert "dummy_file.txt" in orchestrator.manifest.ignored_paths
+    assert "dummy_file.txt" in orchestrator.manifest.vcs_ignores
 
     # Verify tasks and dependencies were executed
     mock_run_quiet.assert_any_call(["echo", "dummy"], "Executing echo")
@@ -45,7 +45,7 @@ def test_orchestrator_writes_gitignore(mocker):
     """Test that .gitignore is safely updated without duplicating existing lines."""
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
-    orchestrator.manifest.add_ignore("new_ignore.txt")
+    orchestrator.manifest.add_vcs_ignore("new_ignore.txt")
 
     # Patch Path methods directly to avoid Path division (__truediv__) mock issues
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)

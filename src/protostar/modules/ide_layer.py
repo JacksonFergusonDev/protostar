@@ -17,15 +17,11 @@ class VSCodeModule(BootstrapModule):
         return "VS Code"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Maps manifest ignores to VS Code exclusion rules."""
+        """Maps manifest workspace hides to VS Code exclusion rules."""
         logger.debug("Building VS Code IDE layer.")
 
-        # We don't hardcode python.defaultInterpreterPath here anymore.
-        # Instead, we pull the aggregated ignores from the manifest and
-        # map them to VS Code's files.exclude format.
-
         exclusions = {}
-        for pattern in manifest.ignored_paths:
+        for pattern in manifest.workspace_hides:
             # Strip trailing slashes for standard VS Code globbing
             clean_pattern = pattern.rstrip("/")
             exclusions[f"**/{clean_pattern}"] = True
@@ -43,6 +39,7 @@ class JetBrainsModule(BootstrapModule):
         return "JetBrains"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends the .idea/ directory to the global ignore list."""
+        """Appends the .idea/ directory to the global ignore and hide lists."""
         logger.debug("Building JetBrains IDE layer.")
-        manifest.add_ignore(".idea/")
+        manifest.add_vcs_ignore(".idea/")
+        manifest.add_workspace_hide(".idea/")
