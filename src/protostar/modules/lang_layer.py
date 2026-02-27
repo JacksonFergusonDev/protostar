@@ -1,7 +1,7 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -12,26 +12,44 @@ logger = logging.getLogger("protostar")
 
 
 class PythonModule(BootstrapModule):
-    """Configures a modern Python environment using uv."""
+    """Configures a modern Python environment using uv or pip."""
 
-    cli_flags = ("-p", "--python")
-    cli_help = "Scaffold a Python (uv) environment"
+    cli_flags: ClassVar[tuple[str, ...]] = ("-p", "--python")
+    cli_help: ClassVar[str] = "Scaffold a Python environment"
+
+    def __init__(self, package_manager: str | None = None):
+        self._package_manager = package_manager
+
+    @property
+    def package_manager(self) -> str:
+        """Lazily evaluates the requested package manager from global config."""
+        if self._package_manager is None:
+            from protostar.config import ProtostarConfig
+
+            self._package_manager = ProtostarConfig.load().python_package_manager
+        return self._package_manager
 
     @property
     def name(self) -> str:
-        return "Python"
+        return f"Python ({self.package_manager})"
 
     def pre_flight(self) -> None:
-        """Ensures 'uv' is installed and accessible."""
-        if not shutil.which("uv"):
+        """Ensures the selected package manager is available."""
+        if self.package_manager == "uv" and not shutil.which("uv"):
             raise RuntimeError(
                 "Missing dependency: 'uv' is required for Python scaffolding. "
                 "Install it via `curl -LsSf https://astral.sh/uv/install.sh | sh`."
             )
+        elif self.package_manager == "pip" and not (
+            shutil.which("python3") or shutil.which("python")
+        ):
+            raise RuntimeError(
+                "Missing dependency: 'python' is required for pip scaffolding."
+            )
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Queues uv initialization and ignores virtual environment artifacts."""
-        logger.debug("Building Python language layer.")
+        """Queues initialization and ignores virtual environment artifacts."""
+        logger.debug(f"Building Python language layer using {self.package_manager}.")
 
         artifacts = [
             ".venv/",
@@ -44,15 +62,22 @@ class PythonModule(BootstrapModule):
             manifest.add_vcs_ignore(artifact)
             manifest.add_workspace_hide(artifact)
 
-        if not Path("pyproject.toml").exists():
-            manifest.add_system_task(["uv", "init", "--no-workspace"])
+        if self.package_manager == "uv":
+            if not Path("pyproject.toml").exists():
+                manifest.add_system_task(["uv", "init", "--no-workspace"])
+        elif self.package_manager == "pip":
+            if not Path(".venv").exists():
+                # Explicitly invoke the POSIX python3 executable
+                manifest.add_system_task(["python3", "-m", "venv", ".venv"])
+            if not Path("requirements.txt").exists():
+                Path("requirements.txt").touch()
 
 
 class RustModule(BootstrapModule):
     """Configures a Rust environment using Cargo."""
 
-    cli_flags = ("-r", "--rust")
-    cli_help = "Scaffold a Rust (cargo) environment"
+    cli_flags: ClassVar[tuple[str, ...]] = ("-r", "--rust")
+    cli_help: ClassVar[str] = "Scaffold a Rust (cargo) environment"
 
     @property
     def name(self) -> str:
@@ -79,8 +104,8 @@ class RustModule(BootstrapModule):
 class NodeModule(BootstrapModule):
     """Configures a Node.js/TypeScript environment."""
 
-    cli_flags = ("-n", "--node")
-    cli_help = "Scaffold a Node.js environment"
+    cli_flags: ClassVar[tuple[str, ...]] = ("-n", "--node")
+    cli_help: ClassVar[str] = "Scaffold a Node.js environment"
 
     def __init__(self, package_manager: str | None = None):
         self._package_manager = package_manager
@@ -125,8 +150,8 @@ class NodeModule(BootstrapModule):
 class CppModule(BootstrapModule):
     """Configures a C/C++ environment footprint."""
 
-    cli_flags = ("-c", "--cpp")
-    cli_help = "Scaffold a C/C++ environment footprint"
+    cli_flags: ClassVar[tuple[str, ...]] = ("-c", "--cpp")
+    cli_help: ClassVar[str] = "Scaffold a C/C++ environment footprint"
 
     @property
     def name(self) -> str:
@@ -145,8 +170,8 @@ class CppModule(BootstrapModule):
 class LatexModule(BootstrapModule):
     """Configures a LaTeX environment footprint."""
 
-    cli_flags = ("-l", "--latex")
-    cli_help = "Scaffold a LaTeX environment footprint"
+    cli_flags: ClassVar[tuple[str, ...]] = ("-l", "--latex")
+    cli_help: ClassVar[str] = "Scaffold a LaTeX environment footprint"
 
     @property
     def name(self) -> str:

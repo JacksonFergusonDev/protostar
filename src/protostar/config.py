@@ -18,6 +18,9 @@ DEFAULT_CONFIG_CONTENT = """[env]
 # Preferred IDE: 'vscode', 'cursor', 'jetbrains', or 'none'
 ide = "vscode"
 
+# Preferred Python package manager: 'uv' or 'pip'
+python_package_manager = "uv"
+
 # Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
 node_package_manager = "npm"
 
@@ -33,11 +36,13 @@ class ProtostarConfig:
 
     Attributes:
         ide (str): The preferred IDE (e.g., 'vscode', 'jetbrains', 'cursor', 'none').
+        python_package_manager (str): The preferred Python manager ('uv', 'pip').
         node_package_manager (str): The preferred JS manager ('npm', 'pnpm', 'yarn').
         presets (dict[str, str]): Generation presets mapped by language/framework.
     """
 
     ide: str = "vscode"
+    python_package_manager: str = "uv"
     node_package_manager: str = "npm"
     presets: dict[str, str] = field(default_factory=dict)
 
@@ -65,15 +70,7 @@ class ProtostarConfig:
     def _parse_and_merge(
         cls, path: Path, instance: "ProtostarConfig"
     ) -> "ProtostarConfig":
-        """Helper to parse a TOML file and merge its values into a config instance.
-
-        Args:
-            path (Path): The filepath of the TOML configuration to read.
-            instance (ProtostarConfig): The current configuration state to update.
-
-        Returns:
-            ProtostarConfig: A newly immutable dataclass instance with applied updates.
-        """
+        """Helper to parse a TOML file and merge its values into a config instance."""
         try:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
@@ -84,12 +81,14 @@ class ProtostarConfig:
                 env_data = data["env"]
                 if "ide" in env_data:
                     updates["ide"] = env_data["ide"]
+                if "python_package_manager" in env_data:
+                    updates["python_package_manager"] = env_data[
+                        "python_package_manager"
+                    ]
                 if "node_package_manager" in env_data:
                     updates["node_package_manager"] = env_data["node_package_manager"]
 
             if "presets" in data:
-                # Merge existing presets with new overrides to prevent clobbering
-                # unrelated keys during the global -> local cascade.
                 merged_presets = dict(instance.presets)
                 merged_presets.update(data["presets"])
                 updates["presets"] = merged_presets
