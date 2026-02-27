@@ -17,7 +17,7 @@ class PythonModule(BootstrapModule):
     cli_flags: ClassVar[tuple[str, ...]] = ("-p", "--python")
     cli_help: ClassVar[str] = "Scaffold a Python environment"
 
-    def __init__(self, package_manager: str | None = None):
+    def __init__(self, package_manager: str | None = None) -> None:
         self._package_manager = package_manager
 
     @property
@@ -105,7 +105,7 @@ class NodeModule(BootstrapModule):
     cli_flags: ClassVar[tuple[str, ...]] = ("-n", "--node")
     cli_help: ClassVar[str] = "Scaffold a Node.js environment"
 
-    def __init__(self, package_manager: str | None = None):
+    def __init__(self, package_manager: str | None = None) -> None:
         self._package_manager = package_manager
 
     @property

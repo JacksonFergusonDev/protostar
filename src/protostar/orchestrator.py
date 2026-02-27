@@ -23,7 +23,7 @@ class Orchestrator:
         modules: list[BootstrapModule],
         presets: list[PresetModule] | None = None,
         docker: bool = False,
-    ):
+    ) -> None:
         """Initializes the orchestrator with the requested modules and presets.
 
         Args:
