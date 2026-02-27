@@ -4,6 +4,8 @@ from collections.abc import Iterable
 
 from rich.console import Console
 
+from protostar.generators import GENERATOR_REGISTRY
+
 from .config import ProtostarConfig
 from .modules import (
     BootstrapModule,
@@ -111,77 +113,25 @@ def handle_init(args: argparse.Namespace) -> None:
 
 
 def handle_generate(args: argparse.Namespace) -> None:
-    """Handles the 'generate' subcommand for post-setup file scaffolding."""
+    """Handles the 'generate' subcommand for post-setup file scaffolding.
+
+    Dynamically routes the execution to the corresponding TargetGenerator.
+    """
     config = ProtostarConfig.load()
 
-    if args.target == "tex":
-        from .modules.lang_layer import generate_latex_boilerplate
-
-        filename = args.name or "main.tex"
-        preset = config.presets.get("latex", "minimal")
-
-        try:
-            out_path = generate_latex_boilerplate(filename, preset)
-            console.print(f"[bold green]Generated:[/bold green] {out_path}")
-        except FileExistsError as e:
-            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
-    elif args.target == "cpp-class":
-        from .modules.lang_layer import generate_cpp_class
-
-        if not args.name:
-            console.print(
-                "[bold red]Generation Aborted:[/bold red] A class name is required "
-                "(e.g., `proto generate cpp-class DataIngestor`)."
-            )
-            return
-
-        try:
-            out_paths = generate_cpp_class(args.name)
-            for path in out_paths:
-                console.print(f"[bold green]Generated:[/bold green] {path}")
-        except (FileExistsError, ValueError) as e:
-            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
-
-    elif args.target == "cmake":
-        from .modules.lang_layer import generate_cmake
-
-        project_name = args.name or "ProtostarApp"
-        try:
-            out_path = generate_cmake(project_name)
-            console.print(f"[bold green]Generated:[/bold green] {out_path}")
-        except FileExistsError as e:
-            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
-
-    elif args.target == "pio":
-        from .modules.lang_layer import generate_pio
-
-        if not args.name:
-            console.print(
-                "[bold red]Generation Aborted:[/bold red] A board target is required "
-                "(e.g., `proto generate pio pico`)."
-            )
-            return
-
-        try:
-            out_path = generate_pio(args.name)
-            console.print(f"[bold green]Generated:[/bold green] {out_path}")
-        except (FileExistsError, ValueError) as e:
-            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
-
-    elif args.target == "circuitpython":
-        from .modules.lang_layer import generate_circuitpython
-
-        try:
-            out_paths = generate_circuitpython()
-            for path in out_paths:
-                console.print(f"[bold green]Generated:[/bold green] {path}")
-        except FileExistsError as e:
-            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
-
-    else:
+    generator = GENERATOR_REGISTRY.get(args.target)
+    if not generator:
         console.print(
-            f"[red]Generator target '{args.target}' is not yet implemented.[/red]"
+            f"[bold red]Generation Aborted:[/bold red] Unknown target '{args.target}'."
         )
+        return
+
+    try:
+        out_paths = generator.execute(args.name, config)
+        for path in out_paths:
+            console.print(f"[bold green]Generated:[/bold green] {path}")
+    except (FileExistsError, ValueError) as e:
+        console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
 
 
 def handle_config(args: argparse.Namespace) -> None:
@@ -300,10 +250,10 @@ def main() -> None:
         formatter_class=ProtoHelpFormatter,
     )
 
-    # Expand the target choices to include embedded targets
+    # Expand the target choices dynamically using the registry keys
     generate_parser.add_argument(
         "target",
-        choices=["tex", "cpp-class", "cmake", "pio", "circuitpython"],
+        choices=list(GENERATOR_REGISTRY.keys()),
         help="The boilerplate target to evaluate and generate.",
     )
     generate_parser.add_argument(
