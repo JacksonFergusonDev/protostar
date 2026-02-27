@@ -31,6 +31,7 @@ class PythonModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name, including the package manager."""
         return f"Python ({self.package_manager})"
 
     def pre_flight(self) -> None:
@@ -81,6 +82,7 @@ class RustModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "Rust"
 
     def pre_flight(self) -> None:
@@ -121,6 +123,7 @@ class NodeModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name, including the package manager."""
         return f"Node ({self.package_manager})"
 
     def pre_flight(self) -> None:
@@ -155,6 +158,7 @@ class CppModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "C/C++"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
@@ -175,6 +179,7 @@ class LatexModule(BootstrapModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable module name."""
         return "LaTeX"
 
     def build(self, manifest: "EnvironmentManifest") -> None:

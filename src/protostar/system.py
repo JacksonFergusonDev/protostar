@@ -8,14 +8,11 @@ console = Console()
 
 
 def run_quiet(cmd: list[str], description: str) -> None:
-    """Executes a subprocess silently, displaying a rich spinner to the user.
-
-    If the command fails, the raw stderr is dumped to the logger and an
-    exception is raised to halt the accretion process.
+    """Executes a subprocess silently, displaying a Rich spinner to the user.
 
     Args:
-        cmd (list[str]): The command and its arguments.
-        description (str): The human-readable string to display in the spinner.
+        cmd: The command and its arguments as a list of strings.
+        description: The human-readable label to display in the spinner.
 
     Raises:
         RuntimeError: If the subprocess returns a non-zero exit code.

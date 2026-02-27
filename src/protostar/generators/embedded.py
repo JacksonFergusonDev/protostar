@@ -13,9 +13,23 @@ class CircuitPythonGenerator(TargetGenerator):
 
     @property
     def target_name(self) -> str:
+        """Returns the generator's target name."""
         return "circuitpython"
 
     def execute(self, identifier: str | None, config: ProtostarConfig) -> list[Path]:
+        """Generates a CircuitPython code.py with a non-blocking state machine.
+
+        Args:
+            identifier: Unused; accepted for interface conformance.
+            config: The active Protostar configuration.
+
+        Returns:
+            A list of created paths, including code.py and optionally
+            .pyrightconfig.json.
+
+        Raises:
+            FileExistsError: If code.py already exists.
+        """
         code_path = Path("code.py")
         if code_path.exists():
             raise FileExistsError("code.py already exists in this directory.")
@@ -66,9 +80,23 @@ class PlatformIOGenerator(TargetGenerator):
 
     @property
     def target_name(self) -> str:
+        """Returns the generator's target name."""
         return "pio"
 
     def execute(self, identifier: str | None, config: ProtostarConfig) -> list[Path]:
+        """Generates a platformio.ini for the specified board target.
+
+        Args:
+            identifier: The PlatformIO board ID (e.g., 'esp32dev', 'pico').
+            config: The active Protostar configuration.
+
+        Returns:
+            A list containing the created platformio.ini path.
+
+        Raises:
+            ValueError: If no board identifier is provided.
+            FileExistsError: If platformio.ini already exists.
+        """
         if not identifier:
             raise ValueError(
                 "A board target must be specified (e.g., `proto generate pio esp32dev`)."

@@ -19,6 +19,7 @@ class DspPreset(PresetModule):
 
     @property
     def name(self) -> str:
+        """Returns the human-readable preset name."""
         return "Digital Signal Processing"
 
     def build(self, manifest: "EnvironmentManifest") -> None:

@@ -13,9 +13,22 @@ class LatexGenerator(TargetGenerator):
 
     @property
     def target_name(self) -> str:
+        """Returns the generator's target name."""
         return "tex"
 
     def execute(self, identifier: str | None, config: ProtostarConfig) -> list[Path]:
+        """Generates a boilerplate LaTeX document for the active preset.
+
+        Args:
+            identifier: Optional output filename, defaults to 'main.tex'.
+            config: The active Protostar configuration.
+
+        Returns:
+            A list containing the created .tex file path.
+
+        Raises:
+            FileExistsError: If the target file already exists.
+        """
         filename = identifier or "main.tex"
         preset = config.presets.get("latex", "minimal")
 

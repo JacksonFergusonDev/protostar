@@ -17,7 +17,7 @@ class TargetGenerator(abc.ABC):
     @property
     @abc.abstractmethod
     def target_name(self) -> str:
-        """The CLI identifier for this generator (e.g., 'tex', 'cpp-class')."""
+        """Returns the CLI identifier used to dispatch this generator."""
         pass
 
     @abc.abstractmethod
@@ -25,11 +25,11 @@ class TargetGenerator(abc.ABC):
         """Executes the discrete disk I/O for this generator.
 
         Args:
-            identifier (str | None): The user-provided target name or primary filename.
-            config (ProtostarConfig): The active global CLI configuration.
+            identifier: The user-provided target name or primary filename.
+            config: The active global CLI configuration.
 
         Returns:
-            list[Path]: A list of absolute or relative paths to the generated files.
+            A list of paths to the files written to disk.
 
         Raises:
             FileExistsError: If a target file already exists in the workspace.
