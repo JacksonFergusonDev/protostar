@@ -5,23 +5,19 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**A modular CLI tool for quickly scaffolding software environments.**
+**A modular CLI tool for high-velocity environment scaffolding.**
 
-Setting up a new project often requires the same manual steps: configuring linters, writing `.gitignore` files, setting up virtual environments, and linking IDEs. Protostar automates this boilerplate so you can skip the setup and get straight to writing code.
+Setting up a new project often requires the same manual steps: configuring linters, writing `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. Protostar automates this boilerplate so you can skip the setup and get straight to writing code.
 
 ---
 
 ## 💡 Design Philosophy
 
-While Protostar is a lightweight utility, it was built around two specific structural concepts:
+Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
 
-### 1. Deterministic Execution
-
-Most bootstrapping scripts run a sequence of shell commands and fail unpredictably if a dependency is missing. Protostar separates state definition from execution. It uses an internal `EnvironmentManifest` where modules (Python, Rust, Linux, etc.) append their requirements. Disk I/O and subprocesses only occur at the very end, ensuring the environment is generated safely without clobbering existing files.
-
-### 2. Signal vs. Noise
-
-Project configuration is necessary noise; writing logic is the signal. By vertically integrating the OS, IDE, and Language strata into a single command, Protostar attempts to reduce the logistical entropy of starting a new repository.
+1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
+1. **Deterministic Execution:** Most bootstrapping scripts run a sequence of shell commands and fail unpredictably if a dependency is missing. Protostar separates state definition from execution. It uses an internal `EnvironmentManifest` where modules append their requirements. Disk I/O and subprocesses only occur at the very end.
+1. **Signal vs. Noise:** Project configuration is necessary noise; writing logic is the signal. By vertically integrating the OS, IDE, Language, and Domain strata into a single command, Protostar collapses the logistical entropy of starting a new repository.
 
 ---
 
@@ -38,7 +34,7 @@ brew install protostar
 
 ### Universal (uv)
 
-For isolated CLI tool installation on any OS, `uv` is recommended:
+For isolated CLI tool installation on any OS, `uv` is highly recommended:
 
 ```bash
 uv tool install protostar
@@ -58,46 +54,72 @@ pip install protostar
 
 Protostar is designed to be run right after you `mkdir` a new project.
 
-### Basic Scaffolding
+### Basic Environment Initialization
 
 Navigate to your empty directory and specify the languages you are using. The OS and IDE configurations are automatically inferred from your system and global settings.
 
 ```bash
 mkdir orbital-mechanics-sim
 cd orbital-mechanics-sim
-protostar --python --cpp
+protostar init --python --cpp
 ```
 
 *Result: Initializes `uv`, scaffolds a Python environment, configures C++ build exclusions, and generates your `.vscode/settings.json`.*
 
-### The Scientific Preset
+### Domain-Specific Presets & Docker Context
 
-If you are building a data analysis pipeline, use the scientific preset to pre-load a standard analytical stack.
+If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template.
 
 ```bash
-protostar --python --scientific
+protostar init --python --astro --docker
 ```
 
-*Result: Installs the Python scientific stack (`numpy`, `scipy`, `pandas`, `matplotlib`, `seaborn`, `ipykernel`) into the new environment.*
+*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, and generates optimized `.gitignore` and `.dockerignore` files.*
+
+### File Generation
+
+For repetitive boilerplate, use the `generate` subcommand.
+
+```bash
+protostar generate cpp-class TelemetryIngestor
+```
+
+*Result: Safely drops a `TelemetryIngestor.hpp` and `TelemetryIngestor.cpp` into your working directory with standard guards and constructors.*
 
 ---
 
 ## 🛠 Command Reference
 
-| Flag / Command | Description |
-| :--- | :--- |
-| `--python` | Scaffolds a Python environment using `uv`. Ignores caches and venvs. |
-| `--rust` | Scaffolds a Rust environment using `cargo`. Ignores targets. |
-| `--node` | Scaffolds a Node.js/TypeScript environment. Ignores `node_modules`. |
-| `--cpp` | Configures a C/C++ footprint (ignores `build/`, `*.o`, `compile_commands.json`). |
-| `--latex` | Configures a LaTeX footprint (ignores `*.aux`, `*.log`, `*.synctex.gz`). |
-| `--scientific` | Injects foundational computational and statistical libraries (Python only). |
+### `protostar init`
+
+| Category | Flag | Description |
+| :--- | :--- | :--- |
+| **Language** | `--python`, `-p` | Scaffolds a Python environment using `uv`. Ignores caches and venvs. |
+| **Language** | `--rust`, `-r` | Scaffolds a Rust environment using `cargo`. Ignores target directories. |
+| **Language** | `--node`, `-n` | Scaffolds a Node.js/TS environment. Ignores `node_modules` and `dist/`. |
+| **Language** | `--cpp`, `-c` | Configures a C/C++ footprint (ignores `build/`, `*.o`, `compile_commands.json`). |
+| **Language** | `--latex`, `-l` | Configures a LaTeX footprint (ignores `*.aux`, `*.log`, `*.synctex.gz`). |
+| **Preset** | `--scientific`, `-s` | Injects foundational computational and statistical libraries. |
+| **Preset** | `--astro`, `-a` | Injects astrophysics and observational data dependencies. |
+| **Preset** | `--dsp`, `-d` | Injects digital signal processing, waveform, and MIDI analysis tools. |
+| **Preset** | `--embedded`, `-e` | Injects host-side embedded hardware interface tools (e.g., `pyserial`). |
+| **Context** | `--docker` | Generates a highly optimized `.dockerignore` based on the environment footprint. |
+
+### `protostar generate`
+
+| Target | Example | Description |
+| :--- | :--- | :--- |
+| `tex` | `proto generate tex report` | Generates a boilerplate LaTeX file based on your global config preset. |
+| `cpp-class` | `proto generate cpp-class Engine` | Generates a `.hpp` and `.cpp` pair with standard boilerplate. |
+| `cmake` | `proto generate cmake` | Generates a `CMakeLists.txt` statically linking local C++ source files. |
+| `pio` | `proto generate pio esp32dev` | Generates a `platformio.ini` environment configuration. |
+| `circuitpython` | `proto generate circuitpython` | Generates a `code.py` non-blocking state machine and LSP configuration. |
 
 ---
 
 ## ⚙️ Configuration
 
-You can set global defaults in `~/.config/protostar/config.toml` so you don't have to specify your IDE or package manager preferences manually.
+You can set global defaults by running `protostar config`, which opens `~/.config/protostar/config.toml` in your system's `$EDITOR`.
 
 ```toml
 [env]
@@ -106,13 +128,17 @@ ide = "vscode"
 
 # Options: "npm", "pnpm", "yarn"
 node_package_manager = "npm"
+
+[presets]
+# Generator presets for scaffolding boilerplate
+latex = "minimal"
 ```
 
 ---
 
 ## 🤝 Collaboration & Extension
 
-This tool uses a decoupled `BootstrapModule` architecture. Adding support for a new language or framework requires writing a single class that appends rules to the `EnvironmentManifest`. Feel free to open an issue or pull request if you'd like to see a specific toolchain supported.
+This tool uses a decoupled architecture. Adding support for a new language requires writing a single `BootstrapModule`, and adding a new dependency pipeline requires writing a single `PresetModule`. Both independently append rules to the `EnvironmentManifest`. Feel free to open an issue or pull request if you'd like to see a specific toolchain supported.
 
 ## 📧 Contact
 
