@@ -132,6 +132,33 @@ def handle_generate(args: argparse.Namespace) -> None:
             console.print(f"[bold green]Generated:[/bold green] {out_path}")
         except FileExistsError as e:
             console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+    elif args.target == "cpp-class":
+        from .modules.lang_layer import generate_cpp_class
+
+        if not args.name:
+            console.print(
+                "[bold red]Generation Aborted:[/bold red] A class name is required "
+                "(e.g., `proto generate cpp-class DataIngestor`)."
+            )
+            return
+
+        try:
+            out_paths = generate_cpp_class(args.name)
+            for path in out_paths:
+                console.print(f"[bold green]Generated:[/bold green] {path}")
+        except (FileExistsError, ValueError) as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
+    elif args.target == "cmake":
+        from .modules.lang_layer import generate_cmake
+
+        project_name = args.name or "ProtostarApp"
+        try:
+            out_path = generate_cmake(project_name)
+            console.print(f"[bold green]Generated:[/bold green] {out_path}")
+        except FileExistsError as e:
+            console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+
     else:
         console.print(
             f"[red]Generator target '{args.target}' is not yet implemented.[/red]"
@@ -228,10 +255,9 @@ def main() -> None:
         formatter_class=ProtoHelpFormatter,
     )
 
-    # Establish the positional schema for generator targeting
     generate_parser.add_argument(
         "target",
-        choices=["tex"],
+        choices=["tex", "cpp-class", "cmake"],
         help="The boilerplate target to evaluate and generate.",
     )
     generate_parser.add_argument(

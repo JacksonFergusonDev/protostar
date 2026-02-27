@@ -238,3 +238,105 @@ def generate_latex_boilerplate(filename: str, preset: str) -> Path:
         )
 
     return target_path
+
+
+def generate_cpp_class(class_name: str) -> list[Path]:
+    """Generates standard C++ header and implementation files.
+
+    Creates a `<class_name>.hpp` with a pragma once guard and a `<class_name>.cpp`
+    with standard constructor and destructor boilerplate.
+
+    Args:
+        class_name (str): The name of the C++ class to scaffold.
+
+    Returns:
+        list[Path]: The paths to the generated header and implementation files.
+
+    Raises:
+        FileExistsError: If either target file already exists in the directory.
+        ValueError: If a class name is not provided.
+    """
+    if not class_name:
+        raise ValueError("A class name must be provided for C++ scaffolding.")
+
+    # Enforce basic PascalCase naming convention
+    safe_name = class_name[:1].upper() + class_name[1:]
+
+    hpp_path = Path(f"{safe_name}.hpp")
+    cpp_path = Path(f"{safe_name}.cpp")
+
+    if hpp_path.exists() or cpp_path.exists():
+        raise FileExistsError(
+            f"C++ class files for '{safe_name}' already exist in this directory."
+        )
+
+    hpp_content = f"""#pragma once
+
+class {safe_name} {{
+public:
+    {safe_name}();
+    ~{safe_name}();
+
+private:
+    // Member variables
+}};
+"""
+
+    cpp_content = f"""#include "{safe_name}.hpp"
+
+{safe_name}::{safe_name}() {{
+}}
+
+{safe_name}::~{safe_name}() {{
+}}
+"""
+
+    hpp_path.write_text(hpp_content)
+    cpp_path.write_text(cpp_content)
+
+    return [hpp_path, cpp_path]
+
+
+def generate_cmake(project_name: str = "ProtostarApp") -> Path:
+    """Generates a CMakeLists.txt statically linking local C++ source files.
+
+    Scans the current working directory for `.cpp` files to include in the
+    `add_executable` directive, avoiding the CMake globbing cache anti-pattern.
+    Enforces the C++17 standard.
+
+    Args:
+        project_name (str, optional): The name of the executable target.
+                                      Defaults to "ProtostarApp".
+
+    Returns:
+        Path: The path to the generated CMakeLists.txt.
+
+    Raises:
+        FileExistsError: If a CMakeLists.txt already exists.
+    """
+    target_path = Path("CMakeLists.txt")
+    if target_path.exists():
+        raise FileExistsError("CMakeLists.txt already exists in this directory.")
+
+    # Statically resolve cpp files to avoid build system cache invalidation issues
+    cpp_files = [p.name for p in Path(".").glob("*.cpp")]
+
+    if not cpp_files:
+        logger.warning(
+            "No .cpp files found in the current directory. The CMake target will be empty."
+        )
+        source_list = "main.cpp  # WARNING: File does not exist yet"
+    else:
+        source_list = " ".join(cpp_files)
+
+    cmake_content = f"""cmake_minimum_required(VERSION 3.10)
+project({project_name})
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_executable(${{PROJECT_NAME}} {source_list})
+"""
+
+    target_path.write_text(cmake_content)
+    return target_path
