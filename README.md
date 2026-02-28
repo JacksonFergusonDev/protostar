@@ -18,7 +18,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
 1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
-1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, and safely aborts if generated files already exist.
+1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, late-binds to generated `pyproject.toml` configurations, and safely aborts if generated files already exist.
 
 ---
 
@@ -69,13 +69,13 @@ protostar init --python --cpp
 
 ### Domain-Specific Presets & Contexts
 
-If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template. You can also automate context boundaries like Docker and virtual environment activation.
+If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template. You can also automate context boundaries like Docker, virtual environment activation, and dev tooling.
 
 ```bash
-protostar init --python --astro --docker --direnv -m
+protostar init --python --astro --docker --direnv -m --mypy --pytest
 ```
 
-*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file for seamless virtual environment switching, and injects a pragmatic `.markdownlint.yaml` ruleset.*
+*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, and resolves `mypy` and `pytest` dev dependencies while injecting their baseline configurations into `pyproject.toml`.*
 
 ### File Generation
 
@@ -105,6 +105,9 @@ protostar generate cpp-class TelemetryIngestor
 | **Preset** | `--astro`, `-a` | Injects astrophysics and observational data dependencies. |
 | **Preset** | `--dsp`, `-d` | Injects digital signal processing, waveform, and MIDI analysis tools. |
 | **Preset** | `--embedded`, `-e` | Injects host-side embedded hardware interface tools (e.g., `pyserial`). |
+| **Tooling** | `--ruff` | Scaffolds Ruff linter and formatter alongside `pyproject.toml` baseline config. |
+| **Tooling** | `--mypy` | Scaffolds Mypy static type checker alongside `pyproject.toml` baseline config. |
+| **Tooling** | `--pytest` | Scaffolds Pytest testing framework alongside `pyproject.toml` baseline config. |
 | **Context** | `--docker` | Generates a highly optimized `.dockerignore` based on the environment footprint. |
 | **Context** | `--direnv` | Scaffolds a `.envrc` and evaluates the virtual environment shell hook automatically. |
 | **Context** | `--markdownlint`, `-m` | Scaffolds a relaxed `.markdownlint.yaml` configuration. |
@@ -141,6 +144,12 @@ python_package_manager = "uv"
 
 # Preferred Node.js package manager: "npm", "pnpm", "yarn"
 node_package_manager = "npm"
+
+# Optional dev tool toggles for Python
+# no-ruff = true  # Disables the default Ruff scaffolding
+# mypy = true
+# pytest = true
+# pre_commit = true
 
 [presets]
 # Generator presets for scaffolding boilerplate
