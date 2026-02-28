@@ -15,6 +15,7 @@ from .modules import (
     JetBrainsModule,
     LinuxModule,
     MacOSModule,
+    PythonModule,
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
@@ -67,6 +68,10 @@ def handle_init(args: argparse.Namespace) -> None:
     has_language = False
     for mod in LANG_MODULES:
         if mod.cli_flags and getattr(args, mod.__class__.__name__, False):
+            # Use isinstance for mypy type narrowing
+            if isinstance(mod, PythonModule) and getattr(args, "python_version", None):
+                mod.python_version = args.python_version
+
             modules.append(mod)
             has_language = True
 
@@ -214,6 +219,15 @@ def main() -> None:
                 help=mod.cli_help,
                 dest=mod.__class__.__name__,
             )
+
+    # Add explicit python version override flag
+    lang_group.add_argument(
+        "--python-version",
+        type=str,
+        help="Specify the Python version to scaffold (e.g., 3.12). Overrides global configuration.",
+        dest="python_version",
+        metavar="VERSION",
+    )
 
     # Dynamically mount Preset flags
     preset_group = init_parser.add_argument_group("Dependency Presets")
