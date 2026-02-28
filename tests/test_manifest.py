@@ -5,6 +5,8 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.ide_settings, dict)
     assert isinstance(manifest.dependencies, list)
     assert isinstance(manifest.system_tasks, list)
+    assert isinstance(manifest.directories, set)
+    assert isinstance(manifest.file_injections, dict)
 
 
 def test_add_vcs_ignore(manifest):
@@ -66,3 +68,12 @@ def test_add_directory(manifest):
     assert len(manifest.directories) == 2
     assert "data" in manifest.directories
     assert "src" in manifest.directories
+
+
+def test_add_file_injection(manifest):
+    """Test that file injections are queued and deduplicated correctly."""
+    manifest.add_file_injection(".envrc", "export FOO=bar")
+    manifest.add_file_injection(".envrc", "export FOO=baz")  # Should not overwrite
+
+    assert len(manifest.file_injections) == 1
+    assert manifest.file_injections[".envrc"] == "export FOO=bar"
