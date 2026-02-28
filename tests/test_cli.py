@@ -1,7 +1,13 @@
 import argparse
 
 from protostar.cli import get_ide_module, handle_init
-from protostar.modules import JetBrainsModule, PythonModule, VSCodeModule
+from protostar.modules import (
+    DirenvModule,
+    JetBrainsModule,
+    MarkdownLintModule,
+    PythonModule,
+    VSCodeModule,
+)
 from protostar.presets import (
     AstroPreset,
     DspPreset,
@@ -16,7 +22,7 @@ def test_handle_init_dispatch(mocker):
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
-    # Simulate running `proto init -p -s -a -d -e --docker --direnv --python-version 3.12`
+    # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12`
     args = argparse.Namespace(
         PythonModule=True,
         RustModule=False,
@@ -28,7 +34,8 @@ def test_handle_init_dispatch(mocker):
         DspPreset=True,
         EmbeddedPreset=True,
         docker=True,
-        direnv=True,
+        DirenvModule=True,
+        MarkdownLintModule=True,
         python_version="3.12",
     )
 
@@ -44,6 +51,10 @@ def test_handle_init_dispatch(mocker):
     assert python_mod is not None
     assert python_mod.python_version == "3.12"
 
+    # Verify Tooling Modules
+    assert any(isinstance(m, DirenvModule) for m in modules)
+    assert any(isinstance(m, MarkdownLintModule) for m in modules)
+
     # Verify Presets
     assert any(isinstance(p, ScientificPreset) for p in presets)
     assert any(isinstance(p, AstroPreset) for p in presets)
@@ -52,7 +63,6 @@ def test_handle_init_dispatch(mocker):
 
     # Verify Context Artifact Flags
     assert kwargs.get("docker") is True
-    assert kwargs.get("direnv") is True
 
 
 def test_get_ide_module_dispatch():
