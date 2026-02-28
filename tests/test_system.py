@@ -29,3 +29,20 @@ def test_run_quiet_failure(mocker):
 
     with pytest.raises(RuntimeError, match="Command failed during setup: false"):
         run_quiet(["false"], "Testing failure")
+
+
+def test_run_quiet_uv_python_error_hint(mocker):
+    """Test that uv python resolution errors raise a contextual hint."""
+    mock_run = mocker.patch("protostar.system.subprocess.run")
+    # Simulate uv failing because it can't download the python version
+    mock_run.side_effect = subprocess.CalledProcessError(
+        returncode=1,
+        cmd=["uv", "init"],
+        stderr="error: python-downloads is set to 'never'",
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="uv.*encountered an error resolving the requested Python version",
+    ):
+        run_quiet(["uv", "init"], "Testing uv error")
