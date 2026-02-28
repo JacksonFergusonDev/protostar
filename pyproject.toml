@@ -130,5 +130,5 @@ replace = 'version = "{new_version}"'
 
 [[tool.bumpversion.files]]
 filename = "README.md"
-search = "# 🔭 Protostar (v{current_version})"
-replace = "# 🔭 Protostar (v{new_version})"
+search = "# Protostar (v{current_version})"
+replace = "# Protostar (v{new_version})"
