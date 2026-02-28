@@ -87,7 +87,9 @@ def handle_init(args: argparse.Namespace) -> None:
         modules.append(ide_mod)
 
     # Execute
-    engine = Orchestrator(modules, presets, docker=args.docker)
+    engine = Orchestrator(
+        modules, presets, docker=args.docker, direnv=(args.direnv or config.direnv)
+    )
     engine.run()
 
 
@@ -230,6 +232,11 @@ def main() -> None:
         "--docker",
         action="store_true",
         help="Generate a .dockerignore based on the environment footprint",
+    )
+    context_group.add_argument(
+        "--direnv",
+        action="store_true",
+        help="Scaffold a .envrc and evaluate the virtual environment",
     )
 
     init_parser.set_defaults(func=handle_init)
