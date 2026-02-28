@@ -72,10 +72,10 @@ protostar init --python --cpp
 If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template. You can also automate context boundaries like Docker and virtual environment activation.
 
 ```bash
-protostar init --python --astro --docker --direnv
+protostar init --python --astro --docker --direnv -m
 ```
 
-*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, and automatically scaffolds and evaluates a `.envrc` file for seamless virtual environment switching.*
+*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file for seamless virtual environment switching, and injects a pragmatic `.markdownlint.yaml` ruleset.*
 
 ### File Generation
 
@@ -107,6 +107,7 @@ protostar generate cpp-class TelemetryIngestor
 | **Preset** | `--embedded`, `-e` | Injects host-side embedded hardware interface tools (e.g., `pyserial`). |
 | **Context** | `--docker` | Generates a highly optimized `.dockerignore` based on the environment footprint. |
 | **Context** | `--direnv` | Scaffolds a `.envrc` and evaluates the virtual environment shell hook automatically. |
+| **Context** | `--markdownlint`, `-m` | Scaffolds a relaxed `.markdownlint.yaml` configuration. |
 
 ### `protostar generate`
 

@@ -16,6 +16,7 @@ class EnvironmentManifest:
         dependencies (list[str]): Packages to inject via the active package manager.
         system_tasks (list[list[str]]): Ordered queue of shell commands to execute.
         directories (set[str]): Local directories to scaffold in the workspace.
+        file_injections (dict[str, str]): Exact paths mapped to their raw file contents.
     """
 
     vcs_ignores: set[str] = dataclasses.field(default_factory=set)
@@ -24,6 +25,7 @@ class EnvironmentManifest:
     dependencies: list[str] = dataclasses.field(default_factory=list)
     system_tasks: list[list[str]] = dataclasses.field(default_factory=list)
     directories: set[str] = dataclasses.field(default_factory=set)
+    file_injections: dict[str, str] = dataclasses.field(default_factory=dict)
 
     def add_vcs_ignore(self, path: str) -> None:
         """Appends a file or directory pattern to the VCS ignore list (.gitignore)."""
@@ -49,3 +51,8 @@ class EnvironmentManifest:
     def add_directory(self, path: str) -> None:
         """Queues a relative directory path to be scaffolded."""
         self.directories.add(path)
+
+    def add_file_injection(self, path: str, content: str) -> None:
+        """Queues a file path and its string content to be written to disk."""
+        if path not in self.file_injections:
+            self.file_injections[path] = content

@@ -1,5 +1,10 @@
+import pytest
+
+from protostar.config import ProtostarConfig
 from protostar.modules import (
+    DirenvModule,
     MacOSModule,
+    MarkdownLintModule,
     NodeModule,
     PythonModule,
     VSCodeModule,
@@ -86,3 +91,39 @@ def test_vscode_module_build(manifest):
 
     assert exclusions["**/.venv"] is True
     assert exclusions["**/build"] is True
+
+
+def test_direnv_module_pre_flight_fails(mocker):
+    """Test that direnv preflight fails loudly if direnv is missing from PATH."""
+    mocker.patch("protostar.modules.tooling_layer.shutil.which", return_value=None)
+    mod = DirenvModule()
+
+    with pytest.raises(RuntimeError, match="direnv is not installed"):
+        mod.pre_flight()
+
+
+def test_direnv_module_build_uv(manifest, mocker):
+    """Test that direnv queue correctly formats .envrc files prioritizing uv."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+
+    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
+    mod = DirenvModule()
+    mod.build(manifest)
+
+    assert ".envrc.local" in manifest.vcs_ignores
+    assert ".envrc" in manifest.file_injections
+    assert "uv sync" in manifest.file_injections[".envrc"]
+    assert ["direnv", "allow"] in manifest.system_tasks
+
+
+def test_markdownlint_module_build(manifest, mocker):
+    """Test that MarkdownLint injects the configured ruleset."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+
+    mod = MarkdownLintModule()
+    mod.build(manifest)
+
+    assert ".markdownlint.yaml" in manifest.file_injections
+    assert "MD013: false" in manifest.file_injections[".markdownlint.yaml"]
