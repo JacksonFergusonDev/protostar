@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -23,6 +24,7 @@ class Orchestrator:
         modules: list[BootstrapModule],
         presets: list[PresetModule] | None = None,
         docker: bool = False,
+        direnv: bool = False,
     ) -> None:
         """Initializes the orchestrator with the requested modules and presets.
 
@@ -30,10 +32,12 @@ class Orchestrator:
             modules: The ordered stack of bootstrap layers to execute.
             presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
+            direnv: If True, scaffolds a .envrc file and allows it via direnv. Defaults to False.
         """
         self.modules = modules
         self.presets = presets or []
         self.docker = docker
+        self.direnv = direnv
         self.manifest = EnvironmentManifest()
 
     def run(self) -> None:
@@ -42,10 +46,17 @@ class Orchestrator:
 
         try:
             # Phase 1: Pre-flight Verification
+            if self.direnv:
+                self._pre_flight_direnv()
+
             for mod in self.modules:
                 mod.pre_flight()
 
             # Phase 2: Manifest Aggregation
+            if self.direnv:
+                self.manifest.add_vcs_ignore(".envrc.local")
+                self.manifest.add_vcs_ignore(".direnv/")
+
             for mod in self.modules:
                 mod.build(self.manifest)
 
@@ -56,6 +67,7 @@ class Orchestrator:
             # Phase 3: System Execution
             self._execute_tasks()
             self._create_directories()
+            self._write_envrc()
             self._write_ignores()
             self._write_docker_artifacts()
             self._write_ide_settings()
@@ -68,6 +80,50 @@ class Orchestrator:
         except Exception as e:
             console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
             logger.debug("Stack trace:", exc_info=True)
+
+    def _pre_flight_direnv(self) -> None:
+        """Ensures direnv is installed before any disk mutations occur."""
+        if not shutil.which("direnv"):
+            raise RuntimeError(
+                "direnv is not installed. Install it with: brew install direnv\n\n"
+                "Once installed, ensure the shell hook is active in your ~/.zshrc:\n"
+                '    eval "$(direnv hook zsh)"\n\n'
+                "Then re-run: protostar init"
+            )
+
+    def _write_envrc(self) -> None:
+        """Scaffolds the .envrc and executes the allow hook."""
+        if not self.direnv:
+            return
+
+        envrc = Path(".envrc")
+        if envrc.exists():
+            logger.debug("Skipping .envrc generation; file already exists.")
+            return
+
+        config = ProtostarConfig.load()
+        init_cmd = (
+            "uv sync"
+            if config.python_package_manager == "uv"
+            else "python3 -m venv .venv"
+        )
+
+        content = (
+            "# Ensure the venv exists\n"
+            'if [ ! -d ".venv" ]; then\n'
+            f"    {init_cmd}\n"
+            "fi\n\n"
+            "# Activate properly — direnv captures env changes, not shell functions\n"
+            'export VIRTUAL_ENV="$(pwd)/.venv"\n'
+            "PATH_add .venv/bin\n\n"
+            "# Local overrides (not committed to git)\n"
+            "source_env_if_exists .envrc.local\n"
+        )
+
+        envrc.write_text(content)
+        logger.debug("Generated .envrc context.")
+
+        run_quiet(["direnv", "allow"], "Evaluating direnv configuration")
 
     def _create_directories(self) -> None:
         """Scaffolds all queued directories in the local workspace."""
