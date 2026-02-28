@@ -2,7 +2,9 @@ import argparse
 import sys
 from collections.abc import Iterable
 
+from rich import box
 from rich.console import Console
+from rich.table import Table
 
 from protostar.generators import GENERATOR_REGISTRY
 
@@ -116,12 +118,42 @@ def handle_config(args: argparse.Namespace) -> None:
     ProtostarConfig.open_in_editor()
 
 
-class ProtoHelpFormatter(argparse.RawDescriptionHelpFormatter):
+class ProtoHelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter for Protostar CLI.
 
-    Inherits from RawDescriptionHelpFormatter to respect explicit line breaks
-    in docstrings/descriptions while overriding default verbose prefixes.
+    Inherits from RawTextHelpFormatter to respect explicit line breaks
+    in docstrings/descriptions and argument help strings.
     """
+
+    def _format_action(self, action: argparse.Action) -> str:
+        """Overrides the default action formatting to group subcommands into logical clusters."""
+        if isinstance(action, argparse._SubParsersAction):
+            parts = []
+
+            # Define logical command clusters
+            groups = {
+                "Environment Lifecycle": ["init"],
+                "Boilerplate Generation": ["generate"],
+                "System Management": ["config"],
+                "General": ["help"],
+            }
+
+            subactions = list(self._iter_indented_subactions(action))
+
+            for group_name, commands in groups.items():
+                group_actions = [a for a in subactions if a.dest in commands]
+                if not group_actions:
+                    continue
+
+                parts.append(f"\n  {group_name}:\n")
+                self._indent()
+                for subaction in group_actions:
+                    parts.append(self._format_action(subaction))
+                self._dedent()
+
+            return self._join_parts(parts)
+
+        return super()._format_action(action)
 
     def add_usage(
         self,
@@ -139,13 +171,24 @@ class ProtoHelpFormatter(argparse.RawDescriptionHelpFormatter):
 def main() -> None:
     """Main entry point for the Protostar CLI."""
     parser = argparse.ArgumentParser(
-        description="High-velocity environment scaffolding.",
+        description="A modular CLI tool for quickly scaffolding software environments. ",
+        epilog="Run 'proto help <command>' or 'proto <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
+        add_help=False,
+        usage=argparse.SUPPRESS,
+    )
+
+    # Manually re-add the help flags but suppress them from the visual output
+    parser.add_argument(
+        "-h",
+        "--help",
+        action="help",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
     )
 
     subparsers = parser.add_subparsers(
         dest="command",
-        required=True,
         title="Subcommands",
         metavar="<command>",
     )
@@ -156,6 +199,7 @@ def main() -> None:
         help="Initialize a new environment and aggregate manifest configurations.",
         description="Scaffolds base configurations, dependencies, and environment files.",
         formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
     )
 
     # Dynamically mount Language flags
@@ -196,17 +240,48 @@ def main() -> None:
         help="Generate boilerplate files and project scaffolding.",
         description="Generates boilerplate code or files based on the configured environment.",
         formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
     )
 
-    # Expand the target choices dynamically using the registry keys
-    generate_parser.add_argument(
+    target_group = generate_parser.add_argument_group("Generation Target")
+
+    # Enable show_lines for horizontal separators between rows
+    target_table = Table(
+        show_header=False,
+        box=box.ROUNDED,
+        show_lines=True,
+        padding=(0, 1),
+        pad_edge=False,
+    )
+    target_table.add_column("Target", style="cyan", no_wrap=True)
+    target_table.add_column("Description")
+
+    # Dynamically populate from the registry
+    for key, generator in GENERATOR_REGISTRY.items():
+        # Grabs the first line of the class docstring
+        desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
+        target_table.add_row(key, desc)
+
+    # Capture the output buffer
+    with console.capture() as capture:
+        # Buffer increased slightly to handle the extra border characters
+        console.print(target_table, width=console.width - 32)
+
+    target_help = "The boilerplate target to evaluate and generate:\n" + capture.get()
+
+    target_group.add_argument(
         "target",
         choices=list(GENERATOR_REGISTRY.keys()),
-        help="The boilerplate target to evaluate and generate.",
+        metavar="TARGET",
+        help=target_help,
     )
-    generate_parser.add_argument(
+
+    # Output Parameters remains standard
+    param_group = generate_parser.add_argument_group("Output Parameters")
+    param_group.add_argument(
         "name",
         nargs="?",
+        metavar="NAME",
         help="The primary identifier or filename for the output.",
     )
 
@@ -218,11 +293,47 @@ def main() -> None:
         help="Manage global Protostar configuration.",
         description="Opens the global configuration file in your system's default $EDITOR.",
         formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,  # Suppress usage block
     )
     config_parser.set_defaults(func=handle_config)
 
+    # --- Help Subparser ---
+    help_parser = subparsers.add_parser(
+        "help",
+        help="Show this help message or a subcommand's manual.",
+        description="Displays the CLI help manual.",
+        formatter_class=ProtoHelpFormatter,
+    )
+
+    # Dynamically grab registered commands, excluding 'help' itself
+    available_commands = [k for k in subparsers.choices if k != "help"]
+
+    help_parser.add_argument(
+        "topic",
+        nargs="?",
+        choices=available_commands,
+        help="The specific subcommand to explain.",
+    )
+
+    def dispatch_help(parsed_args: argparse.Namespace) -> None:
+        """Closure to evaluate and print the requested help scope."""
+        if getattr(parsed_args, "topic", None):
+            # Print the localized help for the specific subcommand
+            subparsers.choices[parsed_args.topic].print_help()
+        else:
+            # Fall back to the global help
+            parser.print_help()
+
+    help_parser.set_defaults(func=dispatch_help)
+
     # Dynamic dispatch based on the invoked subparser
     args = parser.parse_args()
+
+    # Graceful fallback if the user executes `proto` with no arguments
+    if not getattr(args, "command", None):
+        parser.print_help()
+        sys.exit(1)
+
     args.func(args)
 
 
