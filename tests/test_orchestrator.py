@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from protostar.config import ProtostarConfig
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
@@ -189,3 +191,74 @@ def test_orchestrator_creates_directories(mocker):
 
     assert mock_mkdir.call_count == 2
     mock_mkdir.assert_any_call(parents=True, exist_ok=True)
+
+
+def test_orchestrator_pre_flight_direnv_aborts(mocker):
+    """Test that direnv preflight fails loudly if direnv is missing from PATH."""
+    mocker.patch("protostar.orchestrator.shutil.which", return_value=None)
+    orchestrator = Orchestrator([], direnv=True)
+
+    with pytest.raises(RuntimeError, match="direnv is not installed"):
+        orchestrator._pre_flight_direnv()
+
+
+def test_orchestrator_pre_flight_direnv_passes(mocker):
+    """Test that direnv preflight completes successfully if direnv is installed."""
+    mocker.patch(
+        "protostar.orchestrator.shutil.which", return_value="/usr/local/bin/direnv"
+    )
+    orchestrator = Orchestrator([], direnv=True)
+
+    # Should not raise any exceptions
+    orchestrator._pre_flight_direnv()
+
+
+def test_orchestrator_writes_envrc_uv(mocker):
+    """Test that .envrc is generated utilizing uv by default."""
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+    mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
+    orchestrator = Orchestrator([], direnv=True)
+    orchestrator._write_envrc()
+
+    content = mock_write.call_args[0][0]
+    assert "uv sync" in content
+    assert "PATH_add .venv/bin" in content
+
+    # Verify direnv hook is activated
+    mock_run_quiet.assert_called_once_with(
+        ["direnv", "allow"], "Evaluating direnv configuration"
+    )
+
+
+def test_orchestrator_writes_envrc_pip(mocker):
+    """Test that .envrc invokes the standard library venv module if pip is configured."""
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+    mocker.patch("protostar.orchestrator.run_quiet")
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
+
+    orchestrator = Orchestrator([], direnv=True)
+    orchestrator._write_envrc()
+
+    content = mock_write.call_args[0][0]
+    assert "python3 -m venv .venv" in content
+    assert "uv sync" not in content
+
+
+def test_orchestrator_skips_existing_envrc(mocker):
+    """Test that _write_envrc safely aborts if an .envrc already exists."""
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator = Orchestrator([], direnv=True)
+    orchestrator._write_envrc()
+
+    # Ensures the non-destructive rule is met
+    mock_write.assert_not_called()
