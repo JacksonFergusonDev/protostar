@@ -24,6 +24,16 @@ def test_python_module_uv_build(manifest, mocker):
     assert ["uv", "init", "--no-workspace"] in manifest.system_tasks
 
 
+def test_python_module_uv_with_version(manifest, mocker):
+    """Test Python manifest includes the specific python version flag for uv."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    mod = PythonModule(package_manager="uv", python_version="3.12")
+    mod.build(manifest)
+
+    assert ["uv", "init", "--no-workspace", "--python", "3.12"] in manifest.system_tasks
+
+
 def test_python_module_pip_build(manifest, mocker):
     """Test Python manifest correctly initializes standard library venv for pip."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
@@ -33,6 +43,16 @@ def test_python_module_pip_build(manifest, mocker):
 
     assert ".venv/" in manifest.vcs_ignores
     assert ["python3", "-m", "venv", ".venv"] in manifest.system_tasks
+
+
+def test_python_module_pip_with_version(manifest, mocker):
+    """Test Python manifest formats the python executable correctly for pip venvs."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    mod = PythonModule(package_manager="pip", python_version="3.11")
+    mod.build(manifest)
+
+    assert ["python3.11", "-m", "venv", ".venv"] in manifest.system_tasks
 
 
 def test_node_module_custom_manager(manifest, mocker):

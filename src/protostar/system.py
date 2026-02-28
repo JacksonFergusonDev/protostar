@@ -26,7 +26,17 @@ def run_quiet(cmd: list[str], description: str) -> None:
                 text=True,
             )
         except subprocess.CalledProcessError as e:
-            logger.error(
-                f"Task failed: {' '.join(cmd)}\nOutput:\n{e.stderr or e.stdout}"
-            )
+            output = e.stderr or e.stdout
+            logger.error(f"Task failed: {' '.join(cmd)}\nOutput:\n{output}")
+
+            # Catch known edge cases where uv fails to resolve/download python versions
+            if cmd[0] == "uv" and "python" in output.lower():
+                raise RuntimeError(
+                    f"Command failed during setup: {cmd[0]}\n"
+                    "Hint: `uv` encountered an error resolving the requested Python version. "
+                    "If you have a global `uv.toml` (e.g., at `~/.config/uv/uv.toml`), "
+                    "ensure `python-downloads` is not set to 'never', or verify the requested "
+                    "version exists locally."
+                ) from e
+
             raise RuntimeError(f"Command failed during setup: {cmd[0]}") from e

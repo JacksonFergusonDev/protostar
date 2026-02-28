@@ -96,6 +96,7 @@ protostar generate cpp-class TelemetryIngestor
 | Category | Flag | Description |
 | :--- | :--- | :--- |
 | **Language** | `--python`, `-p` | Scaffolds a Python environment (`uv` or `pip`). Ignores caches and venvs. |
+| **Language** | `--python-version` | Specify the Python version to scaffold (e.g., `3.12`). Overrides global configuration. |
 | **Language** | `--rust`, `-r` | Scaffolds a Rust environment using `cargo`. Ignores target directories. |
 | **Language** | `--node`, `-n` | Scaffolds a Node.js/TS environment. Ignores `node_modules` and `dist/`. |
 | **Language** | `--cpp`, `-c` | Configures a C/C++ footprint (ignores `build/`, `*.o`, `compile_commands.json`). |
@@ -133,6 +134,9 @@ direnv = false
 
 # Preferred Python package manager: "uv", "pip"
 python_package_manager = "uv"
+
+# Optional default Python version (e.g., "3.12")
+# python_version = "3.12"
 
 # Preferred Node.js package manager: "npm", "pnpm", "yarn"
 node_package_manager = "npm"

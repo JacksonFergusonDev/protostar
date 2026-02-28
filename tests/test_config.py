@@ -11,6 +11,7 @@ def test_config_load_defaults(mocker):
     assert config.direnv is False
     assert config.node_package_manager == "npm"
     assert config.python_package_manager == "uv"
+    assert config.python_version is None
     assert config.presets == {}
 
 
@@ -24,6 +25,7 @@ def test_config_merge_cascade(mocker):
             "ide": "cursor",
             "direnv": False,
             "python_package_manager": "pip",
+            "python_version": "3.11",
             "node_package_manager": "pnpm",
         },
         "presets": {"latex": "minimal", "cpp": "standard"},
@@ -31,7 +33,7 @@ def test_config_merge_cascade(mocker):
 
     # Mock the local workspace override
     local_payload = {
-        "env": {"ide": "jetbrains", "direnv": True},
+        "env": {"ide": "jetbrains", "direnv": True, "python_version": "3.12"},
         "presets": {"latex": "science"},
     }
 
@@ -48,6 +50,7 @@ def test_config_merge_cascade(mocker):
     assert config.ide == "jetbrains"
     assert config.direnv is True
     assert config.python_package_manager == "pip"
+    assert config.python_version == "3.12"
     assert config.node_package_manager == "pnpm"
 
     assert config.presets["latex"] == "science"

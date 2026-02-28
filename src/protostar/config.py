@@ -24,6 +24,9 @@ direnv = false
 # Preferred Python package manager: 'uv' or 'pip'
 python_package_manager = "uv"
 
+# Optional default Python version (e.g., '3.12')
+# python_version = "3.12"
+
 # Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
 node_package_manager = "npm"
 
@@ -41,6 +44,7 @@ class ProtostarConfig:
         ide (str): The preferred IDE (e.g., 'vscode', 'jetbrains', 'cursor', 'none').
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_package_manager (str): The preferred Python manager ('uv', 'pip').
+        python_version (str | None): The specific Python version to scaffold.
         node_package_manager (str): The preferred JS manager ('npm', 'pnpm', 'yarn').
         presets (dict[str, str]): Generation presets mapped by language/framework.
     """
@@ -48,6 +52,7 @@ class ProtostarConfig:
     ide: str = "vscode"
     direnv: bool = False
     python_package_manager: str = "uv"
+    python_version: str | None = None
     node_package_manager: str = "npm"
     presets: dict[str, str] = field(default_factory=dict)
 
@@ -92,6 +97,8 @@ class ProtostarConfig:
                     updates["python_package_manager"] = env_data[
                         "python_package_manager"
                     ]
+                if "python_version" in env_data:
+                    updates["python_version"] = env_data["python_version"]
                 if "node_package_manager" in env_data:
                     updates["node_package_manager"] = env_data["node_package_manager"]
 

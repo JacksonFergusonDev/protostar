@@ -16,8 +16,7 @@ def test_handle_init_dispatch(mocker):
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
-    # Simulate running `proto init -p -s -a -d -e --docker --direnv`
-    # The dest attributes are now dynamically mapped to the class names
+    # Simulate running `proto init -p -s -a -d -e --docker --direnv --python-version 3.12`
     args = argparse.Namespace(
         PythonModule=True,
         RustModule=False,
@@ -30,6 +29,7 @@ def test_handle_init_dispatch(mocker):
         EmbeddedPreset=True,
         docker=True,
         direnv=True,
+        python_version="3.12",
     )
 
     handle_init(args)
@@ -39,8 +39,10 @@ def test_handle_init_dispatch(mocker):
     presets = mock_orchestrator.call_args[0][1]
     kwargs = mock_orchestrator.call_args[1]
 
-    # Verify Language Module
-    assert any(isinstance(m, PythonModule) for m in modules)
+    # Verify Language Module and Version injection
+    python_mod = next((m for m in modules if isinstance(m, PythonModule)), None)
+    assert python_mod is not None
+    assert python_mod.python_version == "3.12"
 
     # Verify Presets
     assert any(isinstance(p, ScientificPreset) for p in presets)

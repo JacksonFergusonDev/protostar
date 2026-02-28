@@ -17,8 +17,11 @@ class PythonModule(BootstrapModule):
     cli_flags: ClassVar[tuple[str, ...]] = ("-p", "--python")
     cli_help: ClassVar[str] = "Scaffold a Python environment"
 
-    def __init__(self, package_manager: str | None = None) -> None:
+    def __init__(
+        self, package_manager: str | None = None, python_version: str | None = None
+    ) -> None:
         self._package_manager = package_manager
+        self._python_version = python_version
 
     @property
     def package_manager(self) -> str:
@@ -28,6 +31,19 @@ class PythonModule(BootstrapModule):
 
             self._package_manager = ProtostarConfig.load().python_package_manager
         return self._package_manager
+
+    @property
+    def python_version(self) -> str | None:
+        """Lazily evaluates the requested python version from global config."""
+        if self._python_version is None:
+            from protostar.config import ProtostarConfig
+
+            self._python_version = ProtostarConfig.load().python_version
+        return self._python_version
+
+    @python_version.setter
+    def python_version(self, value: str | None) -> None:
+        self._python_version = value
 
     @property
     def name(self) -> str:
@@ -65,9 +81,15 @@ class PythonModule(BootstrapModule):
 
         if self.package_manager == "uv":
             if not Path("pyproject.toml").exists():
-                manifest.add_system_task(["uv", "init", "--no-workspace"])
+                cmd = ["uv", "init", "--no-workspace"]
+                if self.python_version:
+                    cmd.extend(["--python", self.python_version])
+                manifest.add_system_task(cmd)
         elif self.package_manager == "pip" and not Path(".venv").exists():
-            manifest.add_system_task(["python3", "-m", "venv", ".venv"])
+            python_cmd = (
+                f"python{self.python_version}" if self.python_version else "python3"
+            )
+            manifest.add_system_task([python_cmd, "-m", "venv", ".venv"])
 
 
 class RustModule(BootstrapModule):
