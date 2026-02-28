@@ -30,6 +30,12 @@ python_package_manager = "uv"
 # Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
 node_package_manager = "npm"
 
+# Optional dev tool toggles for Python
+# no-ruff = true  # Disables the default Ruff scaffolding
+# mypy = true
+# pytest = true
+# pre_commit = true
+
 [presets]
 # Generator presets for scaffolding boilerplate
 latex = "minimal"
@@ -46,6 +52,10 @@ class ProtostarConfig:
         python_package_manager (str): The preferred Python manager ('uv', 'pip').
         python_version (str | None): The specific Python version to scaffold.
         node_package_manager (str): The preferred JS manager ('npm', 'pnpm', 'yarn').
+        ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
+        mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
+        pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
+        pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
         presets (dict[str, str]): Generation presets mapped by language/framework.
     """
 
@@ -54,6 +64,10 @@ class ProtostarConfig:
     python_package_manager: str = "uv"
     python_version: str | None = None
     node_package_manager: str = "npm"
+    ruff: bool = True
+    mypy: bool = False
+    pytest: bool = False
+    pre_commit: bool = False
     presets: dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -101,6 +115,18 @@ class ProtostarConfig:
                     updates["python_version"] = env_data["python_version"]
                 if "node_package_manager" in env_data:
                     updates["node_package_manager"] = env_data["node_package_manager"]
+
+                # Process dev tool flags, accommodating the inverted no-ruff flag
+                if "ruff" in env_data:
+                    updates["ruff"] = env_data["ruff"]
+                if "no-ruff" in env_data:
+                    updates["ruff"] = not env_data["no-ruff"]
+                if "mypy" in env_data:
+                    updates["mypy"] = env_data["mypy"]
+                if "pytest" in env_data:
+                    updates["pytest"] = env_data["pytest"]
+                if "pre_commit" in env_data:
+                    updates["pre_commit"] = env_data["pre_commit"]
 
             if "presets" in data:
                 merged_presets = dict(instance.presets)
