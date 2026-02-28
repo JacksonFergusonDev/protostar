@@ -16,7 +16,7 @@ def test_handle_init_dispatch(mocker):
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
-    # Simulate running `proto init -p -s -a -d -e --docker`
+    # Simulate running `proto init -p -s -a -d -e --docker --direnv`
     # The dest attributes are now dynamically mapped to the class names
     args = argparse.Namespace(
         PythonModule=True,
@@ -29,6 +29,7 @@ def test_handle_init_dispatch(mocker):
         DspPreset=True,
         EmbeddedPreset=True,
         docker=True,
+        direnv=True,
     )
 
     handle_init(args)
@@ -49,6 +50,7 @@ def test_handle_init_dispatch(mocker):
 
     # Verify Context Artifact Flags
     assert kwargs.get("docker") is True
+    assert kwargs.get("direnv") is True
 
 
 def test_get_ide_module_dispatch():

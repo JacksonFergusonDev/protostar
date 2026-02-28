@@ -17,7 +17,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
 1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
-1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv` or `cargo`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
+1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
 1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, and safely aborts if generated files already exist.
 
 ---
@@ -67,15 +67,15 @@ protostar init --python --cpp
 
 *Result: Initializes `uv` (or `pip`), scaffolds a Python environment, configures C++ build exclusions, and generates your `.vscode/settings.json`.*
 
-### Domain-Specific Presets & Docker Context
+### Domain-Specific Presets & Contexts
 
-If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template.
+If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template. You can also automate context boundaries like Docker and virtual environment activation.
 
 ```bash
-protostar init --python --astro --docker
+protostar init --python --astro --docker --direnv
 ```
 
-*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, and generates optimized `.gitignore` and `.dockerignore` files.*
+*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, and automatically scaffolds and evaluates a `.envrc` file for seamless virtual environment switching.*
 
 ### File Generation
 
@@ -105,6 +105,7 @@ protostar generate cpp-class TelemetryIngestor
 | **Preset** | `--dsp`, `-d` | Injects digital signal processing, waveform, and MIDI analysis tools. |
 | **Preset** | `--embedded`, `-e` | Injects host-side embedded hardware interface tools (e.g., `pyserial`). |
 | **Context** | `--docker` | Generates a highly optimized `.dockerignore` based on the environment footprint. |
+| **Context** | `--direnv` | Scaffolds a `.envrc` and evaluates the virtual environment shell hook automatically. |
 
 ### `protostar generate`
 
@@ -124,13 +125,16 @@ You can set global defaults by running `protostar config`, which opens `~/.confi
 
 ```toml
 [env]
-# Options: "vscode", "cursor", "jetbrains", "none"
+# Preferred IDE: "vscode", "cursor", "jetbrains", "none"
 ide = "vscode"
 
-# Options: "uv", "pip"
+# Auto-scaffold direnv with python environments
+direnv = false
+
+# Preferred Python package manager: "uv", "pip"
 python_package_manager = "uv"
 
-# Options: "npm", "pnpm", "yarn"
+# Preferred Node.js package manager: "npm", "pnpm", "yarn"
 node_package_manager = "npm"
 
 [presets]

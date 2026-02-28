@@ -18,6 +18,9 @@ DEFAULT_CONFIG_CONTENT = """[env]
 # Preferred IDE: 'vscode', 'cursor', 'jetbrains', or 'none'
 ide = "vscode"
 
+# Auto-scaffold direnv with python environments
+direnv = false
+
 # Preferred Python package manager: 'uv' or 'pip'
 python_package_manager = "uv"
 
@@ -36,12 +39,14 @@ class ProtostarConfig:
 
     Attributes:
         ide (str): The preferred IDE (e.g., 'vscode', 'jetbrains', 'cursor', 'none').
+        direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_package_manager (str): The preferred Python manager ('uv', 'pip').
         node_package_manager (str): The preferred JS manager ('npm', 'pnpm', 'yarn').
         presets (dict[str, str]): Generation presets mapped by language/framework.
     """
 
     ide: str = "vscode"
+    direnv: bool = False
     python_package_manager: str = "uv"
     node_package_manager: str = "npm"
     presets: dict[str, str] = field(default_factory=dict)
@@ -81,6 +86,8 @@ class ProtostarConfig:
                 env_data = data["env"]
                 if "ide" in env_data:
                     updates["ide"] = env_data["ide"]
+                if "direnv" in env_data:
+                    updates["direnv"] = env_data["direnv"]
                 if "python_package_manager" in env_data:
                     updates["python_package_manager"] = env_data[
                         "python_package_manager"
