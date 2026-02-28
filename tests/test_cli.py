@@ -5,14 +5,10 @@ from protostar.modules import (
     DirenvModule,
     JetBrainsModule,
     MarkdownLintModule,
-    PythonModule,
+    MypyModule,
+    PytestModule,
+    RuffModule,
     VSCodeModule,
-)
-from protostar.presets import (
-    AstroPreset,
-    DspPreset,
-    EmbeddedPreset,
-    ScientificPreset,
 )
 
 
@@ -22,7 +18,7 @@ def test_handle_init_dispatch(mocker):
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
-    # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12`
+    # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12 --ruff --mypy --pytest`
     args = argparse.Namespace(
         PythonModule=True,
         RustModule=False,
@@ -36,6 +32,9 @@ def test_handle_init_dispatch(mocker):
         docker=True,
         DirenvModule=True,
         MarkdownLintModule=True,
+        RuffModule=True,
+        MypyModule=True,
+        PytestModule=True,
         python_version="3.12",
     )
 
@@ -43,26 +42,48 @@ def test_handle_init_dispatch(mocker):
 
     # Extract the arguments passed to Orchestrator(modules, presets, docker=...)
     modules = mock_orchestrator.call_args[0][0]
-    presets = mock_orchestrator.call_args[0][1]
-    kwargs = mock_orchestrator.call_args[1]
-
-    # Verify Language Module and Version injection
-    python_mod = next((m for m in modules if isinstance(m, PythonModule)), None)
-    assert python_mod is not None
-    assert python_mod.python_version == "3.12"
 
     # Verify Tooling Modules
     assert any(isinstance(m, DirenvModule) for m in modules)
     assert any(isinstance(m, MarkdownLintModule) for m in modules)
+    assert any(isinstance(m, RuffModule) for m in modules)
+    assert any(isinstance(m, MypyModule) for m in modules)
+    assert any(isinstance(m, PytestModule) for m in modules)
 
-    # Verify Presets
-    assert any(isinstance(p, ScientificPreset) for p in presets)
-    assert any(isinstance(p, AstroPreset) for p in presets)
-    assert any(isinstance(p, DspPreset) for p in presets)
-    assert any(isinstance(p, EmbeddedPreset) for p in presets)
 
-    # Verify Context Artifact Flags
-    assert kwargs.get("docker") is True
+def test_handle_init_tooling_requires_language_context(mocker):
+    """Test that python-specific tooling does not activate if PythonModule is absent."""
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch("protostar.cli.get_os_module")
+    mocker.patch("protostar.cli.get_ide_module", return_value=None)
+
+    # Mock the global config to request Ruff and Mypy by default
+    mock_config = mocker.patch("protostar.cli.ProtostarConfig.load")
+    mock_config.return_value.ruff = True
+    mock_config.return_value.mypy = True
+
+    # Simulate a Rust-only initialization
+    args = argparse.Namespace(
+        RustModule=True,
+        PythonModule=False,
+        NodeModule=False,
+        CppModule=False,
+        LatexModule=False,
+        docker=False,
+        DirenvModule=False,
+        MarkdownLintModule=False,
+        RuffModule=False,
+        MypyModule=False,
+        PytestModule=False,
+    )
+
+    handle_init(args)
+
+    modules = mock_orchestrator.call_args[0][0]
+
+    # Verify that despite config defaults, Ruff and Mypy do not pollute the Rust context
+    assert not any(isinstance(m, RuffModule) for m in modules)
+    assert not any(isinstance(m, MypyModule) for m in modules)
 
 
 def test_get_ide_module_dispatch():

@@ -3,7 +3,6 @@ from protostar.config import ProtostarConfig
 
 def test_config_load_defaults(mocker):
     """Test configuration falls back to defaults if no config files exist."""
-    # Patch the class-level method
     mocker.patch("protostar.config.Path.exists", return_value=False)
 
     config = ProtostarConfig.load()
@@ -12,6 +11,10 @@ def test_config_load_defaults(mocker):
     assert config.node_package_manager == "npm"
     assert config.python_package_manager == "uv"
     assert config.python_version is None
+    assert config.ruff is True
+    assert config.mypy is False
+    assert config.pytest is False
+    assert config.pre_commit is False
     assert config.presets == {}
 
 
@@ -27,13 +30,20 @@ def test_config_merge_cascade(mocker):
             "python_package_manager": "pip",
             "python_version": "3.11",
             "node_package_manager": "pnpm",
+            "ruff": False,
         },
         "presets": {"latex": "minimal", "cpp": "standard"},
     }
 
     # Mock the local workspace override
     local_payload = {
-        "env": {"ide": "jetbrains", "direnv": True, "python_version": "3.12"},
+        "env": {
+            "ide": "jetbrains",
+            "direnv": True,
+            "python_version": "3.12",
+            "mypy": True,
+            "pytest": True,
+        },
         "presets": {"latex": "science"},
     }
 
@@ -52,9 +62,25 @@ def test_config_merge_cascade(mocker):
     assert config.python_package_manager == "pip"
     assert config.python_version == "3.12"
     assert config.node_package_manager == "pnpm"
+    assert config.ruff is False
+    assert config.mypy is True
+    assert config.pytest is True
 
     assert config.presets["latex"] == "science"
     assert config.presets["cpp"] == "standard"
+
+
+def test_config_no_ruff_inversion(mocker):
+    """Test that the 'no-ruff' toggle correctly inverts to config.ruff = False."""
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+
+    payload = {"env": {"no-ruff": True}}
+
+    mocker.patch("protostar.config.tomllib.load", return_value=payload)
+    mocker.patch("builtins.open", mocker.mock_open())
+
+    config = ProtostarConfig.load()
+    assert config.ruff is False
 
 
 def test_parse_and_merge_handles_malformed_toml(mocker, caplog):

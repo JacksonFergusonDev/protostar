@@ -80,39 +80,90 @@ def test_orchestrator_writes_injected_files(mocker):
     mock_write.assert_called_once_with("mock content")
 
 
+def test_orchestrator_install_dependencies_uv(mocker):
+    """Test that the orchestrator uses uv add --dev for dev dependencies."""
+    mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    orchestrator.manifest.add_dependency("fastapi")
+    orchestrator.manifest.add_dev_dependency("pytest")
+
+    orchestrator._install_dependencies()
+
+    mock_run_quiet.assert_any_call(
+        ["uv", "add", "fastapi"],
+        "Resolving and installing 1 dependencies",
+    )
+    mock_run_quiet.assert_any_call(
+        ["uv", "add", "--dev", "pytest"],
+        "Resolving and installing 1 development dependencies",
+    )
+
+
 def test_orchestrator_install_dependencies_pip_freeze(mocker):
     """Test that the orchestrator executes a local pip installation and writes a freeze state."""
     mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
     mock_run = mocker.patch("protostar.orchestrator.subprocess.run")
     mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
-    mocker.patch(
-        "protostar.orchestrator.Path.exists", return_value=True
-    )  # Assume .venv/bin/pip exists
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
 
     # Mock config to force pip route
     mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(python_package_manager="pip")
 
-    mock_run.return_value.stdout = "dummy-pkg==1.0.0"
+    mock_run.return_value.stdout = "dummy-pkg==1.0.0\ndev-pkg==2.0.0"
 
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
 
-    # Manually populate the manifest since we are bypassing the phase 2 build() lifecycle
+    # Manually populate the manifest
     orchestrator.manifest.add_dependency("dummy-pkg")
+    orchestrator.manifest.add_dev_dependency("dev-pkg")
 
-    # Execute just the injection pipeline
     orchestrator._install_dependencies()
 
+    # Pip lacks native dev dependency segregation, so they are installed collectively
     mock_run_quiet.assert_called_once_with(
-        [".venv/bin/pip", "install", "dummy-pkg"],
-        "Resolving and installing 1 dependencies",
+        [".venv/bin/pip", "install", "dummy-pkg", "dev-pkg"],
+        "Resolving and installing 2 total dependencies",
     )
 
     mock_run.assert_called_once_with(
         [".venv/bin/pip", "freeze"], capture_output=True, text=True, check=True
     )
-    mock_write.assert_called_once_with("dummy-pkg==1.0.0")
+    mock_write.assert_called_once_with("dummy-pkg==1.0.0\ndev-pkg==2.0.0")
+
+
+def test_orchestrator_append_files_late_binding(mocker):
+    """Test that configuration payloads are interpolated with the active python version."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"'
+    )
+
+    # Mock pyproject.toml existing and containing a requires-python metadata string
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch(
+        "protostar.orchestrator.Path.read_text",
+        return_value='requires-python = ">=3.11"\n',
+    )
+
+    mock_file = mocker.mock_open()
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+
+    orchestrator._append_files()
+
+    written_data = mock_file().write.call_args[0][0]
+    # Verify the regex successfully extracted '3.11' and interpolated the {{PYTHON_VERSION}} token
+    assert 'python_version = "3.11"' in written_data
 
 
 def test_orchestrator_writes_dockerignore(mocker):
