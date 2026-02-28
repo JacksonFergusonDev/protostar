@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import subprocess
 from pathlib import Path
 
@@ -57,6 +58,7 @@ class Orchestrator:
             self._create_directories()
             self._write_injected_files()
             self._execute_tasks()
+            self._append_files()
             self._write_ignores()
             self._write_docker_artifacts()
             self._write_ide_settings()
@@ -97,6 +99,46 @@ class Orchestrator:
         for task in self.manifest.system_tasks:
             # Use the first argument (e.g., 'uv', 'cargo') as the context descriptor
             run_quiet(task, f"Executing {task[0]}")
+
+    def _append_files(self) -> None:
+        """Appends late-binding configuration payloads to their target files."""
+        if not self.manifest.file_appends:
+            return
+
+        # Dynamically resolve the active Python version for token interpolation
+        python_version = "3.12"  # Safe modern fallback
+        pyproject_path = Path("pyproject.toml")
+
+        if pyproject_path.exists():
+            content = pyproject_path.read_text()
+            # Lightweight extraction of requires-python without a heavy TOML parser
+            match = re.search(
+                r'requires-python\s*=\s*"(?:>=|==|~=|>|)?(\d+\.\d+)', content
+            )
+            if match:
+                python_version = match.group(1)
+
+        for filepath, contents in self.manifest.file_appends.items():
+            target = Path(filepath)
+            combined_content = "\n\n".join(contents)
+
+            # Interpolate state tokens
+            combined_content = combined_content.replace(
+                "{{PYTHON_VERSION}}", python_version
+            )
+
+            prefix = ""
+            if target.exists():
+                existing_content = target.read_text()
+                if existing_content and not existing_content.endswith("\n"):
+                    prefix = "\n"
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+
+            with target.open("a") as f:
+                f.write(prefix + combined_content + "\n")
+
+            logger.debug(f"Appended configuration to {filepath}")
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
@@ -179,26 +221,39 @@ class Orchestrator:
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using the active Python manager."""
-        if not self.manifest.dependencies:
+        if not self.manifest.dependencies and not self.manifest.dev_dependencies:
             return
 
         config = ProtostarConfig.load()
 
         if config.python_package_manager == "uv":
-            cmd = ["uv", "add"] + self.manifest.dependencies
-            run_quiet(
-                cmd,
-                f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
-            )
+            if self.manifest.dependencies:
+                cmd = ["uv", "add"] + self.manifest.dependencies
+                run_quiet(
+                    cmd,
+                    f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
+                )
+
+            if self.manifest.dev_dependencies:
+                dev_cmd = ["uv", "add", "--dev"] + self.manifest.dev_dependencies
+                run_quiet(
+                    dev_cmd,
+                    f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies",
+                )
+
         else:
             venv_pip = Path(".venv/bin/pip")
             pip_cmd = str(venv_pip) if venv_pip.exists() else "pip"
 
-            cmd = [pip_cmd, "install"] + self.manifest.dependencies
+            # Pip does not have a native project-level dev dependency segregation concept
+            # like uv without external files, so we install them collectively into the environment.
+            all_deps = self.manifest.dependencies + self.manifest.dev_dependencies
+
+            cmd = [pip_cmd, "install"] + all_deps
 
             run_quiet(
                 cmd,
-                f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
+                f"Resolving and installing {len(all_deps)} total dependencies",
             )
 
             # Freeze the state to mirror uv's declarative pyproject.toml updates

@@ -4,9 +4,11 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.workspace_hides, set)
     assert isinstance(manifest.ide_settings, dict)
     assert isinstance(manifest.dependencies, list)
+    assert isinstance(manifest.dev_dependencies, list)
     assert isinstance(manifest.system_tasks, list)
     assert isinstance(manifest.directories, set)
     assert isinstance(manifest.file_injections, dict)
+    assert isinstance(manifest.file_appends, dict)
 
 
 def test_add_vcs_ignore(manifest):
@@ -54,6 +56,16 @@ def test_add_dependency_deduplication(manifest):
     assert manifest.dependencies == ["numpy", "pandas"]
 
 
+def test_add_dev_dependency_deduplication(manifest):
+    """Test that dev dependencies are queued and deduplicated independently."""
+    manifest.add_dev_dependency("pytest")
+    manifest.add_dev_dependency("ruff")
+    manifest.add_dev_dependency("pytest")  # Should not duplicate
+
+    assert len(manifest.dev_dependencies) == 2
+    assert manifest.dev_dependencies == ["pytest", "ruff"]
+
+
 def test_manifest_directories_initialization(manifest):
     """Test that the manifest initializes the directories set."""
     assert isinstance(manifest.directories, set)
@@ -77,3 +89,13 @@ def test_add_file_injection(manifest):
 
     assert len(manifest.file_injections) == 1
     assert manifest.file_injections[".envrc"] == "export FOO=bar"
+
+
+def test_add_file_append(manifest):
+    """Test that file appends queue successfully to the target path list."""
+    manifest.add_file_append("pyproject.toml", "[tool.ruff]")
+    manifest.add_file_append("pyproject.toml", "[tool.mypy]")
+
+    assert len(manifest.file_appends) == 1
+    assert len(manifest.file_appends["pyproject.toml"]) == 2
+    assert manifest.file_appends["pyproject.toml"] == ["[tool.ruff]", "[tool.mypy]"]

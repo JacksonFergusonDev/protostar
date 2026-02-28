@@ -140,3 +140,100 @@ MD029:
   style: "one"
 """
         manifest.add_file_injection(".markdownlint.yaml", content)
+
+
+class RuffModule(BootstrapModule):
+    """Configures the Ruff linter and formatter with a standard baseline."""
+
+    cli_flags: ClassVar[tuple[str, ...]] = ("--ruff",)
+    cli_help: ClassVar[str] = "Scaffold Ruff linter and formatter"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Ruff"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Ruff dev dependency, ignores, and pyproject.toml configuration."""
+        logger.debug("Building Ruff tooling layer.")
+        manifest.add_dev_dependency("ruff")
+        manifest.add_vcs_ignore(".ruff_cache/")
+        manifest.add_workspace_hide(".ruff_cache/")
+
+        # Ruff natively inherits its target Python version from project.requires-python
+        config = """[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific rules
+]
+ignore = []
+"""
+        manifest.add_file_append("pyproject.toml", config)
+
+
+class MypyModule(BootstrapModule):
+    """Configures the Mypy static type checker with strict enforcement."""
+
+    cli_flags: ClassVar[tuple[str, ...]] = ("--mypy",)
+    cli_help: ClassVar[str] = "Scaffold Mypy static type checker"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Mypy"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Mypy dev dependency, ignores, and pyproject.toml configuration."""
+        logger.debug("Building Mypy tooling layer.")
+        manifest.add_dev_dependency("mypy")
+        manifest.add_vcs_ignore(".mypy_cache/")
+        manifest.add_workspace_hide(".mypy_cache/")
+
+        config = """[tool.mypy]
+python_version = "{{PYTHON_VERSION}}"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+"""
+        manifest.add_file_append("pyproject.toml", config)
+
+
+class PytestModule(BootstrapModule):
+    """Configures the Pytest testing framework and coverage artifacts."""
+
+    cli_flags: ClassVar[tuple[str, ...]] = ("--pytest",)
+    cli_help: ClassVar[str] = "Scaffold Pytest testing framework"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Pytest"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Pytest dev dependencies, ignores, and pyproject.toml configuration."""
+        logger.debug("Building Pytest tooling layer.")
+        manifest.add_dev_dependency("pytest")
+        manifest.add_dev_dependency("pytest-cov")
+        manifest.add_dev_dependency("pytest-mock")
+
+        artifacts = [".pytest_cache/", ".coverage", "htmlcov/", "coverage.xml"]
+        for artifact in artifacts:
+            manifest.add_vcs_ignore(artifact)
+            manifest.add_workspace_hide(artifact)
+
+        config = """[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+"""
+        manifest.add_file_append("pyproject.toml", config)

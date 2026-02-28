@@ -5,8 +5,11 @@ from protostar.modules import (
     DirenvModule,
     MacOSModule,
     MarkdownLintModule,
+    MypyModule,
     NodeModule,
+    PytestModule,
     PythonModule,
+    RuffModule,
     VSCodeModule,
 )
 
@@ -25,8 +28,45 @@ def test_python_module_uv_build(manifest, mocker):
     mod = PythonModule(package_manager="uv")
     mod.build(manifest)
 
+    # Ensure python module no longer ignores tool caches
     assert ".venv/" in manifest.vcs_ignores
+    assert ".ruff_cache/" not in manifest.vcs_ignores
     assert ["uv", "init", "--no-workspace"] in manifest.system_tasks
+
+
+def test_ruff_module_build(manifest):
+    """Test Ruff module drops its dev dependency, ignores, and configuration."""
+    mod = RuffModule()
+    mod.build(manifest)
+
+    assert "ruff" in manifest.dev_dependencies
+    assert ".ruff_cache/" in manifest.vcs_ignores
+    assert "pyproject.toml" in manifest.file_appends
+    assert "[tool.ruff]" in manifest.file_appends["pyproject.toml"][0]
+
+
+def test_mypy_module_build(manifest):
+    """Test Mypy module drops its dev dependency, ignores, and late-binding token."""
+    mod = MypyModule()
+    mod.build(manifest)
+
+    assert "mypy" in manifest.dev_dependencies
+    assert ".mypy_cache/" in manifest.vcs_ignores
+    assert "pyproject.toml" in manifest.file_appends
+    assert "{{PYTHON_VERSION}}" in manifest.file_appends["pyproject.toml"][0]
+
+
+def test_pytest_module_build(manifest):
+    """Test Pytest module drops testing dependencies and ignores."""
+    mod = PytestModule()
+    mod.build(manifest)
+
+    assert "pytest" in manifest.dev_dependencies
+    assert "pytest-cov" in manifest.dev_dependencies
+    assert ".pytest_cache/" in manifest.vcs_ignores
+    assert "htmlcov/" in manifest.vcs_ignores
+    assert "pyproject.toml" in manifest.file_appends
+    assert "[tool.pytest.ini_options]" in manifest.file_appends["pyproject.toml"][0]
 
 
 def test_python_module_uv_with_version(manifest, mocker):
