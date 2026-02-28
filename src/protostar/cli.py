@@ -11,7 +11,9 @@ from protostar.generators import GENERATOR_REGISTRY
 from .config import ProtostarConfig
 from .modules import (
     LANG_MODULES,
+    TOOLING_MODULES,
     BootstrapModule,
+    DirenvModule,
     JetBrainsModule,
     LinuxModule,
     MacOSModule,
@@ -68,7 +70,6 @@ def handle_init(args: argparse.Namespace) -> None:
     has_language = False
     for mod in LANG_MODULES:
         if mod.cli_flags and getattr(args, mod.__class__.__name__, False):
-            # Use isinstance for mypy type narrowing
             if isinstance(mod, PythonModule) and getattr(args, "python_version", None):
                 mod.python_version = args.python_version
 
@@ -91,10 +92,17 @@ def handle_init(args: argparse.Namespace) -> None:
     if ide_mod := get_ide_module(config.ide):
         modules.append(ide_mod)
 
+    # 5. Tooling Layers
+    for mod in TOOLING_MODULES:
+        if isinstance(mod, DirenvModule) and getattr(config, "direnv", False):
+            modules.append(mod)
+            continue
+
+        if mod.cli_flags and getattr(args, mod.__class__.__name__, False):
+            modules.append(mod)
+
     # Execute
-    engine = Orchestrator(
-        modules, presets, docker=args.docker, direnv=(args.direnv or config.direnv)
-    )
+    engine = Orchestrator(modules, presets, docker=args.docker)
     engine.run()
 
 
@@ -240,18 +248,21 @@ def main() -> None:
                 dest=preset.__class__.__name__,
             )
 
-    # Conceptual grouping for context artifacts
-    context_group = init_parser.add_argument_group("Context Scaffolding")
-    context_group.add_argument(
+    # Tooling Context
+    tooling_group = init_parser.add_argument_group("Tooling & Context")
+    tooling_group.add_argument(
         "--docker",
         action="store_true",
         help="Generate a .dockerignore based on the environment footprint",
     )
-    context_group.add_argument(
-        "--direnv",
-        action="store_true",
-        help="Scaffold a .envrc and evaluate the virtual environment",
-    )
+    for mod in TOOLING_MODULES:
+        if mod.cli_flags:
+            tooling_group.add_argument(
+                *mod.cli_flags,
+                action="store_true",
+                help=mod.cli_help,
+                dest=mod.__class__.__name__,
+            )
 
     init_parser.set_defaults(func=handle_init)
 
@@ -314,7 +325,7 @@ def main() -> None:
         help="Manage global Protostar configuration.",
         description="Opens the global configuration file in your system's default $EDITOR.",
         formatter_class=ProtoHelpFormatter,
-        usage=argparse.SUPPRESS,  # Suppress usage block
+        usage=argparse.SUPPRESS,
     )
     config_parser.set_defaults(func=handle_config)
 
