@@ -72,8 +72,6 @@ class PythonModule(BootstrapModule):
             ".venv/",
             "__pycache__/",
             "*.ipynb_checkpoints",
-            ".ruff_cache/",
-            ".mypy_cache/",
         ]
         for artifact in artifacts:
             manifest.add_vcs_ignore(artifact)

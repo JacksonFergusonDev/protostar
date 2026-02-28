@@ -17,7 +17,10 @@ from .modules import (
     JetBrainsModule,
     LinuxModule,
     MacOSModule,
+    MypyModule,
+    PytestModule,
     PythonModule,
+    RuffModule,
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
@@ -93,12 +96,37 @@ def handle_init(args: argparse.Namespace) -> None:
         modules.append(ide_mod)
 
     # 5. Tooling Layers
-    for mod in TOOLING_MODULES:
-        if isinstance(mod, DirenvModule) and getattr(config, "direnv", False):
-            modules.append(mod)
-            continue
+    has_python = any(isinstance(m, PythonModule) for m in modules)
 
-        if mod.cli_flags and getattr(args, mod.__class__.__name__, False):
+    for mod in TOOLING_MODULES:
+        is_active = False
+
+        # Evaluate global configuration defaults, ensuring language-specific
+        # tools only activate if their parent language is present in the stack.
+        if (
+            isinstance(mod, DirenvModule)
+            and getattr(config, "direnv", False)
+            or has_python
+            and (
+                isinstance(mod, RuffModule)
+                and getattr(config, "ruff", False)
+                or isinstance(mod, MypyModule)
+                and getattr(config, "mypy", False)
+                or isinstance(mod, PytestModule)
+                and getattr(config, "pytest", False)
+            )
+        ):
+            is_active = True
+
+        # Explicit CLI flags override local configuration omissions.
+        if (
+            not is_active
+            and mod.cli_flags
+            and getattr(args, mod.__class__.__name__, False)
+        ):
+            is_active = True
+
+        if is_active:
             modules.append(mod)
 
     # Execute
