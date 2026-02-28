@@ -8,6 +8,7 @@ def test_config_load_defaults(mocker):
 
     config = ProtostarConfig.load()
     assert config.ide == "vscode"
+    assert config.direnv is False
     assert config.node_package_manager == "npm"
     assert config.python_package_manager == "uv"
     assert config.presets == {}
@@ -21,6 +22,7 @@ def test_config_merge_cascade(mocker):
     global_payload = {
         "env": {
             "ide": "cursor",
+            "direnv": False,
             "python_package_manager": "pip",
             "node_package_manager": "pnpm",
         },
@@ -28,7 +30,10 @@ def test_config_merge_cascade(mocker):
     }
 
     # Mock the local workspace override
-    local_payload = {"env": {"ide": "jetbrains"}, "presets": {"latex": "science"}}
+    local_payload = {
+        "env": {"ide": "jetbrains", "direnv": True},
+        "presets": {"latex": "science"},
+    }
 
     # Intercept tomllib to return our mock payloads sequentially
     mocker.patch(
@@ -41,6 +46,7 @@ def test_config_merge_cascade(mocker):
     config = ProtostarConfig.load()
 
     assert config.ide == "jetbrains"
+    assert config.direnv is True
     assert config.python_package_manager == "pip"
     assert config.node_package_manager == "pnpm"
 
