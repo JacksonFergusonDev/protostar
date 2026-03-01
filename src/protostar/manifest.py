@@ -19,6 +19,8 @@ class EnvironmentManifest:
         directories (set[str]): Local directories to scaffold in the workspace.
         file_injections (dict[str, str]): Exact paths mapped to their raw file contents.
         file_appends (dict[str, list[str]]): Exact paths mapped to lists of content to append.
+        wants_pre_commit (bool): Flag indicating if pre-commit hooks should be scaffolded.
+        pre_commit_hooks (list[str]): Raw YAML payloads for the pre-commit config.
     """
 
     vcs_ignores: set[str] = dataclasses.field(default_factory=set)
@@ -30,6 +32,8 @@ class EnvironmentManifest:
     directories: set[str] = dataclasses.field(default_factory=set)
     file_injections: dict[str, str] = dataclasses.field(default_factory=dict)
     file_appends: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+    wants_pre_commit: bool = False
+    pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
 
     def add_vcs_ignore(self, path: str) -> None:
         """Appends a file or directory pattern to the VCS ignore list (.gitignore)."""
@@ -71,3 +75,8 @@ class EnvironmentManifest:
         if path not in self.file_appends:
             self.file_appends[path] = []
         self.file_appends[path].append(content)
+
+    def add_pre_commit_hook(self, payload: str) -> None:
+        """Queues a YAML payload block for the .pre-commit-config.yaml file."""
+        if payload not in self.pre_commit_hooks:
+            self.pre_commit_hooks.append(payload)
