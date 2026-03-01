@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "argcomplete>=3.6.3",
     "rich>=14.2.0",
 ]
 license = {file = "LICENSE"}
@@ -30,7 +31,6 @@ build-backend = "hatchling.build"
 
 [project.scripts]
 protostar = "protostar.cli:main"
-proto = "protostar.cli:main"
 
 [dependency-groups]
 dev = [

@@ -3,6 +3,7 @@ import logging
 import sys
 from collections.abc import Iterable
 
+import argcomplete
 from rich import box
 from rich.console import Console
 from rich.logging import RichHandler
@@ -221,7 +222,7 @@ def main() -> None:
     """Main entry point for the Protostar CLI."""
     parser = argparse.ArgumentParser(
         description="A modular CLI tool for quickly scaffolding software environments. ",
-        epilog="Run 'proto help <command>' or 'proto <command> --help' for detailed options.",
+        epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
         add_help=False,
         usage=argparse.SUPPRESS,
@@ -398,6 +399,9 @@ def main() -> None:
             parser.print_help()
 
     help_parser.set_defaults(func=dispatch_help)
+
+    # Inject argcomplete to evaluate the AST of the parser for shell tab-completion
+    argcomplete.autocomplete(parser)
 
     # Dynamic dispatch based on the invoked subparser
     args = parser.parse_args()
