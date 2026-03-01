@@ -1,9 +1,11 @@
 import argparse
+import logging
 import sys
 from collections.abc import Iterable
 
 from rich import box
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.table import Table
 
 from protostar.generators import GENERATOR_REGISTRY
@@ -233,6 +235,13 @@ def main() -> None:
         help=argparse.SUPPRESS,
     )
 
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose debug output and rich tracebacks.",
+    )
+
     subparsers = parser.add_subparsers(
         dest="command",
         title="Subcommands",
@@ -391,6 +400,16 @@ def main() -> None:
 
     # Dynamic dispatch based on the invoked subparser
     args = parser.parse_args()
+
+    if getattr(args, "verbose", False):
+        logger = logging.getLogger("protostar")
+        logger.setLevel(logging.DEBUG)
+
+        # Clear existing handlers to prevent duplicate stream outputs
+        logger.handlers.clear()
+        logger.addHandler(
+            RichHandler(console=console, markup=True, rich_tracebacks=True)
+        )
 
     # Graceful fallback if the user executes `proto` with no arguments
     if not getattr(args, "command", None):
