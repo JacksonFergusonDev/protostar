@@ -296,3 +296,28 @@ def test_orchestrator_creates_directories(mocker):
 
     assert mock_mkdir.call_count == 2
     mock_mkdir.assert_any_call(parents=True, exist_ok=True)
+
+
+def test_orchestrator_writes_dockerignore_with_uv(mocker):
+    """Test that the orchestrator appends .python-version to .dockerignore when uv is used."""
+    dummy_mod = DummyModule()
+
+    # Initialize with docker flag to trigger artifact generation
+    orchestrator = Orchestrator([dummy_mod], docker=True)
+
+    # Inject the uv init task to trigger the dynamic exclusion condition
+    orchestrator.manifest.add_system_task(
+        ["uv", "init", "--no-workspace", "--bare", "--python-pin"]
+    )
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=False)
+
+    mock_file = mocker.mock_open()
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+
+    orchestrator._write_docker_artifacts()
+
+    written_data = mock_file().write.call_args[0][0]
+
+    # Verify the host-side interpreter pin is successfully isolated from the container
+    assert ".python-version" in written_data

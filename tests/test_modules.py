@@ -23,16 +23,39 @@ def test_macos_module(manifest):
 
 
 def test_python_module_uv_build(manifest, mocker):
-    """Test Python manifest mutation prioritizes uv by default."""
+    """Test Python manifest mutation prioritizes uv by default and enforces bare initialization."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
     mod = PythonModule(package_manager="uv")
     mod.build(manifest)
 
-    # Ensure python module no longer ignores tool caches
     assert ".venv/" in manifest.vcs_ignores
     assert ".ruff_cache/" not in manifest.vcs_ignores
-    assert ["uv", "init", "--no-workspace"] in manifest.system_tasks
+    assert [
+        "uv",
+        "init",
+        "--no-workspace",
+        "--bare",
+        "--python-pin",
+    ] in manifest.system_tasks
+
+
+def test_python_module_uv_with_version(manifest, mocker):
+    """Test Python manifest includes the specific python version flag alongside bare initialization."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    mod = PythonModule(package_manager="uv", python_version="3.12")
+    mod.build(manifest)
+
+    assert [
+        "uv",
+        "init",
+        "--no-workspace",
+        "--bare",
+        "--python-pin",
+        "--python",
+        "3.12",
+    ] in manifest.system_tasks
 
 
 def test_ruff_module_build(manifest):
@@ -70,16 +93,6 @@ def test_pytest_module_build(manifest):
     assert "htmlcov/" in manifest.vcs_ignores
     assert "pyproject.toml" in manifest.file_appends
     assert "[tool.pytest.ini_options]" in manifest.file_appends["pyproject.toml"][0]
-
-
-def test_python_module_uv_with_version(manifest, mocker):
-    """Test Python manifest includes the specific python version flag for uv."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-
-    mod = PythonModule(package_manager="uv", python_version="3.12")
-    mod.build(manifest)
-
-    assert ["uv", "init", "--no-workspace", "--python", "3.12"] in manifest.system_tasks
 
 
 def test_python_module_pip_build(manifest, mocker):
