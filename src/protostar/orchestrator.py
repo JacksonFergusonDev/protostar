@@ -72,6 +72,7 @@ class Orchestrator:
         except Exception as e:
             console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
             logger.debug("Stack trace:", exc_info=True)
+            console.print("[dim]Run with --verbose for a full stack trace.[/dim]")
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and interpolates the pre-commit configuration."""
@@ -260,7 +261,9 @@ class Orchestrator:
             try:
                 settings = json.loads(settings_path.read_text())
             except json.JSONDecodeError:
-                logger.warning("Existing settings.json is malformed. Overwriting.")
+                console.print(
+                    "[yellow]Warning:[/yellow] Existing settings.json is malformed. Overwriting."
+                )
 
         # Deep merge isn't strictly necessary for top-level keys like files.exclude,
         # but we do standard dictionary updates to prevent clobbering other settings.
@@ -318,6 +321,6 @@ class Orchestrator:
                 Path("requirements.txt").write_text(result.stdout)
                 logger.debug("Successfully froze dependencies to requirements.txt")
             except Exception as e:
-                logger.warning(
-                    f"Failed to freeze dependencies to requirements.txt: {e}"
+                console.print(
+                    f"[yellow]Warning:[/yellow] Failed to freeze dependencies to requirements.txt: {e}"
                 )

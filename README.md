@@ -91,6 +91,12 @@ protostar generate cpp-class TelemetryIngestor
 
 ## 🛠 Command Reference
 
+### Global Flags
+
+| Flag | Description |
+| :--- | :--- |
+| `--verbose`, `-v` | Enables verbose debug output and rich tracebacks. |
+
 ### `protostar init`
 
 | Category | Flag | Description |

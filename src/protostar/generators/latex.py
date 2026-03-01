@@ -1,11 +1,14 @@
 import logging
 from pathlib import Path
 
+from rich.console import Console
+
 from protostar.config import ProtostarConfig
 
 from .base import TargetGenerator
 
 logger = logging.getLogger("protostar")
+console = Console()
 
 
 class LatexGenerator(TargetGenerator):
@@ -91,13 +94,13 @@ class LatexGenerator(TargetGenerator):
         gitignore_path = Path(".gitignore")
         if gitignore_path.exists():
             if "*.aux" not in gitignore_path.read_text():
-                logger.warning(
-                    "LaTeX auxiliary files not found in .gitignore. "
+                console.print(
+                    "[yellow]Warning:[/yellow] LaTeX auxiliary files not found in .gitignore. "
                     "Consider appending *.aux, *.bbl, *.fls, etc., to maintain tree cleanliness."
                 )
         else:
-            logger.warning(
-                "No .gitignore detected in current workspace. "
+            console.print(
+                "[yellow]Warning:[/yellow] No .gitignore detected in current workspace. "
                 "Consider tracking LaTeX build artifacts."
             )
 
