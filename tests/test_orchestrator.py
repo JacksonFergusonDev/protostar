@@ -37,6 +37,7 @@ def test_orchestrator_lifecycle(mocker):
     """Test that the orchestrator calls pre_flight, build, and executes tasks."""
     mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
     mocker.patch("protostar.orchestrator.Orchestrator._write_injected_files")
+    mocker.patch("protostar.orchestrator.Orchestrator._write_pre_commit_config")
     mocker.patch("protostar.orchestrator.Orchestrator._write_ignores")
     mocker.patch("protostar.orchestrator.Orchestrator._write_docker_artifacts")
     mocker.patch("protostar.orchestrator.Orchestrator._write_ide_settings")
@@ -164,6 +165,44 @@ def test_orchestrator_append_files_late_binding(mocker):
     written_data = mock_file().write.call_args[0][0]
     # Verify the regex successfully extracted '3.11' and interpolated the {{PYTHON_VERSION}} token
     assert 'python_version = "3.11"' in written_data
+
+
+def test_orchestrator_writes_pre_commit_config(mocker):
+    """Test that the orchestrator concatenates hooks and interpolates Mypy dependencies."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # 1. Flag activation and populate dynamic dependencies
+    orchestrator.manifest.wants_pre_commit = True
+    orchestrator.manifest.add_dependency("fastapi")
+    orchestrator.manifest.add_dev_dependency("pytest")
+
+    # 2. Queue a hook with the interpolation token
+    hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+{{MYPY_DEPENDENCIES}}"""
+    orchestrator.manifest.add_pre_commit_hook(hook_payload)
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._write_pre_commit_config()
+
+    # Verify what was written to the .pre-commit-config.yaml file
+    written_data = mock_write.call_args[0][0]
+
+    # Verify base hooks were prepended
+    assert "trailing-whitespace" in written_data
+    # Verify the target hook was appended
+    assert "id: mypy" in written_data
+
+    # Verify the dependency token was successfully evaluated and formatted
+    assert "{{MYPY_DEPENDENCIES}}" not in written_data
+    assert "- fastapi" in written_data
+    assert "- pytest" in written_data
 
 
 def test_orchestrator_writes_dockerignore(mocker):
