@@ -237,3 +237,28 @@ testpaths = [
 ]
 """
         manifest.add_file_append("pyproject.toml", config)
+
+
+class PreCommitModule(BootstrapModule):
+    """Configures pre-commit hooks and installs the git hook scripts."""
+
+    cli_flags: ClassVar[tuple[str, ...]] = ("--pre-commit",)
+    cli_help: ClassVar[str] = "Scaffold pre-commit hooks and configuration"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Pre-Commit"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Flags pre-commit activation, queues dependencies, and sets up git hooks."""
+        logger.debug("Building Pre-Commit tooling layer.")
+
+        # Trigger the orchestrator to assemble and write the YAML file
+        manifest.wants_pre_commit = True
+        manifest.add_dev_dependency("pre-commit")
+
+        # Git must be initialized before pre-commit can install its hooks
+        manifest.add_system_task(["git", "init"])
+        manifest.add_system_task(["pre-commit", "install"])
+        manifest.add_system_task(["pre-commit", "autoupdate"])

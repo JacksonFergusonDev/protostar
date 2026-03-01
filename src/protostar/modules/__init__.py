@@ -8,6 +8,7 @@ from .tooling_layer import (
     DirenvModule,
     MarkdownLintModule,
     MypyModule,
+    PreCommitModule,
     PytestModule,
     RuffModule,
 )
@@ -38,6 +39,7 @@ __all__ = [
     "DirenvModule",
     "RuffModule",
     "MypyModule",
+    "PreCommitModule",
     "PytestModule",
     "LANG_MODULES",
     "TOOLING_MODULES",
