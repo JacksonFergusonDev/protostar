@@ -89,6 +89,37 @@ protostar generate cpp-class TelemetryIngestor
 
 ---
 
+## ⚡️ Shell Autocomplete & Aliasing
+
+To speed up your workflow, you can enable CLI autocompletion and set up a shorter alias.
+
+### 1. Enable Autocomplete
+
+Protostar uses `argcomplete` for dynamic tab-completion. Install the bash/zsh bindings globally:
+
+```bash
+uv tool install argcomplete
+# Or using pip: pip install argcomplete
+```
+
+If you are using Zsh, ensure `bashcompinit` is loaded by adding this to your `~/.zshrc`:
+
+```bash
+autoload -U bashcompinit
+bashcompinit
+eval "$(register-python-argcomplete protostar)"
+```
+
+### 2. Set an Alias (Optional)
+
+Because `proto` is a common namespace (often used by Protocol Buffers), Protostar does not commandeer it by default. If you want the keystroke savings, map it manually in your `~/.zshrc` or `~/.bashrc`:
+
+```bash
+alias proto="protostar"
+```
+
+---
+
 ## 🛠 Command Reference
 
 ### Global Flags
@@ -123,11 +154,11 @@ protostar generate cpp-class TelemetryIngestor
 
 | Target | Example | Description |
 | :--- | :--- | :--- |
-| `tex` | `proto generate tex report` | Generates a boilerplate LaTeX file based on your global config preset. |
-| `cpp-class` | `proto generate cpp-class Engine` | Generates a `.hpp` and `.cpp` pair with standard boilerplate. |
-| `cmake` | `proto generate cmake` | Generates a `CMakeLists.txt` statically linking local C++ source files. |
-| `pio` | `proto generate pio esp32dev` | Generates a `platformio.ini` environment configuration. |
-| `circuitpython` | `proto generate circuitpython` | Generates a `code.py` non-blocking state machine and LSP configuration. |
+| `tex` | `protostar generate tex report` | Generates a boilerplate LaTeX file based on your global config preset. |
+| `cpp-class` | `protostar generate cpp-class Engine` | Generates a `.hpp` and `.cpp` pair with standard boilerplate. |
+| `cmake` | `protostar generate cmake` | Generates a `CMakeLists.txt` statically linking local C++ source files. |
+| `pio` | `protostar generate pio esp32dev` | Generates a `platformio.ini` environment configuration. |
+| `circuitpython` | `protostar generate circuitpython` | Generates a `code.py` non-blocking state machine and LSP configuration. |
 
 ---
 

@@ -249,6 +249,9 @@ class PytestModule(BootstrapModule):
         manifest.add_dev_dependency("pytest-cov")
         manifest.add_dev_dependency("pytest-mock")
 
+        # Deterministically scaffold the testing directory
+        manifest.add_directory("tests")
+
         artifacts = [".pytest_cache/", ".coverage", "htmlcov/", "coverage.xml"]
         for artifact in artifacts:
             manifest.add_vcs_ignore(artifact)

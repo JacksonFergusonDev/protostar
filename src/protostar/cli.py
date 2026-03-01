@@ -3,14 +3,14 @@ import logging
 import sys
 from collections.abc import Iterable
 
+import argcomplete
 from rich import box
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
 
-from protostar.generators import GENERATOR_REGISTRY
-
 from .config import ProtostarConfig
+from .generators import GENERATOR_REGISTRY
 from .modules import (
     LANG_MODULES,
     TOOLING_MODULES,
@@ -19,6 +19,7 @@ from .modules import (
     JetBrainsModule,
     LinuxModule,
     MacOSModule,
+    MarkdownLintModule,
     MypyModule,
     PreCommitModule,
     PytestModule,
@@ -111,6 +112,8 @@ def handle_init(args: argparse.Namespace) -> None:
             and getattr(config, "direnv", False)
             or isinstance(mod, PreCommitModule)
             and getattr(config, "pre_commit", False)
+            or isinstance(mod, MarkdownLintModule)
+            and getattr(config, "markdownlint", False)
             or has_python
             and (
                 isinstance(mod, RuffModule)
@@ -123,13 +126,12 @@ def handle_init(args: argparse.Namespace) -> None:
         ):
             is_active = True
 
-        # Explicit CLI flags override local configuration omissions.
-        if (
-            not is_active
-            and mod.cli_flags
-            and getattr(args, mod.__class__.__name__, False)
-        ):
-            is_active = True
+        # Explicit CLI flags override local configuration omissions and defaults.
+        # argparse.BooleanOptionalAction evaluates to True, False, or None.
+        if mod.cli_flags:
+            cli_override = getattr(args, mod.__class__.__name__, None)
+            if cli_override is not None:
+                is_active = cli_override
 
         if is_active:
             modules.append(mod)
@@ -220,7 +222,7 @@ def main() -> None:
     """Main entry point for the Protostar CLI."""
     parser = argparse.ArgumentParser(
         description="A modular CLI tool for quickly scaffolding software environments. ",
-        epilog="Run 'proto help <command>' or 'proto <command> --help' for detailed options.",
+        epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
         add_help=False,
         usage=argparse.SUPPRESS,
@@ -299,7 +301,7 @@ def main() -> None:
         if mod.cli_flags:
             tooling_group.add_argument(
                 *mod.cli_flags,
-                action="store_true",
+                action=argparse.BooleanOptionalAction,
                 help=mod.cli_help,
                 dest=mod.__class__.__name__,
             )
@@ -397,6 +399,9 @@ def main() -> None:
             parser.print_help()
 
     help_parser.set_defaults(func=dispatch_help)
+
+    # Inject argcomplete to evaluate the AST of the parser for shell tab-completion
+    argcomplete.autocomplete(parser)
 
     # Dynamic dispatch based on the invoked subparser
     args = parser.parse_args()
