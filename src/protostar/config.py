@@ -6,6 +6,10 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+
+console = Console()
+
 logger = logging.getLogger("protostar")
 
 # Platform-agnostic resolution leveraging standard XDG-like fallbacks
@@ -94,7 +98,15 @@ class ProtostarConfig:
     def _parse_and_merge(
         cls, path: Path, instance: "ProtostarConfig"
     ) -> "ProtostarConfig":
-        """Helper to parse a TOML file and merge its values into a config instance."""
+        """Helper to parse a TOML file and merge its values into a config instance.
+
+        Args:
+            path: The filesystem path to the local or global configuration file.
+            instance: The active ProtostarConfig object to mutate.
+
+        Returns:
+            A new ProtostarConfig instance containing the merged state.
+        """
         try:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
@@ -136,9 +148,14 @@ class ProtostarConfig:
             return replace(instance, **updates)
 
         except tomllib.TOMLDecodeError as e:
-            logger.error(f"Config syntax error in {path}: {e}")
+            console.print(
+                f"[bold red]Config Error:[/bold red] Syntax error in {path}: {e}"
+            )
         except Exception as e:
-            logger.warning(f"Failed to load config from {path}: {e}")
+            console.print(
+                f"[yellow]Warning:[/yellow] Failed to load config from {path}: {e}. "
+                "Falling back to defaults."
+            )
 
         return instance
 
