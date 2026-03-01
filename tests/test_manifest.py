@@ -9,6 +9,8 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.directories, set)
     assert isinstance(manifest.file_injections, dict)
     assert isinstance(manifest.file_appends, dict)
+    assert manifest.wants_pre_commit is False
+    assert isinstance(manifest.pre_commit_hooks, list)
 
 
 def test_add_vcs_ignore(manifest):
@@ -99,3 +101,14 @@ def test_add_file_append(manifest):
     assert len(manifest.file_appends) == 1
     assert len(manifest.file_appends["pyproject.toml"]) == 2
     assert manifest.file_appends["pyproject.toml"] == ["[tool.ruff]", "[tool.mypy]"]
+
+
+def test_add_pre_commit_hook(manifest):
+    """Test that pre-commit hooks are queued and deduplicated correctly."""
+    manifest.add_pre_commit_hook("- id: ruff")
+    manifest.add_pre_commit_hook("- id: ruff")  # Should not duplicate
+    manifest.add_pre_commit_hook("- id: mypy")
+
+    assert len(manifest.pre_commit_hooks) == 2
+    assert "- id: ruff" in manifest.pre_commit_hooks
+    assert "- id: mypy" in manifest.pre_commit_hooks

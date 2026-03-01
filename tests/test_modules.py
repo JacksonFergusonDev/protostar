@@ -12,6 +12,7 @@ from protostar.modules import (
     RuffModule,
     VSCodeModule,
 )
+from protostar.modules.tooling_layer import PreCommitModule
 
 
 def test_macos_module(manifest):
@@ -35,7 +36,7 @@ def test_python_module_uv_build(manifest, mocker):
 
 
 def test_ruff_module_build(manifest):
-    """Test Ruff module drops its dev dependency, ignores, and configuration."""
+    """Test Ruff module drops its dev dependency, ignores, hooks, and configuration."""
     mod = RuffModule()
     mod.build(manifest)
 
@@ -43,10 +44,11 @@ def test_ruff_module_build(manifest):
     assert ".ruff_cache/" in manifest.vcs_ignores
     assert "pyproject.toml" in manifest.file_appends
     assert "[tool.ruff]" in manifest.file_appends["pyproject.toml"][0]
+    assert any("id: ruff" in hook for hook in manifest.pre_commit_hooks)
 
 
 def test_mypy_module_build(manifest):
-    """Test Mypy module drops its dev dependency, ignores, and late-binding token."""
+    """Test Mypy module drops its dev dependency, ignores, hooks, and late-binding token."""
     mod = MypyModule()
     mod.build(manifest)
 
@@ -54,6 +56,7 @@ def test_mypy_module_build(manifest):
     assert ".mypy_cache/" in manifest.vcs_ignores
     assert "pyproject.toml" in manifest.file_appends
     assert "{{PYTHON_VERSION}}" in manifest.file_appends["pyproject.toml"][0]
+    assert any("{{MYPY_DEPENDENCIES}}" in hook for hook in manifest.pre_commit_hooks)
 
 
 def test_pytest_module_build(manifest):
@@ -101,7 +104,7 @@ def test_python_module_pip_with_version(manifest, mocker):
 
 
 def test_node_module_custom_manager(manifest, mocker):
-    """Test that NodeModule respects custom package managers like pnpm."""
+    """Test that NodeModule respects custom package managers and queues hooks."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
     mod = NodeModule(package_manager="pnpm")
@@ -109,6 +112,7 @@ def test_node_module_custom_manager(manifest, mocker):
 
     assert ["pnpm", "init"] in manifest.system_tasks
     assert "node_modules/" in manifest.vcs_ignores
+    assert any("id: prettier" in hook for hook in manifest.pre_commit_hooks)
 
 
 def test_vscode_module_aliases():
@@ -159,7 +163,7 @@ def test_direnv_module_build_uv(manifest, mocker):
 
 
 def test_markdownlint_module_build(manifest, mocker):
-    """Test that MarkdownLint injects the configured ruleset."""
+    """Test that MarkdownLint injects the configured ruleset and queues hooks."""
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
 
     mod = MarkdownLintModule()
@@ -167,3 +171,16 @@ def test_markdownlint_module_build(manifest, mocker):
 
     assert ".markdownlint.yaml" in manifest.file_injections
     assert "MD013: false" in manifest.file_injections[".markdownlint.yaml"]
+    assert any("id: markdownlint" in hook for hook in manifest.pre_commit_hooks)
+
+
+def test_pre_commit_module_build(manifest):
+    """Test that PreCommitModule toggles manifest state and queues initialization tasks."""
+    mod = PreCommitModule()
+    mod.build(manifest)
+
+    assert manifest.wants_pre_commit is True
+    assert "pre-commit" in manifest.dev_dependencies
+    assert ["git", "init"] in manifest.system_tasks
+    assert ["pre-commit", "install"] in manifest.system_tasks
+    assert ["pre-commit", "autoupdate"] in manifest.system_tasks

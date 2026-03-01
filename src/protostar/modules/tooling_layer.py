@@ -79,8 +79,15 @@ class MarkdownLintModule(BootstrapModule):
         return "MarkdownLint"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Injects the .markdownlint.yaml boilerplate file."""
+        """Injects the .markdownlint.yaml boilerplate file and pre-commit hook."""
         logger.debug("Building MarkdownLint tooling layer.")
+
+        hook_payload = """  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0
+    hooks:
+      - id: markdownlint
+        args: ["--fix"]"""
+        manifest.add_pre_commit_hook(hook_payload)
 
         if Path(".markdownlint.yaml").exists():
             logger.debug("Skipping .markdownlint.yaml generation; file already exists.")
@@ -154,11 +161,19 @@ class RuffModule(BootstrapModule):
         return "Ruff"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Queues Ruff dev dependency, ignores, and pyproject.toml configuration."""
+        """Queues Ruff dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Ruff tooling layer.")
         manifest.add_dev_dependency("ruff")
         manifest.add_vcs_ignore(".ruff_cache/")
         manifest.add_workspace_hide(".ruff_cache/")
+
+        hook_payload = """  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.4
+    hooks:
+      - id: ruff-format
+      - id: ruff
+        args: [ --fix ]"""
+        manifest.add_pre_commit_hook(hook_payload)
 
         # Ruff natively inherits its target Python version from project.requires-python
         config = """[tool.ruff]
@@ -190,11 +205,21 @@ class MypyModule(BootstrapModule):
         return "Mypy"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Queues Mypy dev dependency, ignores, and pyproject.toml configuration."""
+        """Queues Mypy dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Mypy tooling layer.")
         manifest.add_dev_dependency("mypy")
         manifest.add_vcs_ignore(".mypy_cache/")
         manifest.add_workspace_hide(".mypy_cache/")
+
+        # The MYPY_DEPENDENCIES token is late-bound by the orchestrator
+        # to ensure all dynamically added packages are typed.
+        hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+{{MYPY_DEPENDENCIES}}"""
+        manifest.add_pre_commit_hook(hook_payload)
 
         config = """[tool.mypy]
 python_version = "{{PYTHON_VERSION}}"
@@ -237,3 +262,28 @@ testpaths = [
 ]
 """
         manifest.add_file_append("pyproject.toml", config)
+
+
+class PreCommitModule(BootstrapModule):
+    """Configures pre-commit hooks and installs the git hook scripts."""
+
+    cli_flags: ClassVar[tuple[str, ...]] = ("--pre-commit",)
+    cli_help: ClassVar[str] = "Scaffold pre-commit hooks and configuration"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Pre-Commit"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Flags pre-commit activation, queues dependencies, and sets up git hooks."""
+        logger.debug("Building Pre-Commit tooling layer.")
+
+        # Trigger the orchestrator to assemble and write the YAML file
+        manifest.wants_pre_commit = True
+        manifest.add_dev_dependency("pre-commit")
+
+        # Git must be initialized before pre-commit can install its hooks
+        manifest.add_system_task(["git", "init"])
+        manifest.add_system_task(["pre-commit", "install"])
+        manifest.add_system_task(["pre-commit", "autoupdate"])

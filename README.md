@@ -72,10 +72,10 @@ protostar init --python --cpp
 If you are building a specific type of pipeline, use presets to pre-load standard tools and directory structures without tying yourself to a rigid template. You can also automate context boundaries like Docker, virtual environment activation, and dev tooling.
 
 ```bash
-protostar init --python --astro --docker --direnv -m --mypy --pytest
+protostar init --python --astro --docker --direnv -m --mypy --pytest --pre-commit
 ```
 
-*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, and resolves `mypy` and `pytest` dev dependencies while injecting their baseline configurations into `pyproject.toml`.*
+*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, resolves `mypy` and `pytest` dev dependencies, and generates a modular `.pre-commit-config.yaml` that auto-installs and updates git hooks tailored exactly to the tools you enabled.*
 
 ### File Generation
 
@@ -108,6 +108,7 @@ protostar generate cpp-class TelemetryIngestor
 | **Tooling** | `--ruff` | Scaffolds Ruff linter and formatter alongside `pyproject.toml` baseline config. |
 | **Tooling** | `--mypy` | Scaffolds Mypy static type checker alongside `pyproject.toml` baseline config. |
 | **Tooling** | `--pytest` | Scaffolds Pytest testing framework alongside `pyproject.toml` baseline config. |
+| **Tooling** | `--pre-commit` | Scaffolds and installs a modular `.pre-commit-config.yaml` based on active languages. |
 | **Context** | `--docker` | Generates a highly optimized `.dockerignore` based on the environment footprint. |
 | **Context** | `--direnv` | Scaffolds a `.envrc` and evaluates the virtual environment shell hook automatically. |
 | **Context** | `--markdownlint`, `-m` | Scaffolds a relaxed `.markdownlint.yaml` configuration. |

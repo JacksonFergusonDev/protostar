@@ -57,6 +57,7 @@ class Orchestrator:
             # Phase 3: System Execution
             self._create_directories()
             self._write_injected_files()
+            self._write_pre_commit_config()  # Inject execution here
             self._execute_tasks()
             self._append_files()
             self._write_ignores()
@@ -71,6 +72,50 @@ class Orchestrator:
         except Exception as e:
             console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
             logger.debug("Stack trace:", exc_info=True)
+
+    def _write_pre_commit_config(self) -> None:
+        """Assembles and interpolates the pre-commit configuration."""
+        if not self.manifest.wants_pre_commit:
+            return
+
+        target = Path(".pre-commit-config.yaml")
+        if target.exists():
+            logger.debug(
+                "Skipping .pre-commit-config.yaml generation; file already exists."
+            )
+            return
+
+        # Start with the universal baseline hooks
+        base_yaml = """repos:
+  # 1. Generic hooks (configured to ignore Python to avoid formatting conflicts)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \\.py$
+      - id: end-of-file-fixer
+        exclude: \\.py$
+      - id: check-yaml
+      - id: check-added-large-files
+"""
+
+        # Append all queued hook payloads
+        hooks_yaml = "\n".join(self.manifest.pre_commit_hooks)
+        full_yaml = f"{base_yaml}\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
+
+        # Late-bind the Mypy dependencies to guarantee static evaluation captures all packages
+        if "{{MYPY_DEPENDENCIES}}" in full_yaml:
+            deps = self.manifest.dependencies + self.manifest.dev_dependencies
+            if deps:
+                # Format as a YAML list array with correct indentation
+                deps_formatted = "\n".join(f"          - {d}" for d in deps)
+            else:
+                deps_formatted = "          []"
+
+            full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
+
+        target.write_text(full_yaml)
+        logger.debug("Scaffolded .pre-commit-config.yaml")
 
     def _write_injected_files(self) -> None:
         """Writes all queued boilerplate files to the local workspace."""

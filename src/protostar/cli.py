@@ -18,6 +18,7 @@ from .modules import (
     LinuxModule,
     MacOSModule,
     MypyModule,
+    PreCommitModule,
     PytestModule,
     PythonModule,
     RuffModule,
@@ -106,6 +107,8 @@ def handle_init(args: argparse.Namespace) -> None:
         if (
             isinstance(mod, DirenvModule)
             and getattr(config, "direnv", False)
+            or isinstance(mod, PreCommitModule)
+            and getattr(config, "pre_commit", False)
             or has_python
             and (
                 isinstance(mod, RuffModule)

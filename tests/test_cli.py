@@ -10,6 +10,7 @@ from protostar.modules import (
     RuffModule,
     VSCodeModule,
 )
+from protostar.modules.tooling_layer import PreCommitModule
 
 
 def test_handle_init_dispatch(mocker):
@@ -18,7 +19,7 @@ def test_handle_init_dispatch(mocker):
     mocker.patch("protostar.cli.get_os_module")
     mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
-    # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12 --ruff --mypy --pytest`
+    # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12 --ruff --mypy --pytest --pre-commit`
     args = argparse.Namespace(
         PythonModule=True,
         RustModule=False,
@@ -35,6 +36,7 @@ def test_handle_init_dispatch(mocker):
         RuffModule=True,
         MypyModule=True,
         PytestModule=True,
+        PreCommitModule=True,
         python_version="3.12",
     )
 
@@ -49,6 +51,7 @@ def test_handle_init_dispatch(mocker):
     assert any(isinstance(m, RuffModule) for m in modules)
     assert any(isinstance(m, MypyModule) for m in modules)
     assert any(isinstance(m, PytestModule) for m in modules)
+    assert any(isinstance(m, PreCommitModule) for m in modules)
 
 
 def test_handle_init_tooling_requires_language_context(mocker):
