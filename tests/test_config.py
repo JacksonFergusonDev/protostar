@@ -83,22 +83,34 @@ def test_config_no_ruff_inversion(mocker):
     assert config.ruff is False
 
 
-def test_parse_and_merge_handles_malformed_toml(mocker, caplog):
+def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     """Test that a malformed TOML file does not crash the loading sequence."""
-    import tomllib
+    import protostar.config
 
-    # Side effect sequence: True for global config, False for local config
-    mocker.patch("protostar.config.Path.exists", side_effect=[True, False])
-    mocker.patch("builtins.open", mocker.mock_open())
+    # 1. Create a real, temporary file with deliberately broken TOML syntax
+    mock_global_config = tmp_path / "config.toml"
+    mock_global_config.write_text("invalid [ toml syntax === \n")
 
-    # Force a syntax error
-    mocker.patch(
-        "protostar.config.tomllib.load",
-        side_effect=tomllib.TOMLDecodeError("Invalid syntax", "", 0),
-    )
+    mock_local_config = tmp_path / ".protostar.toml"
+    # We leave local config uncreated so exists() evaluates to False naturally
 
-    config = ProtostarConfig.load()
+    # 2. Redirect the module's constants to point to our temporary sandboxed files
+    mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
+    mocker.patch("protostar.config.LOCAL_CONFIG_FILE", mock_local_config)
 
-    # Should default gracefully
+    # 3. Intercept rich.console.print to verify our error surfaced
+    mock_print = mocker.patch("protostar.config.console.print")
+
+    # Execute the load sequence
+    config = protostar.config.ProtostarConfig.load()
+
+    # The config should gracefully fall back to default values
     assert config.ide == "vscode"
-    assert "Config syntax error" in caplog.text
+
+    # Verify that the user was explicitly warned about the syntax error
+    mock_print.assert_called_once()
+    printed_text = mock_print.call_args[0][0]
+
+    assert "[bold red]Config Error:[/bold red]" in printed_text
+    assert "Syntax error in" in printed_text
+    assert str(mock_global_config) in printed_text
