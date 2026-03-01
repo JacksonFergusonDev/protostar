@@ -72,6 +72,7 @@ class Orchestrator:
         except Exception as e:
             console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
             logger.debug("Stack trace:", exc_info=True)
+            console.print("[dim]Run with --verbose for a full stack trace.[/dim]")
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and interpolates the pre-commit configuration."""
