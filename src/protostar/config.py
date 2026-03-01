@@ -35,6 +35,7 @@ python_package_manager = "uv"
 node_package_manager = "npm"
 
 # Optional dev tool toggles for Python
+# markdownlint = true
 # no-ruff = true  # Disables the default Ruff scaffolding
 # mypy = true
 # pytest = true
@@ -56,6 +57,7 @@ class ProtostarConfig:
         python_package_manager (str): The preferred Python manager ('uv', 'pip').
         python_version (str | None): The specific Python version to scaffold.
         node_package_manager (str): The preferred JS manager ('npm', 'pnpm', 'yarn').
+        markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
         pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
@@ -68,6 +70,7 @@ class ProtostarConfig:
     python_package_manager: str = "uv"
     python_version: str | None = None
     node_package_manager: str = "npm"
+    markdownlint: bool = False
     ruff: bool = True
     mypy: bool = False
     pytest: bool = False
@@ -129,6 +132,8 @@ class ProtostarConfig:
                     updates["node_package_manager"] = env_data["node_package_manager"]
 
                 # Process dev tool flags, accommodating the inverted no-ruff flag
+                if "markdownlint" in env_data:
+                    updates["markdownlint"] = env_data["markdownlint"]
                 if "ruff" in env_data:
                     updates["ruff"] = env_data["ruff"]
                 if "no-ruff" in env_data:
