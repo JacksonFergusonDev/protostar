@@ -27,6 +27,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     RuffModule(),
     MypyModule(),
     PytestModule(),
+    PreCommitModule(),
 )
 
 __all__ = [
