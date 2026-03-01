@@ -221,6 +221,15 @@ class Orchestrator:
 
         # Combine manifest ignores with standard daemon context bloat exclusions
         base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
+
+        # Exclude local Python version pins from the daemon context if managed by uv.
+        # We only append this if uv is actively generating the project footprint.
+        has_uv_init = any(
+            task[:2] == ["uv", "init"] for task in self.manifest.system_tasks
+        )
+        if has_uv_init:
+            base_ignores.add(".python-version")
+
         combined_ignores = self.manifest.vcs_ignores | base_ignores
 
         missing = [p for p in combined_ignores if p not in existing_content]
