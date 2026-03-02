@@ -1,9 +1,12 @@
 import json
 import logging
+import platform
 import re
 import subprocess
 import sys
 import tomllib
+import traceback
+import urllib.parse
 from pathlib import Path
 
 from rich.console import Console
@@ -72,9 +75,36 @@ class Orchestrator:
             )
 
         except Exception as e:
-            console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
+            # Expected runtime boundaries (e.g., missing binaries, failed network requests)
+            if isinstance(e, (RuntimeError, ValueError, FileExistsError)):
+                console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
+                sys.exit(1)
+
+            # Unexpected internal anomalies: Capture telemetry and prompt for a bug report
+            console.print(
+                "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
+            )
+
+            # Extract stack trace and environmental vector
+            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            issue_body = (
+                "### Environment\n"
+                f"- **OS**: {platform.system()} {platform.release()}\n"
+                f"- **Python**: {sys.version.split()[0]}\n"
+                f"- **Command**: `{' '.join(sys.argv)}`\n\n"
+                "### Traceback\n"
+                f"```python\n{tb_str}\n```\n"
+            )
+
+            encoded_body = urllib.parse.quote(issue_body)
+            issue_url = f"https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body={encoded_body}"
+
+            console.print(
+                "This looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
+            )
+            console.print(f"[bold cyan]{issue_url}[/bold cyan]")
+
             logger.debug("Stack trace:", exc_info=True)
-            console.print("[dim]Run with --verbose for a full stack trace.[/dim]")
             sys.exit(1)
 
     def _write_pre_commit_config(self) -> None:
