@@ -79,7 +79,7 @@ class PythonModule(BootstrapModule):
 
         if self.package_manager == "uv":
             if not Path("pyproject.toml").exists():
-                cmd = ["uv", "init", "--no-workspace", "--bare", "--python-pin"]
+                cmd = ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
                 if self.python_version:
                     cmd.extend(["--python", self.python_version])
                 manifest.add_system_task(cmd)

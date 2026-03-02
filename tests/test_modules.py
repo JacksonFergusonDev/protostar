@@ -36,7 +36,7 @@ def test_python_module_uv_build(manifest, mocker):
         "init",
         "--no-workspace",
         "--bare",
-        "--python-pin",
+        "--pin-python",
     ] in manifest.system_tasks
 
 
@@ -52,7 +52,7 @@ def test_python_module_uv_with_version(manifest, mocker):
         "init",
         "--no-workspace",
         "--bare",
-        "--python-pin",
+        "--pin-python",
         "--python",
         "3.12",
     ] in manifest.system_tasks
