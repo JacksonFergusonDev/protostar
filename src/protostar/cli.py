@@ -32,6 +32,7 @@ from .presets import (
     PRESETS,
     PresetModule,
 )
+from .wizard import run_discovery_wizard, run_generate_wizard, run_init_wizard
 
 console = Console()
 
@@ -402,6 +403,71 @@ def main() -> None:
 
     # Inject argcomplete to evaluate the AST of the parser for shell tab-completion
     argcomplete.autocomplete(parser)
+
+    # ==========================================
+    # Interactive Wizard Interception Routing
+    # ==========================================
+
+    # 1. Intercept zero-argument invocation (Discovery Multiplexer)
+    if len(sys.argv) == 1:
+        action = run_discovery_wizard()
+        if not action:
+            parser.print_help()
+            sys.exit(1)
+        # Append the selected action to sys.argv to trick argparse into routing
+        # to the correct subparser for further processing or wizard interception.
+        sys.argv.append(action)
+
+    # 2. Intercept parameter-less subcommands for interactive wizards
+    if len(sys.argv) == 2:
+        cmd = sys.argv[1]
+
+        if cmd == "init":
+            selections = run_init_wizard()
+            if not selections:
+                # Force argparse to dump the subcommand help if wizard is cancelled
+                parser.parse_args(["init", "--help"])
+                sys.exit(1)
+
+            config = ProtostarConfig.load()
+            modules = selections["modules"]
+            presets = selections["presets"]
+
+            # Inject mandatory OS and configured IDE layers implicitly
+            modules.insert(0, get_os_module())
+            if ide_mod := get_ide_module(config.ide):
+                modules.append(ide_mod)
+
+            engine = Orchestrator(modules, presets, docker=selections["docker"])
+            engine.run()
+            sys.exit(0)
+
+        elif cmd == "generate":
+            selections = run_generate_wizard()
+            if not selections:
+                parser.parse_args(["generate", "--help"])
+                sys.exit(1)
+
+            config = ProtostarConfig.load()
+            target_generator = GENERATOR_REGISTRY.get(str(selections["target"]))
+
+            if not target_generator:
+                console.print(
+                    f"[bold red]Generation Aborted:[/bold red] Unknown target '{selections['target']}'."
+                )
+                sys.exit(1)
+
+            try:
+                out_paths = target_generator.execute(selections["name"], config)
+                for path in out_paths:
+                    console.print(f"[bold green]Generated:[/bold green] {path}")
+            except (FileExistsError, ValueError) as e:
+                console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
+            sys.exit(0)
+
+    # ==========================================
+    # Standard CLI Execution
+    # ==========================================
 
     # Dynamic dispatch based on the invoked subparser
     args = parser.parse_args()

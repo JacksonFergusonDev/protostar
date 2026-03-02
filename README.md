@@ -49,11 +49,23 @@ You can also install it into your active environment using standard pip:
 pip install protostar
 ```
 
+> **Note:** If you install Protostar into an existing Python environment with `pip`, it will bring in `questionary` and `prompt_toolkit` for the interactive wizard. In rare cases, this can conflict with other tools that strictly pin `prompt_toolkit` versions (e.g., some IPython/Jupyter stacks). For the smoothest experience and guaranteed isolation, prefer `uv tool install protostar` or Homebrew.
+
 ---
 
 ## 🚀 Usage
 
 Protostar is designed to be run right after you `mkdir` a new project.
+
+### Interactive Wizard
+
+If you run `protostar` without any arguments, it will launch an interactive Terminal User Interface (TUI). This wizard allows you to visually select your languages, tools, and presets using the spacebar without needing to memorize CLI flags.
+
+```bash
+protostar
+```
+
+You can also bypass the discovery menu and jump directly into the specific wizards by running `protostar init` or `protostar generate` with no additional flags.
 
 ### Basic Environment Initialization
 
