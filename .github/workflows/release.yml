@@ -15,28 +15,92 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7
-      with:
-        python-version: "3.14"
+      - name: Install uv
+        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7
+        with:
+          python-version: "3.14"
 
-    - name: Build distribution
-      run: uv build
+      - name: Build distribution
+        run: uv build
 
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
   update-homebrew:
+    name: Update Homebrew tap formula + resources
     needs: build-n-publish
     runs-on: ubuntu-latest
     steps:
-      - name: Update Homebrew Formula
-        uses: mislav/bump-homebrew-formula-action@v3
+      - name: Check out Homebrew Tap
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
         with:
-          formula-name: protostar
-          homebrew-tap: JacksonFergusonDev/homebrew-tap
-          download-url: https://github.com/JacksonFergusonDev/protostar/archive/refs/tags/${{ github.ref_name }}.tar.gz
+          repository: JacksonFergusonDev/homebrew-tap
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Bump formula URL/SHA and sync Python resources
+        working-directory: homebrew-tap
         env:
-          COMMITTER_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          VER="${TAG#v}" # e.g. 0.3.0
+          FORMULA="Formula/protostar.rb"
+
+          # Wait until the just-published version is visible on PyPI
+          FOUND=0
+          for i in $(seq 1 60); do
+            if curl -fsS "https://pypi.org/pypi/protostar/${VER}/json" >/dev/null; then
+              FOUND=1
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$FOUND" -ne 1 ]; then
+            echo "Timed out waiting for protostar ${VER} on PyPI"
+            exit 1
+          fi
+
+          # Fetch PyPI metadata
+          PYPI_JSON="$(curl -fsS https://pypi.org/pypi/protostar/${VER}/json)"
+
+          NEW_URL="$(echo "$PYPI_JSON" | jq -r '.urls[] | select(.packagetype=="sdist") | .url')"
+          NEW_SHA="$(echo "$PYPI_JSON" | jq -r '.urls[] | select(.packagetype=="sdist") | .digests.sha256')"
+
+          if [ -z "$NEW_URL" ] || [ -z "$NEW_SHA" ]; then
+            echo "Failed to retrieve sdist info from PyPI"
+            exit 1
+          fi
+
+          # Update formula
+          sed -i "s|^  url \".*\"|  url \"${NEW_URL}\"|" "$FORMULA"
+          sed -i "s|^  sha256 \".*\"|  sha256 \"${NEW_SHA}\"|" "$FORMULA"
+
+          # Regenerate the dependency resource blocks from PyPI
+          brew update-python-resources \
+            --install-dependencies \
+            --package-name protostar \
+            --version "${VER}" \
+            "$FORMULA"
+
+          # Commit + push if anything changed
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$FORMULA"
+
+          if git diff --cached --quiet; then
+            echo "No formula changes to commit."
+            exit 0
+          fi
+
+          brew audit --strict --online "$FORMULA"
+
+          git commit -m "chore: bump protostar to ${TAG} and sync python resources"
+          git push
