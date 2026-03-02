@@ -30,7 +30,7 @@ def run_quiet(cmd: list[str], description: str) -> None:
             logger.error(f"Task failed: {' '.join(cmd)}\nOutput:\n{output}")
 
             # Catch known edge cases where uv fails to resolve/download python versions
-            if cmd[0] == "uv" and "python" in output.lower():
+            if cmd[0] == "uv" and "python" in (output or "").lower():
                 raise RuntimeError(
                     f"Command failed during setup: {cmd[0]}\n"
                     "Hint: `uv` encountered an error resolving the requested Python version. "
@@ -39,4 +39,9 @@ def run_quiet(cmd: list[str], description: str) -> None:
                     "version exists locally."
                 ) from e
 
-            raise RuntimeError(f"Command failed during setup: {cmd[0]}") from e
+            # Provide the failing output to the user directly in the error message
+            error_msg = (
+                f"Command failed during setup: {' '.join(cmd)}\n\n"
+                f"Details:\n{output.strip() if output else 'No standard error output captured.'}"
+            )
+            raise RuntimeError(error_msg) from e

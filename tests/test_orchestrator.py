@@ -321,3 +321,91 @@ def test_orchestrator_writes_dockerignore_with_uv(mocker):
 
     # Verify the host-side interpreter pin is successfully isolated from the container
     assert ".python-version" in written_data
+
+
+def test_orchestrator_toml_has_overlap_safe_merge():
+    """Test that disjoint TOML namespaces correctly evaluate as non-overlapping."""
+    orchestrator = Orchestrator([])
+    existing = {"tool": {"ruff": {"line-length": 88}}}
+    payload = {"tool": {"mypy": {"strict": True}}}
+
+    assert orchestrator._toml_has_overlap(existing, payload) is False
+
+
+def test_orchestrator_toml_has_overlap_scalar_collision():
+    """Test that exact key collisions in TOML dictionaries are intercepted."""
+    orchestrator = Orchestrator([])
+    existing = {"tool": {"ruff": {"line-length": 88}}}
+    payload = {"tool": {"ruff": {"line-length": 100}}}
+
+    assert orchestrator._toml_has_overlap(existing, payload) is True
+
+
+def test_orchestrator_toml_has_overlap_table_redefinition():
+    """Test that appending scalar strings to an existing table node triggers a collision."""
+    orchestrator = Orchestrator([])
+    existing: dict = {"tool": {"ruff": {"lint": {}}}}
+    payload = {"tool": {"ruff": "invalid string override"}}
+
+    assert orchestrator._toml_has_overlap(existing, payload) is True
+
+
+def test_orchestrator_append_files_toml_idempotency(mocker):
+    """Test that _append_files filters TOML payloads utilizing structural DAG comparison."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # Queue two payloads: one overlapping, one disjoint
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
+    )
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", '[tool.pytest.ini_options]\naddopts = "-q"\n'
+    )
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch(
+        "protostar.orchestrator.Path.read_text",
+        return_value='[tool.ruff]\ntarget-version = "py312"\n',
+    )
+
+    mock_file = mocker.mock_open()
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+
+    orchestrator._append_files()
+
+    written_data = mock_file().write.call_args[0][0]
+
+    # The [tool.ruff] payload should be dropped due to table overlap,
+    # but the disjoint [tool.pytest] payload should bypass the filter and execute.
+    assert "[tool.pytest.ini_options]" in written_data
+    assert "line-length = 88" not in written_data
+
+
+def test_orchestrator_crash_reporter(mocker):
+    """Test that unhandled exceptions generate telemetry payloads and prompt for issues."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # Force a critical internal failure during the pre-flight phase
+    mocker.patch.object(
+        dummy_mod, "pre_flight", side_effect=TypeError("Unhandled null pointer")
+    )
+
+    mock_console = mocker.patch("protostar.orchestrator.console.print")
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit")
+
+    orchestrator.run()
+
+    mock_exit.assert_called_once_with(1)
+
+    # Aggregate console outputs to verify telemetry URL generation
+    printed_output = " ".join(
+        call.args[0] for call in mock_console.call_args_list if call.args
+    )
+
+    assert "CRITICAL FAILURE" in printed_output
+    assert (
+        "https://github.com/jacksonfergusondev/protostar/issues/new" in printed_output
+    )
+    assert "Crash+Report" in printed_output

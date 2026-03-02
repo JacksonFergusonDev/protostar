@@ -1,8 +1,12 @@
 import json
 import logging
+import platform
 import re
 import subprocess
 import sys
+import tomllib
+import traceback
+import urllib.parse
 from pathlib import Path
 
 from rich.console import Console
@@ -58,7 +62,7 @@ class Orchestrator:
             # Phase 3: System Execution
             self._create_directories()
             self._write_injected_files()
-            self._write_pre_commit_config()  # Inject execution here
+            self._write_pre_commit_config()
             self._execute_tasks()
             self._append_files()
             self._write_ignores()
@@ -71,9 +75,36 @@ class Orchestrator:
             )
 
         except Exception as e:
-            console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
+            # Expected runtime boundaries (e.g., missing binaries, failed network requests)
+            if isinstance(e, (RuntimeError, ValueError, FileExistsError)):
+                console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
+                sys.exit(1)
+
+            # Unexpected internal anomalies: Capture telemetry and prompt for a bug report
+            console.print(
+                "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
+            )
+
+            # Extract stack trace and environmental vector
+            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+            issue_body = (
+                "### Environment\n"
+                f"- **OS**: {platform.system()} {platform.release()}\n"
+                f"- **Python**: {sys.version.split()[0]}\n"
+                f"- **Command**: `{' '.join(sys.argv)}`\n\n"
+                "### Traceback\n"
+                f"```python\n{tb_str}\n```\n"
+            )
+
+            encoded_body = urllib.parse.quote(issue_body)
+            issue_url = f"https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body={encoded_body}"
+
+            console.print(
+                "This looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
+            )
+            console.print(f"[bold cyan]{issue_url}[/bold cyan]")
+
             logger.debug("Stack trace:", exc_info=True)
-            console.print("[dim]Run with --verbose for a full stack trace.[/dim]")
             sys.exit(1)
 
     def _write_pre_commit_config(self) -> None:
@@ -148,8 +179,43 @@ class Orchestrator:
             # Use the first argument (e.g., 'uv', 'cargo') as the context descriptor
             run_quiet(task, f"Executing {task[0]}")
 
+    def _toml_has_overlap(self, existing: dict, payload: dict) -> bool:
+        """Recursively evaluates TOML dictionaries to prevent duplicate table definitions.
+
+        Since configurations are appended as raw strings, injecting a payload that defines
+        a table already present in the existing file will result in a TOML parsing error
+        (e.g., 'Cannot redefine table'). This function checks for exact table or scalar key collisions.
+
+        Args:
+            existing: The parsed TOML dictionary of the target file.
+            payload: The parsed TOML dictionary of the incoming configuration block.
+
+        Returns:
+            True if a collision is detected, False otherwise.
+        """
+        for key, value in payload.items():
+            if key in existing:
+                if isinstance(value, dict) and isinstance(existing[key], dict):
+                    # If the payload attempts to add scalar values to an existing table,
+                    # a string append would result in a duplicate table header error.
+                    has_scalars = any(not isinstance(v, dict) for v in value.values())
+                    if has_scalars:
+                        return True
+
+                    # Otherwise, both are topological namespaces (e.g., [tool]). Traverse deeper.
+                    if self._toml_has_overlap(existing[key], value):
+                        return True
+                else:
+                    # Direct collision on a specific key or mismatched types
+                    return True
+        return False
+
     def _append_files(self) -> None:
-        """Appends late-binding configuration payloads to their target files."""
+        """Appends late-binding configuration payloads to their target files.
+
+        Evaluates payloads against existing file state. For TOML files, performs a
+        structural DAG comparison to prevent syntax errors like table redefinitions.
+        """
         if not self.manifest.file_appends:
             return
 
@@ -159,7 +225,7 @@ class Orchestrator:
 
         if pyproject_path.exists():
             content = pyproject_path.read_text()
-            # Lightweight extraction of requires-python without a heavy TOML parser
+            # Lightweight extraction of requires-python without a heavy parser
             match = re.search(
                 r'requires-python\s*=\s*"(?:>=|==|~=|>|)?(\d+\.\d+)', content
             )
@@ -175,19 +241,51 @@ class Orchestrator:
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
 
-            # Idempotency check: Filter out payloads already present in the file
+            is_toml = target.suffix == ".toml"
+            existing_toml_dict = {}
+
+            if is_toml and existing_content:
+                try:
+                    existing_toml_dict = tomllib.loads(existing_content)
+                except tomllib.TOMLDecodeError:
+                    logger.warning(
+                        f"Malformed TOML detected in {filepath}. Falling back to string heuristic."
+                    )
+                    is_toml = False
+
             missing_payloads = []
             for payload in contents:
                 interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
+                payload_dict = {}
+                collision = False
+                fallback_string = not is_toml
 
-                # We check the first line (e.g., '[tool.ruff]') to prevent duplicates
-                # even if the user manually modified the internal keys later.
-                first_line = interpolated.strip().split("\n")[0]
+                if is_toml:
+                    try:
+                        payload_dict = tomllib.loads(interpolated)
+                        collision = self._toml_has_overlap(
+                            existing_toml_dict, payload_dict
+                        )
+                    except tomllib.TOMLDecodeError:
+                        logger.warning(
+                            "Incoming payload is invalid TOML. Falling back to string heuristic."
+                        )
+                        fallback_string = True
 
-                if first_line and first_line in existing_content:
-                    continue
+                # Fallback to string-matching heuristic if TOML parsing is bypassed
+                if fallback_string:
+                    first_line = interpolated.strip().split("\n")[0]
+                    if first_line and first_line in existing_content:
+                        collision = True
 
-                missing_payloads.append(interpolated)
+                if not collision:
+                    missing_payloads.append(interpolated)
+
+                    # Mutate the in-memory TOML dictionary to prevent identical subsequent
+                    # payloads in the same queue from duplicating. A deep merge is not required
+                    # here; injecting the top-level keys handles most idempotency edge cases.
+                    if is_toml and payload_dict:
+                        existing_toml_dict.update(payload_dict)
 
             if not missing_payloads:
                 continue

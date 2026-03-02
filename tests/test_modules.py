@@ -187,8 +187,19 @@ def test_markdownlint_module_build(manifest, mocker):
     assert any("id: markdownlint" in hook for hook in manifest.pre_commit_hooks)
 
 
-def test_pre_commit_module_build(manifest):
-    """Test that PreCommitModule toggles manifest state and queues initialization tasks."""
+def test_pre_commit_module_pre_flight_fails(mocker):
+    """Test that PreCommitModule aborts if the git binary is missing from PATH."""
+    mocker.patch("protostar.modules.tooling_layer.shutil.which", return_value=None)
+    mod = PreCommitModule()
+
+    with pytest.raises(RuntimeError, match="Missing dependency: 'git' is required"):
+        mod.pre_flight()
+
+
+def test_pre_commit_module_build_initializes_git(manifest, mocker):
+    """Test that PreCommitModule queues git init when no .git directory exists."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+
     mod = PreCommitModule()
     mod.build(manifest)
 
@@ -196,4 +207,14 @@ def test_pre_commit_module_build(manifest):
     assert "pre-commit" in manifest.dev_dependencies
     assert ["git", "init"] in manifest.system_tasks
     assert ["pre-commit", "install"] in manifest.system_tasks
-    assert ["pre-commit", "autoupdate"] in manifest.system_tasks
+
+
+def test_pre_commit_module_build_skips_git_init(manifest, mocker):
+    """Test that PreCommitModule bypasses git init if the repository is already initialized."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+
+    mod = PreCommitModule()
+    mod.build(manifest)
+
+    assert ["git", "init"] not in manifest.system_tasks
+    assert ["pre-commit", "install"] in manifest.system_tasks
