@@ -17,8 +17,9 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
 1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
-1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
-1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, late-binds to generated `pyproject.toml` configurations, and safely aborts if generated files already exist.
+1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
+1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses structural DAG comparisons to prevent TOML table collisions, and safely aborts if generated files already exist.
+1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment vector to eliminate debugging entropy.
 
 ---
 
@@ -138,6 +139,7 @@ alias proto="protostar"
 
 | Flag | Description |
 | :--- | :--- |
+| `--version` | Show the application's version footprint and exit. |
 | `--verbose`, `-v` | Enables verbose debug output and rich tracebacks. |
 
 ### `protostar init`
