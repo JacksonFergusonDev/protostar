@@ -1,4 +1,5 @@
 import argparse
+import importlib.metadata
 import logging
 import sys
 from collections.abc import Iterable
@@ -221,6 +222,12 @@ class ProtoHelpFormatter(argparse.RawTextHelpFormatter):
 
 def main() -> None:
     """Main entry point for the Protostar CLI."""
+    # Dynamically resolve the package version footprint
+    try:
+        __version__ = importlib.metadata.version("protostar")
+    except importlib.metadata.PackageNotFoundError:
+        __version__ = "unknown"
+
     parser = argparse.ArgumentParser(
         description="A modular CLI tool for quickly scaffolding software environments. ",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
@@ -236,6 +243,13 @@ def main() -> None:
         action="help",
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
+    )
+
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show the application's version and exit.",
     )
 
     parser.add_argument(
