@@ -278,15 +278,34 @@ class PreCommitModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Pre-Commit"
 
+    def pre_flight(self) -> None:
+        """Verifies that the 'git' executable is available in the system PATH.
+
+        Raises:
+            RuntimeError: If 'git' is not installed or accessible.
+        """
+        if not shutil.which("git"):
+            raise RuntimeError(
+                "Missing dependency: 'git' is required for pre-commit hooks. "
+                "Please install Git and try again."
+            )
+
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Flags pre-commit activation, queues dependencies, and sets up git hooks."""
+        """Flags pre-commit activation, queues dependencies, and sets up git hooks.
+
+        Evaluates the local workspace for an existing Git repository before
+        queueing initialization commands to ensure idempotency.
+        """
         logger.debug("Building Pre-Commit tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
         manifest.wants_pre_commit = True
         manifest.add_dev_dependency("pre-commit")
 
-        # Git must be initialized before pre-commit can install its hooks
-        manifest.add_system_task(["git", "init"])
+        # Git must be initialized before pre-commit can install its hooks.
+        # Check if we're already inside a repository to avoid redundant init calls.
+        if not Path(".git").exists():
+            manifest.add_system_task(["git", "init"])
+
         manifest.add_system_task(["pre-commit", "install"])
         manifest.add_system_task(["pre-commit", "autoupdate"])
