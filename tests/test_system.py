@@ -22,12 +22,15 @@ def test_run_quiet_success(mocker):
 def test_run_quiet_failure(mocker):
     """Test that run_quiet intercepts subprocess errors and raises a clean RuntimeError."""
     mock_run = mocker.patch("protostar.system.subprocess.run")
-    # Simulate a command failure
+    # Simulate a command failure with captured stderr
     mock_run.side_effect = subprocess.CalledProcessError(
-        returncode=1, cmd=["false"], stderr="Command not found"
+        returncode=1, cmd=["false"], stderr="Network timeout during package resolution"
     )
 
-    with pytest.raises(RuntimeError, match="Command failed during setup: false"):
+    # Verify the exception message contains the surfaced stderr details
+    with pytest.raises(
+        RuntimeError, match="Details:\nNetwork timeout during package resolution"
+    ):
         run_quiet(["false"], "Testing failure")
 
 
