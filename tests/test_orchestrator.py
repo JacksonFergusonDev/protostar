@@ -307,7 +307,7 @@ def test_orchestrator_writes_dockerignore_with_uv(mocker):
 
     # Inject the uv init task to trigger the dynamic exclusion condition
     orchestrator.manifest.add_system_task(
-        ["uv", "init", "--no-workspace", "--bare", "--python-pin"]
+        ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
     )
 
     mocker.patch("protostar.orchestrator.Path.exists", return_value=False)

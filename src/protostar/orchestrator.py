@@ -2,6 +2,7 @@ import json
 import logging
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -73,6 +74,7 @@ class Orchestrator:
             console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
             logger.debug("Stack trace:", exc_info=True)
             console.print("[dim]Run with --verbose for a full stack trace.[/dim]")
+            sys.exit(1)
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and interpolates the pre-commit configuration."""
@@ -166,20 +168,36 @@ class Orchestrator:
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
-            combined_content = "\n\n".join(contents)
 
-            # Interpolate state tokens
-            combined_content = combined_content.replace(
-                "{{PYTHON_VERSION}}", python_version
-            )
-
-            prefix = ""
+            existing_content = ""
             if target.exists():
                 existing_content = target.read_text()
-                if existing_content and not existing_content.endswith("\n"):
-                    prefix = "\n"
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
+
+            # Idempotency check: Filter out payloads already present in the file
+            missing_payloads = []
+            for payload in contents:
+                interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
+
+                # We check the first line (e.g., '[tool.ruff]') to prevent duplicates
+                # even if the user manually modified the internal keys later.
+                first_line = interpolated.strip().split("\n")[0]
+
+                if first_line and first_line in existing_content:
+                    continue
+
+                missing_payloads.append(interpolated)
+
+            if not missing_payloads:
+                continue
+
+            combined_content = "\n\n".join(missing_payloads)
+
+            # Ensure clean newline separation
+            prefix = (
+                "\n" if existing_content and not existing_content.endswith("\n") else ""
+            )
 
             with target.open("a") as f:
                 f.write(prefix + combined_content + "\n")
