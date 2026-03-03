@@ -42,11 +42,15 @@ typecheck: ## Run static type checking with Mypy
 	$(call PRINT_STAGE, Running Type Checks)
 	uv run mypy .
 
-test: ## Run the full automated testing matrix with coverage
+test: ## Run the full automated testing matrix
 	$(call PRINT_STAGE, Executing Testing Matrix)
 	uv run pytest
 
-ci: install lint typecheck test ## Run the exact pipeline executed by GitHub Actions
+test-cov: ## Run the full automated testing matrix with coverage
+	$(call PRINT_STAGE, Executing Testing Matrix With Coverage)
+	uv run pytest --cov
+
+ci: install lint typecheck test-cov ## Run the exact pipeline executed by GitHub Actions
 	@echo "\n$(GREEN)✔ Local CI pipeline completed successfully. Clear to push!$(NC)"
 
 clean: ## Remove cache directories and test artifacts

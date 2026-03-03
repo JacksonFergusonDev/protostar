@@ -68,6 +68,7 @@ ignore = [
     "D107",   # Missing docstring in __init__
 ]
 
+# Allow ignored variables (e.g. for unpacking)
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.pydocstyle]
@@ -102,13 +103,21 @@ module = "tests.*"
 disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
-addopts = "--cov=src --cov-report=term-missing --strict-markers"
+addopts = "--strict-markers"
 testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "integration: marks tests that perform actual disk I/O and subprocess calls",
     "exhaustive: marks heavy combinatorial tests"
 ]
+
+[tool.coverage.run]
+source = ["src/protostar"]
+branch = true
+
+[tool.coverage.report]
+omit = ["src/protostar/**/__init__.py"]
+show_missing = true
 
 [tool.bumpversion]
 current_version = "0.4.4"
