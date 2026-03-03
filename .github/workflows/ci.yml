@@ -41,4 +41,18 @@ jobs:
       run: uv run mypy .
 
     - name: Run tests
-      run: uv run pytest
+      run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
+
+    - name: Upload test analytics to Codecov
+      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14' && !cancelled() }}
+      uses: codecov/codecov-action@v5
+      with:
+        report_type: test_results
+        token: ${{ secrets.CODECOV_TOKEN }}
