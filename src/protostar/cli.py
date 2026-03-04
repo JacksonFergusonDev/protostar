@@ -123,6 +123,59 @@ class LazyTargetHelp:
         )
 
 
+class GenerateEpilogTable:
+    """Delays and structures the generate command epilog as a native Rich table."""
+
+    def __str__(self) -> str:
+        """Fallback string representation."""
+        return "How NAME is evaluated:"
+
+    def __mod__(self, params: dict[str, Any]) -> str:
+        """Intercepts argparse's string interpolation."""
+        return self.__str__() % params
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegates missing string methods to the evaluated string."""
+        return getattr(str(self), name)
+
+    def get_renderable(self) -> Any:
+        """Provides a native Rich table for the custom help renderer."""
+        from rich.table import Table
+
+        table = Table(
+            title="How NAME is evaluated:",
+            box=box.ROUNDED,
+            show_lines=False,
+            show_header=False,
+            padding=(0, 1),
+            title_justify="left",
+            title_style="bold blue",
+        )
+        table.add_column("Target", style="cyan", no_wrap=True)
+        table.add_column("Description")
+        table.add_column("Example", style="dim")
+
+        table.add_row(
+            "tex", "The output filename", "(e.g., proto generate tex report.tex)"
+        )
+        table.add_row(
+            "cpp-class",
+            "The class identifier",
+            "(e.g., proto generate cpp-class Engine)",
+        )
+        table.add_row(
+            "pio", "The board target ID", "(e.g., proto generate pio esp32dev)"
+        )
+        table.add_row("cmake", "Ignored automatically", "(e.g., proto generate cmake)")
+        table.add_row(
+            "circuitpython",
+            "Ignored automatically",
+            "(e.g., proto generate circuitpython)",
+        )
+
+        return table
+
+
 def get_os_module() -> BootstrapModule:
     """Detects the host OS and returns the corresponding bootstrap layer."""
     if sys.platform == "darwin":
@@ -384,6 +437,14 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
         console.print(table)
         console.print()
 
+    # Append the parser's epilog block if one is defined
+    if self.epilog:
+        if hasattr(self.epilog, "get_renderable"):
+            renderable_method = cast(Any, self.epilog).get_renderable
+            console.print(renderable_method())
+        else:
+            console.print(self.epilog)
+
 
 def main() -> None:
     """Main entry point for the Protostar CLI."""
@@ -437,6 +498,7 @@ def main() -> None:
         description="Scaffolds base configurations, dependencies, and environment files.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
+        epilog="[bold]Example:[/bold]\n  protostar init --python --astro --mypy",
     )
 
     # Dynamically mount Language flags
@@ -496,6 +558,7 @@ def main() -> None:
         description="Generates boilerplate code or files based on the configured environment.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
+        epilog=cast(str, GenerateEpilogTable()),
     )
 
     target_group = generate_parser.add_argument_group("Generation Target")
