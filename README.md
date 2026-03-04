@@ -4,6 +4,7 @@
 [![Release](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Performance](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JacksonFergusonDev/protostar/performance-benchmarks/latency-badge.json)](https://jacksonfergusondev.github.io/protostar/)
 
 **A modular CLI tool for high-velocity environment scaffolding.**
 
@@ -20,6 +21,19 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
 1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses structural DAG comparisons to prevent TOML table collisions, and safely aborts if generated files already exist.
 1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment vector to eliminate debugging entropy.
+
+---
+
+## ⚡️ Performance & Latency Isolation
+
+Protostar is built to be lightweight, so Python's startup overhead never slows down your local development. We measure initialization latency using two benchmarking approaches:
+
+1. **Fast-Path Execution (Sub-2ms):** Measures the latency of non-interactive commands (e.g., `--help`, `config`). This validates the efficiency of our `argparse` configuration and dynamic module resolution.
+1. **TUI-Path Execution (Sub-2ms):** Measures the overhead of triggering the interactive `questionary` wizards. This ensures that even when heavy TUI dependencies are dynamically imported, the "time-to-first-prompt" remains imperceptible.
+
+Our CI pipeline enforces a strict performance budget, gating any PR that introduces significant regressions in either path.
+
+- **View Live Trends:** [Performance Dashboard](https://jacksonfergusondev.github.io/protostar/)
 
 ---
 
