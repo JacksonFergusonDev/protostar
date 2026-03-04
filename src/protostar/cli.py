@@ -91,6 +91,14 @@ class LazyTargetHelp:
         """
         return self.__str__() % params
 
+    def __getattr__(self, name: str) -> Any:
+        """Delegates missing string methods (like .strip()) to the evaluated string.
+
+        This prevents crashes when external formatters attempt to manipulate
+        the proxy object as if it were a native string.
+        """
+        return getattr(str(self), name)
+
 
 def get_os_module() -> BootstrapModule:
     """Detects the host OS and returns the corresponding bootstrap layer."""
