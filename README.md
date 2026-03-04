@@ -28,8 +28,8 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 Protostar is built to be lightweight, so Python's startup overhead never slows down your local development. We measure initialization latency using two benchmarking approaches:
 
-1. **Fast-Path Execution (Sub-2ms):** Measures the latency of non-interactive commands (e.g., `--help`, `config`). This validates the efficiency of our `argparse` configuration and dynamic module resolution.
-1. **TUI-Path Execution (Sub-2ms):** Measures the overhead of triggering the interactive `questionary` wizards. This ensures that even when heavy TUI dependencies are dynamically imported, the "time-to-first-prompt" remains imperceptible.
+1. **Fast-Path Execution (Sub-3ms):** Measures the latency of non-interactive commands (e.g., `--help`, `config`). This validates the efficiency of our `argparse` configuration and dynamic module resolution.
+1. **TUI-Path Execution (Sub-3ms):** Measures the overhead of triggering the interactive `questionary` wizards. This ensures that even when heavy TUI dependencies are dynamically imported, the "time-to-first-prompt" remains imperceptible.
 
 Our CI pipeline enforces a strict performance budget, gating any PR that introduces significant regressions in either path.
 
