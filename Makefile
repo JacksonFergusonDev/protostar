@@ -50,6 +50,10 @@ test-cov: ## Run the full automated testing matrix with coverage
 	$(call PRINT_STAGE, Executing Testing Matrix With Coverage)
 	uv run pytest --cov
 
+test-benchmark: ## Run performance benchmarks
+	$(call PRINT_STAGE, Executing Performance Benchmarks)
+	uv run pytest tests/test_performance.py --benchmark-only --benchmark-json=benchmark.json
+
 ci: install lint typecheck test-cov ## Run the exact pipeline executed by GitHub Actions
 	@echo "\n$(GREEN)✔ Local CI pipeline completed successfully. Clear to push!$(NC)"
 
@@ -57,5 +61,6 @@ clean: ## Remove cache directories and test artifacts
 	$(call PRINT_STAGE, Cleaning Workspace)
 	rm -rf .pytest_cache .mypy_cache .ruff_cache
 	rm -rf htmlcov .coverage coverage.xml
+	rm benchmark.json
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo "$(GREEN)✔ Environment cleaned.$(NC)"
