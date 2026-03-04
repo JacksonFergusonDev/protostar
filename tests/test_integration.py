@@ -1,7 +1,13 @@
+import argparse
 import shutil
 import tomllib
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
+
+from protostar.cli import handle_init
 
 pytestmark = pytest.mark.integration
 
@@ -90,3 +96,61 @@ def test_generator_routing(run_cli, target, name, expected_files):
         assert (workspace / filename).exists()
 
     assert not (workspace / "pyproject.toml").exists()
+
+
+def test_python_version_cohesion_e2e(
+    monkeypatch, mocker: MockerFixture, tmp_path: Path
+) -> None:
+    """Verifies Python version flags correctly propagate to subprocesses and config interpolations."""
+
+    # Natively isolate all pathlib disk I/O to the sandbox
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "mock_config.toml")
+
+    # Mock subprocess.run to prevent actual uv/git executions on the host
+    mock_run = mocker.patch("subprocess.run")
+
+    # Side-effect function to simulate `uv init` creating a pyproject.toml on disk
+    def mock_subprocess_run_side_effect(cmd: list[str], *args, **kwargs) -> MagicMock:
+        if cmd[:2] == ["uv", "init"]:
+            # Extract the version passed to uv
+            version = cmd[cmd.index("--python") + 1] if "--python" in cmd else "3.12"
+            pyproject = tmp_path / "pyproject.toml"
+            pyproject.write_text(f'[project]\nrequires-python = ">={version}"\n')
+
+        return MagicMock(returncode=0)
+
+    mock_run.side_effect = mock_subprocess_run_side_effect
+
+    # Construct mock CLI arguments matching: `protostar init -p --python-version 3.10 --mypy --ruff`
+    args = argparse.Namespace(
+        command="init",
+        PythonModule=True,
+        python_version="3.10",
+        MypyModule=True,
+        RuffModule=True,
+        docker=False,
+    )
+
+    # Execute the CLI handler
+    handle_init(args)
+
+    # 1. Assert uv received the correct Python version flag
+    mock_run.assert_any_call(
+        ["uv", "init", "--no-workspace", "--bare", "--pin-python", "--python", "3.10"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    # 2. Assert Mypy received the correct interpolated version in pyproject.toml
+    pyproject_content = (tmp_path / "pyproject.toml").read_text()
+    assert 'python_version = "3.10"' in pyproject_content, (
+        "Mypy failed to interpolate the correct Python version."
+    )
+
+    # 3. Assert Ruff config was injected but does NOT have a hardcoded python version
+    assert "[tool.ruff]" in pyproject_content
+    assert "target-version" not in pyproject_content, (
+        "Ruff should rely on requires-python natively."
+    )
