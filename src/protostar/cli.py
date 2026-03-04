@@ -2,13 +2,17 @@ import argparse
 import importlib.metadata
 import logging
 import sys
+import types
 from collections.abc import Iterable
+from typing import Any, cast
 
 import argcomplete
 from rich import box
-from rich.console import Console
+from rich.console import Console, Group
 from rich.logging import RichHandler
 from rich.table import Table
+from rich.text import Text
+from rich_argparse import RawTextRichHelpFormatter
 
 from .config import ProtostarConfig
 from .generators import GENERATOR_REGISTRY
@@ -36,6 +40,140 @@ from .presets import (
 from .wizard import run_discovery_wizard, run_generate_wizard, run_init_wizard
 
 console = Console()
+
+
+class LazyTargetHelp:
+    """Delays boilerplate target table generation until help is explicitly rendered.
+
+    This prevents unnecessary terminal rendering overhead during standard execution
+    and ensures the table dimensions evaluate the terminal width at render-time,
+    preventing overflow on resized terminal windows.
+    """
+
+    def __str__(self) -> str:
+        """Evaluates the terminal context and renders the table string dynamically.
+
+        Returns:
+            A formatted string containing the generated table and header.
+        """
+        # color_system=None strips ANSI codes. This prevents argparse
+        # from counting invisible styling bytes as characters during column alignment.
+        capture_console = Console(
+            width=Console().width - 32,
+            color_system=None,
+        )
+
+        target_table = Table(
+            show_header=False,
+            box=box.ROUNDED,
+            show_lines=True,
+            padding=(0, 1),
+            pad_edge=False,
+        )
+        target_table.add_column("Target", no_wrap=True)
+        target_table.add_column("Description")
+
+        for key, generator in GENERATOR_REGISTRY.items():
+            desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
+            target_table.add_row(key, desc)
+
+        with capture_console.capture() as capture:
+            capture_console.print(target_table)
+
+        return f"The boilerplate target to evaluate and generate:\n{capture.get()}"
+
+    def __mod__(self, params: dict[str, Any]) -> str:
+        """Intercepts argparse's string interpolation to trigger deferred evaluation.
+
+        Args:
+            params: The dictionary of formatting parameters provided by argparse.
+
+        Returns:
+            The fully evaluated and formatted help string.
+        """
+        return self.__str__() % params
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegates missing string methods (like .strip()) to the evaluated string.
+
+        This prevents crashes when external formatters attempt to manipulate
+        the proxy object as if it were a native string.
+        """
+        return getattr(str(self), name)
+
+    def get_renderable(self) -> Any:
+        """Provides a native Rich renderable for use in custom table layouts."""
+        target_table = Table(
+            show_header=False,
+            box=box.ROUNDED,
+            show_lines=False,
+            padding=(0, 1),
+            pad_edge=False,
+        )
+        target_table.add_column("Target", style="cyan", no_wrap=True)
+        target_table.add_column("Description")
+
+        for key, generator in GENERATOR_REGISTRY.items():
+            desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
+            target_table.add_row(key, desc)
+
+        return Group(
+            Text("The boilerplate target to evaluate and generate:\n"),
+            target_table,
+        )
+
+
+class GenerateEpilogTable:
+    """Delays and structures the generate command epilog as a native Rich table."""
+
+    def __str__(self) -> str:
+        """Fallback string representation."""
+        return "How NAME is evaluated:"
+
+    def __mod__(self, params: dict[str, Any]) -> str:
+        """Intercepts argparse's string interpolation."""
+        return self.__str__() % params
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegates missing string methods to the evaluated string."""
+        return getattr(str(self), name)
+
+    def get_renderable(self) -> Any:
+        """Provides a native Rich table for the custom help renderer."""
+        from rich.table import Table
+
+        table = Table(
+            title="How NAME is evaluated:",
+            box=box.ROUNDED,
+            show_lines=False,
+            show_header=False,
+            padding=(0, 1),
+            title_justify="left",
+            title_style="bold blue",
+        )
+        table.add_column("Target", style="cyan", no_wrap=True)
+        table.add_column("Description")
+        table.add_column("Example", style="dim")
+
+        table.add_row(
+            "tex", "The output filename", "(e.g., proto generate tex report.tex)"
+        )
+        table.add_row(
+            "cpp-class",
+            "The class identifier",
+            "(e.g., proto generate cpp-class Engine)",
+        )
+        table.add_row(
+            "pio", "The board target ID", "(e.g., proto generate pio esp32dev)"
+        )
+        table.add_row("cmake", "Ignored automatically", "(e.g., proto generate cmake)")
+        table.add_row(
+            "circuitpython",
+            "Ignored automatically",
+            "(e.g., proto generate circuitpython)",
+        )
+
+        return table
 
 
 def get_os_module() -> BootstrapModule:
@@ -170,42 +308,20 @@ def handle_config(args: argparse.Namespace) -> None:
     ProtostarConfig.open_in_editor()
 
 
-class ProtoHelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom help formatter for Protostar CLI.
+class ProtoHelpFormatter(RawTextRichHelpFormatter):
+    """Custom help formatter for Protostar CLI using rich-argparse.
 
-    Inherits from RawTextHelpFormatter to respect explicit line breaks
-    in docstrings/descriptions and argument help strings.
+    Inherits from RawTextRichHelpFormatter to leverage native rich styling
+    while respecting explicit line breaks in docstrings and argument parameters.
     """
 
-    def _format_action(self, action: argparse.Action) -> str:
-        """Overrides the default action formatting to group subcommands into logical clusters."""
-        if isinstance(action, argparse._SubParsersAction):
-            parts = []
-
-            # Define logical command clusters
-            groups = {
-                "Environment Lifecycle": ["init"],
-                "Boilerplate Generation": ["generate"],
-                "System Management": ["config"],
-                "General": ["help"],
-            }
-
-            subactions = list(self._iter_indented_subactions(action))
-
-            for group_name, commands in groups.items():
-                group_actions = [a for a in subactions if a.dest in commands]
-                if not group_actions:
-                    continue
-
-                parts.append(f"\n  {group_name}:\n")
-                self._indent()
-                for subaction in group_actions:
-                    parts.append(self._format_action(subaction))
-                self._dedent()
-
-            return self._join_parts(parts)
-
-        return super()._format_action(action)
+    # Establish global syntactic styling identifiers
+    styles = {
+        "argparse.args": "cyan",
+        "argparse.groups": "bold blue",
+        "argparse.help": "default",
+        "argparse.metavar": "dark_orange",
+    }
 
     def add_usage(
         self,
@@ -218,6 +334,86 @@ class ProtoHelpFormatter(argparse.RawTextHelpFormatter):
         if prefix is None:
             prefix = "Usage: "
         super().add_usage(usage, actions, groups, prefix)
+
+
+def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
+    """Custom help printer that formats action groups as bordered Rich tables."""
+    # Print main parser description
+    if self.description:
+        console.print(f"{self.description}\n")
+
+    for group in self._action_groups:
+        # Filter out explicitly suppressed arguments and the default HelpAction
+        actions = [
+            a
+            for a in group._group_actions
+            if a.help != argparse.SUPPRESS and not isinstance(a, argparse._HelpAction)
+        ]
+
+        if not actions:
+            continue
+
+        table = Table(
+            show_header=False,
+            title=group.title,
+            box=box.ROUNDED,
+            show_lines=False,
+            padding=(0, 1),
+            title_justify="left",
+            title_style="bold blue",
+        )
+        table.add_column("Arguments", style="cyan", no_wrap=True)
+        table.add_column("Description")
+
+        for action in actions:
+            # Build the invocation string (e.g., "-p, --python")
+            if action.option_strings:
+                invocation = ", ".join(action.option_strings)
+
+                # Append metavars for arguments that take values
+                if (
+                    action.nargs != 0
+                    and action.dest != "help"
+                    and not isinstance(action, argparse.BooleanOptionalAction)
+                ):
+                    if action.metavar:
+                        metavar_str = (
+                            " ".join(action.metavar)
+                            if isinstance(action.metavar, tuple)
+                            else action.metavar
+                        )
+                    else:
+                        metavar_str = action.dest.upper()
+                    invocation += f" {metavar_str}"
+            else:
+                if action.metavar:
+                    invocation = (
+                        " ".join(action.metavar)
+                        if isinstance(action.metavar, tuple)
+                        else action.metavar
+                    )
+                else:
+                    invocation = action.dest
+
+            # Extract help payload, prioritizing native Rich renderables if available
+            help_text: Any = action.help or ""
+            if hasattr(help_text, "get_renderable"):
+                help_text = help_text.get_renderable()
+            elif hasattr(help_text, "__str__") and not isinstance(help_text, str):
+                help_text = str(help_text)
+
+            table.add_row(invocation, help_text)
+
+        console.print(table)
+        console.print()
+
+    # Append the parser's epilog block if one is defined
+    if self.epilog:
+        if hasattr(self.epilog, "get_renderable"):
+            renderable_method = cast(Any, self.epilog).get_renderable
+            console.print(renderable_method())
+        else:
+            console.print(self.epilog)
 
 
 def main() -> None:
@@ -272,6 +468,7 @@ def main() -> None:
         description="Scaffolds base configurations, dependencies, and environment files.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
+        epilog="[bold]Example:[/bold]\n  protostar init --python --astro --mypy",
     )
 
     # Dynamically mount Language flags
@@ -295,7 +492,7 @@ def main() -> None:
     )
 
     # Dynamically mount Preset flags
-    preset_group = init_parser.add_argument_group("Dependency Presets")
+    preset_group = init_parser.add_argument_group("Python Dependency Presets")
     for preset in PRESETS:
         if preset.cli_flags:
             preset_group.add_argument(
@@ -322,6 +519,7 @@ def main() -> None:
             )
 
     init_parser.set_defaults(func=handle_init)
+    init_parser.print_help = types.MethodType(print_table_help, init_parser)  # type: ignore[method-assign]
 
     # --- Generate Subparser ---
     generate_parser = subparsers.add_parser(
@@ -330,39 +528,17 @@ def main() -> None:
         description="Generates boilerplate code or files based on the configured environment.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
+        epilog=cast(str, GenerateEpilogTable()),
     )
 
     target_group = generate_parser.add_argument_group("Generation Target")
 
-    # Enable show_lines for horizontal separators between rows
-    target_table = Table(
-        show_header=False,
-        box=box.ROUNDED,
-        show_lines=True,
-        padding=(0, 1),
-        pad_edge=False,
-    )
-    target_table.add_column("Target", style="cyan", no_wrap=True)
-    target_table.add_column("Description")
-
-    # Dynamically populate from the registry
-    for key, generator in GENERATOR_REGISTRY.items():
-        # Grabs the first line of the class docstring
-        desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
-        target_table.add_row(key, desc)
-
-    # Capture the output buffer
-    with console.capture() as capture:
-        # Buffer increased slightly to handle the extra border characters
-        console.print(target_table, width=console.width - 32)
-
-    target_help = "The boilerplate target to evaluate and generate:\n" + capture.get()
-
+    # The string evaluation is now deferred to the LazyTargetHelp object
     target_group.add_argument(
         "target",
         choices=list(GENERATOR_REGISTRY.keys()),
         metavar="TARGET",
-        help=target_help,
+        help=cast(str, LazyTargetHelp()),
     )
 
     # Output Parameters remains standard
@@ -375,6 +551,7 @@ def main() -> None:
     )
 
     generate_parser.set_defaults(func=handle_generate)
+    generate_parser.print_help = types.MethodType(print_table_help, generate_parser)  # type: ignore[method-assign]
 
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
