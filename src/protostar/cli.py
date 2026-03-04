@@ -10,6 +10,7 @@ from rich import box
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
+from rich_argparse import RawTextRichHelpFormatter
 
 from .config import ProtostarConfig
 from .generators import GENERATOR_REGISTRY
@@ -223,12 +224,20 @@ def handle_config(args: argparse.Namespace) -> None:
     ProtostarConfig.open_in_editor()
 
 
-class ProtoHelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom help formatter for Protostar CLI.
+class ProtoHelpFormatter(RawTextRichHelpFormatter):
+    """Custom help formatter for Protostar CLI using rich-argparse.
 
-    Inherits from RawTextHelpFormatter to respect explicit line breaks
-    in docstrings/descriptions and argument help strings.
+    Inherits from RawTextRichHelpFormatter to leverage native rich styling
+    while respecting explicit line breaks in docstrings and argument parameters.
     """
+
+    # Establish global syntactic styling identifiers
+    styles = {
+        "argparse.args": "cyan",
+        "argparse.groups": "bold blue",
+        "argparse.help": "default",
+        "argparse.metavar": "dark_orange",
+    }
 
     def _format_action(self, action: argparse.Action) -> str:
         """Overrides the default action formatting to group subcommands into logical clusters."""
@@ -250,7 +259,9 @@ class ProtoHelpFormatter(argparse.RawTextHelpFormatter):
                 if not group_actions:
                     continue
 
-                parts.append(f"\n  {group_name}:\n")
+                parts.append(
+                    f"\n  [bold]{group_name}[/bold]:\n"
+                )  # Inject explicit rich markup
                 self._indent()
                 for subaction in group_actions:
                     parts.append(self._format_action(subaction))
