@@ -219,18 +219,32 @@ class Orchestrator:
         if not self.manifest.file_appends:
             return
 
-        # Dynamically resolve the active Python version for token interpolation
-        python_version = "3.12"  # Safe modern fallback
-        pyproject_path = Path("pyproject.toml")
+        # Dynamically resolve the active Python version
+        python_version = None
 
+        # 1. Attempt to scrape uv's generated footprint
+        pyproject_path = Path("pyproject.toml")
         if pyproject_path.exists():
             content = pyproject_path.read_text()
-            # Lightweight extraction of requires-python without a heavy parser
             match = re.search(
                 r'requires-python\s*=\s*"(?:>=|==|~=|>|)?(\d+\.\d+)', content
             )
             if match:
                 python_version = match.group(1)
+
+        # 2. Attempt to scrape pip's generated footprint
+        if not python_version:
+            pyvenv_path = Path(".venv/pyvenv.cfg")
+            if pyvenv_path.exists():
+                content = pyvenv_path.read_text()
+                match = re.search(r"version\s*=\s*(\d+\.\d+)", content)
+                if match:
+                    python_version = match.group(1)
+
+        # 3. Fallback to the configuration state, then 3.12
+        if not python_version:
+            config = ProtostarConfig.load()
+            python_version = config.python_version or "3.12"
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
@@ -367,22 +381,21 @@ class Orchestrator:
         if not self.manifest.ide_settings:
             return
 
-        # Currently handles VS Code / Cursor architecture.
-        # Extensible here if other IDEs require JSON injection.
         vscode_dir = Path(".vscode")
         settings_path = vscode_dir / "settings.json"
 
         settings = {}
         if settings_path.exists():
             try:
+                # Note: This will fail if the file contains JSONC (comments).
                 settings = json.loads(settings_path.read_text())
             except json.JSONDecodeError:
                 console.print(
-                    "[yellow]Warning:[/yellow] Existing settings.json is malformed. Overwriting."
+                    "[yellow]Warning:[/yellow] Existing settings.json contains comments or is malformed. "
+                    "Skipping IDE settings injection to prevent data loss."
                 )
+                return
 
-        # Deep merge isn't strictly necessary for top-level keys like files.exclude,
-        # but we do standard dictionary updates to prevent clobbering other settings.
         for key, value in self.manifest.ide_settings.items():
             if isinstance(value, dict) and isinstance(settings.get(key), dict):
                 settings[key].update(value)
@@ -430,13 +443,20 @@ class Orchestrator:
             )
 
             # Freeze the state to mirror uv's declarative pyproject.toml updates
-            try:
-                result = subprocess.run(
-                    [pip_cmd, "freeze"], capture_output=True, text=True, check=True
-                )
-                Path("requirements.txt").write_text(result.stdout)
-                logger.debug("Successfully froze dependencies to requirements.txt")
-            except Exception as e:
+            req_path = Path("requirements.txt")
+            if req_path.exists():
                 console.print(
-                    f"[yellow]Warning:[/yellow] Failed to freeze dependencies to requirements.txt: {e}"
+                    "[yellow]Warning:[/yellow] requirements.txt already exists. "
+                    "Dependencies were installed to the virtual environment, but the file was not overwritten."
                 )
+            else:
+                try:
+                    result = subprocess.run(
+                        [pip_cmd, "freeze"], capture_output=True, text=True, check=True
+                    )
+                    req_path.write_text(result.stdout)
+                    logger.debug("Successfully froze dependencies to requirements.txt")
+                except Exception as e:
+                    console.print(
+                        f"[yellow]Warning:[/yellow] Failed to freeze dependencies to requirements.txt: {e}"
+                    )

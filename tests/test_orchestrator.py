@@ -107,18 +107,26 @@ def test_orchestrator_install_dependencies_uv(mocker):
     )
 
 
-def test_orchestrator_install_dependencies_pip_freeze(mocker):
+def test_orchestrator_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path):
     """Test that the orchestrator executes a local pip installation and writes a freeze state."""
+    # Natively isolate all disk I/O to the sandbox
+    monkeypatch.chdir(tmp_path)
+
     mock_run_quiet = mocker.patch("protostar.orchestrator.run_quiet")
     mock_run = mocker.patch("protostar.orchestrator.subprocess.run")
-    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
-    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
 
-    # Mock config to force pip route
+    # Create a fake pip executable in the sandbox to satisfy the existence check naturally
+    pip_bin = tmp_path / ".venv" / "bin"
+    pip_bin.mkdir(parents=True)
+    pip_exe = pip_bin / "pip"
+    pip_exe.touch()
+
+    # Mock config to force the pip route
     mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(python_package_manager="pip")
 
-    mock_run.return_value.stdout = "dummy-pkg==1.0.0\ndev-pkg==2.0.0"
+    # Mock the stdout of the freeze command
+    mock_run.return_value.stdout = "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
 
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
@@ -138,7 +146,11 @@ def test_orchestrator_install_dependencies_pip_freeze(mocker):
     mock_run.assert_called_once_with(
         [".venv/bin/pip", "freeze"], capture_output=True, text=True, check=True
     )
-    mock_write.assert_called_once_with("dummy-pkg==1.0.0\ndev-pkg==2.0.0")
+
+    # Verify the file was actually written safely inside the sandbox
+    assert (
+        tmp_path / "requirements.txt"
+    ).read_text() == "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
 
 
 def test_orchestrator_append_files_late_binding(mocker):
@@ -258,27 +270,29 @@ def test_orchestrator_writes_vscode_settings(mocker):
     """Test that IDE settings merge correctly with existing JSON."""
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
+
+    # We are injecting an update to files.exclude
     orchestrator.manifest.add_ide_setting("files.exclude", {"**/.venv": True})
 
-    existing_settings = {"search.exclude": {"**/node_modules": True}}
+    # The existing file ALSO has a files.exclude dictionary
+    existing_settings = {"files.exclude": {"**/node_modules": True}}
 
-    # Patch Path methods directly
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
     mocker.patch(
         "protostar.orchestrator.Path.read_text",
         return_value=json.dumps(existing_settings),
     )
     mock_write_text = mocker.patch("protostar.orchestrator.Path.write_text")
-    mocker.patch("protostar.orchestrator.Path.mkdir")  # Prevent physical dir creation
+    mocker.patch("protostar.orchestrator.Path.mkdir")
 
     orchestrator._write_ide_settings()
 
-    # Verify the write_text call contains both the old and new keys
     written_data = mock_write_text.call_args[0][0]
     parsed_write = json.loads(written_data)
 
+    # Verify BOTH rules exist inside the unified files.exclude dictionary
     assert "**/.venv" in parsed_write["files.exclude"]
-    assert "**/node_modules" in parsed_write["search.exclude"]
+    assert "**/node_modules" in parsed_write["files.exclude"]
 
 
 def test_orchestrator_creates_directories(mocker):
@@ -409,3 +423,86 @@ def test_orchestrator_crash_reporter(mocker):
         "https://github.com/jacksonfergusondev/protostar/issues/new" in printed_output
     )
     assert "Crash+Report" in printed_output
+
+
+def test_orchestrator_append_files_pip_fallback(monkeypatch, tmp_path):
+    """Test that the orchestrator scrapes pyvenv.cfg if pyproject.toml is missing."""
+    monkeypatch.chdir(tmp_path)
+
+    # Simulate a pip virtual environment config
+    venv_dir = tmp_path / ".venv"
+    venv_dir.mkdir()
+    (venv_dir / "pyvenv.cfg").write_text("home = /usr/bin\nversion = 3.10.12\n")
+
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # Add a payload that requires python version interpolation
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"'
+    )
+
+    orchestrator._append_files()
+
+    written_data = (tmp_path / "pyproject.toml").read_text()
+    assert 'python_version = "3.10"' in written_data
+
+
+def test_orchestrator_writes_vscode_settings_jsonc_abort(monkeypatch, mocker, tmp_path):
+    """Test that IDE settings injection safely aborts if existing JSON has comments."""
+    monkeypatch.chdir(tmp_path)
+
+    vscode_dir = tmp_path / ".vscode"
+    vscode_dir.mkdir()
+    settings_file = vscode_dir / "settings.json"
+
+    # Write JSONC (JSON with comments) which will cause json.loads() to fail
+    settings_file.write_text("// My custom comment\n{}")
+
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_ide_setting("files.exclude", {"**/.venv": True})
+
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    orchestrator._write_ide_settings()
+
+    # Verify the warning was printed
+    mock_print.assert_called_once()
+    assert "contains comments or is malformed" in mock_print.call_args[0][0]
+
+    # Verify the file was NOT overwritten
+    assert settings_file.read_text() == "// My custom comment\n{}"
+
+
+def test_orchestrator_install_dependencies_pip_reqs_exist(
+    monkeypatch, mocker, tmp_path
+):
+    """Test that pip freeze skips overwriting an existing requirements.txt."""
+    monkeypatch.chdir(tmp_path)
+
+    # Pre-create a requirements.txt file with custom data
+    req_file = tmp_path / "requirements.txt"
+    req_file.write_text("my-custom-pkg==1.0.0\n")
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
+
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_dependency("dummy-pkg")
+
+    mocker.patch("protostar.orchestrator.run_quiet")
+    mock_run = mocker.patch("protostar.orchestrator.subprocess.run")
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    orchestrator._install_dependencies()
+
+    # Verify the warning was printed
+    mock_print.assert_called()
+    printed_warning = mock_print.call_args[0][0]
+    assert "requirements.txt already exists" in printed_warning
+
+    # Verify pip freeze was skipped
+    mock_run.assert_not_called()
+
+    # Verify the file is untouched
+    assert req_file.read_text() == "my-custom-pkg==1.0.0\n"

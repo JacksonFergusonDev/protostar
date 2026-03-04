@@ -61,6 +61,6 @@ clean: ## Remove cache directories and test artifacts
 	$(call PRINT_STAGE, Cleaning Workspace)
 	rm -rf .pytest_cache .mypy_cache .ruff_cache
 	rm -rf htmlcov .coverage coverage.xml
-	rm benchmark.json
+	rm -f benchmark.json
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo "$(GREEN)✔ Environment cleaned.$(NC)"
