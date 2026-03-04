@@ -37,6 +37,15 @@ jobs:
     - name: Run benchmarks
       run: make test-benchmark
 
+    - name: Generate Latency Badge Data
+      run: |
+        # Extract the mean value from the latest benchmark using python
+        MEAN=$(python3 -c "import json; print(json.load(open('benchmark.json'))['benchmarks'][0]['stats']['mean'])")
+        # Convert to ms and round to 2 decimal places
+        LATENCY=$(python3 -c "print(round($MEAN * 1000, 2))")
+
+        echo "{\"schemaVersion\": 1, \"label\": \"latency\", \"message\": \"$LATENCY ms\", \"color\": \"blue\"}" > latency-badge.json
+
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
       with:
@@ -44,8 +53,20 @@ jobs:
         tool: 'pytest'
         output-file-path: benchmark.json
         gh-pages-branch: 'performance-benchmarks'
+        benchmark-data-dir-path: './'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         fail-on-alert: true
         alert-threshold: '300%'
         comment-on-alert: true
         auto-push: ${{ github.event_name == 'push' }}
+
+    - name: Push latency badge
+      if: github.event_name == 'push'
+      run: |
+        cp latency-badge.json /tmp/latency-badge.json
+        git fetch origin performance-benchmarks
+        git checkout performance-benchmarks
+        cp /tmp/latency-badge.json latency-badge.json
+        git add latency-badge.json
+        git diff --cached --quiet || git commit -m "chore: update latency badge [skip ci]"
+        git push origin performance-benchmarks
