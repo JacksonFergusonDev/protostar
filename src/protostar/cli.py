@@ -2,14 +2,16 @@ import argparse
 import importlib.metadata
 import logging
 import sys
+import types
 from collections.abc import Iterable
 from typing import Any, cast
 
 import argcomplete
 from rich import box
-from rich.console import Console
+from rich.console import Console, Group
 from rich.logging import RichHandler
 from rich.table import Table
+from rich.text import Text
 from rich_argparse import RawTextRichHelpFormatter
 
 from .config import ProtostarConfig
@@ -98,6 +100,27 @@ class LazyTargetHelp:
         the proxy object as if it were a native string.
         """
         return getattr(str(self), name)
+
+    def get_renderable(self) -> Any:
+        """Provides a native Rich renderable for use in custom table layouts."""
+        target_table = Table(
+            show_header=False,
+            box=box.ROUNDED,
+            show_lines=False,
+            padding=(0, 1),
+            pad_edge=False,
+        )
+        target_table.add_column("Target", style="cyan", no_wrap=True)
+        target_table.add_column("Description")
+
+        for key, generator in GENERATOR_REGISTRY.items():
+            desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
+            target_table.add_row(key, desc)
+
+        return Group(
+            Text("The boilerplate target to evaluate and generate:\n"),
+            target_table,
+        )
 
 
 def get_os_module() -> BootstrapModule:
@@ -267,17 +290,15 @@ class ProtoHelpFormatter(RawTextRichHelpFormatter):
                 if not group_actions:
                     continue
 
-                parts.append(
-                    f"\n  [bold]{group_name}[/bold]:\n"
-                )  # Inject explicit rich markup
+                parts.append(f"\n  [bold]{group_name}[/bold]:\n")
                 self._indent()
                 for subaction in group_actions:
                     parts.append(self._format_action(subaction))
                 self._dedent()
 
-            return self._join_parts(parts)
+            return str(self._join_parts(parts))
 
-        return super()._format_action(action)
+        return str(super()._format_action(action))
 
     def add_usage(
         self,
@@ -290,6 +311,78 @@ class ProtoHelpFormatter(RawTextRichHelpFormatter):
         if prefix is None:
             prefix = "Usage: "
         super().add_usage(usage, actions, groups, prefix)
+
+
+def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
+    """Custom help printer that formats action groups as bordered Rich tables."""
+    # Print main parser description
+    if self.description:
+        console.print(f"{self.description}\n")
+
+    for group in self._action_groups:
+        # Filter out explicitly suppressed arguments and the default HelpAction
+        actions = [
+            a
+            for a in group._group_actions
+            if a.help != argparse.SUPPRESS and not isinstance(a, argparse._HelpAction)
+        ]
+
+        if not actions:
+            continue
+
+        table = Table(
+            show_header=False,
+            title=group.title,
+            box=box.ROUNDED,
+            show_lines=False,
+            padding=(0, 1),
+            title_justify="left",
+            title_style="bold blue",
+        )
+        table.add_column("Arguments", style="cyan", no_wrap=True)
+        table.add_column("Description")
+
+        for action in actions:
+            # Build the invocation string (e.g., "-p, --python")
+            if action.option_strings:
+                invocation = ", ".join(action.option_strings)
+
+                # Append metavars for arguments that take values
+                if (
+                    action.nargs != 0
+                    and action.dest != "help"
+                    and not isinstance(action, argparse.BooleanOptionalAction)
+                ):
+                    if action.metavar:
+                        metavar_str = (
+                            " ".join(action.metavar)
+                            if isinstance(action.metavar, tuple)
+                            else action.metavar
+                        )
+                    else:
+                        metavar_str = action.dest.upper()
+                    invocation += f" {metavar_str}"
+            else:
+                if action.metavar:
+                    invocation = (
+                        " ".join(action.metavar)
+                        if isinstance(action.metavar, tuple)
+                        else action.metavar
+                    )
+                else:
+                    invocation = action.dest
+
+            # Extract help payload, prioritizing native Rich renderables if available
+            help_text: Any = action.help or ""
+            if hasattr(help_text, "get_renderable"):
+                help_text = help_text.get_renderable()
+            elif hasattr(help_text, "__str__") and not isinstance(help_text, str):
+                help_text = str(help_text)
+
+            table.add_row(invocation, help_text)
+
+        console.print(table)
+        console.print()
 
 
 def main() -> None:
@@ -367,7 +460,7 @@ def main() -> None:
     )
 
     # Dynamically mount Preset flags
-    preset_group = init_parser.add_argument_group("Dependency Presets")
+    preset_group = init_parser.add_argument_group("Python Dependency Presets")
     for preset in PRESETS:
         if preset.cli_flags:
             preset_group.add_argument(
@@ -394,6 +487,7 @@ def main() -> None:
             )
 
     init_parser.set_defaults(func=handle_init)
+    init_parser.print_help = types.MethodType(print_table_help, init_parser)  # type: ignore[method-assign]
 
     # --- Generate Subparser ---
     generate_parser = subparsers.add_parser(
@@ -424,6 +518,7 @@ def main() -> None:
     )
 
     generate_parser.set_defaults(func=handle_generate)
+    generate_parser.print_help = types.MethodType(print_table_help, generate_parser)  # type: ignore[method-assign]
 
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
