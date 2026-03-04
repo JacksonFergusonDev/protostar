@@ -444,13 +444,20 @@ class Orchestrator:
             )
 
             # Freeze the state to mirror uv's declarative pyproject.toml updates
-            try:
-                result = subprocess.run(
-                    [pip_cmd, "freeze"], capture_output=True, text=True, check=True
-                )
-                Path("requirements.txt").write_text(result.stdout)
-                logger.debug("Successfully froze dependencies to requirements.txt")
-            except Exception as e:
+            req_path = Path("requirements.txt")
+            if req_path.exists():
                 console.print(
-                    f"[yellow]Warning:[/yellow] Failed to freeze dependencies to requirements.txt: {e}"
+                    "[yellow]Warning:[/yellow] requirements.txt already exists. "
+                    "Dependencies were installed to the virtual environment, but the file was not overwritten."
                 )
+            else:
+                try:
+                    result = subprocess.run(
+                        [pip_cmd, "freeze"], capture_output=True, text=True, check=True
+                    )
+                    req_path.write_text(result.stdout)
+                    logger.debug("Successfully froze dependencies to requirements.txt")
+                except Exception as e:
+                    console.print(
+                        f"[yellow]Warning:[/yellow] Failed to freeze dependencies to requirements.txt: {e}"
+                    )
