@@ -225,22 +225,16 @@ def test_generate_epilog_table_proxy():
     assert renderable.title == "How NAME is evaluated:"
 
 
-def test_proto_help_formatter_subcommand_clustering(mocker):
-    """Test that the custom formatter intercepts and groups subcommands."""
+def test_proto_help_formatter_usage(mocker):
+    """Test that the custom formatter correctly overrides the usage prefix."""
     parser = argparse.ArgumentParser(formatter_class=ProtoHelpFormatter)
-    subparsers = parser.add_subparsers(dest="command")
+    parser.add_argument("--foo", help="Foo argument")
 
-    # Add one command that should be clustered, and one unknown
-    subparsers.add_parser("init", help="Initialize env")
-    subparsers.add_parser("unknown_cmd", help="Unknown command")
-
-    # Generate the formatted help string
     help_output = parser.format_help()
 
-    # Verify structural clusters were injected
-    assert "Environment Lifecycle:" in help_output
-    assert "init" in help_output
-    assert "unknown_cmd" in help_output
+    # Ensure the capitalized 'Usage:' prefix is applied
+    assert "Usage:" in help_output
+    assert "usage:" not in help_output
 
 
 def test_print_table_help_rendering(mocker):

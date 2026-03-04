@@ -323,36 +323,6 @@ class ProtoHelpFormatter(RawTextRichHelpFormatter):
         "argparse.metavar": "dark_orange",
     }
 
-    def _format_action(self, action: argparse.Action) -> str:
-        """Overrides the default action formatting to group subcommands into logical clusters."""
-        if isinstance(action, argparse._SubParsersAction):
-            parts = []
-
-            # Define logical command clusters
-            groups = {
-                "Environment Lifecycle": ["init"],
-                "Boilerplate Generation": ["generate"],
-                "System Management": ["config"],
-                "General": ["help"],
-            }
-
-            subactions = list(self._iter_indented_subactions(action))
-
-            for group_name, commands in groups.items():
-                group_actions = [a for a in subactions if a.dest in commands]
-                if not group_actions:
-                    continue
-
-                parts.append(f"\n  [bold]{group_name}[/bold]:\n")
-                self._indent()
-                for subaction in group_actions:
-                    parts.append(self._format_action(subaction))
-                self._dedent()
-
-            return str(self._join_parts(parts))
-
-        return str(super()._format_action(action))
-
     def add_usage(
         self,
         usage: str | None,
