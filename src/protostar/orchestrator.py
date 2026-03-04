@@ -219,18 +219,32 @@ class Orchestrator:
         if not self.manifest.file_appends:
             return
 
-        # Dynamically resolve the active Python version for token interpolation
-        python_version = "3.12"  # Safe modern fallback
-        pyproject_path = Path("pyproject.toml")
+        # Dynamically resolve the active Python version
+        python_version = None
 
+        # 1. Attempt to scrape uv's generated footprint
+        pyproject_path = Path("pyproject.toml")
         if pyproject_path.exists():
             content = pyproject_path.read_text()
-            # Lightweight extraction of requires-python without a heavy parser
             match = re.search(
                 r'requires-python\s*=\s*"(?:>=|==|~=|>|)?(\d+\.\d+)', content
             )
             if match:
                 python_version = match.group(1)
+
+        # 2. Attempt to scrape pip's generated footprint
+        if not python_version:
+            pyvenv_path = Path(".venv/pyvenv.cfg")
+            if pyvenv_path.exists():
+                content = pyvenv_path.read_text()
+                match = re.search(r"version\s*=\s*(\d+\.\d+)", content)
+                if match:
+                    python_version = match.group(1)
+
+        # 3. Fallback to the configuration state, then 3.12
+        if not python_version:
+            config = ProtostarConfig.load()
+            python_version = config.python_version or "3.12"
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
