@@ -381,22 +381,21 @@ class Orchestrator:
         if not self.manifest.ide_settings:
             return
 
-        # Currently handles VS Code / Cursor architecture.
-        # Extensible here if other IDEs require JSON injection.
         vscode_dir = Path(".vscode")
         settings_path = vscode_dir / "settings.json"
 
         settings = {}
         if settings_path.exists():
             try:
+                # Note: This will fail if the file contains JSONC (comments).
                 settings = json.loads(settings_path.read_text())
             except json.JSONDecodeError:
                 console.print(
-                    "[yellow]Warning:[/yellow] Existing settings.json is malformed. Overwriting."
+                    "[yellow]Warning:[/yellow] Existing settings.json contains comments or is malformed. "
+                    "Skipping IDE settings injection to prevent data loss."
                 )
+                return
 
-        # Deep merge isn't strictly necessary for top-level keys like files.exclude,
-        # but we do standard dictionary updates to prevent clobbering other settings.
         for key, value in self.manifest.ide_settings.items():
             if isinstance(value, dict) and isinstance(settings.get(key), dict):
                 settings[key].update(value)
