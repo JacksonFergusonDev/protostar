@@ -3,6 +3,7 @@ import importlib.metadata
 import logging
 import sys
 from collections.abc import Iterable
+from typing import Any, cast
 
 import argcomplete
 from rich import box
@@ -36,6 +37,58 @@ from .presets import (
 from .wizard import run_discovery_wizard, run_generate_wizard, run_init_wizard
 
 console = Console()
+
+
+class LazyTargetHelp:
+    """Delays boilerplate target table generation until help is explicitly rendered.
+
+    This prevents unnecessary terminal rendering overhead during standard execution
+    and ensures the table dimensions evaluate the terminal width at render-time,
+    preventing overflow on resized terminal windows.
+    """
+
+    def __str__(self) -> str:
+        """Evaluates the terminal context and renders the table string dynamically.
+
+        Returns:
+            A formatted string containing the generated table and header.
+        """
+        # color_system=None strips ANSI codes. This prevents argparse
+        # from counting invisible styling bytes as characters during column alignment.
+        capture_console = Console(
+            width=Console().width - 32,
+            color_system=None,
+        )
+
+        target_table = Table(
+            show_header=False,
+            box=box.ROUNDED,
+            show_lines=True,
+            padding=(0, 1),
+            pad_edge=False,
+        )
+        target_table.add_column("Target", no_wrap=True)
+        target_table.add_column("Description")
+
+        for key, generator in GENERATOR_REGISTRY.items():
+            desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
+            target_table.add_row(key, desc)
+
+        with capture_console.capture() as capture:
+            capture_console.print(target_table)
+
+        return f"The boilerplate target to evaluate and generate:\n{capture.get()}"
+
+    def __mod__(self, params: dict[str, Any]) -> str:
+        """Intercepts argparse's string interpolation to trigger deferred evaluation.
+
+        Args:
+            params: The dictionary of formatting parameters provided by argparse.
+
+        Returns:
+            The fully evaluated and formatted help string.
+        """
+        return self.__str__() % params
 
 
 def get_os_module() -> BootstrapModule:
@@ -334,35 +387,12 @@ def main() -> None:
 
     target_group = generate_parser.add_argument_group("Generation Target")
 
-    # Enable show_lines for horizontal separators between rows
-    target_table = Table(
-        show_header=False,
-        box=box.ROUNDED,
-        show_lines=True,
-        padding=(0, 1),
-        pad_edge=False,
-    )
-    target_table.add_column("Target", style="cyan", no_wrap=True)
-    target_table.add_column("Description")
-
-    # Dynamically populate from the registry
-    for key, generator in GENERATOR_REGISTRY.items():
-        # Grabs the first line of the class docstring
-        desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
-        target_table.add_row(key, desc)
-
-    # Capture the output buffer
-    with console.capture() as capture:
-        # Buffer increased slightly to handle the extra border characters
-        console.print(target_table, width=console.width - 32)
-
-    target_help = "The boilerplate target to evaluate and generate:\n" + capture.get()
-
+    # The string evaluation is now deferred to the LazyTargetHelp object
     target_group.add_argument(
         "target",
         choices=list(GENERATOR_REGISTRY.keys()),
         metavar="TARGET",
-        help=target_help,
+        help=cast(str, LazyTargetHelp()),
     )
 
     # Output Parameters remains standard
