@@ -43,8 +43,7 @@ jobs:
         MEAN=$(python3 -c "import json; print(json.load(open('benchmark.json'))['benchmarks'][0]['stats']['mean'])")
         # Convert to ms and round to 2 decimal places
         LATENCY=$(python3 -c "print(round($MEAN * 1000, 2))")
-
-        echo "{\"schemaVersion\": 1, \"label\": \"latency\", \"message\": \"$LATENCY ms\", \"color\": \"blue\"}" > latency-badge.json
+        echo "{\"schemaVersion\": 1, \"label\": \"latency\", \"message\": \"$LATENCY ms\", \"color\": \"blue\"}" > /tmp/latency-badge.json
 
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
@@ -63,10 +62,11 @@ jobs:
     - name: Push latency badge
       if: github.event_name == 'push'
       run: |
-        cp latency-badge.json /tmp/latency-badge.json
         git fetch origin performance-benchmarks
         git checkout performance-benchmarks
         cp /tmp/latency-badge.json latency-badge.json
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         git add latency-badge.json
         git diff --cached --quiet || git commit -m "chore: update latency badge [skip ci]"
         git push origin performance-benchmarks
