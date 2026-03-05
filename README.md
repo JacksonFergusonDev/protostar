@@ -168,6 +168,9 @@ alias proto="protostar"
 | **Language** | `--latex`, `-l` | Configures a LaTeX footprint (ignores `*.aux`, `*.log`, `*.synctex.gz`). |
 | **Preset** | `--scientific`, `-s` | Injects foundational computational and statistical libraries. |
 | **Preset** | `--astro`, `-a` | Injects astrophysics and observational data dependencies. |
+| **Preset** | `--ml` | Injects machine learning and deep learning dependencies. |
+| **Preset** | `--api` | Injects REST API backend dependencies. |
+| **Preset** | `--cli` | Injects CLI application dependencies. |
 | **Preset** | `--dsp`, `-d` | Injects digital signal processing, waveform, and MIDI analysis tools. |
 | **Preset** | `--embedded`, `-e` | Injects host-side embedded hardware interface tools (e.g., `pyserial`). |
 | **Tooling** | `--ruff` | Scaffolds Ruff linter and formatter alongside `pyproject.toml` baseline config. |

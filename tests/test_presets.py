@@ -1,7 +1,10 @@
 from protostar.presets import (
+    ApiPreset,
     AstroPreset,
+    CliPreset,
     DspPreset,
     EmbeddedPreset,
+    MLPreset,
     ScientificPreset,
 )
 
@@ -11,7 +14,7 @@ def test_scientific_preset_build(manifest):
     preset = ScientificPreset()
     preset.build(manifest)
 
-    assert "astropy" in manifest.dependencies
+    assert "scikit-learn" in manifest.dependencies
     assert "numpy" in manifest.dependencies
     assert "notebooks" in manifest.directories
     assert "*.parquet" in manifest.vcs_ignores
@@ -22,9 +25,43 @@ def test_astro_preset_build(manifest):
     preset = AstroPreset()
     preset.build(manifest)
 
-    assert "gwpy" in manifest.dependencies
+    assert "photutils" in manifest.dependencies
     assert "data/fits" in manifest.directories
     assert "*.fits" in manifest.vcs_ignores
+
+
+def test_ml_preset_build(manifest):
+    """Test that the ML preset injects deep learning frameworks and telemetry ignores."""
+    preset = MLPreset()
+    preset.build(manifest)
+
+    assert "torch" in manifest.dependencies
+    assert "huggingface_hub" in manifest.dependencies
+    assert "models" in manifest.directories
+    assert "*.pt" in manifest.vcs_ignores
+    assert "wandb/" in manifest.vcs_ignores
+
+
+def test_api_preset_build(manifest):
+    """Test that the API preset injects web frameworks and security ignores."""
+    preset = ApiPreset()
+    preset.build(manifest)
+
+    assert "fastapi" in manifest.dependencies
+    assert "pydantic" in manifest.dependencies
+    assert "api/routers" in manifest.directories
+    assert ".env" in manifest.vcs_ignores
+
+
+def test_cli_preset_build(manifest):
+    """Test that the CLI preset injects terminal frameworks and source bounds."""
+    preset = CliPreset()
+    preset.build(manifest)
+
+    assert "typer" in manifest.dependencies
+    assert "rich" in manifest.dependencies
+    assert "src" in manifest.directories
+    assert "tests" in manifest.directories
 
 
 def test_dsp_preset_build(manifest):

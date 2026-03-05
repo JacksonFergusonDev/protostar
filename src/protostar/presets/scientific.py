@@ -23,7 +23,11 @@ class ScientificPreset(PresetModule):
         return "Scientific"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends scientific packages, directories, and data artifact ignores."""
+        """Appends scientific packages, directories, and data artifact ignores.
+
+        Args:
+            manifest: The centralized state object.
+        """
         logger.debug("Building Scientific preset layer.")
 
         packages = [
@@ -33,7 +37,7 @@ class ScientificPreset(PresetModule):
             "pandas",
             "scipy",
             "ipykernel",
-            "astropy",
+            "scikit-learn",
         ]
         for pkg in packages:
             manifest.add_dependency(pkg)
