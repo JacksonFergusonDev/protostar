@@ -1,5 +1,14 @@
 import dataclasses
+import enum
 from typing import Any
+
+
+class CollisionStrategy(enum.Enum):
+    """Enumeration of strategies for resolving state collisions during realization."""
+
+    MERGE = "merge"
+    OVERWRITE = "overwrite"
+    ABORT = "abort"
 
 
 @dataclasses.dataclass
@@ -21,6 +30,7 @@ class EnvironmentManifest:
         file_appends (dict[str, list[str]]): Exact paths mapped to lists of content to append.
         wants_pre_commit (bool): Flag indicating if pre-commit hooks should be scaffolded.
         pre_commit_hooks (list[str]): Raw YAML payloads for the pre-commit config.
+        collision_strategy (CollisionStrategy): The execution route for intersecting files.
     """
 
     vcs_ignores: set[str] = dataclasses.field(default_factory=set)
@@ -34,6 +44,7 @@ class EnvironmentManifest:
     file_appends: dict[str, list[str]] = dataclasses.field(default_factory=dict)
     wants_pre_commit: bool = False
     pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
+    collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
 
     def add_vcs_ignore(self, path: str) -> None:
         """Appends a file or directory pattern to the VCS ignore list (.gitignore)."""

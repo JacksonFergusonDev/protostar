@@ -64,6 +64,13 @@ class PythonModule(BootstrapModule):
                 "Missing dependency: 'python' is required for pip scaffolding."
             )
 
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for a Python environment."""
+        if self.package_manager == "uv":
+            return [Path("pyproject.toml")]
+        return [Path("requirements.txt")]
+
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues initialization and ignores virtual environment artifacts."""
         logger.debug(f"Building Python language layer using {self.package_manager}.")
@@ -108,6 +115,11 @@ class RustModule(BootstrapModule):
                 "Missing dependency: 'cargo' is required for Rust scaffolding. "
                 "Install it via `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`."
             )
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for a Rust environment."""
+        return [Path("Cargo.toml")]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues cargo initialization, ignores, and pre-commit hooks."""
@@ -156,6 +168,11 @@ class NodeModule(BootstrapModule):
                 f"Missing dependency: '{self.package_manager}' is required. "
                 "Please install Node.js or the requested package manager."
             )
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for a Node environment."""
+        return [Path("package.json")]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues package initialization, ignores, and pre-commit hooks."""

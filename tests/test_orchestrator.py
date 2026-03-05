@@ -1,6 +1,8 @@
 import json
+from pathlib import Path
 
 from protostar.config import ProtostarConfig
+from protostar.manifest import CollisionStrategy
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
 from protostar.presets.base import PresetModule
@@ -12,6 +14,10 @@ class DummyModule(BootstrapModule):
     @property
     def name(self):
         return "Dummy"
+
+    @property
+    def collision_markers(self):
+        return [Path("dummy_marker.txt")]
 
     def pre_flight(self):
         self.pre_flight_called = True
@@ -506,3 +512,105 @@ def test_orchestrator_install_dependencies_pip_reqs_exist(
 
     # Verify the file is untouched
     assert req_file.read_text() == "my-custom-pkg==1.0.0\n"
+
+
+def test_orchestrator_evaluate_collisions_headless(mocker):
+    """Test that a headless environment skips the TUI and defaults to MERGE."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    # Simulate the marker existing and a headless environment
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
+
+    orchestrator._evaluate_collisions()
+
+    assert orchestrator.manifest.collision_strategy == CollisionStrategy.MERGE
+
+
+def test_orchestrator_evaluate_collisions_interactive_abort(mocker):
+    """Test that selecting ABORT in the collision TUI triggers a safe exit."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
+
+    mocker.patch.dict("os.environ", clear=True)
+
+    # Mock questionary to return ABORT
+    mock_questionary = mocker.patch("questionary.select")
+    mock_questionary.return_value.ask.return_value = CollisionStrategy.ABORT
+
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit")
+
+    orchestrator._evaluate_collisions()
+    mock_exit.assert_called_once_with(1)
+
+
+def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker):
+    """Test that selecting OVERWRITE correctly updates the manifest strategy."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
+
+    mocker.patch.dict("os.environ", clear=True)
+
+    mock_questionary = mocker.patch("questionary.select")
+    mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
+
+    orchestrator._evaluate_collisions()
+    assert orchestrator.manifest.collision_strategy == CollisionStrategy.OVERWRITE
+
+
+def test_orchestrator_writes_injected_files_overwrite(mocker):
+    """Test that file injections bypass the exists() guard if OVERWRITE is active."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+    orchestrator.manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    orchestrator.manifest.add_file_injection(".test_config.yaml", "new content")
+
+    # File exists, but the overwrite strategy should force the write
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._write_injected_files()
+    mock_write.assert_called_once_with("new content")
+
+
+def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
+    """Test that the OVERWRITE strategy dynamically strips colliding TOML tables before injecting."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+    orchestrator.manifest.collision_strategy = CollisionStrategy.OVERWRITE
+
+    # Queue an update to [tool.ruff]
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
+    )
+
+    # Existing file has a conflicting [tool.ruff] table and a safe [tool.mypy] table
+    existing_content = '[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\ntarget-version = "py310"\n'
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.Path.read_text", return_value=existing_content)
+
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+
+    written_data = mock_write.call_args[0][0]
+
+    # The safe table should still be there
+    assert "[tool.mypy]" in written_data
+    assert "strict = true" in written_data
+
+    # The old tool.ruff values should be purged
+    assert "line-length = 120" not in written_data
+    assert 'target-version = "py310"' not in written_data
+
+    # The new tool.ruff payload should be injected
+    assert "[tool.ruff]" in written_data
+    assert "line-length = 88" in written_data
