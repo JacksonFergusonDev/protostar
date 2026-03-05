@@ -4,8 +4,20 @@ import pytest
 
 pytestmark = pytest.mark.exhaustive
 
+# Generate all unique pairs of presets to ensure no configuration collisions occur
 PRESET_COMBINATIONS = list(
-    itertools.combinations(["--scientific", "--astro", "--dsp", "--embedded"], 2)
+    itertools.combinations(
+        [
+            "--scientific",
+            "--astro",
+            "--dsp",
+            "--embedded",
+            "--ml",
+            "--api",
+            "--cli",
+        ],
+        2,
+    )
 )
 
 
@@ -29,11 +41,17 @@ def test_preset_orthogonality(run_cli, preset_pair):
     if "--scientific" in preset_pair:
         assert "numpy" in pyproject_data
     if "--astro" in preset_pair:
-        assert "gwpy" in pyproject_data
+        assert "photutils" in pyproject_data
     if "--dsp" in preset_pair:
         assert "librosa" in pyproject_data
     if "--embedded" in preset_pair:
         assert "pyserial" in pyproject_data
+    if "--ml" in preset_pair:
+        assert "torch" in pyproject_data
+    if "--api" in preset_pair:
+        assert "fastapi" in pyproject_data
+    if "--cli" in preset_pair:
+        assert "typer" in pyproject_data
 
 
 def test_malformed_cli_arguments(run_cli):
