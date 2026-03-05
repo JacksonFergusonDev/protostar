@@ -34,6 +34,11 @@ class DirenvModule(BootstrapModule):
                 "Then re-run: protostar init"
             )
 
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for direnv tooling."""
+        return [Path(".envrc")]
+
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends direnv context ignores, injects the .envrc, and queues evaluation."""
         logger.debug("Building direnv tooling layer.")
@@ -77,6 +82,11 @@ class MarkdownLintModule(BootstrapModule):
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "MarkdownLint"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for markdownlint."""
+        return [Path(".markdownlint.yaml")]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Injects the .markdownlint.yaml boilerplate file and pre-commit hook."""
@@ -289,6 +299,11 @@ class PreCommitModule(BootstrapModule):
                 "Missing dependency: 'git' is required for pre-commit hooks. "
                 "Please install Git and try again."
             )
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for pre-commit."""
+        return [Path(".pre-commit-config.yaml")]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Flags pre-commit activation, queues dependencies, and sets up git hooks.

@@ -1,5 +1,6 @@
 import abc
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
@@ -32,6 +33,16 @@ class BootstrapModule(abc.ABC):
         """Returns a list of configuration aliases that map to this module.
 
         Used for dynamic resolution from the global configuration file.
+        """
+        return []
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns a list of critical filesystem paths to evaluate for collisions during pre-flight.
+
+        Returns:
+            A list of Path objects representing critical configuration files or directories
+            managed by this module. Defaults to an empty list.
         """
         return []
 
