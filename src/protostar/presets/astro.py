@@ -23,14 +23,18 @@ class AstroPreset(PresetModule):
         return "Astrophysics"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends observational packages, directories, and FITS file ignores."""
+        """Appends observational packages, directories, and FITS file ignores.
+
+        Args:
+            manifest: The centralized state object.
+        """
         logger.debug("Building Astrophysics preset layer.")
 
         packages = [
             "astropy",
-            "sunpy",
-            "gwpy",
             "astroquery",
+            "photutils",
+            "specutils",
         ]
         for pkg in packages:
             manifest.add_dependency(pkg)
