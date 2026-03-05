@@ -6,18 +6,15 @@ coverage:
   status:
     project:
       default:
-        target: auto
+        target: 80%
         threshold: 2%
-        if_not_found: success
+        if_not_found: error
         if_ci_failed: error
     patch:
       default:
         target: 80%
-        threshold: 5%
+        threshold: 1%
         if_not_found: success
         if_ci_failed: error
 
-comment:
-  layout: "reach,diff,flags,files"
-  behavior: default
-  require_changes: false
+comment: false
