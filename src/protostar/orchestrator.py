@@ -12,7 +12,7 @@ from pathlib import Path
 from rich.console import Console
 
 from .config import ProtostarConfig
-from .manifest import EnvironmentManifest
+from .manifest import CollisionStrategy, EnvironmentManifest
 from .modules import BootstrapModule
 from .presets.base import PresetModule
 from .system import run_quiet
@@ -42,16 +42,84 @@ class Orchestrator:
         self.docker = docker
         self.manifest = EnvironmentManifest()
 
+    def _evaluate_collisions(self) -> None:
+        """Evaluates the workspace for critical configuration file collisions.
+
+        Halts execution with an interactive prompt if existing configuration markers
+        are found on disk. Non-interactive environments default to a safe merge strategy.
+        """
+        collision_targets = set()
+        for mod in self.modules:
+            for marker in mod.collision_markers:
+                if marker.exists():
+                    collision_targets.add(marker)
+
+        if not collision_targets:
+            return
+
+        # Default to safe merging for headless CI/CD execution
+        if not sys.stdin.isatty():
+            logger.debug(
+                "Non-interactive environment detected. Defaulting to MERGE collision strategy."
+            )
+            self.manifest.collision_strategy = CollisionStrategy.MERGE
+            return
+
+        import questionary
+        from questionary import Choice
+
+        console.print(
+            "\n[bold yellow]Collision Warning:[/bold yellow] Protostar detected existing configuration files."
+        )
+        for target in collision_targets:
+            console.print(f"  - {target}")
+
+        choice = questionary.select(
+            "\nHow would you like to proceed?",
+            choices=[
+                Choice(
+                    title="Merge     (Safely injects missing configs; preserves existing user data)",
+                    value=CollisionStrategy.MERGE,
+                ),
+                Choice(
+                    title="Overwrite (Forces injection; updates existing keys to match Protostar)",
+                    value=CollisionStrategy.OVERWRITE,
+                ),
+                Choice(
+                    title="Abort     (Safely exit without modifying the environment)",
+                    value=CollisionStrategy.ABORT,
+                ),
+            ],
+            style=questionary.Style(
+                [
+                    ("answer", "fg:cyan bold"),
+                    ("pointer", "fg:cyan bold"),
+                    ("selected", "fg:cyan"),
+                ]
+            ),
+        ).ask()
+
+        if not choice or choice == CollisionStrategy.ABORT:
+            console.print(
+                "\n[bold red]ABORTED:[/bold red] Environment initialization cancelled by user."
+            )
+            sys.exit(1)
+
+        self.manifest.collision_strategy = choice
+
     def run(self) -> None:
         """Executes the pre-flight, build, and realization phases."""
         console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
 
         try:
-            # Phase 1: Pre-flight Verification
+            # Phase 1: Collision Intercept
+            self._evaluate_collisions()
+
+            # Phase 2: Pre-flight Verification
             for mod in self.modules:
                 mod.pre_flight()
 
-            # Phase 2: Manifest Aggregation
+            # Phase 3: Manifest Aggregation
             for mod in self.modules:
                 mod.build(self.manifest)
 
@@ -59,7 +127,7 @@ class Orchestrator:
                 logger.debug(f"Building {preset.name} preset.")
                 preset.build(self.manifest)
 
-            # Phase 3: System Execution
+            # Phase 4: System Execution
             self._create_directories()
             self._write_injected_files()
             self._write_pre_commit_config()
