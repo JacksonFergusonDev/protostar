@@ -2,9 +2,10 @@
 
 [![CI](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
 [![Release](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/JacksonFergusonDev/protostar/graph/badge.svg?token=VIR3EZDXRN)](https://codecov.io/gh/JacksonFergusonDev/protostar)
+[![Performance](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JacksonFergusonDev/protostar/performance-benchmarks/latency-badge.json)](https://jacksonfergusondev.github.io/protostar/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Performance](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JacksonFergusonDev/protostar/performance-benchmarks/latency-badge.json)](https://jacksonfergusondev.github.io/protostar/)
 
 **A modular CLI tool for high-velocity environment scaffolding.**
 

@@ -54,6 +54,10 @@ test-benchmark: ## Run performance benchmarks
 	$(call PRINT_STAGE, Executing Performance Benchmarks)
 	uv run pytest tests/test_performance.py --benchmark-only --benchmark-json=benchmark.json
 
+test-cov-report: ## Generate detailed coverage reports
+	$(call PRINT_STAGE, Generating Coverage Reports)
+	uv run pytest --cov --cov-report=term-missing --cov-report=annotate:coverage_annotations/ | tee coverage_report.txt
+
 ci: install lint typecheck test-cov ## Run the exact pipeline executed by GitHub Actions
 	@echo "\n$(GREEN)✔ Local CI pipeline completed successfully. Clear to push!$(NC)"
 
