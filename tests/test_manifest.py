@@ -1,3 +1,6 @@
+from protostar.manifest import CollisionStrategy
+
+
 def test_manifest_initialization(manifest):
     """Test that the manifest initializes with empty, correct data structures."""
     assert isinstance(manifest.vcs_ignores, set)
@@ -11,6 +14,7 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.file_appends, dict)
     assert manifest.wants_pre_commit is False
     assert isinstance(manifest.pre_commit_hooks, list)
+    assert manifest.collision_strategy == CollisionStrategy.MERGE
 
 
 def test_add_vcs_ignore(manifest):

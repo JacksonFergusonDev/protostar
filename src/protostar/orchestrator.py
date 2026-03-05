@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import platform
 import re
 import subprocess
@@ -57,8 +58,8 @@ class Orchestrator:
         if not collision_targets:
             return
 
-        # Default to safe merging for headless CI/CD execution
-        if not sys.stdin.isatty():
+        # Default to safe merging for headless CI/CD execution or automated testing
+        if not sys.stdin.isatty() or "PYTEST_CURRENT_TEST" in os.environ:
             logger.debug(
                 "Non-interactive environment detected. Defaulting to MERGE collision strategy."
             )

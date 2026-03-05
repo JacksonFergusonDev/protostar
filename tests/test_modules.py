@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from protostar.config import ProtostarConfig
@@ -218,3 +220,25 @@ def test_pre_commit_module_build_skips_git_init(manifest, mocker):
 
     assert ["git", "init"] not in manifest.system_tasks
     assert ["pre-commit", "install"] in manifest.system_tasks
+
+
+def test_python_module_collision_markers():
+    """Test that Python modules expose the correct collision markers based on the package manager."""
+    mod_uv = PythonModule(package_manager="uv")
+    assert Path("pyproject.toml") in mod_uv.collision_markers
+
+    mod_pip = PythonModule(package_manager="pip")
+    assert Path("requirements.txt") in mod_pip.collision_markers
+
+
+def test_node_module_collision_markers():
+    """Test that Node modules expose package.json as a collision marker."""
+    mod = NodeModule()
+    assert Path("package.json") in mod.collision_markers
+
+
+def test_tooling_module_collision_markers():
+    """Test that various tooling modules expose their configuration files as collision markers."""
+    assert Path(".envrc") in DirenvModule().collision_markers
+    assert Path(".markdownlint.yaml") in MarkdownLintModule().collision_markers
+    assert Path(".pre-commit-config.yaml") in PreCommitModule().collision_markers

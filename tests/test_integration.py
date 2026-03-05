@@ -8,6 +8,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from protostar.cli import handle_init
+from protostar.manifest import CollisionStrategy
 
 pytestmark = pytest.mark.integration
 
@@ -154,3 +155,46 @@ def test_python_version_cohesion_e2e(
     assert "target-version" not in pyproject_content, (
         "Ruff should rely on requires-python natively."
     )
+
+
+def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path):
+    """Verifies the complete lifecycle of a TUI collision intercept resulting in an OVERWRITE."""
+    monkeypatch.chdir(tmp_path)
+
+    # Strip the pytest environment variable so the Orchestrator doesn't default to MERGE
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+
+    # 1. Setup existing conflicting workspace
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\nname = "test"\n\n[tool.ruff]\nline-length = 150\n')
+
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "mock_config.toml")
+    mocker.patch("subprocess.run", return_value=MagicMock(returncode=0))
+
+    # 2. Mock the interactive environment
+    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
+    mock_questionary = mocker.patch("questionary.select")
+    mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
+
+    # 3. Construct arguments mimicking: `protostar init -p --ruff`
+    args = argparse.Namespace(
+        command="init",
+        PythonModule=True,
+        python_version=None,
+        RuffModule=True,
+        docker=False,
+    )
+
+    handle_init(args)
+
+    # 4. Verify TUI was triggered
+    mock_questionary.assert_called_once()
+
+    # 5. Verify the file was overwritten correctly (purging line-length=150 and replacing with 88)
+    final_content = pyproject.read_text()
+
+    assert '[project]\nname = "test"' in final_content, (
+        "Should not wipe non-conflicting root tables"
+    )
+    assert "line-length = 150" not in final_content, "Failed to purge old state"
+    assert "line-length = 88" in final_content, "Failed to inject new state"
