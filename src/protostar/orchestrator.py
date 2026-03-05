@@ -181,7 +181,10 @@ class Orchestrator:
             return
 
         target = Path(".pre-commit-config.yaml")
-        if target.exists():
+        if (
+            target.exists()
+            and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
+        ):
             logger.debug(
                 "Skipping .pre-commit-config.yaml generation; file already exists."
             )
@@ -226,7 +229,12 @@ class Orchestrator:
 
         for filepath, content in self.manifest.file_injections.items():
             target = Path(filepath)
-            if not target.exists():
+
+            # Allow injections to overwrite existing files if the strategy permits
+            if (
+                not target.exists()
+                or self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
+            ):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(content)
                 logger.debug(f"Injected configuration file: {filepath}")
@@ -283,6 +291,8 @@ class Orchestrator:
 
         Evaluates payloads against existing file state. For TOML files, performs a
         structural DAG comparison to prevent syntax errors like table redefinitions.
+        If the OVERWRITE strategy is active, dynamically strips colliding top-level
+        tables from the existing file string before injecting the target payloads.
         """
         if not self.manifest.file_appends:
             return
@@ -317,12 +327,13 @@ class Orchestrator:
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
 
-            existing_content = ""
+            original_content = ""
             if target.exists():
-                existing_content = target.read_text()
+                original_content = target.read_text()
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
 
+            existing_content = original_content
             is_toml = target.suffix == ".toml"
             existing_toml_dict = {}
 
@@ -345,9 +356,35 @@ class Orchestrator:
                 if is_toml:
                     try:
                         payload_dict = tomllib.loads(interpolated)
-                        collision = self._toml_has_overlap(
-                            existing_toml_dict, payload_dict
-                        )
+
+                        if (
+                            self.manifest.collision_strategy
+                            == CollisionStrategy.OVERWRITE
+                        ):
+                            # Use regex to dynamically purge colliding tables from the existing text state
+                            table_headers = re.findall(
+                                r"^\[([a-zA-Z0-9_\-\.]+)\]",
+                                interpolated,
+                                flags=re.MULTILINE,
+                            )
+                            for header in table_headers:
+                                pattern = rf"(?m)^\[{re.escape(header)}\].*?(?=^\[|\Z)"
+                                existing_content = re.sub(
+                                    pattern, "", existing_content, flags=re.DOTALL
+                                )
+
+                            # Re-evaluate the cleaned dictionary state to avoid triggering downstream exceptions
+                            existing_toml_dict = (
+                                tomllib.loads(existing_content)
+                                if existing_content.strip()
+                                else {}
+                            )
+                            collision = False
+                        else:
+                            collision = self._toml_has_overlap(
+                                existing_toml_dict, payload_dict
+                            )
+
                     except tomllib.TOMLDecodeError:
                         logger.warning(
                             "Incoming payload is invalid TOML. Falling back to string heuristic."
@@ -358,31 +395,31 @@ class Orchestrator:
                 if fallback_string:
                     first_line = interpolated.strip().split("\n")[0]
                     if first_line and first_line in existing_content:
-                        collision = True
+                        if (
+                            self.manifest.collision_strategy
+                            == CollisionStrategy.OVERWRITE
+                        ):
+                            collision = False
+                        else:
+                            collision = True
 
                 if not collision:
                     missing_payloads.append(interpolated)
 
-                    # Mutate the in-memory TOML dictionary to prevent identical subsequent
-                    # payloads in the same queue from duplicating. A deep merge is not required
-                    # here; injecting the top-level keys handles most idempotency edge cases.
                     if is_toml and payload_dict:
                         existing_toml_dict.update(payload_dict)
 
-            if not missing_payloads:
+            existing_clean = existing_content.rstrip()
+
+            # Skip disk I/O if no payloads were queued and the original file string was not mutated
+            if not missing_payloads and existing_clean == original_content.rstrip():
                 continue
 
             combined_content = "\n\n".join(missing_payloads)
+            prefix = "\n\n" if existing_clean and combined_content else ""
 
-            # Ensure clean newline separation
-            prefix = (
-                "\n" if existing_content and not existing_content.endswith("\n") else ""
-            )
-
-            with target.open("a") as f:
-                f.write(prefix + combined_content + "\n")
-
-            logger.debug(f"Appended configuration to {filepath}")
+            target.write_text(existing_clean + prefix + combined_content + "\n")
+            logger.debug(f"Updated configuration in {filepath}")
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
