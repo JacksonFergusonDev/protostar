@@ -26,6 +26,9 @@ class EmbeddedPreset(PresetModule):
         """Appends host-side board communication packages."""
         logger.debug("Building Embedded Hardware preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "pyserial",
             "esptool",

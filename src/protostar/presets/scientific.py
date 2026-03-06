@@ -30,6 +30,9 @@ class ScientificPreset(PresetModule):
         """
         logger.debug("Building Scientific preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "numpy",
             "matplotlib",

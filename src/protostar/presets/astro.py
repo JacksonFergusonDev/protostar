@@ -30,6 +30,9 @@ class AstroPreset(PresetModule):
         """
         logger.debug("Building Astrophysics preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "astropy",
             "astroquery",
