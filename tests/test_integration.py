@@ -64,9 +64,9 @@ def test_orchestrator_idempotency(run_cli):
     )
     initial_ignore_size = ignore_path.stat().st_size
 
-    # Added the --python flag here
+    # --force flag to authorize the headless merge
     code2, stdout2, stderr2, _ = run_cli(
-        "init", "--python", "--python-version", "3.12", "--ruff"
+        "init", "--python", "--python-version", "3.12", "--ruff", "--force"
     )
     assert code2 == 0, f"Second execution failed.\nSTDERR: {stderr2}\nSTDOUT: {stdout2}"
 
