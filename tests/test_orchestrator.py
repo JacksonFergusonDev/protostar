@@ -345,65 +345,6 @@ def test_orchestrator_writes_dockerignore_with_uv(mocker):
     assert ".python-version" in written_data
 
 
-def test_orchestrator_toml_has_overlap_safe_merge():
-    """Test that disjoint TOML namespaces correctly evaluate as non-overlapping."""
-    orchestrator = Orchestrator([])
-    existing = {"tool": {"ruff": {"line-length": 88}}}
-    payload = {"tool": {"mypy": {"strict": True}}}
-
-    assert orchestrator._toml_has_overlap(existing, payload) is False
-
-
-def test_orchestrator_toml_has_overlap_scalar_collision():
-    """Test that exact key collisions in TOML dictionaries are intercepted."""
-    orchestrator = Orchestrator([])
-    existing = {"tool": {"ruff": {"line-length": 88}}}
-    payload = {"tool": {"ruff": {"line-length": 100}}}
-
-    assert orchestrator._toml_has_overlap(existing, payload) is True
-
-
-def test_orchestrator_toml_has_overlap_table_redefinition():
-    """Test that appending scalar strings to an existing table node triggers a collision."""
-    orchestrator = Orchestrator([])
-    existing: dict = {"tool": {"ruff": {"lint": {}}}}
-    payload = {"tool": {"ruff": "invalid string override"}}
-
-    assert orchestrator._toml_has_overlap(existing, payload) is True
-
-
-def test_orchestrator_append_files_toml_idempotency(mocker):
-    """Test that _append_files filters TOML payloads utilizing structural DAG comparison."""
-    dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod])
-
-    # Queue two payloads: one overlapping, one disjoint
-    orchestrator.manifest.add_file_append(
-        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
-    )
-    orchestrator.manifest.add_file_append(
-        "pyproject.toml", '[tool.pytest.ini_options]\naddopts = "-q"\n'
-    )
-
-    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
-    mocker.patch(
-        "protostar.orchestrator.Path.read_text",
-        return_value='[tool.ruff]\ntarget-version = "py312"\n',
-    )
-
-    mock_file = mocker.mock_open()
-    mocker.patch("protostar.orchestrator.Path.open", mock_file)
-
-    orchestrator._append_files()
-
-    written_data = mock_file().write.call_args[0][0]
-
-    # The [tool.ruff] payload should be dropped due to table overlap,
-    # but the disjoint [tool.pytest] payload should bypass the filter and execute.
-    assert "[tool.pytest.ini_options]" in written_data
-    assert "line-length = 88" not in written_data
-
-
 def test_orchestrator_crash_reporter(mocker):
     """Test that unhandled exceptions generate telemetry payloads and prompt for issues."""
     dummy_mod = DummyModule()
@@ -611,8 +552,80 @@ def test_orchestrator_writes_injected_files_overwrite(mocker):
     mock_write.assert_called_once_with("new content")
 
 
-def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
-    """Test that the OVERWRITE strategy dynamically strips colliding TOML tables before injecting."""
+def test_orchestrator_deep_merge_tomlkit():
+    """Test the recursive dictionary merge algorithm using tomlkit structures."""
+    import tomlkit
+
+    orchestrator = Orchestrator([])
+
+    base_toml = """
+    [tool.ruff]
+    line-length = 88
+    target-version = "py310" # Keep this comment
+    """
+
+    payload_toml = """
+    [tool.ruff]
+    line-length = 100
+    
+    [tool.mypy]
+    strict = true
+    """
+
+    base_doc = tomlkit.parse(base_toml)
+    payload_doc = tomlkit.parse(payload_toml)
+
+    orchestrator._deep_merge_tomlkit(base_doc, payload_doc)
+
+    # Unwrap the AST document into a standard Python dict for type-safe assertions
+    merged_dict = base_doc.unwrap()
+
+    # Existing key updated
+    assert merged_dict["tool"]["ruff"]["line-length"] == 100
+    # Existing non-overlapping key preserved
+    assert merged_dict["tool"]["ruff"]["target-version"] == "py310"
+    # New branch injected
+    assert merged_dict["tool"]["mypy"]["strict"] is True
+
+    # Assert comment preservation (using the original AST document, not the unwrapped dict)
+    dumped = tomlkit.dumps(base_doc)
+    assert "# Keep this comment" in dumped
+
+
+def test_orchestrator_append_files_ast_merge(mocker):
+    """Test that _append_files mutates the TOML AST logically based on the MERGE strategy."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+    orchestrator.manifest.collision_strategy = CollisionStrategy.MERGE
+
+    # Queue an update to [tool.ruff]
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
+    )
+
+    existing_content = (
+        "# My file\n[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\n"
+    )
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.Path.read_text", return_value=existing_content)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+    written_data = mock_write.call_args[0][0]
+
+    # Mypy block and comments should be entirely untouched
+    assert "# My file" in written_data
+    assert "[tool.mypy]" in written_data
+    assert "strict = true" in written_data
+
+    # Ruff block should be merged logically
+    assert "[tool.ruff]" in written_data
+    assert "line-length = 88" in written_data
+    assert "line-length = 120" not in written_data
+
+
+def test_orchestrator_append_files_ast_overwrite(mocker):
+    """Test that the OVERWRITE strategy completely replaces colliding TOML tables."""
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
     orchestrator.manifest.collision_strategy = CollisionStrategy.OVERWRITE
@@ -622,12 +635,11 @@ def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
         "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
     )
 
-    # Existing file has a conflicting [tool.ruff] table and a safe [tool.mypy] table
+    # Existing file has a conflicting [tool.ruff] table with extra keys
     existing_content = '[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\ntarget-version = "py310"\n'
 
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
     mocker.patch("protostar.orchestrator.Path.read_text", return_value=existing_content)
-
     mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
 
     orchestrator._append_files()
@@ -638,7 +650,7 @@ def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
     assert "[tool.mypy]" in written_data
     assert "strict = true" in written_data
 
-    # The old tool.ruff values should be purged
+    # The old tool.ruff values should be purged completely
     assert "line-length = 120" not in written_data
     assert 'target-version = "py310"' not in written_data
 

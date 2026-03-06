@@ -286,11 +286,14 @@ class Orchestrator:
             # Use the first argument (e.g., 'uv', 'cargo') as the context descriptor
             run_quiet(task, f"Executing {task[0]}")
 
-    def _deep_merge_tomlkit(self, base: Any, payload: Any) -> None:
+    def _deep_merge_tomlkit(
+        self, base: Any, payload: Any, overwrite: bool = False
+    ) -> None:
         """Recursively deep-merges a tomlkit payload into a base document.
 
         Handles nested tables and cleanly appends to Arrays of Tables (AoT)
-        without overwriting existing list elements.
+        without overwriting existing list elements. If overwrite is True,
+        colliding leaf tables are completely replaced.
         """
         import tomlkit.items
 
@@ -299,13 +302,27 @@ class Orchestrator:
                 if isinstance(value, tomlkit.items.Table) and isinstance(
                     base[key], tomlkit.items.Table
                 ):
-                    self._deep_merge_tomlkit(base[key], value)
+                    # Check if the table has nested tables inside it
+                    has_sub_tables = any(
+                        isinstance(v, (tomlkit.items.Table, tomlkit.items.AoT))
+                        for v in value.values()
+                    )
+
+                    if overwrite and not has_sub_tables:
+                        # It's a leaf table (like [tool.ruff]), replace it entirely
+                        base[key] = value
+                    else:
+                        # It's a super-table (like [tool]), keep recursing
+                        self._deep_merge_tomlkit(base[key], value, overwrite)
+
                 elif isinstance(value, tomlkit.items.AoT) and isinstance(
                     base[key], tomlkit.items.AoT
                 ):
-                    # Safely append new elements to existing [[arrays.of.tables]]
-                    for item in value:
-                        base[key].append(item)
+                    if overwrite:
+                        base[key] = value
+                    else:
+                        for item in value:
+                            base[key].append(item)
                 else:
                     base[key] = value
             else:
@@ -392,16 +409,14 @@ class Orchestrator:
                         payload_doc = tomlkit.parse(interpolated)
                         ast_mutated = True
 
-                        if (
+                        # Use our updated deep merge function to handle both strategies cleanly
+                        is_overwrite = (
                             self.manifest.collision_strategy
                             == CollisionStrategy.OVERWRITE
-                        ):
-                            # Strict override: replace top-level namespace tables entirely
-                            for k, v in payload_doc.items():
-                                doc[k] = v
-                        else:
-                            # Merge strategy: deterministic AST deep merge
-                            self._deep_merge_tomlkit(doc, payload_doc)
+                        )
+                        self._deep_merge_tomlkit(
+                            doc, payload_doc, overwrite=is_overwrite
+                        )
 
                     except Exception as e:
                         logger.warning(
