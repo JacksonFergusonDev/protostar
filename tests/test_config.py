@@ -1,3 +1,5 @@
+import pytest
+
 from protostar.config import ProtostarConfig
 
 
@@ -84,7 +86,7 @@ def test_config_no_ruff_inversion(mocker):
 
 
 def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
-    """Test that a malformed TOML file does not crash the loading sequence."""
+    """Test that a malformed TOML file aborts the loading sequence."""
     import protostar.config
 
     # 1. Create a real, temporary file with deliberately broken TOML syntax
@@ -92,7 +94,6 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     mock_global_config.write_text("invalid [ toml syntax === \n")
 
     mock_local_config = tmp_path / ".protostar.toml"
-    # We leave local config uncreated so exists() evaluates to False naturally
 
     # 2. Redirect the module's constants to point to our temporary sandboxed files
     mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
@@ -101,17 +102,17 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     # 3. Intercept rich.console.print to verify our error surfaced
     mock_print = mocker.patch("protostar.config.console.print")
 
-    # Execute the load sequence
-    config = protostar.config.ProtostarConfig.load()
+    # Execute the load sequence and expect a clean abort
+    with pytest.raises(SystemExit) as exc:
+        protostar.config.ProtostarConfig.load()
 
-    # The config should gracefully fall back to default values
-    assert config.ide == "vscode"
+    assert exc.value.code == 1
 
     # Verify that the user was explicitly warned about the syntax error
-    mock_print.assert_called_once()
-    printed_text = mock_print.call_args[0][0]
+    mock_print.assert_called()
+    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
 
-    assert "[bold red]Config Error:[/bold red]" in printed_text
+    assert "Fatal Configuration Error" in printed_text
     assert "Syntax error in" in printed_text
     assert str(mock_global_config) in printed_text
 

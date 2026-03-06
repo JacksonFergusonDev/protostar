@@ -1,6 +1,5 @@
 import json
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -172,19 +171,20 @@ def test_orchestrator_append_files_late_binding(mocker):
         "pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"'
     )
 
-    # Mock pyproject.toml existing and containing a requires-python metadata string
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
     mocker.patch(
         "protostar.orchestrator.Path.read_text",
-        return_value='requires-python = ">=3.11"\n',
+        return_value='[project]\nrequires-python = ">=3.11"\n',
     )
 
-    mock_file = mocker.mock_open()
+    # Mock binary read for tomllib
+    mock_file = mocker.mock_open(read_data=b'[project]\nrequires-python = ">=3.11"\n')
     mocker.patch("protostar.orchestrator.Path.open", mock_file)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
 
     orchestrator._append_files()
 
-    written_data = mock_file().write.call_args[0][0]
+    written_data = mock_write.call_args[0][0]
     # Verify the regex successfully extracted '3.11' and interpolated the {{PYTHON_VERSION}} token
     assert 'python_version = "3.11"' in written_data
 
@@ -672,6 +672,7 @@ def test_orchestrator_run_global_injections(mocker):
         "_write_injected_files",
         "_write_pre_commit_config",
         "_execute_tasks",
+        "_validate_targets",
         "_append_files",
         "_write_ignores",
         "_write_docker_artifacts",
@@ -779,56 +780,70 @@ def test_deep_merge_tomlkit_aot_append():
     assert result["my_array"][1]["val"] == 2
 
 
-def test_append_files_tomlkit_import_error(mocker):
-    """Test that the orchestrator falls back to string heuristic if tomlkit is not installed."""
+def test_validate_targets_success(mocker):
+    """Test that pre-execution validation passes silently on valid TOML files."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("pyproject.toml", "[tool.ruff]")
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+
+    # Provide valid binary TOML for tomllib to parse
+    mock_file = mocker.mock_open(read_data=b'[project]\nname = "test"\n')
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit")
+
+    orchestrator._validate_targets()
+    mock_exit.assert_not_called()
+
+
+def test_validate_targets_malformed_toml(mocker):
+    """Test that malformed existing TOML triggers a hard abort during pre-execution validation."""
     orchestrator = Orchestrator([])
     orchestrator.manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
 
-    # Force ImportError on tomlkit
-    mocker.patch.dict(sys.modules, {"tomlkit": None})
-
-    mocker.patch("protostar.orchestrator.Path.read_text", return_value="[existing]\n")
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
 
-    orchestrator._append_files()
-    written = mock_write.call_args[0][0]
-    assert "[section]" in written
-    assert "[existing]" in written
+    # Provide invalid binary TOML
+    mock_file = mocker.mock_open(read_data=b"[invalid toml == \n")
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
 
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
 
-def test_append_files_malformed_base_toml(mocker):
-    """Test that malformed existing TOML drops the AST parser and uses the string fallback."""
-    orchestrator = Orchestrator([])
-    orchestrator.manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
+    with pytest.raises(SystemExit) as exc:
+        orchestrator._validate_targets()
 
-    mocker.patch(
-        "protostar.orchestrator.Path.read_text", return_value="[invalid toml == \n"
-    )
-    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+    assert exc.value.code == 1
+    printed = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
 
-    orchestrator._append_files()
-    written = mock_write.call_args[0][0]
-    assert "[section]" in written
-    assert "[invalid toml" in written
+    assert "Validation Failure" in printed
+    assert "Syntax error in existing workspace file" in printed
 
 
 def test_append_files_malformed_payload_toml(mocker):
-    """Test that malformed payload TOML drops the AST parser and uses the string fallback."""
+    """Test that malformed payload TOML triggers an internal error abort during execution."""
     orchestrator = Orchestrator([])
     orchestrator.manifest.add_file_append("test.toml", "[invalid payload == \n")
 
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
     mocker.patch(
         "protostar.orchestrator.Path.read_text", return_value="[existing]\nval = 1\n"
     )
-    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
 
-    orchestrator._append_files()
-    written = mock_write.call_args[0][0]
-    assert "[existing]" in written
-    assert "[invalid payload" in written
+    # Fulfill the binary open for version scraping just in case
+    mock_file = mocker.mock_open(read_data=b"[project]\n")
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    with pytest.raises(SystemExit) as exc:
+        orchestrator._append_files()
+
+    assert exc.value.code == 1
+    printed = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+
+    assert "Internal Error" in printed
+    assert "Failed to parse injected TOML payload" in printed
 
 
 def test_append_files_string_fallback_redundant(mocker):
