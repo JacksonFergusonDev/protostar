@@ -62,7 +62,9 @@ class ProtostarConfig:
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
         pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
         pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
-        presets (dict[str, str]): Generation presets mapped by language/framework.
+        presets (dict[str, Any]): Generation presets, mapped to either strings or nested configuration dictionaries.
+        global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
+        pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
     """
 
     ide: str = "vscode"
@@ -75,7 +77,9 @@ class ProtostarConfig:
     mypy: bool = False
     pytest: bool = False
     pre_commit: bool = False
-    presets: dict[str, str] = field(default_factory=dict)
+    presets: dict[str, Any] = field(default_factory=dict)
+    global_dev_dependencies: list[str] = field(default_factory=list)
+    pyproject_injections: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def load(cls) -> "ProtostarConfig":
