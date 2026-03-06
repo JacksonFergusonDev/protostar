@@ -20,7 +20,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
 1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
-1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses structural DAG comparisons to prevent TOML table collisions, and safely aborts if generated files already exist.
+1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses deterministic AST modification to deep-merge TOML configurations, and safely aborts if generated files already exist.
 1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment vector to eliminate debugging entropy.
 
 ---
@@ -103,7 +103,7 @@ If you are building a specific type of pipeline, use presets to pre-load standar
 protostar init --python --astro --docker --direnv -m --mypy --pytest --pre-commit
 ```
 
-*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `sunpy`, `gwpy`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, resolves `mypy` and `pytest` dev dependencies, and generates a modular `.pre-commit-config.yaml` that auto-installs and updates git hooks tailored exactly to the tools you enabled.*
+*Result: Installs the Python core environment alongside astrophysics dependencies (`astropy`, `photutils`, `specutils`), scaffolds `data/catalogs` and `data/fits`, generates optimized `.gitignore` and `.dockerignore` files, automatically scaffolds and evaluates a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, resolves `mypy` and `pytest` dev dependencies, and generates a modular `.pre-commit-config.yaml` that auto-installs and updates git hooks tailored exactly to the tools you enabled.*
 
 ### File Generation
 
@@ -181,6 +181,7 @@ alias proto="protostar"
 | **Context** | `--docker` | Generates a highly optimized `.dockerignore` based on the environment footprint. |
 | **Context** | `--direnv` | Scaffolds a `.envrc` and evaluates the virtual environment shell hook automatically. |
 | **Context** | `--markdownlint`, `-m` | Scaffolds a relaxed `.markdownlint.yaml` configuration. |
+| **Context** | `--force`, `-f` | Bypasses interactive prompts and forces a merge on file collisions. |
 
 ### `protostar generate`
 
@@ -224,6 +225,25 @@ node_package_manager = "npm"
 [presets]
 # Generator presets for scaffolding boilerplate
 latex = "minimal"
+
+# --- Advanced Configuration Overrides ---
+# Protostar allows you to customize the dependencies and directory structures
+# for specific pipelines, or inject tooling across all initialized environments.
+
+# [presets.astro]
+# dependencies = ["astropy", "astroquery", "photutils", "specutils"]
+# dev_dependencies = ["pytest-benchmark"]
+# directories = ["data/catalogs", "data/fits", "data/raw"]
+
+# [dev]
+# extra_dependencies = ["bump-my-version"]
+
+# [dev.pyproject]
+# custom_ruff = '''
+# [tool.ruff.lint]
+# select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
+# ignore = ["E501", "D100", "D104", "D107"]
+# '''
 ```
 
 ---
