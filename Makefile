@@ -64,7 +64,7 @@ ci: install lint typecheck test-cov ## Run the exact pipeline executed by GitHub
 clean: ## Remove cache directories and test artifacts
 	$(call PRINT_STAGE, Cleaning Workspace)
 	rm -rf .pytest_cache .mypy_cache .ruff_cache
-	rm -rf htmlcov .coverage coverage.xml
-	rm -f benchmark.json
+	rm -rf htmlcov .coverage coverage.xml coverage_annotations/
+	rm -f benchmark.json coverage_report.txt lcov.info coverage.lcov
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	@echo "$(GREEN)✔ Environment cleaned.$(NC)"
