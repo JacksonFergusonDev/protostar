@@ -2,7 +2,7 @@ import logging
 import os
 import subprocess
 import tomllib
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -107,6 +107,9 @@ class ProtostarConfig:
     ) -> "ProtostarConfig":
         """Helper to parse a TOML file and merge its values into a config instance.
 
+        Dynamically evaluates dataclass fields to prevent brittle parsing logic,
+        while maintaining specific handlers for complex nested dictionaries.
+
         Args:
             path: The filesystem path to the local or global configuration file.
             instance: The active ProtostarConfig object to mutate.
@@ -120,39 +123,36 @@ class ProtostarConfig:
 
             updates: dict[str, Any] = {}
 
+            # 1. Parse standard environment toggles dynamically
             if "env" in data:
                 env_data = data["env"]
-                if "ide" in env_data:
-                    updates["ide"] = env_data["ide"]
-                if "direnv" in env_data:
-                    updates["direnv"] = env_data["direnv"]
-                if "python_package_manager" in env_data:
-                    updates["python_package_manager"] = env_data[
-                        "python_package_manager"
-                    ]
-                if "python_version" in env_data:
-                    updates["python_version"] = env_data["python_version"]
-                if "node_package_manager" in env_data:
-                    updates["node_package_manager"] = env_data["node_package_manager"]
 
-                # Process dev tool flags, accommodating the inverted no-ruff flag
-                if "markdownlint" in env_data:
-                    updates["markdownlint"] = env_data["markdownlint"]
-                if "ruff" in env_data:
-                    updates["ruff"] = env_data["ruff"]
+                # Dynamically map matching TOML keys directly to the dataclass fields
+                valid_fields = {f.name for f in fields(cls)}
+                for key, value in env_data.items():
+                    if key in valid_fields:
+                        updates[key] = value
+
+                # Handle the specific inverted 'no-ruff' edge case
                 if "no-ruff" in env_data:
                     updates["ruff"] = not env_data["no-ruff"]
-                if "mypy" in env_data:
-                    updates["mypy"] = env_data["mypy"]
-                if "pytest" in env_data:
-                    updates["pytest"] = env_data["pytest"]
-                if "pre_commit" in env_data:
-                    updates["pre_commit"] = env_data["pre_commit"]
 
+            # 2. Parse and merge preset overrides
             if "presets" in data:
                 merged_presets = dict(instance.presets)
+                # Shallow update maps user-defined dictionaries over the default strings
                 merged_presets.update(data["presets"])
                 updates["presets"] = merged_presets
+
+            # 3. Parse global development dependencies
+            if "dev" in data:
+                dev_data = data["dev"]
+                if "extra_dependencies" in dev_data:
+                    updates["global_dev_dependencies"] = dev_data["extra_dependencies"]
+
+                # 4. Parse raw pyproject.toml injections
+                if "pyproject" in dev_data:
+                    updates["pyproject_injections"] = dev_data["pyproject"]
 
             return replace(instance, **updates)
 
