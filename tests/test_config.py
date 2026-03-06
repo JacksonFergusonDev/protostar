@@ -114,3 +114,48 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     assert "[bold red]Config Error:[/bold red]" in printed_text
     assert "Syntax error in" in printed_text
     assert str(mock_global_config) in printed_text
+
+
+def test_config_advanced_overrides_parsing(mocker, tmp_path):
+    """Test that dynamic parsing correctly extracts presets, dev tools, and raw TOML injections."""
+    import protostar.config
+
+    # Construct a complex configuration payload using the new schemas
+    mock_global_config = tmp_path / "config.toml"
+    mock_global_config.write_text(
+        "[env]\n"
+        'ide = "cursor"\n\n'
+        "[presets.astro]\n"
+        'dependencies = ["custom-astro-pkg"]\n'
+        'dev_dependencies = ["pytest-benchmark"]\n'
+        'directories = ["custom/data"]\n\n'
+        "[dev]\n"
+        'extra_dependencies = ["bump-my-version"]\n\n'
+        "[dev.pyproject]\n"
+        'custom_ruff = "[tool.ruff]\\nline-length = 100"\n'
+    )
+
+    mock_local_config = tmp_path / ".protostar.toml"
+
+    mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
+    mocker.patch("protostar.config.LOCAL_CONFIG_FILE", mock_local_config)
+
+    config = protostar.config.ProtostarConfig.load()
+
+    # 1. Verify dynamic field mapping (standard attributes)
+    assert config.ide == "cursor"
+
+    # 2. Verify nested preset dictionary extraction
+    assert isinstance(config.presets["astro"], dict)
+    assert config.presets["astro"]["dependencies"] == ["custom-astro-pkg"]
+    assert config.presets["astro"]["dev_dependencies"] == ["pytest-benchmark"]
+    assert config.presets["astro"]["directories"] == ["custom/data"]
+
+    # 3. Verify global dev injections mapping
+    assert config.global_dev_dependencies == ["bump-my-version"]
+
+    # 4. Verify pyproject raw string injections mapping
+    assert "custom_ruff" in config.pyproject_injections
+    assert (
+        config.pyproject_injections["custom_ruff"] == "[tool.ruff]\nline-length = 100"
+    )

@@ -277,7 +277,9 @@ def handle_init(args: argparse.Namespace) -> None:
             modules.append(mod)
 
     # Execute
-    engine = Orchestrator(modules, presets, docker=args.docker)
+    engine = Orchestrator(
+        modules, presets, docker=args.docker, force=getattr(args, "force", False)
+    )
     engine.run()
 
 
@@ -504,6 +506,15 @@ def main() -> None:
 
     # Tooling Context
     tooling_group = init_parser.add_argument_group("Tooling & Context")
+
+    # The force flag for collision bypass
+    tooling_group.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Bypass interactive prompts and force a merge on file collisions.",
+    )
+
     tooling_group.add_argument(
         "--docker",
         action="store_true",
@@ -629,7 +640,9 @@ def main() -> None:
             if ide_mod := get_ide_module(config.ide):
                 modules.append(ide_mod)
 
-            engine = Orchestrator(modules, presets, docker=selections["docker"])
+            engine = Orchestrator(
+                modules, presets, docker=selections["docker"], force=False
+            )
             engine.run()
             sys.exit(0)
 

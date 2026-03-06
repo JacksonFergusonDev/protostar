@@ -5,9 +5,12 @@ dist/
 build/
 *.egg-info/
 .env
-.coverage
 .pytest_cache/
 htmlcov/
-.hypothesis/
 .ipynb_checkpoints/
 .mypy_cache/
+.coverage
+coverage_annotations/
+coverage_report.txt
+lcov.info
+coverage.lcov

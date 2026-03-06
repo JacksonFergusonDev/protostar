@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from protostar.config import ProtostarConfig
 from protostar.manifest import CollisionStrategy
 from protostar.modules import BootstrapModule
@@ -514,10 +516,39 @@ def test_orchestrator_install_dependencies_pip_reqs_exist(
     assert req_file.read_text() == "my-custom-pkg==1.0.0\n"
 
 
-def test_orchestrator_evaluate_collisions_headless(mocker):
-    """Test that a headless environment skips the TUI and defaults to MERGE."""
+def test_orchestrator_evaluate_collisions_headless_aborts_by_default(mocker):
+    """Test that a headless environment safely aborts on collision without the force flag."""
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
+
+    # Simulate the marker existing and a headless environment
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
+
+    # Configure the mock to actually raise SystemExit, preventing fall-through
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
+    mock_console = mocker.patch("protostar.orchestrator.console.print")
+
+    # Catch the exit to prevent it from failing the test
+    with pytest.raises(SystemExit):
+        orchestrator._evaluate_collisions()
+
+    # Verify it halted the process with code 1
+    mock_exit.assert_called_once_with(1)
+
+    # Verify the warning instructs the user to use the --force flag
+    printed_output = " ".join(
+        call.args[0] for call in mock_console.call_args_list if call.args
+    )
+    assert "--force" in printed_output
+
+
+def test_orchestrator_evaluate_collisions_headless_with_force_merges(mocker):
+    """Test that a headless environment respects the --force flag and defaults to MERGE."""
+    dummy_mod = DummyModule()
+
+    # Initialize with the force flag enabled
+    orchestrator = Orchestrator([dummy_mod], force=True)
 
     # Simulate the marker existing and a headless environment
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)

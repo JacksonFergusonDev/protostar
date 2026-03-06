@@ -30,6 +30,7 @@ class Orchestrator:
         modules: list[BootstrapModule],
         presets: list[PresetModule] | None = None,
         docker: bool = False,
+        force: bool = False,
     ) -> None:
         """Initializes the orchestrator with the requested modules and presets.
 
@@ -37,17 +38,20 @@ class Orchestrator:
             modules: The ordered stack of bootstrap layers to execute.
             presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
+            force: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
         """
         self.modules = modules
         self.presets = presets or []
         self.docker = docker
+        self.force = force
         self.manifest = EnvironmentManifest()
 
     def _evaluate_collisions(self) -> None:
         """Evaluates the workspace for critical configuration file collisions.
 
         Halts execution with an interactive prompt if existing configuration markers
-        are found on disk. Non-interactive environments default to a safe merge strategy.
+        are found on disk. Non-interactive environments default to a safe abort
+        unless the --force flag is explicitly provided.
         """
         collision_targets = set()
         for mod in self.modules:
@@ -58,13 +62,24 @@ class Orchestrator:
         if not collision_targets:
             return
 
-        # Default to safe merging for headless CI/CD execution or automated testing
+        # Evaluate non-interactive fallback logic
         if not sys.stdin.isatty() or "PYTEST_CURRENT_TEST" in os.environ:
-            logger.debug(
-                "Non-interactive environment detected. Defaulting to MERGE collision strategy."
-            )
-            self.manifest.collision_strategy = CollisionStrategy.MERGE
-            return
+            if self.force:
+                logger.debug(
+                    "Non-interactive environment detected. --force flag provided. "
+                    "Defaulting to MERGE collision strategy."
+                )
+                self.manifest.collision_strategy = CollisionStrategy.MERGE
+                return
+            else:
+                console.print(
+                    "\n[bold red]Collision Detected:[/bold red] The target environment is not empty."
+                )
+                console.print(
+                    "Aborting to prevent destructive mutations in a non-interactive context.\n"
+                    "Use the [bold cyan]--force[/bold cyan] flag to bypass this check and merge safely."
+                )
+                sys.exit(1)
 
         import questionary
         from questionary import Choice
