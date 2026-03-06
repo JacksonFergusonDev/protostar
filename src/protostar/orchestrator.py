@@ -5,10 +5,10 @@ import platform
 import re
 import subprocess
 import sys
-import tomllib
 import traceback
 import urllib.parse
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -286,44 +286,37 @@ class Orchestrator:
             # Use the first argument (e.g., 'uv', 'cargo') as the context descriptor
             run_quiet(task, f"Executing {task[0]}")
 
-    def _toml_has_overlap(self, existing: dict, payload: dict) -> bool:
-        """Recursively evaluates TOML dictionaries to prevent duplicate table definitions.
+    def _deep_merge_tomlkit(self, base: Any, payload: Any) -> None:
+        """Recursively deep-merges a tomlkit payload into a base document.
 
-        Since configurations are appended as raw strings, injecting a payload that defines
-        a table already present in the existing file will result in a TOML parsing error
-        (e.g., 'Cannot redefine table'). This function checks for exact table or scalar key collisions.
-
-        Args:
-            existing: The parsed TOML dictionary of the target file.
-            payload: The parsed TOML dictionary of the incoming configuration block.
-
-        Returns:
-            True if a collision is detected, False otherwise.
+        Handles nested tables and cleanly appends to Arrays of Tables (AoT)
+        without overwriting existing list elements.
         """
-        for key, value in payload.items():
-            if key in existing:
-                if isinstance(value, dict) and isinstance(existing[key], dict):
-                    # If the payload attempts to add scalar values to an existing table,
-                    # a string append would result in a duplicate table header error.
-                    has_scalars = any(not isinstance(v, dict) for v in value.values())
-                    if has_scalars:
-                        return True
+        import tomlkit.items
 
-                    # Otherwise, both are topological namespaces (e.g., [tool]). Traverse deeper.
-                    if self._toml_has_overlap(existing[key], value):
-                        return True
+        for key, value in payload.items():
+            if key in base:
+                if isinstance(value, tomlkit.items.Table) and isinstance(
+                    base[key], tomlkit.items.Table
+                ):
+                    self._deep_merge_tomlkit(base[key], value)
+                elif isinstance(value, tomlkit.items.AoT) and isinstance(
+                    base[key], tomlkit.items.AoT
+                ):
+                    # Safely append new elements to existing [[arrays.of.tables]]
+                    for item in value:
+                        base[key].append(item)
                 else:
-                    # Direct collision on a specific key or mismatched types
-                    return True
-        return False
+                    base[key] = value
+            else:
+                base[key] = value
 
     def _append_files(self) -> None:
         """Appends late-binding configuration payloads to their target files.
 
-        Evaluates payloads against existing file state. For TOML files, performs a
-        structural DAG comparison to prevent syntax errors like table redefinitions.
-        If the OVERWRITE strategy is active, dynamically strips colliding top-level
-        tables from the existing file string before injecting the target payloads.
+        For TOML files, leverages tomlkit to modify the Abstract Syntax Tree (AST)
+        dynamically while preserving formatting and comments. Lazy-loads the
+        parser to maintain sub-3ms initialization latency.
         """
         if not self.manifest.file_appends:
             return
@@ -366,83 +359,82 @@ class Orchestrator:
 
             existing_content = original_content
             is_toml = target.suffix == ".toml"
-            existing_toml_dict = {}
 
-            if is_toml and existing_content:
+            # 1. Attempt to lazy-load tomlkit
+            if is_toml:
                 try:
-                    existing_toml_dict = tomllib.loads(existing_content)
-                except tomllib.TOMLDecodeError:
+                    import tomlkit
+                except ImportError:
+                    logger.debug("tomlkit not found. Falling back to string heuristic.")
+                    is_toml = False
+
+            # 2. Parse the existing file AST
+            doc = None
+            if is_toml:
+                try:
+                    doc = (
+                        tomlkit.parse(existing_content)
+                        if existing_content
+                        else tomlkit.document()
+                    )
+                except Exception as e:
                     logger.warning(
-                        f"Malformed TOML detected in {filepath}. Falling back to string heuristic."
+                        f"Malformed TOML detected in {filepath}: {e}. Falling back to strings."
                     )
                     is_toml = False
 
+            # 3. Apply the payloads to the AST
+            if is_toml and doc is not None:
+                ast_mutated = False
+                for payload in contents:
+                    interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
+                    try:
+                        payload_doc = tomlkit.parse(interpolated)
+                        ast_mutated = True
+
+                        if (
+                            self.manifest.collision_strategy
+                            == CollisionStrategy.OVERWRITE
+                        ):
+                            # Strict override: replace top-level namespace tables entirely
+                            for k, v in payload_doc.items():
+                                doc[k] = v
+                        else:
+                            # Merge strategy: deterministic AST deep merge
+                            self._deep_merge_tomlkit(doc, payload_doc)
+
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to parse incoming TOML payload: {e}. Falling back."
+                        )
+                        is_toml = False
+                        break
+
+                # If AST parsing was successful across all payloads, write to disk and exit the loop
+                if is_toml and ast_mutated:
+                    new_content = tomlkit.dumps(doc)
+                    if new_content.strip() != original_content.strip():
+                        target.write_text(new_content)
+                        logger.debug(f"Updated configuration AST in {filepath}")
+                    continue
+
+            # 4. Fallback for standard string appends (or if TOML failed)
             missing_payloads = []
             for payload in contents:
                 interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
-                payload_dict = {}
-                collision = False
-                fallback_string = not is_toml
+                first_line = interpolated.strip().split("\n")[0]
 
-                if is_toml:
-                    try:
-                        payload_dict = tomllib.loads(interpolated)
+                if (
+                    first_line
+                    and first_line in existing_content
+                    and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
+                ):
+                    continue
 
-                        if (
-                            self.manifest.collision_strategy
-                            == CollisionStrategy.OVERWRITE
-                        ):
-                            # Use regex to dynamically purge colliding tables from the existing text state
-                            table_headers = re.findall(
-                                r"^\[([a-zA-Z0-9_\-\.]+)\]",
-                                interpolated,
-                                flags=re.MULTILINE,
-                            )
-                            for header in table_headers:
-                                pattern = rf"(?m)^\[{re.escape(header)}\].*?(?=^\[|\Z)"
-                                existing_content = re.sub(
-                                    pattern, "", existing_content, flags=re.DOTALL
-                                )
-
-                            # Re-evaluate the cleaned dictionary state to avoid triggering downstream exceptions
-                            existing_toml_dict = (
-                                tomllib.loads(existing_content)
-                                if existing_content.strip()
-                                else {}
-                            )
-                            collision = False
-                        else:
-                            collision = self._toml_has_overlap(
-                                existing_toml_dict, payload_dict
-                            )
-
-                    except tomllib.TOMLDecodeError:
-                        logger.warning(
-                            "Incoming payload is invalid TOML. Falling back to string heuristic."
-                        )
-                        fallback_string = True
-
-                # Fallback to string-matching heuristic if TOML parsing is bypassed
-                if fallback_string:
-                    first_line = interpolated.strip().split("\n")[0]
-                    if first_line and first_line in existing_content:
-                        if (
-                            self.manifest.collision_strategy
-                            == CollisionStrategy.OVERWRITE
-                        ):
-                            collision = False
-                        else:
-                            collision = True
-
-                if not collision:
-                    missing_payloads.append(interpolated)
-
-                    if is_toml and payload_dict:
-                        existing_toml_dict.update(payload_dict)
+                missing_payloads.append(interpolated)
 
             existing_clean = existing_content.rstrip()
 
-            # Skip disk I/O if no payloads were queued and the original file string was not mutated
             if not missing_payloads and existing_clean == original_content.rstrip():
                 continue
 
@@ -450,7 +442,7 @@ class Orchestrator:
             prefix = "\n\n" if existing_clean and combined_content else ""
 
             target.write_text(existing_clean + prefix + combined_content + "\n")
-            logger.debug(f"Updated configuration in {filepath}")
+            logger.debug(f"Updated configuration string block in {filepath}")
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
