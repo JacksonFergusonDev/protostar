@@ -44,6 +44,25 @@ node_package_manager = "npm"
 [presets]
 # Generator presets for scaffolding boilerplate
 latex = "minimal"
+
+# --- Advanced Configuration Overrides ---
+# Protostar allows you to customize the dependencies and directory structures
+# for specific pipelines, or inject tooling across all initialized environments.
+
+# [presets.astro]
+# dependencies = ["astropy", "astroquery", "photutils", "specutils"]
+# dev_dependencies = ["pytest-benchmark"]
+# directories = ["data/catalogs", "data/fits", "data/raw"]
+
+# [dev]
+# extra_dependencies = ["bump-my-version"]
+
+# [dev.pyproject]
+# custom_ruff = '''
+# [tool.ruff.lint]
+# select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
+# ignore = ["E501", "D100", "D104", "D107"]
+# '''
 """
 
 
