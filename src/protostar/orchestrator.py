@@ -5,6 +5,7 @@ import platform
 import re
 import subprocess
 import sys
+import tomllib
 import traceback
 import urllib.parse
 from pathlib import Path
@@ -341,15 +342,22 @@ class Orchestrator:
         # Dynamically resolve the active Python version
         python_version = None
 
-        # 1. Attempt to scrape uv's generated footprint
+        # 1. Attempt to safely parse uv's generated footprint using tomllib
         pyproject_path = Path("pyproject.toml")
         if pyproject_path.exists():
-            content = pyproject_path.read_text()
-            match = re.search(
-                r'requires-python\s*=\s*"(?:>=|==|~=|>|)?(\d+\.\d+)', content
-            )
-            if match:
-                python_version = match.group(1)
+            try:
+                with pyproject_path.open("rb") as f:
+                    pyproject_data = tomllib.load(f)
+                    req_python = pyproject_data.get("project", {}).get(
+                        "requires-python", ""
+                    )
+
+                    # Regex is now only used to strip PEP 440 operators (>=, ~=) from the validated string
+                    match = re.search(r"(\d+\.\d+)", req_python)
+                    if match:
+                        python_version = match.group(1)
+            except Exception as e:
+                logger.debug(f"Failed to parse pyproject.toml for python version: {e}")
 
         # 2. Attempt to scrape pip's generated footprint
         if not python_version:
