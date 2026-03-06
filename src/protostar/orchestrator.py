@@ -143,6 +143,21 @@ class Orchestrator:
                 logger.debug(f"Building {preset.name} preset.")
                 preset.build(self.manifest)
 
+            # Inject global configuration states
+            config = ProtostarConfig.load()
+
+            if config.global_dev_dependencies:
+                logger.debug("Injecting global dev dependencies from configuration.")
+                for dep in config.global_dev_dependencies:
+                    self.manifest.add_dev_dependency(dep)
+
+            if config.pyproject_injections:
+                logger.debug(
+                    "Injecting global pyproject.toml payloads from configuration."
+                )
+                for payload in config.pyproject_injections.values():
+                    self.manifest.add_file_append("pyproject.toml", payload)
+
             # Phase 4: System Execution
             self._create_directories()
             self._write_injected_files()
