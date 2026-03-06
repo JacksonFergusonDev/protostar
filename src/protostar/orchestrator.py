@@ -159,6 +159,11 @@ class Orchestrator:
                 for payload in config.pyproject_injections.values():
                     self.manifest.add_file_append("pyproject.toml", payload)
 
+            # Phase 3.5: Pre-Execution Validation
+            # Evaluates the active workspace state against the manifested intent
+            # to guarantee safe disk mutations.
+            self._validate_targets()
+
             # Phase 4: System Execution
             self._create_directories()
             self._write_injected_files()
@@ -206,6 +211,33 @@ class Orchestrator:
 
             logger.debug("Stack trace:", exc_info=True)
             sys.exit(1)
+
+    def _validate_targets(self) -> None:
+        """Validates the syntax of existing target files before disk I/O begins.
+
+        Uses the C-optimized tomllib to quickly evaluate target workspace files,
+        ensuring that subsequent tomlkit operations in Phase 4 will not fail
+        mid-execution and leave the environment fragmented.
+
+        Raises:
+            SystemExit: If an existing target TOML file contains syntax errors.
+        """
+        for filepath in self.manifest.file_appends:
+            target = Path(filepath)
+            if target.suffix == ".toml" and target.exists():
+                try:
+                    with target.open("rb") as f:
+                        tomllib.load(f)
+                except tomllib.TOMLDecodeError as e:
+                    console.print(
+                        f"\n[bold red]Validation Failure:[/bold red] Syntax error in existing workspace file: {filepath}"
+                    )
+                    console.print(f"Details: {e}")
+                    console.print(
+                        "\nProtostar cannot safely merge configurations into a malformed file. "
+                        "Please fix the syntax error and re-run the command."
+                    )
+                    sys.exit(1)
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and interpolates the pre-commit configuration."""
@@ -332,9 +364,9 @@ class Orchestrator:
     def _append_files(self) -> None:
         """Appends late-binding configuration payloads to their target files.
 
-        For TOML files, leverages tomlkit to modify the Abstract Syntax Tree (AST)
-        dynamically while preserving formatting and comments. Lazy-loads the
-        parser to maintain sub-3ms initialization latency.
+        For TOML files, strictly leverages tomlkit to modify the Abstract Syntax
+        Tree (AST) dynamically while preserving formatting and comments.
+        Lazy-loads the parser to maintain sub-3ms initialization latency.
         """
         if not self.manifest.file_appends:
             return
@@ -352,7 +384,6 @@ class Orchestrator:
                         "requires-python", ""
                     )
 
-                    # Regex is now only used to strip PEP 440 operators (>=, ~=) from the validated string
                     match = re.search(r"(\d+\.\d+)", req_python)
                     if match:
                         python_version = match.group(1)
@@ -382,34 +413,18 @@ class Orchestrator:
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
 
-            existing_content = original_content
             is_toml = target.suffix == ".toml"
 
-            # 1. Attempt to lazy-load tomlkit
             if is_toml:
-                try:
-                    import tomlkit
-                except ImportError:
-                    logger.debug("tomlkit not found. Falling back to string heuristic.")
-                    is_toml = False
+                # Lazy import tomlkit to avoid parsing overhead during fast-path CLI execution
+                import tomlkit
 
-            # 2. Parse the existing file AST
-            doc = None
-            if is_toml:
-                try:
-                    doc = (
-                        tomlkit.parse(existing_content)
-                        if existing_content
-                        else tomlkit.document()
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"Malformed TOML detected in {filepath}: {e}. Falling back to strings."
-                    )
-                    is_toml = False
+                doc = (
+                    tomlkit.parse(original_content)
+                    if original_content
+                    else tomlkit.document()
+                )
 
-            # 3. Apply the payloads to the AST
-            if is_toml and doc is not None:
                 ast_mutated = False
                 for payload in contents:
                     interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
@@ -417,7 +432,6 @@ class Orchestrator:
                         payload_doc = tomlkit.parse(interpolated)
                         ast_mutated = True
 
-                        # Use our updated deep merge function to handle both strategies cleanly
                         is_overwrite = (
                             self.manifest.collision_strategy
                             == CollisionStrategy.OVERWRITE
@@ -425,40 +439,40 @@ class Orchestrator:
                         self._deep_merge_tomlkit(
                             doc, payload_doc, overwrite=is_overwrite
                         )
-
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to parse incoming TOML payload: {e}. Falling back."
+                        # Since the injected payloads are controlled by Protostar, parsing
+                        # failure here indicates a bug in the module's payload definition.
+                        console.print(
+                            f"\n[bold red]Internal Error:[/bold red] Failed to parse injected TOML payload for {filepath}."
                         )
-                        is_toml = False
-                        break
+                        console.print(f"Details: {e}")
+                        sys.exit(1)
 
-                # If AST parsing was successful across all payloads, write to disk and exit the loop
-                if is_toml and ast_mutated:
+                if ast_mutated:
                     new_content = tomlkit.dumps(doc)
                     if new_content.strip() != original_content.strip():
                         target.write_text(new_content)
                         logger.debug(f"Updated configuration AST in {filepath}")
-                    continue
+                continue
 
-            # 4. Fallback for standard string appends (or if TOML failed)
+            # Standard string append routing for non-TOML files
+            existing_clean = original_content.rstrip()
             missing_payloads = []
+
             for payload in contents:
                 interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
                 first_line = interpolated.strip().split("\n")[0]
 
                 if (
                     first_line
-                    and first_line in existing_content
+                    and first_line in original_content
                     and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
                 ):
                     continue
 
                 missing_payloads.append(interpolated)
 
-            existing_clean = existing_content.rstrip()
-
-            if not missing_payloads and existing_clean == original_content.rstrip():
+            if not missing_payloads:
                 continue
 
             combined_content = "\n\n".join(missing_payloads)
