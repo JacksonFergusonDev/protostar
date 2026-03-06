@@ -26,6 +26,9 @@ class DspPreset(PresetModule):
         """Appends audio processing packages, directories, and audio file ignores."""
         logger.debug("Building DSP preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "librosa",
             "soundfile",

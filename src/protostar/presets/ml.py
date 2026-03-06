@@ -30,6 +30,9 @@ class MLPreset(PresetModule):
         """
         logger.debug("Building Machine Learning preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "torch",
             "scikit-learn",

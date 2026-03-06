@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -345,65 +347,6 @@ def test_orchestrator_writes_dockerignore_with_uv(mocker):
     assert ".python-version" in written_data
 
 
-def test_orchestrator_toml_has_overlap_safe_merge():
-    """Test that disjoint TOML namespaces correctly evaluate as non-overlapping."""
-    orchestrator = Orchestrator([])
-    existing = {"tool": {"ruff": {"line-length": 88}}}
-    payload = {"tool": {"mypy": {"strict": True}}}
-
-    assert orchestrator._toml_has_overlap(existing, payload) is False
-
-
-def test_orchestrator_toml_has_overlap_scalar_collision():
-    """Test that exact key collisions in TOML dictionaries are intercepted."""
-    orchestrator = Orchestrator([])
-    existing = {"tool": {"ruff": {"line-length": 88}}}
-    payload = {"tool": {"ruff": {"line-length": 100}}}
-
-    assert orchestrator._toml_has_overlap(existing, payload) is True
-
-
-def test_orchestrator_toml_has_overlap_table_redefinition():
-    """Test that appending scalar strings to an existing table node triggers a collision."""
-    orchestrator = Orchestrator([])
-    existing: dict = {"tool": {"ruff": {"lint": {}}}}
-    payload = {"tool": {"ruff": "invalid string override"}}
-
-    assert orchestrator._toml_has_overlap(existing, payload) is True
-
-
-def test_orchestrator_append_files_toml_idempotency(mocker):
-    """Test that _append_files filters TOML payloads utilizing structural DAG comparison."""
-    dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod])
-
-    # Queue two payloads: one overlapping, one disjoint
-    orchestrator.manifest.add_file_append(
-        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
-    )
-    orchestrator.manifest.add_file_append(
-        "pyproject.toml", '[tool.pytest.ini_options]\naddopts = "-q"\n'
-    )
-
-    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
-    mocker.patch(
-        "protostar.orchestrator.Path.read_text",
-        return_value='[tool.ruff]\ntarget-version = "py312"\n',
-    )
-
-    mock_file = mocker.mock_open()
-    mocker.patch("protostar.orchestrator.Path.open", mock_file)
-
-    orchestrator._append_files()
-
-    written_data = mock_file().write.call_args[0][0]
-
-    # The [tool.ruff] payload should be dropped due to table overlap,
-    # but the disjoint [tool.pytest] payload should bypass the filter and execute.
-    assert "[tool.pytest.ini_options]" in written_data
-    assert "line-length = 88" not in written_data
-
-
 def test_orchestrator_crash_reporter(mocker):
     """Test that unhandled exceptions generate telemetry payloads and prompt for issues."""
     dummy_mod = DummyModule()
@@ -611,8 +554,80 @@ def test_orchestrator_writes_injected_files_overwrite(mocker):
     mock_write.assert_called_once_with("new content")
 
 
-def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
-    """Test that the OVERWRITE strategy dynamically strips colliding TOML tables before injecting."""
+def test_orchestrator_deep_merge_tomlkit():
+    """Test the recursive dictionary merge algorithm using tomlkit structures."""
+    import tomlkit
+
+    orchestrator = Orchestrator([])
+
+    base_toml = """
+    [tool.ruff]
+    line-length = 88
+    target-version = "py310" # Keep this comment
+    """
+
+    payload_toml = """
+    [tool.ruff]
+    line-length = 100
+    
+    [tool.mypy]
+    strict = true
+    """
+
+    base_doc = tomlkit.parse(base_toml)
+    payload_doc = tomlkit.parse(payload_toml)
+
+    orchestrator._deep_merge_tomlkit(base_doc, payload_doc)
+
+    # Unwrap the AST document into a standard Python dict for type-safe assertions
+    merged_dict = base_doc.unwrap()
+
+    # Existing key updated
+    assert merged_dict["tool"]["ruff"]["line-length"] == 100
+    # Existing non-overlapping key preserved
+    assert merged_dict["tool"]["ruff"]["target-version"] == "py310"
+    # New branch injected
+    assert merged_dict["tool"]["mypy"]["strict"] is True
+
+    # Assert comment preservation (using the original AST document, not the unwrapped dict)
+    dumped = tomlkit.dumps(base_doc)
+    assert "# Keep this comment" in dumped
+
+
+def test_orchestrator_append_files_ast_merge(mocker):
+    """Test that _append_files mutates the TOML AST logically based on the MERGE strategy."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod])
+    orchestrator.manifest.collision_strategy = CollisionStrategy.MERGE
+
+    # Queue an update to [tool.ruff]
+    orchestrator.manifest.add_file_append(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
+    )
+
+    existing_content = (
+        "# My file\n[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\n"
+    )
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.Path.read_text", return_value=existing_content)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+    written_data = mock_write.call_args[0][0]
+
+    # Mypy block and comments should be entirely untouched
+    assert "# My file" in written_data
+    assert "[tool.mypy]" in written_data
+    assert "strict = true" in written_data
+
+    # Ruff block should be merged logically
+    assert "[tool.ruff]" in written_data
+    assert "line-length = 88" in written_data
+    assert "line-length = 120" not in written_data
+
+
+def test_orchestrator_append_files_ast_overwrite(mocker):
+    """Test that the OVERWRITE strategy completely replaces colliding TOML tables."""
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod])
     orchestrator.manifest.collision_strategy = CollisionStrategy.OVERWRITE
@@ -622,12 +637,11 @@ def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
         "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
     )
 
-    # Existing file has a conflicting [tool.ruff] table and a safe [tool.mypy] table
+    # Existing file has a conflicting [tool.ruff] table with extra keys
     existing_content = '[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\ntarget-version = "py310"\n'
 
     mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
     mocker.patch("protostar.orchestrator.Path.read_text", return_value=existing_content)
-
     mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
 
     orchestrator._append_files()
@@ -638,10 +652,236 @@ def test_orchestrator_append_files_overwrite_strategy_purge(mocker):
     assert "[tool.mypy]" in written_data
     assert "strict = true" in written_data
 
-    # The old tool.ruff values should be purged
+    # The old tool.ruff values should be purged completely
     assert "line-length = 120" not in written_data
     assert 'target-version = "py310"' not in written_data
 
     # The new tool.ruff payload should be injected
     assert "[tool.ruff]" in written_data
     assert "line-length = 88" in written_data
+
+
+def test_orchestrator_run_global_injections(mocker):
+    """Test that global dev dependencies and pyproject injections are added in Phase 3."""
+    orchestrator = Orchestrator([])
+
+    # Mock everything after Phase 3 to prevent actual execution
+    for method in [
+        "_evaluate_collisions",
+        "_create_directories",
+        "_write_injected_files",
+        "_write_pre_commit_config",
+        "_execute_tasks",
+        "_append_files",
+        "_write_ignores",
+        "_write_docker_artifacts",
+        "_write_ide_settings",
+        "_install_dependencies",
+    ]:
+        mocker.patch.object(orchestrator, method)
+
+    # Mock the global configuration
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value.global_dev_dependencies = ["test-global-dep"]
+    mock_config.return_value.pyproject_injections = {"custom_key": "custom_payload"}
+
+    orchestrator.run()
+
+    assert "test-global-dep" in orchestrator.manifest.dev_dependencies
+    assert "custom_payload" in orchestrator.manifest.file_appends["pyproject.toml"]
+
+
+def test_orchestrator_run_known_exception(mocker):
+    """Test that known exceptions (e.g. FileExistsError) abort cleanly without stack traces."""
+    orchestrator = Orchestrator([])
+    mocker.patch.object(
+        orchestrator, "_evaluate_collisions", side_effect=FileExistsError("Known error")
+    )
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    with pytest.raises(SystemExit):
+        orchestrator.run()
+
+    mock_exit.assert_called_once_with(1)
+    printed = " ".join(
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], str)
+    )
+    assert "ABORTED" in printed
+    assert "Known error" in printed
+
+
+def test_orchestrator_run_unknown_exception(mocker):
+    """Test that unknown exceptions trigger the telemetry generation URL and full traceback."""
+    orchestrator = Orchestrator([])
+    mocker.patch.object(
+        orchestrator, "_evaluate_collisions", side_effect=KeyError("Unknown crash")
+    )
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    with pytest.raises(SystemExit):
+        orchestrator.run()
+
+    mock_exit.assert_called_once_with(1)
+    printed = " ".join(
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], str)
+    )
+    assert "CRITICAL FAILURE" in printed
+    assert "https://github.com/" in printed
+
+
+def test_write_pre_commit_config_skips_existing_merge(mocker):
+    """Test that pre-commit generation aborts if file exists and strategy is not OVERWRITE."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.wants_pre_commit = True
+    orchestrator.manifest.collision_strategy = CollisionStrategy.MERGE
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._write_pre_commit_config()
+    mock_write.assert_not_called()
+
+
+def test_write_pre_commit_config_empty_deps(mocker):
+    """Test that mypy late-binding injects an empty array if no python dependencies exist."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.wants_pre_commit = True
+    orchestrator.manifest.pre_commit_hooks.append("id: mypy\n{{MYPY_DEPENDENCIES}}")
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._write_pre_commit_config()
+    written_data = mock_write.call_args[0][0]
+    assert "[]" in written_data
+
+
+def test_deep_merge_tomlkit_aot_append():
+    """Test that arrays of tables (AoT) are appended to when not using OVERWRITE."""
+    import tomlkit
+
+    orchestrator = Orchestrator([])
+    base = tomlkit.parse("[[my_array]]\nval = 1\n")
+    payload = tomlkit.parse("[[my_array]]\nval = 2\n")
+
+    orchestrator._deep_merge_tomlkit(base, payload, overwrite=False)
+
+    # Unwrap the tomlkit document to a standard Python dict for type-safe assertions
+    result = base.unwrap()
+    assert len(result["my_array"]) == 2
+    assert result["my_array"][0]["val"] == 1
+    assert result["my_array"][1]["val"] == 2
+
+
+def test_append_files_tomlkit_import_error(mocker):
+    """Test that the orchestrator falls back to string heuristic if tomlkit is not installed."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
+
+    # Force ImportError on tomlkit
+    mocker.patch.dict(sys.modules, {"tomlkit": None})
+
+    mocker.patch("protostar.orchestrator.Path.read_text", return_value="[existing]\n")
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+    written = mock_write.call_args[0][0]
+    assert "[section]" in written
+    assert "[existing]" in written
+
+
+def test_append_files_malformed_base_toml(mocker):
+    """Test that malformed existing TOML drops the AST parser and uses the string fallback."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
+
+    mocker.patch(
+        "protostar.orchestrator.Path.read_text", return_value="[invalid toml == \n"
+    )
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+    written = mock_write.call_args[0][0]
+    assert "[section]" in written
+    assert "[invalid toml" in written
+
+
+def test_append_files_malformed_payload_toml(mocker):
+    """Test that malformed payload TOML drops the AST parser and uses the string fallback."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("test.toml", "[invalid payload == \n")
+
+    mocker.patch(
+        "protostar.orchestrator.Path.read_text", return_value="[existing]\nval = 1\n"
+    )
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+    written = mock_write.call_args[0][0]
+    assert "[existing]" in written
+    assert "[invalid payload" in written
+
+
+def test_append_files_string_fallback_redundant(mocker):
+    """Test that the string fallback skips writing if the payload is already in the file."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("test.txt", "line1\nline2")
+    orchestrator.manifest.collision_strategy = CollisionStrategy.MERGE
+
+    mocker.patch(
+        "protostar.orchestrator.Path.read_text", return_value="existing\nline1\nline2"
+    )
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+    mock_write.assert_not_called()
+
+
+def test_early_returns_on_empty_manifest(mocker):
+    """Test that functions execute early returns when manifest data is absent."""
+    orchestrator = Orchestrator([])
+    mock_exists = mocker.patch("protostar.orchestrator.Path.exists")
+
+    orchestrator._write_ignores()
+    orchestrator._write_ide_settings()
+    orchestrator._install_dependencies()
+
+    mock_exists.assert_not_called()
+
+
+def test_install_dependencies_pip_freeze_exception(mocker):
+    """Test that a pip freeze subprocess crash is caught and logged as a warning."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.dependencies = ["requests"]
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value.python_package_manager = "pip"
+
+    mocker.patch("protostar.orchestrator.run_quiet")
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=False)
+
+    # Simulate a crash during `pip freeze`
+    mocker.patch(
+        "protostar.orchestrator.subprocess.run",
+        side_effect=subprocess.CalledProcessError(1, "pip freeze"),
+    )
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    orchestrator._install_dependencies()
+
+    printed = " ".join(
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], str)
+    )
+    assert "Failed to freeze dependencies to requirements.txt" in printed

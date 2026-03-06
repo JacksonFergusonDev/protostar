@@ -30,6 +30,9 @@ class ApiPreset(PresetModule):
         """
         logger.debug("Building REST API preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "fastapi",
             "uvicorn",

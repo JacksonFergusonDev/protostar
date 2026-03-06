@@ -30,6 +30,9 @@ class CliPreset(PresetModule):
         """
         logger.debug("Building CLI preset layer.")
 
+        if self._apply_overrides(manifest):
+            return
+
         packages = [
             "typer",
             "rich",
