@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import sys
 import tomllib
 from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
@@ -135,6 +136,9 @@ class ProtostarConfig:
 
         Returns:
             A new ProtostarConfig instance containing the merged state.
+
+        Raises:
+            SystemExit: If the TOML file contains syntax errors.
         """
         try:
             with open(path, "rb") as f:
@@ -177,8 +181,13 @@ class ProtostarConfig:
 
         except tomllib.TOMLDecodeError as e:
             console.print(
-                f"[bold red]Config Error:[/bold red] Syntax error in {path}: {e}"
+                f"\n[bold red]Fatal Configuration Error:[/bold red] Syntax error in {path}"
             )
+            console.print(f"Details: {e}")
+            console.print(
+                "Please fix the syntax error or delete the file to regenerate the defaults."
+            )
+            sys.exit(1)
         except Exception as e:
             console.print(
                 f"[yellow]Warning:[/yellow] Failed to load config from {path}: {e}. "
