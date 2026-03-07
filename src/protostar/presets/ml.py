@@ -1,12 +1,8 @@
 """Preset module for machine learning and deep learning workflows."""
 
 import logging
-from typing import TYPE_CHECKING
 
 from .base import PresetModule
-
-if TYPE_CHECKING:
-    from protostar.manifest import EnvironmentManifest
 
 logger = logging.getLogger("protostar")
 
@@ -22,32 +18,20 @@ class MLPreset(PresetModule):
         """Returns the human-readable preset name."""
         return "Machine Learning"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends ML packages, training directories, and telemetry ignores.
+    @property
+    def default_dependencies(self) -> list[str]:
+        """Returns a list of default packages to inject for this preset."""
+        return ["torch", "scikit-learn", "huggingface_hub", "tqdm"]
 
-        Args:
-            manifest: The centralized state object.
-        """
-        logger.debug("Building Machine Learning preset layer.")
+    @property
+    def default_directories(self) -> list[str]:
+        """Returns a list of default directories to scaffold for this preset."""
+        return ["models", "data", "notebooks", "src"]
 
-        if self._apply_overrides(manifest):
-            return
-
-        packages = [
-            "torch",
-            "scikit-learn",
-            "huggingface_hub",
-            "tqdm",
-        ]
-        for pkg in packages:
-            manifest.add_dependency(pkg)
-
-        # Scaffold standard directories for training loops and EDA
-        for directory in ["models", "data", "notebooks", "src"]:
-            manifest.add_directory(directory)
-
-        # Ignore serialized weights and telemetry bloat
-        for artifact in [
+    @property
+    def default_ignores(self) -> list[str]:
+        """Returns a list of default VCS ignore patterns for this preset."""
+        return [
             "*.pt",
             "*.pth",
             "*.safetensors",
@@ -56,5 +40,4 @@ class MLPreset(PresetModule):
             "wandb/",
             "mlruns/",
             "runs/",
-        ]:
-            manifest.add_vcs_ignore(artifact)
+        ]

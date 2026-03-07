@@ -1,12 +1,8 @@
 """Preset module for host-side embedded hardware interfacing."""
 
 import logging
-from typing import TYPE_CHECKING
 
 from .base import PresetModule
-
-if TYPE_CHECKING:
-    from protostar.manifest import EnvironmentManifest
 
 logger = logging.getLogger("protostar")
 
@@ -22,17 +18,17 @@ class EmbeddedPreset(PresetModule):
         """Returns the human-readable preset name."""
         return "Embedded Hardware"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends host-side board communication packages."""
-        logger.debug("Building Embedded Hardware preset layer.")
+    @property
+    def default_dependencies(self) -> list[str]:
+        """Returns a list of default packages to inject for this preset."""
+        return ["pyserial", "esptool", "adafruit-blinka"]
 
-        if self._apply_overrides(manifest):
-            return
+    @property
+    def default_directories(self) -> list[str]:
+        """Returns a list of default directories to scaffold for this preset."""
+        return []
 
-        packages = [
-            "pyserial",
-            "esptool",
-            "adafruit-blinka",
-        ]
-        for pkg in packages:
-            manifest.add_dependency(pkg)
+    @property
+    def default_ignores(self) -> list[str]:
+        """Returns a list of default VCS ignore patterns for this preset."""
+        return []

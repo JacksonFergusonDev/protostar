@@ -1,12 +1,8 @@
 """Dependency presets for data analysis and scientific computing."""
 
 import logging
-from typing import TYPE_CHECKING
 
 from .base import PresetModule
-
-if TYPE_CHECKING:
-    from protostar.manifest import EnvironmentManifest
 
 logger = logging.getLogger("protostar")
 
@@ -22,18 +18,10 @@ class ScientificPreset(PresetModule):
         """Returns the human-readable preset name."""
         return "Scientific"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends scientific packages, directories, and data artifact ignores.
-
-        Args:
-            manifest: The centralized state object.
-        """
-        logger.debug("Building Scientific preset layer.")
-
-        if self._apply_overrides(manifest):
-            return
-
-        packages = [
+    @property
+    def default_dependencies(self) -> list[str]:
+        """Returns a list of default packages to inject for this preset."""
+        return [
             "numpy",
             "matplotlib",
             "seaborn",
@@ -42,13 +30,13 @@ class ScientificPreset(PresetModule):
             "ipykernel",
             "scikit-learn",
         ]
-        for pkg in packages:
-            manifest.add_dependency(pkg)
 
-        # Scaffold standard data analysis pipeline directories
-        for directory in ["data", "notebooks", "src"]:
-            manifest.add_directory(directory)
+    @property
+    def default_directories(self) -> list[str]:
+        """Returns a list of default directories to scaffold for this preset."""
+        return ["data", "notebooks", "src"]
 
-        # Ignore large or binary data files common in analysis pipelines
-        for artifact in ["*.csv", "*.parquet", "*.nc"]:
-            manifest.add_vcs_ignore(artifact)
+    @property
+    def default_ignores(self) -> list[str]:
+        """Returns a list of default VCS ignore patterns for this preset."""
+        return ["*.csv", "*.parquet", "*.nc"]
