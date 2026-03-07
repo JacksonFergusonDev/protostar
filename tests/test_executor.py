@@ -1,3 +1,4 @@
+import hashlib
 import json
 import subprocess
 
@@ -270,7 +271,10 @@ def test_executor_writes_vscode_settings_jsonc_abort(
     executor._write_ide_settings()
 
     mock_print.assert_called_once()
-    assert "contains comments or is malformed" in mock_print.call_args[0][0]
+    assert (
+        "contains comments, trailing commas, or is malformed"
+        in mock_print.call_args[0][0]
+    )
     assert settings_file.read_text() == "// My custom comment\n{}"
 
 
@@ -512,15 +516,17 @@ def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
 
 
 def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
-    """Test that the string fallback skips writing if the payload is already in the file."""
+    """Test that the string fallback skips writing if the payload hash is already in the file."""
+    payload = "line1\nline2"
+    payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
+    existing_content = f"existing\n# --- Protostar Injection: {payload_hash} ---\n{payload}\n# --- End Protostar Injection ---"
+
     manifest = EnvironmentManifest()
-    manifest.add_file_append("test.txt", "line1\nline2")
+    manifest.add_file_append("test.txt", payload)
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch(
-        "protostar.executor.Path.read_text", return_value="existing\nline1\nline2"
-    )
+    mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mock_write = mocker.patch("protostar.executor.Path.write_text")
 
@@ -641,7 +647,7 @@ def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
 
 
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
-    """Test that the string fallback successfully appends missing payloads to non-TOML files."""
+    """Test that the string fallback successfully appends missing payloads wrapped in hash markers."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("config.ini", "new_payload_1")
     manifest.add_file_append("config.ini", "new_payload_2")
@@ -654,5 +660,125 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
 
     executor._append_files()
 
+    hash1 = hashlib.md5(b"new_payload_1").hexdigest()[:8]
+    hash2 = hashlib.md5(b"new_payload_2").hexdigest()[:8]
+    expected_data = (
+        "existing_data\n\n"
+        f"# --- Protostar Injection: {hash1} ---\nnew_payload_1\n# --- End Protostar Injection ---\n\n"
+        f"# --- Protostar Injection: {hash2} ---\nnew_payload_2\n# --- End Protostar Injection ---\n"
+    )
+
     written_data = mock_write.call_args[0][0]
-    assert written_data == "existing_data\n\nnew_payload_1\n\nnew_payload_2\n"
+    assert written_data == expected_data
+
+
+def test_executor_deep_merge_tomlkit_table_collision(mock_config):
+    """Test that TOML table injections safely skip when colliding with a scalar type."""
+    import tomlkit
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    # Base contains a string where a Table is expected
+    base = tomlkit.parse("tool = 'not a table'\n")
+    payload = tomlkit.parse("[tool]\nnew_key = 1\n")
+
+    executor._deep_merge_tomlkit(base, payload)
+
+    assert base["tool"] == "not a table"
+    assert len(executor.warnings) == 1
+    assert "Expected a Table for key 'tool'" in executor.warnings[0]
+
+
+def test_executor_deep_merge_tomlkit_aot_collision(mock_config):
+    """Test that TOML Array of Tables injections safely skip when colliding with a scalar type."""
+    import tomlkit
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    # Base contains a string where an AoT is expected
+    base = tomlkit.parse("my_array = 'string'\n")
+    payload = tomlkit.parse("[[my_array]]\nval = 1\n")
+
+    executor._deep_merge_tomlkit(base, payload)
+
+    assert base["my_array"] == "string"
+    assert len(executor.warnings) == 1
+    assert "Expected an Array of Tables for key 'my_array'" in executor.warnings[0]
+
+
+def test_executor_deep_merge_tomlkit_aot_overwrite(mock_config):
+    """Test that the OVERWRITE strategy replaces an entire Array of Tables."""
+    import tomlkit
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base = tomlkit.parse("[[my_array]]\nval = 1\n")
+    payload = tomlkit.parse("[[my_array]]\nval = 2\n")
+
+    executor._deep_merge_tomlkit(base, payload, overwrite=True)
+
+    result = base.unwrap()
+    assert len(result["my_array"]) == 1
+    assert result["my_array"][0]["val"] == 2
+
+
+def test_executor_append_files_early_return(mocker, mock_config):
+    """Test that _append_files cleanly returns if there are no payloads queued."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    mock_exists = mocker.patch("protostar.executor.Path.exists")
+    executor._append_files()
+
+    mock_exists.assert_not_called()
+
+
+def test_executor_writes_vscode_settings_empty_file(monkeypatch, tmp_path, mock_config):
+    """Test that an entirely empty settings.json file is safely initialized as a dictionary."""
+    import json
+
+    monkeypatch.chdir(tmp_path)
+
+    vscode_dir = tmp_path / ".vscode"
+    vscode_dir.mkdir()
+    settings_file = vscode_dir / "settings.json"
+    settings_file.write_text("   \n  \t")  # Empty except for whitespace
+
+    manifest = EnvironmentManifest()
+    manifest.add_ide_setting("files.exclude", {"**/.venv": True})
+    executor = SystemExecutor(manifest, mock_config)
+
+    executor._write_ide_settings()
+
+    written_data = json.loads(settings_file.read_text())
+    assert "**/.venv" in written_data["files.exclude"]
+
+
+def test_executor_writes_vscode_settings_root_not_dict(
+    monkeypatch, mocker, tmp_path, mock_config
+):
+    """Test that a settings.json file containing a non-dict primitive triggers the abort sequence."""
+    monkeypatch.chdir(tmp_path)
+
+    vscode_dir = tmp_path / ".vscode"
+    vscode_dir.mkdir()
+    settings_file = vscode_dir / "settings.json"
+    settings_file.write_text('["I am an array, not a dictionary"]')
+
+    manifest = EnvironmentManifest()
+    manifest.add_ide_setting("files.exclude", {"**/.venv": True})
+    executor = SystemExecutor(manifest, mock_config)
+
+    mock_print = mocker.patch("protostar.executor.console.print")
+
+    executor._write_ide_settings()
+
+    mock_print.assert_called_once()
+    assert (
+        "contains comments, trailing commas, or is malformed"
+        in mock_print.call_args[0][0]
+    )
+    assert settings_file.read_text() == '["I am an array, not a dictionary"]'

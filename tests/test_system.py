@@ -27,9 +27,10 @@ def test_execute_subprocess_failure(mocker):
         returncode=1, cmd=["false"], stderr="Network timeout during package resolution"
     )
 
-    # Verify the exception message contains the surfaced stderr details
+    # Verify the exception message contains the correctly formatted stderr details
     with pytest.raises(
-        RuntimeError, match="Details:\nNetwork timeout during package resolution"
+        RuntimeError,
+        match="Diagnostics:\n--- STDERR ---\nNetwork timeout during package resolution",
     ):
         execute_subprocess(["false"])
 

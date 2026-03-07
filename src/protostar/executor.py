@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import re
@@ -158,9 +159,15 @@ class SystemExecutor:
 
         for key, value in payload.items():
             if key in base:
-                if isinstance(value, tomlkit.items.Table) and isinstance(
-                    base[key], tomlkit.items.Table
-                ):
+                if isinstance(value, tomlkit.items.Table):
+                    # Type Parity Guard
+                    if not isinstance(base[key], tomlkit.items.Table):
+                        self.warnings.append(
+                            f"TOML Merge Collision: Expected a Table for key '{key}', "
+                            f"but found {type(base[key]).__name__}. Skipping injection."
+                        )
+                        continue
+
                     has_sub_tables = any(
                         isinstance(v, (tomlkit.items.Table, tomlkit.items.AoT))
                         for v in value.values()
@@ -169,9 +176,16 @@ class SystemExecutor:
                         base[key] = value
                     else:
                         self._deep_merge_tomlkit(base[key], value, overwrite)
-                elif isinstance(value, tomlkit.items.AoT) and isinstance(
-                    base[key], tomlkit.items.AoT
-                ):
+
+                elif isinstance(value, tomlkit.items.AoT):
+                    # Type Parity Guard
+                    if not isinstance(base[key], tomlkit.items.AoT):
+                        self.warnings.append(
+                            f"TOML Merge Collision: Expected an Array of Tables for key '{key}', "
+                            f"but found {type(base[key]).__name__}. Skipping injection."
+                        )
+                        continue
+
                     if overwrite:
                         base[key] = value
                     else:
@@ -275,14 +289,19 @@ class SystemExecutor:
 
             for payload in contents:
                 interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
-                first_line = interpolated.strip().split("\n")[0]
+
+                # Generate a deterministic boundary marker
+                payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
+                marker = f"# --- Protostar Injection: {payload_hash} ---"
+
                 if (
-                    first_line
-                    and first_line in original_content
+                    marker in original_content
                     and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
                 ):
                     continue
-                missing_payloads.append(interpolated)
+
+                framed_payload = f"{marker}\n{interpolated.strip()}\n# --- End Protostar Injection ---"
+                missing_payloads.append(framed_payload)
 
             if not missing_payloads:
                 continue
@@ -349,15 +368,25 @@ class SystemExecutor:
         settings = {}
 
         if settings_path.exists():
-            try:
-                settings = json.loads(settings_path.read_text())
-            except json.JSONDecodeError:
-                console.print(
-                    "[yellow]Warning:[/yellow] Existing settings.json contains comments or is malformed. "
-                    "Skipping IDE settings injection to prevent data loss."
-                )
-                return
+            original_content = settings_path.read_text()
+            if not original_content.strip():
+                # Handle completely empty files gracefully by defaulting to {}
+                pass
+            else:
+                try:
+                    parsed_data = json.loads(original_content)
+                    if not isinstance(parsed_data, dict):
+                        raise ValueError("Root JSON element is not an object.")
+                    settings = parsed_data
+                except (json.JSONDecodeError, ValueError):
+                    console.print(
+                        "Existing settings.json contains comments, "
+                        "trailing commas, or is malformed. Skipping IDE settings injection "
+                        "to prevent data loss."
+                    )
+                    return
 
+        # 1-level deep dictionary merge
         for key, value in self.manifest.ide_settings.items():
             if isinstance(value, dict) and isinstance(settings.get(key), dict):
                 settings[key].update(value)
@@ -365,6 +394,7 @@ class SystemExecutor:
                 settings[key] = value
 
         vscode_dir.mkdir(exist_ok=True)
+        # json.dumps inherently preserves dictionary insertion order in standard CPython
         settings_path.write_text(json.dumps(settings, indent=4) + "\n")
 
     def _install_dependencies(self) -> None:
