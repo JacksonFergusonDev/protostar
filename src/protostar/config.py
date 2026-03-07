@@ -264,8 +264,12 @@ class ProtostarConfig:
         """Opens the global configuration file in the system's default editor.
 
         Ensures the parent directory exists and seeds a default configuration
-        template if the file is missing.
+        template if the file is missing. Safely tokenizes the $EDITOR environment
+        variable to support complex commands (e.g., 'code --wait').
         """
+        import shlex
+        import shutil
+
         if not CONFIG_FILE.parent.exists():
             CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
@@ -273,15 +277,27 @@ class ProtostarConfig:
             CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
             logger.info(f"Initialized default configuration at {CONFIG_FILE}")
 
-        # Fallback to nano if $EDITOR isn't exported in the user's shell profile
-        editor = os.environ.get("EDITOR", "nano")
+        editor_env = os.environ.get("EDITOR", "nano")
+
+        # Safely tokenize the environment string into a command list
+        editor_cmd = shlex.split(editor_env)
+
+        if not editor_cmd:
+            logger.error("The $EDITOR environment variable is empty.")
+            return
+
+        # Verify the base executable actually exists
+        if not shutil.which(editor_cmd[0]):
+            logger.error(
+                f"Could not resolve editor executable '{editor_cmd[0]}'. "
+                "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
+            )
+            return
+
+        # Append the target file path
+        editor_cmd.append(str(CONFIG_FILE))
 
         try:
-            subprocess.run([editor, str(CONFIG_FILE)], check=True)
+            subprocess.run(editor_cmd, check=True)
         except subprocess.CalledProcessError as e:
-            logger.error(f"Editor '{editor}' exited with non-zero status: {e}")
-        except FileNotFoundError:
-            logger.error(
-                f"Could not resolve editor '{editor}'. "
-                "Ensure your $EDITOR environment variable is set to a valid executable."
-            )
+            logger.error(f"Editor '{editor_env}' exited with non-zero status: {e}")
