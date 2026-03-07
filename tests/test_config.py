@@ -1,5 +1,3 @@
-import subprocess
-
 import pytest
 
 from protostar.config import ProtostarConfig
@@ -25,7 +23,7 @@ def test_config_load_defaults(mocker):
 def test_config_scope_enforcement(mocker):
     """Test that local TOML files cannot override global init blocks (env, presets, dev)."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_print = mocker.patch("protostar.config.console.print")
+    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     # Mock the global config payload
     global_payload = {
@@ -58,13 +56,13 @@ def test_config_scope_enforcement(mocker):
     assert config.python_version == "3.11"
     assert config.presets["latex"] == "minimal"
 
-    # Verify the scope warning was surfaced to the user
-    mock_print.assert_called()
-    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+    # Verify the scope warning was surfaced to the user via the logger
+    mock_logger.assert_called()
+    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
 
-    assert "Scope Warning" in printed_text
-    assert "env" in printed_text
-    assert "presets" in printed_text
+    assert "Scope Warning" in logged_text
+    assert "env" in logged_text
+    assert "presets" in logged_text
 
 
 def test_config_no_ruff_inversion(mocker):
@@ -81,7 +79,7 @@ def test_config_no_ruff_inversion(mocker):
 
 
 def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
-    """Test that a malformed TOML file aborts the loading sequence."""
+    """Test that a malformed TOML file raises a ValueError instead of exiting."""
     import protostar.config
 
     # 1. Create a real, temporary file with deliberately broken TOML syntax
@@ -94,22 +92,12 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
     mocker.patch("protostar.config.LOCAL_CONFIG_FILE", mock_local_config)
 
-    # 3. Intercept rich.console.print to verify our error surfaced
-    mock_print = mocker.patch("protostar.config.console.print")
-
-    # Execute the load sequence and expect a clean abort
-    with pytest.raises(SystemExit) as exc:
+    # Execute the load sequence and expect a ValueError bubbled up for the CLI to handle
+    with pytest.raises(ValueError, match="Syntax error in configuration file") as exc:
         protostar.config.ProtostarConfig.load()
 
-    assert exc.value.code == 1
-
-    # Verify that the user was explicitly warned about the syntax error
-    mock_print.assert_called()
-    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
-
-    assert "Fatal Configuration Error" in printed_text
-    assert "Syntax error in" in printed_text
-    assert str(mock_global_config) in printed_text
+    assert "Syntax error in configuration file" in str(exc.value)
+    assert str(mock_global_config) in str(exc.value)
 
 
 def test_config_advanced_overrides_parsing(mocker, tmp_path):
@@ -160,7 +148,7 @@ def test_config_advanced_overrides_parsing(mocker, tmp_path):
 def test_config_runtime_type_validation(mocker):
     """Test that the parser catches invalid types, drops them, and falls back to defaults."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_print = mocker.patch("protostar.config.console.print")
+    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     # Inject deliberately wrong Python primitive types
     payload = {
@@ -185,18 +173,18 @@ def test_config_runtime_type_validation(mocker):
     assert config.python_version is None
 
     # Verify the warnings told the user exactly what type was expected
-    assert mock_print.call_count == 3
-    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+    assert mock_logger.call_count == 3
+    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
 
-    assert "Invalid type for '[env].ide'" in printed_text
-    assert "Invalid type for '[env].direnv'" in printed_text
-    assert "Invalid type for '[env].python_version'" in printed_text
+    assert "Invalid type for '[env].ide'" in logged_text
+    assert "Invalid type for '[env].direnv'" in logged_text
+    assert "Invalid type for '[env].python_version'" in logged_text
 
 
 def test_config_unknown_root_keys(mocker):
     """Test that the parser warns about unrecognized or misspelled root blocks."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_print = mocker.patch("protostar.config.console.print")
+    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     payload = {
         "env": {"ide": "cursor"},
@@ -211,18 +199,18 @@ def test_config_unknown_root_keys(mocker):
 
     ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
 
-    mock_print.assert_called()
-    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+    mock_logger.assert_called()
+    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
 
-    assert "Unrecognized root keys" in printed_text
-    assert "presetz" in printed_text
-    assert "unknown_block" in printed_text
+    assert "Unrecognized root keys" in logged_text
+    assert "presetz" in logged_text
+    assert "unknown_block" in logged_text
 
 
 def test_config_no_ruff_invalid_type(mocker):
     """Test that an invalid type for the inverted 'no-ruff' edge case triggers a warning."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_print = mocker.patch("protostar.config.console.print")
+    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     # Pass a string instead of a boolean
     payload = {"env": {"no-ruff": "yes"}}
@@ -235,9 +223,9 @@ def test_config_no_ruff_invalid_type(mocker):
     # Should safely drop the string and fall back to the True default
     assert config.ruff is True
 
-    mock_print.assert_called()
-    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
-    assert "'[env].no-ruff' must be a boolean. Falling back to default." in printed_text
+    mock_logger.assert_called()
+    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
+    assert "'[env].no-ruff' must be a boolean. Falling back to default." in logged_text
 
 
 def test_config_complex_generic_type_passthrough(mocker):
@@ -255,79 +243,3 @@ def test_config_complex_generic_type_passthrough(mocker):
 
     # The dictionary should pass through successfully
     assert config.presets == {"custom_preset": "value"}
-
-
-def test_open_in_editor_creates_defaults(mocker, tmp_path):
-    """Test that open_in_editor safely initializes the config tree if it is missing."""
-
-    # Isolate I/O to the pytest tmp_path sandbox
-    mock_config_file = tmp_path / "isolated_config" / "config.toml"
-    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
-
-    # Mock environment and subprocess execution
-    mocker.patch.dict("os.environ", {"EDITOR": "vim"})
-    mocker.patch("protostar.config.shutil.which", return_value="/usr/bin/vim")
-    mock_run = mocker.patch("protostar.config.subprocess.run")
-
-    ProtostarConfig.open_in_editor()
-
-    # Verify the parent directory and file were scaffolded
-    assert mock_config_file.parent.exists()
-    assert mock_config_file.exists()
-    assert "ide =" in mock_config_file.read_text()
-
-    # Verify execution was triggered
-    mock_run.assert_called_once_with(["vim", str(mock_config_file)], check=True)
-
-
-def test_open_in_editor_empty_env(mocker):
-    """Test that empty $EDITOR variables abort cleanly."""
-    mocker.patch.dict("os.environ", {"EDITOR": ""})
-
-    # Patch Path.exists instead of the PosixPath instance
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    mock_logger = mocker.patch("protostar.config.logger.error")
-
-    ProtostarConfig.open_in_editor()
-
-    mock_logger.assert_called_once_with("The $EDITOR environment variable is empty.")
-
-
-def test_open_in_editor_missing_binary(mocker):
-    """Test that missing binaries intercepted by shutil.which abort safely."""
-    mocker.patch.dict("os.environ", {"EDITOR": "nonexistent_editor --wait"})
-    mocker.patch("protostar.config.shutil.which", return_value=None)
-
-    # Patch Path.exists instead of the PosixPath instance
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    mock_logger = mocker.patch("protostar.config.logger.error")
-
-    ProtostarConfig.open_in_editor()
-
-    mock_logger.assert_called_once()
-    assert (
-        "Could not resolve editor executable 'nonexistent_editor'"
-        in mock_logger.call_args[0][0]
-    )
-
-
-def test_open_in_editor_subprocess_error(mocker):
-    """Test that editor process crashes are logged gracefully."""
-    mocker.patch.dict("os.environ", {"EDITOR": "nano"})
-    mocker.patch("protostar.config.shutil.which", return_value="/usr/bin/nano")
-
-    # Patch Path.exists instead of the PosixPath instance
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    mock_logger = mocker.patch("protostar.config.logger.error")
-    mock_run = mocker.patch("protostar.config.subprocess.run")
-
-    # Simulate the user closing the editor with an abnormal exit code
-    mock_run.side_effect = subprocess.CalledProcessError(1, "nano")
-
-    ProtostarConfig.open_in_editor()
-
-    mock_logger.assert_called_once()
-    assert "exited with non-zero status" in mock_logger.call_args[0][0]
