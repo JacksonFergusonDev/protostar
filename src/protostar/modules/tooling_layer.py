@@ -18,6 +18,7 @@ class DirenvModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--direnv",)
     cli_help: ClassVar[str] = "Scaffold a .envrc and evaluate the virtual environment"
+    config_key: ClassVar[str] = "direnv"
 
     @property
     def name(self) -> str:
@@ -77,6 +78,7 @@ class MarkdownLintModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("-m", "--markdownlint")
     cli_help: ClassVar[str] = "Scaffold a relaxed .markdownlint.yaml configuration"
+    config_key: ClassVar[str] = "markdownlint"
 
     @property
     def name(self) -> str:
@@ -164,6 +166,8 @@ class RuffModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--ruff",)
     cli_help: ClassVar[str] = "Scaffold Ruff linter and formatter"
+    config_key: ClassVar[str] = "ruff"
+    requires_python: ClassVar[bool] = True
 
     @property
     def name(self) -> str:
@@ -207,6 +211,8 @@ class MypyModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--mypy",)
     cli_help: ClassVar[str] = "Scaffold Mypy static type checker"
+    config_key: ClassVar[str] = "mypy"
+    requires_python: ClassVar[bool] = True
 
     @property
     def name(self) -> str:
@@ -244,6 +250,8 @@ class PytestModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--pytest",)
     cli_help: ClassVar[str] = "Scaffold Pytest testing framework"
+    config_key: ClassVar[str] = "pytest"
+    requires_python: ClassVar[bool] = True
 
     @property
     def name(self) -> str:
@@ -279,6 +287,7 @@ class PreCommitModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--pre-commit",)
     cli_help: ClassVar[str] = "Scaffold pre-commit hooks and configuration"
+    config_key: ClassVar[str] = "pre_commit"
 
     @property
     def name(self) -> str:

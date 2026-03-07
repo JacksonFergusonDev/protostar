@@ -22,6 +22,12 @@ class BootstrapModule(abc.ABC):
     cli_help: ClassVar[str] = ""
     """The help description for the CLI flag."""
 
+    config_key: ClassVar[str] = ""
+    """The global configuration key used to evaluate if this module is active."""
+
+    requires_python: ClassVar[bool] = False
+    """Flag indicating if this module strictly requires a Python environment to activate."""
+
     @property
     @abc.abstractmethod
     def name(self) -> str:

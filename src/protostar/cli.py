@@ -24,16 +24,10 @@ from .modules import (
     LANG_MODULES,
     TOOLING_MODULES,
     BootstrapModule,
-    DirenvModule,
     JetBrainsModule,
     LinuxModule,
     MacOSModule,
-    MarkdownLintModule,
-    MypyModule,
-    PreCommitModule,
-    PytestModule,
     PythonModule,
-    RuffModule,
     VSCodeModule,
 )
 from .orchestrator import Orchestrator
@@ -251,22 +245,8 @@ def handle_init(args: argparse.Namespace) -> None:
 
         # Evaluate global configuration defaults, ensuring language-specific
         # tools only activate if their parent language is present in the stack.
-        if (
-            isinstance(mod, DirenvModule)
-            and getattr(config, "direnv", False)
-            or isinstance(mod, PreCommitModule)
-            and getattr(config, "pre_commit", False)
-            or isinstance(mod, MarkdownLintModule)
-            and getattr(config, "markdownlint", False)
-            or has_python
-            and (
-                isinstance(mod, RuffModule)
-                and getattr(config, "ruff", False)
-                or isinstance(mod, MypyModule)
-                and getattr(config, "mypy", False)
-                or isinstance(mod, PytestModule)
-                and getattr(config, "pytest", False)
-            )
+        if getattr(config, mod.config_key, False) and (
+            not mod.requires_python or has_python
         ):
             is_active = True
 
