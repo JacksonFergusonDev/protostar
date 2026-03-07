@@ -418,9 +418,8 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
             console.print(self.epilog)
 
 
-def main() -> None:
-    """Main entry point for the Protostar CLI."""
-    # Dynamically resolve the package version footprint
+def build_parser() -> argparse.ArgumentParser:
+    """Constructs and returns the primary argument parser with dynamically injected modules."""
     try:
         __version__ = importlib.metadata.version("protostar")
     except importlib.metadata.PackageNotFoundError:
@@ -520,6 +519,7 @@ def main() -> None:
         action="store_true",
         help="Generate a .dockerignore based on the environment footprint",
     )
+
     for mod in TOOLING_MODULES:
         if mod.cli_flags:
             tooling_group.add_argument(
@@ -606,18 +606,16 @@ def main() -> None:
     # Inject argcomplete to evaluate the AST of the parser for shell tab-completion
     argcomplete.autocomplete(parser)
 
-    # ==========================================
-    # Interactive Wizard Interception Routing
-    # ==========================================
+    return parser
 
-    # 1. Intercept zero-argument invocation (Discovery Multiplexer)
+
+def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
+    """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
     if len(sys.argv) == 1:
         action = run_discovery_wizard()
         if not action:
             parser.print_help()
             sys.exit(1)
-        # Append the selected action to sys.argv to trick argparse into routing
-        # to the correct subparser for further processing or wizard interception.
         sys.argv.append(action)
 
     # 2. Intercept parameter-less subcommands for interactive wizards
@@ -637,6 +635,7 @@ def main() -> None:
 
             # Inject mandatory OS and configured IDE layers implicitly
             modules.insert(0, get_os_module())
+
             if ide_mod := get_ide_module(config.ide):
                 modules.append(ide_mod)
 
@@ -669,24 +668,25 @@ def main() -> None:
                 console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
             sys.exit(0)
 
-    # ==========================================
-    # Standard CLI Execution
-    # ==========================================
 
-    # Dynamic dispatch based on the invoked subparser
+def configure_logging() -> None:
+    """Injects Rich tracebacks and debug handlers into the global logger."""
+    logger = logging.getLogger("protostar")
+    logger.setLevel(logging.DEBUG)
+    logger.handlers.clear()
+    logger.addHandler(RichHandler(console=console, markup=True, rich_tracebacks=True))
+
+
+def main() -> None:
+    """Main execution pipeline for the Protostar CLI."""
+    parser = build_parser()
+    intercept_interactive_wizards(parser)
+
     args = parser.parse_args()
 
     if getattr(args, "verbose", False):
-        logger = logging.getLogger("protostar")
-        logger.setLevel(logging.DEBUG)
+        configure_logging()
 
-        # Clear existing handlers to prevent duplicate stream outputs
-        logger.handlers.clear()
-        logger.addHandler(
-            RichHandler(console=console, markup=True, rich_tracebacks=True)
-        )
-
-    # Graceful fallback if the user executes `proto` with no arguments
     if not getattr(args, "command", None):
         parser.print_help()
         sys.exit(1)
