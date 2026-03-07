@@ -1,9 +1,13 @@
 import logging
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import tomllib
-from dataclasses import dataclass, field, fields, replace
+import types
+import typing
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -117,22 +121,46 @@ class ProtostarConfig:
             logger.debug(
                 f"Discovered local configuration override at {LOCAL_CONFIG_FILE}"
             )
-            instance = cls._parse_and_merge(LOCAL_CONFIG_FILE, instance)
+            instance = cls._parse_and_merge(LOCAL_CONFIG_FILE, instance, is_local=True)
 
         return instance
 
+    # --- Dependency Note: Why Not Pydantic? ---
+    # Pydantic v2 was considered for config validation. The decision was to
+    # stay with manual isinstance checks for the following reasons:
+    #
+    #   1. Schema stability: ProtostarConfig is small and unlikely to grow
+    #      significantly. Pydantic earns its keep with complex, nested, or
+    #      frequently changing schemas — none of which apply here.
+    #
+    #   2. CLI import cost: Even at ~0.1s, Pydantic's import time is
+    #      perceptible in a CLI context where there is no persistent process
+    #      keeping it warm. Every subcommand pays this cost.
+    #
+    #   3. Binary dependency: pydantic-core is a compiled Rust extension
+    #      (~2–4MB, platform-specific wheel). This complicates installs in
+    #      minimal or unusual environments and feels disproportionate for
+    #      validating a handful of config fields written by the tool's own user.
+    #
+    # If the config schema grows to include cross-field validation, deeply
+    # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
-        cls, path: Path, instance: "ProtostarConfig"
+        cls, path: Path, instance: "ProtostarConfig", is_local: bool = False
     ) -> "ProtostarConfig":
         """Helper to parse a TOML file and merge its values into a config instance.
 
         Dynamically evaluates dataclass fields to prevent brittle parsing logic,
         while maintaining specific handlers for complex nested dictionaries.
+        Type annotations are resolved at runtime via typing.get_type_hints so
+        that Union types (e.g. str | None) are validated correctly before
+        assignment; mismatched values are dropped with a warning rather than
+        raising.
 
         Args:
             path: The filesystem path to the local or global configuration file.
             instance: The active ProtostarConfig object to mutate.
+            is_local: A flag indicating whether the configuration file is local.
 
         Returns:
             A new ProtostarConfig instance containing the merged state.
@@ -144,21 +172,94 @@ class ProtostarConfig:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
 
+            # --- Schema Validation & Scope Enforcement ---
+            # Dynamically resolve valid generate keys to future-proof the parser
+            from protostar.generators import GENERATOR_REGISTRY
+
+            generate_keys = set(GENERATOR_REGISTRY.keys())
+
+            # The root tables for initialization are structurally hardcoded below
+            init_keys = {"env", "presets", "dev"}
+
+            if is_local:
+                # 1. Hard enforce the architectural boundary
+                blocked_found = init_keys.intersection(data.keys())
+                if blocked_found:
+                    console.print(
+                        f"[yellow]Scope Warning:[/yellow] Found global init blocks "
+                        f"({', '.join(blocked_found)}) in local {path}.\n"
+                        "Local configs are strictly for 'generate'. These blocks will be ignored."
+                    )
+                    # Bulletproof drop: strip the keys from the dictionary entirely
+                    for k in blocked_found:
+                        data.pop(k)
+
+                allowed_keys = generate_keys
+            else:
+                allowed_keys = init_keys | generate_keys
+
+            # 2. General typo/unknown key detection
+            unknown_keys = set(data.keys()) - allowed_keys
+            if unknown_keys:
+                console.print(
+                    f"[yellow]Config Warning:[/yellow] Unrecognized root keys in {path}: "
+                    f"{', '.join(unknown_keys)}."
+                )
+            # ---------------------------------------------
+
             updates: dict[str, Any] = {}
 
             # 1. Parse standard environment toggles dynamically
             if "env" in data:
                 env_data = data["env"]
 
-                # Dynamically map matching TOML keys directly to the dataclass fields
-                valid_fields = {f.name for f in fields(cls)}
+                # get_type_hints resolves stringified annotations (PEP 563 /
+                # `from __future__ import annotations`) into real type objects.
+                # f.type would return raw strings in that context and break
+                # isinstance checks.
+                resolved_hints = typing.get_type_hints(cls)
+
                 for key, value in env_data.items():
-                    if key in valid_fields:
+                    if key not in resolved_hints:
+                        continue
+
+                    expected = resolved_hints[key]
+                    origin = typing.get_origin(expected)
+
+                    # Skip deep validation for complex generics such as
+                    # dict[str, Any] or list[str] — checking the outer
+                    # container type is sufficient and avoids fragile
+                    # recursive introspection.
+                    if origin not in (None, types.UnionType, typing.Union):
                         updates[key] = value
+                        continue
+
+                    if origin in (types.UnionType, typing.Union):
+                        allowed = tuple(
+                            t for t in typing.get_args(expected) if t is not type(None)
+                        )
+                    else:
+                        allowed = (expected,)
+
+                    if value is not None and allowed and not isinstance(value, allowed):
+                        console.print(
+                            f"[yellow]Config Warning:[/yellow] Invalid type for "
+                            f"'[env].{key}'. Expected {expected}, got "
+                            f"{type(value).__name__}. Falling back to default."
+                        )
+                        continue
+
+                    updates[key] = value
 
                 # Handle the specific inverted 'no-ruff' edge case
                 if "no-ruff" in env_data:
-                    updates["ruff"] = not env_data["no-ruff"]
+                    if not isinstance(env_data["no-ruff"], bool):
+                        console.print(
+                            "[yellow]Config Warning:[/yellow] '[env].no-ruff' "
+                            "must be a boolean. Falling back to default."
+                        )
+                    else:
+                        updates["ruff"] = not env_data["no-ruff"]
 
             # 2. Parse and merge preset overrides
             if "presets" in data:
@@ -201,7 +302,8 @@ class ProtostarConfig:
         """Opens the global configuration file in the system's default editor.
 
         Ensures the parent directory exists and seeds a default configuration
-        template if the file is missing.
+        template if the file is missing. Safely tokenizes the $EDITOR environment
+        variable to support complex commands (e.g., 'code --wait').
         """
         if not CONFIG_FILE.parent.exists():
             CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -210,15 +312,27 @@ class ProtostarConfig:
             CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
             logger.info(f"Initialized default configuration at {CONFIG_FILE}")
 
-        # Fallback to nano if $EDITOR isn't exported in the user's shell profile
-        editor = os.environ.get("EDITOR", "nano")
+        editor_env = os.environ.get("EDITOR", "nano")
+
+        # Safely tokenize the environment string into a command list
+        editor_cmd = shlex.split(editor_env)
+
+        if not editor_cmd:
+            logger.error("The $EDITOR environment variable is empty.")
+            return
+
+        # Verify the base executable actually exists
+        if not shutil.which(editor_cmd[0]):
+            logger.error(
+                f"Could not resolve editor executable '{editor_cmd[0]}'. "
+                "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
+            )
+            return
+
+        # Append the target file path
+        editor_cmd.append(str(CONFIG_FILE))
 
         try:
-            subprocess.run([editor, str(CONFIG_FILE)], check=True)
+            subprocess.run(editor_cmd, check=True)
         except subprocess.CalledProcessError as e:
-            logger.error(f"Editor '{editor}' exited with non-zero status: {e}")
-        except FileNotFoundError:
-            logger.error(
-                f"Could not resolve editor '{editor}'. "
-                "Ensure your $EDITOR environment variable is set to a valid executable."
-            )
+            logger.error(f"Editor '{editor_env}' exited with non-zero status: {e}")
