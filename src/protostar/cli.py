@@ -1,6 +1,10 @@
 import argparse
 import importlib.metadata
 import logging
+import os
+import shlex
+import shutil
+import subprocess
 import sys
 import types
 from collections.abc import Iterable
@@ -14,7 +18,7 @@ from rich.table import Table
 from rich.text import Text
 from rich_argparse import RawTextRichHelpFormatter
 
-from .config import ProtostarConfig
+from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from .generators import GENERATOR_REGISTRY
 from .modules import (
     LANG_MODULES,
@@ -305,11 +309,6 @@ def handle_generate(args: argparse.Namespace) -> None:
         console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
 
 
-def handle_config(args: argparse.Namespace) -> None:
-    """Handles the 'config' subcommand to manage global CLI settings."""
-    ProtostarConfig.open_in_editor()
-
-
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
     """Custom help formatter for Protostar CLI using rich-argparse.
 
@@ -418,9 +417,8 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
             console.print(self.epilog)
 
 
-def main() -> None:
-    """Main entry point for the Protostar CLI."""
-    # Dynamically resolve the package version footprint
+def build_parser() -> argparse.ArgumentParser:
+    """Constructs and returns the primary argument parser with dynamically injected modules."""
     try:
         __version__ = importlib.metadata.version("protostar")
     except importlib.metadata.PackageNotFoundError:
@@ -520,6 +518,7 @@ def main() -> None:
         action="store_true",
         help="Generate a .dockerignore based on the environment footprint",
     )
+
     for mod in TOOLING_MODULES:
         if mod.cli_flags:
             tooling_group.add_argument(
@@ -606,18 +605,16 @@ def main() -> None:
     # Inject argcomplete to evaluate the AST of the parser for shell tab-completion
     argcomplete.autocomplete(parser)
 
-    # ==========================================
-    # Interactive Wizard Interception Routing
-    # ==========================================
+    return parser
 
-    # 1. Intercept zero-argument invocation (Discovery Multiplexer)
+
+def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
+    """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
     if len(sys.argv) == 1:
         action = run_discovery_wizard()
         if not action:
             parser.print_help()
             sys.exit(1)
-        # Append the selected action to sys.argv to trick argparse into routing
-        # to the correct subparser for further processing or wizard interception.
         sys.argv.append(action)
 
     # 2. Intercept parameter-less subcommands for interactive wizards
@@ -637,6 +634,7 @@ def main() -> None:
 
             # Inject mandatory OS and configured IDE layers implicitly
             modules.insert(0, get_os_module())
+
             if ide_mod := get_ide_module(config.ide):
                 modules.append(ide_mod)
 
@@ -669,29 +667,84 @@ def main() -> None:
                 console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
             sys.exit(0)
 
-    # ==========================================
-    # Standard CLI Execution
-    # ==========================================
 
-    # Dynamic dispatch based on the invoked subparser
-    args = parser.parse_args()
+def configure_logging() -> None:
+    """Injects Rich tracebacks and debug handlers into the global logger."""
+    logger = logging.getLogger("protostar")
+    logger.setLevel(logging.DEBUG)
+    logger.handlers.clear()
+    logger.addHandler(RichHandler(console=console, markup=True, rich_tracebacks=True))
 
-    if getattr(args, "verbose", False):
-        logger = logging.getLogger("protostar")
-        logger.setLevel(logging.DEBUG)
 
-        # Clear existing handlers to prevent duplicate stream outputs
-        logger.handlers.clear()
-        logger.addHandler(
-            RichHandler(console=console, markup=True, rich_tracebacks=True)
+def handle_config(args: argparse.Namespace) -> None:
+    """Handles the 'config' subcommand to manage global CLI settings.
+
+    Opens the global configuration file in the system's default editor.
+    Ensures the parent directory exists and seeds a default configuration
+    template if the file is missing. Safely tokenizes the $EDITOR environment
+    variable to support complex commands (e.g., 'code --wait').
+
+    Args:
+        args: Parsed CLI arguments mapping to this command.
+    """
+    if not CONFIG_FILE.parent.exists():
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    if not CONFIG_FILE.exists():
+        CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
+        console.print(
+            f"[bold green]Initialized default configuration at {CONFIG_FILE}[/bold green]"
         )
 
-    # Graceful fallback if the user executes `proto` with no arguments
-    if not getattr(args, "command", None):
-        parser.print_help()
+    editor_env = os.environ.get("EDITOR", "nano")
+    editor_cmd = shlex.split(editor_env)
+
+    if not editor_cmd:
+        console.print(
+            "[bold red]Configuration Error:[/bold red] The $EDITOR environment variable is empty."
+        )
         sys.exit(1)
 
-    args.func(args)
+    if not shutil.which(editor_cmd[0]):
+        console.print(
+            f"[bold red]Configuration Error:[/bold red] Could not resolve editor executable '{editor_cmd[0]}'.\n"
+            "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
+        )
+        sys.exit(1)
+
+    editor_cmd.append(str(CONFIG_FILE))
+
+    try:
+        subprocess.run(editor_cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        console.print(
+            f"[bold red]Editor Error:[/bold red] Editor '{editor_env}' exited with non-zero status: {e}"
+        )
+        sys.exit(1)
+
+
+def main() -> None:
+    """Main execution pipeline for the Protostar CLI."""
+    parser = build_parser()
+
+    try:
+        intercept_interactive_wizards(parser)
+
+        args = parser.parse_args()
+
+        if getattr(args, "verbose", False):
+            configure_logging()
+
+        if not getattr(args, "command", None):
+            parser.print_help()
+            sys.exit(1)
+
+        args.func(args)
+
+    except ValueError as e:
+        # Gracefully handle the TOML syntax errors bubbled up from ProtostarConfig
+        console.print(f"\n[bold red]Configuration Error:[/bold red] {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

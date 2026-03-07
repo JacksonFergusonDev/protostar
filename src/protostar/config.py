@@ -1,19 +1,10 @@
 import logging
-import os
-import shlex
-import shutil
-import subprocess
-import sys
 import tomllib
 import types
 import typing
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
-
-from rich.console import Console
-
-console = Console()
 
 logger = logging.getLogger("protostar")
 
@@ -154,8 +145,7 @@ class ProtostarConfig:
         while maintaining specific handlers for complex nested dictionaries.
         Type annotations are resolved at runtime via typing.get_type_hints so
         that Union types (e.g. str | None) are validated correctly before
-        assignment; mismatched values are dropped with a warning rather than
-        raising.
+        assignment.
 
         Args:
             path: The filesystem path to the local or global configuration file.
@@ -166,173 +156,106 @@ class ProtostarConfig:
             A new ProtostarConfig instance containing the merged state.
 
         Raises:
-            SystemExit: If the TOML file contains syntax errors.
+            ValueError: If the TOML file contains syntax errors.
         """
         try:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
-
-            # --- Schema Validation & Scope Enforcement ---
-            # Dynamically resolve valid generate keys to future-proof the parser
-            from protostar.generators import GENERATOR_REGISTRY
-
-            generate_keys = set(GENERATOR_REGISTRY.keys())
-
-            # The root tables for initialization are structurally hardcoded below
-            init_keys = {"env", "presets", "dev"}
-
-            if is_local:
-                # 1. Hard enforce the architectural boundary
-                blocked_found = init_keys.intersection(data.keys())
-                if blocked_found:
-                    console.print(
-                        f"[yellow]Scope Warning:[/yellow] Found global init blocks "
-                        f"({', '.join(blocked_found)}) in local {path}.\n"
-                        "Local configs are strictly for 'generate'. These blocks will be ignored."
-                    )
-                    # Bulletproof drop: strip the keys from the dictionary entirely
-                    for k in blocked_found:
-                        data.pop(k)
-
-                allowed_keys = generate_keys
-            else:
-                allowed_keys = init_keys | generate_keys
-
-            # 2. General typo/unknown key detection
-            unknown_keys = set(data.keys()) - allowed_keys
-            if unknown_keys:
-                console.print(
-                    f"[yellow]Config Warning:[/yellow] Unrecognized root keys in {path}: "
-                    f"{', '.join(unknown_keys)}."
-                )
-            # ---------------------------------------------
-
-            updates: dict[str, Any] = {}
-
-            # 1. Parse standard environment toggles dynamically
-            if "env" in data:
-                env_data = data["env"]
-
-                # get_type_hints resolves stringified annotations (PEP 563 /
-                # `from __future__ import annotations`) into real type objects.
-                # f.type would return raw strings in that context and break
-                # isinstance checks.
-                resolved_hints = typing.get_type_hints(cls)
-
-                for key, value in env_data.items():
-                    if key not in resolved_hints:
-                        continue
-
-                    expected = resolved_hints[key]
-                    origin = typing.get_origin(expected)
-
-                    # Skip deep validation for complex generics such as
-                    # dict[str, Any] or list[str] — checking the outer
-                    # container type is sufficient and avoids fragile
-                    # recursive introspection.
-                    if origin not in (None, types.UnionType, typing.Union):
-                        updates[key] = value
-                        continue
-
-                    if origin in (types.UnionType, typing.Union):
-                        allowed = tuple(
-                            t for t in typing.get_args(expected) if t is not type(None)
-                        )
-                    else:
-                        allowed = (expected,)
-
-                    if value is not None and allowed and not isinstance(value, allowed):
-                        console.print(
-                            f"[yellow]Config Warning:[/yellow] Invalid type for "
-                            f"'[env].{key}'. Expected {expected}, got "
-                            f"{type(value).__name__}. Falling back to default."
-                        )
-                        continue
-
-                    updates[key] = value
-
-                # Handle the specific inverted 'no-ruff' edge case
-                if "no-ruff" in env_data:
-                    if not isinstance(env_data["no-ruff"], bool):
-                        console.print(
-                            "[yellow]Config Warning:[/yellow] '[env].no-ruff' "
-                            "must be a boolean. Falling back to default."
-                        )
-                    else:
-                        updates["ruff"] = not env_data["no-ruff"]
-
-            # 2. Parse and merge preset overrides
-            if "presets" in data:
-                merged_presets = dict(instance.presets)
-                # Shallow update maps user-defined dictionaries over the default strings
-                merged_presets.update(data["presets"])
-                updates["presets"] = merged_presets
-
-            # 3. Parse global development dependencies
-            if "dev" in data:
-                dev_data = data["dev"]
-                if "extra_dependencies" in dev_data:
-                    updates["global_dev_dependencies"] = dev_data["extra_dependencies"]
-
-                # 4. Parse raw pyproject.toml injections
-                if "pyproject" in dev_data:
-                    updates["pyproject_injections"] = dev_data["pyproject"]
-
-            return replace(instance, **updates)
-
         except tomllib.TOMLDecodeError as e:
-            console.print(
-                f"\n[bold red]Fatal Configuration Error:[/bold red] Syntax error in {path}"
-            )
-            console.print(f"Details: {e}")
-            console.print(
+            raise ValueError(
+                f"Syntax error in configuration file {path}.\n"
+                f"Details: {e}\n"
                 "Please fix the syntax error or delete the file to regenerate the defaults."
-            )
-            sys.exit(1)
+            ) from e
         except Exception as e:
-            console.print(
-                f"[yellow]Warning:[/yellow] Failed to load config from {path}: {e}. "
-                "Falling back to defaults."
+            logger.warning(
+                f"Failed to load config from {path}: {e}. Falling back to defaults."
+            )
+            return instance
+
+        # --- Schema Validation & Scope Enforcement ---
+        from protostar.generators import GENERATOR_REGISTRY
+
+        generate_keys = set(GENERATOR_REGISTRY.keys())
+        init_keys = {"env", "presets", "dev"}
+
+        if is_local:
+            blocked_found = init_keys.intersection(data.keys())
+            if blocked_found:
+                logger.warning(
+                    f"Scope Warning: Found global init blocks ({', '.join(blocked_found)}) "
+                    f"in local {path}. Local configs are strictly for 'generate'. These blocks will be ignored."
+                )
+                for k in blocked_found:
+                    data.pop(k)
+
+            allowed_keys = generate_keys
+        else:
+            allowed_keys = init_keys | generate_keys
+
+        unknown_keys = set(data.keys()) - allowed_keys
+        if unknown_keys:
+            logger.warning(
+                f"Config Warning: Unrecognized root keys in {path}: {', '.join(unknown_keys)}."
             )
 
-        return instance
+        updates: dict[str, Any] = {}
 
-    @staticmethod
-    def open_in_editor() -> None:
-        """Opens the global configuration file in the system's default editor.
+        if "env" in data:
+            env_data = data["env"]
 
-        Ensures the parent directory exists and seeds a default configuration
-        template if the file is missing. Safely tokenizes the $EDITOR environment
-        variable to support complex commands (e.g., 'code --wait').
-        """
-        if not CONFIG_FILE.parent.exists():
-            CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            # get_type_hints resolves stringified annotations (PEP 563 /
+            # `from __future__ import annotations`) into real type objects.
+            # f.type would return raw strings in that context and break
+            # isinstance checks.
+            resolved_hints = typing.get_type_hints(cls)
 
-        if not CONFIG_FILE.exists():
-            CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
-            logger.info(f"Initialized default configuration at {CONFIG_FILE}")
+            for key, value in env_data.items():
+                if key not in resolved_hints:
+                    continue
 
-        editor_env = os.environ.get("EDITOR", "nano")
+                expected = resolved_hints[key]
+                origin = typing.get_origin(expected)
 
-        # Safely tokenize the environment string into a command list
-        editor_cmd = shlex.split(editor_env)
+                if origin not in (None, types.UnionType, typing.Union):
+                    updates[key] = value
+                    continue
 
-        if not editor_cmd:
-            logger.error("The $EDITOR environment variable is empty.")
-            return
+                if origin in (types.UnionType, typing.Union):
+                    allowed = tuple(
+                        t for t in typing.get_args(expected) if t is not type(None)
+                    )
+                else:
+                    allowed = (expected,)
 
-        # Verify the base executable actually exists
-        if not shutil.which(editor_cmd[0]):
-            logger.error(
-                f"Could not resolve editor executable '{editor_cmd[0]}'. "
-                "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
-            )
-            return
+                if value is not None and allowed and not isinstance(value, allowed):
+                    logger.warning(
+                        f"Config Warning: Invalid type for '[env].{key}'. Expected {expected}, "
+                        f"got {type(value).__name__}. Falling back to default."
+                    )
+                    continue
 
-        # Append the target file path
-        editor_cmd.append(str(CONFIG_FILE))
+                updates[key] = value
 
-        try:
-            subprocess.run(editor_cmd, check=True)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Editor '{editor_env}' exited with non-zero status: {e}")
+            if "no-ruff" in env_data:
+                if not isinstance(env_data["no-ruff"], bool):
+                    logger.warning(
+                        "Config Warning: '[env].no-ruff' must be a boolean. Falling back to default."
+                    )
+                else:
+                    updates["ruff"] = not env_data["no-ruff"]
+
+        if "presets" in data:
+            merged_presets = dict(instance.presets)
+            merged_presets.update(data["presets"])
+            updates["presets"] = merged_presets
+
+        if "dev" in data:
+            dev_data = data["dev"]
+            if "extra_dependencies" in dev_data:
+                updates["global_dev_dependencies"] = dev_data["extra_dependencies"]
+
+            if "pyproject" in dev_data:
+                updates["pyproject_injections"] = dev_data["pyproject"]
+
+        return replace(instance, **updates)
