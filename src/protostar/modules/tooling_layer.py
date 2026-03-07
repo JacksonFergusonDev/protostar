@@ -18,6 +18,7 @@ class DirenvModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--direnv",)
     cli_help: ClassVar[str] = "Scaffold a .envrc and evaluate the virtual environment"
+    config_key: ClassVar[str] = "direnv"
 
     @property
     def name(self) -> str:
@@ -77,6 +78,7 @@ class MarkdownLintModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("-m", "--markdownlint")
     cli_help: ClassVar[str] = "Scaffold a relaxed .markdownlint.yaml configuration"
+    config_key: ClassVar[str] = "markdownlint"
 
     @property
     def name(self) -> str:
@@ -164,6 +166,8 @@ class RuffModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--ruff",)
     cli_help: ClassVar[str] = "Scaffold Ruff linter and formatter"
+    config_key: ClassVar[str] = "ruff"
+    requires_python: ClassVar[bool] = True
 
     @property
     def name(self) -> str:
@@ -174,8 +178,7 @@ class RuffModule(BootstrapModule):
         """Queues Ruff dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Ruff tooling layer.")
         manifest.add_dev_dependency("ruff")
-        manifest.add_vcs_ignore(".ruff_cache/")
-        manifest.add_workspace_hide(".ruff_cache/")
+        manifest.add_environment_artifact(".ruff_cache/")
 
         hook_payload = """  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.4
@@ -208,6 +211,8 @@ class MypyModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--mypy",)
     cli_help: ClassVar[str] = "Scaffold Mypy static type checker"
+    config_key: ClassVar[str] = "mypy"
+    requires_python: ClassVar[bool] = True
 
     @property
     def name(self) -> str:
@@ -218,8 +223,7 @@ class MypyModule(BootstrapModule):
         """Queues Mypy dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Mypy tooling layer.")
         manifest.add_dev_dependency("mypy")
-        manifest.add_vcs_ignore(".mypy_cache/")
-        manifest.add_workspace_hide(".mypy_cache/")
+        manifest.add_environment_artifact(".mypy_cache/")
 
         # The MYPY_DEPENDENCIES token is late-bound by the orchestrator
         # to ensure all dynamically added packages are typed.
@@ -246,6 +250,8 @@ class PytestModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--pytest",)
     cli_help: ClassVar[str] = "Scaffold Pytest testing framework"
+    config_key: ClassVar[str] = "pytest"
+    requires_python: ClassVar[bool] = True
 
     @property
     def name(self) -> str:
@@ -264,8 +270,7 @@ class PytestModule(BootstrapModule):
 
         artifacts = [".pytest_cache/", ".coverage", "htmlcov/", "coverage.xml"]
         for artifact in artifacts:
-            manifest.add_vcs_ignore(artifact)
-            manifest.add_workspace_hide(artifact)
+            manifest.add_environment_artifact(artifact)
 
         config = """[tool.pytest.ini_options]
 minversion = "7.0"
@@ -282,6 +287,7 @@ class PreCommitModule(BootstrapModule):
 
     cli_flags: ClassVar[tuple[str, ...]] = ("--pre-commit",)
     cli_help: ClassVar[str] = "Scaffold pre-commit hooks and configuration"
+    config_key: ClassVar[str] = "pre_commit"
 
     @property
     def name(self) -> str:

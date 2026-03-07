@@ -8,12 +8,6 @@ from .generators import GENERATOR_REGISTRY
 from .modules import (
     LANG_MODULES,
     TOOLING_MODULES,
-    DirenvModule,
-    MarkdownLintModule,
-    MypyModule,
-    PreCommitModule,
-    PytestModule,
-    RuffModule,
 )
 from .presets import PRESETS
 
@@ -88,22 +82,8 @@ def run_init_wizard() -> dict[str, Any] | None:
     choices.append(Choice(title="Docker (.dockerignore)", value="docker"))
 
     for tool_mod in TOOLING_MODULES:
-        is_checked = False
-
-        # Evaluate global configuration defaults to pre-select checkboxes
-        if isinstance(tool_mod, DirenvModule):
-            is_checked = config.direnv
-        elif isinstance(tool_mod, PreCommitModule):
-            is_checked = config.pre_commit
-        elif isinstance(tool_mod, MarkdownLintModule):
-            is_checked = config.markdownlint
-        elif isinstance(tool_mod, RuffModule):
-            is_checked = config.ruff
-        elif isinstance(tool_mod, MypyModule):
-            is_checked = config.mypy
-        elif isinstance(tool_mod, PytestModule):
-            is_checked = config.pytest
-
+        # Dynamically evaluate the global configuration default
+        is_checked = getattr(config, tool_mod.config_key, False)
         choices.append(Choice(title=tool_mod.name, value=tool_mod, checked=is_checked))
 
     def _validate_init(result: list[Any]) -> bool | str:

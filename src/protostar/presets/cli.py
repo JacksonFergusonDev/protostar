@@ -1,12 +1,8 @@
 """Preset module for command-line interface applications."""
 
 import logging
-from typing import TYPE_CHECKING
 
 from .base import PresetModule
-
-if TYPE_CHECKING:
-    from protostar.manifest import EnvironmentManifest
 
 logger = logging.getLogger("protostar")
 
@@ -22,24 +18,17 @@ class CliPreset(PresetModule):
         """Returns the human-readable preset name."""
         return "CLI Application"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends CLI framework packages and source directories.
+    @property
+    def default_dependencies(self) -> list[str]:
+        """Returns a list of default packages to inject for this preset."""
+        return ["typer", "rich"]
 
-        Args:
-            manifest: The centralized state object.
-        """
-        logger.debug("Building CLI preset layer.")
+    @property
+    def default_directories(self) -> list[str]:
+        """Returns a list of default directories to scaffold for this preset."""
+        return ["src", "tests"]
 
-        if self._apply_overrides(manifest):
-            return
-
-        packages = [
-            "typer",
-            "rich",
-        ]
-        for pkg in packages:
-            manifest.add_dependency(pkg)
-
-        # Scaffold standard source and unit testing boundaries
-        for directory in ["src", "tests"]:
-            manifest.add_directory(directory)
+    @property
+    def default_ignores(self) -> list[str]:
+        """Returns a list of default VCS ignore patterns for this preset."""
+        return []

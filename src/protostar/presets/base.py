@@ -60,11 +60,40 @@ class PresetModule(abc.ABC):
 
         return True
 
-    @abc.abstractmethod
+    @property
+    def default_dependencies(self) -> list[str]:
+        """Returns a list of default packages to inject for this preset."""
+        return []
+
+    @property
+    def default_directories(self) -> list[str]:
+        """Returns a list of default directories to scaffold for this preset."""
+        return []
+
+    @property
+    def default_ignores(self) -> list[str]:
+        """Returns a list of default VCS ignore patterns for this preset."""
+        return []
+
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends preset-specific dependencies and directories to the manifest.
+
+        Automatically applies configuration overrides if present. Otherwise, injects
+        the default packages, directories, and ignores defined by the preset subclass.
 
         Args:
             manifest (EnvironmentManifest): The centralized state object.
         """
-        pass
+        logger.debug(f"Building {self.name} preset layer.")
+
+        if self._apply_overrides(manifest):
+            return
+
+        for dep in self.default_dependencies:
+            manifest.add_dependency(dep)
+
+        for directory in self.default_directories:
+            manifest.add_directory(directory)
+
+        for artifact in self.default_ignores:
+            manifest.add_vcs_ignore(artifact)

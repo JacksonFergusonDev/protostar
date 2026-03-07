@@ -54,6 +54,15 @@ class EnvironmentManifest:
         """Appends a file or directory pattern to the IDE workspace exclusion list."""
         self.workspace_hides.add(path)
 
+    def add_environment_artifact(self, path: str) -> None:
+        """Appends a file or directory pattern to both the VCS ignore and IDE exclusion lists.
+
+        Args:
+            path: The unique file or directory pattern to hide and ignore.
+        """
+        self.add_vcs_ignore(path)
+        self.add_workspace_hide(path)
+
     def add_ide_setting(self, key: str, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
