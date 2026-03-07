@@ -1,6 +1,10 @@
 import argparse
 import importlib.metadata
 import logging
+import os
+import shlex
+import shutil
+import subprocess
 import sys
 import types
 from collections.abc import Iterable
@@ -14,7 +18,7 @@ from rich.table import Table
 from rich.text import Text
 from rich_argparse import RawTextRichHelpFormatter
 
-from .config import ProtostarConfig
+from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from .generators import GENERATOR_REGISTRY
 from .modules import (
     LANG_MODULES,
@@ -303,11 +307,6 @@ def handle_generate(args: argparse.Namespace) -> None:
             console.print(f"[bold green]Generated:[/bold green] {path}")
     except (FileExistsError, ValueError) as e:
         console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
-
-
-def handle_config(args: argparse.Namespace) -> None:
-    """Handles the 'config' subcommand to manage global CLI settings."""
-    ProtostarConfig.open_in_editor()
 
 
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
@@ -677,21 +676,75 @@ def configure_logging() -> None:
     logger.addHandler(RichHandler(console=console, markup=True, rich_tracebacks=True))
 
 
+def handle_config(args: argparse.Namespace) -> None:
+    """Handles the 'config' subcommand to manage global CLI settings.
+
+    Opens the global configuration file in the system's default editor.
+    Ensures the parent directory exists and seeds a default configuration
+    template if the file is missing. Safely tokenizes the $EDITOR environment
+    variable to support complex commands (e.g., 'code --wait').
+
+    Args:
+        args: Parsed CLI arguments mapping to this command.
+    """
+    if not CONFIG_FILE.parent.exists():
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    if not CONFIG_FILE.exists():
+        CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
+        console.print(
+            f"[bold green]Initialized default configuration at {CONFIG_FILE}[/bold green]"
+        )
+
+    editor_env = os.environ.get("EDITOR", "nano")
+    editor_cmd = shlex.split(editor_env)
+
+    if not editor_cmd:
+        console.print(
+            "[bold red]Configuration Error:[/bold red] The $EDITOR environment variable is empty."
+        )
+        sys.exit(1)
+
+    if not shutil.which(editor_cmd[0]):
+        console.print(
+            f"[bold red]Configuration Error:[/bold red] Could not resolve editor executable '{editor_cmd[0]}'.\n"
+            "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
+        )
+        sys.exit(1)
+
+    editor_cmd.append(str(CONFIG_FILE))
+
+    try:
+        subprocess.run(editor_cmd, check=True)
+    except subprocess.CalledProcessError as e:
+        console.print(
+            f"[bold red]Editor Error:[/bold red] Editor '{editor_env}' exited with non-zero status: {e}"
+        )
+        sys.exit(1)
+
+
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
     parser = build_parser()
-    intercept_interactive_wizards(parser)
 
-    args = parser.parse_args()
+    try:
+        intercept_interactive_wizards(parser)
 
-    if getattr(args, "verbose", False):
-        configure_logging()
+        args = parser.parse_args()
 
-    if not getattr(args, "command", None):
-        parser.print_help()
+        if getattr(args, "verbose", False):
+            configure_logging()
+
+        if not getattr(args, "command", None):
+            parser.print_help()
+            sys.exit(1)
+
+        args.func(args)
+
+    except ValueError as e:
+        # Gracefully handle the TOML syntax errors bubbled up from ProtostarConfig
+        console.print(f"\n[bold red]Configuration Error:[/bold red] {e}")
         sys.exit(1)
-
-    args.func(args)
 
 
 if __name__ == "__main__":
