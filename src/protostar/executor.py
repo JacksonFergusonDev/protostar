@@ -180,8 +180,10 @@ class SystemExecutor:
         if not self.manifest.file_appends:
             return
 
+        # Resolve the active Python version via a fallback chain
         python_version = None
 
+        # 1. pyproject.toml `requires-python` (uv-managed projects)
         pyproject_path = Path("pyproject.toml")
         if pyproject_path.exists():
             try:
@@ -193,17 +195,30 @@ class SystemExecutor:
                     match = re.search(r"(\d+\.\d+)", req_python)
                     if match:
                         python_version = match.group(1)
+                        logger.debug(
+                            f"Resolved Python version {python_version} from pyproject.toml"
+                        )
             except Exception as e:
                 logger.debug(f"Failed to parse pyproject.toml for python version: {e}")
 
+        # 2. .venv/pyvenv.cfg `version` field (pip/venv-managed projects)
         if not python_version:
             pyvenv_path = Path(".venv/pyvenv.cfg")
             if pyvenv_path.exists():
                 content = pyvenv_path.read_text()
-                match = re.search(r"version\s*=\s*(\d+\.\d+)", content)
+                match = re.search(r"^version\s*=\s*(\d+\.\d+)", content, re.MULTILINE)
                 if match:
                     python_version = match.group(1)
+                    logger.debug(
+                        f"Resolved Python version {python_version} from pyvenv.cfg"
+                    )
+                else:
+                    logger.warning(
+                        "Found .venv/pyvenv.cfg but could not extract Python version. "
+                        "Falling back to default."
+                    )
 
+        # 3. Protostar config or hardcoded default
         if not python_version:
             config = ProtostarConfig.load()
             python_version = config.python_version or "3.12"
