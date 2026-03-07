@@ -158,9 +158,15 @@ class SystemExecutor:
 
         for key, value in payload.items():
             if key in base:
-                if isinstance(value, tomlkit.items.Table) and isinstance(
-                    base[key], tomlkit.items.Table
-                ):
+                if isinstance(value, tomlkit.items.Table):
+                    # Type Parity Guard
+                    if not isinstance(base[key], tomlkit.items.Table):
+                        self.warnings.append(
+                            f"TOML Merge Collision: Expected a Table for key '{key}', "
+                            f"but found {type(base[key]).__name__}. Skipping injection."
+                        )
+                        continue
+
                     has_sub_tables = any(
                         isinstance(v, (tomlkit.items.Table, tomlkit.items.AoT))
                         for v in value.values()
@@ -169,9 +175,16 @@ class SystemExecutor:
                         base[key] = value
                     else:
                         self._deep_merge_tomlkit(base[key], value, overwrite)
-                elif isinstance(value, tomlkit.items.AoT) and isinstance(
-                    base[key], tomlkit.items.AoT
-                ):
+
+                elif isinstance(value, tomlkit.items.AoT):
+                    # Type Parity Guard
+                    if not isinstance(base[key], tomlkit.items.AoT):
+                        self.warnings.append(
+                            f"TOML Merge Collision: Expected an Array of Tables for key '{key}', "
+                            f"but found {type(base[key]).__name__}. Skipping injection."
+                        )
+                        continue
+
                     if overwrite:
                         base[key] = value
                     else:
