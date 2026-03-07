@@ -3,7 +3,9 @@ import os
 import subprocess
 import sys
 import tomllib
-from dataclasses import dataclass, field, fields, replace
+import types
+import typing
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -121,6 +123,25 @@ class ProtostarConfig:
 
         return instance
 
+    # --- Dependency Note: Why Not Pydantic? ---
+    # Pydantic v2 was considered for config validation. The decision was to
+    # stay with manual isinstance checks for the following reasons:
+    #
+    #   1. Schema stability: ProtostarConfig is small and unlikely to grow
+    #      significantly. Pydantic earns its keep with complex, nested, or
+    #      frequently changing schemas — none of which apply here.
+    #
+    #   2. CLI import cost: Even at ~0.1s, Pydantic's import time is
+    #      perceptible in a CLI context where there is no persistent process
+    #      keeping it warm. Every subcommand pays this cost.
+    #
+    #   3. Binary dependency: pydantic-core is a compiled Rust extension
+    #      (~2–4MB, platform-specific wheel). This complicates installs in
+    #      minimal or unusual environments and feels disproportionate for
+    #      validating a handful of config fields written by the tool's own user.
+    #
+    # If the config schema grows to include cross-field validation, deeply
+    # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
         cls, path: Path, instance: "ProtostarConfig"
@@ -129,6 +150,10 @@ class ProtostarConfig:
 
         Dynamically evaluates dataclass fields to prevent brittle parsing logic,
         while maintaining specific handlers for complex nested dictionaries.
+        Type annotations are resolved at runtime via typing.get_type_hints so
+        that Union types (e.g. str | None) are validated correctly before
+        assignment; mismatched values are dropped with a warning rather than
+        raising.
 
         Args:
             path: The filesystem path to the local or global configuration file.
@@ -150,15 +175,53 @@ class ProtostarConfig:
             if "env" in data:
                 env_data = data["env"]
 
-                # Dynamically map matching TOML keys directly to the dataclass fields
-                valid_fields = {f.name for f in fields(cls)}
+                # get_type_hints resolves stringified annotations (PEP 563 /
+                # `from __future__ import annotations`) into real type objects.
+                # f.type would return raw strings in that context and break
+                # isinstance checks.
+                resolved_hints = typing.get_type_hints(cls)
+
                 for key, value in env_data.items():
-                    if key in valid_fields:
+                    if key not in resolved_hints:
+                        continue
+
+                    expected = resolved_hints[key]
+                    origin = typing.get_origin(expected)
+
+                    # Skip deep validation for complex generics such as
+                    # dict[str, Any] or list[str] — checking the outer
+                    # container type is sufficient and avoids fragile
+                    # recursive introspection.
+                    if origin not in (None, types.UnionType, typing.Union):
                         updates[key] = value
+                        continue
+
+                    if origin in (types.UnionType, typing.Union):
+                        allowed = tuple(
+                            t for t in typing.get_args(expected) if t is not type(None)
+                        )
+                    else:
+                        allowed = (expected,)
+
+                    if value is not None and allowed and not isinstance(value, allowed):
+                        console.print(
+                            f"[yellow]Config Warning:[/yellow] Invalid type for "
+                            f"'[env].{key}'. Expected {expected}, got "
+                            f"{type(value).__name__}. Falling back to default."
+                        )
+                        continue
+
+                    updates[key] = value
 
                 # Handle the specific inverted 'no-ruff' edge case
                 if "no-ruff" in env_data:
-                    updates["ruff"] = not env_data["no-ruff"]
+                    if not isinstance(env_data["no-ruff"], bool):
+                        console.print(
+                            "[yellow]Config Warning:[/yellow] '[env].no-ruff' "
+                            "must be a boolean. Falling back to default."
+                        )
+                    else:
+                        updates["ruff"] = not env_data["no-ruff"]
 
             # 2. Parse and merge preset overrides
             if "presets" in data:
