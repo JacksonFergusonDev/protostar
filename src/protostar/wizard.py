@@ -1,5 +1,6 @@
 """Interactive Terminal User Interface (TUI) wizards for Protostar."""
 
+import os
 import sys
 from typing import Any
 
@@ -13,12 +14,9 @@ from .presets import PRESETS
 
 
 def _should_run_wizard() -> bool:
-    """Evaluates if the environment supports interactive TTY prompts.
-
-    Returns:
-        True if both standard input and standard output are connected to a TTY,
-        False otherwise (e.g., in CI/CD pipelines or piped environments).
-    """
+    """Evaluates if the environment supports interactive TTY prompts."""
+    if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
+        return True
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
@@ -91,6 +89,10 @@ def run_init_wizard() -> dict[str, Any] | None:
         if not any(item in LANG_MODULES for item in result):
             return "Please select at least one language footprint."
         return True
+
+    # Intercept execution right before blocking the thread
+    if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
+        return None
 
     selected = questionary.checkbox(
         "Select the components for your new environment:",
