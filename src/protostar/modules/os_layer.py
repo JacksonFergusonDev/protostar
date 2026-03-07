@@ -20,8 +20,7 @@ class MacOSModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends .DS_Store to the ignore and workspace hide lists."""
         logger.debug("Building macOS OS layer.")
-        manifest.add_vcs_ignore(".DS_Store")
-        manifest.add_workspace_hide(".DS_Store")
+        manifest.add_environment_artifact(".DS_Store")
 
 
 class LinuxModule(BootstrapModule):
@@ -35,5 +34,4 @@ class LinuxModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends temporary editor files to the ignore and workspace hide lists."""
         logger.debug("Building Linux OS layer.")
-        manifest.add_vcs_ignore("*~")
-        manifest.add_workspace_hide("*~")
+        manifest.add_environment_artifact("*~")

@@ -81,8 +81,7 @@ class PythonModule(BootstrapModule):
             "*.ipynb_checkpoints",
         ]
         for artifact in artifacts:
-            manifest.add_vcs_ignore(artifact)
-            manifest.add_workspace_hide(artifact)
+            manifest.add_environment_artifact(artifact)
 
         if self.package_manager == "uv":
             if not Path("pyproject.toml").exists():
@@ -124,8 +123,7 @@ class RustModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues cargo initialization, ignores, and pre-commit hooks."""
         logger.debug("Building Rust language layer.")
-        manifest.add_vcs_ignore("target/")
-        manifest.add_workspace_hide("target/")
+        manifest.add_environment_artifact("target/")
 
         hook_payload = """  - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
@@ -180,8 +178,7 @@ class NodeModule(BootstrapModule):
 
         artifacts = ["node_modules/", "dist/", ".next/"]
         for artifact in artifacts:
-            manifest.add_vcs_ignore(artifact)
-            manifest.add_workspace_hide(artifact)
+            manifest.add_environment_artifact(artifact)
 
         hook_payload = """  - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.1.0
@@ -217,8 +214,7 @@ class CppModule(BootstrapModule):
 
         artifacts = ["build/", "*.o", "*.out", ".cache/", "compile_commands.json"]
         for artifact in artifacts:
-            manifest.add_vcs_ignore(artifact)
-            manifest.add_workspace_hide(artifact)
+            manifest.add_environment_artifact(artifact)
 
         hook_payload = """  - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.5
@@ -253,8 +249,7 @@ class LatexModule(BootstrapModule):
             "*.out",
         ]
         for artifact in artifacts:
-            manifest.add_vcs_ignore(artifact)
-            manifest.add_workspace_hide(artifact)
+            manifest.add_environment_artifact(artifact)
 
         hook_payload = """  - repo: https://github.com/aarnphm/tex-fmt
     rev: v0.4.5

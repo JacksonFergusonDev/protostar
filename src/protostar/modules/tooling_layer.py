@@ -174,8 +174,7 @@ class RuffModule(BootstrapModule):
         """Queues Ruff dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Ruff tooling layer.")
         manifest.add_dev_dependency("ruff")
-        manifest.add_vcs_ignore(".ruff_cache/")
-        manifest.add_workspace_hide(".ruff_cache/")
+        manifest.add_environment_artifact(".ruff_cache/")
 
         hook_payload = """  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.4
@@ -218,8 +217,7 @@ class MypyModule(BootstrapModule):
         """Queues Mypy dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Mypy tooling layer.")
         manifest.add_dev_dependency("mypy")
-        manifest.add_vcs_ignore(".mypy_cache/")
-        manifest.add_workspace_hide(".mypy_cache/")
+        manifest.add_environment_artifact(".mypy_cache/")
 
         # The MYPY_DEPENDENCIES token is late-bound by the orchestrator
         # to ensure all dynamically added packages are typed.
@@ -264,8 +262,7 @@ class PytestModule(BootstrapModule):
 
         artifacts = [".pytest_cache/", ".coverage", "htmlcov/", "coverage.xml"]
         for artifact in artifacts:
-            manifest.add_vcs_ignore(artifact)
-            manifest.add_workspace_hide(artifact)
+            manifest.add_environment_artifact(artifact)
 
         config = """[tool.pytest.ini_options]
 minversion = "7.0"
