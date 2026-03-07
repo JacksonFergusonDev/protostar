@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import re
@@ -288,14 +289,19 @@ class SystemExecutor:
 
             for payload in contents:
                 interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
-                first_line = interpolated.strip().split("\n")[0]
+
+                # Generate a deterministic boundary marker
+                payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
+                marker = f"# --- Protostar Injection: {payload_hash} ---"
+
                 if (
-                    first_line
-                    and first_line in original_content
+                    marker in original_content
                     and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
                 ):
                     continue
-                missing_payloads.append(interpolated)
+
+                framed_payload = f"{marker}\n{interpolated.strip()}\n# --- End Protostar Injection ---"
+                missing_payloads.append(framed_payload)
 
             if not missing_payloads:
                 continue
