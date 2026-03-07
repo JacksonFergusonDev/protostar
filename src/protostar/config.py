@@ -119,7 +119,7 @@ class ProtostarConfig:
             logger.debug(
                 f"Discovered local configuration override at {LOCAL_CONFIG_FILE}"
             )
-            instance = cls._parse_and_merge(LOCAL_CONFIG_FILE, instance)
+            instance = cls._parse_and_merge(LOCAL_CONFIG_FILE, instance, is_local=True)
 
         return instance
 
@@ -144,7 +144,7 @@ class ProtostarConfig:
     # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
-        cls, path: Path, instance: "ProtostarConfig"
+        cls, path: Path, instance: "ProtostarConfig", is_local: bool = False
     ) -> "ProtostarConfig":
         """Helper to parse a TOML file and merge its values into a config instance.
 
@@ -158,6 +158,7 @@ class ProtostarConfig:
         Args:
             path: The filesystem path to the local or global configuration file.
             instance: The active ProtostarConfig object to mutate.
+            is_local: A flag indicating whether the configuration file is local.
 
         Returns:
             A new ProtostarConfig instance containing the merged state.
@@ -168,6 +169,41 @@ class ProtostarConfig:
         try:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
+
+            # --- Schema Validation & Scope Enforcement ---
+            # Dynamically resolve valid generate keys to future-proof the parser
+            from protostar.generators import GENERATOR_REGISTRY
+
+            generate_keys = set(GENERATOR_REGISTRY.keys())
+
+            # The root tables for initialization are structurally hardcoded below
+            init_keys = {"env", "presets", "dev"}
+
+            if is_local:
+                # 1. Hard enforce the architectural boundary
+                blocked_found = init_keys.intersection(data.keys())
+                if blocked_found:
+                    console.print(
+                        f"[yellow]Scope Warning:[/yellow] Found global init blocks "
+                        f"({', '.join(blocked_found)}) in local {path}.\n"
+                        "Local configs are strictly for 'generate'. These blocks will be ignored."
+                    )
+                    # Bulletproof drop: strip the keys from the dictionary entirely
+                    for k in blocked_found:
+                        data.pop(k)
+
+                allowed_keys = generate_keys
+            else:
+                allowed_keys = init_keys | generate_keys
+
+            # 2. General typo/unknown key detection
+            unknown_keys = set(data.keys()) - allowed_keys
+            if unknown_keys:
+                console.print(
+                    f"[yellow]Config Warning:[/yellow] Unrecognized root keys in {path}: "
+                    f"{', '.join(unknown_keys)}."
+                )
+            # ---------------------------------------------
 
             updates: dict[str, Any] = {}
 
