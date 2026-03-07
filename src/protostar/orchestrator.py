@@ -23,6 +23,7 @@ class Orchestrator:
     def __init__(
         self,
         modules: list[BootstrapModule],
+        config: ProtostarConfig,
         presets: list[PresetModule] | None = None,
         docker: bool = False,
         force: bool = False,
@@ -31,11 +32,13 @@ class Orchestrator:
 
         Args:
             modules: The ordered stack of bootstrap layers to execute.
+            config: The active Protostar configuration instance.
             presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
             force: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
         """
         self.modules = modules
+        self.config = config
         self.presets = presets or []
         self.docker = docker
         self.force = force
@@ -138,23 +141,21 @@ class Orchestrator:
                 logger.debug(f"Building {preset.name} preset.")
                 preset.build(self.manifest)
 
-            # Inject global configuration states
-            config = ProtostarConfig.load()
-
-            if config.global_dev_dependencies:
+            # Inject global configuration states using the injected config
+            if self.config.global_dev_dependencies:
                 logger.debug("Injecting global dev dependencies from configuration.")
-                for dep in config.global_dev_dependencies:
+                for dep in self.config.global_dev_dependencies:
                     self.manifest.add_dev_dependency(dep)
 
-            if config.pyproject_injections:
+            if self.config.pyproject_injections:
                 logger.debug(
                     "Injecting global pyproject.toml payloads from configuration."
                 )
-                for payload in config.pyproject_injections.values():
+                for payload in self.config.pyproject_injections.values():
                     self.manifest.add_file_append("pyproject.toml", payload)
 
             # Phase 4: System Execution
-            executor = SystemExecutor(self.manifest, self.docker)
+            executor = SystemExecutor(self.manifest, self.config, self.docker)
             executor.execute()
 
             # Phase 5: Telemetry Evaluation

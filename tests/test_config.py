@@ -1,6 +1,20 @@
+from collections.abc import Generator
+
 import pytest
 
 from protostar.config import ProtostarConfig
+
+
+@pytest.fixture(autouse=True)
+def clear_config_cache() -> Generator[None, None, None]:
+    """Clears the ProtostarConfig singleton cache before and after each test.
+
+    Ensures that disk I/O mocks in individual tests are evaluated correctly
+    rather than returning a polluted instance from a previous test run.
+    """
+    ProtostarConfig._instance = None
+    yield
+    ProtostarConfig._instance = None
 
 
 def test_config_load_defaults(mocker):

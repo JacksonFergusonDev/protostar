@@ -40,22 +40,40 @@ from .wizard import run_discovery_wizard, run_generate_wizard, run_init_wizard
 console = Console()
 
 
-class LazyTargetHelp:
-    """Delays boilerplate target table generation until help is explicitly rendered.
+class LazyTargetHelp(str):
+    """A str subclass that embeds a Rich-rendered target table as its string value.
 
-    This prevents unnecessary terminal rendering overhead during standard execution
-    and ensures the table dimensions evaluate the terminal width at render-time,
-    preventing overflow on resized terminal windows.
+    Inheriting from str ensures full compatibility with argparse and rich-argparse
+    regardless of whether they use duck-typing or isinstance checks internally.
+    The get_renderable() method provides a native Rich renderable for the custom
+    print_table_help formatter, preserving styled terminal output.
     """
 
-    def __str__(self) -> str:
-        """Evaluates the terminal context and renders the table string dynamically.
+    def __new__(cls) -> "LazyTargetHelp":
+        """Constructs the instance with the rendered table as its string value.
+
+        Evaluates the terminal width at construction time and captures a
+        ANSI-stripped Rich table render as the underlying str value. ANSI codes
+        are stripped via color_system=None to prevent argparse from counting
+        invisible styling bytes during column alignment.
 
         Returns:
-            A formatted string containing the generated table and header.
+            A LazyTargetHelp instance whose string value is the rendered table.
         """
-        # color_system=None strips ANSI codes. This prevents argparse
-        # from counting invisible styling bytes as characters during column alignment.
+        return super().__new__(cls, cls._build_string())
+
+    @staticmethod
+    def _build_string() -> str:
+        """Renders the generator registry as a plain-text table string.
+
+        Uses a width-constrained, color-stripped console to produce a string
+        safe for argparse's internal help formatting logic.
+
+        Returns:
+            A formatted string containing the target table and its header.
+        """
+        # Subtract 32 columns to account for argparse's indentation and
+        # decoration overhead, preventing table overflow in the help output.
         capture_console = Console(
             width=Console().width - 32,
             color_system=None,
@@ -80,27 +98,16 @@ class LazyTargetHelp:
 
         return f"The boilerplate target to evaluate and generate:\n{capture.get()}"
 
-    def __mod__(self, params: dict[str, Any]) -> str:
-        """Intercepts argparse's string interpolation to trigger deferred evaluation.
+    def get_renderable(self) -> Any:
+        """Provides a native Rich renderable for the custom print_table_help formatter.
 
-        Args:
-            params: The dictionary of formatting parameters provided by argparse.
+        Constructs a styled Rich table with column colouring and a descriptive
+        header, used exclusively by print_table_help() when rendering the
+        help output directly to the terminal via a Rich Console.
 
         Returns:
-            The fully evaluated and formatted help string.
+            A Rich Group containing a header Text and a styled Table.
         """
-        return self.__str__() % params
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegates missing string methods (like .strip()) to the evaluated string.
-
-        This prevents crashes when external formatters attempt to manipulate
-        the proxy object as if it were a native string.
-        """
-        return getattr(str(self), name)
-
-    def get_renderable(self) -> Any:
-        """Provides a native Rich renderable for use in custom table layouts."""
         target_table = Table(
             show_header=False,
             box=box.ROUNDED,
@@ -262,7 +269,11 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # Execute
     engine = Orchestrator(
-        modules, presets, docker=args.docker, force=getattr(args, "force", False)
+        modules,
+        config,
+        presets,
+        docker=args.docker,
+        force=getattr(args, "force", False),
     )
     engine.run()
 
@@ -597,7 +608,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             sys.exit(1)
         sys.argv.append(action)
 
-    # 2. Intercept parameter-less subcommands for interactive wizards
+    # Intercept parameter-less subcommands for interactive wizards
     if len(sys.argv) == 2:
         cmd = sys.argv[1]
 
@@ -619,7 +630,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 modules.append(ide_mod)
 
             engine = Orchestrator(
-                modules, presets, docker=selections["docker"], force=False
+                modules, config, presets, docker=selections["docker"], force=False
             )
             engine.run()
             sys.exit(0)
