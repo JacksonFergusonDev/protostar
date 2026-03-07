@@ -46,6 +46,7 @@ class Orchestrator:
         self.docker = docker
         self.force = force
         self.manifest = EnvironmentManifest()
+        self.warnings: list[str] = []
 
     def _evaluate_collisions(self) -> None:
         """Evaluates the workspace for critical configuration file collisions.
@@ -175,9 +176,19 @@ class Orchestrator:
             self._write_ide_settings()
             self._install_dependencies()
 
-            console.print(
-                "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
-            )
+            # Phase 5: Telemetry Evaluation
+            # Strictly evaluates the state buffer to surface isolated runtime failures
+            if self.warnings:
+                console.print(
+                    "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, but some non-critical tasks encountered issues."
+                )
+                for warning in self.warnings:
+                    # Isolate the exact payload to maintain terminal readability
+                    console.print(f"[yellow]  ⚠ {warning}[/yellow]")
+            else:
+                console.print(
+                    "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
+                )
 
         except Exception as e:
             # Expected runtime boundaries (e.g., missing binaries, failed network requests)
