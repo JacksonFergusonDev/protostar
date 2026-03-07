@@ -1,5 +1,7 @@
 import logging
 import os
+import shlex
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -303,9 +305,6 @@ class ProtostarConfig:
         template if the file is missing. Safely tokenizes the $EDITOR environment
         variable to support complex commands (e.g., 'code --wait').
         """
-        import shlex
-        import shutil
-
         if not CONFIG_FILE.parent.exists():
             CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 

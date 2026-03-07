@@ -1,3 +1,5 @@
+import subprocess
+
 import pytest
 
 from protostar.config import ProtostarConfig
@@ -215,3 +217,117 @@ def test_config_unknown_root_keys(mocker):
     assert "Unrecognized root keys" in printed_text
     assert "presetz" in printed_text
     assert "unknown_block" in printed_text
+
+
+def test_config_no_ruff_invalid_type(mocker):
+    """Test that an invalid type for the inverted 'no-ruff' edge case triggers a warning."""
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+    mock_print = mocker.patch("protostar.config.console.print")
+
+    # Pass a string instead of a boolean
+    payload = {"env": {"no-ruff": "yes"}}
+
+    mocker.patch("protostar.config.tomllib.load", return_value=payload)
+    mocker.patch("builtins.open", mocker.mock_open())
+
+    config = ProtostarConfig.load()
+
+    # Should safely drop the string and fall back to the True default
+    assert config.ruff is True
+
+    mock_print.assert_called()
+    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+    assert "'[env].no-ruff' must be a boolean. Falling back to default." in printed_text
+
+
+def test_config_complex_generic_type_passthrough(mocker):
+    """Test that complex generic types (like dicts/lists) in the env block bypass deep validation."""
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+
+    # `presets` has a type of `dict[str, Any]` which resolves an origin of `dict`.
+    # It should hit the `origin not in (None, types.UnionType, typing.Union)` early-continue block.
+    payload = {"env": {"presets": {"custom_preset": "value"}}}
+
+    mocker.patch("protostar.config.tomllib.load", return_value=payload)
+    mocker.patch("builtins.open", mocker.mock_open())
+
+    config = ProtostarConfig.load()
+
+    # The dictionary should pass through successfully
+    assert config.presets == {"custom_preset": "value"}
+
+
+def test_open_in_editor_creates_defaults(mocker, tmp_path):
+    """Test that open_in_editor safely initializes the config tree if it is missing."""
+
+    # Isolate I/O to the pytest tmp_path sandbox
+    mock_config_file = tmp_path / "isolated_config" / "config.toml"
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
+
+    # Mock environment and subprocess execution
+    mocker.patch.dict("os.environ", {"EDITOR": "vim"})
+    mocker.patch("protostar.config.shutil.which", return_value="/usr/bin/vim")
+    mock_run = mocker.patch("protostar.config.subprocess.run")
+
+    ProtostarConfig.open_in_editor()
+
+    # Verify the parent directory and file were scaffolded
+    assert mock_config_file.parent.exists()
+    assert mock_config_file.exists()
+    assert "ide =" in mock_config_file.read_text()
+
+    # Verify execution was triggered
+    mock_run.assert_called_once_with(["vim", str(mock_config_file)], check=True)
+
+
+def test_open_in_editor_empty_env(mocker):
+    """Test that empty $EDITOR variables abort cleanly."""
+    mocker.patch.dict("os.environ", {"EDITOR": ""})
+
+    # Patch Path.exists instead of the PosixPath instance
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+
+    mock_logger = mocker.patch("protostar.config.logger.error")
+
+    ProtostarConfig.open_in_editor()
+
+    mock_logger.assert_called_once_with("The $EDITOR environment variable is empty.")
+
+
+def test_open_in_editor_missing_binary(mocker):
+    """Test that missing binaries intercepted by shutil.which abort safely."""
+    mocker.patch.dict("os.environ", {"EDITOR": "nonexistent_editor --wait"})
+    mocker.patch("protostar.config.shutil.which", return_value=None)
+
+    # Patch Path.exists instead of the PosixPath instance
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+
+    mock_logger = mocker.patch("protostar.config.logger.error")
+
+    ProtostarConfig.open_in_editor()
+
+    mock_logger.assert_called_once()
+    assert (
+        "Could not resolve editor executable 'nonexistent_editor'"
+        in mock_logger.call_args[0][0]
+    )
+
+
+def test_open_in_editor_subprocess_error(mocker):
+    """Test that editor process crashes are logged gracefully."""
+    mocker.patch.dict("os.environ", {"EDITOR": "nano"})
+    mocker.patch("protostar.config.shutil.which", return_value="/usr/bin/nano")
+
+    # Patch Path.exists instead of the PosixPath instance
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+
+    mock_logger = mocker.patch("protostar.config.logger.error")
+    mock_run = mocker.patch("protostar.config.subprocess.run")
+
+    # Simulate the user closing the editor with an abnormal exit code
+    mock_run.side_effect = subprocess.CalledProcessError(1, "nano")
+
+    ProtostarConfig.open_in_editor()
+
+    mock_logger.assert_called_once()
+    assert "exited with non-zero status" in mock_logger.call_args[0][0]
