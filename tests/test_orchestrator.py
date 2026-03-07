@@ -875,7 +875,7 @@ def test_early_returns_on_empty_manifest(mocker):
 
 
 def test_install_dependencies_pip_freeze_exception(mocker):
-    """Test that a pip freeze subprocess crash is caught and logged as a warning."""
+    """Test that a pip freeze subprocess crash is gracefully aggregated in warnings."""
     orchestrator = Orchestrator([])
     orchestrator.manifest.dependencies = ["requests"]
 
@@ -890,13 +890,140 @@ def test_install_dependencies_pip_freeze_exception(mocker):
         "protostar.orchestrator.subprocess.run",
         side_effect=subprocess.CalledProcessError(1, "pip freeze"),
     )
-    mock_print = mocker.patch("protostar.orchestrator.console.print")
 
     orchestrator._install_dependencies()
 
-    printed = " ".join(
-        call.args[0]
-        for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], str)
+    assert any(
+        "Failed to freeze dependencies to requirements.txt" in w
+        for w in orchestrator.warnings
     )
-    assert "Failed to freeze dependencies to requirements.txt" in printed
+
+
+def test_install_dependencies_graceful_degradation_uv(mocker):
+    """Test that uv resolution failures are appended to warnings without aborting."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.dependencies = ["invalid-pkg"]
+    orchestrator.manifest.dev_dependencies = ["invalid-dev-pkg"]
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value.python_package_manager = "uv"
+
+    # Force run_quiet to raise RuntimeError for both tier calls
+    mocker.patch(
+        "protostar.orchestrator.run_quiet",
+        side_effect=RuntimeError("Resolution failed"),
+    )
+
+    orchestrator._install_dependencies()
+
+    assert len(orchestrator.warnings) == 2
+    assert (
+        "Standard dependency resolution failed: Resolution failed"
+        in orchestrator.warnings[0]
+    )
+    assert (
+        "Development dependency resolution failed: Resolution failed"
+        in orchestrator.warnings[1]
+    )
+
+
+def test_install_dependencies_graceful_degradation_pip(mocker):
+    """Test that pip resolution failures are appended to warnings without aborting."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.dependencies = ["invalid-pkg"]
+
+    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
+    mock_config.return_value.python_package_manager = "pip"
+
+    mocker.patch(
+        "protostar.orchestrator.run_quiet",
+        side_effect=RuntimeError("Pip installation failed"),
+    )
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+
+    orchestrator._install_dependencies()
+
+    assert len(orchestrator.warnings) == 1
+    assert (
+        "Pip dependency resolution failed: Pip installation failed"
+        in orchestrator.warnings[0]
+    )
+
+
+def test_orchestrator_run_partial_success(mocker):
+    """Test that populated warnings trigger the PARTIAL SUCCESS terminal output."""
+    orchestrator = Orchestrator([])
+
+    # Mock everything to avoid execution
+    for method in [
+        "_evaluate_collisions",
+        "_create_directories",
+        "_write_injected_files",
+        "_write_pre_commit_config",
+        "_execute_tasks",
+        "_validate_targets",
+        "_append_files",
+        "_write_ignores",
+        "_write_docker_artifacts",
+        "_write_ide_settings",
+        "_install_dependencies",
+    ]:
+        mocker.patch.object(orchestrator, method)
+
+    # Inject a warning to trigger partial success
+    orchestrator.warnings.append("Mocked resolution failure")
+
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    orchestrator.run()
+
+    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+    assert "PARTIAL SUCCESS" in printed_text
+    assert "Mocked resolution failure" in printed_text
+
+
+def test_append_files_pyproject_parse_exception(mocker):
+    """Test that pyproject.toml parsing failures are caught and logged during late-binding."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("dummy.txt", "content")
+
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+
+    # Force tomllib.load to crash when extracting python version
+    mock_file = mocker.mock_open()
+    mocker.patch("protostar.orchestrator.Path.open", mock_file)
+    mocker.patch(
+        "protostar.orchestrator.tomllib.load",
+        side_effect=Exception("Mocked parse error"),
+    )
+
+    mock_logger = mocker.patch("protostar.orchestrator.logger.debug")
+
+    # Ensure it doesn't try to actually parse dummy.txt as toml
+    mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+
+    mock_logger.assert_any_call(
+        "Failed to parse pyproject.toml for python version: Mocked parse error"
+    )
+
+
+def test_append_files_string_fallback_append(mocker):
+    """Test that the string fallback successfully appends missing payloads to non-TOML files."""
+    orchestrator = Orchestrator([])
+    orchestrator.manifest.add_file_append("config.ini", "new_payload_1")
+    orchestrator.manifest.add_file_append("config.ini", "new_payload_2")
+    orchestrator.manifest.collision_strategy = CollisionStrategy.MERGE
+
+    # File exists, but doesn't contain the payloads
+    mocker.patch("protostar.orchestrator.Path.exists", return_value=True)
+    mocker.patch("protostar.orchestrator.Path.read_text", return_value="existing_data")
+    mock_write = mocker.patch("protostar.orchestrator.Path.write_text")
+
+    orchestrator._append_files()
+
+    written_data = mock_write.call_args[0][0]
+
+    # Assert missing payloads are accurately injected with newlines
+    assert written_data == "existing_data\n\nnew_payload_1\n\nnew_payload_2\n"

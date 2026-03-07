@@ -46,6 +46,7 @@ class Orchestrator:
         self.docker = docker
         self.force = force
         self.manifest = EnvironmentManifest()
+        self.warnings: list[str] = []
 
     def _evaluate_collisions(self) -> None:
         """Evaluates the workspace for critical configuration file collisions.
@@ -175,9 +176,19 @@ class Orchestrator:
             self._write_ide_settings()
             self._install_dependencies()
 
-            console.print(
-                "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
-            )
+            # Phase 5: Telemetry Evaluation
+            # Strictly evaluates the state buffer to surface isolated runtime failures
+            if self.warnings:
+                console.print(
+                    "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, but some non-critical tasks encountered issues."
+                )
+                for warning in self.warnings:
+                    # Isolate the exact payload to maintain terminal readability
+                    console.print(f"[yellow]  ⚠ {warning}[/yellow]")
+            else:
+                console.print(
+                    "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
+                )
 
         except Exception as e:
             # Expected runtime boundaries (e.g., missing binaries, failed network requests)
@@ -571,7 +582,12 @@ class Orchestrator:
         settings_path.write_text(json.dumps(settings, indent=4) + "\n")
 
     def _install_dependencies(self) -> None:
-        """Installs queued dependencies using the active Python manager."""
+        """Installs queued dependencies using the active Python manager.
+
+        Evaluates package resolution within isolated try-except blocks to ensure
+        that a failure in one dependency tier (e.g., a typo in a dev-dependency)
+        does not halt the resolution of the remaining packages.
+        """
         if not self.manifest.dependencies and not self.manifest.dev_dependencies:
             return
 
@@ -580,17 +596,25 @@ class Orchestrator:
         if config.python_package_manager == "uv":
             if self.manifest.dependencies:
                 cmd = ["uv", "add"] + self.manifest.dependencies
-                run_quiet(
-                    cmd,
-                    f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
-                )
+                try:
+                    run_quiet(
+                        cmd,
+                        f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
+                    )
+                except RuntimeError as e:
+                    self.warnings.append(f"Standard dependency resolution failed: {e}")
 
             if self.manifest.dev_dependencies:
                 dev_cmd = ["uv", "add", "--dev"] + self.manifest.dev_dependencies
-                run_quiet(
-                    dev_cmd,
-                    f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies",
-                )
+                try:
+                    run_quiet(
+                        dev_cmd,
+                        f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies",
+                    )
+                except RuntimeError as e:
+                    self.warnings.append(
+                        f"Development dependency resolution failed: {e}"
+                    )
 
         else:
             venv_pip = Path(".venv/bin/pip")
@@ -602,10 +626,13 @@ class Orchestrator:
 
             cmd = [pip_cmd, "install"] + all_deps
 
-            run_quiet(
-                cmd,
-                f"Resolving and installing {len(all_deps)} total dependencies",
-            )
+            try:
+                run_quiet(
+                    cmd,
+                    f"Resolving and installing {len(all_deps)} total dependencies",
+                )
+            except RuntimeError as e:
+                self.warnings.append(f"Pip dependency resolution failed: {e}")
 
             # Freeze the state to mirror uv's declarative pyproject.toml updates
             req_path = Path("requirements.txt")
@@ -622,6 +649,7 @@ class Orchestrator:
                     req_path.write_text(result.stdout)
                     logger.debug("Successfully froze dependencies to requirements.txt")
                 except Exception as e:
-                    console.print(
-                        f"[yellow]Warning:[/yellow] Failed to freeze dependencies to requirements.txt: {e}"
+                    # Append freeze failures to the state buffer rather than direct stdout
+                    self.warnings.append(
+                        f"Failed to freeze dependencies to requirements.txt: {e}"
                     )
