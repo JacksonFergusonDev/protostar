@@ -197,7 +197,11 @@ alias proto="protostar"
 
 ## ⚙️ Configuration
 
-You can set global defaults by running `protostar config`, which opens `~/.config/protostar/config.toml` in your system's `$EDITOR`.
+Protostar enforces a strict architectural boundary between global initialization and local repository generation to prevent configuration drift.
+
+### Global Configuration (`init` & Defaults)
+
+Run `protostar config` to open your global configuration file (`~/.config/protostar/config.toml`) in your system's default `$EDITOR`. This file acts as the singular source of truth for environment initialization (`protostar init`), dictating base environment toggles, developer tools, and domain-specific scaffolding.
 
 ```toml
 [env]
@@ -217,6 +221,7 @@ python_package_manager = "uv"
 node_package_manager = "npm"
 
 # Optional dev tool toggles for Python
+# markdownlint = true
 # no-ruff = true  # Disables the default Ruff scaffolding
 # mypy = true
 # pytest = true
@@ -245,6 +250,10 @@ latex = "minimal"
 # ignore = ["E501", "D100", "D104", "D107"]
 # '''
 ```
+
+### Local Configuration (`generate`)
+
+For repository-specific boilerplate generation, you can create a `.protostar.toml` file in your project root. **This file is strictly reserved for `protostar generate` targets.** Any global initialization blocks (`[env]`, `[presets]`, `[dev]`) placed in this file will be actively ignored by the orchestrator to guarantee idempotent scaffolding.
 
 ---
 
