@@ -4,7 +4,7 @@ import types
 import typing
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger("protostar")
 
@@ -96,13 +96,26 @@ class ProtostarConfig:
     global_dev_dependencies: list[str] = field(default_factory=list)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
 
+    # In-memory cache to prevent repeated disk I/O
+    _instance: ClassVar["ProtostarConfig | None"] = None
+
     @classmethod
-    def load(cls) -> "ProtostarConfig":
+    def load(cls, force_reload: bool = False) -> "ProtostarConfig":
         """Loads and parses global and local Protostar configuration files.
 
         Evaluates the global XDG configuration first, then merges any overrides
         from a local '.protostar.toml' file in the current working directory.
+        Implements a class-level cache to prevent repeated disk I/O across the lifecycle.
+
+        Args:
+            force_reload: If True, bypasses the cache and forces a disk read.
+
+        Returns:
+            The loaded ProtostarConfig instance.
         """
+        if cls._instance is not None and not force_reload:
+            return cls._instance
+
         instance = cls()
 
         if CONFIG_FILE.exists():
@@ -114,6 +127,7 @@ class ProtostarConfig:
             )
             instance = cls._parse_and_merge(LOCAL_CONFIG_FILE, instance, is_local=True)
 
+        cls._instance = instance
         return instance
 
     # --- Dependency Note: Why Not Pydantic? ---

@@ -20,14 +20,21 @@ console = Console()
 class SystemExecutor:
     """Executes the materialized environment manifest by mutating the local disk and shell."""
 
-    def __init__(self, manifest: EnvironmentManifest, docker: bool = False) -> None:
+    def __init__(
+        self,
+        manifest: EnvironmentManifest,
+        config: ProtostarConfig,
+        docker: bool = False,
+    ) -> None:
         """Initializes the executor with the target manifest state.
 
         Args:
             manifest: The centralized state object containing all execution directives.
+            config: The active Protostar configuration instance.
             docker: If True, scaffolds a .dockerignore from the manifest ignores.
         """
         self.manifest = manifest
+        self.config = config
         self.docker = docker
         self.warnings: list[str] = []
 
@@ -220,8 +227,7 @@ class SystemExecutor:
 
         # 3. Protostar config or hardcoded default
         if not python_version:
-            config = ProtostarConfig.load()
-            python_version = config.python_version or "3.12"
+            python_version = self.config.python_version or "3.12"
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
@@ -366,9 +372,7 @@ class SystemExecutor:
         if not self.manifest.dependencies and not self.manifest.dev_dependencies:
             return
 
-        config = ProtostarConfig.load()
-
-        if config.python_package_manager == "uv":
+        if self.config.python_package_manager == "uv":
             if self.manifest.dependencies:
                 cmd = ["uv", "add"] + self.manifest.dependencies
                 try:

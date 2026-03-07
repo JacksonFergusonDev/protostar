@@ -269,7 +269,11 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # Execute
     engine = Orchestrator(
-        modules, presets, docker=args.docker, force=getattr(args, "force", False)
+        modules,
+        config,
+        presets,
+        docker=args.docker,
+        force=getattr(args, "force", False),
     )
     engine.run()
 
@@ -604,7 +608,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             sys.exit(1)
         sys.argv.append(action)
 
-    # 2. Intercept parameter-less subcommands for interactive wizards
+    # Intercept parameter-less subcommands for interactive wizards
     if len(sys.argv) == 2:
         cmd = sys.argv[1]
 
@@ -626,7 +630,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 modules.append(ide_mod)
 
             engine = Orchestrator(
-                modules, presets, docker=selections["docker"], force=False
+                modules, config, presets, docker=selections["docker"], force=False
             )
             engine.run()
             sys.exit(0)
