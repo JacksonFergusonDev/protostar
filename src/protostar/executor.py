@@ -349,15 +349,25 @@ class SystemExecutor:
         settings = {}
 
         if settings_path.exists():
-            try:
-                settings = json.loads(settings_path.read_text())
-            except json.JSONDecodeError:
-                console.print(
-                    "[yellow]Warning:[/yellow] Existing settings.json contains comments or is malformed. "
-                    "Skipping IDE settings injection to prevent data loss."
-                )
-                return
+            original_content = settings_path.read_text()
+            if not original_content.strip():
+                # Handle completely empty files gracefully by defaulting to {}
+                pass
+            else:
+                try:
+                    parsed_data = json.loads(original_content)
+                    if not isinstance(parsed_data, dict):
+                        raise ValueError("Root JSON element is not an object.")
+                    settings = parsed_data
+                except (json.JSONDecodeError, ValueError):
+                    console.print(
+                        "Existing settings.json contains comments, "
+                        "trailing commas, or is malformed. Skipping IDE settings injection "
+                        "to prevent data loss."
+                    )
+                    return
 
+        # 1-level deep dictionary merge
         for key, value in self.manifest.ide_settings.items():
             if isinstance(value, dict) and isinstance(settings.get(key), dict):
                 settings[key].update(value)
@@ -365,6 +375,7 @@ class SystemExecutor:
                 settings[key] = value
 
         vscode_dir.mkdir(exist_ok=True)
+        # json.dumps inherently preserves dictionary insertion order in standard CPython
         settings_path.write_text(json.dumps(settings, indent=4) + "\n")
 
     def _install_dependencies(self) -> None:
