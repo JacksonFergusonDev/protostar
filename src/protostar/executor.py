@@ -11,7 +11,7 @@ from rich.console import Console
 
 from .config import ProtostarConfig
 from .manifest import CollisionStrategy, EnvironmentManifest
-from .system import run_quiet
+from .system import execute_subprocess
 
 logger = logging.getLogger("protostar")
 console = Console()
@@ -140,7 +140,8 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            run_quiet(task, f"Executing {task[0]}")
+            with console.status(f"Executing {task[0]}"):
+                execute_subprocess(task)
 
     def _deep_merge_tomlkit(
         self, base: Any, payload: Any, overwrite: bool = False
@@ -354,20 +355,22 @@ class SystemExecutor:
 
         if config.python_package_manager == "uv":
             if self.manifest.dependencies:
+                cmd = ["uv", "add"] + self.manifest.dependencies
                 try:
-                    run_quiet(
-                        ["uv", "add"] + self.manifest.dependencies,
-                        f"Resolving and installing {len(self.manifest.dependencies)} dependencies",
-                    )
+                    with console.status(
+                        f"Resolving and installing {len(self.manifest.dependencies)} dependencies"
+                    ):
+                        execute_subprocess(cmd)
                 except RuntimeError as e:
                     self.warnings.append(f"Standard dependency resolution failed: {e}")
 
             if self.manifest.dev_dependencies:
+                dev_cmd = ["uv", "add", "--dev"] + self.manifest.dev_dependencies
                 try:
-                    run_quiet(
-                        ["uv", "add", "--dev"] + self.manifest.dev_dependencies,
-                        f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies",
-                    )
+                    with console.status(
+                        f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
+                    ):
+                        execute_subprocess(dev_cmd)
                 except RuntimeError as e:
                     self.warnings.append(
                         f"Development dependency resolution failed: {e}"
@@ -376,12 +379,13 @@ class SystemExecutor:
             venv_pip = Path(".venv/bin/pip")
             pip_cmd = str(venv_pip) if venv_pip.exists() else "pip"
             all_deps = self.manifest.dependencies + self.manifest.dev_dependencies
+            cmd = [pip_cmd, "install"] + all_deps
 
             try:
-                run_quiet(
-                    [pip_cmd, "install"] + all_deps,
-                    f"Resolving and installing {len(all_deps)} total dependencies",
-                )
+                with console.status(
+                    f"Resolving and installing {len(all_deps)} total dependencies"
+                ):
+                    execute_subprocess(cmd)
             except RuntimeError as e:
                 self.warnings.append(f"Pip dependency resolution failed: {e}")
 

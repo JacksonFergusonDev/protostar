@@ -31,7 +31,7 @@ def test_executor_install_dependencies_uv(mocker):
     manifest.add_dev_dependency("pytest")
     executor = SystemExecutor(manifest)
 
-    mock_run_quiet = mocker.patch("protostar.executor.run_quiet")
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
     mocker.patch("protostar.executor.Path.exists", return_value=True)
 
     mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
@@ -39,14 +39,8 @@ def test_executor_install_dependencies_uv(mocker):
 
     executor._install_dependencies()
 
-    mock_run_quiet.assert_any_call(
-        ["uv", "add", "fastapi"],
-        "Resolving and installing 1 dependencies",
-    )
-    mock_run_quiet.assert_any_call(
-        ["uv", "add", "--dev", "pytest"],
-        "Resolving and installing 1 development dependencies",
-    )
+    mock_execute.assert_any_call(["uv", "add", "fastapi"])
+    mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"])
 
 
 def test_executor_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path):
@@ -58,7 +52,7 @@ def test_executor_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path)
     manifest.add_dev_dependency("dev-pkg")
     executor = SystemExecutor(manifest)
 
-    mock_run_quiet = mocker.patch("protostar.executor.run_quiet")
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
     mock_run = mocker.patch("protostar.executor.subprocess.run")
 
     pip_bin = tmp_path / ".venv" / "bin"
@@ -73,11 +67,9 @@ def test_executor_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path)
 
     executor._install_dependencies()
 
-    mock_run_quiet.assert_called_once_with(
-        [".venv/bin/pip", "install", "dummy-pkg", "dev-pkg"],
-        "Resolving and installing 2 total dependencies",
+    mock_execute.assert_called_once_with(
+        [".venv/bin/pip", "install", "dummy-pkg", "dev-pkg"]
     )
-
     mock_run.assert_called_once_with(
         [".venv/bin/pip", "freeze"], capture_output=True, text=True, check=True
     )
@@ -288,7 +280,7 @@ def test_executor_install_dependencies_pip_reqs_exist(monkeypatch, mocker, tmp_p
     mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(python_package_manager="pip")
 
-    mocker.patch("protostar.executor.run_quiet")
+    mocker.patch("protostar.executor.execute_subprocess")
     mock_run = mocker.patch("protostar.executor.subprocess.run")
     mock_print = mocker.patch("protostar.executor.console.print")
 
@@ -549,7 +541,7 @@ def test_executor_install_dependencies_pip_freeze_exception(mocker):
     mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
     mock_config.return_value.python_package_manager = "pip"
 
-    mocker.patch("protostar.executor.run_quiet")
+    mocker.patch("protostar.executor.execute_subprocess")
     mocker.patch("protostar.executor.Path.exists", return_value=False)
 
     mocker.patch(
@@ -576,7 +568,7 @@ def test_executor_install_dependencies_graceful_degradation_uv(mocker):
     mock_config.return_value.python_package_manager = "uv"
 
     mocker.patch(
-        "protostar.executor.run_quiet",
+        "protostar.executor.execute_subprocess",
         side_effect=RuntimeError("Resolution failed"),
     )
 
@@ -603,7 +595,7 @@ def test_executor_install_dependencies_graceful_degradation_pip(mocker):
     mock_config.return_value.python_package_manager = "pip"
 
     mocker.patch(
-        "protostar.executor.run_quiet",
+        "protostar.executor.execute_subprocess",
         side_effect=RuntimeError("Pip installation failed"),
     )
     mocker.patch("protostar.executor.Path.exists", return_value=True)
