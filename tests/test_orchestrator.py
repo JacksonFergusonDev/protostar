@@ -9,6 +9,12 @@ from protostar.orchestrator import Orchestrator
 from protostar.presets.base import PresetModule
 
 
+@pytest.fixture
+def mock_config() -> ProtostarConfig:
+    """Provides a fresh baseline configuration for DI injections."""
+    return ProtostarConfig()
+
+
 class DummyModule(BootstrapModule):
     """A mock module for testing the orchestrator lifecycle."""
 
@@ -40,18 +46,15 @@ class DummyPreset(PresetModule):
         manifest.add_dependency("dummy-preset-pkg")
 
 
-def test_orchestrator_lifecycle(mocker):
+def test_orchestrator_lifecycle(mocker, mock_config):
     """Test that the orchestrator calls pre_flight, build, and executes tasks."""
     mock_execute = mocker.patch("protostar.orchestrator.SystemExecutor.execute")
     mocker.patch("protostar.orchestrator.Orchestrator._evaluate_collisions")
 
-    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig()
-
     dummy_mod = DummyModule()
     dummy_preset = DummyPreset()
 
-    orchestrator = Orchestrator([dummy_mod], presets=[dummy_preset])
+    orchestrator = Orchestrator([dummy_mod], mock_config, presets=[dummy_preset])
     orchestrator.run()
 
     assert dummy_mod.pre_flight_called is True
@@ -63,10 +66,12 @@ def test_orchestrator_lifecycle(mocker):
     mock_execute.assert_called_once()
 
 
-def test_orchestrator_evaluate_collisions_headless_aborts_by_default(mocker):
+def test_orchestrator_evaluate_collisions_headless_aborts_by_default(
+    mocker, mock_config
+):
     """Test that a headless environment safely aborts on collision without the force flag."""
     dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod])
+    orchestrator = Orchestrator([dummy_mod], mock_config)
 
     # Simulate the marker existing and a headless environment by patching the base pathlib object
     mocker.patch("pathlib.Path.exists", return_value=True)
@@ -90,12 +95,14 @@ def test_orchestrator_evaluate_collisions_headless_aborts_by_default(mocker):
     assert "--force" in printed_output
 
 
-def test_orchestrator_evaluate_collisions_headless_with_force_merges(mocker):
+def test_orchestrator_evaluate_collisions_headless_with_force_merges(
+    mocker, mock_config
+):
     """Test that a headless environment respects the --force flag and defaults to MERGE."""
     dummy_mod = DummyModule()
 
     # Initialize with the force flag enabled
-    orchestrator = Orchestrator([dummy_mod], force=True)
+    orchestrator = Orchestrator([dummy_mod], mock_config, force=True)
 
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
@@ -105,10 +112,10 @@ def test_orchestrator_evaluate_collisions_headless_with_force_merges(mocker):
     assert orchestrator.manifest.collision_strategy == CollisionStrategy.MERGE
 
 
-def test_orchestrator_evaluate_collisions_interactive_abort(mocker):
+def test_orchestrator_evaluate_collisions_interactive_abort(mocker, mock_config):
     """Test that selecting ABORT in the collision TUI triggers a safe exit."""
     dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod])
+    orchestrator = Orchestrator([dummy_mod], mock_config)
 
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
@@ -124,10 +131,10 @@ def test_orchestrator_evaluate_collisions_interactive_abort(mocker):
     mock_exit.assert_called_once_with(1)
 
 
-def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker):
+def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker, mock_config):
     """Test that selecting OVERWRITE correctly updates the manifest strategy."""
     dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod])
+    orchestrator = Orchestrator([dummy_mod], mock_config)
 
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
@@ -140,18 +147,16 @@ def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker):
     assert orchestrator.manifest.collision_strategy == CollisionStrategy.OVERWRITE
 
 
-def test_orchestrator_run_global_injections(mocker):
+def test_orchestrator_run_global_injections(mocker, mock_config):
     """Test that global dev dependencies and pyproject injections are added in Phase 3."""
-    orchestrator = Orchestrator([])
+    mock_config.global_dev_dependencies = ["test-global-dep"]
+    mock_config.pyproject_injections = {"custom_key": "custom_payload"}
+
+    orchestrator = Orchestrator([], mock_config)
 
     # Mock evaluation to prevent aborts and SystemExecutor to prevent execution
     mocker.patch.object(orchestrator, "_evaluate_collisions")
     mocker.patch("protostar.orchestrator.SystemExecutor.execute")
-
-    # Mock the global configuration
-    mock_config = mocker.patch("protostar.orchestrator.ProtostarConfig.load")
-    mock_config.return_value.global_dev_dependencies = ["test-global-dep"]
-    mock_config.return_value.pyproject_injections = {"custom_key": "custom_payload"}
 
     orchestrator.run()
 
@@ -159,9 +164,9 @@ def test_orchestrator_run_global_injections(mocker):
     assert "custom_payload" in orchestrator.manifest.file_appends["pyproject.toml"]
 
 
-def test_orchestrator_run_known_exception(mocker):
+def test_orchestrator_run_known_exception(mocker, mock_config):
     """Test that known exceptions (e.g. FileExistsError) abort cleanly without stack traces."""
-    orchestrator = Orchestrator([])
+    orchestrator = Orchestrator([], mock_config)
     mocker.patch.object(
         orchestrator, "_evaluate_collisions", side_effect=FileExistsError("Known error")
     )
@@ -181,9 +186,9 @@ def test_orchestrator_run_known_exception(mocker):
     assert "Known error" in printed
 
 
-def test_orchestrator_run_unknown_exception(mocker):
+def test_orchestrator_run_unknown_exception(mocker, mock_config):
     """Test that unknown exceptions trigger the telemetry generation URL and full traceback."""
-    orchestrator = Orchestrator([])
+    orchestrator = Orchestrator([], mock_config)
     mocker.patch.object(
         orchestrator, "_evaluate_collisions", side_effect=KeyError("Unknown crash")
     )
@@ -203,9 +208,9 @@ def test_orchestrator_run_unknown_exception(mocker):
     assert "https://github.com/" in printed
 
 
-def test_orchestrator_run_partial_success(mocker):
+def test_orchestrator_run_partial_success(mocker, mock_config):
     """Test that populated warnings trigger the PARTIAL SUCCESS terminal output."""
-    orchestrator = Orchestrator([])
+    orchestrator = Orchestrator([], mock_config)
     mocker.patch.object(orchestrator, "_evaluate_collisions")
 
     # Mock SystemExecutor to simulate warnings surfaced during execution

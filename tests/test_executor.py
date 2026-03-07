@@ -8,11 +8,17 @@ from protostar.executor import SystemExecutor
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 
 
-def test_executor_writes_injected_files(mocker):
+@pytest.fixture
+def mock_config() -> ProtostarConfig:
+    """Provides a fresh baseline configuration for DI injections."""
+    return ProtostarConfig()
+
+
+def test_executor_writes_injected_files(mocker, mock_config):
     """Test that the executor flushes queued file injections to disk."""
     manifest = EnvironmentManifest()
     manifest.add_file_injection(".test_config.yaml", "mock content")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
@@ -24,18 +30,17 @@ def test_executor_writes_injected_files(mocker):
     mock_write.assert_called_once_with("mock content")
 
 
-def test_executor_install_dependencies_uv(mocker):
+def test_executor_install_dependencies_uv(mocker, mock_config):
     """Test that the executor uses uv add --dev for dev dependencies."""
     manifest = EnvironmentManifest()
     manifest.add_dependency("fastapi")
     manifest.add_dev_dependency("pytest")
-    executor = SystemExecutor(manifest)
+
+    mock_config.python_package_manager = "uv"
+    executor = SystemExecutor(manifest, mock_config)
 
     mock_execute = mocker.patch("protostar.executor.execute_subprocess")
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-
-    mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
 
     executor._install_dependencies()
 
@@ -43,14 +48,18 @@ def test_executor_install_dependencies_uv(mocker):
     mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"])
 
 
-def test_executor_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path):
+def test_executor_install_dependencies_pip_freeze(
+    monkeypatch, mocker, tmp_path, mock_config
+):
     """Test that the executor runs a local pip installation and writes a freeze state."""
     monkeypatch.chdir(tmp_path)
 
     manifest = EnvironmentManifest()
     manifest.add_dependency("dummy-pkg")
     manifest.add_dev_dependency("dev-pkg")
-    executor = SystemExecutor(manifest)
+
+    mock_config.python_package_manager = "pip"
+    executor = SystemExecutor(manifest, mock_config)
 
     mock_execute = mocker.patch("protostar.executor.execute_subprocess")
     mock_run = mocker.patch("protostar.executor.subprocess.run")
@@ -59,9 +68,6 @@ def test_executor_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path)
     pip_bin.mkdir(parents=True)
     pip_exe = pip_bin / "pip"
     pip_exe.touch()
-
-    mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
 
     mock_run.return_value.stdout = "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
 
@@ -79,11 +85,11 @@ def test_executor_install_dependencies_pip_freeze(monkeypatch, mocker, tmp_path)
     ).read_text() == "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
 
 
-def test_executor_append_files_late_binding(mocker):
+def test_executor_append_files_late_binding(mocker, mock_config):
     """Test that configuration payloads are interpolated with the active python version."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"')
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch(
@@ -101,7 +107,7 @@ def test_executor_append_files_late_binding(mocker):
     assert 'python_version = "3.11"' in written_data
 
 
-def test_executor_writes_pre_commit_config(mocker):
+def test_executor_writes_pre_commit_config(mocker, mock_config):
     """Test that the executor concatenates hooks and interpolates Mypy dependencies."""
     manifest = EnvironmentManifest()
     manifest.wants_pre_commit = True
@@ -116,7 +122,7 @@ def test_executor_writes_pre_commit_config(mocker):
 {{MYPY_DEPENDENCIES}}"""
     manifest.add_pre_commit_hook(hook_payload)
 
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_write = mocker.patch("protostar.executor.Path.write_text")
@@ -132,11 +138,11 @@ def test_executor_writes_pre_commit_config(mocker):
     assert "- pytest" in written_data
 
 
-def test_executor_writes_dockerignore(mocker):
+def test_executor_writes_dockerignore(mocker, mock_config):
     """Test that the executor aggregates base ignores and vcs ignores for docker."""
     manifest = EnvironmentManifest()
     manifest.add_vcs_ignore("custom_build_artifact/")
-    executor = SystemExecutor(manifest, docker=True)
+    executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value=".env\n")
@@ -152,11 +158,11 @@ def test_executor_writes_dockerignore(mocker):
     assert "README*" in written_data
 
 
-def test_executor_writes_gitignore(mocker):
+def test_executor_writes_gitignore(mocker, mock_config):
     """Test that .gitignore is safely updated without duplicating existing lines."""
     manifest = EnvironmentManifest()
     manifest.add_vcs_ignore("new_ignore.txt")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch(
@@ -170,11 +176,11 @@ def test_executor_writes_gitignore(mocker):
     mock_file().write.assert_called_once_with("new_ignore.txt\n")
 
 
-def test_executor_writes_vscode_settings(mocker):
+def test_executor_writes_vscode_settings(mocker, mock_config):
     """Test that IDE settings merge correctly with existing JSON."""
     manifest = EnvironmentManifest()
     manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     existing_settings = {"files.exclude": {"**/node_modules": True}}
 
@@ -195,12 +201,12 @@ def test_executor_writes_vscode_settings(mocker):
     assert "**/node_modules" in parsed_write["files.exclude"]
 
 
-def test_executor_creates_directories(mocker):
+def test_executor_creates_directories(mocker, mock_config):
     """Test that the executor generates all requested workspace directories."""
     manifest = EnvironmentManifest()
     manifest.add_directory("data")
     manifest.add_directory("src/core")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
 
@@ -210,11 +216,11 @@ def test_executor_creates_directories(mocker):
     mock_mkdir.assert_any_call(parents=True, exist_ok=True)
 
 
-def test_executor_writes_dockerignore_with_uv(mocker):
+def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     """Test that the executor appends .python-version to .dockerignore when uv is used."""
     manifest = EnvironmentManifest()
     manifest.add_system_task(["uv", "init", "--no-workspace", "--bare", "--pin-python"])
-    executor = SystemExecutor(manifest, docker=True)
+    executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_file = mocker.mock_open()
@@ -226,7 +232,7 @@ def test_executor_writes_dockerignore_with_uv(mocker):
     assert ".python-version" in written_data
 
 
-def test_executor_append_files_pip_fallback(monkeypatch, tmp_path):
+def test_executor_append_files_pip_fallback(monkeypatch, tmp_path, mock_config):
     """Test that the executor scrapes pyvenv.cfg if pyproject.toml is missing."""
     monkeypatch.chdir(tmp_path)
 
@@ -236,7 +242,7 @@ def test_executor_append_files_pip_fallback(monkeypatch, tmp_path):
 
     manifest = EnvironmentManifest()
     manifest.add_file_append("pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"')
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     executor._append_files()
 
@@ -244,7 +250,9 @@ def test_executor_append_files_pip_fallback(monkeypatch, tmp_path):
     assert 'python_version = "3.10"' in written_data
 
 
-def test_executor_writes_vscode_settings_jsonc_abort(monkeypatch, mocker, tmp_path):
+def test_executor_writes_vscode_settings_jsonc_abort(
+    monkeypatch, mocker, tmp_path, mock_config
+):
     """Test that IDE settings injection safely aborts if existing JSON has comments."""
     monkeypatch.chdir(tmp_path)
 
@@ -255,7 +263,7 @@ def test_executor_writes_vscode_settings_jsonc_abort(monkeypatch, mocker, tmp_pa
 
     manifest = EnvironmentManifest()
     manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mock_print = mocker.patch("protostar.executor.console.print")
 
@@ -266,7 +274,9 @@ def test_executor_writes_vscode_settings_jsonc_abort(monkeypatch, mocker, tmp_pa
     assert settings_file.read_text() == "// My custom comment\n{}"
 
 
-def test_executor_install_dependencies_pip_reqs_exist(monkeypatch, mocker, tmp_path):
+def test_executor_install_dependencies_pip_reqs_exist(
+    monkeypatch, mocker, tmp_path, mock_config
+):
     """Test that pip freeze skips overwriting an existing requirements.txt."""
     monkeypatch.chdir(tmp_path)
 
@@ -275,10 +285,9 @@ def test_executor_install_dependencies_pip_reqs_exist(monkeypatch, mocker, tmp_p
 
     manifest = EnvironmentManifest()
     manifest.add_dependency("dummy-pkg")
-    executor = SystemExecutor(manifest)
 
-    mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
+    mock_config.python_package_manager = "pip"
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.execute_subprocess")
     mock_run = mocker.patch("protostar.executor.subprocess.run")
@@ -292,12 +301,12 @@ def test_executor_install_dependencies_pip_reqs_exist(monkeypatch, mocker, tmp_p
     assert req_file.read_text() == "my-custom-pkg==1.0.0\n"
 
 
-def test_executor_writes_injected_files_overwrite(mocker):
+def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     """Test that file injections bypass the exists() guard if OVERWRITE is active."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.add_file_injection(".test_config.yaml", "new content")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mock_write = mocker.patch("protostar.executor.Path.write_text")
@@ -306,12 +315,12 @@ def test_executor_writes_injected_files_overwrite(mocker):
     mock_write.assert_called_once_with("new content")
 
 
-def test_executor_deep_merge_tomlkit():
+def test_executor_deep_merge_tomlkit(mock_config):
     """Test the recursive dictionary merge algorithm using tomlkit structures."""
     import tomlkit
 
     manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     base_toml = """
     [tool.ruff]
@@ -342,12 +351,12 @@ def test_executor_deep_merge_tomlkit():
     assert "# Keep this comment" in dumped
 
 
-def test_executor_append_files_ast_merge(mocker):
+def test_executor_append_files_ast_merge(mocker, mock_config):
     """Test that _append_files mutates the TOML AST logically based on the MERGE strategy."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
     manifest.add_file_append("pyproject.toml", "[tool.ruff]\nline-length = 88\n")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     existing_content = (
         "# My file\n[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\n"
@@ -367,12 +376,12 @@ def test_executor_append_files_ast_merge(mocker):
     assert "line-length = 120" not in written_data
 
 
-def test_executor_append_files_ast_overwrite(mocker):
+def test_executor_append_files_ast_overwrite(mocker, mock_config):
     """Test that the OVERWRITE strategy completely replaces colliding TOML tables."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.add_file_append("pyproject.toml", "[tool.ruff]\nline-length = 88\n")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     existing_content = '[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\ntarget-version = "py310"\n'
 
@@ -392,12 +401,12 @@ def test_executor_append_files_ast_overwrite(mocker):
     assert "line-length = 88" in written_data
 
 
-def test_executor_write_pre_commit_config_skips_existing_merge(mocker):
+def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_config):
     """Test that pre-commit generation aborts if file exists and strategy is not OVERWRITE."""
     manifest = EnvironmentManifest()
     manifest.wants_pre_commit = True
     manifest.collision_strategy = CollisionStrategy.MERGE
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mock_write = mocker.patch("protostar.executor.Path.write_text")
@@ -406,12 +415,12 @@ def test_executor_write_pre_commit_config_skips_existing_merge(mocker):
     mock_write.assert_not_called()
 
 
-def test_executor_write_pre_commit_config_empty_deps(mocker):
+def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     """Test that mypy late-binding injects an empty array if no python dependencies exist."""
     manifest = EnvironmentManifest()
     manifest.wants_pre_commit = True
     manifest.pre_commit_hooks.append("id: mypy\n{{MYPY_DEPENDENCIES}}")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_write = mocker.patch("protostar.executor.Path.write_text")
@@ -421,12 +430,12 @@ def test_executor_write_pre_commit_config_empty_deps(mocker):
     assert "[]" in written_data
 
 
-def test_executor_deep_merge_tomlkit_aot_append():
+def test_executor_deep_merge_tomlkit_aot_append(mock_config):
     """Test that arrays of tables (AoT) are appended to when not using OVERWRITE."""
     import tomlkit
 
     manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     base = tomlkit.parse("[[my_array]]\nval = 1\n")
     payload = tomlkit.parse("[[my_array]]\nval = 2\n")
@@ -439,11 +448,11 @@ def test_executor_deep_merge_tomlkit_aot_append():
     assert result["my_array"][1]["val"] == 2
 
 
-def test_executor_validate_targets_success(mocker):
+def test_executor_validate_targets_success(mocker, mock_config):
     """Test that pre-execution validation passes silently on valid TOML files."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("pyproject.toml", "[tool.ruff]")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
 
@@ -456,11 +465,11 @@ def test_executor_validate_targets_success(mocker):
     mock_exit.assert_not_called()
 
 
-def test_executor_validate_targets_malformed_toml(mocker):
+def test_executor_validate_targets_malformed_toml(mocker, mock_config):
     """Test that malformed existing TOML triggers a hard abort during pre-execution validation."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
 
@@ -477,11 +486,11 @@ def test_executor_validate_targets_malformed_toml(mocker):
     assert "Syntax error in existing workspace file" in printed
 
 
-def test_executor_append_files_malformed_payload_toml(mocker):
+def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
     """Test that malformed payload TOML triggers an internal error abort during execution."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("test.toml", "[invalid payload == \n")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch(
@@ -502,12 +511,12 @@ def test_executor_append_files_malformed_payload_toml(mocker):
     assert "Failed to parse injected TOML payload" in printed
 
 
-def test_executor_append_files_string_fallback_redundant(mocker):
+def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
     """Test that the string fallback skips writing if the payload is already in the file."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("test.txt", "line1\nline2")
     manifest.collision_strategy = CollisionStrategy.MERGE
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
         "protostar.executor.Path.read_text", return_value="existing\nline1\nline2"
@@ -519,10 +528,10 @@ def test_executor_append_files_string_fallback_redundant(mocker):
     mock_write.assert_not_called()
 
 
-def test_executor_early_returns_on_empty_manifest(mocker):
+def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
     """Test that functions execute early returns when manifest data is absent."""
     manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
     mock_exists = mocker.patch("protostar.executor.Path.exists")
 
     executor._write_ignores()
@@ -532,14 +541,13 @@ def test_executor_early_returns_on_empty_manifest(mocker):
     mock_exists.assert_not_called()
 
 
-def test_executor_install_dependencies_pip_freeze_exception(mocker):
+def test_executor_install_dependencies_pip_freeze_exception(mocker, mock_config):
     """Test that a pip freeze subprocess crash is gracefully aggregated in warnings."""
     manifest = EnvironmentManifest()
     manifest.dependencies = ["requests"]
-    executor = SystemExecutor(manifest)
 
-    mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
-    mock_config.return_value.python_package_manager = "pip"
+    mock_config.python_package_manager = "pip"
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.execute_subprocess")
     mocker.patch("protostar.executor.Path.exists", return_value=False)
@@ -557,15 +565,14 @@ def test_executor_install_dependencies_pip_freeze_exception(mocker):
     )
 
 
-def test_executor_install_dependencies_graceful_degradation_uv(mocker):
+def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_config):
     """Test that uv resolution failures are appended to warnings without aborting."""
     manifest = EnvironmentManifest()
     manifest.dependencies = ["invalid-pkg"]
     manifest.dev_dependencies = ["invalid-dev-pkg"]
-    executor = SystemExecutor(manifest)
 
-    mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
-    mock_config.return_value.python_package_manager = "uv"
+    mock_config.python_package_manager = "uv"
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
         "protostar.executor.execute_subprocess",
@@ -585,14 +592,13 @@ def test_executor_install_dependencies_graceful_degradation_uv(mocker):
     )
 
 
-def test_executor_install_dependencies_graceful_degradation_pip(mocker):
+def test_executor_install_dependencies_graceful_degradation_pip(mocker, mock_config):
     """Test that pip resolution failures are appended to warnings without aborting."""
     manifest = EnvironmentManifest()
     manifest.dependencies = ["invalid-pkg"]
-    executor = SystemExecutor(manifest)
 
-    mock_config = mocker.patch("protostar.executor.ProtostarConfig.load")
-    mock_config.return_value.python_package_manager = "pip"
+    mock_config.python_package_manager = "pip"
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
         "protostar.executor.execute_subprocess",
@@ -609,11 +615,11 @@ def test_executor_install_dependencies_graceful_degradation_pip(mocker):
     )
 
 
-def test_executor_append_files_pyproject_parse_exception(mocker):
+def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
     """Test that pyproject.toml parsing failures are caught and logged during late-binding."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("dummy.txt", "content")
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
 
@@ -634,13 +640,13 @@ def test_executor_append_files_pyproject_parse_exception(mocker):
     )
 
 
-def test_executor_append_files_string_fallback_append(mocker):
+def test_executor_append_files_string_fallback_append(mocker, mock_config):
     """Test that the string fallback successfully appends missing payloads to non-TOML files."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("config.ini", "new_payload_1")
     manifest.add_file_append("config.ini", "new_payload_2")
     manifest.collision_strategy = CollisionStrategy.MERGE
-    executor = SystemExecutor(manifest)
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value="existing_data")
