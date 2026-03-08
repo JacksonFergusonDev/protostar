@@ -1,6 +1,6 @@
 [project]
 name = "protostar"
-version = "0.5.0"
+version = "0.6.0"
 description = "High-velocity, zero-friction environment scaffolding."
 readme = "README.md"
 authors = [
@@ -139,7 +139,7 @@ fail_under = 90
 # ---- bump-my-version ---- #
 
 [tool.bumpversion]
-current_version = "0.5.0"
+current_version = "0.6.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
 serialize = ["{major}.{minor}.{patch}"]
 search = "{current_version}"
