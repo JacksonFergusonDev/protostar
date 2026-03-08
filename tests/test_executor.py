@@ -330,6 +330,37 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     mock_write.assert_called_once_with("new content")
 
 
+def test_executor_mkdir_os_error_propagation(mocker, mock_config):
+    """Test that the executor correctly propagates OSErrors during directory creation."""
+    manifest = EnvironmentManifest()
+    manifest.add_directory("protected_dir")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch(
+        "protostar.executor.Path.mkdir", side_effect=OSError("Read-only file system")
+    )
+
+    with pytest.raises(OSError, match="Read-only file system"):
+        executor._create_directories()
+
+
+def test_executor_write_text_permission_error_propagation(mocker, mock_config):
+    """Test that the executor propagates PermissionErrors during file injections."""
+    manifest = EnvironmentManifest()
+    manifest.add_file_injection("system_config.yaml", "secret")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mocker.patch("protostar.executor.Path.mkdir")
+    mocker.patch(
+        "protostar.executor.Path.write_text",
+        side_effect=PermissionError("Permission denied"),
+    )
+
+    with pytest.raises(PermissionError, match="Permission denied"):
+        executor._write_injected_files()
+
+
 def test_executor_deep_merge_tomlkit(mock_config):
     """Test the recursive dictionary merge algorithm using chaotic tomlkit structures."""
     manifest = EnvironmentManifest()

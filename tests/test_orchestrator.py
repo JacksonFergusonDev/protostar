@@ -208,6 +208,32 @@ def test_orchestrator_run_unknown_exception(mocker, mock_config):
     assert "https://github.com/" in printed
 
 
+def test_orchestrator_run_os_error_graceful_abort(mocker, mock_config):
+    """Test that OS-level locks and permission boundaries trigger a clean abort, not a crash report."""
+    orchestrator = Orchestrator([], mock_config)
+    mocker.patch.object(orchestrator, "_evaluate_collisions")
+
+    # Mock SystemExecutor to raise a PermissionError (which inherits from OSError)
+    mock_execute = mocker.patch("protostar.orchestrator.SystemExecutor.execute")
+    mock_execute.side_effect = PermissionError("Permission denied: '/etc/protostar'")
+
+    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.orchestrator.console.print")
+
+    with pytest.raises(SystemExit):
+        orchestrator.run()
+
+    mock_exit.assert_called_once_with(1)
+    printed = " ".join(
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], str)
+    )
+    assert "ABORTED" in printed
+    assert "Permission denied: '/etc/protostar'" in printed
+    assert "CRITICAL FAILURE" not in printed
+
+
 def test_orchestrator_run_partial_success(mocker, mock_config):
     """Test that populated warnings trigger the PARTIAL SUCCESS terminal output."""
     orchestrator = Orchestrator([], mock_config)

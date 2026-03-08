@@ -171,7 +171,8 @@ class Orchestrator:
                 )
 
         except Exception as e:
-            if isinstance(e, (RuntimeError, ValueError, FileExistsError)):
+            # Catch expected operational errors and OS-level I/O constraints
+            if isinstance(e, (RuntimeError, ValueError, FileExistsError, OSError)):
                 console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
                 sys.exit(1)
 
