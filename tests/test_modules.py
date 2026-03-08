@@ -43,6 +43,8 @@ def test_python_module_uv_build(manifest, mocker):
         "--no-workspace",
         "--bare",
         "--pin-python",
+        "--python",
+        "3.13",
     ] in manifest.system_tasks
 
 
@@ -109,7 +111,7 @@ def test_python_module_pip_build(manifest, mocker):
     mod.build(manifest)
 
     assert ".venv/" in manifest.vcs_ignores
-    assert ["python3", "-m", "venv", ".venv"] in manifest.system_tasks
+    assert ["python3.13", "-m", "venv", ".venv"] in manifest.system_tasks
 
 
 def test_python_module_pip_with_version(manifest, mocker):

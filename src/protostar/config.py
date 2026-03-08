@@ -24,8 +24,8 @@ direnv = false
 # Preferred Python package manager: 'uv' or 'pip'
 python_package_manager = "uv"
 
-# Optional default Python version (e.g., '3.12')
-# python_version = "3.12"
+# Default Python version
+python_version = "3.13"
 
 # Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
 node_package_manager = "npm"
@@ -85,7 +85,7 @@ class ProtostarConfig:
     ide: str = "vscode"
     direnv: bool = False
     python_package_manager: str = "uv"
-    python_version: str | None = None
+    python_version: str | None = "3.13"
     node_package_manager: str = "npm"
     markdownlint: bool = False
     ruff: bool = True

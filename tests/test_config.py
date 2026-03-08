@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
@@ -26,7 +27,7 @@ def test_config_load_defaults(mocker):
     assert config.direnv is False
     assert config.node_package_manager == "npm"
     assert config.python_package_manager == "uv"
-    assert config.python_version is None
+    assert config.python_version == "3.13"
     assert config.ruff is True
     assert config.mypy is False
     assert config.pytest is False
@@ -177,14 +178,12 @@ def test_config_runtime_type_validation(mocker):
     mocker.patch("builtins.open", mocker.mock_open())
 
     # Pass the payload directly into the parser
-    from pathlib import Path
-
     config = ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
 
     # Assert the malformed inputs were dropped and defaults were maintained
     assert config.ide == "vscode"
     assert config.direnv is False
-    assert config.python_version is None
+    assert config.python_version == "3.13"
 
     # Verify the warnings told the user exactly what type was expected
     assert mock_logger.call_count == 3

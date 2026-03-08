@@ -70,7 +70,7 @@ class Orchestrator:
                 self.manifest.collision_strategy = CollisionStrategy.MERGE
                 return
             console.print(
-                "\n[bold red]Collision Detected:[/bold red] The target environment is not empty."
+                "\n[bold red]Orbital Collision Detected:[/bold red] The target workspace is not empty."
             )
             console.print(
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"
@@ -82,7 +82,7 @@ class Orchestrator:
         from questionary import Choice
 
         console.print(
-            "\n[bold yellow]Collision Warning:[/bold yellow] Protostar detected existing configuration files."
+            "\n[bold yellow]Gravitational Anomaly:[/bold yellow] Protostar detected existing configuration files in the workspace."
         )
         for target in collision_targets:
             console.print(f"  - {target}")

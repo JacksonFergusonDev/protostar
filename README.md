@@ -123,18 +123,28 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
 
 ### 1. Enable Autocomplete
 
-Protostar uses `argcomplete` for dynamic tab-completion. Install the bash/zsh bindings globally:
+Protostar uses `argcomplete` for dynamic tab-completion. Install the CLI bindings globally:
 
 ```bash
 uv tool install argcomplete
 # Or using pip: pip install argcomplete
 ```
 
-If you are using Zsh, ensure `bashcompinit` is loaded by adding this to your `~/.zshrc`:
+> **Note:** If using `uv`, ensure `~/.local/bin` is exported in your system `$PATH` so your shell can resolve the `register-python-argcomplete` executable.
+
+**For Zsh:**
+Ensure the bash compatibility layer is loaded by adding this to your `~/.zshrc`:
 
 ```bash
 autoload -U bashcompinit
 bashcompinit
+eval "$(register-python-argcomplete protostar)"
+```
+
+**For Bash:**
+Add the evaluation string directly to your `~/.bashrc`:
+
+```bash
 eval "$(register-python-argcomplete protostar)"
 ```
 

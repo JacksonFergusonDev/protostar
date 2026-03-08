@@ -149,13 +149,13 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            with console.status(f"Executing {task[0]}"):
+            with console.status(f"Propelling sequence: {task[0]}"):
                 execute_subprocess(task)
 
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
-            with console.status(f"Executing {task[0]}"):
+            with console.status(f"Propelling sequence: {task[0]}"):
                 execute_subprocess(task)
 
     def _deep_merge_tomlkit(
@@ -270,7 +270,7 @@ class SystemExecutor:
 
         # 3. Protostar config or hardcoded default
         if not python_version:
-            python_version = self.config.python_version or "3.12"
+            python_version = self.config.python_version or "3.13"
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
@@ -436,7 +436,7 @@ class SystemExecutor:
                 cmd = ["uv", "add", *self.manifest.dependencies]
                 try:
                     with console.status(
-                        f"Resolving and installing {len(self.manifest.dependencies)} dependencies"
+                        f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
                     ):
                         execute_subprocess(cmd)
                 except RuntimeError as e:
