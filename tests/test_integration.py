@@ -182,3 +182,27 @@ def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path):
     )
     assert "line-length = 150" not in final_content, "Failed to purge old state"
     assert "line-length = 88" in final_content, "Failed to inject new state"
+
+
+@pytest.mark.skipif(
+    shutil.which("uv") is None or shutil.which("git") is None,
+    reason="uv and git executables required for pre-commit lifecycle",
+)
+def test_pre_commit_lifecycle_integration(run_cli):
+    """Verifies that pre-commit can be successfully installed and updated post-dependency resolution."""
+    code, stdout, stderr, workspace = run_cli(
+        "init", "--python", "--python-version", "3.12", "--pre-commit"
+    )
+
+    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+
+    # Verify the git repository was initialized
+    assert (workspace / ".git").exists(), "Git was not initialized"
+
+    # Verify the pre-commit configuration was generated
+    assert (workspace / ".pre-commit-config.yaml").exists(), "Pre-commit config missing"
+
+    # Verify pre-commit successfully installed its hooks into the .git directory
+    assert (workspace / ".git" / "hooks" / "pre-commit").exists(), (
+        "Pre-commit binary failed to install hooks"
+    )

@@ -848,3 +848,51 @@ def test_executor_writes_vscode_settings_root_not_dict(
         in mock_print.call_args[0][0]
     )
     assert settings_file.read_text() == '["I am an array, not a dictionary"]'
+
+
+def test_executor_lifecycle_ordering(mocker, mock_config):
+    """Test that the executor strictly adheres to the execution DAG order."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    # We patch the internal methods to prevent disk I/O, but we want to track
+    # the exact sequence they are invoked in.
+    manager = mocker.Mock()
+
+    # Attach the mocked methods to the parent manager
+    manager.attach_mock(mocker.patch.object(executor, "_execute_tasks"), "sys_tasks")
+    manager.attach_mock(
+        mocker.patch.object(executor, "_install_dependencies"), "install"
+    )
+    manager.attach_mock(
+        mocker.patch.object(executor, "_execute_post_install_tasks"), "post_install"
+    )
+
+    # Mock other methods that aren't part of this specific ordering check
+    mocker.patch.object(executor, "_validate_targets")
+    mocker.patch.object(executor, "_create_directories")
+    mocker.patch.object(executor, "_write_injected_files")
+    mocker.patch.object(executor, "_write_pre_commit_config")
+    mocker.patch.object(executor, "_append_files")
+    mocker.patch.object(executor, "_write_ignores")
+    mocker.patch.object(executor, "_write_docker_artifacts")
+    mocker.patch.object(executor, "_write_ide_settings")
+
+    executor.execute()
+
+    # Assert that system tasks happen BEFORE dependency installation,
+    # and post-install tasks happen AFTER dependency installation.
+    expected_call_order = [
+        mocker.call.sys_tasks(),
+        mocker.call.install(),
+        mocker.call.post_install(),
+    ]
+
+    # Filter the manager's mock_calls to only include the ones we care about
+    actual_calls = [
+        call
+        for call in manager.mock_calls
+        if call[0] in ("sys_tasks", "install", "post_install")
+    ]
+
+    assert actual_calls == expected_call_order
