@@ -196,13 +196,45 @@ def test_pre_commit_lifecycle_integration(run_cli):
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
 
-    # Verify the git repository was initialized
     assert (workspace / ".git").exists(), "Git was not initialized"
-
-    # Verify the pre-commit configuration was generated
     assert (workspace / ".pre-commit-config.yaml").exists(), "Pre-commit config missing"
-
-    # Verify pre-commit successfully installed its hooks into the .git directory
     assert (workspace / ".git" / "hooks" / "pre-commit").exists(), (
-        "Pre-commit binary failed to install hooks"
+        "Pre-commit binary failed to map git hooks"
+    )
+
+
+@pytest.mark.skipif(shutil.which("direnv") is None, reason="direnv executable required")
+def test_direnv_lifecycle_integration(run_cli):
+    """Verifies direnv shell commands execute without crashing in the post-install phase."""
+    code, stdout, stderr, workspace = run_cli("init", "--python", "--direnv")
+
+    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+    assert (workspace / ".envrc").exists()
+
+
+def test_virtual_env_isolation(run_cli, monkeypatch):
+    """Verifies Protostar correctly executes even if the parent shell has an active virtual environment."""
+    monkeypatch.setenv("VIRTUAL_ENV", "/fake/parent/venv")
+
+    code, _, stderr, workspace = run_cli("init", "--python", "--python-version", "3.12")
+
+    assert code == 0, f"Failed execution with parent VIRTUAL_ENV set.\nSTDERR: {stderr}"
+    assert (workspace / "pyproject.toml").exists()
+
+
+def test_crash_reporter_e2e(run_cli):
+    """Verifies the hidden crash flag triggers a URL-encoded Rich hyperlink in the terminal."""
+    code, stdout, stderr, _ = run_cli("init", "--python", "--crash-test")
+
+    # Ensure it hard-fails
+    assert code == 1
+    output = stdout + stderr
+
+    # Assert structural integrity of the crash telemetry UI
+    assert "CRITICAL FAILURE:" in output
+    assert "TypeError" in output
+    assert "INTENTIONAL_CRASH" in output
+    assert (
+        "[link=https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body="
+        in output
     )

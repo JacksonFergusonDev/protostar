@@ -855,11 +855,9 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
     manifest = EnvironmentManifest()
     executor = SystemExecutor(manifest, mock_config)
 
-    # We patch the internal methods to prevent disk I/O, but we want to track
-    # the exact sequence they are invoked in.
+    # Use a parent mock to track chronological execution sequence across methods
     manager = mocker.Mock()
 
-    # Attach the mocked methods to the parent manager
     manager.attach_mock(mocker.patch.object(executor, "_execute_tasks"), "sys_tasks")
     manager.attach_mock(
         mocker.patch.object(executor, "_install_dependencies"), "install"
@@ -868,7 +866,7 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
         mocker.patch.object(executor, "_execute_post_install_tasks"), "post_install"
     )
 
-    # Mock other methods that aren't part of this specific ordering check
+    # Silence all other disk I/O mutations
     mocker.patch.object(executor, "_validate_targets")
     mocker.patch.object(executor, "_create_directories")
     mocker.patch.object(executor, "_write_injected_files")
@@ -880,19 +878,17 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
 
     executor.execute()
 
-    # Assert that system tasks happen BEFORE dependency installation,
-    # and post-install tasks happen AFTER dependency installation.
-    expected_call_order = [
-        mocker.call.sys_tasks(),
-        mocker.call.install(),
-        mocker.call.post_install(),
-    ]
-
-    # Filter the manager's mock_calls to only include the ones we care about
+    # Filter calls to isolate our specific topological phases
     actual_calls = [
         call
         for call in manager.mock_calls
         if call[0] in ("sys_tasks", "install", "post_install")
+    ]
+
+    expected_call_order = [
+        mocker.call.sys_tasks(),
+        mocker.call.install(),
+        mocker.call.post_install(),
     ]
 
     assert actual_calls == expected_call_order
