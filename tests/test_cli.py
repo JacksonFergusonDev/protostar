@@ -1,4 +1,6 @@
 import argparse
+import importlib.metadata
+import subprocess
 import sys
 import types
 
@@ -10,12 +12,18 @@ from protostar.cli import (
     GenerateEpilogTable,
     LazyTargetHelp,
     ProtoHelpFormatter,
+    build_parser,
+    configure_logging,
     get_ide_module,
+    handle_config,
+    handle_generate,
     handle_init,
+    intercept_interactive_wizards,
     main,
     print_table_help,
 )
 from protostar.modules import (
+    LANG_MODULES,
     DirenvModule,
     JetBrainsModule,
     MarkdownLintModule,
@@ -274,3 +282,216 @@ def test_print_table_help_rendering(mocker):
     table_strings = str(tables[0].columns)
     assert "foo" in table_strings
     assert "hidden" not in table_strings
+
+
+def test_handle_init_aborts_on_no_language(mocker):
+    """Test that `protostar init` gracefully aborts if no language is selected."""
+    args = argparse.Namespace(docker=False, force=False)
+    for mod in LANG_MODULES:
+        setattr(args, mod.__class__.__name__, False)
+
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    with pytest.raises(SystemExit):
+        handle_init(args)
+
+    mock_exit.assert_called_once_with(1)
+    printed = " ".join(
+        str(call.args[0]) for call in mock_print.call_args_list if call.args
+    )
+    assert "Please specify at least one language flag" in printed
+
+
+def test_handle_generate_unknown_target(mocker):
+    """Test that handle_generate catches invalid targets safely."""
+    args = argparse.Namespace(target="unknown_target", name="foo")
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    handle_generate(args)
+
+    printed = " ".join(
+        str(call.args[0]) for call in mock_print.call_args_list if call.args
+    )
+    assert "Unknown target" in printed
+
+
+def test_handle_generate_success_and_error(mocker):
+    """Test both the happy path and collision exceptions in file generation."""
+    args = argparse.Namespace(target="cpp_class", name="Engine")
+    mocker.patch("protostar.cli.ProtostarConfig.load")
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    mock_gen = mocker.Mock()
+    mock_gen.execute.return_value = ["Engine.hpp"]
+    mocker.patch.dict("protostar.cli.GENERATOR_REGISTRY", {"cpp_class": mock_gen})
+
+    # Success Path
+    handle_generate(args)
+    assert any(
+        "Generated" in str(call.args[0])
+        for call in mock_print.call_args_list
+        if call.args
+    )
+
+    # FileExistsError Path
+    mock_gen.execute.side_effect = FileExistsError("File already exists")
+    handle_generate(args)
+    assert any(
+        "Generation Aborted" in str(call.args[0])
+        for call in mock_print.call_args_list
+        if call.args
+    )
+
+
+def test_build_parser_package_not_found(mocker):
+    """Test that the parser gracefully handles missing metadata during development."""
+    mocker.patch(
+        "importlib.metadata.version",
+        side_effect=importlib.metadata.PackageNotFoundError,
+    )
+    # Just checking it doesn't crash during construction
+    parser = build_parser()
+    assert parser is not None
+
+
+def test_dispatch_help(mocker):
+    """Test the internal help dispatch routing."""
+    parser = build_parser()
+
+    mock_print_help = mocker.patch.object(parser, "print_help")
+    args = parser.parse_args(["help"])
+    args.func(args)
+    mock_print_help.assert_called_once()
+
+
+def test_intercept_interactive_wizards_cancellations(mocker):
+    """Test that cancelling wizards safely exits the process and prints help."""
+    parser = mocker.Mock()
+
+    # 1. Discovery Wizard Cancellation
+    mocker.patch.object(sys, "argv", ["protostar"])
+    mocker.patch("protostar.cli.run_discovery_wizard", return_value=None)
+    with pytest.raises(SystemExit):
+        intercept_interactive_wizards(parser)
+    parser.print_help.assert_called_once()
+
+    # 2. Init Wizard Cancellation
+    mocker.patch.object(sys, "argv", ["protostar", "init"])
+    mocker.patch("protostar.cli.run_init_wizard", return_value=None)
+    with pytest.raises(SystemExit):
+        intercept_interactive_wizards(parser)
+    parser.parse_args.assert_called_with(["init", "--help"])
+
+    # 3. Generate Wizard Cancellation
+    mocker.patch.object(sys, "argv", ["protostar", "generate"])
+    mocker.patch("protostar.cli.run_generate_wizard", return_value=None)
+    with pytest.raises(SystemExit):
+        intercept_interactive_wizards(parser)
+    parser.parse_args.assert_called_with(["generate", "--help"])
+
+
+def test_intercept_generate_wizard_errors(mocker):
+    """Test error handling routing inside the generate TUI wrapper."""
+    parser = mocker.Mock()
+    mock_print = mocker.patch("protostar.cli.console.print")
+    mocker.patch.object(sys, "argv", ["protostar", "generate"])
+
+    # 1. Unknown target returned by wizard
+    mocker.patch(
+        "protostar.cli.run_generate_wizard",
+        return_value={"target": "unknown", "name": "foo"},
+    )
+    with pytest.raises(SystemExit):
+        intercept_interactive_wizards(parser)
+    assert any("Unknown target" in str(c) for c in mock_print.call_args_list)
+
+    # 2. Target execution crash
+    mock_gen = mocker.Mock()
+    mock_gen.execute.side_effect = ValueError("Bad identifier")
+    mocker.patch.dict("protostar.cli.GENERATOR_REGISTRY", {"cpp_class": mock_gen})
+    mocker.patch(
+        "protostar.cli.run_generate_wizard",
+        return_value={"target": "cpp_class", "name": "foo"},
+    )
+    with pytest.raises(SystemExit):
+        intercept_interactive_wizards(parser)
+    assert any("Generation Aborted" in str(c) for c in mock_print.call_args_list)
+
+
+def test_configure_logging():
+    """Test that the rich handler is successfully attached to the global logger."""
+    import logging
+
+    from rich.logging import RichHandler
+
+    configure_logging()
+    logger = logging.getLogger("protostar")
+
+    assert logger.level == logging.DEBUG
+    assert any(isinstance(h, RichHandler) for h in logger.handlers)
+
+
+def test_handle_config_success(mocker, tmp_path):
+    """Test the config command successfully spawns the user's editor."""
+    mock_config_file = tmp_path / "config.toml"
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch.dict("os.environ", {"EDITOR": "nano"})
+    mocker.patch("shutil.which", return_value="/usr/bin/nano")
+    mock_run = mocker.patch("subprocess.run")
+
+    handle_config(argparse.Namespace())
+
+    assert mock_config_file.exists()
+    assert "ide =" in mock_config_file.read_text()
+    mock_run.assert_called_once_with(["nano", str(mock_config_file)], check=True)
+
+
+def test_handle_config_errors(mocker, tmp_path):
+    """Test missing binaries, empty env vars, and subprocess crashes in handle_config."""
+    mock_config_file = tmp_path / "config.toml"
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    args = argparse.Namespace()
+
+    # 1. Empty EDITOR
+    mocker.patch.dict("os.environ", {"EDITOR": ""})
+    with pytest.raises(SystemExit):
+        handle_config(args)
+
+    # 2. Missing EDITOR executable
+    mocker.patch.dict("os.environ", {"EDITOR": "not-a-real-editor"})
+    mocker.patch("shutil.which", return_value=None)
+    with pytest.raises(SystemExit):
+        handle_config(args)
+
+    # 3. Subprocess fails
+    mocker.patch.dict("os.environ", {"EDITOR": "nano"})
+    mocker.patch("shutil.which", return_value="/usr/bin/nano")
+    mocker.patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "nano"))
+    with pytest.raises(SystemExit):
+        handle_config(args)
+
+
+def test_main_no_command(mocker):
+    """Test main gracefully exits if no subcommand is parsed."""
+    mocker.patch.object(sys, "argv", ["protostar"])
+    mocker.patch("protostar.cli.intercept_interactive_wizards")
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+    mock_exit.assert_called_once_with(1)
+
+
+def test_main_value_error_handling(mocker):
+    """Test that TOML parsing ValueErrors are gracefully handled without crashing."""
+    mocker.patch.object(sys, "argv", ["protostar", "init", "--python"])
+    mocker.patch("protostar.cli.intercept_interactive_wizards")
+    mocker.patch(
+        "protostar.cli.handle_init", side_effect=ValueError("Syntax Error in TOML")
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+    mock_exit.assert_called_once_with(1)
