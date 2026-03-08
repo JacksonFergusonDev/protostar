@@ -80,7 +80,6 @@ def test_orchestrator_idempotency(run_cli):
 @pytest.mark.parametrize(
     ("target", "name", "expected_files"),
     [
-        # Updated to the correct CLI choices
         (
             "cpp-class",
             "OrbitalMechanics",
@@ -99,6 +98,7 @@ def test_generator_routing(run_cli, target, name, expected_files):
     assert not (workspace / "pyproject.toml").exists()
 
 
+@pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
 def test_python_version_cohesion_e2e(
     monkeypatch, mocker: MockerFixture, tmp_path: Path
 ) -> None:
@@ -107,21 +107,6 @@ def test_python_version_cohesion_e2e(
     # Natively isolate all pathlib disk I/O to the sandbox
     monkeypatch.chdir(tmp_path)
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "mock_config.toml")
-
-    # Mock subprocess.run to prevent actual uv/git executions on the host
-    mock_run = mocker.patch("subprocess.run")
-
-    # Side-effect function to simulate `uv init` creating a pyproject.toml on disk
-    def mock_subprocess_run_side_effect(cmd: list[str], *args, **kwargs) -> MagicMock:
-        if cmd[:2] == ["uv", "init"]:
-            # Extract the version passed to uv
-            version = cmd[cmd.index("--python") + 1] if "--python" in cmd else "3.12"
-            pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(f'[project]\nrequires-python = ">={version}"\n')
-
-        return MagicMock(returncode=0)
-
-    mock_run.side_effect = mock_subprocess_run_side_effect
 
     # Construct mock CLI arguments matching: `protostar init -p --python-version 3.10 --mypy --ruff`
     args = argparse.Namespace(
@@ -133,19 +118,18 @@ def test_python_version_cohesion_e2e(
         docker=False,
     )
 
-    # Execute the CLI handler
+    # Execute the CLI handler. Because we are no longer mocking subprocess.run,
+    # this will execute the actual system `uv init` command inside `tmp_path`.
     handle_init(args)
 
-    # 1. Assert uv received the correct Python version flag
-    mock_run.assert_any_call(
-        ["uv", "init", "--no-workspace", "--bare", "--pin-python", "--python", "3.10"],
-        check=True,
-        capture_output=True,
-        text=True,
+    pyproject_content = (tmp_path / "pyproject.toml").read_text()
+
+    # 1. Assert uv successfully initialized the project and pinned the requested version natively
+    assert 'requires-python = ">=3.10"' in pyproject_content, (
+        "uv failed to pin the requested Python version in pyproject.toml."
     )
 
-    # 2. Assert Mypy received the correct interpolated version in pyproject.toml
-    pyproject_content = (tmp_path / "pyproject.toml").read_text()
+    # 2. Assert Mypy received the correct interpolated version from our orchestrator injection
     assert 'python_version = "3.10"' in pyproject_content, (
         "Mypy failed to interpolate the correct Python version."
     )
@@ -153,7 +137,7 @@ def test_python_version_cohesion_e2e(
     # 3. Assert Ruff config was injected but does NOT have a hardcoded python version
     assert "[tool.ruff]" in pyproject_content
     assert "target-version" not in pyproject_content, (
-        "Ruff should rely on requires-python natively."
+        "Ruff should rely on requires-python natively, target-version should not be injected."
     )
 
 

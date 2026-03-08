@@ -1,12 +1,17 @@
 import hashlib
 import json
 import subprocess
+import tomllib
+from pathlib import Path
 
 import pytest
+import tomlkit
 
 from protostar.config import ProtostarConfig
 from protostar.executor import SystemExecutor
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -105,7 +110,10 @@ def test_executor_append_files_late_binding(mocker, mock_config):
     executor._append_files()
 
     written_data = mock_write.call_args[0][0]
-    assert 'python_version = "3.11"' in written_data
+    parsed_toml = tomllib.loads(written_data)
+
+    # Assert structural integrity rather than string presence
+    assert parsed_toml["python_version"] == "3.11"
 
 
 def test_executor_writes_pre_commit_config(mocker, mock_config):
@@ -248,7 +256,10 @@ def test_executor_append_files_pip_fallback(monkeypatch, tmp_path, mock_config):
     executor._append_files()
 
     written_data = (tmp_path / "pyproject.toml").read_text()
-    assert 'python_version = "3.10"' in written_data
+    parsed_toml = tomllib.loads(written_data)
+
+    # Verify the fallback resolved and injected the correct version structurally
+    assert parsed_toml["python_version"] == "3.10"
 
 
 def test_executor_writes_vscode_settings_jsonc_abort(
@@ -319,90 +330,145 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     mock_write.assert_called_once_with("new content")
 
 
-def test_executor_deep_merge_tomlkit(mock_config):
-    """Test the recursive dictionary merge algorithm using tomlkit structures."""
-    import tomlkit
+def test_executor_mkdir_os_error_propagation(mocker, mock_config):
+    """Test that the executor correctly propagates OSErrors during directory creation."""
+    manifest = EnvironmentManifest()
+    manifest.add_directory("protected_dir")
+    executor = SystemExecutor(manifest, mock_config)
 
+    mocker.patch(
+        "protostar.executor.Path.mkdir", side_effect=OSError("Read-only file system")
+    )
+
+    with pytest.raises(OSError, match="Read-only file system"):
+        executor._create_directories()
+
+
+def test_executor_write_text_permission_error_propagation(mocker, mock_config):
+    """Test that the executor propagates PermissionErrors during file injections."""
+    manifest = EnvironmentManifest()
+    manifest.add_file_injection("system_config.yaml", "secret")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mocker.patch("protostar.executor.Path.mkdir")
+    mocker.patch(
+        "protostar.executor.Path.write_text",
+        side_effect=PermissionError("Permission denied"),
+    )
+
+    with pytest.raises(PermissionError, match="Permission denied"):
+        executor._write_injected_files()
+
+
+def test_executor_deep_merge_tomlkit(mock_config):
+    """Test the recursive dictionary merge algorithm using chaotic tomlkit structures."""
     manifest = EnvironmentManifest()
     executor = SystemExecutor(manifest, mock_config)
 
-    base_toml = """
-    [tool.ruff]
-    line-length = 88
-    target-version = "py310" # Keep this comment
-    """
+    base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
+    payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
 
-    payload_toml = """
-    [tool.ruff]
-    line-length = 100
-    
-    [tool.mypy]
-    strict = true
-    """
-
-    base_doc = tomlkit.parse(base_toml)
-    payload_doc = tomlkit.parse(payload_toml)
+    base_doc = tomlkit.parse(base_content)
+    payload_doc = tomlkit.parse(payload_content)
 
     executor._deep_merge_tomlkit(base_doc, payload_doc)
 
     merged_dict = base_doc.unwrap()
 
-    assert merged_dict["tool"]["ruff"]["line-length"] == 100
+    # 1. Verify scalar overrides (line-length changed 120 -> 88)
+    assert merged_dict["tool"]["ruff"]["line-length"] == 88
+
+    # 2. Verify non-colliding existing keys were preserved
     assert merged_dict["tool"]["ruff"]["target-version"] == "py310"
+    assert merged_dict["project"]["name"] == "protostar-test"
+
+    # 3. Verify nested list replacements
+    assert "UP" in merged_dict["tool"]["ruff"]["lint"]["select"]
+    assert merged_dict["tool"]["ruff"]["lint"]["ignore"] == []
+
+    # 4. Verify new root tables were injected
     assert merged_dict["tool"]["mypy"]["strict"] is True
 
+    # 5. Verify Array of Tables (AoT) concatenation (MERGE strategy default behavior)
+    assert len(merged_dict["tool"]["mypy"]["overrides"]) == 2
+    assert merged_dict["tool"]["mypy"]["overrides"][0]["module"] == "tests.*"
+    assert merged_dict["tool"]["mypy"]["overrides"][1]["module"] == "legacy_module.*"
+
+    # 6. Verify comments survived the AST manipulation
     dumped = tomlkit.dumps(base_doc)
-    assert "# Keep this comment" in dumped
+    assert "# We expect this comment to survive the merge" in dumped
+    assert "# A random comment inside an array" in dumped
 
 
 def test_executor_append_files_ast_merge(mocker, mock_config):
     """Test that _append_files mutates the TOML AST logically based on the MERGE strategy."""
+    base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
+    payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
+
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
-    manifest.add_file_append("pyproject.toml", "[tool.ruff]\nline-length = 88\n")
+    manifest.add_file_append("pyproject.toml", payload_content)
     executor = SystemExecutor(manifest, mock_config)
 
-    existing_content = (
-        "# My file\n[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\n"
-    )
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
+    mocker.patch("protostar.executor.Path.read_text", return_value=base_content)
+
+    # mock_open needs to return the pyproject string to resolve the python version
+    mock_file = mocker.mock_open(read_data=base_content.encode("utf-8"))
+    mocker.patch("protostar.executor.Path.open", mock_file)
+
     mock_write = mocker.patch("protostar.executor.Path.write_text")
 
     executor._append_files()
     written_data = mock_write.call_args[0][0]
 
-    assert "# My file" in written_data
-    assert "[tool.mypy]" in written_data
-    assert "strict = true" in written_data
-    assert "[tool.ruff]" in written_data
-    assert "line-length = 88" in written_data
-    assert "line-length = 120" not in written_data
+    parsed_toml = tomllib.loads(written_data)
+
+    # Verify structural merge logic via the AST
+    assert parsed_toml["tool"]["mypy"]["strict"] is True
+    assert parsed_toml["tool"]["ruff"]["line-length"] == 88
+    assert parsed_toml["tool"]["ruff"]["target-version"] == "py310"  # Preserved!
+
+    # Verify the late-binding variable {{PYTHON_VERSION}} was interpolated correctly
+    # based on the `requires-python = ">=3.11"` in base_complex.toml
+    assert parsed_toml["tool"]["mypy"]["python_version"] == "3.11"
 
 
 def test_executor_append_files_ast_overwrite(mocker, mock_config):
     """Test that the OVERWRITE strategy completely replaces colliding TOML tables."""
+    base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
+    payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
+
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    manifest.add_file_append("pyproject.toml", "[tool.ruff]\nline-length = 88\n")
+    manifest.add_file_append("pyproject.toml", payload_content)
     executor = SystemExecutor(manifest, mock_config)
 
-    existing_content = '[tool.mypy]\nstrict = true\n\n[tool.ruff]\nline-length = 120\ntarget-version = "py310"\n'
-
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
+    mocker.patch("protostar.executor.Path.read_text", return_value=base_content)
+
+    mock_file = mocker.mock_open(read_data=base_content.encode("utf-8"))
+    mocker.patch("protostar.executor.Path.open", mock_file)
+
     mock_write = mocker.patch("protostar.executor.Path.write_text")
 
     executor._append_files()
 
     written_data = mock_write.call_args[0][0]
+    parsed_toml = tomllib.loads(written_data)
 
-    assert "[tool.mypy]" in written_data
-    assert "strict = true" in written_data
-    assert "line-length = 120" not in written_data
-    assert 'target-version = "py310"' not in written_data
-    assert "[tool.ruff]" in written_data
-    assert "line-length = 88" in written_data
+    # Verify the table was entirely replaced in the AST, not just merged
+    assert parsed_toml["tool"]["mypy"]["strict"] is True
+    assert parsed_toml["tool"]["ruff"]["line-length"] == 88
+
+    # Under OVERWRITE, target-version should have been purged because it existed
+    # in the old [tool.ruff] table but not in the payload [tool.ruff] table.
+    assert "target-version" not in parsed_toml["tool"]["ruff"]
+
+    # Under OVERWRITE, the original [[tool.mypy.overrides]] should be wiped
+    assert len(parsed_toml["tool"]["mypy"]["overrides"]) == 1
+    assert parsed_toml["tool"]["mypy"]["overrides"][0]["module"] == "legacy_module.*"
 
 
 def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_config):

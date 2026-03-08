@@ -154,8 +154,27 @@ class SystemExecutor:
     def _deep_merge_tomlkit(
         self, base: Any, payload: Any, overwrite: bool = False
     ) -> None:
-        """Recursively deep-merges a tomlkit payload into a base document."""
+        """Recursively deep-merges a tomlkit payload into a base document.
+
+        Args:
+            base: The existing tomlkit document or table to mutate.
+            payload: The incoming tomlkit table to merge into the base.
+            overwrite: If True, unmatched scalar keys in the base will be purged,
+                and array-of-tables will be completely replaced.
+        """
         import tomlkit.items
+
+        # Purge scalar/array keys in base that are missing from the payload
+        # to enforce strict AST overwriting, while preserving sibling tables.
+        if overwrite:
+            keys_to_remove = []
+            for b_key, b_val in base.items():
+                if b_key not in payload and not isinstance(
+                    b_val, (tomlkit.items.Table, tomlkit.items.AoT)
+                ):
+                    keys_to_remove.append(b_key)
+            for k in keys_to_remove:
+                del base[k]
 
         for key, value in payload.items():
             if key in base:
@@ -172,6 +191,9 @@ class SystemExecutor:
                         isinstance(v, (tomlkit.items.Table, tomlkit.items.AoT))
                         for v in value.values()
                     )
+
+                    # If the payload table has no nested tables, we can safely overwrite
+                    # it in its entirety. Otherwise, we must recurse to protect sibling tables.
                     if overwrite and not has_sub_tables:
                         base[key] = value
                     else:
