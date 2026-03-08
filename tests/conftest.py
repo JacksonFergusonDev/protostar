@@ -58,3 +58,15 @@ def run_cli(
         return result.returncode, result.stdout, result.stderr, tmp_path
 
     return _execute
+
+
+@pytest.fixture
+def seed_global_config(tmp_path: Path) -> Callable[[str], None]:
+    """Dynamically seeds the sandboxed global configuration for integration tests."""
+
+    def _seed(toml_content: str) -> None:
+        config_dir = tmp_path / ".config" / "protostar"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        (config_dir / "config.toml").write_text(toml_content)
+
+    return _seed
