@@ -223,7 +223,7 @@ def test_virtual_env_isolation(run_cli, monkeypatch):
 
 
 def test_crash_reporter_e2e(run_cli):
-    """Verifies the hidden crash flag triggers a URL-encoded Rich hyperlink in the terminal."""
+    """Verifies the hidden crash flag triggers a clean telemetry message in the terminal."""
     code, stdout, stderr, _ = run_cli("init", "--python", "--crash-test")
 
     # Ensure it hard-fails
@@ -232,9 +232,4 @@ def test_crash_reporter_e2e(run_cli):
 
     # Assert structural integrity of the crash telemetry UI
     assert "CRITICAL FAILURE:" in output
-    assert "TypeError" in output
-    assert "INTENTIONAL_CRASH" in output
-    assert (
-        "[link=https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body="
-        in output
-    )
+    assert "Click here to open a GitHub issue with your telemetry" in output

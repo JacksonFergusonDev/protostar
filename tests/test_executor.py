@@ -892,3 +892,21 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
     ]
 
     assert actual_calls == expected_call_order
+
+
+def test_executor_execute_post_install_tasks(mocker, mock_config):
+    """Test that _execute_post_install_tasks iterates and calls execute_subprocess."""
+    manifest = EnvironmentManifest()
+    manifest.add_post_install_task(["echo", "first_task"])
+    manifest.add_post_install_task(["echo", "second_task"])
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+
+    executor._execute_post_install_tasks()
+
+    # Verify the loop iterated correctly and passed the commands to the system wrapper
+    assert mock_execute.call_count == 2
+    mock_execute.assert_any_call(["echo", "first_task"])
+    mock_execute.assert_any_call(["echo", "second_task"])
