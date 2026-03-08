@@ -51,8 +51,14 @@ test-cov: ## Run the full automated testing matrix with coverage
 	uv run pytest --cov
 
 test-benchmark:
-	@echo "Running Hyperfine benchmarks..."
+	@echo "Running Quicker Hyperfine benchmarks..."
 	@hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
+		'.venv/bin/protostar help init' \
+		'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
+
+test-benchmark-slower:
+	@echo "Running Slower Hyperfine benchmarks..."
+	@hyperfine --warmup 30 --runs 90 --export-json benchmark.json \
 		'.venv/bin/protostar help init' \
 		'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
 

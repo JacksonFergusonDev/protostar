@@ -3,7 +3,6 @@
 [![CI](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
 [![Release](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![codecov](https://codecov.io/gh/JacksonFergusonDev/protostar/graph/badge.svg?token=VIR3EZDXRN)](https://codecov.io/gh/JacksonFergusonDev/protostar)
-[![Performance](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/JacksonFergusonDev/protostar/performance-benchmarks/latency-badge.json)](https://jacksonfergusondev.github.io/protostar/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -29,12 +28,13 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 Protostar is built to be lightweight, so Python's startup overhead never slows down your local development. We measure initialization latency using two benchmarking approaches:
 
-1. **Fast-Path Execution (Sub-3ms):** Measures the latency of non-interactive commands (e.g., `--help`, `config`). This validates the efficiency of our `argparse` configuration and dynamic module resolution.
-1. **TUI-Path Execution (Sub-3ms):** Measures the overhead of triggering the interactive `questionary` wizards. This ensures that even when heavy TUI dependencies are dynamically imported, the "time-to-first-prompt" remains imperceptible.
+1. **Fast-Path Execution:** Measures the latency of non-interactive commands (e.g., `protostar help init`). This validates the efficiency of our `argparse` configuration and dynamic module resolution. Tested locally on a MacBook Air M3, this path executes in **83.7 ms ± 8.5 ms**.
 
-Our CI pipeline enforces a strict performance budget, gating any PR that introduces significant regressions in either path.
+1. **TUI-Path Execution:** Measures the overhead of triggering the interactive `questionary` wizards. This ensures that even when heavy TUI dependencies are dynamically imported, the "time-to-first-prompt" remains imperceptible. Tested locally on a MacBook Air M3, this path executes in **83.7 ms ± 8.5 ms**.
 
-- **View Live Trends:** [Performance Dashboard](https://jacksonfergusondev.github.io/protostar/)
+Our CI pipeline enforces a strict performance budget using `hyperfine`, gating any PR that introduces significant regressions in either path. We maintain historical tracking to ensure long-term architectural stability rather than chasing absolute CI metrics (which are subject to heavy VM variance).
+
+- **View CI Trends:** [Performance Dashboard](https://jacksonfergusondev.github.io/protostar/)
 
 ---
 
