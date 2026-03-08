@@ -69,15 +69,14 @@ class Orchestrator:
                 )
                 self.manifest.collision_strategy = CollisionStrategy.MERGE
                 return
-            else:
-                console.print(
-                    "\n[bold red]Collision Detected:[/bold red] The target environment is not empty."
-                )
-                console.print(
-                    "Aborting to prevent destructive mutations in a non-interactive context.\n"
-                    "Use the [bold cyan]--force[/bold cyan] flag to bypass this check and merge safely."
-                )
-                sys.exit(1)
+            console.print(
+                "\n[bold red]Collision Detected:[/bold red] The target environment is not empty."
+            )
+            console.print(
+                "Aborting to prevent destructive mutations in a non-interactive context.\n"
+                "Use the [bold cyan]--force[/bold cyan] flag to bypass this check and merge safely."
+            )
+            sys.exit(1)
 
         import questionary
         from questionary import Choice

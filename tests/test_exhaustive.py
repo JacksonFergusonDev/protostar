@@ -57,10 +57,8 @@ def test_preset_orthogonality(run_cli, preset_pair):
 def test_malformed_cli_arguments(run_cli):
     """Verifies the CLI parser intercepts invalid boundaries and returns non-zero codes."""
     # Pass a genuinely unrecognized flag to guarantee argparse terminates with >0
-    code, stdout, stderr, _ = run_cli("init", "--this-flag-is-completely-invalid")
+    code, *_ = run_cli("init", "--this-flag-is-completely-invalid")
     assert code != 0
 
-    code_gen, stdout_gen, stderr_gen, _ = run_cli(
-        "generate", "unknown_target", "TestName"
-    )
+    code_gen, *_ = run_cli("generate", "unknown_target", "TestName")
     assert code_gen != 0

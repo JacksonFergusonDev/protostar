@@ -20,6 +20,6 @@ PRESETS: tuple[PresetModule, ...] = (
 )
 
 __all__ = [
-    "PresetModule",
     "PRESETS",
+    "PresetModule",
 ]

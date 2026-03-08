@@ -143,7 +143,7 @@ class ProtostarConfig:
     #      keeping it warm. Every subcommand pays this cost.
     #
     #   3. Binary dependency: pydantic-core is a compiled Rust extension
-    #      (~2–4MB, platform-specific wheel). This complicates installs in
+    #      (~2-4MB, platform-specific wheel). This complicates installs in
     #      minimal or unusual environments and feels disproportionate for
     #      validating a handful of config fields written by the tool's own user.
     #

@@ -8,12 +8,13 @@ import subprocess
 import sys
 import types
 from collections.abc import Iterable
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 import argcomplete
 from rich import box
 from rich.console import Console, Group
 from rich.logging import RichHandler
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 from rich_argparse import RawTextRichHelpFormatter
@@ -308,7 +309,7 @@ class ProtoHelpFormatter(RawTextRichHelpFormatter):
     """
 
     # Establish global syntactic styling identifiers
-    styles = {
+    styles: ClassVar[dict[str, str | Style]] = {
         "argparse.args": "cyan",
         "argparse.groups": "bold blue",
         "argparse.help": "default",
