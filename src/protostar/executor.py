@@ -426,7 +426,7 @@ class SystemExecutor:
 
         if self.config.python_package_manager == "uv":
             if self.manifest.dependencies:
-                cmd = ["uv", "add"] + self.manifest.dependencies
+                cmd = ["uv", "add", *self.manifest.dependencies]
                 try:
                     with console.status(
                         f"Resolving and installing {len(self.manifest.dependencies)} dependencies"
@@ -436,7 +436,7 @@ class SystemExecutor:
                     self.warnings.append(f"Standard dependency resolution failed: {e}")
 
             if self.manifest.dev_dependencies:
-                dev_cmd = ["uv", "add", "--dev"] + self.manifest.dev_dependencies
+                dev_cmd = ["uv", "add", "--dev", *self.manifest.dev_dependencies]
                 try:
                     with console.status(
                         f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
@@ -450,7 +450,7 @@ class SystemExecutor:
             venv_pip = Path(".venv/bin/pip")
             pip_cmd = str(venv_pip) if venv_pip.exists() else "pip"
             all_deps = self.manifest.dependencies + self.manifest.dev_dependencies
-            cmd = [pip_cmd, "install"] + all_deps
+            cmd = [pip_cmd, "install", *all_deps]
 
             try:
                 with console.status(

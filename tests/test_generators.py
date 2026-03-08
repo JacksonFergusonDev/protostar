@@ -115,7 +115,7 @@ def test_circuitpython_generator_aborts_on_existing_file(mocker, mock_config):
     mocker.patch("protostar.generators.embedded.Path.exists", return_value=True)
 
     generator = CircuitPythonGenerator()
-    with pytest.raises(FileExistsError, match="code.py already exists"):
+    with pytest.raises(FileExistsError, match=r"code\.py already exists"):
         generator.execute(None, mock_config)
 
 
@@ -131,7 +131,7 @@ def test_pio_generator_aborts_on_existing_file(mocker, mock_config):
     mocker.patch("protostar.generators.embedded.Path.exists", return_value=True)
 
     generator = PlatformIOGenerator()
-    with pytest.raises(FileExistsError, match="platformio.ini already exists"):
+    with pytest.raises(FileExistsError, match=r"platformio\.ini already exists"):
         generator.execute("esp32dev", mock_config)
 
 

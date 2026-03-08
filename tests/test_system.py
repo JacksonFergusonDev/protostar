@@ -47,6 +47,6 @@ def test_execute_subprocess_uv_python_error_hint(mocker):
 
     with pytest.raises(
         RuntimeError,
-        match="uv.*encountered an error resolving the requested Python version",
+        match=r"uv.*encountered an error resolving the requested Python version",
     ):
         execute_subprocess(["uv", "init"])
