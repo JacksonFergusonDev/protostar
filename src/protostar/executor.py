@@ -270,7 +270,7 @@ class SystemExecutor:
 
         # 3. Protostar config or hardcoded default
         if not python_version:
-            python_version = self.config.python_version or "3.12"
+            python_version = self.config.python_version or "3.13"
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
