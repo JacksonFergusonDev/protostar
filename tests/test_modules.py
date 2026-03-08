@@ -4,7 +4,9 @@ import pytest
 
 from protostar.config import ProtostarConfig
 from protostar.modules import (
+    CppModule,
     DirenvModule,
+    LatexModule,
     LinuxModule,
     MacOSModule,
     MarkdownLintModule,
@@ -13,6 +15,7 @@ from protostar.modules import (
     PytestModule,
     PythonModule,
     RuffModule,
+    RustModule,
     VSCodeModule,
 )
 from protostar.modules.tooling_layer import PreCommitModule
@@ -259,3 +262,86 @@ def test_linux_module_properties_and_build(manifest):
     mod.build(manifest)
     assert "*~" in manifest.vcs_ignores
     assert "*~" in manifest.workspace_hides
+
+
+def test_python_module_pre_flight_missing_uv(mocker):
+    """Test PythonModule aborts pre-flight if uv is missing."""
+    mod = PythonModule(package_manager="uv")
+    mocker.patch("shutil.which", return_value=None)
+
+    with pytest.raises(RuntimeError, match="Missing dependency: 'uv' is required"):
+        mod.pre_flight()
+
+
+def test_python_module_pre_flight_missing_pip(mocker):
+    """Test PythonModule aborts pre-flight if python/python3 are missing."""
+    mod = PythonModule(package_manager="pip")
+    mocker.patch("shutil.which", return_value=None)
+
+    with pytest.raises(RuntimeError, match="Missing dependency: 'python' is required"):
+        mod.pre_flight()
+
+
+def test_rust_module_pre_flight_missing_cargo(mocker):
+    """Test RustModule aborts pre-flight if cargo is missing."""
+    mod = RustModule()
+    mocker.patch("shutil.which", return_value=None)
+
+    with pytest.raises(RuntimeError, match="Missing dependency: 'cargo' is required"):
+        mod.pre_flight()
+
+
+def test_rust_module_collision_markers():
+    """Test RustModule defines Cargo.toml as a collision marker."""
+    mod = RustModule()
+    assert Path("Cargo.toml") in mod.collision_markers
+
+
+def test_rust_module_build(manifest, mocker):
+    """Test RustModule queues the correct build artifacts and git hooks."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+    mod = RustModule()
+    mod.build(manifest)
+
+    assert "target/" in manifest.vcs_ignores
+    assert "target/" in manifest.workspace_hides
+    assert ["cargo", "init"] in manifest.system_tasks
+    assert any("id: clippy" in hook for hook in manifest.pre_commit_hooks)
+
+
+def test_node_module_pre_flight_missing_manager(mocker):
+    """Test NodeModule aborts pre-flight if the package manager is missing."""
+    mod = NodeModule(package_manager="yarn")
+    mocker.patch("shutil.which", return_value=None)
+
+    with pytest.raises(RuntimeError, match="Missing dependency: 'yarn' is required"):
+        mod.pre_flight()
+
+
+def test_node_module_build_npm_y_flag(manifest, mocker):
+    """Test NodeModule automatically appends the -y flag when using npm."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+    mod = NodeModule(package_manager="npm")
+    mod.build(manifest)
+
+    assert ["npm", "init", "-y"] in manifest.system_tasks
+
+
+def test_cpp_module_build(manifest):
+    """Test CppModule queues the correct build artifacts and git hooks."""
+    mod = CppModule()
+    mod.build(manifest)
+
+    assert "build/" in manifest.vcs_ignores
+    assert "*.o" in manifest.vcs_ignores
+    assert any("id: clang-format" in hook for hook in manifest.pre_commit_hooks)
+
+
+def test_latex_module_build(manifest):
+    """Test LatexModule queues the correct build artifacts and git hooks."""
+    mod = LatexModule()
+    mod.build(manifest)
+
+    assert "*.aux" in manifest.vcs_ignores
+    assert "*.synctex.gz" in manifest.workspace_hides
+    assert any("id: tex-fmt" in hook for hook in manifest.pre_commit_hooks)
