@@ -70,7 +70,7 @@ class DirenvModule(BootstrapModule):
         )
 
         manifest.add_file_injection(".envrc", content)
-        manifest.add_system_task(["direnv", "allow"])
+        manifest.add_post_install_task(["direnv", "allow"])
 
 
 class MarkdownLintModule(BootstrapModule):
@@ -328,5 +328,11 @@ class PreCommitModule(BootstrapModule):
         if not Path(".git").exists():
             manifest.add_system_task(["git", "init"])
 
-        manifest.add_system_task(["pre-commit", "install"])
-        manifest.add_system_task(["pre-commit", "autoupdate"])
+        # Dynamically evaluate the active package manager to route the binary execution
+        config = ProtostarConfig.load()
+        if config.python_package_manager == "uv":
+            manifest.add_post_install_task(["uv", "run", "pre-commit", "install"])
+            manifest.add_post_install_task(["uv", "run", "pre-commit", "autoupdate"])
+        else:
+            manifest.add_post_install_task([".venv/bin/pre-commit", "install"])
+            manifest.add_post_install_task([".venv/bin/pre-commit", "autoupdate"])

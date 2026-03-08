@@ -51,6 +51,7 @@ class SystemExecutor:
         self._write_docker_artifacts()
         self._write_ide_settings()
         self._install_dependencies()
+        self._execute_post_install_tasks()
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.
@@ -148,6 +149,12 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
+            with console.status(f"Executing {task[0]}"):
+                execute_subprocess(task)
+
+    def _execute_post_install_tasks(self) -> None:
+        """Runs accumulated tasks that require dependencies to be installed first."""
+        for task in self.manifest.post_install_tasks:
             with console.status(f"Executing {task[0]}"):
                 execute_subprocess(task)
 

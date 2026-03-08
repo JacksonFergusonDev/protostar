@@ -195,7 +195,10 @@ class Orchestrator:
             console.print(
                 "This looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
             )
-            console.print(f"[bold cyan]{issue_url}[/bold cyan]")
+            # Render via Rich's OSC 8 link syntax
+            console.print(
+                f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
+            )
 
             logger.debug("Stack trace:", exc_info=True)
             sys.exit(1)
