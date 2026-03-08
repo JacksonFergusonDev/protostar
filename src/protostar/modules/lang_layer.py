@@ -57,7 +57,7 @@ class PythonModule(BootstrapModule):
                 "Missing dependency: 'uv' is required for Python scaffolding. "
                 "Install it via `curl -LsSf https://astral.sh/uv/install.sh | sh`."
             )
-        elif self.package_manager == "pip" and not (
+        if self.package_manager == "pip" and not (
             shutil.which("python3") or shutil.which("python")
         ):
             raise RuntimeError(

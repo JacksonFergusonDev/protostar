@@ -31,17 +31,17 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
 )
 
 __all__ = [
+    "LANG_MODULES",
+    "TOOLING_MODULES",
     "BootstrapModule",
-    "MacOSModule",
-    "LinuxModule",
-    "VSCodeModule",
-    "JetBrainsModule",
-    "PythonModule",
     "DirenvModule",
-    "RuffModule",
+    "JetBrainsModule",
+    "LinuxModule",
+    "MacOSModule",
     "MypyModule",
     "PreCommitModule",
     "PytestModule",
-    "LANG_MODULES",
-    "TOOLING_MODULES",
+    "PythonModule",
+    "RuffModule",
+    "VSCodeModule",
 ]
