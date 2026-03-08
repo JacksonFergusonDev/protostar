@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"] # Expanding the lint rules
+ignore = []
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+python_version = "{{PYTHON_VERSION}}"
+
+[[tool.mypy.overrides]]
+module = "legacy_module.*"
+ignore_missing_imports = true

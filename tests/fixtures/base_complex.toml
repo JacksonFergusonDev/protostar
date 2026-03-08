@@ -1,0 +1,25 @@
+[project]
+name = "protostar-test"
+version = "0.1.0"
+description = "A messy baseline TOML file"
+authors = [
+    { name = "Test User", email = "test@example.com" } # Inline table
+]
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "numpy", # A random comment inside an array
+]
+
+[tool.ruff]
+line-length = 120 # Overly long default
+target-version = "py310"
+ignore = ["E501"]
+
+# We expect this comment to survive the merge
+[tool.ruff.lint]
+select = ["E", "F"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
