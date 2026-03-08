@@ -53,8 +53,8 @@ test-cov: ## Run the full automated testing matrix with coverage
 test-benchmark:
 	@echo "Running Hyperfine benchmarks..."
 	@hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
-		'protostar help init' \
-		'PROTOSTAR_BENCHMARK_WIZARD=1 protostar init'
+		'.venv/bin/protostar help init' \
+		'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
 
 test-cov-report: ## Generate detailed coverage reports
 	$(call PRINT_STAGE, Generating Coverage Reports)
