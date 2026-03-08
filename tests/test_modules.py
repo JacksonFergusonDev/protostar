@@ -5,6 +5,7 @@ import pytest
 from protostar.config import ProtostarConfig
 from protostar.modules import (
     DirenvModule,
+    LinuxModule,
     MacOSModule,
     MarkdownLintModule,
     MypyModule,
@@ -242,3 +243,19 @@ def test_tooling_module_collision_markers():
     assert Path(".envrc") in DirenvModule().collision_markers
     assert Path(".markdownlint.yaml") in MarkdownLintModule().collision_markers
     assert Path(".pre-commit-config.yaml") in PreCommitModule().collision_markers
+
+
+def test_macos_module_properties():
+    """Test the macOS module defines its UI name correctly."""
+    mod = MacOSModule()
+    assert mod.name == "macOS"
+
+
+def test_linux_module_properties_and_build(manifest):
+    """Test the Linux module defines its UI name and applies temporary file ignores."""
+    mod = LinuxModule()
+    assert mod.name == "Linux"
+
+    mod.build(manifest)
+    assert "*~" in manifest.vcs_ignores
+    assert "*~" in manifest.workspace_hides
