@@ -149,13 +149,13 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            with console.status(f"Executing {task[0]}"):
+            with console.status(f"Propelling sequence: {task[0]}"):
                 execute_subprocess(task)
 
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
-            with console.status(f"Executing {task[0]}"):
+            with console.status(f"Propelling sequence: {task[0]}"):
                 execute_subprocess(task)
 
     def _deep_merge_tomlkit(
@@ -436,7 +436,7 @@ class SystemExecutor:
                 cmd = ["uv", "add", *self.manifest.dependencies]
                 try:
                     with console.status(
-                        f"Resolving and installing {len(self.manifest.dependencies)} dependencies"
+                        f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
                     ):
                         execute_subprocess(cmd)
                 except RuntimeError as e:
