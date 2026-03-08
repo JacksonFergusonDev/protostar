@@ -182,3 +182,54 @@ def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path):
     )
     assert "line-length = 150" not in final_content, "Failed to purge old state"
     assert "line-length = 88" in final_content, "Failed to inject new state"
+
+
+@pytest.mark.skipif(
+    shutil.which("uv") is None or shutil.which("git") is None,
+    reason="uv and git executables required for pre-commit lifecycle",
+)
+def test_pre_commit_lifecycle_integration(run_cli):
+    """Verifies that pre-commit can be successfully installed and updated post-dependency resolution."""
+    code, stdout, stderr, workspace = run_cli(
+        "init", "--python", "--python-version", "3.12", "--pre-commit"
+    )
+
+    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+
+    assert (workspace / ".git").exists(), "Git was not initialized"
+    assert (workspace / ".pre-commit-config.yaml").exists(), "Pre-commit config missing"
+    assert (workspace / ".git" / "hooks" / "pre-commit").exists(), (
+        "Pre-commit binary failed to map git hooks"
+    )
+
+
+@pytest.mark.skipif(shutil.which("direnv") is None, reason="direnv executable required")
+def test_direnv_lifecycle_integration(run_cli):
+    """Verifies direnv shell commands execute without crashing in the post-install phase."""
+    code, stdout, stderr, workspace = run_cli("init", "--python", "--direnv")
+
+    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+    assert (workspace / ".envrc").exists()
+
+
+def test_virtual_env_isolation(run_cli, monkeypatch):
+    """Verifies Protostar correctly executes even if the parent shell has an active virtual environment."""
+    monkeypatch.setenv("VIRTUAL_ENV", "/fake/parent/venv")
+
+    code, _, stderr, workspace = run_cli("init", "--python", "--python-version", "3.12")
+
+    assert code == 0, f"Failed execution with parent VIRTUAL_ENV set.\nSTDERR: {stderr}"
+    assert (workspace / "pyproject.toml").exists()
+
+
+def test_crash_reporter_e2e(run_cli):
+    """Verifies the hidden crash flag triggers a clean telemetry message in the terminal."""
+    code, stdout, stderr, _ = run_cli("init", "--python", "--crash-test")
+
+    # Ensure it hard-fails
+    assert code == 1
+    output = stdout + stderr
+
+    # Assert structural integrity of the crash telemetry UI
+    assert "CRITICAL FAILURE:" in output
+    assert "Click here to open a GitHub issue with your telemetry" in output

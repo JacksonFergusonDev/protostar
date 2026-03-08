@@ -26,6 +26,15 @@ jobs:
         cache-dependency-glob: "uv.lock"
         python-version: ${{ matrix.python-version }}
 
+    - name: Install system tools (direnv)
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y direnv
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install direnv
+        fi
+      shell: bash
+
     - name: Install dependencies
       run: uv sync --group ci
 

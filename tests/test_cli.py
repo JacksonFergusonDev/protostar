@@ -495,3 +495,51 @@ def test_main_value_error_handling(mocker):
     with pytest.raises(SystemExit):
         main()
     mock_exit.assert_called_once_with(1)
+
+
+def test_handle_init_crash_test_injection(mocker):
+    """Test that the --crash-test flag injects the CrashModule and its methods work."""
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch("protostar.cli.get_os_module")
+    mocker.patch("protostar.cli.get_ide_module", return_value=None)
+
+    # Simulate running `protostar init -p --crash-test`
+    args = argparse.Namespace(
+        PythonModule=True,  # Required to bypass the 'no language' abort
+        RustModule=False,
+        NodeModule=False,
+        CppModule=False,
+        LatexModule=False,
+        docker=False,
+        DirenvModule=False,
+        MarkdownLintModule=False,
+        RuffModule=False,
+        MypyModule=False,
+        PytestModule=False,
+        PreCommitModule=False,
+        python_version=None,
+        crash_test=True,  # Trigger the injection
+    )
+
+    handle_init(args)
+
+    # Extract the modules list passed to the Orchestrator
+    modules = mock_orchestrator.call_args[0][0]
+
+    # Find the dynamically generated CrashModule instance
+    crash_mod = next(
+        (m for m in modules if m.__class__.__name__ == "CrashModule"), None
+    )
+    assert crash_mod is not None, (
+        "CrashModule was not injected into the execution stack."
+    )
+
+    # Manually trigger the methods to satisfy coverage
+    assert crash_mod.name == "CrashTest"
+
+    # build() should return implicitly without throwing
+    crash_mod.build(None)
+
+    # pre_flight() should trigger our intentional exception
+    with pytest.raises(TypeError, match="INTENTIONAL_CRASH"):
+        crash_mod.pre_flight()

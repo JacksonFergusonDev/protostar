@@ -848,3 +848,65 @@ def test_executor_writes_vscode_settings_root_not_dict(
         in mock_print.call_args[0][0]
     )
     assert settings_file.read_text() == '["I am an array, not a dictionary"]'
+
+
+def test_executor_lifecycle_ordering(mocker, mock_config):
+    """Test that the executor strictly adheres to the execution DAG order."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    # Use a parent mock to track chronological execution sequence across methods
+    manager = mocker.Mock()
+
+    manager.attach_mock(mocker.patch.object(executor, "_execute_tasks"), "sys_tasks")
+    manager.attach_mock(
+        mocker.patch.object(executor, "_install_dependencies"), "install"
+    )
+    manager.attach_mock(
+        mocker.patch.object(executor, "_execute_post_install_tasks"), "post_install"
+    )
+
+    # Silence all other disk I/O mutations
+    mocker.patch.object(executor, "_validate_targets")
+    mocker.patch.object(executor, "_create_directories")
+    mocker.patch.object(executor, "_write_injected_files")
+    mocker.patch.object(executor, "_write_pre_commit_config")
+    mocker.patch.object(executor, "_append_files")
+    mocker.patch.object(executor, "_write_ignores")
+    mocker.patch.object(executor, "_write_docker_artifacts")
+    mocker.patch.object(executor, "_write_ide_settings")
+
+    executor.execute()
+
+    # Filter calls to isolate our specific topological phases
+    actual_calls = [
+        call
+        for call in manager.mock_calls
+        if call[0] in ("sys_tasks", "install", "post_install")
+    ]
+
+    expected_call_order = [
+        mocker.call.sys_tasks(),
+        mocker.call.install(),
+        mocker.call.post_install(),
+    ]
+
+    assert actual_calls == expected_call_order
+
+
+def test_executor_execute_post_install_tasks(mocker, mock_config):
+    """Test that _execute_post_install_tasks iterates and calls execute_subprocess."""
+    manifest = EnvironmentManifest()
+    manifest.add_post_install_task(["echo", "first_task"])
+    manifest.add_post_install_task(["echo", "second_task"])
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+
+    executor._execute_post_install_tasks()
+
+    # Verify the loop iterated correctly and passed the commands to the system wrapper
+    assert mock_execute.call_count == 2
+    mock_execute.assert_any_call(["echo", "first_task"])
+    mock_execute.assert_any_call(["echo", "second_task"])

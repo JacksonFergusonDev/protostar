@@ -268,6 +268,22 @@ def handle_init(args: argparse.Namespace) -> None:
         if is_active:
             modules.append(mod)
 
+    # 6. Undocumented Crash Test Injection
+    if getattr(args, "crash_test", False):
+
+        class CrashModule(BootstrapModule):
+            @property
+            def name(self) -> str:
+                return "CrashTest"
+
+            def pre_flight(self) -> None:
+                raise TypeError("INTENTIONAL_CRASH")
+
+            def build(self, manifest: Any) -> None:
+                pass
+
+        modules.append(CrashModule())
+
     # Execute
     engine = Orchestrator(
         modules,
@@ -461,6 +477,12 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         epilog="[bold]Example:[/bold]\n  protostar init --python --astro --mypy",
+    )
+
+    init_parser.add_argument(
+        "--crash-test",
+        action="store_true",
+        help=argparse.SUPPRESS,
     )
 
     # Dynamically mount Language flags

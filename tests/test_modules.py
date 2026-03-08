@@ -178,7 +178,8 @@ def test_direnv_module_build_uv(manifest, mocker):
     assert ".envrc.local" in manifest.vcs_ignores
     assert ".envrc" in manifest.file_injections
     assert "uv sync" in manifest.file_injections[".envrc"]
-    assert ["direnv", "allow"] in manifest.system_tasks
+
+    assert ["direnv", "allow"] in manifest.post_install_tasks
 
 
 def test_markdownlint_module_build(manifest, mocker):
@@ -206,24 +207,34 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
     """Test that PreCommitModule queues git init when no .git directory exists."""
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
 
+    # Mock config to test the 'uv' routing path
+    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
     mod = PreCommitModule()
     mod.build(manifest)
 
     assert manifest.wants_pre_commit is True
     assert "pre-commit" in manifest.dev_dependencies
     assert ["git", "init"] in manifest.system_tasks
-    assert ["pre-commit", "install"] in manifest.system_tasks
+
+    assert ["uv", "run", "pre-commit", "install"] in manifest.post_install_tasks
 
 
 def test_pre_commit_module_build_skips_git_init(manifest, mocker):
     """Test that PreCommitModule bypasses git init if the repository is already initialized."""
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
 
+    # Mock config to test the 'pip' routing path
+    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
+
     mod = PreCommitModule()
     mod.build(manifest)
 
     assert ["git", "init"] not in manifest.system_tasks
-    assert ["pre-commit", "install"] in manifest.system_tasks
+
+    assert [".venv/bin/pre-commit", "install"] in manifest.post_install_tasks
 
 
 def test_python_module_collision_markers():
