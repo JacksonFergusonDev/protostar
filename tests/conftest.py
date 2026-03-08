@@ -1,4 +1,5 @@
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -26,10 +27,13 @@ def run_cli(
     def _execute(*args: str) -> tuple[int, str, str, Path]:
         monkeypatch.chdir(tmp_path)
 
+        # Force execution via the local python module instead of the global binary
         result = subprocess.run(
-            ["protostar", *args], capture_output=True, text=True, check=False
+            [sys.executable, "-m", "protostar.cli", *args],
+            capture_output=True,
+            text=True,
+            check=False,
         )
-        # Now returning a 4-tuple including stderr
         return result.returncode, result.stdout, result.stderr, tmp_path
 
     return _execute
