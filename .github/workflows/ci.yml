@@ -67,3 +67,84 @@ jobs:
         disable_search: true
         report_type: test_results
         name: test-results-ubuntu-py314
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: benchmark-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        python-version: "3.14"
+
+    - name: Install hyperfine
+      run: |
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y hyperfine
+
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+
+    - name: Run benchmarks
+      run: make test-benchmark
+
+    - name: Generate Latency Badge Data
+      run: |
+        # Hyperfine exports time in seconds; multiply by 1000 for ms
+        MEAN=$(python3 -c "import json; print(json.load(open('benchmark.json'))['results'][0]['mean'])")
+        LATENCY=$(python3 -c "print(round($MEAN * 1000, 2))")
+        echo "{\"schemaVersion\": 1, \"label\": \"latency\", \"message\": \"$LATENCY ms\", \"color\": \"blue\"}" > /tmp/latency-badge.json
+
+    - name: Convert hyperfine output for benchmark action
+      run: |
+        python << 'PY'
+        import json
+
+        data = json.load(open("benchmark.json"))
+        mean_ms = data["results"][0]["mean"] * 1000
+
+        converted = [{
+            "name": "Protostar Initialization Latency",
+            "unit": "ms",
+            "value": round(mean_ms, 2)
+        }]
+
+        json.dump(converted, open("benchmark-gh.json", "w"))
+        PY
+
+    - name: Store benchmark result
+      # Only run on the first attempt to prevent re-run duplications in the graph
+      if: ${{ success() && hashFiles('benchmark.json') != '' }}
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        name: Protostar Initialization Latency
+        tool: 'customSmallerIsBetter'
+        output-file-path: benchmark-gh.json
+        gh-pages-branch: 'performance-benchmarks'
+        benchmark-data-dir-path: './'
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        fail-on-alert: true
+        alert-threshold: '150%'
+        comment-on-alert: true
+        auto-push: ${{ github.ref == 'refs/heads/main' }}
+
+    - name: Push latency badge
+      if: ${{ success() && github.ref == 'refs/heads/main' && hashFiles('benchmark.json') != '' }}
+      run: |
+        git fetch origin performance-benchmarks
+        git checkout performance-benchmarks
+        cp /tmp/latency-badge.json latency-badge.json
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add latency-badge.json
+        git diff --cached --quiet || git commit -m "chore: update latency badge [skip ci]"
+        git push origin performance-benchmarks

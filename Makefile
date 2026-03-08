@@ -50,9 +50,11 @@ test-cov: ## Run the full automated testing matrix with coverage
 	$(call PRINT_STAGE, Executing Testing Matrix With Coverage)
 	uv run pytest --cov
 
-test-benchmark: ## Run performance benchmarks
-	$(call PRINT_STAGE, Executing Performance Benchmarks)
-	uv run pytest tests/test_performance.py --benchmark-only --benchmark-json=benchmark.json
+test-benchmark:
+	@echo "Running Hyperfine benchmarks..."
+	@hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
+		'.venv/bin/protostar help init' \
+		'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
 
 test-cov-report: ## Generate detailed coverage reports
 	$(call PRINT_STAGE, Generating Coverage Reports)
