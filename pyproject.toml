@@ -4,7 +4,8 @@ version = "0.5.0"
 description = "High-velocity, zero-friction environment scaffolding."
 readme = "README.md"
 authors = [
-    { email = "jackson.ferguson0@gmail.com" }
+    { email = "jackson.ferguson0@gmail.com" },
+    { name = "Jackson Ferguson" },
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -28,24 +29,32 @@ classifiers = [
 Repository = "https://github.com/jacksonfergusondev/protostar"
 Issues = "https://github.com/jacksonfergusondev/protostar/issues"
 
+[project.scripts]
+protostar = "protostar.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[project.scripts]
-protostar = "protostar.cli:main"
-
 [dependency-groups]
-dev = [
-    "build>=1.4.0",
-    "bump-my-version>=1.2.6",
+ci = [
     "mypy>=1.19.1",
-    "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "pytest-mock>=3.15.1",
     "ruff>=0.14.13",
 ]
+dev = [
+    { include-group = "ci" },
+    "bump-my-version>=1.2.6",
+    "pre-commit>=4.5.1",
+]
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- ruff ---- #
 
 [tool.ruff]
 target-version = "py312"
@@ -62,7 +71,7 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
+select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D", "RUF", "N", "RET"]
 ignore = [
     "E501",
     "D100",   # Missing docstring in public module
@@ -89,6 +98,8 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
+# ---- mypy ---- #
+
 [tool.mypy]
 python_version = "3.12"
 pretty = true
@@ -103,6 +114,8 @@ ignore_missing_imports = false
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
+
+# ---- pytest ---- #
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
@@ -120,6 +133,10 @@ branch = true
 [tool.coverage.report]
 omit = ["src/protostar/**/__init__.py"]
 show_missing = true
+skip_covered = true
+fail_under = 90
+
+# ---- bump-my-version ---- #
 
 [tool.bumpversion]
 current_version = "0.5.0"
