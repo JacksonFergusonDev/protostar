@@ -50,7 +50,29 @@ def test_python_environment_scaffolding(run_cli, flags, expected_tools):
         )
 
 
-def test_orchestrator_idempotency(run_cli):
+def test_pip_fallback_integration(run_cli, seed_global_config):
+    """Verifies pip package manager gracefully degrades and outputs to requirements.txt."""
+    seed_global_config('[env]\npython_package_manager = "pip"\n')
+
+    code, stdout, stderr, workspace = run_cli(
+        "init", "--python", "--python-version", "3.12", "--ruff"
+    )
+
+    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+    assert (workspace / ".venv").exists()
+
+    req_path = workspace / "requirements.txt"
+    assert req_path.exists(), "pip fallback failed to generate requirements.txt"
+
+    reqs = req_path.read_text().lower()
+    assert "ruff" in reqs, "ruff missing from requirements.txt"
+
+
+def test_orchestrator_idempotency(run_cli, seed_global_config):
+    seed_global_config(
+        '[dev.pyproject]\ncustom_ruff = "[tool.ruff]\\nline-length = 150"\n'
+    )
+
     code1, stdout1, stderr1, workspace = run_cli(
         "init", "--python", "--python-version", "3.12", "--ruff"
     )
@@ -141,8 +163,7 @@ def test_python_version_cohesion_e2e(
     )
 
 
-def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path):
-    """Verifies the complete lifecycle of a TUI collision intercept resulting in an OVERWRITE."""
+def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path, seed_global_config):
     monkeypatch.chdir(tmp_path)
 
     # Strip the pytest environment variable so the Orchestrator doesn't default to MERGE
@@ -152,7 +173,10 @@ def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path):
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text('[project]\nname = "test"\n\n[tool.ruff]\nline-length = 150\n')
 
-    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "mock_config.toml")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    seed_global_config("[system]\nheadless_overwrite = true\n")
+
     mocker.patch("subprocess.run", return_value=MagicMock(returncode=0))
 
     # 2. Mock the interactive environment
@@ -188,10 +212,11 @@ def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path):
     shutil.which("uv") is None or shutil.which("git") is None,
     reason="uv and git executables required for pre-commit lifecycle",
 )
-def test_pre_commit_lifecycle_integration(run_cli):
-    """Verifies that pre-commit can be successfully installed and updated post-dependency resolution."""
+def test_pre_commit_lifecycle_integration(run_cli, seed_global_config):
+    seed_global_config("[env]\npre_commit = true\n")
+
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python", "--python-version", "3.12", "--pre-commit"
+        "init", "--python", "--python-version", "3.12"
     )
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
