@@ -627,8 +627,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     if len(sys.argv) == 1:
         action = run_discovery_wizard()
         if not action:
-            parser.print_help()
-            sys.exit(1)
+            sys.exit(130)
         sys.argv.append(action)
 
     # Intercept parameter-less subcommands for interactive wizards
@@ -638,9 +637,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
         if cmd == "init":
             selections = run_init_wizard()
             if not selections:
-                # Force argparse to dump the subcommand help if wizard is cancelled
-                parser.parse_args(["init", "--help"])
-                sys.exit(1)
+                sys.exit(130)
 
             config = ProtostarConfig.load()
             modules = selections["modules"]
@@ -661,8 +658,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
         elif cmd == "generate":
             selections = run_generate_wizard()
             if not selections:
-                parser.parse_args(["generate", "--help"])
-                sys.exit(1)
+                sys.exit(130)
 
             config = ProtostarConfig.load()
             target_generator = GENERATOR_REGISTRY.get(str(selections["target"]))

@@ -366,29 +366,32 @@ def test_dispatch_help(mocker):
 
 
 def test_intercept_interactive_wizards_cancellations(mocker):
-    """Test that cancelling wizards safely exits the process and prints help."""
+    """Test that cancelling wizards safely exits the process with code 130."""
     parser = mocker.Mock()
 
     # 1. Discovery Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar"])
     mocker.patch("protostar.cli.run_discovery_wizard", return_value=None)
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         intercept_interactive_wizards(parser)
-    parser.print_help.assert_called_once()
+    assert exc_info.value.code == 130
+    parser.print_help.assert_not_called()
 
     # 2. Init Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch("protostar.cli.run_init_wizard", return_value=None)
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         intercept_interactive_wizards(parser)
-    parser.parse_args.assert_called_with(["init", "--help"])
+    assert exc_info.value.code == 130
+    parser.parse_args.assert_not_called()
 
     # 3. Generate Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "generate"])
     mocker.patch("protostar.cli.run_generate_wizard", return_value=None)
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         intercept_interactive_wizards(parser)
-    parser.parse_args.assert_called_with(["generate", "--help"])
+    assert exc_info.value.code == 130
+    parser.parse_args.assert_not_called()
 
 
 def test_intercept_generate_wizard_errors(mocker):
