@@ -759,6 +759,10 @@ def main() -> None:
         # Gracefully handle the TOML syntax errors bubbled up from ProtostarConfig
         console.print(f"\n[bold red]Configuration Error:[/bold red] {e}")
         sys.exit(1)
+    except KeyboardInterrupt:
+        # Catch Ctrl+C cleanly
+        console.print("\n[bold red]Aborted by user.[/bold red]")
+        sys.exit(130)
 
 
 if __name__ == "__main__":
