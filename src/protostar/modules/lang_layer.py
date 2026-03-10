@@ -251,8 +251,8 @@ class LatexModule(BootstrapModule):
         for artifact in artifacts:
             manifest.add_environment_artifact(artifact)
 
-        hook_payload = """  - repo: https://github.com/aarnphm/tex-fmt
-    rev: v0.4.5
+        hook_payload = """  - repo: https://github.com/WGUNDERWOOD/tex-fmt
+    rev: v0.5.6
     hooks:
       - id: tex-fmt"""
         manifest.add_pre_commit_hook(hook_payload)
