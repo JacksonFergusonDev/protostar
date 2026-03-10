@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from protostar.config import ProtostarConfig
 from protostar.modules import LANG_MODULES, TOOLING_MODULES, PythonModule, RuffModule
 from protostar.presets import PRESETS
@@ -99,12 +101,14 @@ def test_benchmark_env_bypasses_tty_check(mocker):
 
 
 def test_run_init_wizard_benchmark_abort(mocker):
-    """Test that the init wizard correctly intercepts the benchmark flag before blocking."""
+    """Test that the init wizard correctly intercepts the benchmark flag and exits cleanly."""
     mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
     mocker.patch.dict(os.environ, {"PROTOSTAR_BENCHMARK_WIZARD": "1"})
 
-    result = run_init_wizard()
-    assert result is None
+    with pytest.raises(SystemExit) as exc_info:
+        run_init_wizard()
+
+    assert exc_info.value.code == 0
 
 
 def test_run_init_wizard_cancellation(mocker):

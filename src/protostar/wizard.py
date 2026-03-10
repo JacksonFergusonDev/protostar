@@ -90,9 +90,9 @@ def run_init_wizard() -> dict[str, Any] | None:
             return "Please select at least one language footprint."
         return True
 
-    # Intercept execution right before blocking the thread
+    # For benchmarking: Intercept execution right before blocking the thread with the prompt
     if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
-        return None
+        sys.exit(0)
 
     selected = questionary.checkbox(
         "Select the components for your new environment:",
