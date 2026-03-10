@@ -546,3 +546,22 @@ def test_handle_init_crash_test_injection(mocker):
     # pre_flight() should trigger our intentional exception
     with pytest.raises(TypeError, match="INTENTIONAL_CRASH"):
         crash_mod.pre_flight()
+
+
+def test_main_keyboard_interrupt_handling(mocker):
+    """Test that a KeyboardInterrupt cleanly exits the application with code 130."""
+    mocker.patch.object(sys, "argv", ["protostar", "init"])
+
+    # Trigger the interrupt early in the main execution block
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards", side_effect=KeyboardInterrupt
+    )
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 130
+    assert any(
+        "Aborted by user." in str(call.args[0]) for call in mock_print.call_args_list
+    )
