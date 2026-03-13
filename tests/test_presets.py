@@ -20,14 +20,43 @@ def test_scientific_preset_build(manifest):
     assert "*.parquet" in manifest.vcs_ignores
 
 
-def test_astro_preset_build(manifest):
-    """Test that the Astro preset injects observational formats."""
+def test_astro_preset_build(manifest, mocker):
+    """Test that the Astro preset injects observational formats and uv nbdime."""
+    mock_config = mocker.patch("protostar.presets.astro.ProtostarConfig.load")
+    mock_config.return_value.python_package_manager = "uv"
+    mocker.patch("protostar.presets.astro.Path.exists", return_value=True)
+
     preset = AstroPreset()
     preset.build(manifest)
 
     assert "photutils" in manifest.dependencies
+    assert "numpy" in manifest.dependencies
+    assert "nbdime" in manifest.dependencies
     assert "data/fits" in manifest.directories
     assert "*.fits" in manifest.vcs_ignores
+    assert ".gitattributes" in manifest.file_injections
+    assert [
+        "uv",
+        "run",
+        "nbdime",
+        "config-git",
+        "--enable",
+    ] in manifest.post_install_tasks
+    assert ["git", "init"] not in manifest.system_tasks
+
+
+def test_astro_preset_build_pip(manifest, mocker):
+    """Test that the Astro preset injects the pip variant of nbdime command."""
+    mock_config = mocker.patch("protostar.presets.astro.ProtostarConfig.load")
+    mock_config.return_value.python_package_manager = "pip"
+    mocker.patch("protostar.presets.astro.Path.exists", return_value=False)
+
+    preset = AstroPreset()
+    preset.build(manifest)
+
+    assert "nbdime" in manifest.dependencies
+    assert [".venv/bin/nbdime", "config-git", "--enable"] in manifest.post_install_tasks
+    assert ["git", "init"] in manifest.system_tasks
 
 
 def test_ml_preset_build(manifest):
