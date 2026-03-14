@@ -246,16 +246,18 @@ def handle_init(args: argparse.Namespace) -> None:
         modules.append(ide_mod)
 
     # 5. Tooling Layers
-    has_python = any(isinstance(m, PythonModule) for m in modules)
+    active_langs = {m.__class__.__name__ for m in modules}
 
     for mod in TOOLING_MODULES:
         is_active = False
 
-        # Evaluate global configuration defaults, ensuring language-specific
-        # tools only activate if their parent language is present in the stack.
-        if getattr(config, mod.config_key, False) and (
-            not mod.requires_python or has_python
-        ):
+        # Check if the tool's requirements intersect with the active language footprint
+        reqs_met = not mod.required_languages or bool(
+            set(mod.required_languages).intersection(active_langs)
+        )
+
+        # Evaluate global configuration defaults
+        if getattr(config, mod.config_key, False) and reqs_met:
             is_active = True
 
         # Explicit CLI flags override local configuration omissions and defaults.
@@ -263,7 +265,17 @@ def handle_init(args: argparse.Namespace) -> None:
         if mod.cli_flags:
             cli_override = getattr(args, mod.__class__.__name__, None)
             if cli_override is not None:
-                is_active = cli_override
+                if cli_override and not reqs_met:
+                    clean_reqs = [
+                        r.replace("Module", "") for r in (mod.required_languages or ())
+                    ]
+                    console.print(
+                        f"[yellow]Warning:[/yellow] Ignoring {mod.name}. "
+                        f"It requires {', '.join(clean_reqs)}."
+                    )
+                    is_active = False
+                else:
+                    is_active = cli_override
 
         if is_active:
             modules.append(mod)
