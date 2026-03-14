@@ -565,3 +565,43 @@ def test_main_keyboard_interrupt_handling(mocker):
     assert any(
         "Aborted by user." in str(call.args[0]) for call in mock_print.call_args_list
     )
+
+
+def test_handle_init_tooling_explicit_override_warning(mocker):
+    """Test that explicitly requested tooling via CLI is ignored if language constraints fail."""
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch("protostar.cli.get_os_module")
+    mocker.patch("protostar.cli.get_ide_module", return_value=None)
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    # Simulate running `protostar init --rust --ruff`
+    # The user is explicitly asking for Ruff on a Rust-only footprint
+    args = argparse.Namespace(
+        RustModule=True,
+        PythonModule=False,
+        NodeModule=False,
+        CppModule=False,
+        LatexModule=False,
+        docker=False,
+        DirenvModule=False,
+        MarkdownLintModule=False,
+        RuffModule=True,  # Explicitly requested
+        MypyModule=False,
+        PytestModule=False,
+        PreCommitModule=False,
+        python_version=None,
+    )
+
+    handle_init(args)
+
+    modules = mock_orchestrator.call_args[0][0]
+
+    # Verify that Ruff was intercepted and dropped from the stack
+    assert not any(isinstance(m, RuffModule) for m in modules)
+
+    # Verify that a clear warning was surfaced to the user
+    printed = " ".join(
+        str(call.args[0]) for call in mock_print.call_args_list if call.args
+    )
+    assert "Ignoring Ruff" in printed
+    assert "requires Python" in printed

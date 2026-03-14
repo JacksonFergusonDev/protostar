@@ -3,7 +3,13 @@ import os
 import pytest
 
 from protostar.config import ProtostarConfig
-from protostar.modules import LANG_MODULES, TOOLING_MODULES, PythonModule, RuffModule
+from protostar.modules import (
+    LANG_MODULES,
+    TOOLING_MODULES,
+    PythonModule,
+    RuffModule,
+    RustModule,
+)
 from protostar.presets import PRESETS
 from protostar.presets.scientific import ScientificPreset
 from protostar.wizard import (
@@ -146,3 +152,40 @@ def test_run_generate_wizard_cancellation_name(mocker):
     mock_text.return_value.ask.return_value = None  # User aborts here (Ctrl+C)
 
     assert run_generate_wizard() is None
+
+
+def test_init_wizard_validation_logic(mocker):
+    """Test that the internal TUI validator catches impossible tooling combinations."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch(
+        "protostar.wizard.ProtostarConfig.load", return_value=ProtostarConfig()
+    )
+
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    # Simulate a cancellation so the function returns immediately after yielding the kwargs
+    mock_checkbox.return_value.ask.return_value = None
+
+    run_init_wizard()
+
+    # Extract the internal validation closure passed to questionary.checkbox
+    validate_fn = mock_checkbox.call_args[1]["validate"]
+
+    python_mod = next(m for m in LANG_MODULES if isinstance(m, PythonModule))
+    rust_mod = next(m for m in LANG_MODULES if isinstance(m, RustModule))
+    ruff_mod = next(m for m in TOOLING_MODULES if isinstance(m, RuffModule))
+
+    # 1. Valid: No tools, just languages
+    assert validate_fn([python_mod]) is True
+
+    # 2. Valid: Tools with correct parent language
+    assert validate_fn([python_mod, ruff_mod]) is True
+
+    # 3. Invalid: Tools with wrong parent language
+    result_conflict = validate_fn([rust_mod, ruff_mod])
+    assert isinstance(result_conflict, str)
+    assert "Conflict: Ruff requires Python" in result_conflict
+
+    # 4. Invalid: Tools with no language selected at all
+    result_no_lang = validate_fn([ruff_mod])
+    assert isinstance(result_no_lang, str)
+    assert "Please select at least one language footprint" in result_no_lang
