@@ -149,14 +149,14 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            with console.status(f"Propelling sequence: {task[0]}"):
-                execute_subprocess(task)
+            with console.status(f"Propelling sequence: {task.command[0]}"):
+                execute_subprocess(task.command, timeout=task.timeout)
 
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
-            with console.status(f"Propelling sequence: {task[0]}"):
-                execute_subprocess(task)
+            with console.status(f"Propelling sequence: {task.command[0]}"):
+                execute_subprocess(task.command, timeout=task.timeout)
 
     def _deep_merge_tomlkit(
         self, base: Any, payload: Any, overwrite: bool = False
@@ -369,7 +369,7 @@ class SystemExecutor:
         base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
 
         has_uv_init = any(
-            task[:2] == ["uv", "init"] for task in self.manifest.system_tasks
+            task.command[:2] == ["uv", "init"] for task in self.manifest.system_tasks
         )
         if has_uv_init:
             base_ignores.add(".python-version")
@@ -431,6 +431,9 @@ class SystemExecutor:
         if not self.manifest.dependencies and not self.manifest.dev_dependencies:
             return
 
+        # Apply a generous 10-minute leash for heavy, network-bound payload resolutions
+        resolution_timeout = 600
+
         if self.config.python_package_manager == "uv":
             if self.manifest.dependencies:
                 cmd = ["uv", "add", *self.manifest.dependencies]
@@ -438,7 +441,7 @@ class SystemExecutor:
                     with console.status(
                         f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
                     ):
-                        execute_subprocess(cmd)
+                        execute_subprocess(cmd, timeout=resolution_timeout)
                 except RuntimeError as e:
                     self.warnings.append(f"Standard dependency resolution failed: {e}")
 
@@ -448,7 +451,7 @@ class SystemExecutor:
                     with console.status(
                         f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
                     ):
-                        execute_subprocess(dev_cmd)
+                        execute_subprocess(dev_cmd, timeout=resolution_timeout)
                 except RuntimeError as e:
                     self.warnings.append(
                         f"Development dependency resolution failed: {e}"
@@ -463,7 +466,7 @@ class SystemExecutor:
                 with console.status(
                     f"Resolving and installing {len(all_deps)} total dependencies"
                 ):
-                    execute_subprocess(cmd)
+                    execute_subprocess(cmd, timeout=resolution_timeout)
             except RuntimeError as e:
                 self.warnings.append(f"Pip dependency resolution failed: {e}")
 
@@ -476,10 +479,18 @@ class SystemExecutor:
             else:
                 try:
                     result = subprocess.run(
-                        [pip_cmd, "freeze"], capture_output=True, text=True, check=True
+                        [pip_cmd, "freeze"],
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                        timeout=30,
                     )
                     req_path.write_text(result.stdout)
                     logger.debug("Successfully froze dependencies to requirements.txt")
+                except subprocess.TimeoutExpired:
+                    self.warnings.append(
+                        "Failed to freeze dependencies to requirements.txt: Process timed out."
+                    )
                 except Exception as e:
                     self.warnings.append(
                         f"Failed to freeze dependencies to requirements.txt: {e}"

@@ -37,15 +37,19 @@ def test_python_module_uv_build(manifest, mocker):
 
     assert ".venv/" in manifest.vcs_ignores
     assert ".ruff_cache/" not in manifest.vcs_ignores
-    assert [
-        "uv",
-        "init",
-        "--no-workspace",
-        "--bare",
-        "--pin-python",
-        "--python",
-        "3.13",
-    ] in manifest.system_tasks
+    assert any(
+        t.command
+        == [
+            "uv",
+            "init",
+            "--no-workspace",
+            "--bare",
+            "--pin-python",
+            "--python",
+            "3.13",
+        ]
+        for t in manifest.system_tasks
+    )
 
 
 def test_python_module_uv_with_version(manifest, mocker):
@@ -55,15 +59,19 @@ def test_python_module_uv_with_version(manifest, mocker):
     mod = PythonModule(package_manager="uv", python_version="3.12")
     mod.build(manifest)
 
-    assert [
-        "uv",
-        "init",
-        "--no-workspace",
-        "--bare",
-        "--pin-python",
-        "--python",
-        "3.12",
-    ] in manifest.system_tasks
+    assert any(
+        t.command
+        == [
+            "uv",
+            "init",
+            "--no-workspace",
+            "--bare",
+            "--pin-python",
+            "--python",
+            "3.12",
+        ]
+        for t in manifest.system_tasks
+    )
 
 
 def test_ruff_module_build(manifest):
@@ -111,7 +119,10 @@ def test_python_module_pip_build(manifest, mocker):
     mod.build(manifest)
 
     assert ".venv/" in manifest.vcs_ignores
-    assert ["python3.13", "-m", "venv", ".venv"] in manifest.system_tasks
+    assert any(
+        t.command == ["python3.13", "-m", "venv", ".venv"]
+        for t in manifest.system_tasks
+    )
 
 
 def test_python_module_pip_with_version(manifest, mocker):
@@ -121,7 +132,10 @@ def test_python_module_pip_with_version(manifest, mocker):
     mod = PythonModule(package_manager="pip", python_version="3.11")
     mod.build(manifest)
 
-    assert ["python3.11", "-m", "venv", ".venv"] in manifest.system_tasks
+    assert any(
+        t.command == ["python3.11", "-m", "venv", ".venv"]
+        for t in manifest.system_tasks
+    )
 
 
 def test_node_module_custom_manager(manifest, mocker):
@@ -131,7 +145,7 @@ def test_node_module_custom_manager(manifest, mocker):
     mod = NodeModule(package_manager="pnpm")
     mod.build(manifest)
 
-    assert ["pnpm", "init"] in manifest.system_tasks
+    assert any(t.command == ["pnpm", "init"] for t in manifest.system_tasks)
     assert "node_modules/" in manifest.vcs_ignores
     assert any("id: prettier" in hook for hook in manifest.pre_commit_hooks)
 
@@ -181,7 +195,7 @@ def test_direnv_module_build_uv(manifest, mocker):
     assert ".envrc" in manifest.file_injections
     assert "uv sync" in manifest.file_injections[".envrc"]
 
-    assert ["direnv", "allow"] in manifest.post_install_tasks
+    assert any(t.command == ["direnv", "allow"] for t in manifest.post_install_tasks)
 
 
 def test_markdownlint_module_build(manifest, mocker):
@@ -218,9 +232,20 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
 
     assert manifest.wants_pre_commit is True
     assert "pre-commit" in manifest.dev_dependencies
-    assert ["git", "init"] in manifest.system_tasks
 
-    assert ["uv", "run", "pre-commit", "install"] in manifest.post_install_tasks
+    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
+    assert any(
+        t.command == ["uv", "run", "pre-commit", "install"]
+        for t in manifest.post_install_tasks
+    )
+
+    # Verify the autoupdate specific timeout
+    autoupdate_task = next(
+        t
+        for t in manifest.post_install_tasks
+        if t.command == ["uv", "run", "pre-commit", "autoupdate"]
+    )
+    assert autoupdate_task.timeout == 300
 
 
 def test_pre_commit_module_build_skips_git_init(manifest, mocker):
@@ -234,9 +259,11 @@ def test_pre_commit_module_build_skips_git_init(manifest, mocker):
     mod = PreCommitModule()
     mod.build(manifest)
 
-    assert ["git", "init"] not in manifest.system_tasks
-
-    assert [".venv/bin/pre-commit", "install"] in manifest.post_install_tasks
+    assert not any(t.command == ["git", "init"] for t in manifest.system_tasks)
+    assert any(
+        t.command == [".venv/bin/pre-commit", "install"]
+        for t in manifest.post_install_tasks
+    )
 
 
 def test_python_module_collision_markers():
@@ -318,7 +345,7 @@ def test_rust_module_build(manifest, mocker):
 
     assert "target/" in manifest.vcs_ignores
     assert "target/" in manifest.workspace_hides
-    assert ["cargo", "init"] in manifest.system_tasks
+    assert any(t.command == ["cargo", "init"] for t in manifest.system_tasks)
     assert any("id: clippy" in hook for hook in manifest.pre_commit_hooks)
 
 
@@ -337,7 +364,7 @@ def test_node_module_build_npm_y_flag(manifest, mocker):
     mod = NodeModule(package_manager="npm")
     mod.build(manifest)
 
-    assert ["npm", "init", "-y"] in manifest.system_tasks
+    assert any(t.command == ["npm", "init", "-y"] for t in manifest.system_tasks)
 
 
 def test_cpp_module_build(manifest):

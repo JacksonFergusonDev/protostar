@@ -12,6 +12,19 @@ class CollisionStrategy(enum.Enum):
 
 
 @dataclasses.dataclass
+class SystemTask:
+    """A shell command with an associated execution timeout limit.
+
+    Attributes:
+        command: The command and its arguments as a list of strings.
+        timeout: The maximum execution time in seconds, or None for no limit.
+    """
+
+    command: list[str]
+    timeout: int | None = None
+
+
+@dataclasses.dataclass
 class EnvironmentManifest:
     """Centralized state object holding the aggregate environment requirements.
 
@@ -24,8 +37,8 @@ class EnvironmentManifest:
         ide_settings (dict[str, Any]): Nested key-value pairs for IDE configurations.
         dependencies (list[str]): Packages to inject via the active package manager.
         dev_dependencies (list[str]): Development packages to inject.
-        system_tasks (list[list[str]]): Ordered queue of shell commands to execute.
-        post_install_tasks (list[list[str]]): Ordered queue of shell commands to execute after dependencies are installed.
+        system_tasks (list[SystemTask]): Ordered queue of shell commands to execute.
+        post_install_tasks (list[SystemTask]): Ordered queue of shell commands to execute after dependencies are installed.
         directories (set[str]): Local directories to scaffold in the workspace.
         file_injections (dict[str, str]): Exact paths mapped to their raw file contents.
         file_appends (dict[str, list[str]]): Exact paths mapped to lists of content to append.
@@ -39,8 +52,8 @@ class EnvironmentManifest:
     ide_settings: dict[str, Any] = dataclasses.field(default_factory=dict)
     dependencies: list[str] = dataclasses.field(default_factory=list)
     dev_dependencies: list[str] = dataclasses.field(default_factory=list)
-    system_tasks: list[list[str]] = dataclasses.field(default_factory=list)
-    post_install_tasks: list[list[str]] = dataclasses.field(default_factory=list)
+    system_tasks: list[SystemTask] = dataclasses.field(default_factory=list)
+    post_install_tasks: list[SystemTask] = dataclasses.field(default_factory=list)
     directories: set[str] = dataclasses.field(default_factory=set)
     file_injections: dict[str, str] = dataclasses.field(default_factory=dict)
     file_appends: dict[str, list[str]] = dataclasses.field(default_factory=dict)
@@ -69,13 +82,25 @@ class EnvironmentManifest:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
 
-    def add_system_task(self, command: list[str]) -> None:
-        """Queues a shell command for execution during the realization phase."""
-        self.system_tasks.append(command)
+    def add_system_task(self, command: list[str], timeout: int | None = 30) -> None:
+        """Queues a shell command for execution during the realization phase.
 
-    def add_post_install_task(self, command: list[str]) -> None:
-        """Queues a shell command for execution after dependencies are fully installed."""
-        self.post_install_tasks.append(command)
+        Args:
+            command: The command and its arguments to execute.
+            timeout: The maximum allowed execution time in seconds. Defaults to 30.
+        """
+        self.system_tasks.append(SystemTask(command=command, timeout=timeout))
+
+    def add_post_install_task(
+        self, command: list[str], timeout: int | None = 30
+    ) -> None:
+        """Queues a shell command for execution after dependencies are fully installed.
+
+        Args:
+            command: The command and its arguments to execute.
+            timeout: The maximum allowed execution time in seconds. Defaults to 30.
+        """
+        self.post_install_tasks.append(SystemTask(command=command, timeout=timeout))
 
     def add_dependency(self, package: str) -> None:
         """Queues a dependency for installation, preventing duplicates."""
