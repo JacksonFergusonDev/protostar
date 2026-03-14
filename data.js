@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773454190052,
+  "lastUpdate": 1773456159214,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -376,6 +376,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 129.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a171c60906ec88047b9f4c59fb88899f1137b26",
+          "message": "refactor: enforce explicit language constraints for tooling modules (#53)\n\nReplaces the hardcoded `requires_python` boolean in the base `BootstrapModule` with a scalable `required_languages` tuple. This prevents impossible combinations (e.g., scaffolding Ruff for a Rust project) from polluting the workspace in both headless and interactive execution paths.\n\n- Updates `BootstrapModule` interface to use dynamic language mapping.\n- Binds `RuffModule`, `MypyModule`, and `PytestModule` strictly to `PythonModule`.\n- Patches the TUI wizard (`run_init_wizard`) to evaluate and reject invalid combinations at the prompt.\n- Patches the CLI parser (`handle_init`) to intercept, warn, and drop explicit CLI tooling flags that violate language constraints.\n- Expands test suite coverage in `test_cli.py`, `test_wizard.py`, and `test_modules.py` to explicitly verify constraint logic.",
+          "timestamp": "2026-03-13T19:41:35-07:00",
+          "tree_id": "bcd84e82f249933bfee993464f1df86f32fb32af",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9a171c60906ec88047b9f4c59fb88899f1137b26"
+        },
+        "date": 1773456158334,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 124.23,
             "unit": "ms"
           }
         ]
