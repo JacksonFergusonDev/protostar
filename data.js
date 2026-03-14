@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773383869125,
+  "lastUpdate": 1773454190052,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -347,6 +347,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 132.53,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d49358f9aad279f0dfd266a193befff9c3336dcd",
+          "message": "feat: implement granular task-level timeouts for system execution (#52)\n\nReplaces unbounded blocking I/O calls with task-specific execution timeouts to prevent the orchestrator from hanging indefinitely on stalled network requests.\n\n- Introduces `SystemTask` dataclass to bind execution time limits to shell commands.\n- Implements `TimeoutExpired` exception handling in the core subprocess wrapper.\n- Applies a default 30-second timeout to local shell configurations.\n- Grants a 600-second boundary for package manager resolutions (uv/pip).\n- Updates test suite to enforce the new architectural constraints.",
+          "timestamp": "2026-03-13T19:08:37-07:00",
+          "tree_id": "948b46f0c065dc3746a380755c022fbde6820fec",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d49358f9aad279f0dfd266a193befff9c3336dcd"
+        },
+        "date": 1773454189239,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 129.86,
             "unit": "ms"
           }
         ]
