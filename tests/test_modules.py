@@ -7,30 +7,25 @@ from protostar.modules import (
     CppModule,
     DirenvModule,
     LatexModule,
-    LinuxModule,
-    MacOSModule,
     MarkdownLintModule,
     MypyModule,
     NodeModule,
+    PreCommitModule,
     PytestModule,
     PythonModule,
     RuffModule,
     RustModule,
-    VSCodeModule,
+    SystemWorkspaceModule,
 )
-from protostar.modules.tooling_layer import PreCommitModule
-
-
-def test_macos_module(manifest):
-    """Test that the macOS layer appends correct system ignores."""
-    mod = MacOSModule()
-    mod.build(manifest)
-    assert ".DS_Store" in manifest.vcs_ignores
 
 
 def test_python_module_uv_build(manifest, mocker):
     """Test Python manifest mutation prioritizes uv by default and enforces bare initialization."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    # Prevent IDE injection to isolate build testing
+    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(ide=None)
 
     mod = PythonModule(package_manager="uv")
     mod.build(manifest)
@@ -55,6 +50,8 @@ def test_python_module_uv_build(manifest, mocker):
 def test_python_module_uv_with_version(manifest, mocker):
     """Test Python manifest includes the specific python version flag alongside bare initialization."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(ide=None)
 
     mod = PythonModule(package_manager="uv", python_version="3.12")
     mod.build(manifest)
@@ -72,6 +69,47 @@ def test_python_module_uv_with_version(manifest, mocker):
         ]
         for t in manifest.system_tasks
     )
+
+
+def test_system_workspace_module_build(manifest):
+    """Test that the universal system layer appends deterministic workspace ignores."""
+    mod = SystemWorkspaceModule()
+    mod.build(manifest)
+
+    expected_artifacts = [".DS_Store", "Thumbs.db", "*~", ".idea/", ".vscode/", ".env"]
+    for artifact in expected_artifacts:
+        assert artifact in manifest.vcs_ignores
+        assert artifact in manifest.workspace_hides
+
+
+def test_python_module_ide_injection_active(manifest, mocker):
+    """Test that the Python module dynamically injects the interpreter path for supported IDEs."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    # Mock global config to explicitly request VS Code
+    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(ide="vscode")
+
+    mod = PythonModule(package_manager="uv")
+    mod.build(manifest)
+
+    assert "python.defaultInterpreterPath" in manifest.ide_settings
+    assert "/.venv/bin/python" in manifest.ide_settings["python.defaultInterpreterPath"]
+    assert manifest.ide_settings["python.terminal.activateEnvironment"] is True
+
+
+def test_python_module_ide_injection_inactive(manifest, mocker):
+    """Test that the Python module skips IDE injection if the preferred IDE is unsupported or None."""
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    # Mock global config to represent an unconfigured or non-VS Code state
+    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(ide=None)
+
+    mod = PythonModule(package_manager="uv")
+    mod.build(manifest)
+
+    assert "python.defaultInterpreterPath" not in manifest.ide_settings
 
 
 def test_ruff_module_build(manifest):
@@ -148,28 +186,6 @@ def test_node_module_custom_manager(manifest, mocker):
     assert any(t.command == ["pnpm", "init"] for t in manifest.system_tasks)
     assert "node_modules/" in manifest.vcs_ignores
     assert any("id: prettier" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_vscode_module_aliases():
-    """Test that IDE aliases expose the correct mapping strings."""
-    mod = VSCodeModule()
-    assert "vscode" in mod.aliases
-    assert "cursor" in mod.aliases
-
-
-def test_vscode_module_build(manifest):
-    """Test that VS Code successfully translates hides into workspace exclusions."""
-    manifest.add_workspace_hide(".venv/")
-    manifest.add_workspace_hide("build/")
-
-    mod = VSCodeModule()
-    mod.build(manifest)
-
-    assert "files.exclude" in manifest.ide_settings
-    exclusions = manifest.ide_settings["files.exclude"]
-
-    assert exclusions["**/.venv"] is True
-    assert exclusions["**/build"] is True
 
 
 def test_direnv_module_pre_flight_fails(mocker):
@@ -286,22 +302,6 @@ def test_tooling_module_collision_markers():
     assert Path(".envrc") in DirenvModule().collision_markers
     assert Path(".markdownlint.yaml") in MarkdownLintModule().collision_markers
     assert Path(".pre-commit-config.yaml") in PreCommitModule().collision_markers
-
-
-def test_macos_module_properties():
-    """Test the macOS module defines its UI name correctly."""
-    mod = MacOSModule()
-    assert mod.name == "macOS"
-
-
-def test_linux_module_properties_and_build(manifest):
-    """Test the Linux module defines its UI name and applies temporary file ignores."""
-    mod = LinuxModule()
-    assert mod.name == "Linux"
-
-    mod.build(manifest)
-    assert "*~" in manifest.vcs_ignores
-    assert "*~" in manifest.workspace_hides
 
 
 def test_python_module_pre_flight_missing_uv(mocker):

@@ -25,11 +25,8 @@ from .modules import (
     LANG_MODULES,
     TOOLING_MODULES,
     BootstrapModule,
-    JetBrainsModule,
-    LinuxModule,
-    MacOSModule,
     PythonModule,
-    VSCodeModule,
+    SystemWorkspaceModule,
 )
 from .orchestrator import Orchestrator
 from .presets import (
@@ -182,30 +179,6 @@ class GenerateEpilogTable:
         return table
 
 
-def get_os_module() -> BootstrapModule:
-    """Detects the host OS and returns the corresponding bootstrap layer."""
-    if sys.platform == "darwin":
-        return MacOSModule()
-    return LinuxModule()
-
-
-def get_ide_module(ide_preference: str) -> BootstrapModule | None:
-    """Returns the IDE module based on the user's global configuration.
-
-    Dynamically resolves the target module by evaluating the aliases declared
-    on each IDE class.
-    """
-    ide = ide_preference.lower()
-
-    # Iterate over supported IDE modules to find an alias match
-    for ide_class in (VSCodeModule, JetBrainsModule):
-        instance = ide_class()
-        if ide in instance.aliases:
-            return instance
-
-    return None
-
-
 def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments.
 
@@ -216,8 +189,8 @@ def handle_init(args: argparse.Namespace) -> None:
     modules: list[BootstrapModule] = []
     presets: list[PresetModule] = []
 
-    # 1. Base OS Layer
-    modules.append(get_os_module())
+    # 1. Universal System Layer
+    modules.append(SystemWorkspaceModule())
 
     # 2. Language Layers
     has_language = False
@@ -241,11 +214,7 @@ def handle_init(args: argparse.Namespace) -> None:
         if preset.cli_flags and getattr(args, preset.__class__.__name__, False):
             presets.append(preset)
 
-    # 4. IDE Layer
-    if ide_mod := get_ide_module(config.ide):
-        modules.append(ide_mod)
-
-    # 5. Tooling Layers
+    # 4. Tooling Layers
     active_langs = {m.__class__.__name__ for m in modules}
 
     for mod in TOOLING_MODULES:
@@ -261,7 +230,6 @@ def handle_init(args: argparse.Namespace) -> None:
             is_active = True
 
         # Explicit CLI flags override local configuration omissions and defaults.
-        # argparse.BooleanOptionalAction evaluates to True, False, or None.
         if mod.cli_flags:
             cli_override = getattr(args, mod.__class__.__name__, None)
             if cli_override is not None:
@@ -280,7 +248,7 @@ def handle_init(args: argparse.Namespace) -> None:
         if is_active:
             modules.append(mod)
 
-    # 6. Undocumented Crash Test Injection
+    # 5. Undocumented Crash Test Injection
     if getattr(args, "crash_test", False):
 
         class CrashModule(BootstrapModule):
@@ -655,11 +623,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             modules = selections["modules"]
             presets = selections["presets"]
 
-            # Inject mandatory OS and configured IDE layers implicitly
-            modules.insert(0, get_os_module())
-
-            if ide_mod := get_ide_module(config.ide):
-                modules.append(ide_mod)
+            # Inject mandatory universal workspace layer implicitly
+            modules.insert(0, SystemWorkspaceModule())
 
             engine = Orchestrator(
                 modules, config, presets, docker=selections["docker"], force=False

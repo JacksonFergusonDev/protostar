@@ -23,7 +23,8 @@ def test_config_load_defaults(mocker):
     mocker.patch("protostar.config.Path.exists", return_value=False)
 
     config = ProtostarConfig.load()
-    assert config.ide == "vscode"
+
+    assert config.ide is None
     assert config.direnv is False
     assert config.node_package_manager == "npm"
     assert config.python_package_manager == "uv"
@@ -181,7 +182,8 @@ def test_config_runtime_type_validation(mocker):
     config = ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
 
     # Assert the malformed inputs were dropped and defaults were maintained
-    assert config.ide == "vscode"
+    assert config.ide is None
+
     assert config.direnv is False
     assert config.python_version == "3.13"
 

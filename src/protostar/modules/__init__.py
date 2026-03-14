@@ -1,9 +1,8 @@
 """Module exports for the Protostar manifest execution engine."""
 
 from .base import BootstrapModule
-from .ide_layer import JetBrainsModule, VSCodeModule
 from .lang_layer import CppModule, LatexModule, NodeModule, PythonModule, RustModule
-from .os_layer import LinuxModule, MacOSModule
+from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
     DirenvModule,
     MarkdownLintModule,
@@ -35,13 +34,10 @@ __all__ = [
     "TOOLING_MODULES",
     "BootstrapModule",
     "DirenvModule",
-    "JetBrainsModule",
-    "LinuxModule",
-    "MacOSModule",
     "MypyModule",
     "PreCommitModule",
     "PytestModule",
     "PythonModule",
     "RuffModule",
-    "VSCodeModule",
+    "SystemWorkspaceModule",
 ]

@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
 
+from protostar.config import ProtostarConfig
+
 from .base import BootstrapModule
 
 logger = logging.getLogger("protostar")
@@ -72,7 +74,15 @@ class PythonModule(BootstrapModule):
         return [Path("requirements.txt")]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Queues initialization and ignores virtual environment artifacts."""
+        """Queues initialization, ignores artifacts, and handles IDE telemetry bindings.
+
+        Dynamically resolves the absolute path of the generated virtual environment
+        and injects interpreter pointers into the workspace configuration if a
+        supported IDE is active.
+
+        Args:
+            manifest: The centralized state object.
+        """
         logger.debug(f"Building Python language layer using {self.package_manager}.")
 
         artifacts = [
@@ -94,6 +104,15 @@ class PythonModule(BootstrapModule):
                 f"python{self.python_version}" if self.python_version else "python3"
             )
             manifest.add_system_task([python_cmd, "-m", "venv", ".venv"])
+
+        # --- IDE Injection ---
+        config = ProtostarConfig.load()
+        if config.ide in ("vscode", "cursor"):
+            interpreter_path = Path.cwd() / ".venv" / "bin" / "python"
+            manifest.add_ide_setting(
+                "python.defaultInterpreterPath", str(interpreter_path)
+            )
+            manifest.add_ide_setting("python.terminal.activateEnvironment", True)
 
 
 class RustModule(BootstrapModule):
