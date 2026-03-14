@@ -330,9 +330,16 @@ class PreCommitModule(BootstrapModule):
 
         # Dynamically evaluate the active package manager to route the binary execution
         config = ProtostarConfig.load()
+
+        # `autoupdate` pulls remote git repositories to update hook definitions,
+        # requiring a wider time window than a local install.
         if config.python_package_manager == "uv":
             manifest.add_post_install_task(["uv", "run", "pre-commit", "install"])
-            manifest.add_post_install_task(["uv", "run", "pre-commit", "autoupdate"])
+            manifest.add_post_install_task(
+                ["uv", "run", "pre-commit", "autoupdate"], timeout=300
+            )
         else:
             manifest.add_post_install_task([".venv/bin/pre-commit", "install"])
-            manifest.add_post_install_task([".venv/bin/pre-commit", "autoupdate"])
+            manifest.add_post_install_task(
+                [".venv/bin/pre-commit", "autoupdate"], timeout=300
+            )
