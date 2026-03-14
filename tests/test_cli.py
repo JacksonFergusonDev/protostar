@@ -14,7 +14,6 @@ from protostar.cli import (
     ProtoHelpFormatter,
     build_parser,
     configure_logging,
-    get_ide_module,
     handle_config,
     handle_generate,
     handle_init,
@@ -25,22 +24,19 @@ from protostar.cli import (
 from protostar.modules import (
     LANG_MODULES,
     DirenvModule,
-    JetBrainsModule,
     MarkdownLintModule,
     MypyModule,
+    PreCommitModule,
     PytestModule,
     PythonModule,
     RuffModule,
-    VSCodeModule,
+    SystemWorkspaceModule,
 )
-from protostar.modules.tooling_layer import PreCommitModule
 
 
 def test_handle_init_dispatch(mocker):
     """Test that dynamically generated CLI flags instantiate modules and presets."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-    mocker.patch("protostar.cli.get_os_module")
-    mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
     # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12 --ruff --mypy --pytest --pre-commit`
     args = argparse.Namespace(
@@ -68,6 +64,9 @@ def test_handle_init_dispatch(mocker):
     # Extract the arguments passed to Orchestrator(modules, presets, docker=...)
     modules = mock_orchestrator.call_args[0][0]
 
+    # Verify Universal System Module Injection
+    assert any(isinstance(m, SystemWorkspaceModule) for m in modules)
+
     # Verify Tooling Modules
     assert any(isinstance(m, DirenvModule) for m in modules)
     assert any(isinstance(m, MarkdownLintModule) for m in modules)
@@ -80,8 +79,6 @@ def test_handle_init_dispatch(mocker):
 def test_handle_init_tooling_requires_language_context(mocker):
     """Test that python-specific tooling does not activate if PythonModule is absent."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-    mocker.patch("protostar.cli.get_os_module")
-    mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
     # Mock the global config to request Ruff and Mypy by default
     mock_config = mocker.patch("protostar.cli.ProtostarConfig.load")
@@ -110,18 +107,6 @@ def test_handle_init_tooling_requires_language_context(mocker):
     # Verify that despite config defaults, Ruff and Mypy do not pollute the Rust context
     assert not any(isinstance(m, RuffModule) for m in modules)
     assert not any(isinstance(m, MypyModule) for m in modules)
-
-
-def test_get_ide_module_dispatch():
-    """Test that IDE aliases correctly resolve to their respective module classes."""
-    vscode_mod = get_ide_module("cursor")
-    assert isinstance(vscode_mod, VSCodeModule)
-
-    jetbrains_mod = get_ide_module("jetbrains")
-    assert isinstance(jetbrains_mod, JetBrainsModule)
-
-    unknown_mod = get_ide_module("eclipse")
-    assert unknown_mod is None
 
 
 def test_main_intercepts_bare_invocation(mocker):
@@ -153,9 +138,6 @@ def test_main_intercepts_init_wizard(mocker):
         "docker": False,
     }
 
-    mock_config = mocker.patch("protostar.cli.ProtostarConfig.load")
-    mock_config.return_value.ide = "vscode"
-
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
 
     with pytest.raises(SystemExit) as excinfo:
@@ -164,12 +146,12 @@ def test_main_intercepts_init_wizard(mocker):
     assert excinfo.value.code == 0
     mock_init_wizard.assert_called_once()
 
-    # Verify Orchestrator was initialized with the wizard payload + implicit OS/IDE layers
+    # Verify Orchestrator was initialized with the wizard payload + implicit universal layer
     orchestrator_args = mock_orchestrator.call_args[0]
     modules_passed = orchestrator_args[0]
 
+    assert any(isinstance(m, SystemWorkspaceModule) for m in modules_passed)
     assert any(isinstance(m, PythonModule) for m in modules_passed)
-    assert any(isinstance(m, VSCodeModule) for m in modules_passed)
     mock_orchestrator.return_value.run.assert_called_once()
 
 
@@ -503,8 +485,6 @@ def test_main_value_error_handling(mocker):
 def test_handle_init_crash_test_injection(mocker):
     """Test that the --crash-test flag injects the CrashModule and its methods work."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-    mocker.patch("protostar.cli.get_os_module")
-    mocker.patch("protostar.cli.get_ide_module", return_value=None)
 
     # Simulate running `protostar init -p --crash-test`
     args = argparse.Namespace(
@@ -537,13 +517,9 @@ def test_handle_init_crash_test_injection(mocker):
         "CrashModule was not injected into the execution stack."
     )
 
-    # Manually trigger the methods to satisfy coverage
     assert crash_mod.name == "CrashTest"
-
-    # build() should return implicitly without throwing
     crash_mod.build(None)
 
-    # pre_flight() should trigger our intentional exception
     with pytest.raises(TypeError, match="INTENTIONAL_CRASH"):
         crash_mod.pre_flight()
 
@@ -570,8 +546,7 @@ def test_main_keyboard_interrupt_handling(mocker):
 def test_handle_init_tooling_explicit_override_warning(mocker):
     """Test that explicitly requested tooling via CLI is ignored if language constraints fail."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-    mocker.patch("protostar.cli.get_os_module")
-    mocker.patch("protostar.cli.get_ide_module", return_value=None)
+
     mock_print = mocker.patch("protostar.cli.console.print")
 
     # Simulate running `protostar init --rust --ruff`
