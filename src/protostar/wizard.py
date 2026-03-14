@@ -85,9 +85,27 @@ def run_init_wizard() -> dict[str, Any] | None:
         choices.append(Choice(title=tool_mod.name, value=tool_mod, checked=is_checked))
 
     def _validate_init(result: list[Any]) -> bool | str:
-        """Ensures the user has selected at least one language footprint."""
-        if not any(item in LANG_MODULES for item in result):
+        """Ensures valid language and tooling combinations.
+
+        Args:
+            result: The user's current checklist selection vector.
+
+        Returns:
+            True if the selection is valid, or an error string to display in the TUI.
+        """
+        selected_langs = {
+            item.__class__.__name__ for item in result if item in LANG_MODULES
+        }
+
+        if not selected_langs:
             return "Please select at least one language footprint."
+
+        for item in result:
+            reqs = getattr(item, "required_languages", None)
+            if reqs and not set(reqs).intersection(selected_langs):
+                clean_reqs = [r.replace("Module", "") for r in reqs]
+                return f"Conflict: {item.name} requires {', '.join(clean_reqs)}."
+
         return True
 
     # For benchmarking: Intercept execution right before blocking the thread with the prompt
