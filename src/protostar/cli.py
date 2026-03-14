@@ -29,7 +29,6 @@ from .modules import (
     LinuxModule,
     MacOSModule,
     PythonModule,
-    VSCodeModule,
 )
 from .orchestrator import Orchestrator
 from .presets import (
@@ -206,11 +205,9 @@ def get_ide_module(ide_preference: str | None) -> BootstrapModule | None:
 
     ide = ide_preference.lower()
 
-    # Iterate over supported IDE modules to find an alias match
-    for ide_class in (VSCodeModule, JetBrainsModule):
-        instance = ide_class()
-        if ide in instance.aliases:
-            return instance
+    jetbrains_instance = JetBrainsModule()
+    if ide in jetbrains_instance.aliases:
+        return jetbrains_instance
 
     return None
 
