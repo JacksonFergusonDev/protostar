@@ -4,14 +4,15 @@ import subprocess
 logger = logging.getLogger("protostar")
 
 
-def execute_subprocess(cmd: list[str]) -> None:
+def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
     """Executes a subprocess silently and captures telemetry on failure.
 
     Args:
         cmd: The command and its arguments as a list of strings.
+        timeout: The maximum execution time in seconds. Defaults to None.
 
     Raises:
-        RuntimeError: If the subprocess returns a non-zero exit code.
+        RuntimeError: If the subprocess returns a non-zero exit code or times out.
     """
     try:
         subprocess.run(
@@ -19,7 +20,14 @@ def execute_subprocess(cmd: list[str]) -> None:
             check=True,
             capture_output=True,
             text=True,
+            timeout=timeout,
         )
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Task timed out after {timeout} seconds: {' '.join(cmd)}")
+        raise RuntimeError(
+            f"Command timed out after {timeout} seconds: {' '.join(cmd)}\n"
+            "Hint: This is often caused by a stalled network request or an unresponsive registry."
+        ) from e
     except subprocess.CalledProcessError as e:
         # Concatenate both streams to prevent critical context loss
         output_blocks = []
