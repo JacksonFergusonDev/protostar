@@ -2,7 +2,7 @@
 
 from .base import BootstrapModule
 from .lang_layer import CppModule, LatexModule, NodeModule, PythonModule, RustModule
-from .os_layer import SystemWorkspaceModule
+from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
     DirenvModule,
     MarkdownLintModule,
