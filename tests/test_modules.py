@@ -385,3 +385,16 @@ def test_latex_module_build(manifest):
     assert "*.aux" in manifest.vcs_ignores
     assert "*.synctex.gz" in manifest.workspace_hides
     assert any("id: tex-fmt" in hook for hook in manifest.pre_commit_hooks)
+
+
+def test_tooling_module_language_constraints():
+    """Test that tooling modules correctly declare their language dependency arrays."""
+    # Python-specific tooling must enforce PythonModule presence
+    assert RuffModule.required_languages == ("PythonModule",)
+    assert MypyModule.required_languages == ("PythonModule",)
+    assert PytestModule.required_languages == ("PythonModule",)
+
+    # Generic tooling should be entirely unconstrained (None)
+    assert DirenvModule.required_languages is None
+    assert MarkdownLintModule.required_languages is None
+    assert PreCommitModule.required_languages is None
