@@ -9,29 +9,30 @@ if TYPE_CHECKING:
 logger = logging.getLogger("protostar")
 
 
-class MacOSModule(BootstrapModule):
-    """Configures macOS-specific environment artifacts."""
+class SystemWorkspaceModule(BootstrapModule):
+    """Configures universal environment artifacts and workspace exclusions.
+
+    Ignores common host machine artifacts, IDE workspace
+    directories, and standard credential files to enforce repository hygiene.
+    """
 
     @property
     def name(self) -> str:
         """Returns the human-readable module name."""
-        return "macOS"
+        return "System Workspace"
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends .DS_Store to the ignore and workspace hide lists."""
-        logger.debug("Building macOS OS layer.")
-        manifest.add_environment_artifact(".DS_Store")
+        """Appends universal artifacts to the ignore and workspace hide lists."""
+        logger.debug("Building universal system workspace layer.")
 
+        universal_artifacts = [
+            ".DS_Store",
+            "Thumbs.db",
+            "*~",
+            ".idea/",
+            ".vscode/",
+            ".env",
+        ]
 
-class LinuxModule(BootstrapModule):
-    """Configures Linux-specific environment artifacts."""
-
-    @property
-    def name(self) -> str:
-        """Returns the human-readable module name."""
-        return "Linux"
-
-    def build(self, manifest: "EnvironmentManifest") -> None:
-        """Appends temporary editor files to the ignore and workspace hide lists."""
-        logger.debug("Building Linux OS layer.")
-        manifest.add_environment_artifact("*~")
+        for artifact in universal_artifacts:
+            manifest.add_environment_artifact(artifact)
