@@ -35,14 +35,12 @@ def test_astro_preset_build(manifest, mocker):
     assert "data/fits" in manifest.directories
     assert "*.fits" in manifest.vcs_ignores
     assert ".gitattributes" in manifest.file_injections
-    assert [
-        "uv",
-        "run",
-        "nbdime",
-        "config-git",
-        "--enable",
-    ] in manifest.post_install_tasks
-    assert ["git", "init"] not in manifest.system_tasks
+
+    assert any(
+        t.command == ["uv", "run", "nbdime", "config-git", "--enable"]
+        for t in manifest.post_install_tasks
+    )
+    assert not any(t.command == ["git", "init"] for t in manifest.system_tasks)
 
 
 def test_astro_preset_build_pip(manifest, mocker):
@@ -55,8 +53,11 @@ def test_astro_preset_build_pip(manifest, mocker):
     preset.build(manifest)
 
     assert "nbdime" in manifest.dependencies
-    assert [".venv/bin/nbdime", "config-git", "--enable"] in manifest.post_install_tasks
-    assert ["git", "init"] in manifest.system_tasks
+    assert any(
+        t.command == [".venv/bin/nbdime", "config-git", "--enable"]
+        for t in manifest.post_install_tasks
+    )
+    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
 
 
 def test_ml_preset_build(manifest):

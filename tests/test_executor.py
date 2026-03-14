@@ -37,7 +37,7 @@ def test_executor_writes_injected_files(mocker, mock_config):
 
 
 def test_executor_install_dependencies_uv(mocker, mock_config):
-    """Test that the executor uses uv add --dev for dev dependencies."""
+    """Test that the executor uses uv add --dev for dev dependencies and applies network timeouts."""
     manifest = EnvironmentManifest()
     manifest.add_dependency("fastapi")
     manifest.add_dev_dependency("pytest")
@@ -50,8 +50,8 @@ def test_executor_install_dependencies_uv(mocker, mock_config):
 
     executor._install_dependencies()
 
-    mock_execute.assert_any_call(["uv", "add", "fastapi"])
-    mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"])
+    mock_execute.assert_any_call(["uv", "add", "fastapi"], timeout=600)
+    mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"], timeout=600)
 
 
 def test_executor_install_dependencies_pip_freeze(
@@ -80,15 +80,40 @@ def test_executor_install_dependencies_pip_freeze(
     executor._install_dependencies()
 
     mock_execute.assert_called_once_with(
-        [".venv/bin/pip", "install", "dummy-pkg", "dev-pkg"]
+        [".venv/bin/pip", "install", "dummy-pkg", "dev-pkg"], timeout=600
     )
     mock_run.assert_called_once_with(
-        [".venv/bin/pip", "freeze"], capture_output=True, text=True, check=True
+        [".venv/bin/pip", "freeze"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
     )
 
     assert (
         tmp_path / "requirements.txt"
     ).read_text() == "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
+
+
+def test_executor_install_dependencies_pip_freeze_timeout(mocker, mock_config):
+    """Test that a pip freeze timeout is gracefully aggregated in warnings."""
+    manifest = EnvironmentManifest()
+    manifest.dependencies = ["requests"]
+
+    mock_config.python_package_manager = "pip"
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.execute_subprocess")
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+
+    mocker.patch(
+        "protostar.executor.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd=["pip", "freeze"], timeout=30),
+    )
+
+    executor._install_dependencies()
+
+    assert any("Process timed out" in w for w in executor.warnings)
 
 
 def test_executor_append_files_late_binding(mocker, mock_config):
@@ -895,10 +920,10 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
 
 
 def test_executor_execute_post_install_tasks(mocker, mock_config):
-    """Test that _execute_post_install_tasks iterates and calls execute_subprocess."""
+    """Test that _execute_post_install_tasks iterates and calls execute_subprocess with boundaries."""
     manifest = EnvironmentManifest()
     manifest.add_post_install_task(["echo", "first_task"])
-    manifest.add_post_install_task(["echo", "second_task"])
+    manifest.add_post_install_task(["echo", "second_task"], timeout=45)
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -906,7 +931,6 @@ def test_executor_execute_post_install_tasks(mocker, mock_config):
 
     executor._execute_post_install_tasks()
 
-    # Verify the loop iterated correctly and passed the commands to the system wrapper
     assert mock_execute.call_count == 2
-    mock_execute.assert_any_call(["echo", "first_task"])
-    mock_execute.assert_any_call(["echo", "second_task"])
+    mock_execute.assert_any_call(["echo", "first_task"], timeout=30)
+    mock_execute.assert_any_call(["echo", "second_task"], timeout=45)

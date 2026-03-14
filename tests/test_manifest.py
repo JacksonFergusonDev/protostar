@@ -44,12 +44,27 @@ def test_add_ide_setting(manifest):
 
 
 def test_add_system_task(manifest):
-    """Test that system tasks are queued sequentially."""
+    """Test that system tasks are queued sequentially as SystemTask dataclasses."""
     manifest.add_system_task(["uv", "init"])
-    manifest.add_system_task(["cargo", "init"])
+    manifest.add_system_task(["cargo", "init"], timeout=45)
 
     assert len(manifest.system_tasks) == 2
-    assert manifest.system_tasks[0] == ["uv", "init"]
+    assert manifest.system_tasks[0].command == ["uv", "init"]
+    assert manifest.system_tasks[0].timeout == 30
+    assert manifest.system_tasks[1].command == ["cargo", "init"]
+    assert manifest.system_tasks[1].timeout == 45
+
+
+def test_add_post_install_task(manifest):
+    """Test that post-install tasks are queued sequentially with explicit timeout bindings."""
+    manifest.add_post_install_task(["direnv", "allow"])
+    manifest.add_post_install_task(["pre-commit", "autoupdate"], timeout=300)
+
+    assert len(manifest.post_install_tasks) == 2
+    assert manifest.post_install_tasks[0].command == ["direnv", "allow"]
+    assert manifest.post_install_tasks[0].timeout == 30
+    assert manifest.post_install_tasks[1].command == ["pre-commit", "autoupdate"]
+    assert manifest.post_install_tasks[1].timeout == 300
 
 
 def test_add_dependency_deduplication(manifest):
