@@ -189,12 +189,21 @@ def get_os_module() -> BootstrapModule:
     return LinuxModule()
 
 
-def get_ide_module(ide_preference: str) -> BootstrapModule | None:
+def get_ide_module(ide_preference: str | None) -> BootstrapModule | None:
     """Returns the IDE module based on the user's global configuration.
 
     Dynamically resolves the target module by evaluating the aliases declared
-    on each IDE class.
+    on each IDE class. Safely handles unconfigured (None) IDE preferences.
+
+    Args:
+        ide_preference: The configured IDE string alias, or None.
+
+    Returns:
+        The instantiated BootstrapModule for the requested IDE, or None.
     """
+    if not ide_preference:
+        return None
+
     ide = ide_preference.lower()
 
     # Iterate over supported IDE modules to find an alias match
