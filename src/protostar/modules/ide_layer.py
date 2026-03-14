@@ -23,17 +23,14 @@ class VSCodeModule(BootstrapModule):
         return ["vscode", "cursor"]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Maps manifest workspace hides to VS Code exclusion rules."""
+        """Evaluates IDE configuration intent.
+
+        Note:
+            Settings injection is currently delegated to language-specific
+            modules (e.g., PythonModule) to ensure tight contextual coupling.
+        """
         logger.debug("Building VS Code IDE layer.")
-
-        exclusions = {}
-        for pattern in manifest.workspace_hides:
-            clean_pattern = pattern.rstrip("/")
-            exclusions[f"**/{clean_pattern}"] = True
-
-        if exclusions:
-            manifest.add_ide_setting("files.exclude", exclusions)
-            manifest.add_ide_setting("search.exclude", exclusions)
+        pass
 
 
 class JetBrainsModule(BootstrapModule):
