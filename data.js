@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773528714428,
+  "lastUpdate": 1773538305425,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -434,6 +434,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 130.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "1fe345c320b61544f67adf76ee479b1cafe41d62",
+          "message": "refactor(core): unify system exclusions and localize IDE injection (#54)\n\n- Default `ide` preference to `None` in global configuration to prevent implicit assumptions.\n- Migrate `vscode`/`cursor` interpreter path injection directly into `PythonModule`, ensuring strict coupling to Python footprint generation.\n- Excise deprecated `ide_layer.py` and `VSCodeModule` to eliminate dead code and abstraction overhead.\n- Rename `os_layer.py` to `system_layer.py` and implement a unified `SystemWorkspaceModule`.\n- Apply universal repository hygiene ignores (`.idea/`, `.vscode/`, `.env`, `.DS_Store`, `*~`) deterministically on every `init`.\n- Update test suite to reflect new component routing, removed mocks, and the `None` configuration baseline.",
+          "timestamp": "2026-03-14T18:30:24-07:00",
+          "tree_id": "6ee3abf3045af771705220f8d2501f904195628a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1fe345c320b61544f67adf76ee479b1cafe41d62"
+        },
+        "date": 1773538304943,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 130.77,
             "unit": "ms"
           }
         ]
