@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773538305425,
+  "lastUpdate": 1773614748898,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -463,6 +463,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 130.77,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "aa88e36a248102c8efd81f53bf63cc5fc6f0cd02",
+          "message": "fix(orchestrator): hoist --force flag evaluation above TTY check (#55)\n\nPreviously, the `--force` flag was ignored during interactive terminal\nsessions because `sys.stdin.isatty()` was evaluated first, routing the\nexecution flow directly to the questionary prompt.\n\nThis commit hoists the `self.force` check to the top of the\n`_evaluate_collisions` method, ensuring the explicit CLI flag acts as an\nunconditional override for the merge strategy, regardless of the\nenvironment's interactive status.",
+          "timestamp": "2026-03-15T15:44:42-07:00",
+          "tree_id": "0f84a6e17a590fdb7e7e102ae954edd047ac60f5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/aa88e36a248102c8efd81f53bf63cc5fc6f0cd02"
+        },
+        "date": 1773614748059,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 131.33,
             "unit": "ms"
           }
         ]
