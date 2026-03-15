@@ -60,15 +60,16 @@ class Orchestrator:
         if not collision_targets:
             return
 
-        # Evaluate non-interactive fallback logic
+        # 1. Immediate override: Evaluate explicit force flag first
+        if self.force:
+            logger.debug(
+                "--force flag provided. Defaulting to MERGE collision strategy."
+            )
+            self.manifest.collision_strategy = CollisionStrategy.MERGE
+            return
+
+        # 2. Evaluate non-interactive fallback logic
         if not sys.stdin.isatty() or "PYTEST_CURRENT_TEST" in os.environ:
-            if self.force:
-                logger.debug(
-                    "Non-interactive environment detected. --force flag provided. "
-                    "Defaulting to MERGE collision strategy."
-                )
-                self.manifest.collision_strategy = CollisionStrategy.MERGE
-                return
             console.print(
                 "\n[bold red]Orbital Collision Detected:[/bold red] The target workspace is not empty."
             )
@@ -78,6 +79,7 @@ class Orchestrator:
             )
             sys.exit(1)
 
+        # 3. Fallback to interactive prompt
         import questionary
         from questionary import Choice
 
