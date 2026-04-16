@@ -5,9 +5,10 @@ build:
   tools:
     python: "3.12"
   jobs:
+    post_create_environment:
+      - pip install uv
     post_install:
-      - curl -LsSf https://astral.sh/uv/install.sh | sh
-      - $HOME/.local/bin/uv sync --group docs
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install -e . --group docs
 
 mkdocs:
   configuration: mkdocs.yml
