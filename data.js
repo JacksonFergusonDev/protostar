@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773614748898,
+  "lastUpdate": 1776368728458,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -492,6 +492,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 131.33,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27734dca5e751dd7f846468db1a5e85912ef3259",
+          "message": "docs: implement zensical framework and structural guides (#60)\n\n* docs: implement zensical framework and structural guides\n\n* ci(benchmark): switch benchmark to use just",
+          "timestamp": "2026-04-16T12:44:28-07:00",
+          "tree_id": "ecd81960463e97f936db87a9466cb9fe5887e0c3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/27734dca5e751dd7f846468db1a5e85912ef3259"
+        },
+        "date": 1776368727717,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 110.35,
             "unit": "ms"
           }
         ]
