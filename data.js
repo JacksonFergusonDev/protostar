@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776371270603,
+  "lastUpdate": 1776372154705,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -608,6 +608,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 130.31,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "da4db743d6e8a66838765151381f01061411fe99",
+          "message": "fix: resolve readthedocs build failure (#61)\n\nUpdate .readthedocs.yaml to use uv export and uv pip install --system.\nThis ensures that the Zensical framework and documentation dependencies\nare installed into the active system environment utilized by the\nReadTheDocs runner, rather than being isolated within a local .venv.\n\nAdditionally, update mkdocs.yml to switch the emoji\nextension namespace from material to zensical, resolving the\nModuleNotFoundError encountered during the build phase.",
+          "timestamp": "2026-04-16T13:41:21-07:00",
+          "tree_id": "c2210f661b4a2ce3d54b5959a06563e6b809f839",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/da4db743d6e8a66838765151381f01061411fe99"
+        },
+        "date": 1776372153852,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 126.07,
             "unit": "ms"
           }
         ]
