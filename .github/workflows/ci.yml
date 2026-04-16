@@ -26,15 +26,6 @@ jobs:
         cache-dependency-glob: "uv.lock"
         python-version: ${{ matrix.python-version }}
 
-    - name: Install system tools (direnv)
-      run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y direnv
-        elif [ "$RUNNER_OS" == "macOS" ]; then
-          brew install direnv
-        fi
-      shell: bash
-
     - name: Install dependencies
       run: uv sync --group ci
 
@@ -44,7 +35,9 @@ jobs:
         uv run ruff format --check .
 
     - name: Lint Markdown
-      run: npx --yes markdownlint-cli "**/*.md" --ignore ".venv"
+      uses: DavidAnson/markdownlint-cli2-action@v23
+      with:
+        globs: '**/*.md'
 
     - name: Type check with Mypy
       run: uv run mypy .
@@ -92,15 +85,16 @@ jobs:
         python-version: "3.14"
 
     - name: Install hyperfine
-      run: |
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y hyperfine
+      uses: taiki-e/install-action@hyperfine
+
+    - name: Install just
+      uses: taiki-e/install-action@just
 
     - name: Install dependencies
       run: uv sync --group ci
 
     - name: Run benchmarks
-      run: make test-benchmark
+      run: just test-benchmark
 
     - name: Convert hyperfine output for benchmark action
       run: |
