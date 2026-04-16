@@ -32,15 +32,16 @@ jobs:
         python-version: "3.14"
 
     - name: Install hyperfine
-      run: |
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y hyperfine
+      uses: taiki-e/install-action@hyperfine
+
+    - name: Install just
+      uses: taiki-e/install-action@just
 
     - name: Install dependencies
       run: uv sync --group ci
 
     - name: Run rigerous benchmarks
-      run: make test-benchmark-slower
+      run: just test-benchmark-slower
 
     - name: Convert hyperfine output for benchmark action
       run: |

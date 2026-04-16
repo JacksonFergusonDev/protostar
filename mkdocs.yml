@@ -1,0 +1,114 @@
+site_name: Protostar
+site_description: High-velocity, zero-friction environment scaffolding.
+site_url: https://jacksonfergusondev.github.io/protostar/
+repo_url: https://github.com/jacksonfergusondev/protostar
+repo_name: jacksonfergusondev/protostar
+edit_uri: edit/main/docs/
+copyright: "&copy; 2026 Jackson Ferguson. <a href=\"https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE\">License</a>"
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Usage:
+    - Init: usage/init.md
+    - Generate: usage/generate.md
+    - Configuration: usage/configuration.md
+  - Flags:
+    - Languages: flags/languages.md
+    - Presets: flags/presets.md
+    - Tooling: flags/tooling.md
+  - Mechanics:
+    - Manifest: mechanics/manifest.md
+    - Orchestrator: mechanics/orchestrator.md
+    - Executor: mechanics/executor.md
+    - Modules: mechanics/modules.md
+  - Mission Control:
+    - Overview: mission-control/overview.md
+    - Extending Protostar: mission-control/extending-protostar.md
+    - Testing: mission-control/testing.md
+    - API Reference: mission-control/api-reference.md
+
+
+theme:
+  name: material
+  logo: assets/protostar-logo.png
+  favicon: assets/protostar-favicon.png
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  icon:
+    repo: fontawesome/brands/space-awesome
+    admonition:
+      note: material/telescope
+      tip: material/rocket-launch
+      warning: material/alert
+      info: material/satellite-variant
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - navigation.footer
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.blocks.caption
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.snippets:
+      base_path: ["docs/includes", "."]
+      check_paths: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - toc:
+      permalink: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: true
+            members_order: source
+  - search
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  generator: false

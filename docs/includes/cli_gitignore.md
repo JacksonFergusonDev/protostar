@@ -1,0 +1,17 @@
+```text
+.venv/
+.idea/
+.DS_Store
+*~
+.coverage
+.env
+coverage.xml
+htmlcov/
+.ruff_cache/
+*.ipynb_checkpoints
+.mypy_cache/
+Thumbs.db
+.vscode/
+.pytest_cache/
+__pycache__/
+```

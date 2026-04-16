@@ -9,11 +9,7 @@ logger = logging.getLogger("protostar")
 
 
 class PresetModule(abc.ABC):
-    """Appends module-specific requirements to the environment manifest.
-
-    Args:
-        manifest: The centralized state object to append requirements to.
-    """
+    """Appends module-specific requirements to the environment manifest."""
 
     cli_flags: ClassVar[tuple[str, ...]] = ()
     """The CLI flags to trigger this preset (e.g., ('-a', '--astro'))."""
