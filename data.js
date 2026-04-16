@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776372299084,
+  "lastUpdate": 1776372802359,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -666,6 +666,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 132.6,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "0fb0219d755239d0776760e9534d65d743100e99",
+          "message": "fix: resolve readthedocs build failure (#61)",
+          "timestamp": "2026-04-16T13:51:37-07:00",
+          "tree_id": "6d6a5c6b5f3ecc388f7670ba4c6fd522b7521886",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0fb0219d755239d0776760e9534d65d743100e99"
+        },
+        "date": 1776372802002,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 126.95,
             "unit": "ms"
           }
         ]
