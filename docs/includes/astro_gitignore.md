@@ -1,0 +1,17 @@
+```text
+*.csv
+Thumbs.db
+.ruff_cache/
+.DS_Store
+.env
+*.ipynb_checkpoints
+*.fit
+.venv/
+__pycache__/
+*.parquet
+*.fits
+.idea/
+*.fts
+.vscode/
+*~
+```

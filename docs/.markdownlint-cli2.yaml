@@ -1,0 +1,28 @@
+gitignore: true
+
+config:
+  # Inherit default rules
+  default: true
+
+  # --- Disabled Rules ---
+
+  # MD041: First line in a file should be a top-level heading
+  # Rationale: MkDocs Material pages often derive their titles from mkdocs.yml navigation
+  # or YAML frontmatter. Documentation files occasionally need to begin with snippets,
+  # includes, or admonitions rather than a strict `# Heading`.
+  MD041: false
+
+  # MD046: Code block style
+  # Rationale: MkDocs heavily utilizes Python-Markdown extensions (e.g., admonitions,
+  # content tabs) which frequently require mixing fenced and indented code blocks
+  # to nest properly. Enforcing a single strict style causes unnecessary linting friction.
+  MD046: false
+
+  # --- Refined Rules ---
+
+  # MD010: Hard tabs
+  # Rationale: Hard tabs are disallowed in standard text to ensure consistent rendering,
+  # but they must be permitted inside fenced code blocks to accurately document literal
+  # generated file contents (e.g., Makefiles, nbdime .gitattributes outputs).
+  MD010:
+    code_blocks: false

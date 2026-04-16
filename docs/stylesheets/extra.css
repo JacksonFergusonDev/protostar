@@ -1,0 +1,368 @@
+/* ====================================================================
+   1. UNIVERSAL LAYOUT (Always On)
+   These rules control structure (grids, flex, padding, margins).
+   Keeping them global ensures your custom HTML components do not
+   break or stack awkwardly when the user switches to Light Mode.
+   ==================================================================== */
+
+.spacer-1 {
+    margin-top: 1.2em;
+    margin-bottom: 1.2em;
+}
+
+.spacer-2 {
+    margin-top: 2em;
+    margin-bottom: 2em;
+}
+
+.spacer-3 {
+    margin-top: 3em;
+    margin-bottom: 3em;
+}
+
+.md-typeset .grid.cards>ul>li,
+.md-typeset .grid.cards>ol>li,
+.md-typeset .grid.cards>li {
+    padding: 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+}
+
+.protostar-kicker {
+    display: inline-block;
+    margin-bottom: 0.8rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* --- Hero Section Layout --- */
+.protostar-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 2.5rem 2rem;
+    border-radius: 1.2rem;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    align-items: center;
+    gap: 2rem;
+
+    /* Light Mode: Standard soft drop shadow */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* --- Card Grid Layout --- */
+.protostar-card {
+    padding: 1rem;
+    border-radius: 0.9rem;
+
+    /* Light Mode: Subtle elevation */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+}
+
+.hero-visual {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.hero-visual img {
+    max-width: 100%;
+    height: auto;
+}
+
+@media screen and (max-width: 768px) {
+    .protostar-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-visual {
+        display: none;
+    }
+}
+
+/* --- Card Grid Layout --- */
+.protostar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1.2rem;
+}
+
+.protostar-card {
+    padding: 1rem;
+    border-radius: 0.9rem;
+}
+
+.protostar-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.4rem;
+}
+
+.protostar-terminal {
+    border-radius: 0.9rem;
+    overflow: hidden;
+}
+
+.protostar-terminal .highlight {
+    margin: 0;
+}
+
+/* --- Definition List Layout --- */
+.md-typeset dl {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0.8rem 0rem;
+}
+
+.md-typeset dt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 0.4rem;
+    font-weight: 600;
+    padding: 0rem;
+    border-radius: 0.7rem;
+}
+
+.md-typeset dd {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border-radius: 0.7rem;
+}
+
+.md-typeset dd ul {
+    margin: 0;
+    padding-left: 1rem;
+}
+
+.md-typeset dd li {
+    margin-bottom: 0.35rem;
+}
+
+
+/* ====================================================================
+   2. DARK MODE THEMING (Slate Only)
+   These rules control "Paint" (colors, shadows, gradients, opacity).
+   They will instantly disable when the user switches to Light Mode.
+   ==================================================================== */
+
+[data-md-color-scheme="slate"] {
+
+    /* Custom Variables */
+    --protostar-bg-base: #0a0f1f;
+    --protostar-bg-elevated: #11172b;
+    --protostar-cyan: #22d3ee;
+    --protostar-purple: #7c4dff;
+    --protostar-text-soft: #a9b7d0;
+    --protostar-border: rgba(34, 211, 238, 0.14);
+
+    /* MkDocs Overrides */
+    --md-default-bg-color: var(--protostar-bg-base);
+    --md-default-fg-color--light: var(--protostar-text-soft);
+    --md-typeset-a-color: var(--protostar-cyan);
+
+    /* Footer Overrides */
+    --md-footer-bg-color: var(--protostar-bg-base);
+    --md-footer-bg-color--dark: var(--protostar-bg-base);
+    --md-footer-fg-color: rgba(255, 255, 255, 0.85);
+    --md-footer-fg-color--light: rgba(255, 255, 255, 0.55);
+    --md-footer-fg-color--lighter: rgba(255, 255, 255, 0.28);
+
+    /* --- Navigation & Headers --- */
+    .md-header,
+    .md-tabs {
+        background: linear-gradient(90deg, rgba(15, 18, 36, 0.96), rgba(27, 20, 56, 0.96));
+        border-bottom: 1px solid rgba(124, 77, 255, 0.16);
+    }
+
+    .md-tabs__link--active,
+    .md-nav__link--active,
+    .md-typeset a:hover {
+        text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+    }
+
+    /* --- Hero Section Theming --- */
+    .protostar-hero {
+        border: 1px solid var(--protostar-border);
+        background:
+            radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.14), transparent 24%),
+            radial-gradient(circle at 85% 25%, rgba(124, 77, 255, 0.18), transparent 28%),
+            radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.05), transparent 35%),
+            linear-gradient(180deg, rgba(17, 23, 43, 0.96), rgba(10, 15, 31, 0.98));
+
+        /* Diffused Cyan Glow */
+        box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
+    }
+
+    /* --- Typography & Elements --- */
+    .protostar-kicker {
+        color: var(--protostar-cyan);
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background: rgba(34, 211, 238, 0.04);
+        color: var(--protostar-cyan);
+    }
+
+    .protostar-card {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(34, 211, 238, 0.08);
+        backdrop-filter: blur(4px);
+
+        /* Subtle Cyan Glow
+        box-shadow: 0 0 20px rgba(34, 211, 238, 0.01);*/
+        transition: box-shadow 0.2s ease-in-out;
+    }
+
+    .protostar-card:hover {
+        /* Glow intensifies on hover */
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
+    }
+
+    /* --- Material Grid Card Theming --- */
+    .md-typeset .grid.cards>ul>li,
+    .md-typeset .grid.cards>ol>li,
+    .md-typeset .grid.cards>li {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(34, 211, 238, 0.08);
+        backdrop-filter: blur(4px);
+    }
+
+    .md-typeset .grid.cards>ul>li:hover,
+    .md-typeset .grid.cards>ol>li:hover,
+    .md-typeset .grid.cards>li:hover {
+        border-color: rgba(34, 211, 238, 0.15);
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.05) !important;
+    }
+
+    .md-typeset .grid.cards>li:hover,
+    .md-typeset .grid.cards>a:hover {
+        /* Glow intensifies on hover */
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .protostar-hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+            radial-gradient(2px 2px at 12% 18%, rgba(255, 255, 255, 0.55), transparent 50%),
+            radial-gradient(1.5px 1.5px at 22% 72%, rgba(255, 255, 255, 0.35), transparent 50%),
+            radial-gradient(1.5px 1.5px at 78% 22%, rgba(255, 255, 255, 0.45), transparent 50%),
+            radial-gradient(2px 2px at 64% 64%, rgba(34, 211, 238, 0.35), transparent 50%),
+            radial-gradient(1.5px 1.5px at 88% 42%, rgba(124, 77, 255, 0.35), transparent 50%);
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    .protostar-hero>* {
+        position: relative;
+        z-index: 1;
+    }
+
+    .hero-visual video {
+        max-width: 100%;
+        height: auto;
+        /*opacity: 0.95;
+        filter: blur(1px);*/
+    }
+
+    .protostar-card {
+        background: rgba(255, 255, 255, 0.025);
+        border: 1px solid rgba(34, 211, 238, 0.08);
+        backdrop-filter: blur(4px);
+    }
+
+    .protostar-muted {
+        color: var(--protostar-text-soft);
+    }
+
+    .protostar-terminal {
+        border: 1px solid rgba(124, 77, 255, 0.18);
+    }
+
+    .md-typeset h1 {
+        letter-spacing: 0.02em;
+    }
+
+    .md-typeset h2 {
+        border-bottom: 1px solid var(--protostar-border);
+        padding-bottom: 0.35rem;
+        margin-top: 2.2rem;
+    }
+
+    .md-typeset h4 {
+        margin-top: 1.8rem;
+        margin-bottom: 0.8rem;
+        padding: 0.35rem 0.6rem;
+        border-radius: 0.45rem;
+        border: 1px solid var(--protostar-border);
+        background: rgba(124, 77, 255, 0.04);
+        transition: box-shadow 0.2s ease;
+    }
+
+    .md-typeset h4:hover {
+        box-shadow: 0 0 10px rgba(124, 77, 255, 0.2);
+    }
+
+    .md-typeset code {
+        border-radius: 0.35rem;
+    }
+
+    .md-typeset pre>code {
+        border: 1px solid rgba(124, 77, 255, 0.12);
+        box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.03);
+        transition: box-shadow 0.15s ease;
+    }
+
+    .md-typeset pre>code:hover {
+        box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.1);
+    }
+
+    /* --- Definition Lists --- */
+    .md-typeset dt {
+        border: 1px solid var(--protostar-border);
+        background: rgba(124, 77, 255, 0.08);
+    }
+
+    .md-typeset dd {
+        border: 1px solid rgba(34, 211, 238, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* --- Tables --- */
+    .md-typeset table tr:nth-child(even) td {
+        background-color: rgba(40, 8, 130, 0.06);
+    }
+
+    .md-typeset table tr:nth-child(odd) td {
+        background-color: #00000005;
+    }
+
+    .md-typeset table thead tr th {
+        border-bottom: 1px solid var(--protostar-border);
+        color: white;
+        letter-spacing: 0.03em;
+    }
+
+    /* --- Footers --- */
+    .md-footer__inner {
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+    }
+
+    .md-footer-meta {
+        background-color: var(--protostar-bg-base) !important;
+        /* Subtle separation */
+    }
+
+    .md-footer {
+        border-top: none;
+    }
+}

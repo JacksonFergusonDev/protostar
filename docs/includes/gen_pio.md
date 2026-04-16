@@ -1,0 +1,11 @@
+**`platformio.ini`**
+
+```ini
+; PlatformIO Project Configuration File
+
+[env:esp32dev]
+platform = espressif32
+board = esp32dev
+framework = arduino
+monitor_speed = 115200
+```
