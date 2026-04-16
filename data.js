@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776370679622,
+  "lastUpdate": 1776370926360,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -550,6 +550,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 138.22,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9c3fd1c822fcae432041cd4e370b6d264feb23d1",
+          "message": "fix: resolve readthedocs build failure (#61)\n\nUpdate .readthedocs.yaml to use uv export and uv pip install --system.\nThis ensures that the Zensical framework and documentation dependencies\nare installed into the active system environment utilized by the\nReadTheDocs runner, rather than being isolated within a local .venv.",
+          "timestamp": "2026-04-16T13:20:26-07:00",
+          "tree_id": "786c61b84ac245ade7bad53f34f32f0931f5ddc4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9c3fd1c822fcae432041cd4e370b6d264feb23d1"
+        },
+        "date": 1776370925883,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 114.8,
             "unit": "ms"
           }
         ]
