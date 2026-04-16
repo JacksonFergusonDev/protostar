@@ -4,6 +4,7 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+_LAB_STATUS.md
 .env
 .pytest_cache/
 htmlcov/
@@ -14,3 +15,9 @@ coverage_annotations/
 coverage_report.txt
 lcov.info
 coverage.lcov
+tmp*/
+site/
+.benchmarks/
+.cache/
+.ruff_cache/
+.venv/
