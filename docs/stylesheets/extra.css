@@ -48,7 +48,7 @@
     padding: 2.5rem 2rem;
     border-radius: 1.2rem;
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: 1.4fr 0.8fr;
     align-items: center;
     gap: 2rem;
 
@@ -72,8 +72,10 @@
 }
 
 .hero-visual img {
-    max-width: 100%;
+    width: 60%;
+    max-width: 450px;
     height: auto;
+    filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.1));
 }
 
 @media screen and (max-width: 768px) {
@@ -264,13 +266,6 @@
     .protostar-hero>* {
         position: relative;
         z-index: 1;
-    }
-
-    .hero-visual video {
-        max-width: 100%;
-        height: auto;
-        /*opacity: 0.95;
-        filter: blur(1px);*/
     }
 
     .protostar-card {
