@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776372802359,
+  "lastUpdate": 1776555769607,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -695,6 +695,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 126.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "854c13ca7919ff6d96cdda4ef2ca5e6ccb2687a1",
+          "message": "style(branding): transition to official lightweight static logos (#62)\n\nReplaces computationally expensive, script-generated animated logos with static SVGs to eliminate CPU spikes during documentation rendering. \n\n- Removes Python logo generation scripts and legacy assets\n- Integrates `hero-page.svg` and `favicon.svg` into MkDocs and CSS\n- Adds responsive light/dark mode SVGs to the README\n- Restyles README badges to match the Protostar theme colors\n- Transitions to a dynamic PyPI version badge, removing the README target from `pyproject.toml`",
+          "timestamp": "2026-04-18T16:41:52-07:00",
+          "tree_id": "fc6c3cf7a4331898f341a30458fc29f1e6772d8d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/854c13ca7919ff6d96cdda4ef2ca5e6ccb2687a1"
+        },
+        "date": 1776555769292,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 135.7,
             "unit": "ms"
           }
         ]
