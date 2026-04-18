@@ -1,14 +1,41 @@
-# Protostar (v0.6.0)
+<!-- markdownlint-disable-file MD041 -->
 
-[![CI](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
-[![Release](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml/badge.svg)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
-[![codecov](https://codecov.io/gh/JacksonFergusonDev/protostar/graph/badge.svg?token=VIR3EZDXRN)](https://codecov.io/gh/JacksonFergusonDev/protostar)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme-light.svg">
+  <img alt="Pulsar demo"
+       src="docs/assets/readme-light.svg"
+       width="400"
+       style="max-width:100%; height:auto;">
+</picture>
+
+<br>
 
 **A modular CLI tool for high-velocity environment scaffolding.**
 
-Setting up a new project often requires the same manual steps: configuring linters, writing `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. Protostar automates this boilerplate so you can skip the setup and get straight to writing code.
+[![PyPI Version](https://img.shields.io/pypi/v/protostar?color=22d3ee&labelColor=0A0A0A&logo=pypi&logoColor=white)](https://pypi.org/project/protostar/)
+[![CI](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/ci.yml?color=22d3ee&labelColor=0A0A0A&label=CI)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
+[![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
+[![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
+
+</div>
+
+Setting up a new project often requires the same manual steps: configuring linters, writing `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
+
+---
+
+<div align="center">
+<picture>
+  <img alt="Pulsar demo"
+       src="docs/assets/demo_headless.gif"
+       width="700"
+       style="max-width:100%; height:auto;">
+</picture>
+</div>
 
 ---
 
@@ -286,11 +313,9 @@ Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for full details on our develo
 
 ## 📧 Contact
 
-### Jackson Ferguson
-
-- **GitHub:** [@JacksonFergusonDev](https://github.com/JacksonFergusonDev)
-- **LinkedIn:** [Jackson Ferguson](https://www.linkedin.com/in/jackson--ferguson/)
-- **Email:** <jackson.ferguson0@gmail.com>
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/JacksonFergusonDev)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/jackson--ferguson/)
+[![Email](https://img.shields.io/badge/Email-D14836?style=for-the-badge&logo=gmail&logoColor=white)](mailto:jackson.ferguson0@gmail.com)
 
 ---
 

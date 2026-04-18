@@ -1,5 +1,3 @@
-# The Observatory
-
 <div class="protostar-hero">
   <div class="hero-content">
     <div class="protostar-kicker">High-velocity environment scaffolding</div>
@@ -10,7 +8,7 @@
     </p>
   </div>
   <div class="hero-visual">
-    <img src="./assets/lorenz_high_res.svg" alt="Lorenz Attractor" />
+    <img src="./assets/hero-page.svg" alt="Logo" />
   </div>
 </div>
 

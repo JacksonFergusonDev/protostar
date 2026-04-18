@@ -1,5 +1,3 @@
-# Quickstart: Orbital Injection
-
 ## Prerequisites
 
 - **Python 3.12+**
