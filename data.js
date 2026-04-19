@@ -26,7 +26,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 130.56,
             "unit": "ms"
           }
