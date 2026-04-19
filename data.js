@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776633916851,
+  "lastUpdate": 1776635357861,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -753,6 +753,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 131.32,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4df00ed0977a520eca71c461c1afa38a596c0732",
+          "message": "fix(ci): parse all hyperfine benchmark results for gh-pages (#64)\n\nPreviously, the inline Python script in the benchmark workflow hardcoded\nextraction to the 0th index of the benchmark results array, causing the\nTUI wizard latency metrics to be dropped before reporting.\n\nThis updates the transformation step to iterate through the entire JSON\narray and dynamically maps the raw execution commands to distinct\ndashboard labels (Headless Latency vs. TUI Wizard Latency).",
+          "timestamp": "2026-04-19T14:48:20-07:00",
+          "tree_id": "367749faacf683c0b9510fc1f6e8545cb02239e6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4df00ed0977a520eca71c461c1afa38a596c0732"
+        },
+        "date": 1776635357462,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.97,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 203.29,
             "unit": "ms"
           }
         ]
