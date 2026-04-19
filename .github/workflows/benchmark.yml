@@ -47,14 +47,28 @@ jobs:
       run: |
         python << 'PY'
         import json
-        data = json.load(open("benchmark.json"))
-        mean_ms = data["results"][0]["mean"] * 1000
-        converted = [{
-            "name": "Protostar Initialization Latency",
-            "unit": "ms",
-            "value": round(mean_ms, 2)
-        }]
-        json.dump(converted, open("benchmark-gh.json", "w"))
+
+        with open("benchmark.json") as f:
+            data = json.load(f)
+
+        converted = []
+        for result in data["results"]:
+            mean_ms = result["mean"] * 1000
+
+            # Map the raw command to a clean dashboard label
+            if "WIZARD" in result["command"]:
+                name = "Protostar TUI Wizard Latency"
+            else:
+                name = "Protostar Headless Latency"
+
+            converted.append({
+                "name": name,
+                "unit": "ms",
+                "value": round(mean_ms, 2)
+            })
+
+        with open("benchmark-gh.json", "w") as f:
+            json.dump(converted, f, indent=2)
         PY
 
     - name: Store benchmark result
