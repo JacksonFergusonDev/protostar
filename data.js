@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776555769607,
+  "lastUpdate": 1776633916851,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -724,6 +724,35 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Initialization Latency",
             "value": 135.7,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c4f3abcf2b37239cbac1209d9d54eac6e7d17e59",
+          "message": "docs: migrate deep-dive documentation to ReadTheDocs and streamline README (#63)\n\n* docs: compress brew install and migrate autocomplete guide\n\n- Compressed Homebrew tap and install steps into a single command for cleaner UX.\n- Migrated 'Shell Autocomplete & Aliasing' out of the README and into the Getting Started documentation.\n- Added package-manager specific installation branches (Homebrew vs uv) for `argcomplete` to prevent toolchain contamination.\n\n* docs: refactor README into a top-of-funnel landing page\n\n- Stripped out heavy command matrices, AST configuration guides, and autocomplete setups to reduce cognitive load.\n- Injected prominent routing and badges linking to the new ReadTheDocs instance.\n- Compressed the Homebrew installation block into a single command.\n- Preserved the core architecture philosophy, latency benchmarks, and Quick Start execution paths to ensure the tool's value proposition is immediately clear.",
+          "timestamp": "2026-04-19T14:24:20-07:00",
+          "tree_id": "15d453b4df8313a0fe64b1de04cfb4ee6c4b9863",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c4f3abcf2b37239cbac1209d9d54eac6e7d17e59"
+        },
+        "date": 1776633916546,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Initialization Latency",
+            "value": 131.32,
             "unit": "ms"
           }
         ]
