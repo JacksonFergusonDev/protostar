@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776662515055,
+  "lastUpdate": 1776663644425,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -855,6 +855,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 214.4,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1919281552247013fc1b072c9a904f5226a544f1",
+          "message": "chore: simplify pyproject config and trim sdist contents (#67)\n\n- Removed `pyproject.toml` settings that were explicitly restating tool defaults\n- Simplified Ruff configuration by dropping unnecessary default-valued options\n- Replaced Ruff `exclude` usage with a leaner additive approach where appropriate\n- Removed redundant `mypy` settings that were already default behavior\n- Merged split author metadata into a single `{ name, email }` entry\n- Added explicit Hatch `sdist` exclusions for non-package repo content",
+          "timestamp": "2026-04-19T22:39:44-07:00",
+          "tree_id": "dffb1bf3fcac6dc37c4eec9cf146509ecd1707c3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1919281552247013fc1b072c9a904f5226a544f1"
+        },
+        "date": 1776663643538,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.18,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 195.93,
             "unit": "ms"
           }
         ]
