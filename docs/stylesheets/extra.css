@@ -1,33 +1,19 @@
 /* ====================================================================
    1. UNIVERSAL LAYOUT (Always On)
-   These rules control structure (grids, flex, padding, margins).
-   Keeping them global ensures your custom HTML components do not
-   break or stack awkwardly when the user switches to Light Mode.
+   Structure: Grids, flex, padding, margins, base typography.
    ==================================================================== */
 
+/* --- Utilities --- */
 .spacer-1 {
-    margin-top: 1.2em;
-    margin-bottom: 1.2em;
+    margin: 1.2em 0;
 }
 
 .spacer-2 {
-    margin-top: 2em;
-    margin-bottom: 2em;
+    margin: 2em 0;
 }
 
 .spacer-3 {
-    margin-top: 3em;
-    margin-bottom: 3em;
-}
-
-.md-typeset .grid.cards>ul>li,
-.md-typeset .grid.cards>ol>li,
-.md-typeset .grid.cards>li {
-    padding: 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid transparent;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+    margin: 3em 0;
 }
 
 .protostar-kicker {
@@ -41,7 +27,12 @@
     font-weight: 600;
 }
 
-/* --- Hero Section Layout --- */
+.protostar-muted {
+    /* Color injected in dark mode, fallback for light mode */
+    opacity: 0.8;
+}
+
+/* --- Hero Section --- */
 .protostar-hero {
     position: relative;
     overflow: hidden;
@@ -51,18 +42,8 @@
     grid-template-columns: 1.4fr 0.8fr;
     align-items: center;
     gap: 2rem;
-
-    /* Light Mode: Standard soft drop shadow */
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-}
-
-/* --- Card Grid Layout --- */
-.protostar-card {
-    padding: 1rem;
-    border-radius: 0.9rem;
-
-    /* Light Mode: Subtle elevation */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    /* Light mode shadow */
 }
 
 .hero-visual {
@@ -96,7 +77,7 @@
     }
 }
 
-/* --- Card Grid Layout --- */
+/* --- Card Grids --- */
 .protostar-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -107,6 +88,9 @@
 .protostar-card {
     padding: 1rem;
     border-radius: 0.9rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    /* Light mode shadow */
+    transition: all 0.2s ease-in-out;
 }
 
 .protostar-card h3 {
@@ -114,6 +98,7 @@
     margin-bottom: 0.4rem;
 }
 
+/* --- MkDocs Material Overrides --- */
 .protostar-terminal {
     border-radius: 0.9rem;
     overflow: hidden;
@@ -123,7 +108,16 @@
     margin: 0;
 }
 
-/* --- Definition List Layout --- */
+.md-typeset .grid.cards>ul>li,
+.md-typeset .grid.cards>ol>li,
+.md-typeset .grid.cards>li {
+    padding: 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid transparent;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
 .md-typeset dl {
     display: grid;
     grid-template-columns: 220px 1fr;
@@ -159,31 +153,36 @@
 
 /* ====================================================================
    2. DARK MODE THEMING (Slate Only)
-   These rules control "Paint" (colors, shadows, gradients, opacity).
-   They will instantly disable when the user switches to Light Mode.
+   Paint: Colors, shadows, gradients, opacity.
    ==================================================================== */
 
 [data-md-color-scheme="slate"] {
 
     /* Custom Variables */
     --protostar-bg-base: #0a0f1f;
-    --protostar-bg-elevated: #11172b;
     --protostar-cyan: #22d3ee;
-    --protostar-purple: #7c4dff;
     --protostar-text-soft: #a9b7d0;
     --protostar-border: rgba(34, 211, 238, 0.14);
+    --protostar-card-bg: rgba(255, 255, 255, 0.025);
 
     /* MkDocs Overrides */
     --md-default-bg-color: var(--protostar-bg-base);
     --md-default-fg-color--light: var(--protostar-text-soft);
     --md-typeset-a-color: var(--protostar-cyan);
-
-    /* Footer Overrides */
     --md-footer-bg-color: var(--protostar-bg-base);
     --md-footer-bg-color--dark: var(--protostar-bg-base);
-    --md-footer-fg-color: rgba(255, 255, 255, 0.85);
-    --md-footer-fg-color--light: rgba(255, 255, 255, 0.55);
-    --md-footer-fg-color--lighter: rgba(255, 255, 255, 0.28);
+
+    /* --- Typography & Elements --- */
+    .protostar-muted {
+        color: var(--protostar-text-soft);
+        opacity: 1;
+    }
+
+    .protostar-kicker {
+        color: var(--protostar-cyan);
+        border: 1px solid rgba(34, 211, 238, 0.16);
+        background: rgba(34, 211, 238, 0.04);
+    }
 
     /* --- Navigation & Headers --- */
     .md-header,
@@ -206,63 +205,7 @@
             radial-gradient(circle at 85% 25%, rgba(124, 77, 255, 0.18), transparent 28%),
             radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.05), transparent 35%),
             linear-gradient(180deg, rgba(17, 23, 43, 0.96), rgba(10, 15, 31, 0.98));
-
-        /* Diffused Cyan Glow */
         box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
-    }
-
-    .hero-img-dark {
-        display: block;
-    }
-
-    .hero-img-light {
-        display: none;
-    }
-
-    /* --- Typography & Elements --- */
-    .protostar-kicker {
-        color: var(--protostar-cyan);
-        border: 1px solid rgba(34, 211, 238, 0.16);
-        background: rgba(34, 211, 238, 0.04);
-        color: var(--protostar-cyan);
-    }
-
-    .protostar-card {
-        background: rgba(255, 255, 255, 0.025);
-        border: 1px solid rgba(34, 211, 238, 0.08);
-        backdrop-filter: blur(4px);
-
-        /* Subtle Cyan Glow
-        box-shadow: 0 0 20px rgba(34, 211, 238, 0.01);*/
-        transition: box-shadow 0.2s ease-in-out;
-    }
-
-    .protostar-card:hover {
-        /* Glow intensifies on hover */
-        box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
-    }
-
-    /* --- Material Grid Card Theming --- */
-    .md-typeset .grid.cards>ul>li,
-    .md-typeset .grid.cards>ol>li,
-    .md-typeset .grid.cards>li {
-        background: rgba(255, 255, 255, 0.025);
-        border: 1px solid rgba(34, 211, 238, 0.08);
-        backdrop-filter: blur(4px);
-    }
-
-    .md-typeset .grid.cards>ul>li:hover,
-    .md-typeset .grid.cards>ol>li:hover,
-    .md-typeset .grid.cards>li:hover {
-        border-color: rgba(34, 211, 238, 0.15);
-        box-shadow: 0 0 30px rgba(34, 211, 238, 0.05) !important;
-    }
-
-    .md-typeset .grid.cards>li:hover,
-    .md-typeset .grid.cards>a:hover {
-        /* Glow intensifies on hover */
-        box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
-        transform: translateY(-2px);
     }
 
     .protostar-hero::before {
@@ -284,16 +227,45 @@
         z-index: 1;
     }
 
+    .hero-img-dark {
+        display: block;
+    }
+
+    .hero-img-light {
+        display: none;
+    }
+
+    /* --- Cards --- */
     .protostar-card {
-        background: rgba(255, 255, 255, 0.025);
+        background: var(--protostar-card-bg);
         border: 1px solid rgba(34, 211, 238, 0.08);
         backdrop-filter: blur(4px);
     }
 
-    .protostar-muted {
-        color: var(--protostar-text-soft);
+    .protostar-card:hover {
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
+        transform: translateY(-2px);
     }
 
+    /* --- Material Grid Card Theming --- */
+    .md-typeset .grid.cards>ul>li,
+    .md-typeset .grid.cards>ol>li,
+    .md-typeset .grid.cards>li {
+        background: var(--protostar-card-bg);
+        border: 1px solid rgba(34, 211, 238, 0.08);
+        backdrop-filter: blur(4px);
+    }
+
+    .md-typeset .grid.cards>ul>li:hover,
+    .md-typeset .grid.cards>ol>li:hover,
+    .md-typeset .grid.cards>li:hover,
+    .md-typeset .grid.cards>a:hover {
+        border-color: rgba(34, 211, 238, 0.15);
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
+        transform: translateY(-2px);
+    }
+
+    /* --- Markdown Elements --- */
     .protostar-terminal {
         border: 1px solid rgba(124, 77, 255, 0.18);
     }
@@ -369,8 +341,7 @@
     }
 
     .md-footer-meta {
-        background-color: var(--protostar-bg-base) !important;
-        /* Subtle separation */
+        background-color: var(--protostar-bg-base);
     }
 
     .md-footer {
