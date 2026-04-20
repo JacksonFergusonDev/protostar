@@ -199,8 +199,6 @@ class SystemExecutor:
                         for v in value.values()
                     )
 
-                    # If the payload table has no nested tables, we can safely overwrite
-                    # it in its entirety. Otherwise, we must recurse to protect sibling tables.
                     if overwrite and not has_sub_tables:
                         base[key] = value
                     else:
@@ -223,6 +221,11 @@ class SystemExecutor:
                 else:
                     base[key] = value
             else:
+                if isinstance(value, tomlkit.items.Table):
+                    value.add(tomlkit.nl())
+                elif isinstance(value, tomlkit.items.AoT) and len(value) > 0:
+                    value[-1].add(tomlkit.nl())
+
                 base[key] = value
 
     def _append_files(self) -> None:
@@ -308,6 +311,7 @@ class SystemExecutor:
 
                 if ast_mutated:
                     new_content = tomlkit.dumps(doc)
+                    new_content = re.sub(r"\n{3,}", "\n\n", new_content)
                     if new_content.strip() != original_content.strip():
                         target.write_text(new_content)
                         logger.debug(f"Updated configuration AST in {filepath}")
