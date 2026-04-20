@@ -4,8 +4,7 @@ version = "0.6.0"
 description = "High-velocity, zero-friction environment scaffolding."
 readme = "README.md"
 authors = [
-    { email = "jackson.ferguson0@gmail.com" },
-    { name = "Jackson Ferguson" },
+    { name = "Jackson Ferguson", email = "jackson.ferguson0@gmail.com" },
 ]
 requires-python = ">=3.12"
 dependencies = [
@@ -37,6 +36,17 @@ protostar = "protostar.cli:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+    "/.vscode",
+    "/demo",
+    "/docs",
+    "/scripts",
+    "/mkdocs.yml",
+    "/.readthedocs.yaml",
+]
 
 [dependency-groups]
 ci = [
@@ -72,31 +82,16 @@ dev = [
 
 [tool.ruff]
 target-version = "py312"
-line-length = 88
-indent-width = 4
-
-exclude = [
-    ".git",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".venv",
-    "build",
-    "dist",
-    "docs",
-    "site",
-]
+extend-exclude = ["docs", "site"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D", "RUF", "N", "RET"]
 ignore = [
     "E501",
-    "D100",   # Missing docstring in public module
-    "D104",   # Missing docstring in public package
-    "D107",   # Missing docstring in __init__
+    "D100",
+    "D104",
+    "D107",
 ]
-
-# Allow ignored variables (e.g. for unpacking)
-dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -109,12 +104,6 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "tests/*.py" = ["T201", "D"]
 "scripts/*.py" = ["D", "N806", "E741", "T201"]
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
 # ---- mypy ---- #
 
 [tool.mypy]
@@ -126,7 +115,6 @@ warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
 disallow_untyped_defs = true
-ignore_missing_imports = false
 exclude = ["^docs/", "^scripts/", "^site/"]
 
 [[tool.mypy.overrides]]
