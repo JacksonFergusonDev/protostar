@@ -40,6 +40,19 @@ Setting up a new project often requires the same manual steps: configuring linte
 
 ---
 
+## 📖 Official Documentation
+
+Ready to dive deeper? The README only scratches the surface.
+
+Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/latest/)** for:
+
+- **Command Reference:** Full flags and capabilities for `init` and `generate`.
+- **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, and Embedded workflows.
+- **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
+- **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
+
+---
+
 ## 💡 Design Philosophy
 
 Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
@@ -120,19 +133,6 @@ protostar init --python --astro --docker --direnv -m --mypy --pytest --pre-commi
 ```
 
 *Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
-
----
-
-## 📖 Official Documentation
-
-Ready to dive deeper? The README only scratches the surface.
-
-Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/latest/)** for:
-
-- **Command Reference:** Full flags and capabilities for `init` and `generate`.
-- **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, and Embedded workflows.
-- **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
-- **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
 
 ---
 
