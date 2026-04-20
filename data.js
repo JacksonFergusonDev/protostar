@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776663644425,
+  "lastUpdate": 1776712049669,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -889,6 +889,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "31bc16058db687d211c6556d02932b66ea64a977",
+          "message": "fix: deterministic artifacts, notebook scoping, and generator formatting (#68)\n\n- fix(executor): enforce deterministic sorting for .gitignore appending to prevent hash randomization churn.\n- fix(generators): strip trailing whitespace from `CircuitPythonGenerator` multi-line string payload to ensure pre-commit compliance.\n- refactor(presets): remove `*.ipynb_checkpoints` from the base Python footprint and inject it exclusively into data science presets (Astro, ML, Scientific).\n- docs(fixtures): update `generate_doc_fixtures.py` payload with `--docker` and sync all markdown includes.",
+          "timestamp": "2026-04-20T12:06:32-07:00",
+          "tree_id": "cc9256a9303681869e672ff8aaef63488f34405e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/31bc16058db687d211c6556d02932b66ea64a977"
+        },
+        "date": 1776712049171,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 126.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 194.68,
             "unit": "ms"
           }
         ]
