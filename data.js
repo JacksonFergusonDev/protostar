@@ -55,7 +55,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 134.74,
             "unit": "ms"
           }
@@ -84,7 +84,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.05,
             "unit": "ms"
           }
@@ -113,7 +113,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 132.61,
             "unit": "ms"
           }
@@ -142,7 +142,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 134.15,
             "unit": "ms"
           }
@@ -171,7 +171,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.55,
             "unit": "ms"
           }
@@ -200,7 +200,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.78,
             "unit": "ms"
           }
@@ -229,7 +229,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 127.25,
             "unit": "ms"
           }
@@ -258,7 +258,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.45,
             "unit": "ms"
           }
@@ -287,7 +287,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.77,
             "unit": "ms"
           }
@@ -316,7 +316,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 137.51,
             "unit": "ms"
           }
@@ -345,7 +345,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 132.53,
             "unit": "ms"
           }
@@ -374,7 +374,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 129.86,
             "unit": "ms"
           }
@@ -403,7 +403,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 124.23,
             "unit": "ms"
           }
@@ -432,7 +432,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 130.86,
             "unit": "ms"
           }
@@ -461,7 +461,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 130.77,
             "unit": "ms"
           }
@@ -490,7 +490,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.33,
             "unit": "ms"
           }
@@ -519,7 +519,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 110.35,
             "unit": "ms"
           }
@@ -548,7 +548,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 138.22,
             "unit": "ms"
           }
@@ -577,7 +577,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 114.8,
             "unit": "ms"
           }
@@ -606,7 +606,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 130.31,
             "unit": "ms"
           }
@@ -635,7 +635,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 126.07,
             "unit": "ms"
           }
@@ -664,7 +664,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 132.6,
             "unit": "ms"
           }
@@ -693,7 +693,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 126.95,
             "unit": "ms"
           }
@@ -722,7 +722,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 135.7,
             "unit": "ms"
           }
@@ -751,7 +751,7 @@ window.BENCHMARK_DATA = {
         "tool": "customSmallerIsBetter",
         "benches": [
           {
-            "name": "Protostar Initialization Latency",
+            "name": "Protostar Headless Latency",
             "value": 131.32,
             "unit": "ms"
           }
