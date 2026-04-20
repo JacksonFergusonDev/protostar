@@ -1,21 +1,21 @@
 ```toml
 [project]
-name = "tmpnsq3b5rl"
+name = "tmpflwfrbd8"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "astropy>=7.2.0",
     "astroquery>=0.4.11",
-    "huggingface-hub>=1.7.1",
+    "huggingface-hub>=1.11.0",
     "matplotlib>=3.10.8",
     "nbdime>=4.0.4",
-    "numpy>=2.4.3",
-    "pandas>=3.0.1",
-    "photutils>=2.3.0",
+    "numpy>=2.4.4",
+    "pandas>=3.0.2",
+    "photutils>=3.0.0",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.1",
     "specutils>=2.3.0",
-    "torch>=2.10.0",
+    "torch>=2.11.0",
     "tqdm>=4.67.3",
 ]
 
@@ -42,7 +42,7 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 [dependency-groups]
 dev = [
-    "mypy>=1.19.1",
-    "ruff>=0.15.6",
+    "mypy>=1.20.1",
+    "ruff>=0.15.11",
 ]
 ```

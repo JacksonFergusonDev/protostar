@@ -112,7 +112,7 @@ Lets say you initialized a machine learning repo yesterday with `protostar init 
 
 But today you remembered you'll be doing quasar analysis, and you want to enforce strict typing with `mypy`
 
-You simply run `protostar init --python --astro --mypy` in that existing directory.
+You simply run `protostar init --python --astro --mypy --docker` in that existing directory.
 
 Because Protostar detects existing configuration markers (like `pyproject.toml`), it instantly halts the execution and triggers the __Gravitational Anomaly__ intercept prompt:
 

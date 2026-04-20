@@ -1,5 +1,4 @@
 ```text
-*.ipynb_checkpoints
 *.log
 *.onnx
 *.pt
@@ -10,6 +9,7 @@
 .env
 .git/
 .idea/
+.ipynb_checkpoints/
 .python-version
 .ruff_cache/
 .venv/

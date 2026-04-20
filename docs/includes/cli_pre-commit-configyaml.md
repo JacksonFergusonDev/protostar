@@ -17,13 +17,13 @@ repos:
       - id: markdownlint
         args: ["--fix"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.6
+    rev: v0.15.11
     hooks:
       - id: ruff-format
       - id: ruff
         args: [ --fix ]
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
+    rev: v1.20.1
     hooks:
       - id: mypy
         additional_dependencies:
