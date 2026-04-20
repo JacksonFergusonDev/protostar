@@ -48,7 +48,7 @@ class AstroPreset(PresetModule):
     @property
     def default_ignores(self) -> list[str]:
         """Returns a list of default VCS ignore patterns for this preset."""
-        return ["*.fits", "*.fit", "*.fts", "*.csv", "*.parquet"]
+        return ["*.fits", "*.fit", "*.fts", "*.csv", "*.parquet", ".ipynb_checkpoints/"]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends preset-specific dependencies, attributes, and post-install tasks."""
