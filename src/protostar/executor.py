@@ -356,7 +356,7 @@ class SystemExecutor:
                     if existing_content and not existing_content.endswith("\n")
                     else ""
                 )
-                f.write(prefix + "\n".join(missing) + "\n")
+                f.write(prefix + "\n".join(sorted(missing)) + "\n")
             logger.debug(f"Appended {len(missing)} items to .gitignore")
 
     def _write_docker_artifacts(self) -> None:
