@@ -37,20 +37,21 @@ theme:
     text: Inter
     code: JetBrains Mono
   palette:
+    # 1. Rich UI (Forced default for all users)
     - scheme: slate
       primary: deep purple
       accent: cyan
       toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
+        icon: material/brush
+        name: Switch to Minimal UI
 
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
+    # 2. Minimal UI (Low-entropy fallback)
+    - scheme: default
       primary: white
       accent: cyan
       toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
+        icon: material/brush-off
+        name: Switch to Rich UI
   icon:
     repo: fontawesome/brands/space-awesome
     admonition:

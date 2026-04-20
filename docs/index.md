@@ -8,7 +8,8 @@
     </p>
   </div>
   <div class="hero-visual">
-    <img src="./assets/hero-page.svg" alt="Logo" />
+    <img class="hero-img-light" src="./assets/favicon.svg" alt="Logo" />
+    <img class="hero-img-dark" src="./assets/hero-page.svg" alt="Logo" />
   </div>
 </div>
 
