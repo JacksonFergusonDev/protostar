@@ -40,4 +40,5 @@ class MLPreset(PresetModule):
             "wandb/",
             "mlruns/",
             "runs/",
+            ".ipynb_checkpoints/",
         ]

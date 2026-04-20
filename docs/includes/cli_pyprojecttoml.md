@@ -1,10 +1,10 @@
 ```toml
 [project]
-name = "tmppx3tp-oy"
+name = "tmpf9fysw0f"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "rich>=14.3.3",
+    "rich>=15.0.0",
     "typer>=0.24.1",
 ]
 
@@ -38,11 +38,11 @@ testpaths = [
 
 [dependency-groups]
 dev = [
-    "mypy>=1.19.1",
+    "mypy>=1.20.1",
     "pre-commit>=4.5.1",
-    "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
+    "pytest>=9.0.3",
+    "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
-    "ruff>=0.15.6",
+    "ruff>=0.15.11",
 ]
 ```

@@ -39,4 +39,4 @@ class ScientificPreset(PresetModule):
     @property
     def default_ignores(self) -> list[str]:
         """Returns a list of default VCS ignore patterns for this preset."""
-        return ["*.csv", "*.parquet", "*.nc"]
+        return ["*.csv", "*.parquet", "*.nc", ".ipynb_checkpoints/"]

@@ -20,7 +20,7 @@ FIXTURES = {
     "ml": [["--python", "--ml", "--docker"]],
     "ml_merged": [
         ["--python", "--ml", "--docker"],
-        ["--python", "--astro", "--mypy", "--force"],
+        ["--python", "--astro", "--mypy", "--docker", "--force"],
     ],
 }
 

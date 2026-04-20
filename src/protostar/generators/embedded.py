@@ -49,11 +49,11 @@ def main():
 
     while True:
         current_time = time.monotonic()
-        
+
         if current_time - last_tick >= interval:
             # led.value = not led.value
             last_tick = current_time
-            
+
         time.sleep(0.01)
 
 if __name__ == "__main__":

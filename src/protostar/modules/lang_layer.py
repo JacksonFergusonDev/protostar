@@ -88,7 +88,6 @@ class PythonModule(BootstrapModule):
         artifacts = [
             ".venv/",
             "__pycache__/",
-            "*.ipynb_checkpoints",
         ]
         for artifact in artifacts:
             manifest.add_environment_artifact(artifact)

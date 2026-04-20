@@ -1,5 +1,4 @@
 ```text
-*.ipynb_checkpoints
 *.log
 *.onnx
 *.pt
@@ -10,6 +9,7 @@
 .env
 .git/
 .idea/
+.ipynb_checkpoints/
 .python-version
 .ruff_cache/
 .venv/
@@ -22,4 +22,10 @@ mlruns/
 runs/
 tests/
 wandb/
+*.csv
+*.fit
+*.fits
+*.fts
+*.parquet
+.mypy_cache/
 ```

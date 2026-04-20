@@ -1,12 +1,12 @@
 ```toml
 [project]
-name = "tmplqnacng8"
+name = "tmp-luu98vu"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "huggingface-hub>=1.7.1",
+    "huggingface-hub>=1.11.0",
     "scikit-learn>=1.8.0",
-    "torch>=2.10.0",
+    "torch>=2.11.0",
     "tqdm>=4.67.3",
 ]
 
@@ -26,6 +26,6 @@ ignore = []
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.6",
+    "ruff>=0.15.11",
 ]
 ```

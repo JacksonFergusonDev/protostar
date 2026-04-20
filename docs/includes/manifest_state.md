@@ -5,14 +5,13 @@
         "*.fit",
         "*.fits",
         "*.fts",
-        "*.ipynb_checkpoints",
         "*.parquet",
+        ".ipynb_checkpoints/",
         ".ruff_cache/",
         ".venv/",
         "__pycache__/"
     ],
     "workspace_hides": [
-        "*.ipynb_checkpoints",
         ".ruff_cache/",
         ".venv/",
         "__pycache__/"
