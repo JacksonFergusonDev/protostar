@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776635357861,
+  "lastUpdate": 1776661218635,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -787,6 +787,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 203.29,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c6125aeecd8cd25a2cf128cac407be60a4c6d9d4",
+          "message": "docs: enforce canonical rich UI default and optimize doc routing (#65)\n\n- Force `slate` palette as the default MkDocs state, disregarding local OS media queries.\n- Reframe theme toggle semantics to represent Rich/Minimal UI states.\n- Map dynamic hero SVG visibility strictly to `data-md-color-scheme` DOM attributes via CSS instead of native HTML media attributes.\n- Elevate documentation links in the README hierarchy.\n- Propagate readthedocs URL to package metadata in `pyproject.toml`.",
+          "timestamp": "2026-04-19T21:59:22-07:00",
+          "tree_id": "5fff0319bbdb1cff8f0f8a8e44fd7b101ac19203",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c6125aeecd8cd25a2cf128cac407be60a4c6d9d4"
+        },
+        "date": 1776661218294,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 129.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 198.89,
             "unit": "ms"
           }
         ]
