@@ -78,6 +78,14 @@
     filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.1));
 }
 
+.hero-img-dark {
+    display: none;
+}
+
+.hero-img-light {
+    display: block;
+}
+
 @media screen and (max-width: 768px) {
     .protostar-hero {
         grid-template-columns: 1fr;
@@ -201,6 +209,14 @@
 
         /* Diffused Cyan Glow */
         box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
+    }
+
+    .hero-img-dark {
+        display: block;
+    }
+
+    .hero-img-light {
+        display: none;
     }
 
     /* --- Typography & Elements --- */
