@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776661218635,
+  "lastUpdate": 1776662515055,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -821,6 +821,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 198.89,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a50fa282ef531948a32d450b5b4e24a2ce4d43ba",
+          "message": "refactor(docs): overhaul CSS architecture to remove technical debt (#66)\n\n- Consolidate duplicate selectors across the stylesheet\n- Remove !important overrides to flatten CSS specificity\n- Group MkDocs slate theme variables into a single source of truth\n- Purge dead code and establish strict universal vs. dark-mode boundaries",
+          "timestamp": "2026-04-19T22:20:55-07:00",
+          "tree_id": "3a9f002c20d5ba91baa5dc7838337892bbfd0b44",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a50fa282ef531948a32d450b5b4e24a2ce4d43ba"
+        },
+        "date": 1776662514751,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 142.73,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 214.4,
             "unit": "ms"
           }
         ]
