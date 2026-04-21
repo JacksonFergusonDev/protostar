@@ -149,13 +149,17 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            with console.status(f"Propelling sequence: {task.command[0]}"):
+            binary_name = Path(task.command[0]).name
+            msg = task.description or f"Propelling sequence: {binary_name}"
+            with console.status(msg):
                 execute_subprocess(task.command, timeout=task.timeout)
 
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
-            with console.status(f"Propelling sequence: {task.command[0]}"):
+            binary_name = Path(task.command[0]).name
+            msg = task.description or f"Propelling sequence: {binary_name}"
+            with console.status(msg):
                 execute_subprocess(task.command, timeout=task.timeout)
 
     def _deep_merge_tomlkit(
