@@ -426,6 +426,74 @@ def test_executor_deep_merge_tomlkit(mock_config):
     assert "# A random comment inside an array" in dumped
 
 
+def test_executor_deep_merge_tomlkit_empty_aot(mock_config):
+    """Test that injecting an empty Array of Tables safely bypasses the newline append logic."""
+    import tomlkit
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base = tomlkit.document()
+    payload = tomlkit.document()
+
+    # Inject a structurally empty Array of Tables
+    payload.append("empty_array", tomlkit.aot())
+
+    executor._deep_merge_tomlkit(base, payload)
+
+    result = base.unwrap()
+    assert "empty_array" in result
+    assert len(result["empty_array"]) == 0
+
+
+def test_executor_append_files_ast_no_op_write(mocker, mock_config):
+    """Test that file writing is bypassed if the merged AST yields identical content."""
+    original_content = "[tool.mypy]\nstrict = true\n"
+
+    manifest = EnvironmentManifest()
+    # Queue a payload that is perfectly identical to the existing base document
+    manifest.add_file_append("pyproject.toml", original_content)
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mocker.patch("protostar.executor.Path.read_text", return_value=original_content)
+
+    # mock_open resolves the python_version lookup gracefully
+    mock_file = mocker.mock_open(read_data=original_content.encode("utf-8"))
+    mocker.patch("protostar.executor.Path.open", mock_file)
+
+    mock_write = mocker.patch("protostar.executor.Path.write_text")
+
+    executor._append_files()
+
+    # The AST was parsed, evaluated, and merged (ast_mutated = True),
+    # but since the stripped strings matched, it correctly avoided disk I/O.
+    mock_write.assert_not_called()
+
+
+def test_executor_deep_merge_tomlkit_new_populated_aot(mock_config):
+    """Test that injecting a novel, populated Array of Tables appends a newline to its last element."""
+    import tomlkit
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base = tomlkit.document()
+    # Inject a populated AoT that does not exist in the base document
+    payload = tomlkit.parse("[[plugins]]\nname = 'alpha'\n[[plugins]]\nname = 'beta'\n")
+
+    executor._deep_merge_tomlkit(base, payload)
+
+    dumped = tomlkit.dumps(base)
+
+    # Verify the AoT was injected and the newline was appended to the final element
+    assert "name = 'beta'\n\n" in dumped
+
+    result = base.unwrap()
+    assert len(result["plugins"]) == 2
+    assert result["plugins"][1]["name"] == "beta"
+
+
 def test_executor_append_files_ast_merge(mocker, mock_config):
     """Test that _append_files mutates the TOML AST logically based on the MERGE strategy."""
     base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
