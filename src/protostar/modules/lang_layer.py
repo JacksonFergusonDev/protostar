@@ -97,12 +97,17 @@ class PythonModule(BootstrapModule):
                 cmd = ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
                 if self.python_version:
                     cmd.extend(["--python", self.python_version])
-                manifest.add_system_task(cmd)
+                manifest.add_system_task(
+                    cmd, description="Scaffolding uv virtual environment"
+                )
         elif self.package_manager == "pip" and not Path(".venv").exists():
             python_cmd = (
                 f"python{self.python_version}" if self.python_version else "python3"
             )
-            manifest.add_system_task([python_cmd, "-m", "venv", ".venv"])
+            manifest.add_system_task(
+                [python_cmd, "-m", "venv", ".venv"],
+                description="Scaffolding pip virtual environment",
+            )
 
         # --- IDE Injection ---
         config = ProtostarConfig.load()
@@ -151,7 +156,9 @@ class RustModule(BootstrapModule):
         manifest.add_pre_commit_hook(hook_payload)
 
         if not Path("Cargo.toml").exists():
-            manifest.add_system_task(["cargo", "init"])
+            manifest.add_system_task(
+                ["cargo", "init"], description="Initializing Cargo workspace"
+            )
 
 
 class NodeModule(BootstrapModule):
@@ -212,7 +219,9 @@ class NodeModule(BootstrapModule):
             cmd = [self.package_manager, "init"]
             if self.package_manager == "npm":
                 cmd.append("-y")
-            manifest.add_system_task(cmd)
+            manifest.add_system_task(
+                cmd, description=f"Initializing {self.package_manager} workspace"
+            )
 
 
 class CppModule(BootstrapModule):

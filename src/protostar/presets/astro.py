@@ -70,7 +70,9 @@ class AstroPreset(PresetModule):
 
         # 2. nbdime requires a git repository to configure
         if not Path(".git").exists():
-            manifest.add_system_task(["git", "init"])
+            manifest.add_system_task(
+                ["git", "init"], description="Initializing git repository"
+            )
 
         # 3. Queue nbdime configuration
         config = ProtostarConfig.load()
@@ -79,4 +81,6 @@ class AstroPreset(PresetModule):
         else:
             nbdime_cmd = [".venv/bin/nbdime", "config-git", "--enable"]
 
-        manifest.add_post_install_task(nbdime_cmd)
+        manifest.add_post_install_task(
+            nbdime_cmd, description="Configuring nbdime git integration"
+        )

@@ -70,7 +70,9 @@ class DirenvModule(BootstrapModule):
         )
 
         manifest.add_file_injection(".envrc", content)
-        manifest.add_post_install_task(["direnv", "allow"])
+        manifest.add_post_install_task(
+            ["direnv", "allow"], description="Authorizing direnv workspace"
+        )
 
 
 class MarkdownLintModule(BootstrapModule):
@@ -334,12 +336,22 @@ class PreCommitModule(BootstrapModule):
         # `autoupdate` pulls remote git repositories to update hook definitions,
         # requiring a wider time window than a local install.
         if config.python_package_manager == "uv":
-            manifest.add_post_install_task(["uv", "run", "pre-commit", "install"])
             manifest.add_post_install_task(
-                ["uv", "run", "pre-commit", "autoupdate"], timeout=300
+                ["uv", "run", "pre-commit", "install"],
+                description="Installing pre-commit git hooks",
+            )
+            manifest.add_post_install_task(
+                ["uv", "run", "pre-commit", "autoupdate"],
+                timeout=300,
+                description="Updating pre-commit hooks to latest versions...",
             )
         else:
-            manifest.add_post_install_task([".venv/bin/pre-commit", "install"])
             manifest.add_post_install_task(
-                [".venv/bin/pre-commit", "autoupdate"], timeout=300
+                [".venv/bin/pre-commit", "install"],
+                description="Installing pre-commit git hooks",
+            )
+            manifest.add_post_install_task(
+                [".venv/bin/pre-commit", "autoupdate"],
+                timeout=300,
+                description="Updating pre-commit hooks to latest versions...",
             )
