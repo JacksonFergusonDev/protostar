@@ -1,6 +1,6 @@
 ```toml
 [project]
-name = "tmpflwfrbd8"
+name = "tmpc5sa0gq6"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
@@ -33,16 +33,17 @@ select = [
 ]
 ignore = []
 
-
 [tool.mypy]
 python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
 [dependency-groups]
 dev = [
     "mypy>=1.20.1",
     "ruff>=0.15.11",
 ]
+
 ```

@@ -1,6 +1,6 @@
 ```toml
 [project]
-name = "tmp-luu98vu"
+name = "tmpafcwiq6i"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
@@ -28,4 +28,5 @@ ignore = []
 dev = [
     "ruff>=0.15.11",
 ]
+
 ```

@@ -1,6 +1,6 @@
 ```toml
 [project]
-name = "tmpf9fysw0f"
+name = "tmpo3h7504o"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
@@ -45,4 +45,5 @@ dev = [
     "pytest-mock>=3.15.1",
     "ruff>=0.15.11",
 ]
+
 ```
