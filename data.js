@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776712049669,
+  "lastUpdate": 1776745525177,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -923,6 +923,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 194.68,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ace60dc849f46eabbeb07fd86cb0698f9c284aa",
+          "message": "fix: stabilize tomlkit AST injection spacing and refresh doc fixtures (#69)\n\n* fix(executor): resolve TOML AST injection spacing anomalies\n\n- Explicitly append `tomlkit.nl()` to newly injected `Table` and `AoT` objects in `_deep_merge_tomlkit` to prevent blocks from rendering flush against subsequent tables.\n- Introduce a regex pass in `_append_files` to condense stacked newlines (3+ down to 2) resulting from AST table overwrites.\n- Ensure standard trailing newlines are preserved when dumping the mutated document.\n\n* docs(fixtures): regenerate pyproject.toml markdown fixtures\n\nUpdate docs/includes fixtures to reflect the corrected TOML formatting, demonstrating proper single-line spacing before the `[dependency-groups]` block and standard EOF newlines.\n\n* test(executor): achieve full coverage on TOML AST spacing logic\n\n- Add test for empty Array of Tables (AoT) injection to verify the newline append bypass logic in `_deep_merge_tomlkit`.\n- Add test for identical AST mutations to ensure `_append_files` safely bypasses redundant disk I/O when the merged tree yields the same string as the base document.",
+          "timestamp": "2026-04-20T21:24:23-07:00",
+          "tree_id": "83ce1221359035cf10a234f2d748df2b80b1398e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8ace60dc849f46eabbeb07fd86cb0698f9c284aa"
+        },
+        "date": 1776745524304,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.69,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 195.22,
             "unit": "ms"
           }
         ]
