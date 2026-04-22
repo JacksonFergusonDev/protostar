@@ -165,6 +165,15 @@ def generate_manifest_state() -> None:
     for mod in modules:
         mod.build(manifest)
 
+    # --- STABILIZE ARTIFACTS ---
+    # Override machine-specific paths and user-specific global configs
+    # to ensure deterministic JSON output in both local and CI environments.
+    manifest.ide_settings = {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": True,
+    }
+    # ---------------------------
+
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
     output_path = INCLUDES_DIR / "manifest_state.md"
     content = f"```json\n{state_json}\n```\n"

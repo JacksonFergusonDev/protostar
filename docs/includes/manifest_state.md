@@ -17,7 +17,7 @@
         "__pycache__/"
     ],
     "ide_settings": {
-        "python.defaultInterpreterPath": "/Users/jacksonferguson/Developer/protostar/.venv/bin/python",
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
         "python.terminal.activateEnvironment": true
     },
     "dependencies": [
