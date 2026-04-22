@@ -155,6 +155,6 @@ The manifest exposes the following methods to queue state changes:
 | `add_dev_dependency(package: str)` | Queues a development or tooling package. |
 | `add_file_injection(path: str, content: str)` | Queues a complete file write. Fails if the file exists unless explicitly marked for overwrite. |
 | `add_file_append(path: str, content: str)` | Queues a string payload for late-binding concatenation or TOML AST deep-merging. |
-| `add_system_task(command: list[str], timeout: int | None = 30)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout. |
-| `add_post_install_task(command: list[str], timeout: int | None = 30)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout. |
+| `add_system_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout and UI description. |
+| `add_post_install_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout and UI description. |
 | `add_vcs_ignore(path: str)` | Appends a tracking exclusion entry to the version control ignore manifest (e.g., `.gitignore`). |

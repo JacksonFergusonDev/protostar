@@ -44,7 +44,8 @@
                 "config-git",
                 "--enable"
             ],
-            "timeout": 30
+            "timeout": 30,
+            "description": "Configuring nbdime git integration"
         }
     ],
     "directories": [
