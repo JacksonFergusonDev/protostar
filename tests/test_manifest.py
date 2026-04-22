@@ -1,4 +1,4 @@
-from protostar.manifest import CollisionStrategy
+from protostar.manifest import CollisionStrategy, EnvironmentManifest
 
 
 def test_manifest_initialization(manifest):
@@ -53,6 +53,31 @@ def test_add_system_task(manifest):
     assert manifest.system_tasks[0].timeout == 30
     assert manifest.system_tasks[1].command == ["cargo", "init"]
     assert manifest.system_tasks[1].timeout == 45
+
+
+def test_add_system_task_with_description():
+    manifest = EnvironmentManifest()
+    manifest.add_system_task(
+        ["git", "init"], timeout=10, description="Initializing git repository"
+    )
+
+    assert len(manifest.system_tasks) == 1
+    task = manifest.system_tasks[0]
+    assert task.command == ["git", "init"]
+    assert task.timeout == 10
+    assert task.description == "Initializing git repository"
+
+
+def test_add_post_install_task_with_description():
+    manifest = EnvironmentManifest()
+    manifest.add_post_install_task(
+        ["direnv", "allow"], description="Authorizing direnv workspace"
+    )
+
+    assert len(manifest.post_install_tasks) == 1
+    task = manifest.post_install_tasks[0]
+    assert task.command == ["direnv", "allow"]
+    assert task.description == "Authorizing direnv workspace"
 
 
 def test_add_post_install_task(manifest):

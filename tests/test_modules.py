@@ -46,6 +46,10 @@ def test_python_module_uv_build(manifest, mocker):
         for t in manifest.system_tasks
     )
 
+    # Find the uv init task and verify its description
+    task = next(t for t in manifest.system_tasks if t.command[0] == "uv")
+    assert task.description == "Scaffolding uv virtual environment"
+
 
 def test_python_module_uv_with_version(manifest, mocker):
     """Test Python manifest includes the specific python version flag alongside bare initialization."""
@@ -262,6 +266,13 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
         if t.command == ["uv", "run", "pre-commit", "autoupdate"]
     )
     assert autoupdate_task.timeout == 300
+
+    # Verify the descriptions of the pre-commit tasks
+    install_task = manifest.post_install_tasks[0]
+    update_task = manifest.post_install_tasks[1]
+
+    assert install_task.description == "Installing pre-commit git hooks"
+    assert "Updating pre-commit hooks" in update_task.description
 
 
 def test_pre_commit_module_build_skips_git_init(manifest, mocker):
