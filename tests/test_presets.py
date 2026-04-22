@@ -42,6 +42,10 @@ def test_astro_preset_build(manifest, mocker):
     )
     assert not any(t.command == ["git", "init"] for t in manifest.system_tasks)
 
+    # Verify nbdime post-install task
+    nbdime_task = next(t for t in manifest.post_install_tasks if "nbdime" in t.command)
+    assert nbdime_task.description == "Configuring nbdime git integration"
+
 
 def test_astro_preset_build_pip(manifest, mocker):
     """Test that the Astro preset injects the pip variant of nbdime command."""

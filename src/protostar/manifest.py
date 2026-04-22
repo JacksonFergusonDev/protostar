@@ -18,10 +18,12 @@ class SystemTask:
     Attributes:
         command: The command and its arguments as a list of strings.
         timeout: The maximum execution time in seconds, or None for no limit.
+        description: An optional human-readable description for the terminal UI.
     """
 
     command: list[str]
     timeout: int | None = None
+    description: str | None = None
 
 
 @dataclasses.dataclass
@@ -82,25 +84,39 @@ class EnvironmentManifest:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
 
-    def add_system_task(self, command: list[str], timeout: int | None = 30) -> None:
+    def add_system_task(
+        self,
+        command: list[str],
+        timeout: int | None = 30,
+        description: str | None = None,
+    ) -> None:
         """Queues a shell command for execution during the realization phase.
 
         Args:
             command: The command and its arguments to execute.
             timeout: The maximum allowed execution time in seconds. Defaults to 30.
+            description: An optional human-readable description for the terminal UI.
         """
-        self.system_tasks.append(SystemTask(command=command, timeout=timeout))
+        self.system_tasks.append(
+            SystemTask(command=command, timeout=timeout, description=description)
+        )
 
     def add_post_install_task(
-        self, command: list[str], timeout: int | None = 30
+        self,
+        command: list[str],
+        timeout: int | None = 30,
+        description: str | None = None,
     ) -> None:
         """Queues a shell command for execution after dependencies are fully installed.
 
         Args:
             command: The command and its arguments to execute.
             timeout: The maximum allowed execution time in seconds. Defaults to 30.
+            description: An optional human-readable description for the terminal UI.
         """
-        self.post_install_tasks.append(SystemTask(command=command, timeout=timeout))
+        self.post_install_tasks.append(
+            SystemTask(command=command, timeout=timeout, description=description)
+        )
 
     def add_dependency(self, package: str) -> None:
         """Queues a dependency for installation, preventing duplicates."""

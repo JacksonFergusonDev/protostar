@@ -1002,3 +1002,38 @@ def test_executor_execute_post_install_tasks(mocker, mock_config):
     assert mock_execute.call_count == 2
     mock_execute.assert_any_call(["echo", "first_task"], timeout=30)
     mock_execute.assert_any_call(["echo", "second_task"], timeout=45)
+
+
+def test_executor_uses_custom_task_description(mocker):
+    # Mock the console and subprocess
+    mock_status = mocker.patch("protostar.executor.console.status")
+    mocker.patch("protostar.executor.execute_subprocess")
+
+    manifest = EnvironmentManifest()
+    manifest.add_system_task(["git", "init"], description="Initializing git repo")
+
+    # We only need a dummy config to init the executor
+    config = ProtostarConfig()
+    executor = SystemExecutor(manifest, config)
+
+    executor._execute_tasks()
+
+    # Verify the exact string was passed to the rich console status
+    mock_status.assert_called_once_with("Initializing git repo")
+
+
+def test_executor_task_description_fallback(mocker):
+    mock_status = mocker.patch("protostar.executor.console.status")
+    mocker.patch("protostar.executor.execute_subprocess")
+
+    manifest = EnvironmentManifest()
+    # Provide a command with a path, but NO description
+    manifest.add_system_task([".venv/bin/pre-commit", "install"])
+
+    config = ProtostarConfig()
+    executor = SystemExecutor(manifest, config)
+
+    executor._execute_tasks()
+
+    # Verify the fallback logic stripped the path and grabbed the binary name
+    mock_status.assert_called_once_with("Propelling sequence: pre-commit")
