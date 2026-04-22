@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776745525177,
+  "lastUpdate": 1776832880468,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -957,6 +957,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.22,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac3f71ecf1cb771b768c17f636d9754348d59e20",
+          "message": "feat: add context-aware status descriptions for system tasks (#70)\n\nResolves an abstraction leak where the SystemExecutor generated UI status \nspinners based purely on the raw command executable (e.g., displaying \"uv\" \nwhile actually running a heavy `pre-commit autoupdate` task). \n\n- Extends `SystemTask` and `EnvironmentManifest` with an optional `description` field.\n- Updates `SystemExecutor` to prioritize module-provided descriptions, falling back to a clean binary name extraction if omitted.\n- Injects domain-specific descriptions into `PreCommitModule`, `DirenvModule`, `AstroPreset`, and the primary language modules to clarify long-running network tasks.\n- Expands test suite with `pytest-mock` to verify the new UI routing and fallback logic without executing real subprocesses.\n- Synchronizes the Manifest API documentation and generated JSON fixtures with the new task signatures.",
+          "timestamp": "2026-04-21T21:40:22-07:00",
+          "tree_id": "0df101bec2fb5122584e4e5172fa4b2eb63b2534",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ac3f71ecf1cb771b768c17f636d9754348d59e20"
+        },
+        "date": 1776832880128,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.85,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 205.44,
             "unit": "ms"
           }
         ]
