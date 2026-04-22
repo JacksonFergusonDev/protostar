@@ -186,6 +186,10 @@ def generate_tree(dir_path: Path) -> str:
 
 
 def build_fixtures():
+    # Strip the parent VIRTUAL_ENV so it doesn't leak into the isolated temp dir
+    clean_env = os.environ.copy()
+    clean_env.pop("VIRTUAL_ENV", None)
+
     for name, commands in FIXTURES.items():
         with tempfile.TemporaryDirectory() as tmpdir:
             # 1. Create a static working directory to prevent random project names
@@ -195,7 +199,10 @@ def build_fixtures():
             # 2. Run Protostar commands sequentially in the isolated static directory
             for flags in commands:
                 subprocess.run(
-                    ["protostar", "init", *flags], cwd=static_cwd, check=True
+                    ["protostar", "init", *flags],
+                    cwd=static_cwd,
+                    check=True,
+                    env=clean_env,
                 )
 
             # 3. Extract and write the directory tree
