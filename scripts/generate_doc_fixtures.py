@@ -3,15 +3,23 @@ import os
 import re
 import subprocess
 import tempfile
+from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from protostar.config import DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from protostar.generators import GENERATOR_REGISTRY
 from protostar.manifest import EnvironmentManifest
-from protostar.modules import LANG_MODULES, TOOLING_MODULES, PythonModule, RuffModule
-from protostar.presets import PRESETS, AstroPreset
+from protostar.modules import (
+    LANG_MODULES,
+    TOOLING_MODULES,
+    BootstrapModule,
+    PythonModule,
+    RuffModule,
+)
+from protostar.presets import PRESETS, AstroPreset, PresetModule
 
 FIXTURES = {
     "cli": [
@@ -38,10 +46,139 @@ TARGETS = [
 INCLUDES_DIR = Path("docs/includes").resolve()
 
 
+def _write_markdown_snippet(
+    filename: str, content: str, language: str | None = None
+) -> None:
+    """Writes content to a markdown snippet file within the includes directory.
+
+    Args:
+        filename: The target filename (e.g., 'default_config.md').
+        content: The raw string payload to write to disk.
+        language: An optional language identifier for a fenced code block.
+            If provided, the content is wrapped in a markdown code block.
+            If omitted, the content is written as standard markdown.
+    """
+    output_path = INCLUDES_DIR / filename
+
+    # Ensure exactly one trailing newline before closing blocks to prevent formatting errors,
+    # while preserving intentional multiple trailing newlines from target files.
+    if not content.endswith("\n"):
+        content += "\n"
+
+    formatted_content = f"```{language}\n{content}```\n" if language else content
+
+    output_path.write_text(formatted_content)
+    print(f"Generated: {output_path.name}")
+
+
+def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
+    """Preserves existing dependency versions from an older pyproject.toml.
+
+    Extracts the semantic version pins from the old content and injects them
+    into the newly generated content to prevent arbitrary diff churn during
+    documentation regeneration.
+
+    Args:
+        old_content: The string content of the existing documentation fixture.
+        new_content: The newly generated pyproject.toml string content.
+
+    Returns:
+        The merged string content with frozen dependency versions.
+    """
+    # Build a lookup dictionary mapping package names to their frozen versions
+    frozen_deps: dict[str, str] = dict(
+        re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
+    )
+
+    def repl_deps(match: re.Match[str]) -> str:
+        package_name = match.group(1)
+        new_version = match.group(2)
+        # Fall back to the new version if the package wasn't in the old content
+        frozen_version = frozen_deps.get(package_name, new_version)
+        return f'"{package_name}>={frozen_version}"'
+
+    return re.sub(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', repl_deps, new_content)
+
+
+def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
+    """Preserves existing git hook revisions from an older .pre-commit-config.yaml.
+
+    Extracts the hook repository revisions from the old content and injects them
+    into the newly generated content to prevent arbitrary diff churn.
+
+    Args:
+        old_content: The string content of the existing documentation fixture.
+        new_content: The newly generated .pre-commit-config.yaml string content.
+
+    Returns:
+        The merged string content with frozen hook revisions.
+    """
+    # Build a lookup dictionary mapping repository URLs to their frozen git tags
+    frozen_hooks: dict[str, str] = dict(
+        re.findall(r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content)
+    )
+
+    def repl_hooks(match: re.Match[str]) -> str:
+        repo_url = match.group(1)
+        indentation = match.group(2)
+        new_rev = match.group(3)
+        # Fall back to the newly generated tag if the repo is new
+        frozen_rev = frozen_hooks.get(repo_url, new_rev)
+        return f"repo: {repo_url}\n{indentation}rev: {frozen_rev}"
+
+    return re.sub(r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)", repl_hooks, new_content)
+
+
+def _resolve_markdown_language(filename: str) -> str:
+    """Resolves the appropriate markdown language tag for a given filename.
+
+    Args:
+        filename: The string filename to evaluate (e.g., 'main.cpp', 'pyproject.toml').
+
+    Returns:
+        The markdown syntax highlighting identifier.
+    """
+    # Path().suffix correctly identifies that '.gitignore' has NO suffix,
+    # but '.pyrightconfig.json' has the suffix '.json'.
+    ext = Path(filename).suffix.lstrip(".").lower()
+
+    language_map = {
+        "py": "python",
+        "hpp": "cpp",
+        "txt": "text",  # Normalize .txt to standard ```text blocks
+    }
+
+    # Fallback to the extracted extension, or "text" if there is no extension
+    return language_map.get(ext, ext or "text")
+
+
+def _format_markdown_table(
+    headers: Sequence[str], rows: Sequence[Sequence[str]]
+) -> str:
+    """Constructs a markdown-formatted table from headers and row data.
+
+    Args:
+        headers: A sequence of column header strings.
+        rows: A sequence of rows, where each row is a sequence of string values.
+
+    Returns:
+        A formatted markdown table string.
+    """
+    header_row = f"| {' | '.join(headers)} |"
+    separator_row = f"| {' | '.join([':---'] * len(headers))} |"
+
+    table = [header_row, separator_row]
+    for row in rows:
+        table.append(f"| {' | '.join(row)} |")
+
+    return "\n".join(table)
+
+
 class ManifestEncoder(json.JSONEncoder):
     """Custom JSON encoder for EnvironmentManifest dataclass serialization."""
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
+        """Overrides the default JSON encoder for custom data types."""
         if isinstance(obj, set):
             return sorted(obj)
         if isinstance(obj, Enum):
@@ -56,10 +193,9 @@ class ManifestEncoder(json.JSONEncoder):
 
 def generate_default_config() -> None:
     """Extracts the default global TOML configuration."""
-    output_path = INCLUDES_DIR / "default_config.md"
-    content = f"```toml\n{DEFAULT_CONFIG_CONTENT.strip()}\n```\n"
-    output_path.write_text(content)
-    print(f"Generated: {output_path.name}")
+    _write_markdown_snippet(
+        "default_config.md", DEFAULT_CONFIG_CONTENT, language="toml"
+    )
 
 
 def generate_generator_outputs() -> None:
@@ -86,17 +222,10 @@ def generate_generator_outputs() -> None:
 
                 markdown_blocks = []
                 for path in output_paths:
-                    file_ext = path.suffix.lstrip(".") or "text"
-                    if file_ext == "py":
-                        file_ext = "python"
-                    elif file_ext in ("hpp", "cpp"):
-                        file_ext = "cpp"
-                    elif file_ext == "ini":
-                        file_ext = "ini"
-
+                    lang = _resolve_markdown_language(path.name)
                     file_content = path.read_text().strip()
                     markdown_blocks.append(
-                        f"**`{path.name}`**\n\n```{file_ext}\n{file_content}\n```"
+                        f"**`{path.name}`**\n\n```{lang}\n{file_content}\n```"
                     )
 
                 output_path = INCLUDES_DIR / f"gen_{target_name}.md"
@@ -113,46 +242,54 @@ def generate_capability_tables() -> None:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
     # 1. Languages Table
-    lang_path = INCLUDES_DIR / "table_languages.md"
-    lang_lines = [
-        "| Language Footprint | CLI Flags | Description | Collision Markers |",
-        "| :--- | :--- | :--- | :--- |",
+    lang_headers = [
+        "Language Footprint",
+        "CLI Flags",
+        "Description",
+        "Collision Markers",
     ]
-    for mod in LANG_MODULES:
-        markers = ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*"
-        lang_lines.append(
-            f"| {mod.name} | {_format_flags(mod.cli_flags)} | {mod.cli_help} | {markers} |"
-        )
-    lang_path.write_text("\n".join(lang_lines) + "\n")
-    print(f"Generated: {lang_path.name}")
+    lang_rows = [
+        [
+            mod.name,
+            _format_flags(mod.cli_flags),
+            mod.cli_help,
+            ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*",
+        ]
+        for mod in LANG_MODULES
+    ]
+    _write_markdown_snippet(
+        "table_languages.md", _format_markdown_table(lang_headers, lang_rows)
+    )
 
     # 2. Tooling Table
-    tool_path = INCLUDES_DIR / "table_tooling.md"
-    tool_lines = [
-        "| Tooling Module | CLI Flags | Description | Collision Markers |",
-        "| :--- | :--- | :--- | :--- |",
+    tool_headers = ["Tooling Module", "CLI Flags", "Description", "Collision Markers"]
+    tool_rows = [
+        [
+            mod.name,
+            _format_flags(mod.cli_flags),
+            mod.cli_help,
+            ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*",
+        ]
+        for mod in TOOLING_MODULES
     ]
-    for mod in TOOLING_MODULES:
-        markers = ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*"
-        tool_lines.append(
-            f"| {mod.name} | {_format_flags(mod.cli_flags)} | {mod.cli_help} | {markers} |"
-        )
-    tool_path.write_text("\n".join(tool_lines) + "\n")
-    print(f"Generated: {tool_path.name}")
+    _write_markdown_snippet(
+        "table_tooling.md", _format_markdown_table(tool_headers, tool_rows)
+    )
 
     # 3. Presets Table
-    preset_path = INCLUDES_DIR / "table_presets.md"
-    preset_lines = [
-        "| Preset | CLI Flags | Description | Default Dependencies |",
-        "| :--- | :--- | :--- | :--- |",
+    preset_headers = ["Preset", "CLI Flags", "Description", "Default Dependencies"]
+    preset_rows = [
+        [
+            preset.name,
+            _format_flags(preset.cli_flags),
+            preset.cli_help,
+            ", ".join(f"`{d}`" for d in preset.default_dependencies) or "*None*",
+        ]
+        for preset in PRESETS
     ]
-    for preset in PRESETS:
-        deps = ", ".join(f"`{d}`" for d in preset.default_dependencies) or "*None*"
-        preset_lines.append(
-            f"| {preset.name} | {_format_flags(preset.cli_flags)} | {preset.cli_help} | {deps} |"
-        )
-    preset_path.write_text("\n".join(preset_lines) + "\n")
-    print(f"Generated: {preset_path.name}")
+    _write_markdown_snippet(
+        "table_presets.md", _format_markdown_table(preset_headers, preset_rows)
+    )
 
 
 def generate_manifest_state() -> None:
@@ -160,10 +297,14 @@ def generate_manifest_state() -> None:
     manifest = EnvironmentManifest()
 
     # Simulate: `protostar init --python --astro --ruff`
-    modules = [PythonModule(), AstroPreset(), RuffModule()]
+    bootstrap_mods: list[BootstrapModule] = [PythonModule(), RuffModule()]
+    preset_mods: list[PresetModule] = [AstroPreset()]
 
-    for mod in modules:
-        mod.build(manifest)
+    for b_mod in bootstrap_mods:
+        b_mod.build(manifest)
+
+    for p_mod in preset_mods:
+        p_mod.build(manifest)
 
     # --- STABILIZE ARTIFACTS ---
     # Override machine-specific paths and user-specific global configs
@@ -175,10 +316,7 @@ def generate_manifest_state() -> None:
     # ---------------------------
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
-    output_path = INCLUDES_DIR / "manifest_state.md"
-    content = f"```json\n{state_json}\n```\n"
-    output_path.write_text(content)
-    print(f"Generated: {output_path.name}")
+    _write_markdown_snippet("manifest_state.md", state_json, language="json")
 
 
 def generate_tree(dir_path: Path) -> str:
@@ -194,89 +332,75 @@ def generate_tree(dir_path: Path) -> str:
     return result.stdout.strip()
 
 
-def build_fixtures():
+def _execute_fixture_scenario(
+    commands: list[list[str]], cwd: Path, env: dict[str, str]
+) -> None:
+    """Executes a sequence of Protostar CLI commands in a given directory.
+
+    Args:
+        commands: A list of flag arrays to append to `protostar init`.
+        cwd: The isolated working directory for the subprocess execution.
+        env: The environment variables passed to the subprocess.
+    """
+    for flags in commands:
+        subprocess.run(
+            ["protostar", "init", *flags],
+            cwd=cwd,
+            check=True,
+            env=env,
+        )
+
+
+def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
+    """Extracts the directory tree and target files, formatting them as markdown.
+
+    Args:
+        source_dir: The populated workspace directory to inspect.
+        fixture_name: The namespace identifier for the output markdown files
+            (e.g., 'cli', 'astro', 'ml_merged').
+    """
+    # 1. Extract and write the directory tree
+    tree_output = generate_tree(source_dir)
+    _write_markdown_snippet(f"{fixture_name}_tree.md", tree_output, language="text")
+
+    # 2. Extract and write specific target files
+    for target in TARGETS:
+        target_file = source_dir / target
+        if not target_file.exists():
+            continue
+
+        lang = _resolve_markdown_language(target)
+        content = target_file.read_text()
+        snippet_filename = f"{fixture_name}_{target.replace('.', '')}.md"
+        snippet_path = INCLUDES_DIR / snippet_filename
+
+        # --- THE SELF-FREEZING LOGIC ---
+        if snippet_path.exists():
+            old_content = snippet_path.read_text()
+
+            if target == "pyproject.toml":
+                content = _freeze_pyproject_deps(old_content, content)
+            elif target == ".pre-commit-config.yaml":
+                content = _freeze_pre_commit_hooks(old_content, content)
+        # -------------------------------
+
+        _write_markdown_snippet(snippet_filename, content, language=lang)
+
+
+def build_fixtures() -> None:
+    """Iterates through predefined fixture scenarios and extracts their artifacts."""
     # Strip the parent VIRTUAL_ENV so it doesn't leak into the isolated temp dir
     clean_env = os.environ.copy()
     clean_env.pop("VIRTUAL_ENV", None)
 
     for name, commands in FIXTURES.items():
         with tempfile.TemporaryDirectory() as tmpdir:
-            # 1. Create a static working directory to prevent random project names
+            # Create a static working directory to prevent random project names
             static_cwd = Path(tmpdir) / "demo_project"
             static_cwd.mkdir()
 
-            # 2. Run Protostar commands sequentially in the isolated static directory
-            for flags in commands:
-                subprocess.run(
-                    ["protostar", "init", *flags],
-                    cwd=static_cwd,
-                    check=True,
-                    env=clean_env,
-                )
-
-            # 3. Extract and write the directory tree
-            tree_output = generate_tree(static_cwd)
-            tree_path = INCLUDES_DIR / f"{name}_tree.md"
-            tree_path.write_text(f"```text\n{tree_output}\n```\n")
-            print(f"Generated: {tree_path.name}")
-
-            # 4. Extract and write specific target files
-            for target in TARGETS:
-                target_file = static_cwd / target
-                if target_file.exists():
-                    lang = (
-                        "toml"
-                        if target.endswith(".toml")
-                        else "yaml"
-                        if target.endswith(".yaml")
-                        else "text"
-                    )
-                    content = target_file.read_text()
-                    snippet_path = INCLUDES_DIR / f"{name}_{target.replace('.', '')}.md"
-
-                    # --- THE SELF-FREEZING LOGIC ---
-                    if snippet_path.exists():
-                        old_content = snippet_path.read_text()
-
-                        if target == "pyproject.toml":
-                            frozen_deps: dict[str, str] = dict(
-                                re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
-                            )
-
-                            def repl_deps(
-                                m: re.Match[str], f: dict[str, str] = frozen_deps
-                            ) -> str:
-                                return (
-                                    f'"{m.group(1)}>={f.get(m.group(1), m.group(2))}"'
-                                )
-
-                            content = re.sub(
-                                r'"([a-zA-Z0-9_-]+)>=([^"]+)"',
-                                repl_deps,
-                                content,
-                            )
-
-                        elif target == ".pre-commit-config.yaml":
-                            frozen_hooks: dict[str, str] = dict(
-                                re.findall(
-                                    r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content
-                                )
-                            )
-
-                            def repl_hooks(
-                                m: re.Match[str], f: dict[str, str] = frozen_hooks
-                            ) -> str:
-                                return f"repo: {m.group(1)}\n{m.group(2)}rev: {f.get(m.group(1), m.group(3))}"
-
-                            content = re.sub(
-                                r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)",
-                                repl_hooks,
-                                content,
-                            )
-                    # -------------------------------
-
-                    snippet_path.write_text(f"```{lang}\n{content}```\n")
-                    print(f"Generated: {snippet_path.name}")
+            _execute_fixture_scenario(commands, static_cwd, clean_env)
+            _extract_and_write_targets(static_cwd, name)
 
 
 def main() -> None:
