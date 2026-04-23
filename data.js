@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776915868490,
+  "lastUpdate": 1776921037873,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1025,6 +1025,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b924161b8df0c8dbcfa40b1325ad6a6bae38d7cf",
+          "message": "refactor(scripts): overhaul doc fixture generation and enforce strict typing (#72)\n\n* refactor(scripts): abstract markdown file writing into unified utility\n\n* refactor(scripts): extract state-freezing regex mutations into pure functions\n\n* refactor(scripts): decouple CLI execution from artifact extraction in fixture generation\n\n* refactor(scripts): streamline table generation and code block extension mapping\n\n* build(tools): enforce strict ruff and mypy static analysis on scripts directory\n\n* fix(scripts): patch type hints, markdown extension resolution, and whitespace formatting\n\n* docs(fixtures): normalize CMakeLists markdown code block language to text",
+          "timestamp": "2026-04-22T22:09:36-07:00",
+          "tree_id": "8a6dabf6708ec94560b2da822a699560a0500a99",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b924161b8df0c8dbcfa40b1325ad6a6bae38d7cf"
+        },
+        "date": 1776921036932,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132.64,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.72,
             "unit": "ms"
           }
         ]
