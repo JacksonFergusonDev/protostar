@@ -60,6 +60,64 @@ def _write_markdown_snippet(
     print(f"Generated: {output_path.name}")
 
 
+def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
+    """Preserves existing dependency versions from an older pyproject.toml.
+
+    Extracts the semantic version pins from the old content and injects them
+    into the newly generated content to prevent arbitrary diff churn during
+    documentation regeneration.
+
+    Args:
+        old_content: The string content of the existing documentation fixture.
+        new_content: The newly generated pyproject.toml string content.
+
+    Returns:
+        The merged string content with frozen dependency versions.
+    """
+    # Build a lookup dictionary mapping package names to their frozen versions
+    frozen_deps: dict[str, str] = dict(
+        re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
+    )
+
+    def repl_deps(match: re.Match[str]) -> str:
+        package_name = match.group(1)
+        new_version = match.group(2)
+        # Fall back to the new version if the package wasn't in the old content
+        frozen_version = frozen_deps.get(package_name, new_version)
+        return f'"{package_name}>={frozen_version}"'
+
+    return re.sub(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', repl_deps, new_content)
+
+
+def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
+    """Preserves existing git hook revisions from an older .pre-commit-config.yaml.
+
+    Extracts the hook repository revisions from the old content and injects them
+    into the newly generated content to prevent arbitrary diff churn.
+
+    Args:
+        old_content: The string content of the existing documentation fixture.
+        new_content: The newly generated .pre-commit-config.yaml string content.
+
+    Returns:
+        The merged string content with frozen hook revisions.
+    """
+    # Build a lookup dictionary mapping repository URLs to their frozen git tags
+    frozen_hooks: dict[str, str] = dict(
+        re.findall(r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content)
+    )
+
+    def repl_hooks(match: re.Match[str]) -> str:
+        repo_url = match.group(1)
+        indentation = match.group(2)
+        new_rev = match.group(3)
+        # Fall back to the newly generated tag if the repo is new
+        frozen_rev = frozen_hooks.get(repo_url, new_rev)
+        return f"repo: {repo_url}\n{indentation}rev: {frozen_rev}"
+
+    return re.sub(r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)", repl_hooks, new_content)
+
+
 class ManifestEncoder(json.JSONEncoder):
     """Custom JSON encoder for EnvironmentManifest dataclass serialization."""
 
@@ -251,40 +309,9 @@ def build_fixtures():
                         old_content = snippet_path.read_text()
 
                         if target == "pyproject.toml":
-                            frozen_deps: dict[str, str] = dict(
-                                re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
-                            )
-
-                            def repl_deps(
-                                m: re.Match[str], f: dict[str, str] = frozen_deps
-                            ) -> str:
-                                return (
-                                    f'"{m.group(1)}>={f.get(m.group(1), m.group(2))}"'
-                                )
-
-                            content = re.sub(
-                                r'"([a-zA-Z0-9_-]+)>=([^"]+)"',
-                                repl_deps,
-                                content,
-                            )
-
+                            content = _freeze_pyproject_deps(old_content, content)
                         elif target == ".pre-commit-config.yaml":
-                            frozen_hooks: dict[str, str] = dict(
-                                re.findall(
-                                    r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content
-                                )
-                            )
-
-                            def repl_hooks(
-                                m: re.Match[str], f: dict[str, str] = frozen_hooks
-                            ) -> str:
-                                return f"repo: {m.group(1)}\n{m.group(2)}rev: {f.get(m.group(1), m.group(3))}"
-
-                            content = re.sub(
-                                r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)",
-                                repl_hooks,
-                                content,
-                            )
+                            content = _freeze_pre_commit_hooks(old_content, content)
                     # -------------------------------
 
                     snippet_path.write_text(f"```{lang}\n{content}```\n")
