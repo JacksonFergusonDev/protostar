@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776832880468,
+  "lastUpdate": 1776915868490,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -991,6 +991,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 205.44,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d99fe064a224278d43ba45abc380de75aaef1d67",
+          "message": "fix(docs): eliminate doc fixture git noise and enforce sync in CI (#71)\n\n- Update `generate_doc_fixtures.py` to use a static execution directory to prevent randomized `uv init` names.\n- Implement self-freezing regex logic to retain existing dependency versions and pre-commit hook revisions across script executions.\n- Override `ide_settings` in manifest generation to use generic `${workspaceFolder}` paths instead of leaking local absolute paths.\n- Strip `VIRTUAL_ENV` from `subprocess.run()` environment kwargs to prevent `uv` environment leakage in CI.\n- Add a CI check via `git diff --exit-code` on the Python 3.14 runner to fail builds that contain out-of-date documentation fixtures.\n- Update existing `docs/includes/*.md` pyproject files to use the stable `demo-project` name.",
+          "timestamp": "2026-04-22T20:43:27-07:00",
+          "tree_id": "5df22741c0484cc49de7eeaf3cc277caa9376501",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d99fe064a224278d43ba45abc380de75aaef1d67"
+        },
+        "date": 1776915867555,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.77,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.52,
             "unit": "ms"
           }
         ]
