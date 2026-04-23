@@ -38,6 +38,28 @@ TARGETS = [
 INCLUDES_DIR = Path("docs/includes").resolve()
 
 
+def _write_markdown_snippet(
+    filename: str, content: str, language: str | None = None
+) -> None:
+    """Writes content to a markdown snippet file within the includes directory.
+
+    Args:
+        filename: The target filename (e.g., 'default_config.md').
+        content: The raw string payload to write to disk.
+        language: An optional language identifier for a fenced code block.
+            If provided, the content is wrapped in a markdown code block.
+            If omitted, the content is written as standard markdown.
+    """
+    output_path = INCLUDES_DIR / filename
+    if language:
+        formatted_content = f"```{language}\n{content.strip()}\n```\n"
+    else:
+        formatted_content = f"{content.strip()}\n"
+
+    output_path.write_text(formatted_content)
+    print(f"Generated: {output_path.name}")
+
+
 class ManifestEncoder(json.JSONEncoder):
     """Custom JSON encoder for EnvironmentManifest dataclass serialization."""
 
@@ -56,10 +78,9 @@ class ManifestEncoder(json.JSONEncoder):
 
 def generate_default_config() -> None:
     """Extracts the default global TOML configuration."""
-    output_path = INCLUDES_DIR / "default_config.md"
-    content = f"```toml\n{DEFAULT_CONFIG_CONTENT.strip()}\n```\n"
-    output_path.write_text(content)
-    print(f"Generated: {output_path.name}")
+    _write_markdown_snippet(
+        "default_config.md", DEFAULT_CONFIG_CONTENT, language="toml"
+    )
 
 
 def generate_generator_outputs() -> None:
@@ -113,7 +134,6 @@ def generate_capability_tables() -> None:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
     # 1. Languages Table
-    lang_path = INCLUDES_DIR / "table_languages.md"
     lang_lines = [
         "| Language Footprint | CLI Flags | Description | Collision Markers |",
         "| :--- | :--- | :--- | :--- |",
@@ -123,11 +143,9 @@ def generate_capability_tables() -> None:
         lang_lines.append(
             f"| {mod.name} | {_format_flags(mod.cli_flags)} | {mod.cli_help} | {markers} |"
         )
-    lang_path.write_text("\n".join(lang_lines) + "\n")
-    print(f"Generated: {lang_path.name}")
+    _write_markdown_snippet("table_languages.md", "\n".join(lang_lines))
 
     # 2. Tooling Table
-    tool_path = INCLUDES_DIR / "table_tooling.md"
     tool_lines = [
         "| Tooling Module | CLI Flags | Description | Collision Markers |",
         "| :--- | :--- | :--- | :--- |",
@@ -137,11 +155,9 @@ def generate_capability_tables() -> None:
         tool_lines.append(
             f"| {mod.name} | {_format_flags(mod.cli_flags)} | {mod.cli_help} | {markers} |"
         )
-    tool_path.write_text("\n".join(tool_lines) + "\n")
-    print(f"Generated: {tool_path.name}")
+    _write_markdown_snippet("table_tooling.md", "\n".join(tool_lines))
 
     # 3. Presets Table
-    preset_path = INCLUDES_DIR / "table_presets.md"
     preset_lines = [
         "| Preset | CLI Flags | Description | Default Dependencies |",
         "| :--- | :--- | :--- | :--- |",
@@ -151,8 +167,7 @@ def generate_capability_tables() -> None:
         preset_lines.append(
             f"| {preset.name} | {_format_flags(preset.cli_flags)} | {preset.cli_help} | {deps} |"
         )
-    preset_path.write_text("\n".join(preset_lines) + "\n")
-    print(f"Generated: {preset_path.name}")
+    _write_markdown_snippet("table_presets.md", "\n".join(preset_lines))
 
 
 def generate_manifest_state() -> None:
@@ -175,10 +190,7 @@ def generate_manifest_state() -> None:
     # ---------------------------
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
-    output_path = INCLUDES_DIR / "manifest_state.md"
-    content = f"```json\n{state_json}\n```\n"
-    output_path.write_text(content)
-    print(f"Generated: {output_path.name}")
+    _write_markdown_snippet("manifest_state.md", state_json, language="json")
 
 
 def generate_tree(dir_path: Path) -> str:
