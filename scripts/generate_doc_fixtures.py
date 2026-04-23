@@ -264,58 +264,81 @@ def generate_tree(dir_path: Path) -> str:
     return result.stdout.strip()
 
 
-def build_fixtures():
+def _execute_fixture_scenario(
+    commands: list[list[str]], cwd: Path, env: dict[str, str]
+) -> None:
+    """Executes a sequence of Protostar CLI commands in a given directory.
+
+    Args:
+        commands: A list of flag arrays to append to `protostar init`.
+        cwd: The isolated working directory for the subprocess execution.
+        env: The environment variables passed to the subprocess.
+    """
+    for flags in commands:
+        subprocess.run(
+            ["protostar", "init", *flags],
+            cwd=cwd,
+            check=True,
+            env=env,
+        )
+
+
+def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
+    """Extracts the directory tree and target files, formatting them as markdown.
+
+    Args:
+        source_dir: The populated workspace directory to inspect.
+        fixture_name: The namespace identifier for the output markdown files
+            (e.g., 'cli', 'astro', 'ml_merged').
+    """
+    # 1. Extract and write the directory tree
+    tree_output = generate_tree(source_dir)
+    _write_markdown_snippet(f"{fixture_name}_tree.md", tree_output, language="text")
+
+    # 2. Extract and write specific target files
+    for target in TARGETS:
+        target_file = source_dir / target
+        if not target_file.exists():
+            continue
+
+        lang = (
+            "toml"
+            if target.endswith(".toml")
+            else "yaml"
+            if target.endswith(".yaml")
+            else "text"
+        )
+        content = target_file.read_text()
+        snippet_filename = f"{fixture_name}_{target.replace('.', '')}.md"
+        snippet_path = INCLUDES_DIR / snippet_filename
+
+        # --- THE SELF-FREEZING LOGIC ---
+        if snippet_path.exists():
+            old_content = snippet_path.read_text()
+
+            if target == "pyproject.toml":
+                content = _freeze_pyproject_deps(old_content, content)
+            elif target == ".pre-commit-config.yaml":
+                content = _freeze_pre_commit_hooks(old_content, content)
+        # -------------------------------
+
+        _write_markdown_snippet(snippet_filename, content, language=lang)
+
+
+def build_fixtures() -> None:
+    """Iterates through predefined fixture scenarios and extracts their artifacts."""
     # Strip the parent VIRTUAL_ENV so it doesn't leak into the isolated temp dir
     clean_env = os.environ.copy()
     clean_env.pop("VIRTUAL_ENV", None)
 
     for name, commands in FIXTURES.items():
         with tempfile.TemporaryDirectory() as tmpdir:
-            # 1. Create a static working directory to prevent random project names
+            # Create a static working directory to prevent random project names
             static_cwd = Path(tmpdir) / "demo_project"
             static_cwd.mkdir()
 
-            # 2. Run Protostar commands sequentially in the isolated static directory
-            for flags in commands:
-                subprocess.run(
-                    ["protostar", "init", *flags],
-                    cwd=static_cwd,
-                    check=True,
-                    env=clean_env,
-                )
-
-            # 3. Extract and write the directory tree
-            tree_output = generate_tree(static_cwd)
-            tree_path = INCLUDES_DIR / f"{name}_tree.md"
-            tree_path.write_text(f"```text\n{tree_output}\n```\n")
-            print(f"Generated: {tree_path.name}")
-
-            # 4. Extract and write specific target files
-            for target in TARGETS:
-                target_file = static_cwd / target
-                if target_file.exists():
-                    lang = (
-                        "toml"
-                        if target.endswith(".toml")
-                        else "yaml"
-                        if target.endswith(".yaml")
-                        else "text"
-                    )
-                    content = target_file.read_text()
-                    snippet_path = INCLUDES_DIR / f"{name}_{target.replace('.', '')}.md"
-
-                    # --- THE SELF-FREEZING LOGIC ---
-                    if snippet_path.exists():
-                        old_content = snippet_path.read_text()
-
-                        if target == "pyproject.toml":
-                            content = _freeze_pyproject_deps(old_content, content)
-                        elif target == ".pre-commit-config.yaml":
-                            content = _freeze_pre_commit_hooks(old_content, content)
-                    # -------------------------------
-
-                    snippet_path.write_text(f"```{lang}\n{content}```\n")
-                    print(f"Generated: {snippet_path.name}")
+            _execute_fixture_scenario(commands, static_cwd, clean_env)
+            _extract_and_write_targets(static_cwd, name)
 
 
 def main() -> None:
