@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import tempfile
+from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from pathlib import Path
@@ -118,6 +119,50 @@ def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
     return re.sub(r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)", repl_hooks, new_content)
 
 
+def _resolve_markdown_language(filename: str) -> str:
+    """Resolves the appropriate markdown language tag for a given filename.
+
+    Args:
+        filename: The string filename to evaluate (e.g., 'main.cpp', 'pyproject.toml').
+
+    Returns:
+        The markdown syntax highlighting identifier.
+    """
+    ext = filename.split(".")[-1].lower() if "." in filename else ""
+    language_map = {
+        "py": "python",
+        "hpp": "cpp",
+        "cpp": "cpp",
+        "ini": "ini",
+        "toml": "toml",
+        "yaml": "yaml",
+        "yml": "yaml",
+    }
+    return language_map.get(ext, ext or "text")
+
+
+def _format_markdown_table(
+    headers: Sequence[str], rows: Sequence[Sequence[str]]
+) -> str:
+    """Constructs a markdown-formatted table from headers and row data.
+
+    Args:
+        headers: A sequence of column header strings.
+        rows: A sequence of rows, where each row is a sequence of string values.
+
+    Returns:
+        A formatted markdown table string.
+    """
+    header_row = f"| {' | '.join(headers)} |"
+    separator_row = f"| {' | '.join([':---'] * len(headers))} |"
+
+    table = [header_row, separator_row]
+    for row in rows:
+        table.append(f"| {' | '.join(row)} |")
+
+    return "\n".join(table)
+
+
 class ManifestEncoder(json.JSONEncoder):
     """Custom JSON encoder for EnvironmentManifest dataclass serialization."""
 
@@ -165,17 +210,10 @@ def generate_generator_outputs() -> None:
 
                 markdown_blocks = []
                 for path in output_paths:
-                    file_ext = path.suffix.lstrip(".") or "text"
-                    if file_ext == "py":
-                        file_ext = "python"
-                    elif file_ext in ("hpp", "cpp"):
-                        file_ext = "cpp"
-                    elif file_ext == "ini":
-                        file_ext = "ini"
-
+                    lang = _resolve_markdown_language(path.name)
                     file_content = path.read_text().strip()
                     markdown_blocks.append(
-                        f"**`{path.name}`**\n\n```{file_ext}\n{file_content}\n```"
+                        f"**`{path.name}`**\n\n```{lang}\n{file_content}\n```"
                     )
 
                 output_path = INCLUDES_DIR / f"gen_{target_name}.md"
@@ -192,40 +230,54 @@ def generate_capability_tables() -> None:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
     # 1. Languages Table
-    lang_lines = [
-        "| Language Footprint | CLI Flags | Description | Collision Markers |",
-        "| :--- | :--- | :--- | :--- |",
+    lang_headers = [
+        "Language Footprint",
+        "CLI Flags",
+        "Description",
+        "Collision Markers",
     ]
-    for mod in LANG_MODULES:
-        markers = ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*"
-        lang_lines.append(
-            f"| {mod.name} | {_format_flags(mod.cli_flags)} | {mod.cli_help} | {markers} |"
-        )
-    _write_markdown_snippet("table_languages.md", "\n".join(lang_lines))
+    lang_rows = [
+        [
+            mod.name,
+            _format_flags(mod.cli_flags),
+            mod.cli_help,
+            ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*",
+        ]
+        for mod in LANG_MODULES
+    ]
+    _write_markdown_snippet(
+        "table_languages.md", _format_markdown_table(lang_headers, lang_rows)
+    )
 
     # 2. Tooling Table
-    tool_lines = [
-        "| Tooling Module | CLI Flags | Description | Collision Markers |",
-        "| :--- | :--- | :--- | :--- |",
+    tool_headers = ["Tooling Module", "CLI Flags", "Description", "Collision Markers"]
+    tool_rows = [
+        [
+            mod.name,
+            _format_flags(mod.cli_flags),
+            mod.cli_help,
+            ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*",
+        ]
+        for mod in TOOLING_MODULES
     ]
-    for mod in TOOLING_MODULES:
-        markers = ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*"
-        tool_lines.append(
-            f"| {mod.name} | {_format_flags(mod.cli_flags)} | {mod.cli_help} | {markers} |"
-        )
-    _write_markdown_snippet("table_tooling.md", "\n".join(tool_lines))
+    _write_markdown_snippet(
+        "table_tooling.md", _format_markdown_table(tool_headers, tool_rows)
+    )
 
     # 3. Presets Table
-    preset_lines = [
-        "| Preset | CLI Flags | Description | Default Dependencies |",
-        "| :--- | :--- | :--- | :--- |",
+    preset_headers = ["Preset", "CLI Flags", "Description", "Default Dependencies"]
+    preset_rows = [
+        [
+            preset.name,
+            _format_flags(preset.cli_flags),
+            preset.cli_help,
+            ", ".join(f"`{d}`" for d in preset.default_dependencies) or "*None*",
+        ]
+        for preset in PRESETS
     ]
-    for preset in PRESETS:
-        deps = ", ".join(f"`{d}`" for d in preset.default_dependencies) or "*None*"
-        preset_lines.append(
-            f"| {preset.name} | {_format_flags(preset.cli_flags)} | {preset.cli_help} | {deps} |"
-        )
-    _write_markdown_snippet("table_presets.md", "\n".join(preset_lines))
+    _write_markdown_snippet(
+        "table_presets.md", _format_markdown_table(preset_headers, preset_rows)
+    )
 
 
 def generate_manifest_state() -> None:
@@ -301,13 +353,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         if not target_file.exists():
             continue
 
-        lang = (
-            "toml"
-            if target.endswith(".toml")
-            else "yaml"
-            if target.endswith(".yaml")
-            else "text"
-        )
+        lang = _resolve_markdown_language(target)
         content = target_file.read_text()
         snippet_filename = f"{fixture_name}_{target.replace('.', '')}.md"
         snippet_path = INCLUDES_DIR / snippet_filename
