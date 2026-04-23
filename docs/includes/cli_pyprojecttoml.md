@@ -1,6 +1,6 @@
 ```toml
 [project]
-name = "tmpo3h7504o"
+name = "demo-project"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [

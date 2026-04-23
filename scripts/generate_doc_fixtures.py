@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import tempfile
 from dataclasses import asdict, is_dataclass
@@ -164,6 +165,15 @@ def generate_manifest_state() -> None:
     for mod in modules:
         mod.build(manifest)
 
+    # --- STABILIZE ARTIFACTS ---
+    # Override machine-specific paths and user-specific global configs
+    # to ensure deterministic JSON output in both local and CI environments.
+    manifest.ide_settings = {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": True,
+    }
+    # ---------------------------
+
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
     output_path = INCLUDES_DIR / "manifest_state.md"
     content = f"```json\n{state_json}\n```\n"
@@ -185,23 +195,34 @@ def generate_tree(dir_path: Path) -> str:
 
 
 def build_fixtures():
+    # Strip the parent VIRTUAL_ENV so it doesn't leak into the isolated temp dir
+    clean_env = os.environ.copy()
+    clean_env.pop("VIRTUAL_ENV", None)
+
     for name, commands in FIXTURES.items():
         with tempfile.TemporaryDirectory() as tmpdir:
-            tmp_path = Path(tmpdir)
+            # 1. Create a static working directory to prevent random project names
+            static_cwd = Path(tmpdir) / "demo_project"
+            static_cwd.mkdir()
 
-            # 1. Run Protostar commands sequentially in the isolated temp directory
+            # 2. Run Protostar commands sequentially in the isolated static directory
             for flags in commands:
-                subprocess.run(["protostar", "init", *flags], cwd=tmp_path, check=True)
+                subprocess.run(
+                    ["protostar", "init", *flags],
+                    cwd=static_cwd,
+                    check=True,
+                    env=clean_env,
+                )
 
-            # 2. Extract and write the directory tree
-            tree_output = generate_tree(tmp_path)
+            # 3. Extract and write the directory tree
+            tree_output = generate_tree(static_cwd)
             tree_path = INCLUDES_DIR / f"{name}_tree.md"
             tree_path.write_text(f"```text\n{tree_output}\n```\n")
             print(f"Generated: {tree_path.name}")
 
-            # 3. Extract and write specific target files
+            # 4. Extract and write specific target files
             for target in TARGETS:
-                target_file = tmp_path / target
+                target_file = static_cwd / target
                 if target_file.exists():
                     lang = (
                         "toml"
@@ -211,8 +232,49 @@ def build_fixtures():
                         else "text"
                     )
                     content = target_file.read_text()
-
                     snippet_path = INCLUDES_DIR / f"{name}_{target.replace('.', '')}.md"
+
+                    # --- THE SELF-FREEZING LOGIC ---
+                    if snippet_path.exists():
+                        old_content = snippet_path.read_text()
+
+                        if target == "pyproject.toml":
+                            frozen_deps: dict[str, str] = dict(
+                                re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
+                            )
+
+                            def repl_deps(
+                                m: re.Match[str], f: dict[str, str] = frozen_deps
+                            ) -> str:
+                                return (
+                                    f'"{m.group(1)}>={f.get(m.group(1), m.group(2))}"'
+                                )
+
+                            content = re.sub(
+                                r'"([a-zA-Z0-9_-]+)>=([^"]+)"',
+                                repl_deps,
+                                content,
+                            )
+
+                        elif target == ".pre-commit-config.yaml":
+                            frozen_hooks: dict[str, str] = dict(
+                                re.findall(
+                                    r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content
+                                )
+                            )
+
+                            def repl_hooks(
+                                m: re.Match[str], f: dict[str, str] = frozen_hooks
+                            ) -> str:
+                                return f"repo: {m.group(1)}\n{m.group(2)}rev: {f.get(m.group(1), m.group(3))}"
+
+                            content = re.sub(
+                                r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)",
+                                repl_hooks,
+                                content,
+                            )
+                    # -------------------------------
+
                     snippet_path.write_text(f"```{lang}\n{content}```\n")
                     print(f"Generated: {snippet_path.name}")
 
