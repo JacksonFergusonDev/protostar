@@ -7,12 +7,19 @@ from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from protostar.config import DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from protostar.generators import GENERATOR_REGISTRY
 from protostar.manifest import EnvironmentManifest
-from protostar.modules import LANG_MODULES, TOOLING_MODULES, PythonModule, RuffModule
-from protostar.presets import PRESETS, AstroPreset
+from protostar.modules import (
+    LANG_MODULES,
+    TOOLING_MODULES,
+    BootstrapModule,
+    PythonModule,
+    RuffModule,
+)
+from protostar.presets import PRESETS, AstroPreset, PresetModule
 
 FIXTURES = {
     "cli": [
@@ -52,10 +59,13 @@ def _write_markdown_snippet(
             If omitted, the content is written as standard markdown.
     """
     output_path = INCLUDES_DIR / filename
-    if language:
-        formatted_content = f"```{language}\n{content.strip()}\n```\n"
-    else:
-        formatted_content = f"{content.strip()}\n"
+
+    # Ensure exactly one trailing newline before closing blocks to prevent formatting errors,
+    # while preserving intentional multiple trailing newlines from target files.
+    if not content.endswith("\n"):
+        content += "\n"
+
+    formatted_content = f"```{language}\n{content}```\n" if language else content
 
     output_path.write_text(formatted_content)
     print(f"Generated: {output_path.name}")
@@ -128,16 +138,17 @@ def _resolve_markdown_language(filename: str) -> str:
     Returns:
         The markdown syntax highlighting identifier.
     """
-    ext = filename.split(".")[-1].lower() if "." in filename else ""
+    # Path().suffix correctly identifies that '.gitignore' has NO suffix,
+    # but '.pyrightconfig.json' has the suffix '.json'.
+    ext = Path(filename).suffix.lstrip(".").lower()
+
     language_map = {
         "py": "python",
         "hpp": "cpp",
-        "cpp": "cpp",
-        "ini": "ini",
-        "toml": "toml",
-        "yaml": "yaml",
-        "yml": "yaml",
+        "txt": "text",  # Normalize .txt to standard ```text blocks
     }
+
+    # Fallback to the extracted extension, or "text" if there is no extension
     return language_map.get(ext, ext or "text")
 
 
@@ -166,7 +177,8 @@ def _format_markdown_table(
 class ManifestEncoder(json.JSONEncoder):
     """Custom JSON encoder for EnvironmentManifest dataclass serialization."""
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
+        """Overrides the default JSON encoder for custom data types."""
         if isinstance(obj, set):
             return sorted(obj)
         if isinstance(obj, Enum):
@@ -285,10 +297,14 @@ def generate_manifest_state() -> None:
     manifest = EnvironmentManifest()
 
     # Simulate: `protostar init --python --astro --ruff`
-    modules = [PythonModule(), AstroPreset(), RuffModule()]
+    bootstrap_mods: list[BootstrapModule] = [PythonModule(), RuffModule()]
+    preset_mods: list[PresetModule] = [AstroPreset()]
 
-    for mod in modules:
-        mod.build(manifest)
+    for b_mod in bootstrap_mods:
+        b_mod.build(manifest)
+
+    for p_mod in preset_mods:
+        p_mod.build(manifest)
 
     # --- STABILIZE ARTIFACTS ---
     # Override machine-specific paths and user-specific global configs
