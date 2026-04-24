@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import re
@@ -9,6 +10,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
+from rich.text import Text
+
+import protostar.cli
 from protostar.config import DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from protostar.generators import GENERATOR_REGISTRY
 from protostar.manifest import EnvironmentManifest
@@ -46,22 +52,18 @@ TARGETS = [
 INCLUDES_DIR = Path("docs/includes").resolve()
 
 
-def _write_markdown_snippet(
-    filename: str, content: str, language: str | None = None
-) -> None:
-    """Writes content to a markdown snippet file within the includes directory.
+def _write_fixture(filename: str, content: str, language: str | None = None) -> None:
+    """Writes content to a fixture file within the includes directory.
 
     Args:
-        filename: The target filename (e.g., 'default_config.md').
+        filename: The target filename (e.g., 'default_config.md', 'cli_help.svg').
         content: The raw string payload to write to disk.
         language: An optional language identifier for a fenced code block.
             If provided, the content is wrapped in a markdown code block.
-            If omitted, the content is written as standard markdown.
+            If omitted, the content is written as standard text.
     """
     output_path = INCLUDES_DIR / filename
 
-    # Ensure exactly one trailing newline before closing blocks to prevent formatting errors,
-    # while preserving intentional multiple trailing newlines from target files.
     if not content.endswith("\n"):
         content += "\n"
 
@@ -193,9 +195,7 @@ class ManifestEncoder(json.JSONEncoder):
 
 def generate_default_config() -> None:
     """Extracts the default global TOML configuration."""
-    _write_markdown_snippet(
-        "default_config.md", DEFAULT_CONFIG_CONTENT, language="toml"
-    )
+    _write_fixture("default_config.md", DEFAULT_CONFIG_CONTENT, language="toml")
 
 
 def generate_generator_outputs() -> None:
@@ -228,9 +228,7 @@ def generate_generator_outputs() -> None:
                         f"**`{path.name}`**\n\n```{lang}\n{file_content}\n```"
                     )
 
-                output_path = INCLUDES_DIR / f"gen_{target_name}.md"
-                output_path.write_text("\n\n".join(markdown_blocks) + "\n")
-                print(f"Generated: {output_path.name}")
+                _write_fixture(f"gen_{target_name}.md", "\n\n".join(markdown_blocks))
         finally:
             os.chdir(original_cwd)
 
@@ -257,7 +255,7 @@ def generate_capability_tables() -> None:
         ]
         for mod in LANG_MODULES
     ]
-    _write_markdown_snippet(
+    _write_fixture(
         "table_languages.md", _format_markdown_table(lang_headers, lang_rows)
     )
 
@@ -272,9 +270,7 @@ def generate_capability_tables() -> None:
         ]
         for mod in TOOLING_MODULES
     ]
-    _write_markdown_snippet(
-        "table_tooling.md", _format_markdown_table(tool_headers, tool_rows)
-    )
+    _write_fixture("table_tooling.md", _format_markdown_table(tool_headers, tool_rows))
 
     # 3. Presets Table
     preset_headers = ["Preset", "CLI Flags", "Description", "Default Dependencies"]
@@ -287,7 +283,7 @@ def generate_capability_tables() -> None:
         ]
         for preset in PRESETS
     ]
-    _write_markdown_snippet(
+    _write_fixture(
         "table_presets.md", _format_markdown_table(preset_headers, preset_rows)
     )
 
@@ -316,7 +312,7 @@ def generate_manifest_state() -> None:
     # ---------------------------
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
-    _write_markdown_snippet("manifest_state.md", state_json, language="json")
+    _write_fixture("manifest_state.md", state_json, language="json")
 
 
 def generate_tree(dir_path: Path) -> str:
@@ -361,7 +357,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     """
     # 1. Extract and write the directory tree
     tree_output = generate_tree(source_dir)
-    _write_markdown_snippet(f"{fixture_name}_tree.md", tree_output, language="text")
+    _write_fixture(f"{fixture_name}_tree.md", tree_output, language="text")
 
     # 2. Extract and write specific target files
     for target in TARGETS:
@@ -384,7 +380,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 content = _freeze_pre_commit_hooks(old_content, content)
         # -------------------------------
 
-        _write_markdown_snippet(snippet_filename, content, language=lang)
+        _write_fixture(snippet_filename, content, language=lang)
 
 
 def build_fixtures() -> None:
@@ -403,11 +399,85 @@ def build_fixtures() -> None:
             _extract_and_write_targets(static_cwd, name)
 
 
+def generate_cli_help_svg() -> None:
+    """Generate an SVG snapshot of the CLI help menu."""
+    dev_null = io.StringIO()
+
+    format_console = Console(
+        width=100,
+        force_terminal=True,
+        color_system="truecolor",
+        file=dev_null,
+    )
+    record_console = Console(
+        record=True,
+        width=100,
+        force_terminal=True,
+        color_system="truecolor",
+        file=dev_null,
+    )
+
+    original_console = getattr(protostar.cli.ProtoHelpFormatter, "console", None)
+
+    try:
+        protostar.cli.ProtoHelpFormatter.console = format_console  # type: ignore[method-assign, assignment]
+
+        parser = protostar.cli.build_parser()
+        ansi_string = parser.format_help()
+
+        prompt = Text.assemble(
+            ("❯ ", "bold magenta"),  # noqa: RUF001
+            ("protostar ", "bold cyan"),
+            ("help\n", "white"),
+        )
+        record_console.print(prompt)
+        record_console.print(Text.from_ansi(ansi_string))
+
+        ansi_colors = [
+            (color.red, color.green, color.blue)
+            for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
+        ]
+
+        # 1. OVERRIDE THE BLUE
+        # Index 4 is ANSI Blue, Index 12 is ANSI Bright Blue.
+        ansi_colors[4] = (97, 175, 239)
+        ansi_colors[12] = (97, 175, 239)
+
+        # 2. OVERRIDE THE CYAN (The actual "puke green" culprit!)
+        # Index 6 is ANSI Cyan, Index 14 is ANSI Bright Cyan.
+        # We replace the default dusty teal with your exact --protostar-cyan hex (#22d3ee)
+        ansi_colors[6] = (34, 211, 238)
+        ansi_colors[14] = (34, 211, 238)
+
+        protostar_theme = TerminalTheme(
+            background=(10, 15, 31),  # --protostar-bg-base: #0a0f1f
+            foreground=(220, 225, 235),  # Crisp off-white text
+            normal=ansi_colors[:8],
+            bright=ansi_colors[8:16],
+        )
+
+        svg_content = record_console.export_svg(
+            title="zsh",
+            theme=protostar_theme,
+        )
+
+        clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+
+        _write_fixture("cli_help.svg", clean_svg)
+
+    finally:
+        if original_console is None:
+            protostar.cli.ProtoHelpFormatter.console = None  # type: ignore[method-assign, assignment]
+        else:
+            protostar.cli.ProtoHelpFormatter.console = original_console  # type: ignore[method-assign, assignment]
+
+
 def main() -> None:
     """Main execution pipeline."""
     INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Generating documentation fixtures...")
+    generate_cli_help_svg()
     generate_default_config()
     generate_generator_outputs()
     generate_capability_tables()

@@ -67,6 +67,20 @@ This safely drops a `TelemetryIngestor.hpp` and `TelemetryIngestor.cpp` into you
 
 ![Target Generation](../assets/demo_generate.gif){ width="700" }
 
+## Exploration & Help
+
+Protostar is self-documenting. You can view the full capabilities matrix and subcommand details directly from your terminal at any time.
+
+![Protostar Help](./includes/cli_help.svg)
+
+!!! tip "Command-Specific Help"
+    You can also get localized help for specific subcommands by running:
+    ```bash
+    protostar help init
+    # or
+    protostar generate --help
+    ```
+
 ## Shell Autocomplete & Aliasing
 
 To speed up your workflow, you can enable CLI autocompletion and set up a shorter alias.
