@@ -461,7 +461,9 @@ def generate_cli_help_svg() -> None:
             theme=protostar_theme,
         )
 
-        _write_fixture("cli_help.svg", svg_content)
+        clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+
+        _write_fixture("cli_help.svg", clean_svg)
 
     finally:
         if original_console is None:
