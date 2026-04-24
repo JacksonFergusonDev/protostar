@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776921037873,
+  "lastUpdate": 1777009607145,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1059,6 +1059,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4750bfd2fae6663fd62ddc27a222a81c2b0b5807",
+          "message": "feat(docs): automate CLI help SVG generation with custom terminal theme (#73)\n\nAutomates the generation of the CLI help menu artifact to prevent documentation drift. \n\n- Refactored `_write_markdown_snippet` to `_write_fixture` to support format-agnostic disk I/O.\n- Implemented `generate_cli_help_svg()` to parse the `argparse` AST and render a vectorized terminal window using `rich`.\n- Applied a custom `TerminalTheme` to map the SVG background and ANSI cyan/blue accents to the project's MkDocs stylesheet.\n- Added an \"Exploration & Help\" section to `getting-started.md` embedding the generated `cli_help.svg`.",
+          "timestamp": "2026-04-23T22:45:46-07:00",
+          "tree_id": "6b0252a9215d1ba6b5ec19bf0a06deb64e8c1460",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4750bfd2fae6663fd62ddc27a222a81c2b0b5807"
+        },
+        "date": 1777009606228,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 128.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 193.23,
             "unit": "ms"
           }
         ]
