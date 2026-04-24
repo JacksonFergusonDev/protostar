@@ -46,22 +46,18 @@ TARGETS = [
 INCLUDES_DIR = Path("docs/includes").resolve()
 
 
-def _write_markdown_snippet(
-    filename: str, content: str, language: str | None = None
-) -> None:
-    """Writes content to a markdown snippet file within the includes directory.
+def _write_fixture(filename: str, content: str, language: str | None = None) -> None:
+    """Writes content to a fixture file within the includes directory.
 
     Args:
-        filename: The target filename (e.g., 'default_config.md').
+        filename: The target filename (e.g., 'default_config.md', 'cli_help.svg').
         content: The raw string payload to write to disk.
         language: An optional language identifier for a fenced code block.
             If provided, the content is wrapped in a markdown code block.
-            If omitted, the content is written as standard markdown.
+            If omitted, the content is written as standard text.
     """
     output_path = INCLUDES_DIR / filename
 
-    # Ensure exactly one trailing newline before closing blocks to prevent formatting errors,
-    # while preserving intentional multiple trailing newlines from target files.
     if not content.endswith("\n"):
         content += "\n"
 
@@ -193,9 +189,7 @@ class ManifestEncoder(json.JSONEncoder):
 
 def generate_default_config() -> None:
     """Extracts the default global TOML configuration."""
-    _write_markdown_snippet(
-        "default_config.md", DEFAULT_CONFIG_CONTENT, language="toml"
-    )
+    _write_fixture("default_config.md", DEFAULT_CONFIG_CONTENT, language="toml")
 
 
 def generate_generator_outputs() -> None:
@@ -228,9 +222,7 @@ def generate_generator_outputs() -> None:
                         f"**`{path.name}`**\n\n```{lang}\n{file_content}\n```"
                     )
 
-                output_path = INCLUDES_DIR / f"gen_{target_name}.md"
-                output_path.write_text("\n\n".join(markdown_blocks) + "\n")
-                print(f"Generated: {output_path.name}")
+                _write_fixture(f"gen_{target_name}.md", "\n\n".join(markdown_blocks))
         finally:
             os.chdir(original_cwd)
 
@@ -257,7 +249,7 @@ def generate_capability_tables() -> None:
         ]
         for mod in LANG_MODULES
     ]
-    _write_markdown_snippet(
+    _write_fixture(
         "table_languages.md", _format_markdown_table(lang_headers, lang_rows)
     )
 
@@ -272,9 +264,7 @@ def generate_capability_tables() -> None:
         ]
         for mod in TOOLING_MODULES
     ]
-    _write_markdown_snippet(
-        "table_tooling.md", _format_markdown_table(tool_headers, tool_rows)
-    )
+    _write_fixture("table_tooling.md", _format_markdown_table(tool_headers, tool_rows))
 
     # 3. Presets Table
     preset_headers = ["Preset", "CLI Flags", "Description", "Default Dependencies"]
@@ -287,7 +277,7 @@ def generate_capability_tables() -> None:
         ]
         for preset in PRESETS
     ]
-    _write_markdown_snippet(
+    _write_fixture(
         "table_presets.md", _format_markdown_table(preset_headers, preset_rows)
     )
 
@@ -316,7 +306,7 @@ def generate_manifest_state() -> None:
     # ---------------------------
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
-    _write_markdown_snippet("manifest_state.md", state_json, language="json")
+    _write_fixture("manifest_state.md", state_json, language="json")
 
 
 def generate_tree(dir_path: Path) -> str:
@@ -361,7 +351,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     """
     # 1. Extract and write the directory tree
     tree_output = generate_tree(source_dir)
-    _write_markdown_snippet(f"{fixture_name}_tree.md", tree_output, language="text")
+    _write_fixture(f"{fixture_name}_tree.md", tree_output, language="text")
 
     # 2. Extract and write specific target files
     for target in TARGETS:
@@ -384,7 +374,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 content = _freeze_pre_commit_hooks(old_content, content)
         # -------------------------------
 
-        _write_markdown_snippet(snippet_filename, content, language=lang)
+        _write_fixture(snippet_filename, content, language=lang)
 
 
 def build_fixtures() -> None:
