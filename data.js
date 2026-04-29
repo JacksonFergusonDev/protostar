@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777350186726,
+  "lastUpdate": 1777441187936,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1161,6 +1161,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 187.97,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7a86abb5e49cac8f13d0f0e628386c2e451f0a03",
+          "message": "fix(docs): stabilize SVG fixture generation and sync rich v15 output (#74)\n\n- Hardcoded `unique_id=\"cli_help\"` in `export_svg` to prevent randomized CSS class hashes from triggering spurious CI diff failures.\n- Regenerated `cli_help.svg` against the latest `uv.lock` to account for the new line height and text wrapping behaviors introduced in the rich v15 bump.",
+          "timestamp": "2026-04-28T22:38:54-07:00",
+          "tree_id": "19c9b238295ea44cc89e39d223acbd8487df8d33",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7a86abb5e49cac8f13d0f0e628386c2e451f0a03"
+        },
+        "date": 1777441187614,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 114.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 185.64,
             "unit": "ms"
           }
         ]
