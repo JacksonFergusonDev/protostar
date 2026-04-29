@@ -480,20 +480,36 @@ def generate_cli_help_svgs() -> None:
 
 def main() -> None:
     """Primary execution pipeline for documentation artifact generation."""
+    parser = argparse.ArgumentParser(description="Generate documentation fixtures.")
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="Skip slow combinatorial subprocess executions (e.g., Protostar init).",
+    )
+    args = parser.parse_args()
+
     try:
         INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
 
         print("Generating documentation fixtures...")
+
+        # Fast executions (instant)
         generate_cli_help_svgs()
         generate_default_config()
         generate_generator_outputs()
         generate_capability_tables()
         generate_manifest_state()
-        build_fixtures()
+
+        # Slow executions (disk I/O and subprocess isolation)
+        if not args.fast:
+            build_fixtures()
+        else:
+            print("Skipping full fixture builds (--fast enabled).")
+
         print("\nDocumentation fixtures updated successfully!")
 
     except KeyboardInterrupt:
-        print("\n\nOperation cancelled by user. Exiting gracefully...")
+        print("\n\nOperation cancelled by user. Exiting gracefully.")
         sys.exit(130)
 
 
