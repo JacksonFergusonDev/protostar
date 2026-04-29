@@ -1,3 +1,4 @@
+import argparse
 import io
 import json
 import os
@@ -399,76 +400,102 @@ def build_fixtures() -> None:
             _extract_and_write_targets(static_cwd, name)
 
 
-def generate_cli_help_svg() -> None:
-    """Generate an SVG snapshot of the CLI help menu."""
-    dev_null = io.StringIO()
-
-    format_console = Console(
-        width=100,
-        force_terminal=True,
-        color_system="truecolor",
-        file=dev_null,
-    )
-    record_console = Console(
-        record=True,
-        width=100,
-        force_terminal=True,
-        color_system="truecolor",
-        file=dev_null,
+def generate_cli_help_svgs() -> None:
+    """Generate SVG snapshots of the CLI help menus."""
+    # Save original consoles to restore them later
+    original_global_console = protostar.cli.console
+    original_formatter_console = getattr(
+        protostar.cli.ProtoHelpFormatter, "console", None
     )
 
-    original_console = getattr(protostar.cli.ProtoHelpFormatter, "console", None)
-
-    try:
-        protostar.cli.ProtoHelpFormatter.console = format_console  # type: ignore[method-assign, assignment]
-
-        parser = protostar.cli.build_parser()
-        ansi_string = parser.format_help()
+    def _render_svg(
+        target_parser: argparse.ArgumentParser, prompt_cmd: str, filename: str
+    ) -> None:
+        """Helper to safely record and export an isolated SVG buffer."""
+        record_console = Console(
+            record=True,
+            width=100,
+            force_terminal=True,
+            color_system="truecolor",
+            legacy_windows=False,
+            file=io.StringIO(),  # Prevents output from splashing to stdout during execution
+        )
 
         prompt = Text.assemble(
             ("❯ ", "bold magenta"),  # noqa: RUF001
             ("protostar ", "bold cyan"),
-            ("help\n", "white"),
+            (f"{prompt_cmd}\n", "white"),
         )
         record_console.print(prompt)
-        record_console.print(Text.from_ansi(ansi_string))
+
+        # ---------------------------------------------------------
+        # Intelligently dispatch based on the parser's
+        # AST to capture custom Table rendering vs standard strings
+        # ---------------------------------------------------------
+        is_custom_table = (
+            hasattr(target_parser, "print_help")
+            and hasattr(target_parser.print_help, "__func__")
+            and target_parser.print_help.__func__.__name__ == "print_table_help"
+        )
+
+        if is_custom_table:
+            # Monkey-patch the module-level console so print_table_help writes to our recorder
+            protostar.cli.console = record_console
+            target_parser.print_help()
+        else:
+            # Use standard rich-argparse flow for parsers that haven't overridden print_help
+            protostar.cli.ProtoHelpFormatter.console = record_console  # type: ignore[method-assign, assignment]
+            ansi_str = target_parser.format_help()
+            record_console.print(Text.from_ansi(ansi_str, no_wrap=True))
+        # ---------------------------------------------------------
 
         ansi_colors = [
             (color.red, color.green, color.blue)
             for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
         ]
-
-        # 1. OVERRIDE THE BLUE
-        # Index 4 is ANSI Blue, Index 12 is ANSI Bright Blue.
         ansi_colors[4] = (97, 175, 239)
         ansi_colors[12] = (97, 175, 239)
-
-        # 2. OVERRIDE THE CYAN (The actual "puke green" culprit!)
-        # Index 6 is ANSI Cyan, Index 14 is ANSI Bright Cyan.
-        # We replace the default dusty teal with your exact --protostar-cyan hex (#22d3ee)
         ansi_colors[6] = (34, 211, 238)
         ansi_colors[14] = (34, 211, 238)
 
         protostar_theme = TerminalTheme(
-            background=(10, 15, 31),  # --protostar-bg-base: #0a0f1f
-            foreground=(220, 225, 235),  # Crisp off-white text
+            background=(10, 15, 31),
+            foreground=(220, 225, 235),
             normal=ansi_colors[:8],
             bright=ansi_colors[8:16],
         )
 
         svg_content = record_console.export_svg(
-            title="zsh", theme=protostar_theme, unique_id="cli_help"
+            title="zsh",
+            theme=protostar_theme,
+            unique_id=filename.replace(".svg", ""),
         )
 
         clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+        _write_fixture(filename, clean_svg)
 
-        _write_fixture("cli_help.svg", clean_svg)
+    try:
+        parser = protostar.cli.build_parser()
+
+        # 1. Base root help
+        _render_svg(parser, "help", "cli_help.svg")
+
+        # 2. Extract the 'init' subparser and render its help
+        subparsers = next(
+            (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+            None,
+        )
+        if subparsers and "init" in subparsers.choices:
+            init_parser = subparsers.choices["init"]
+            _render_svg(init_parser, "help init", "cli_init_help.svg")
 
     finally:
-        if original_console is None:
+        # Restore the native consoles
+        protostar.cli.console = original_global_console
+        if original_formatter_console is None:
             protostar.cli.ProtoHelpFormatter.console = None  # type: ignore[method-assign, assignment]
         else:
-            protostar.cli.ProtoHelpFormatter.console = original_console  # type: ignore[method-assign, assignment]
+            protostar.cli.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign, assignment]
 
 
 def main() -> None:
@@ -476,7 +503,7 @@ def main() -> None:
     INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Generating documentation fixtures...")
-    generate_cli_help_svg()
+    generate_cli_help_svgs()
     generate_default_config()
     generate_generator_outputs()
     generate_capability_tables()
