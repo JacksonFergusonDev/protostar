@@ -51,7 +51,7 @@ This initializes a working environment quickly while preserving explicit control
 
 ## Flight paths
 
-- Head to **[Getting Started](./1_getting-started/getting-started.md)** to get Protostar onto your system.
-- Use **[Environment Initialization](./2_usage/init.md)** to learn the `init` workflow.
-- Use **[Boilerplate Generation](./2_usage/generate.md)** for repeatable boilerplate targets.
-- Visit **[Mission Control](./5_mission-control/overview.md)** for architecture, philosophy, and advanced guidance.
+- Head to **[Getting Started](./getting-started.md)** to get Protostar onto your system.
+- Use **[Environment Initialization](./usage/init.md)** to learn the `init` workflow.
+- Use **[Boilerplate Generation](./usage/generate.md)** for repeatable boilerplate targets.
+- Visit **[Mission Control](./mission-control/overview.md)** for architecture, philosophy, and advanced guidance.

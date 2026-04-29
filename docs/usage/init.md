@@ -166,7 +166,7 @@ If you select __Merge__, Protostar performs a surgical AST injection.
     === "`pyproject.toml` After"
         --8<-- "ml_merged_pyprojecttoml.md"
 
-*Curious how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments? Read the [Mechanics: Executor](../4_mechanics/executor.md) deep dive.*
+*Curious how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments? Read the [Mechanics: Executor](../mechanics/executor.md) deep dive.*
 
 !!! success "Strict Footprint Validation"
     Protostar enforces explicit language boundaries for all tooling operations. If you pass an impossible configuration matrix via the CLI—such as attempting to scaffold Python typing tools in a Rust-only environment (`protostar init --rust --mypy`)—Protostar will not crash or dump inert configurations into your repository. It evaluates the topological constraint, drops the invalid tool, and prints a clean diagnostic warning before proceeding with the rest of the valid scaffolding sequence.
@@ -175,26 +175,6 @@ If you select __Merge__, Protostar performs a surgical AST injection.
 
 ## The Capabilities Matrix
 
-You can mix and match these flags to generate exactly the environment you need.
+You can mix and match these flags to generate exactly the environment you need. To view this matrix in your terminal at any time, run `protostar help init`.
 
-| Category | Flag | Description |
-| --- | --- | --- |
-| :material-code-tags: __Languages__ | `--python` (`-p`) | Modern Python environment via `uv` or `pip`. |
-| | `--rust` (`-r`) | Cargo initialization and pre-commit hooks. |
-| | `--node` (`-n`) | JS/TS environment via npm, pnpm, or yarn. |
-| | `--cpp` (`-c`) | C/C++ footprint with build exclusions. |
-| | `--latex` (`-l`) | LaTeX compiler exclusions and formatting hooks. |
-| :material-rocket-launch: __Domain Presets__ | `--scientific` (`-s`) | Data science and statistical basics. |
-| | `--astro` (`-a`) | Observational astronomy and FITS management. |
-| | `--ml` | Machine learning, deep learning, and artifact exclusions. |
-| | `--api` | REST API backend routers (FastAPI/Pydantic). |
-| | `--cli` | TUI rendering and CLI application parsing. |
-| | `--dsp` (`-d`) | Digital signal processing and audio analysis. |
-| | `--embedded` (`-e`) | Host-side embedded hardware interfacing. |
-| :material-hammer-wrench: __Tooling & Context__ | `--ruff` | Lightning-fast linting and formatting. |
-| | `--mypy` | Strict static type checking. |
-| | `--pytest` | Testing framework and coverage artifacts. |
-| | `--pre-commit` | Automatic git hook orchestration. |
-| | `--markdownlint` (`-m`) | Pragmatic Markdown linting ruleset. |
-| | `--direnv` | Automatic `.envrc` virtual environment activation. |
-| | `--docker` | Optimized build-context `.dockerignore` generation. |
+![Protostar Help Init](../includes/cli_init_help.svg)
