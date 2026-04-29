@@ -28,6 +28,7 @@ from protostar.modules import (
 )
 from protostar.presets import PRESETS, AstroPreset, PresetModule
 
+# Define matrices for combinatorial CLI execution scenarios
 FIXTURES = {
     "cli": [
         ["--python", "--cli", "--mypy", "--pytest", "--pre-commit", "--markdownlint"],
@@ -40,6 +41,7 @@ FIXTURES = {
     ],
 }
 
+# Define target files to extract from the generated environments
 TARGETS = [
     "pyproject.toml",
     ".gitignore",
@@ -49,19 +51,18 @@ TARGETS = [
     ".gitattributes",
 ]
 
-# Resolve to an absolute path immediately so os.chdir() doesn't break it
+# Resolve absolute path to prevent os.chdir() related pathing errors
 INCLUDES_DIR = Path("docs/includes").resolve()
 
 
 def _write_fixture(filename: str, content: str, language: str | None = None) -> None:
-    """Writes content to a fixture file within the includes directory.
+    """Writes formatted content to a fixture file in the documentation includes directory.
 
     Args:
-        filename: The target filename (e.g., 'default_config.md', 'cli_help.svg').
-        content: The raw string payload to write to disk.
-        language: An optional language identifier for a fenced code block.
-            If provided, the content is wrapped in a markdown code block.
-            If omitted, the content is written as standard text.
+        filename: Target filename for the output payload.
+        content: Raw string data to write to disk.
+        language: Optional identifier for a Markdown fenced code block. If provided,
+            the content is wrapped in the specified syntax highlighting.
     """
     output_path = INCLUDES_DIR / filename
 
@@ -75,20 +76,18 @@ def _write_fixture(filename: str, content: str, language: str | None = None) -> 
 
 
 def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
-    """Preserves existing dependency versions from an older pyproject.toml.
+    """Preserves dependency versions from an existing pyproject.toml.
 
-    Extracts the semantic version pins from the old content and injects them
-    into the newly generated content to prevent arbitrary diff churn during
-    documentation regeneration.
+    Prevents arbitrary diff churn during documentation regeneration by extracting
+    and injecting prior semantic version pins into the newly generated payload.
 
     Args:
-        old_content: The string content of the existing documentation fixture.
-        new_content: The newly generated pyproject.toml string content.
+        old_content: Existing documentation fixture string.
+        new_content: Newly generated configuration string.
 
     Returns:
-        The merged string content with frozen dependency versions.
+        The updated string containing the frozen dependency versions.
     """
-    # Build a lookup dictionary mapping package names to their frozen versions
     frozen_deps: dict[str, str] = dict(
         re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
     )
@@ -96,7 +95,6 @@ def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
     def repl_deps(match: re.Match[str]) -> str:
         package_name = match.group(1)
         new_version = match.group(2)
-        # Fall back to the new version if the package wasn't in the old content
         frozen_version = frozen_deps.get(package_name, new_version)
         return f'"{package_name}>={frozen_version}"'
 
@@ -104,19 +102,18 @@ def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
 
 
 def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
-    """Preserves existing git hook revisions from an older .pre-commit-config.yaml.
+    """Preserves Git hook revisions from an existing .pre-commit-config.yaml.
 
-    Extracts the hook repository revisions from the old content and injects them
-    into the newly generated content to prevent arbitrary diff churn.
+    Prevents unnecessary documentation churn by extracting prior repository
+    revisions and injecting them into the new configuration string.
 
     Args:
-        old_content: The string content of the existing documentation fixture.
-        new_content: The newly generated .pre-commit-config.yaml string content.
+        old_content: Existing documentation fixture string.
+        new_content: Newly generated configuration string.
 
     Returns:
-        The merged string content with frozen hook revisions.
+        The updated string containing the frozen Git hook revisions.
     """
-    # Build a lookup dictionary mapping repository URLs to their frozen git tags
     frozen_hooks: dict[str, str] = dict(
         re.findall(r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content)
     )
@@ -125,7 +122,6 @@ def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
         repo_url = match.group(1)
         indentation = match.group(2)
         new_rev = match.group(3)
-        # Fall back to the newly generated tag if the repo is new
         frozen_rev = frozen_hooks.get(repo_url, new_rev)
         return f"repo: {repo_url}\n{indentation}rev: {frozen_rev}"
 
@@ -133,39 +129,36 @@ def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
 
 
 def _resolve_markdown_language(filename: str) -> str:
-    """Resolves the appropriate markdown language tag for a given filename.
+    """Maps a file extension to its corresponding Markdown syntax identifier.
 
     Args:
-        filename: The string filename to evaluate (e.g., 'main.cpp', 'pyproject.toml').
+        filename: The filename to evaluate.
 
     Returns:
-        The markdown syntax highlighting identifier.
+        The syntax highlighting identifier for Markdown.
     """
-    # Path().suffix correctly identifies that '.gitignore' has NO suffix,
-    # but '.pyrightconfig.json' has the suffix '.json'.
     ext = Path(filename).suffix.lstrip(".").lower()
 
     language_map = {
         "py": "python",
         "hpp": "cpp",
-        "txt": "text",  # Normalize .txt to standard ```text blocks
+        "txt": "text",
     }
 
-    # Fallback to the extracted extension, or "text" if there is no extension
     return language_map.get(ext, ext or "text")
 
 
 def _format_markdown_table(
     headers: Sequence[str], rows: Sequence[Sequence[str]]
 ) -> str:
-    """Constructs a markdown-formatted table from headers and row data.
+    """Constructs a Markdown-formatted table from headers and row values.
 
     Args:
-        headers: A sequence of column header strings.
-        rows: A sequence of rows, where each row is a sequence of string values.
+        headers: Sequence of column header names.
+        rows: Sequence containing the row data.
 
     Returns:
-        A formatted markdown table string.
+        A valid Markdown table string.
     """
     header_row = f"| {' | '.join(headers)} |"
     separator_row = f"| {' | '.join([':---'] * len(headers))} |"
@@ -178,7 +171,7 @@ def _format_markdown_table(
 
 
 class ManifestEncoder(json.JSONEncoder):
-    """Custom JSON encoder for EnvironmentManifest dataclass serialization."""
+    """Custom JSON serialization encoder for the EnvironmentManifest datastructure."""
 
     def default(self, obj: Any) -> Any:
         """Overrides the default JSON encoder for custom data types."""
@@ -186,7 +179,6 @@ class ManifestEncoder(json.JSONEncoder):
             return sorted(obj)
         if isinstance(obj, Enum):
             return obj.value
-        # Check that it's an instance, not the class type itself
         if is_dataclass(obj) and not isinstance(obj, type):
             return asdict(obj)
         if hasattr(obj, "__dict__"):
@@ -195,12 +187,12 @@ class ManifestEncoder(json.JSONEncoder):
 
 
 def generate_default_config() -> None:
-    """Extracts the default global TOML configuration."""
+    """Writes the default global TOML configuration to a documentation fixture."""
     _write_fixture("default_config.md", DEFAULT_CONFIG_CONTENT, language="toml")
 
 
 def generate_generator_outputs() -> None:
-    """Executes target generators in a sandbox and dumps their outputs."""
+    """Executes code generators within an isolated directory and extracts outputs."""
     config = ProtostarConfig()
 
     # Map generator targets to dummy identifiers for execution
@@ -235,12 +227,12 @@ def generate_generator_outputs() -> None:
 
 
 def generate_capability_tables() -> None:
-    """Parses modules and presets to generate markdown tables."""
+    """Generates Markdown tables detailing modules, presets, and their CLI footprints."""
 
     def _format_flags(flags: tuple[str, ...]) -> str:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
-    # 1. Languages Table
+    # Language definitions matrix
     lang_headers = [
         "Language Footprint",
         "CLI Flags",
@@ -260,7 +252,7 @@ def generate_capability_tables() -> None:
         "table_languages.md", _format_markdown_table(lang_headers, lang_rows)
     )
 
-    # 2. Tooling Table
+    # Tooling integration matrix
     tool_headers = ["Tooling Module", "CLI Flags", "Description", "Collision Markers"]
     tool_rows = [
         [
@@ -273,7 +265,7 @@ def generate_capability_tables() -> None:
     ]
     _write_fixture("table_tooling.md", _format_markdown_table(tool_headers, tool_rows))
 
-    # 3. Presets Table
+    # Dependency preset matrix
     preset_headers = ["Preset", "CLI Flags", "Description", "Default Dependencies"]
     preset_rows = [
         [
@@ -290,7 +282,7 @@ def generate_capability_tables() -> None:
 
 
 def generate_manifest_state() -> None:
-    """Computes and serializes a standard EnvironmentManifest state matrix."""
+    """Simulates an initialization sequence to compute a deterministic JSON manifest."""
     manifest = EnvironmentManifest()
 
     # Simulate: `protostar init --python --astro --ruff`
@@ -303,21 +295,18 @@ def generate_manifest_state() -> None:
     for p_mod in preset_mods:
         p_mod.build(manifest)
 
-    # --- STABILIZE ARTIFACTS ---
-    # Override machine-specific paths and user-specific global configs
-    # to ensure deterministic JSON output in both local and CI environments.
+    # Override machine-specific IDE paths to guarantee stable JSON diffs in CI
     manifest.ide_settings = {
         "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
         "python.terminal.activateEnvironment": True,
     }
-    # ---------------------------
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
     _write_fixture("manifest_state.md", state_json, language="json")
 
 
 def generate_tree(dir_path: Path) -> str:
-    """Generates a text representation of the directory tree with a cleaned root and no footer."""
+    """Executes the tree CLI utility to generate a clean directory structure text representation."""
     result = subprocess.run(
         ["tree", "-a", "-I", ".git", "--gitignore", "--noreport", "."],
         cwd=dir_path,
@@ -332,12 +321,12 @@ def generate_tree(dir_path: Path) -> str:
 def _execute_fixture_scenario(
     commands: list[list[str]], cwd: Path, env: dict[str, str]
 ) -> None:
-    """Executes a sequence of Protostar CLI commands in a given directory.
+    """Executes a defined sequence of Protostar commands within an isolated environment.
 
     Args:
-        commands: A list of flag arrays to append to `protostar init`.
-        cwd: The isolated working directory for the subprocess execution.
-        env: The environment variables passed to the subprocess.
+        commands: Argument vectors to pass to the CLI.
+        cwd: Target directory for execution.
+        env: Isolated environment variables map.
     """
     for flags in commands:
         subprocess.run(
@@ -349,18 +338,15 @@ def _execute_fixture_scenario(
 
 
 def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
-    """Extracts the directory tree and target files, formatting them as markdown.
+    """Extracts target files from a completed execution scenario and writes them to disk.
 
     Args:
-        source_dir: The populated workspace directory to inspect.
-        fixture_name: The namespace identifier for the output markdown files
-            (e.g., 'cli', 'astro', 'ml_merged').
+        source_dir: Populated workspace directory containing generated artifacts.
+        fixture_name: Prefix assigned to the output documentation fixtures.
     """
-    # 1. Extract and write the directory tree
     tree_output = generate_tree(source_dir)
     _write_fixture(f"{fixture_name}_tree.md", tree_output, language="text")
 
-    # 2. Extract and write specific target files
     for target in TARGETS:
         target_file = source_dir / target
         if not target_file.exists():
@@ -371,7 +357,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         snippet_filename = f"{fixture_name}_{target.replace('.', '')}.md"
         snippet_path = INCLUDES_DIR / snippet_filename
 
-        # --- THE SELF-FREEZING LOGIC ---
+        # Freeze mutable dependencies and VCS revisions if updating an existing file
         if snippet_path.exists():
             old_content = snippet_path.read_text()
 
@@ -379,14 +365,12 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 content = _freeze_pyproject_deps(old_content, content)
             elif target == ".pre-commit-config.yaml":
                 content = _freeze_pre_commit_hooks(old_content, content)
-        # -------------------------------
 
         _write_fixture(snippet_filename, content, language=lang)
 
 
 def build_fixtures() -> None:
-    """Iterates through predefined fixture scenarios and extracts their artifacts."""
-    # Strip the parent VIRTUAL_ENV so it doesn't leak into the isolated temp dir
+    """Iterates through predefined scenarios, executing commands and extracting artifacts."""
     clean_env = os.environ.copy()
     clean_env.pop("VIRTUAL_ENV", None)
 
@@ -401,8 +385,7 @@ def build_fixtures() -> None:
 
 
 def generate_cli_help_svgs() -> None:
-    """Generate SVG snapshots of the CLI help menus."""
-    # Save original consoles to restore them later
+    """Captures isolated SVG snapshots of the Protostar CLI help menus via Rich."""
     original_global_console = protostar.cli.console
     original_formatter_console = getattr(
         protostar.cli.ProtoHelpFormatter, "console", None
@@ -411,14 +394,14 @@ def generate_cli_help_svgs() -> None:
     def _render_svg(
         target_parser: argparse.ArgumentParser, prompt_cmd: str, filename: str
     ) -> None:
-        """Helper to safely record and export an isolated SVG buffer."""
+        """Records terminal output and exports the resulting render to an SVG file."""
         record_console = Console(
             record=True,
             width=100,
             force_terminal=True,
             color_system="truecolor",
             legacy_windows=False,
-            file=io.StringIO(),  # Prevents output from splashing to stdout during execution
+            file=io.StringIO(),
         )
 
         prompt = Text.assemble(
@@ -428,10 +411,8 @@ def generate_cli_help_svgs() -> None:
         )
         record_console.print(prompt)
 
-        # ---------------------------------------------------------
-        # Intelligently dispatch based on the parser's
-        # AST to capture custom Table rendering vs standard strings
-        # ---------------------------------------------------------
+        # Dispatch based on the parser's structure to handle custom table
+        # rendering versus standard rich-argparse string formatting.
         is_custom_table = (
             hasattr(target_parser, "print_help")
             and hasattr(target_parser.print_help, "__func__")
@@ -439,16 +420,14 @@ def generate_cli_help_svgs() -> None:
         )
 
         if is_custom_table:
-            # Monkey-patch the module-level console so print_table_help writes to our recorder
             protostar.cli.console = record_console
             target_parser.print_help()
         else:
-            # Use standard rich-argparse flow for parsers that haven't overridden print_help
             protostar.cli.ProtoHelpFormatter.console = record_console  # type: ignore[method-assign, assignment]
             ansi_str = target_parser.format_help()
             record_console.print(Text.from_ansi(ansi_str, no_wrap=True))
-        # ---------------------------------------------------------
 
+        # Re-map primary colors to match project theme defaults
         ansi_colors = [
             (color.red, color.green, color.blue)
             for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
@@ -477,10 +456,10 @@ def generate_cli_help_svgs() -> None:
     try:
         parser = protostar.cli.build_parser()
 
-        # 1. Base root help
+        # Generate base root help SVG
         _render_svg(parser, "help", "cli_help.svg")
 
-        # 2. Extract the 'init' subparser and render its help
+        # Generate specific subparser help SVG if available
         subparsers = next(
             (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
             None,
@@ -499,7 +478,7 @@ def generate_cli_help_svgs() -> None:
 
 
 def main() -> None:
-    """Main execution pipeline."""
+    """Primary execution pipeline for documentation artifact generation."""
     INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
 
     print("Generating documentation fixtures...")
