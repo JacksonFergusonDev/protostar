@@ -1,5 +1,5 @@
 set shell := ["bash", "-uc"]
-set unstable := true
+set unstable
 set quiet
 
 # --- ANSI Colors ---
@@ -13,21 +13,19 @@ nc := '\033[0m'
 default:
     @just --list
 
-# Install dependencies using uv
-install:
-    @printf "\n{{ blue }}=== Installing Dependencies ==={{ nc }}\n"
-    uv sync --all-extras --dev
-    @printf "{{ green }}✔ Dependencies installed{{ nc }}\n"
+# Sync/install dependencies using uv
+sync:
+    uv sync --all-extras --dev --quiet
 
 # Auto-format Python code using Ruff
-format:
+format: sync
     @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
     uv run ruff check --fix .
     uv run ruff format .
     @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
 
 # Run linters (Ruff and Markdown)
-lint:
+lint: sync
     @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
     uv run ruff check .
     uv run ruff format --check .
@@ -41,31 +39,31 @@ lint:
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
 # Run static type checking with Mypy
-typecheck:
+typecheck: sync
     @printf "\n{{ blue }}=== Running Type Checks ==={{ nc }}\n"
     uv run mypy .
     @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
 
 # Run the full automated testing matrix
-test:
+test: sync
     @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
     uv run pytest
     @printf "{{ green }}✔ All tests passed{{ nc }}\n"
 
 # Run tests with coverage
-test-cov:
+test-cov: sync
     @printf "\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\n"
     uv run pytest --cov
     @printf "{{ green }}✔ Coverage run complete{{ nc }}\n"
 
 # Generate detailed coverage reports
-test-cov-report:
+test-cov-report: sync
     @printf "\n{{ blue }}=== Generating Coverage Reports ==={{ nc }}\n"
     uv run pytest --cov --cov-report=term-missing --cov-report=annotate:coverage_annotations/ | tee coverage_report.txt
     @printf "{{ green }}✔ Coverage reports generated{{ nc }}\n"
 
 # Run quick Hyperfine benchmarks
-test-benchmark:
+test-benchmark: sync
     @printf "\n{{ blue }}=== Running Quick Hyperfine Benchmarks ==={{ nc }}\n"
     hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
         '.venv/bin/protostar help init' \
@@ -73,7 +71,7 @@ test-benchmark:
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run slower, more accurate Hyperfine benchmarks
-test-benchmark-slower:
+test-benchmark-slower: sync
     @printf "\n{{ blue }}=== Running Full Hyperfine Benchmarks ==={{ nc }}\n"
     hyperfine --warmup 30 --runs 90 --export-json benchmark.json \
         '.venv/bin/protostar help init' \
@@ -81,7 +79,7 @@ test-benchmark-slower:
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the exact pipeline executed by GitHub Actions
-ci: install lint typecheck test-cov
+ci: lint typecheck test-cov
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -109,28 +107,34 @@ clean:
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
 
-# Generate Markdown fixtures for documentation examples
-docs-fixtures:
-    @printf "\n{{ blue }}=== Generating Documentation Fixtures ==={{ nc }}\n"
+# Generate ALL Markdown fixtures for documentation (Includes slower subprocess environments)
+docs-fixtures: sync
+    @printf "\n{{ blue }}=== Generating All Documentation Fixtures ==={{ nc }}\n"
     uv run python scripts/generate_doc_fixtures.py
     @printf "{{ green }}✔ Documentation fixtures generated in docs/includes/{{ nc }}\n"
 
+# Generate only the fast documentation fixtures (Skips Protostar init executions)
+docs-fixtures-fast: sync
+    @printf "\n{{ blue }}=== Generating Fast Documentation Fixtures ==={{ nc }}\n"
+    uv run python scripts/generate_doc_fixtures.py --fast
+    @printf "{{ green }}✔ Fast documentation fixtures generated in docs/includes/{{ nc }}\n"
+
 # Generate wizard demo
-wizard-demo:
+wizard-demo: sync
     @printf "\n{{ blue }}=== Generating Wizard Demo ==={{ nc }}\n"
     vhs demo/wizard.tape
     rm -rf tmp_wizard
     @printf "{{ green }}✔ Wizard demo generated{{ nc }}\n"
 
 # Generate headless demo
-headless-demo:
+headless-demo: sync
     @printf "\n{{ blue }}=== Generating Headless Demo ==={{ nc }}\n"
     vhs demo/headless_init.tape
     rm -rf tmp_headless
     @printf "{{ green }}✔ Headless demo generated{{ nc }}\n"
 
 # Generate generation demo
-gen-demo:
+gen-demo: sync
     @printf "\n{{ blue }}=== Generating Generation Demo ==={{ nc }}\n"
     vhs demo/generate.tape
     rm -rf tmp_gen
@@ -141,6 +145,6 @@ all-demo: wizard-demo headless-demo gen-demo
     @printf "\n{{ blue }}=== All demos generated ==={{ nc }}\n"
 
 # Start the documentation preview server
-serve:
+serve: sync
     @printf "\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\n"
     uv run zensical serve -o
