@@ -457,8 +457,7 @@ def generate_cli_help_svg() -> None:
         )
 
         svg_content = record_console.export_svg(
-            title="zsh",
-            theme=protostar_theme,
+            title="zsh", theme=protostar_theme, unique_id="cli_help"
         )
 
         clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
