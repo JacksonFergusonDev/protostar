@@ -4,6 +4,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
@@ -479,16 +480,21 @@ def generate_cli_help_svgs() -> None:
 
 def main() -> None:
     """Primary execution pipeline for documentation artifact generation."""
-    INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Generating documentation fixtures...")
-    generate_cli_help_svgs()
-    generate_default_config()
-    generate_generator_outputs()
-    generate_capability_tables()
-    generate_manifest_state()
-    build_fixtures()
-    print("\nDocumentation fixtures updated successfully!")
+        print("Generating documentation fixtures...")
+        generate_cli_help_svgs()
+        generate_default_config()
+        generate_generator_outputs()
+        generate_capability_tables()
+        generate_manifest_state()
+        build_fixtures()
+        print("\nDocumentation fixtures updated successfully!")
+
+    except KeyboardInterrupt:
+        print("\n\nOperation cancelled by user. Exiting gracefully...")
+        sys.exit(130)
 
 
 if __name__ == "__main__":
