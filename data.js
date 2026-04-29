@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777441187936,
+  "lastUpdate": 1777494057369,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1195,6 +1195,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 185.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b1895eb0ecdd7de0ae6769f639ff0679ebb481e",
+          "message": "feat(docs): automate init capabilities matrix and fix routing links (#75)\n\n- Replaced the static capabilities markdown table in `init.md` with an auto-generated `cli_init_help.svg`.\n- Refactored `scripts/generate_doc_fixtures.py` to support multiple SVG outputs.\n- Implemented AST inspection in the fixture script to safely capture custom Rich `Table` layouts without line-wrapping artifacts.\n- Fixed broken internal documentation routing links in `index.md` and `getting-started.md` caused by legacy directory prefixes.\n- Corrected a typo in the `getting-started.md` CLI help example.",
+          "timestamp": "2026-04-29T13:19:55-07:00",
+          "tree_id": "0044e2ed55796e421e9bd4fbf6a741ab4c678f9b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8b1895eb0ecdd7de0ae6769f639ff0679ebb481e"
+        },
+        "date": 1777494056880,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 113.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 176.44,
             "unit": "ms"
           }
         ]
