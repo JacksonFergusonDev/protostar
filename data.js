@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777494057369,
+  "lastUpdate": 1777497130123,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1229,6 +1229,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 176.44,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1c37421de991aefcaaf6e0157349bc3d225050aa",
+          "message": "chore: optimize build pipeline and refine fixture generation (#76)\n\n- build(justfile): replace manual `install` with silent `sync` prerequisite across all core targets to eliminate branch-switching dependency drift.\n- build(justfile): add `docs-fixtures-fast` recipe for iterative UI/AST testing.\n- refactor(scripts): standardize docstrings and streamline inline comments in `generate_doc_fixtures.py`.\n- feat(scripts): implement graceful SIGINT handling (exit code 130) for console interrupts.\n- feat(scripts): introduce `--fast` argparse flag to bypass expensive subprocess isolation tasks.",
+          "timestamp": "2026-04-29T14:11:15-07:00",
+          "tree_id": "11ced6231896333715b1fd819a9dc7f2ae423bd1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1c37421de991aefcaaf6e0157349bc3d225050aa"
+        },
+        "date": 1777497129808,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.56,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 187.53,
             "unit": "ms"
           }
         ]
