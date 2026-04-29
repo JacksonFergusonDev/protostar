@@ -1,5 +1,5 @@
 set shell := ["bash", "-uc"]
-set unstable := true
+set unstable
 set quiet
 
 # --- ANSI Colors ---
@@ -109,11 +109,17 @@ clean:
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
 
-# Generate Markdown fixtures for documentation examples
+# Generate ALL Markdown fixtures for documentation (Includes slower subprocess environments)
 docs-fixtures:
-    @printf "\n{{ blue }}=== Generating Documentation Fixtures ==={{ nc }}\n"
+    @printf "\n{{ blue }}=== Generating All Documentation Fixtures ==={{ nc }}\n"
     uv run python scripts/generate_doc_fixtures.py
     @printf "{{ green }}✔ Documentation fixtures generated in docs/includes/{{ nc }}\n"
+
+# Generate only the fast documentation fixtures (Skips Protostar init executions)
+docs-fixtures-fast:
+    @printf "\n{{ blue }}=== Generating Fast Documentation Fixtures ==={{ nc }}\n"
+    uv run python scripts/generate_doc_fixtures.py --fast
+    @printf "{{ green }}✔ Fast documentation fixtures generated in docs/includes/{{ nc }}\n"
 
 # Generate wizard demo
 wizard-demo:
