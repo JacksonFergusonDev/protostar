@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777643338137,
+  "lastUpdate": 1777694598057,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1297,6 +1297,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 185.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "06544d19e42917bac4740c923c4cac5c085161fa",
+          "message": "build(deps): remove redundant logo generation dependencies\n\nTransitioning the project logo from dynamic Python generation to a static\nSVG implementation has rendered several libraries obsolete. This commit\nprunes the dependency tree by removing the `logo` optional dependency\ngroup and its references, reducing the environment footprint.\n\nRemoved:\n- cairosvg\n- drawsvg\n- matplotlib\n- numpy",
+          "timestamp": "2026-05-01T21:02:14-07:00",
+          "tree_id": "331dc3b934b22d21a3cc2f7fe5a3ab81ac5c7b2d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/06544d19e42917bac4740c923c4cac5c085161fa"
+        },
+        "date": 1777694597743,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 114.02,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 179.17,
             "unit": "ms"
           }
         ]
