@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777694598057,
+  "lastUpdate": 1777697099289,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1331,6 +1331,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 179.17,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3662caa8d3b7208166091a317eef15e2debcb08",
+          "message": "refactor(ci): extract inline benchmark parsing to dedicated script (#79)\n\nConsolidates the duplicated inline Python strings from our GitHub \nActions into a single, static-analysis-compliant script.\n\n- Implement `scripts/parse_benchmarks.py` with `argparse` and `TypedDict`\n- Update `benchmark.yml` to use the unified script for TUI vs Headless evaluation\n- Update `ci.yml` to use the script with `--gate-mode` for single-result regression checks\n- Fix 'rigerous' typo in benchmark step name",
+          "timestamp": "2026-05-01T21:44:02-07:00",
+          "tree_id": "f722a7b18bb63cd1e410c12386067226400aec6b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a3662caa8d3b7208166091a317eef15e2debcb08"
+        },
+        "date": 1777697098496,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 113.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 185.23,
             "unit": "ms"
           }
         ]
