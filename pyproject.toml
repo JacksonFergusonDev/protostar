@@ -60,16 +60,9 @@ docs = [
     "mkdocstrings[python]>=1.0.3",
     "zensical>=0.0.26",
 ]
-logo = [
-    "cairosvg>=2.8.2",
-    "drawsvg>=2.4.0",
-    "matplotlib>=3.10.8",
-    "numpy>=2.4.3",
-]
 dev = [
     { include-group = "ci" },
     { include-group = "docs" },
-    { include-group = "logo" },
     "bump-my-version>=1.2.6",
     "pre-commit>=4.5.1",
 ]
