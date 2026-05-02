@@ -44,32 +44,7 @@ jobs:
       run: just test-benchmark-slower
 
     - name: Convert hyperfine output for benchmark action
-      run: |
-        python << 'PY'
-        import json
-
-        with open("benchmark.json") as f:
-            data = json.load(f)
-
-        converted = []
-        for result in data["results"]:
-            mean_ms = result["mean"] * 1000
-
-            # Map the raw command to a clean dashboard label
-            if "WIZARD" in result["command"]:
-                name = "Protostar TUI Wizard Latency"
-            else:
-                name = "Protostar Headless Latency"
-
-            converted.append({
-                "name": name,
-                "unit": "ms",
-                "value": round(mean_ms, 2)
-            })
-
-        with open("benchmark-gh.json", "w") as f:
-            json.dump(converted, f, indent=2)
-        PY
+      run: uv run python scripts/parse_benchmarks.py --input benchmark.json --output benchmark-gh.json
 
     - name: Store benchmark result
       uses: benchmark-action/github-action-benchmark@v1
