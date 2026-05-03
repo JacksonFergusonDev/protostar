@@ -32,6 +32,8 @@ jobs:
     name: Update Homebrew tap formula + resources
     needs: build-n-publish
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
     steps:
       - name: Check out Homebrew Tap
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -40,77 +42,41 @@ jobs:
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: homebrew-tap
 
+      - name: Check out Protostar repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: protostar-repo
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@9926e3be887aa6c9523a027099bf5e882056f5c1
 
       - name: Tap the repository
         run: brew tap JacksonFergusonDev/homebrew-tap ./homebrew-tap
 
-      - name: Bump formula URL/SHA and sync Python resources
-        working-directory: homebrew-tap
-        env:
-          TAG: ${{ github.ref_name }}
+      - name: Update Formula
         run: |
-          set -euo pipefail
+          uv run protostar-repo/scripts/update_homebrew.py \
+            --version "${TAG#v}" \
+            --formula-path "./homebrew-tap/Formula/protostar.rb"
 
-          VER="${TAG#v}" # e.g. 0.3.0
-          FORMULA="Formula/protostar.rb"
-
-          # Define the path to Homebrew's internal clone of the tap
-          BREW_TAP_DIR="$(brew --repository jacksonfergusondev/homebrew-tap)"
-          BREW_FORMULA="$BREW_TAP_DIR/$FORMULA"
-
-          # Wait until the just-published version is visible on PyPI
-          FOUND=0
-          for i in $(seq 1 60); do
-            if curl -fsS "https://pypi.org/pypi/protostar/${VER}/json" >/dev/null; then
-              FOUND=1
-              break
-            fi
-            sleep 2
-          done
-
-          if [ "$FOUND" -ne 1 ]; then
-            echo "Timed out waiting for protostar ${VER} on PyPI"
-            exit 1
-          fi
-
-          # Fetch PyPI metadata
-          PYPI_JSON="$(curl -fsS https://pypi.org/pypi/protostar/${VER}/json)"
-
-          NEW_URL="$(echo "$PYPI_JSON" | jq -r '.urls[] | select(.packagetype=="sdist") | .url')"
-          NEW_SHA="$(echo "$PYPI_JSON" | jq -r '.urls[] | select(.packagetype=="sdist") | .digests.sha256')"
-
-          if [ -z "$NEW_URL" ] || [ -z "$NEW_SHA" ]; then
-            echo "Failed to retrieve sdist info from PyPI"
-            exit 1
-          fi
-
-          # Update formula in HOMEBREW'S internal directory
-          sed -i "s|^  url \".*\"|  url \"${NEW_URL}\"|" "$BREW_FORMULA"
-          sed -i "s|^  sha256 \".*\"|  sha256 \"${NEW_SHA}\"|" "$BREW_FORMULA"
-
-          # Regenerate the dependency resource blocks (modifies Homebrew's internal copy)
-          brew update-python-resources \
-          --install-dependencies \
-          --package-name protostar \
-          --version "${VER}" \
-          jacksonfergusondev/homebrew-tap/protostar
-
-          # Copy the fully updated formula back to the local GitHub Action workspace
-          cp "$BREW_FORMULA" "$FORMULA"
-
-          # Commit + push if anything changed
+      - name: Commit and Push
+        working-directory: homebrew-tap
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$FORMULA"
+          git add Formula/protostar.rb
 
           if git diff --cached --quiet; then
             echo "No formula changes to commit."
             exit 0
           fi
 
-          brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
+          # Sync the locally generated formula to Homebrew's global tap registry
+          cp Formula/protostar.rb "$(brew --repository jacksonfergusondev/homebrew-tap)/Formula/"
 
+          brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
           git commit -m "chore: bump protostar to ${TAG} and sync python resources"
           git push
