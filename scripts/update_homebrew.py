@@ -140,17 +140,39 @@ def clean_poet_resources(raw_resources: str, package_name: str) -> str:
     Returns:
         The cleaned, correctly indented Ruby block string.
     """
-    pattern = rf'resource "{package_name}" do.*?end\n*'
-    cleaned = re.sub(pattern, "", raw_resources, flags=re.DOTALL)
-    cleaned = cleaned.strip()
+    # Strip carriage returns to prevent RuboCop layout errors
+    raw_resources = raw_resources.replace("\r", "")
 
-    if not cleaned:
+    # Extract blocks blindly, regardless of their native indentation
+    blocks = re.findall(r'resource ".*?" do.*?end', raw_resources, flags=re.DOTALL)
+
+    cleaned_blocks = []
+    for block in blocks:
+        # Excise the root package to pass Homebrew audits
+        if f'resource "{package_name}" do' in block:
+            continue
+
+        formatted_lines = []
+        # Rebuild the block with strict RuboCop-compliant indentation
+        for line in block.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            # Outer wrapper elements get 2 spaces (formula class scope)
+            if stripped.startswith("resource ") or stripped == "end":
+                formatted_lines.append(f"  {stripped}")
+            # Inner properties (url, sha256, etc.) get 4 spaces
+            else:
+                formatted_lines.append(f"    {stripped}")
+
+        cleaned_blocks.append("\n".join(formatted_lines))
+
+    # Prevent stray newlines if no dependencies exist
+    if not cleaned_blocks:
         return ""
 
-    # Poet outputs flush left; indent by 2 spaces to match Ruby class scope
-    return (
-        "\n".join(f"  {line}" if line else line for line in cleaned.split("\n")) + "\n"
-    )
+    return "\n\n".join(cleaned_blocks) + "\n"
 
 
 def splice_resources(formula_path: Path, resources: str) -> None:
