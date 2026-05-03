@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777766249740,
+  "lastUpdate": 1777780253540,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1399,6 +1399,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 191.46,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "e878b06012f3257925046f5ab8a2151be5aaaed8",
+          "message": "fix(ci): replace homebrew resource generator with poet pipeline",
+          "timestamp": "2026-05-02T20:48:54-07:00",
+          "tree_id": "000fbe72d83e0c8f283105670edd914c4cbdde10",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e878b06012f3257925046f5ab8a2151be5aaaed8"
+        },
+        "date": 1777780253226,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 185.87,
             "unit": "ms"
           }
         ]
