@@ -83,35 +83,31 @@ def update_formula_url_sha(formula_path: Path, new_url: str, new_sha: str) -> No
     """
     content = formula_path.read_text(encoding="utf-8")
 
-    # Replace root url definition
+    # By strictly matching exactly 2 spaces (the root class scope) and using count=1,
+    # we guarantee we only mutate the primary package properties, leaving resources alone.
     content = re.sub(
-        r'^\s*url\s+".*"', f'  url "{new_url}"', content, flags=re.MULTILINE
+        r'^  url\s+".*"', f'  url "{new_url}"', content, flags=re.MULTILINE, count=1
     )
-    # Replace root sha256 definition
     content = re.sub(
-        r'^\s*sha256\s+".*"', f'  sha256 "{new_sha}"', content, flags=re.MULTILINE
+        r'^  sha256\s+".*"',
+        f'  sha256 "{new_sha}"',
+        content,
+        flags=re.MULTILINE,
+        count=1,
     )
 
     formula_path.write_text(content, encoding="utf-8")
     print("Updated formula root properties: url and sha256.")
 
 
-def generate_poet_resources(package_name: str, version: str) -> str:
-    """Generate Homebrew resource blocks using an ephemeral `uv` environment.
-
-    Args:
-        package_name: The PyPI package name.
-        version: The exact version string to generate dependencies for.
-
-    Raises:
-        subprocess.CalledProcessError: If the uv run command fails.
-
-    Returns:
-        The raw stdout string containing the generated Ruby resource blocks.
-    """
+def generate_poet_resources(
+    package_name: str, version: str, max_retries: int = 15
+) -> str:
+    """Generate Homebrew resource blocks using an ephemeral `uv` environment."""
     cmd = [
         "uv",
         "run",
+        "--refresh",  # Force uv to bypass its local cache
         "--with",
         "setuptools<70",
         "--with",
@@ -123,8 +119,21 @@ def generate_poet_resources(package_name: str, version: str) -> str:
     ]
 
     print("Executing dependency resolution via poet...")
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    return result.stdout
+
+    # CDN propagation delay buffer: Retry if uv cannot find the package yet
+    for attempt in range(max_retries):
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return result.stdout
+        except subprocess.CalledProcessError:
+            if attempt == max_retries - 1:
+                raise
+            print(
+                f"Waiting for PyPI CDN propagation (attempt {attempt + 1}/{max_retries})..."
+            )
+            time.sleep(5)
+
+    raise RuntimeError("Failed to resolve dependencies after maximum retries.")
 
 
 def clean_poet_resources(raw_resources: str, package_name: str) -> str:
