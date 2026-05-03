@@ -686,7 +686,7 @@ wheels = [
 
 [[package]]
 name = "protostar"
-version = "0.7.6"
+version = "0.7.7"
 source = { editable = "." }
 dependencies = [
     { name = "argcomplete" },
