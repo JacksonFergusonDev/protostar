@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777788229505,
+  "lastUpdate": 1777788551505,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1705,6 +1705,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 186.53,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "182b4bf1838100ea669e2796a72a823e2b691015",
+          "message": "ci(release): promote TAG variable to job scope\n\nMoves the TAG environment variable from the 'Update Formula' step to\nthe job level. This ensures the variable is available to the\nsubsequent 'Commit and Push' step, preventing empty version strings\nin the Homebrew tap commit messages.",
+          "timestamp": "2026-05-02T23:07:22-07:00",
+          "tree_id": "5e2866d605802bf88205c7f44c3576ece88fc03c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/182b4bf1838100ea669e2796a72a823e2b691015"
+        },
+        "date": 1777788550655,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 114.93,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 183.56,
             "unit": "ms"
           }
         ]
