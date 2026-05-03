@@ -90,17 +90,47 @@ jobs:
           sed -i "s|^  url \".*\"|  url \"${NEW_URL}\"|" "$BREW_FORMULA"
           sed -i "s|^  sha256 \".*\"|  sha256 \"${NEW_SHA}\"|" "$BREW_FORMULA"
 
-          # Regenerate the dependency resource blocks (modifies Homebrew's internal copy)
-          brew update-python-resources \
-          --install-dependencies \
-          --package-name protostar \
-          --version "${VER}" \
-          jacksonfergusondev/homebrew-tap/protostar
+          # 1. Create an isolated virtual environment (Bypasses PEP 668)
+          python3 -m venv .venv
+          source .venv/bin/activate
+
+          # 2. Downgrade setuptools to restore pkg_resources for poet
+          pip install "setuptools<70"
+
+          # 3. Install poet and your newly published package (Bypasses the 24h cooldown)
+          pip install -U pip homebrew-pypi-poet
+          pip install "protostar==${VER}"
+
+          # 4. Generate the Homebrew resource blocks
+          poet protostar > resources.rb
+
+          # 5. Splice the new resources into the formula using Python
+          python3 -c "
+          import sys
+
+          with open('$BREW_FORMULA', 'r') as f:
+              content = f.read()
+          with open('resources.rb', 'r') as f:
+              resources = f.read()
+
+          # Find the boundaries of the existing resources
+          start_idx = content.find('  resource \"')
+          end_idx = content.find('  def install')
+
+          if start_idx != -1 and end_idx != -1:
+              # Stitch the top of the formula, the new resources, and the bottom together
+              new_content = content[:start_idx] + resources + '\n' + content[end_idx:]
+              with open('$BREW_FORMULA', 'w') as f:
+                  f.write(new_content)
+          else:
+              print('Error: Could not find resource bounds in formula.')
+              sys.exit(1)
+          "
 
           # Copy the fully updated formula back to the local GitHub Action workspace
           cp "$BREW_FORMULA" "$FORMULA"
 
-          # Commit + push if anything changed
+          # Commit + push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$FORMULA"
