@@ -74,6 +74,9 @@ jobs:
             exit 0
           fi
 
+          # Sync the locally generated formula to Homebrew's global tap registry
+          cp Formula/protostar.rb "$(brew --repository jacksonfergusondev/homebrew-tap)/Formula/"
+
           brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
           git commit -m "chore: bump protostar to ${TAG} and sync python resources"
           git push
