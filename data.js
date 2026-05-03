@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777788699845,
+  "lastUpdate": 1777789842213,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1773,6 +1773,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.22,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "5bc8c238c70956a4429c84e36bc31004c1c3726d",
+          "message": "ci: refactor homebrew release pipeline to typed python script\n\nThis refactor replaces the fragile, inline bash/sed logic in the release\nworkflow with a robust, strictly typed Python script.\n\nKey Improvements:\n- Implemented 'scripts/update_homebrew.py' using standard library networking\n  to eliminate dependencies on curl/jq.\n- Transitioned to 'homebrew-pypi-poet' for dependency resource generation,\n  orchestrated via ephemeral 'uv run' environments.\n- Added comprehensive unit tests for the release pipeline using pytest-mock.\n- Integrated the deployment logic into the project's static analysis\n  (Ruff/Mypy) suite.\n\nBug Fixes:\n- Fixed a regex 'blast radius' bug that was overwriting dependency URLs\n  with the root package URL.\n- Resolved a PyPI CDN propagation race condition by adding a retry loop\n  to the dependency resolution step.\n- Fixed a CI structural bug where 'brew audit' was evaluating a stale\n  remote clone instead of the mutated local workspace.\n- Enforced strict RuboCop-compliant indentation for Ruby resource blocks.\n\nFinal state: v0.7.8",
+          "timestamp": "2026-05-02T23:28:18-07:00",
+          "tree_id": "1eaa22c21a49057f60d1c63ffad675658f05c9f1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5bc8c238c70956a4429c84e36bc31004c1c3726d"
+        },
+        "date": 1777789841786,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 107.62,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 172.32,
             "unit": "ms"
           }
         ]
