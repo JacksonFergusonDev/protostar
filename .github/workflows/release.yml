@@ -40,122 +40,40 @@ jobs:
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: homebrew-tap
 
+      - name: Check out Protostar repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: protostar-repo
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@9926e3be887aa6c9523a027099bf5e882056f5c1
 
       - name: Tap the repository
         run: brew tap JacksonFergusonDev/homebrew-tap ./homebrew-tap
 
-      - name: Bump formula URL/SHA and sync Python resources
-        working-directory: homebrew-tap
+      - name: Update Formula
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          set -euo pipefail
+          uv run protostar-repo/scripts/update_homebrew.py \
+            --version "${TAG#v}" \
+            --formula-path "./homebrew-tap/Formula/protostar.rb"
 
-          VER="${TAG#v}" # e.g. 0.7.0
-          FORMULA="Formula/protostar.rb"
-
-          # Wait until the just-published version is visible on PyPI
-          FOUND=0
-          for i in $(seq 1 60); do
-            if curl -fsS "https://pypi.org/pypi/protostar/${VER}/json" >/dev/null; then
-              FOUND=1
-              break
-            fi
-            sleep 2
-          done
-
-          if [ "$FOUND" -ne 1 ]; then
-            echo "Timed out waiting for protostar ${VER} on PyPI"
-            exit 1
-          fi
-
-          # Fetch PyPI metadata
-          PYPI_JSON="$(curl -fsS https://pypi.org/pypi/protostar/${VER}/json)"
-
-          NEW_URL="$(echo "$PYPI_JSON" | jq -r '.urls[] | select(.packagetype=="sdist") | .url')"
-          NEW_SHA="$(echo "$PYPI_JSON" | jq -r '.urls[] | select(.packagetype=="sdist") | .digests.sha256')"
-
-          if [ -z "$NEW_URL" ] || [ -z "$NEW_SHA" ]; then
-            echo "Failed to retrieve sdist info from PyPI"
-            exit 1
-          fi
-
-          # Update formula in the local checkout directly
-          sed -i "s|^  url \".*\"|  url \"${NEW_URL}\"|" "$FORMULA"
-          sed -i "s|^  sha256 \".*\"|  sha256 \"${NEW_SHA}\"|" "$FORMULA"
-
-          # 1. Create an isolated virtual environment (Bypasses PEP 668)
-          python3 -m venv .venv
-          source .venv/bin/activate
-
-          # 2. Downgrade setuptools to restore pkg_resources for poet
-          pip install "setuptools<70"
-
-          # 3. Install poet and your newly published package
-          pip install -U pip homebrew-pypi-poet
-          pip install "protostar==${VER}"
-
-          # 4. Generate the Homebrew resource blocks
-          poet protostar > resources.rb
-
-          # 5. Splice the resources into the formula using sentinels
-          python3 -c "
-          import sys
-          import re
-
-          formula_path = '$FORMULA'
-          with open(formula_path, 'r') as f:
-              lines = f.readlines()
-
-          with open('resources.rb', 'r') as f:
-              raw_resources = f.read()
-
-          # Homebrew audits fail if a resource shares the formula's name.
-          # Poet includes the root package in its output, so we must excise it.
-          raw_resources = re.sub(r'resource \"protostar\" do.*?end\n*', '', raw_resources, flags=re.DOTALL)
-          raw_resources = raw_resources.strip()
-
-          # poet outputs flush left; indent by 2 spaces to match Ruby class scope
-          if raw_resources:
-              resources = '\n'.join('  ' + line if line else line for line in raw_resources.split('\n')) + '\n'
-          else:
-              resources = ''
-
-          start_idx, end_idx = -1, -1
-          for i, line in enumerate(lines):
-              if line.strip() == '# RESOURCE_BLOCK_START':
-                  start_idx = i
-              elif line.strip() == '# RESOURCE_BLOCK_END':
-                  end_idx = i
-
-          if start_idx == -1 or end_idx == -1 or start_idx >= end_idx:
-              print('Error: Could not find valid RESOURCE_BLOCK_START and END sentinels.')
-              sys.exit(1)
-
-          # Reconstruct the file safely
-          new_lines = lines[:start_idx + 1] + [resources] + lines[end_idx:]
-
-          with open(formula_path, 'w') as f:
-              f.writelines(new_lines)
-          "
-
-          # Clean up the virtual environment and temp files
-          rm -rf .venv resources.rb
-
-          # Commit + push
+      - name: Commit and Push
+        working-directory: homebrew-tap
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$FORMULA"
+          git add Formula/protostar.rb
 
           if git diff --cached --quiet; then
             echo "No formula changes to commit."
             exit 0
           fi
 
-          # Audit the local checkout
           brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
-
           git commit -m "chore: bump protostar to ${TAG} and sync python resources"
           git push
