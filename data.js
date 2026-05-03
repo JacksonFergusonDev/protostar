@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777787890565,
+  "lastUpdate": 1777788229505,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1671,6 +1671,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 186.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f3f1cbc9dd256d5854e4f80ab2f05d5c37c25c31",
+          "message": "test(scripts): update main integration test fixture for strict indentation\n\nAdjusts the dummy formula in `test_main_integration` to include the\n2-space indentation required by the recently hardened regex in\n`update_formula_url_sha`.\n\nPreviously, the fixture used zero-indentation strings which failed to\ntrigger the `re.sub` logic. This change ensures the test accurately\nsimulates a valid Homebrew formula structure and verifies the\nscript's ability to target root properties without side-effects on\ndeeply indented resource blocks.",
+          "timestamp": "2026-05-02T23:02:49-07:00",
+          "tree_id": "23076d5f5647a821afb4336e2428ae059e84e3cd",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f3f1cbc9dd256d5854e4f80ab2f05d5c37c25c31"
+        },
+        "date": 1777788229226,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 118.67,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 186.53,
             "unit": "ms"
           }
         ]
