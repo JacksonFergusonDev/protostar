@@ -126,8 +126,9 @@ def test_splice_resources_missing_sentinel(tmp_path: Path) -> None:
 
 def test_main_integration(mocker: MockerFixture, tmp_path: Path) -> None:
     formula = tmp_path / "protostar.rb"
+    # Added 2-space indentation to the root url/sha256 to match script logic
     formula.write_text(
-        'url "old"\nsha256 "old"\n# RESOURCE_BLOCK_START\n# RESOURCE_BLOCK_END'
+        '  url "old"\n  sha256 "old"\n# RESOURCE_BLOCK_START\n# RESOURCE_BLOCK_END'
     )
 
     mocker.patch(
@@ -156,6 +157,8 @@ def test_main_integration(mocker: MockerFixture, tmp_path: Path) -> None:
     main()
 
     content = formula.read_text()
+    # These should now pass since the regex found its 2-space indented targets
     assert '  url "new_url"' in content
     assert '  sha256 "new_sha"' in content
     assert '  resource "dep" do' in content
+    assert '    url "foo"' in content
