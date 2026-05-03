@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777781568297,
+  "lastUpdate": 1777783349121,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1501,6 +1501,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 186.43,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3ad9fa5f437e2a2097b148e302b09e428922bc8",
+          "message": "ci: refactor homebrew tap updates to use typed python script (#80)\n\n* Extracts Homebrew deployment logic from `release.yml` into `scripts/update_homebrew.py`.\n* Replaces `curl`, `jq`, and manual `venv` setup with Python standard library modules and `uv run`.\n* Adds comprehensive unit testing via `pytest-mock` for PyPI polling and `poet` resource generation.\n* Ensures deployment logic is now covered by strict Mypy and Ruff static analysis.",
+          "timestamp": "2026-05-02T21:41:33-07:00",
+          "tree_id": "ba0fd83c2f20890016b437c0691a054a5d1f8f92",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d3ad9fa5f437e2a2097b148e302b09e428922bc8"
+        },
+        "date": 1777783348679,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 119.01,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 185.96,
             "unit": "ms"
           }
         ]
