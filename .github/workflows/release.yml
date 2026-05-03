@@ -155,7 +155,7 @@ jobs:
           fi
 
           # Audit the local checkout
-          brew audit --strict --online "$FORMULA"
+          brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
 
           git commit -m "chore: bump protostar to ${TAG} and sync python resources"
           git push
