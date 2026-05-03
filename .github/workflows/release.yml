@@ -53,12 +53,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          VER="${TAG#v}" # e.g. 0.3.0
+          VER="${TAG#v}" # e.g. 0.7.0
           FORMULA="Formula/protostar.rb"
-
-          # Define the path to Homebrew's internal clone of the tap
-          BREW_TAP_DIR="$(brew --repository jacksonfergusondev/homebrew-tap)"
-          BREW_FORMULA="$BREW_TAP_DIR/$FORMULA"
 
           # Wait until the just-published version is visible on PyPI
           FOUND=0
@@ -86,9 +82,9 @@ jobs:
             exit 1
           fi
 
-          # Update formula in HOMEBREW'S internal directory
-          sed -i "s|^  url \".*\"|  url \"${NEW_URL}\"|" "$BREW_FORMULA"
-          sed -i "s|^  sha256 \".*\"|  sha256 \"${NEW_SHA}\"|" "$BREW_FORMULA"
+          # Update formula in the local checkout directly
+          sed -i "s|^  url \".*\"|  url \"${NEW_URL}\"|" "$FORMULA"
+          sed -i "s|^  sha256 \".*\"|  sha256 \"${NEW_SHA}\"|" "$FORMULA"
 
           # 1. Create an isolated virtual environment (Bypasses PEP 668)
           python3 -m venv .venv
@@ -97,38 +93,56 @@ jobs:
           # 2. Downgrade setuptools to restore pkg_resources for poet
           pip install "setuptools<70"
 
-          # 3. Install poet and your newly published package (Bypasses the 24h cooldown)
+          # 3. Install poet and your newly published package
           pip install -U pip homebrew-pypi-poet
           pip install "protostar==${VER}"
 
           # 4. Generate the Homebrew resource blocks
           poet protostar > resources.rb
 
-          # 5. Splice the new resources into the formula using Python
+          # 5. Splice the resources into the formula using sentinels
           python3 -c "
           import sys
+          import re
 
-          with open('$BREW_FORMULA', 'r') as f:
-              content = f.read()
+          formula_path = '$FORMULA'
+          with open(formula_path, 'r') as f:
+              lines = f.readlines()
+
           with open('resources.rb', 'r') as f:
-              resources = f.read()
+              raw_resources = f.read()
 
-          # Find the boundaries of the existing resources
-          start_idx = content.find('  resource \"')
-          end_idx = content.find('  def install')
+          # Homebrew audits fail if a resource shares the formula's name.
+          # Poet includes the root package in its output, so we must excise it.
+          raw_resources = re.sub(r'resource \"protostar\" do.*?end\n*', '', raw_resources, flags=re.DOTALL)
+          raw_resources = raw_resources.strip()
 
-          if start_idx != -1 and end_idx != -1:
-              # Stitch the top of the formula, the new resources, and the bottom together
-              new_content = content[:start_idx] + resources + '\n' + content[end_idx:]
-              with open('$BREW_FORMULA', 'w') as f:
-                  f.write(new_content)
+          # poet outputs flush left; indent by 2 spaces to match Ruby class scope
+          if raw_resources:
+              resources = '\n'.join('  ' + line if line else line for line in raw_resources.split('\n')) + '\n'
           else:
-              print('Error: Could not find resource bounds in formula.')
+              resources = ''
+
+          start_idx, end_idx = -1, -1
+          for i, line in enumerate(lines):
+              if line.strip() == '# RESOURCE_BLOCK_START':
+                  start_idx = i
+              elif line.strip() == '# RESOURCE_BLOCK_END':
+                  end_idx = i
+
+          if start_idx == -1 or end_idx == -1 or start_idx >= end_idx:
+              print('Error: Could not find valid RESOURCE_BLOCK_START and END sentinels.')
               sys.exit(1)
+
+          # Reconstruct the file safely
+          new_lines = lines[:start_idx + 1] + [resources] + lines[end_idx:]
+
+          with open(formula_path, 'w') as f:
+              f.writelines(new_lines)
           "
 
-          # Copy the fully updated formula back to the local GitHub Action workspace
-          cp "$BREW_FORMULA" "$FORMULA"
+          # Clean up the virtual environment and temp files
+          rm -rf .venv resources.rb
 
           # Commit + push
           git config user.name "github-actions[bot]"
@@ -140,7 +154,8 @@ jobs:
             exit 0
           fi
 
-          brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
+          # Audit the local checkout
+          brew audit --strict --online "$FORMULA"
 
           git commit -m "chore: bump protostar to ${TAG} and sync python resources"
           git push
