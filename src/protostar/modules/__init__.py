@@ -1,7 +1,7 @@
 """Module exports for the Protostar manifest execution engine."""
 
 from .base import BootstrapModule
-from .lang_layer import CppModule, LatexModule, NodeModule, PythonModule, RustModule
+from .lang_layer import PythonCore
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
     DirenvModule,
@@ -10,14 +10,6 @@ from .tooling_layer import (
     PreCommitModule,
     PytestModule,
     RuffModule,
-)
-
-LANG_MODULES: tuple[BootstrapModule, ...] = (
-    PythonModule(),
-    RustModule(),
-    NodeModule(),
-    CppModule(),
-    LatexModule(),
 )
 
 TOOLING_MODULES: tuple[BootstrapModule, ...] = (
@@ -30,14 +22,13 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
 )
 
 __all__ = [
-    "LANG_MODULES",
     "TOOLING_MODULES",
     "BootstrapModule",
     "DirenvModule",
     "MypyModule",
     "PreCommitModule",
     "PytestModule",
-    "PythonModule",
+    "PythonCore",
     "RuffModule",
     "SystemWorkspaceModule",
 ]
