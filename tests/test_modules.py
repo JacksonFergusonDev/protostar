@@ -1,22 +1,7 @@
-from pathlib import Path
-
 import pytest
 
 from protostar.config import ProtostarConfig
-from protostar.modules import (
-    CppModule,
-    DirenvModule,
-    LatexModule,
-    MarkdownLintModule,
-    MypyModule,
-    NodeModule,
-    PreCommitModule,
-    PytestModule,
-    PythonModule,
-    RuffModule,
-    RustModule,
-    SystemWorkspaceModule,
-)
+from protostar.modules import PythonCore
 
 
 def test_python_module_uv_build(manifest, mocker):
@@ -27,7 +12,7 @@ def test_python_module_uv_build(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide=None)
 
-    mod = PythonModule(package_manager="uv")
+    mod = PythonCore(package_manager="uv")
     mod.build(manifest)
 
     assert ".venv/" in manifest.vcs_ignores
@@ -57,7 +42,7 @@ def test_python_module_uv_with_version(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide=None)
 
-    mod = PythonModule(package_manager="uv", python_version="3.12")
+    mod = PythonCore(package_manager="uv", python_version="3.12")
     mod.build(manifest)
 
     assert any(
@@ -75,17 +60,6 @@ def test_python_module_uv_with_version(manifest, mocker):
     )
 
 
-def test_system_workspace_module_build(manifest):
-    """Test that the universal system layer appends deterministic workspace ignores."""
-    mod = SystemWorkspaceModule()
-    mod.build(manifest)
-
-    expected_artifacts = [".DS_Store", "Thumbs.db", "*~", ".idea/", ".vscode/", ".env"]
-    for artifact in expected_artifacts:
-        assert artifact in manifest.vcs_ignores
-        assert artifact in manifest.workspace_hides
-
-
 def test_python_module_ide_injection_active(manifest, mocker):
     """Test that the Python module dynamically injects the interpreter path for supported IDEs."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
@@ -94,7 +68,7 @@ def test_python_module_ide_injection_active(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide="vscode")
 
-    mod = PythonModule(package_manager="uv")
+    mod = PythonCore(package_manager="uv")
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" in manifest.ide_settings
@@ -110,54 +84,17 @@ def test_python_module_ide_injection_inactive(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide=None)
 
-    mod = PythonModule(package_manager="uv")
+    mod = PythonCore(package_manager="uv")
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" not in manifest.ide_settings
-
-
-def test_ruff_module_build(manifest):
-    """Test Ruff module drops its dev dependency, ignores, hooks, and configuration."""
-    mod = RuffModule()
-    mod.build(manifest)
-
-    assert "ruff" in manifest.dev_dependencies
-    assert ".ruff_cache/" in manifest.vcs_ignores
-    assert "pyproject.toml" in manifest.file_appends
-    assert "[tool.ruff]" in manifest.file_appends["pyproject.toml"][0]
-    assert any("id: ruff" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_mypy_module_build(manifest):
-    """Test Mypy module drops its dev dependency, ignores, hooks, and late-binding token."""
-    mod = MypyModule()
-    mod.build(manifest)
-
-    assert "mypy" in manifest.dev_dependencies
-    assert ".mypy_cache/" in manifest.vcs_ignores
-    assert "pyproject.toml" in manifest.file_appends
-    assert "{{PYTHON_VERSION}}" in manifest.file_appends["pyproject.toml"][0]
-    assert any("{{MYPY_DEPENDENCIES}}" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_pytest_module_build(manifest):
-    """Test Pytest module drops testing dependencies and ignores."""
-    mod = PytestModule()
-    mod.build(manifest)
-
-    assert "pytest" in manifest.dev_dependencies
-    assert "pytest-cov" in manifest.dev_dependencies
-    assert ".pytest_cache/" in manifest.vcs_ignores
-    assert "htmlcov/" in manifest.vcs_ignores
-    assert "pyproject.toml" in manifest.file_appends
-    assert "[tool.pytest.ini_options]" in manifest.file_appends["pyproject.toml"][0]
 
 
 def test_python_module_pip_build(manifest, mocker):
     """Test Python manifest correctly initializes standard library venv for pip."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
-    mod = PythonModule(package_manager="pip")
+    mod = PythonCore(package_manager="pip")
     mod.build(manifest)
 
     assert ".venv/" in manifest.vcs_ignores
@@ -171,7 +108,7 @@ def test_python_module_pip_with_version(manifest, mocker):
     """Test Python manifest formats the python executable correctly for pip venvs."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
-    mod = PythonModule(package_manager="pip", python_version="3.11")
+    mod = PythonCore(package_manager="pip", python_version="3.11")
     mod.build(manifest)
 
     assert any(
@@ -180,144 +117,9 @@ def test_python_module_pip_with_version(manifest, mocker):
     )
 
 
-def test_node_module_custom_manager(manifest, mocker):
-    """Test that NodeModule respects custom package managers and queues hooks."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-
-    mod = NodeModule(package_manager="pnpm")
-    mod.build(manifest)
-
-    assert any(t.command == ["pnpm", "init"] for t in manifest.system_tasks)
-    assert "node_modules/" in manifest.vcs_ignores
-    assert any("id: prettier" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_direnv_module_pre_flight_fails(mocker):
-    """Test that direnv preflight fails loudly if direnv is missing from PATH."""
-    mocker.patch("protostar.modules.tooling_layer.shutil.which", return_value=None)
-    mod = DirenvModule()
-
-    with pytest.raises(RuntimeError, match="direnv is not installed"):
-        mod.pre_flight()
-
-
-def test_direnv_module_build_uv(manifest, mocker):
-    """Test that direnv queue correctly formats .envrc files prioritizing uv."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
-    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
-
-    mod = DirenvModule()
-    mod.build(manifest)
-
-    assert ".envrc.local" in manifest.vcs_ignores
-    assert ".envrc" in manifest.file_injections
-    assert "uv sync" in manifest.file_injections[".envrc"]
-
-    assert any(t.command == ["direnv", "allow"] for t in manifest.post_install_tasks)
-
-
-def test_markdownlint_module_build(manifest, mocker):
-    """Test that MarkdownLint injects the configured ruleset and queues hooks."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
-    mod = MarkdownLintModule()
-    mod.build(manifest)
-
-    assert ".markdownlint.yaml" in manifest.file_injections
-    assert "MD013: false" in manifest.file_injections[".markdownlint.yaml"]
-    assert any("id: markdownlint" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_pre_commit_module_pre_flight_fails(mocker):
-    """Test that PreCommitModule aborts if the git binary is missing from PATH."""
-    mocker.patch("protostar.modules.tooling_layer.shutil.which", return_value=None)
-    mod = PreCommitModule()
-
-    with pytest.raises(RuntimeError, match="Missing dependency: 'git' is required"):
-        mod.pre_flight()
-
-
-def test_pre_commit_module_build_initializes_git(manifest, mocker):
-    """Test that PreCommitModule queues git init when no .git directory exists."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
-    # Mock config to test the 'uv' routing path
-    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
-
-    mod = PreCommitModule()
-    mod.build(manifest)
-
-    assert manifest.wants_pre_commit is True
-    assert "pre-commit" in manifest.dev_dependencies
-
-    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
-    assert any(
-        t.command == ["uv", "run", "pre-commit", "install"]
-        for t in manifest.post_install_tasks
-    )
-
-    # Verify the autoupdate specific timeout
-    autoupdate_task = next(
-        t
-        for t in manifest.post_install_tasks
-        if t.command == ["uv", "run", "pre-commit", "autoupdate"]
-    )
-    assert autoupdate_task.timeout == 300
-
-    # Verify the descriptions of the pre-commit tasks
-    install_task = manifest.post_install_tasks[0]
-    update_task = manifest.post_install_tasks[1]
-
-    assert install_task.description == "Installing pre-commit git hooks"
-    assert "Updating pre-commit hooks" in update_task.description
-
-
-def test_pre_commit_module_build_skips_git_init(manifest, mocker):
-    """Test that PreCommitModule bypasses git init if the repository is already initialized."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-
-    # Mock config to test the 'pip' routing path
-    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
-
-    mod = PreCommitModule()
-    mod.build(manifest)
-
-    assert not any(t.command == ["git", "init"] for t in manifest.system_tasks)
-    assert any(
-        t.command == [".venv/bin/pre-commit", "install"]
-        for t in manifest.post_install_tasks
-    )
-
-
-def test_python_module_collision_markers():
-    """Test that Python modules expose the correct collision markers based on the package manager."""
-    mod_uv = PythonModule(package_manager="uv")
-    assert Path("pyproject.toml") in mod_uv.collision_markers
-
-    mod_pip = PythonModule(package_manager="pip")
-    assert Path("requirements.txt") in mod_pip.collision_markers
-
-
-def test_node_module_collision_markers():
-    """Test that Node modules expose package.json as a collision marker."""
-    mod = NodeModule()
-    assert Path("package.json") in mod.collision_markers
-
-
-def test_tooling_module_collision_markers():
-    """Test that various tooling modules expose their configuration files as collision markers."""
-    assert Path(".envrc") in DirenvModule().collision_markers
-    assert Path(".markdownlint.yaml") in MarkdownLintModule().collision_markers
-    assert Path(".pre-commit-config.yaml") in PreCommitModule().collision_markers
-
-
 def test_python_module_pre_flight_missing_uv(mocker):
-    """Test PythonModule aborts pre-flight if uv is missing."""
-    mod = PythonModule(package_manager="uv")
+    """Test PythonCore aborts pre-flight if uv is missing."""
+    mod = PythonCore(package_manager="uv")
     mocker.patch("shutil.which", return_value=None)
 
     with pytest.raises(RuntimeError, match="Missing dependency: 'uv' is required"):
@@ -325,87 +127,9 @@ def test_python_module_pre_flight_missing_uv(mocker):
 
 
 def test_python_module_pre_flight_missing_pip(mocker):
-    """Test PythonModule aborts pre-flight if python/python3 are missing."""
-    mod = PythonModule(package_manager="pip")
+    """Test PythonCore aborts pre-flight if python/python3 are missing."""
+    mod = PythonCore(package_manager="pip")
     mocker.patch("shutil.which", return_value=None)
 
     with pytest.raises(RuntimeError, match="Missing dependency: 'python' is required"):
         mod.pre_flight()
-
-
-def test_rust_module_pre_flight_missing_cargo(mocker):
-    """Test RustModule aborts pre-flight if cargo is missing."""
-    mod = RustModule()
-    mocker.patch("shutil.which", return_value=None)
-
-    with pytest.raises(RuntimeError, match="Missing dependency: 'cargo' is required"):
-        mod.pre_flight()
-
-
-def test_rust_module_collision_markers():
-    """Test RustModule defines Cargo.toml as a collision marker."""
-    mod = RustModule()
-    assert Path("Cargo.toml") in mod.collision_markers
-
-
-def test_rust_module_build(manifest, mocker):
-    """Test RustModule queues the correct build artifacts and git hooks."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-    mod = RustModule()
-    mod.build(manifest)
-
-    assert "target/" in manifest.vcs_ignores
-    assert "target/" in manifest.workspace_hides
-    assert any(t.command == ["cargo", "init"] for t in manifest.system_tasks)
-    assert any("id: clippy" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_node_module_pre_flight_missing_manager(mocker):
-    """Test NodeModule aborts pre-flight if the package manager is missing."""
-    mod = NodeModule(package_manager="yarn")
-    mocker.patch("shutil.which", return_value=None)
-
-    with pytest.raises(RuntimeError, match="Missing dependency: 'yarn' is required"):
-        mod.pre_flight()
-
-
-def test_node_module_build_npm_y_flag(manifest, mocker):
-    """Test NodeModule automatically appends the -y flag when using npm."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-    mod = NodeModule(package_manager="npm")
-    mod.build(manifest)
-
-    assert any(t.command == ["npm", "init", "-y"] for t in manifest.system_tasks)
-
-
-def test_cpp_module_build(manifest):
-    """Test CppModule queues the correct build artifacts and git hooks."""
-    mod = CppModule()
-    mod.build(manifest)
-
-    assert "build/" in manifest.vcs_ignores
-    assert "*.o" in manifest.vcs_ignores
-    assert any("id: clang-format" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_latex_module_build(manifest):
-    """Test LatexModule queues the correct build artifacts and git hooks."""
-    mod = LatexModule()
-    mod.build(manifest)
-
-    assert "*.aux" in manifest.vcs_ignores
-    assert "*.synctex.gz" in manifest.workspace_hides
-    assert any("id: tex-fmt" in hook for hook in manifest.pre_commit_hooks)
-
-
-def test_tooling_module_language_constraints():
-    """Test that tooling modules correctly declare their language dependency arrays."""
-    # Python-specific tooling must enforce PythonModule presence
-    assert RuffModule.required_languages == ("PythonModule",)
-    assert MypyModule.required_languages == ("PythonModule",)
-    assert PytestModule.required_languages == ("PythonModule",)
-
-    # Generic tooling should be entirely unconstrained (None)
-    assert DirenvModule.required_languages is None
-    assert MarkdownLintModule.required_languages is None
-    assert PreCommitModule.required_languages is None

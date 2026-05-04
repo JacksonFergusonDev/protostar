@@ -30,12 +30,3 @@ The base layer of Protostar handles the initialization of language-specific pack
     Protostar was originally engineered to accelerate Python development pipelines, and its Python scaffolding (specifically via `uv`) is highly refined and deeply integrated.
 
     While Protostar natively supports scaffolding for C++, Rust, Node.js, and LaTeX, these footprints currently represent basic, standard implementations. If you are a domain expert in these ecosystems, we gladly welcome PRs to help stabilize and expand their dependency pipelines to match the maturity of the Python layer.
-
----
-
-## Technical Specifications
-
---8<-- "table_languages.md"
-
-!!! info "Global Version Targeting"
-    For languages like Python, you can explicitly override the global configuration at runtime using `--python-version <VERSION>` to enforce a specific compiler or interpreter version.

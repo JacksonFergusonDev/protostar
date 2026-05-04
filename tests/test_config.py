@@ -18,24 +18,6 @@ def clear_config_cache() -> Generator[None, None, None]:
     ProtostarConfig._instance = None
 
 
-def test_config_load_defaults(mocker):
-    """Test configuration falls back to defaults if no config files exist."""
-    mocker.patch("protostar.config.Path.exists", return_value=False)
-
-    config = ProtostarConfig.load()
-
-    assert config.ide is None
-    assert config.direnv is False
-    assert config.node_package_manager == "npm"
-    assert config.python_package_manager == "uv"
-    assert config.python_version == "3.13"
-    assert config.ruff is True
-    assert config.mypy is False
-    assert config.pytest is False
-    assert config.pre_commit is False
-    assert config.presets == {}
-
-
 def test_config_scope_enforcement(mocker):
     """Test that local TOML files cannot override global init blocks (env, presets, dev)."""
     mocker.patch("protostar.config.Path.exists", return_value=True)

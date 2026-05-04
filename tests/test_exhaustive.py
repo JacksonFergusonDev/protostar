@@ -25,7 +25,7 @@ PRESET_COMBINATIONS = list(
 def test_preset_orthogonality(run_cli, preset_pair):
     """Verifies that loading multiple domain-specific presets does not cause manifest collisions."""
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python", "--python-version", "3.12", *preset_pair
+        "init", "--python-version", "3.12", *preset_pair
     )
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"

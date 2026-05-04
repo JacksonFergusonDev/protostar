@@ -1,7 +1,10 @@
+"""Integration tests for the Protostar execution lifecycle."""
+
 import argparse
 import shutil
 import tomllib
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,9 +26,12 @@ pytestmark = pytest.mark.integration
     ],
     ids=["ruff_pytest", "mypy_only", "full_suite"],
 )
-def test_python_environment_scaffolding(run_cli, flags, expected_tools):
+def test_python_environment_scaffolding(
+    run_cli: Any, flags: list[str], expected_tools: list[str]
+) -> None:
+    """Verifies core Python tools scaffold correctly using the new implicit baseline."""
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python", "--python-version", "3.12", *flags
+        "init", "--python-version", "3.12", *flags
     )
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
@@ -50,12 +56,12 @@ def test_python_environment_scaffolding(run_cli, flags, expected_tools):
         )
 
 
-def test_pip_fallback_integration(run_cli, seed_global_config):
+def test_pip_fallback_integration(run_cli: Any, seed_global_config: Any) -> None:
     """Verifies pip package manager gracefully degrades and outputs to requirements.txt."""
     seed_global_config('[env]\npython_package_manager = "pip"\n')
 
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python", "--python-version", "3.12", "--ruff"
+        "init", "--python-version", "3.12", "--ruff"
     )
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
@@ -68,13 +74,14 @@ def test_pip_fallback_integration(run_cli, seed_global_config):
     assert "ruff" in reqs, "ruff missing from requirements.txt"
 
 
-def test_orchestrator_idempotency(run_cli, seed_global_config):
+def test_orchestrator_idempotency(run_cli: Any, seed_global_config: Any) -> None:
+    """Ensures repeated executions with --force safely merge configurations."""
     seed_global_config(
         '[dev.pyproject]\ncustom_ruff = "[tool.ruff]\\nline-length = 150"\n'
     )
 
     code1, stdout1, stderr1, workspace = run_cli(
-        "init", "--python", "--python-version", "3.12", "--ruff"
+        "init", "--python-version", "3.12", "--ruff"
     )
     assert code1 == 0, f"First execution failed.\nSTDERR: {stderr1}\nSTDOUT: {stdout1}"
 
@@ -88,7 +95,7 @@ def test_orchestrator_idempotency(run_cli, seed_global_config):
 
     # --force flag to authorize the headless merge
     code2, stdout2, stderr2, _ = run_cli(
-        "init", "--python", "--python-version", "3.12", "--ruff", "--force"
+        "init", "--python-version", "3.12", "--ruff", "--force"
     )
     assert code2 == 0, f"Second execution failed.\nSTDERR: {stderr2}\nSTDOUT: {stdout2}"
 
@@ -103,14 +110,17 @@ def test_orchestrator_idempotency(run_cli, seed_global_config):
     ("target", "name", "expected_files"),
     [
         (
-            "cpp-class",
-            "OrbitalMechanics",
-            ["OrbitalMechanics.hpp", "OrbitalMechanics.cpp"],
+            "circuitpython",
+            "ignored",
+            ["code.py", ".pyrightconfig.json"],
         ),
-        ("tex", "main", ["main.tex"]),
+        ("pio", "esp32dev", ["platformio.ini"]),
     ],
 )
-def test_generator_routing(run_cli, target, name, expected_files):
+def test_generator_routing(
+    run_cli: Any, target: str, name: str, expected_files: list[str]
+) -> None:
+    """Verifies discrete file generation for the remaining embedded targets."""
     code, stdout, stderr, workspace = run_cli("generate", target, name)
     assert code == 0, f"Generator failed.\nSTDERR: {stderr}\nSTDOUT: {stdout}"
 
@@ -122,7 +132,7 @@ def test_generator_routing(run_cli, target, name, expected_files):
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
 def test_python_version_cohesion_e2e(
-    monkeypatch, mocker: MockerFixture, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture, tmp_path: Path
 ) -> None:
     """Verifies Python version flags correctly propagate to subprocesses and config interpolations."""
 
@@ -130,18 +140,16 @@ def test_python_version_cohesion_e2e(
     monkeypatch.chdir(tmp_path)
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "mock_config.toml")
 
-    # Construct mock CLI arguments matching: `protostar init -p --python-version 3.10 --mypy --ruff`
+    # Construct mock CLI arguments matching: `protostar init --python-version 3.10 --mypy --ruff`
     args = argparse.Namespace(
         command="init",
-        PythonModule=True,
         python_version="3.10",
         MypyModule=True,
         RuffModule=True,
         docker=False,
     )
 
-    # Execute the CLI handler. Because we are no longer mocking subprocess.run,
-    # this will execute the actual system `uv init` command inside `tmp_path`.
+    # Execute the CLI handler natively in the tmp_path
     handle_init(args)
 
     pyproject_content = (tmp_path / "pyproject.toml").read_text()
@@ -163,7 +171,13 @@ def test_python_version_cohesion_e2e(
     )
 
 
-def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path, seed_global_config):
+def test_collision_overwrite_e2e(
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+    tmp_path: Path,
+    seed_global_config: Any,
+) -> None:
+    """Tests the OVERWRITE strategy via the interactive TUI prompt."""
     monkeypatch.chdir(tmp_path)
 
     # Strip the pytest environment variable so the Orchestrator doesn't default to MERGE
@@ -184,10 +198,9 @@ def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path, seed_global_conf
     mock_questionary = mocker.patch("questionary.select")
     mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
 
-    # 3. Construct arguments mimicking: `protostar init -p --ruff`
+    # 3. Construct arguments mimicking: `protostar init --ruff`
     args = argparse.Namespace(
         command="init",
-        PythonModule=True,
         python_version=None,
         RuffModule=True,
         docker=False,
@@ -212,12 +225,13 @@ def test_collision_overwrite_e2e(monkeypatch, mocker, tmp_path, seed_global_conf
     shutil.which("uv") is None or shutil.which("git") is None,
     reason="uv and git executables required for pre-commit lifecycle",
 )
-def test_pre_commit_lifecycle_integration(run_cli, seed_global_config):
+def test_pre_commit_lifecycle_integration(
+    run_cli: Any, seed_global_config: Any
+) -> None:
+    """Validates git initialization and pre-commit hook mapping."""
     seed_global_config("[env]\npre_commit = true\n")
 
-    code, stdout, stderr, workspace = run_cli(
-        "init", "--python", "--python-version", "3.12"
-    )
+    code, stdout, stderr, workspace = run_cli("init", "--python-version", "3.12")
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
 
@@ -229,27 +243,27 @@ def test_pre_commit_lifecycle_integration(run_cli, seed_global_config):
 
 
 @pytest.mark.skipif(shutil.which("direnv") is None, reason="direnv executable required")
-def test_direnv_lifecycle_integration(run_cli):
+def test_direnv_lifecycle_integration(run_cli: Any) -> None:
     """Verifies direnv shell commands execute without crashing in the post-install phase."""
-    code, stdout, stderr, workspace = run_cli("init", "--python", "--direnv")
+    code, stdout, stderr, workspace = run_cli("init", "--direnv")
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
     assert (workspace / ".envrc").exists()
 
 
-def test_virtual_env_isolation(run_cli, monkeypatch):
+def test_virtual_env_isolation(run_cli: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """Verifies Protostar correctly executes even if the parent shell has an active virtual environment."""
     monkeypatch.setenv("VIRTUAL_ENV", "/fake/parent/venv")
 
-    code, _, stderr, workspace = run_cli("init", "--python", "--python-version", "3.12")
+    code, _, stderr, workspace = run_cli("init", "--python-version", "3.12")
 
     assert code == 0, f"Failed execution with parent VIRTUAL_ENV set.\nSTDERR: {stderr}"
     assert (workspace / "pyproject.toml").exists()
 
 
-def test_crash_reporter_e2e(run_cli):
+def test_crash_reporter_e2e(run_cli: Any) -> None:
     """Verifies the hidden crash flag triggers a clean telemetry message in the terminal."""
-    code, stdout, stderr, _ = run_cli("init", "--python", "--crash-test")
+    code, stdout, stderr, _ = run_cli("init", "--crash-test")
 
     # Ensure it hard-fails
     assert code == 1
