@@ -20,7 +20,7 @@
 [![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
 [![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![Documentation](https://img.shields.io/badge/docs-ReadTheDocs-22d3ee?labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/en/latest/)
+[![Documentation](https://img.shields.io/badge/docs-ReadTheDocs-22d3ee?labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/en/stable/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
 
 </div>
@@ -44,7 +44,7 @@ Setting up a new project often requires the same manual steps: configuring linte
 
 Ready to dive deeper? The README only scratches the surface.
 
-Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/latest/)** for:
+Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/stable/)** for:
 
 - **Command Reference:** Full flags and capabilities for `init` and `generate`.
 - **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, and Embedded workflows.

@@ -28,7 +28,7 @@ classifiers = [
 Repository = "https://github.com/jacksonfergusondev/protostar"
 Issues = "https://github.com/jacksonfergusondev/protostar/issues"
 PyPi = "https://pypi.org/project/protostar/"
-Documentation = "https://protostar.readthedocs.io/en/latest/"
+Documentation = "https://protostar.readthedocs.io/en/stable/"
 
 [project.scripts]
 protostar = "protostar.cli:main"
