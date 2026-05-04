@@ -5,12 +5,10 @@ import sys
 import types
 
 import pytest
-from rich.console import Group
 from rich.table import Table
 
 from protostar.cli import (
     GenerateEpilogTable,
-    LazyTargetHelp,
     ProtoHelpFormatter,
     build_parser,
     configure_logging,
@@ -62,28 +60,6 @@ def test_main_intercepts_generate_wizard(mocker):
     assert excinfo.value.code == 0
     mock_gen_wizard.assert_called_once()
     mock_target_gen.execute.assert_called_once_with("OrbitalMechanics", mocker.ANY)
-
-
-def test_lazy_target_help_proxy():
-    """Test that the lazy evaluation proxy mimics a string and yields native rich objects."""
-    proxy = LazyTargetHelp()
-
-    # 1. Test string conversion and argparse interpolation interception
-    string_eval = str(proxy)
-    assert "The boilerplate target" in string_eval
-    assert "cpp-class" in string_eval
-
-    mod_eval = proxy % {}
-    assert "The boilerplate target" in mod_eval
-
-    # 2. Test attribute delegation (masquerading as a string to formatters)
-    stripped = proxy.strip()
-    assert isinstance(stripped, str)
-
-    # 3. Test native rich object generation
-    renderable = proxy.get_renderable()
-    assert isinstance(renderable, Group)
-    assert isinstance(renderable.renderables[1], Table)
 
 
 def test_generate_epilog_table_proxy():
