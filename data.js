@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777789842213,
+  "lastUpdate": 1777868435952,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1807,6 +1807,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 172.32,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a311fc5c6894602a2b8a1e904a190c9ac1e1442a",
+          "message": "docs: redirect ReadTheDocs links to stable build (#82)\n\nUpdates the ReadTheDocs URLs in the repository to target the `/stable/` build instead of `/latest/`.\n\n- Modifies the documentation badge and hyperlinks in `README.md`.\n- Updates the `Documentation` URL field in `pyproject.toml`.\n\nThis change ensures that visitors from GitHub and PyPI are directed to the documentation corresponding to the most recent tagged release, preventing version mismatch confusion caused by bleeding-edge changes on the main branch.",
+          "timestamp": "2026-05-03T21:19:40-07:00",
+          "tree_id": "9e167ac43bc778ea0a3f2683637e258a04c3f3cb",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a311fc5c6894602a2b8a1e904a190c9ac1e1442a"
+        },
+        "date": 1777868435376,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.41,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 187.64,
             "unit": "ms"
           }
         ]
