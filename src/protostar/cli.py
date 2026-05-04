@@ -215,35 +215,18 @@ def handle_init(args: argparse.Namespace) -> None:
             presets.append(preset)
 
     # 4. Tooling Layers
-    active_langs = {m.__class__.__name__ for m in modules}
-
     for mod in TOOLING_MODULES:
         is_active = False
 
-        # Check if the tool's requirements intersect with the active language footprint
-        reqs_met = not mod.required_languages or bool(
-            set(mod.required_languages).intersection(active_langs)
-        )
-
         # Evaluate global configuration defaults
-        if getattr(config, mod.config_key, False) and reqs_met:
+        if getattr(config, mod.config_key, False):
             is_active = True
 
         # Explicit CLI flags override local configuration omissions and defaults.
         if mod.cli_flags:
             cli_override = getattr(args, mod.__class__.__name__, None)
             if cli_override is not None:
-                if cli_override and not reqs_met:
-                    clean_reqs = [
-                        r.replace("Module", "") for r in (mod.required_languages or ())
-                    ]
-                    console.print(
-                        f"[yellow]Warning:[/yellow] Ignoring {mod.name}. "
-                        f"It requires {', '.join(clean_reqs)}."
-                    )
-                    is_active = False
-                else:
-                    is_active = cli_override
+                is_active = cli_override
 
         if is_active:
             modules.append(mod)

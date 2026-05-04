@@ -100,12 +100,6 @@ def run_init_wizard() -> dict[str, Any] | None:
         if not selected_langs:
             return "Please select at least one language footprint."
 
-        for item in result:
-            reqs = getattr(item, "required_languages", None)
-            if reqs and not set(reqs).intersection(selected_langs):
-                clean_reqs = [r.replace("Module", "") for r in reqs]
-                return f"Conflict: {item.name} requires {', '.join(clean_reqs)}."
-
         return True
 
     # For benchmarking: Intercept execution right before blocking the thread with the prompt

@@ -169,7 +169,6 @@ class RuffModule(BootstrapModule):
     cli_flags: ClassVar[tuple[str, ...]] = ("--ruff",)
     cli_help: ClassVar[str] = "Scaffold Ruff linter and formatter"
     config_key: ClassVar[str] = "ruff"
-    required_languages: ClassVar[tuple[str, ...]] = ("PythonModule",)
 
     @property
     def name(self) -> str:
@@ -214,7 +213,6 @@ class MypyModule(BootstrapModule):
     cli_flags: ClassVar[tuple[str, ...]] = ("--mypy",)
     cli_help: ClassVar[str] = "Scaffold Mypy static type checker"
     config_key: ClassVar[str] = "mypy"
-    required_languages: ClassVar[tuple[str, ...]] = ("PythonModule",)
 
     @property
     def name(self) -> str:
@@ -253,7 +251,6 @@ class PytestModule(BootstrapModule):
     cli_flags: ClassVar[tuple[str, ...]] = ("--pytest",)
     cli_help: ClassVar[str] = "Scaffold Pytest testing framework"
     config_key: ClassVar[str] = "pytest"
-    required_languages: ClassVar[tuple[str, ...]] = ("PythonModule",)
 
     @property
     def name(self) -> str:
