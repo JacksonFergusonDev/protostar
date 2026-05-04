@@ -12,11 +12,10 @@ from typing import Any, ClassVar, cast
 
 import argcomplete
 from rich import box
-from rich.console import Console, Group
+from rich.console import Console
 from rich.logging import RichHandler
 from rich.style import Style
 from rich.table import Table
-from rich.text import Text
 from rich_argparse import RawTextRichHelpFormatter
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
@@ -105,24 +104,29 @@ class LazyTargetHelp(str):
         Returns:
             A Rich Group containing a header Text and a styled Table.
         """
-        target_table = Table(
-            show_header=False,
+        table = Table(
+            title="How NAME is evaluated:",
             box=box.ROUNDED,
             show_lines=False,
+            show_header=False,
             padding=(0, 1),
-            pad_edge=False,
+            title_justify="left",
+            title_style="bold blue",
         )
-        target_table.add_column("Target", style="cyan", no_wrap=True)
-        target_table.add_column("Description")
+        table.add_column("Target", style="cyan", no_wrap=True)
+        table.add_column("Description")
+        table.add_column("Example", style="dim")
 
-        for key, generator in GENERATOR_REGISTRY.items():
-            desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
-            target_table.add_row(key, desc)
-
-        return Group(
-            Text("The boilerplate target to evaluate and generate:\n"),
-            target_table,
+        table.add_row(
+            "pio", "The board target ID", "(e.g., proto generate pio esp32dev)"
         )
+        table.add_row(
+            "circuitpython",
+            "Ignored automatically",
+            "(e.g., proto generate circuitpython)",
+        )
+
+        return table
 
 
 class GenerateEpilogTable:
