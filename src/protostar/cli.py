@@ -22,10 +22,9 @@ from rich_argparse import RawTextRichHelpFormatter
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from .generators import GENERATOR_REGISTRY
 from .modules import (
-    LANG_MODULES,
     TOOLING_MODULES,
     BootstrapModule,
-    PythonModule,
+    PythonCore,
     SystemWorkspaceModule,
 )
 from .orchestrator import Orchestrator
@@ -183,7 +182,7 @@ def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments.
 
     Dynamically constructs the environment manifest by evaluating flags mapped
-    to the respective language, OS, IDE, and preset registries.
+    to the respective OS, IDE, and preset registries.
     """
     config = ProtostarConfig.load()
     modules: list[BootstrapModule] = []
@@ -192,22 +191,9 @@ def handle_init(args: argparse.Namespace) -> None:
     # 1. Universal System Layer
     modules.append(SystemWorkspaceModule())
 
-    # 2. Language Layers
-    has_language = False
-    for mod in LANG_MODULES:
-        if mod.cli_flags and getattr(args, mod.__class__.__name__, False):
-            if isinstance(mod, PythonModule) and getattr(args, "python_version", None):
-                mod.python_version = args.python_version
-
-            modules.append(mod)
-            has_language = True
-
-    if not has_language:
-        console.print(
-            "[yellow]Please specify at least one language flag (e.g., --python, --rust).[/yellow]"
-        )
-        console.print("Run [bold cyan]protostar init --help[/bold cyan] for options.")
-        sys.exit(1)
+    # 2. Mandatory Python Core
+    python_core = PythonCore(python_version=getattr(args, "python_version", None))
+    modules.append(python_core)
 
     # 3. Preset Layers
     for preset in PRESETS:
@@ -215,35 +201,18 @@ def handle_init(args: argparse.Namespace) -> None:
             presets.append(preset)
 
     # 4. Tooling Layers
-    active_langs = {m.__class__.__name__ for m in modules}
-
     for mod in TOOLING_MODULES:
         is_active = False
 
-        # Check if the tool's requirements intersect with the active language footprint
-        reqs_met = not mod.required_languages or bool(
-            set(mod.required_languages).intersection(active_langs)
-        )
-
         # Evaluate global configuration defaults
-        if getattr(config, mod.config_key, False) and reqs_met:
+        if getattr(config, mod.config_key, False):
             is_active = True
 
         # Explicit CLI flags override local configuration omissions and defaults.
         if mod.cli_flags:
             cli_override = getattr(args, mod.__class__.__name__, None)
             if cli_override is not None:
-                if cli_override and not reqs_met:
-                    clean_reqs = [
-                        r.replace("Module", "") for r in (mod.required_languages or ())
-                    ]
-                    console.print(
-                        f"[yellow]Warning:[/yellow] Ignoring {mod.name}. "
-                        f"It requires {', '.join(clean_reqs)}."
-                    )
-                    is_active = False
-                else:
-                    is_active = cli_override
+                is_active = cli_override
 
         if is_active:
             modules.append(mod)
@@ -465,19 +434,9 @@ def build_parser() -> argparse.ArgumentParser:
         help=argparse.SUPPRESS,
     )
 
-    # Dynamically mount Language flags
-    lang_group = init_parser.add_argument_group("Language Footprints")
-    for mod in LANG_MODULES:
-        if mod.cli_flags:
-            lang_group.add_argument(
-                *mod.cli_flags,
-                action="store_true",
-                help=mod.cli_help,
-                dest=mod.__class__.__name__,
-            )
-
-    # Add explicit python version override flag
-    lang_group.add_argument(
+    # Base Configuration
+    base_group = init_parser.add_argument_group("Base Configuration")
+    base_group.add_argument(
         "--python-version",
         type=str,
         help="Specify the Python version to scaffold (e.g., 3.12). Overrides global configuration.",
@@ -623,8 +582,9 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             modules = selections["modules"]
             presets = selections["presets"]
 
-            # Inject mandatory universal workspace layer implicitly
+            # Inject mandatory universal layers implicitly
             modules.insert(0, SystemWorkspaceModule())
+            modules.insert(1, PythonCore())
 
             engine = Orchestrator(
                 modules, config, presets, docker=selections["docker"], force=False

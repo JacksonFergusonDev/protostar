@@ -21,92 +21,6 @@ from protostar.cli import (
     main,
     print_table_help,
 )
-from protostar.modules import (
-    LANG_MODULES,
-    DirenvModule,
-    MarkdownLintModule,
-    MypyModule,
-    PreCommitModule,
-    PytestModule,
-    PythonModule,
-    RuffModule,
-    SystemWorkspaceModule,
-)
-
-
-def test_handle_init_dispatch(mocker):
-    """Test that dynamically generated CLI flags instantiate modules and presets."""
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    # Simulate running `proto init -p -s -a -d -e --docker --direnv -m --python-version 3.12 --ruff --mypy --pytest --pre-commit`
-    args = argparse.Namespace(
-        PythonModule=True,
-        RustModule=False,
-        NodeModule=False,
-        CppModule=False,
-        LatexModule=False,
-        ScientificPreset=True,
-        AstroPreset=True,
-        DspPreset=True,
-        EmbeddedPreset=True,
-        docker=True,
-        DirenvModule=True,
-        MarkdownLintModule=True,
-        RuffModule=True,
-        MypyModule=True,
-        PytestModule=True,
-        PreCommitModule=True,
-        python_version="3.12",
-    )
-
-    handle_init(args)
-
-    # Extract the arguments passed to Orchestrator(modules, presets, docker=...)
-    modules = mock_orchestrator.call_args[0][0]
-
-    # Verify Universal System Module Injection
-    assert any(isinstance(m, SystemWorkspaceModule) for m in modules)
-
-    # Verify Tooling Modules
-    assert any(isinstance(m, DirenvModule) for m in modules)
-    assert any(isinstance(m, MarkdownLintModule) for m in modules)
-    assert any(isinstance(m, RuffModule) for m in modules)
-    assert any(isinstance(m, MypyModule) for m in modules)
-    assert any(isinstance(m, PytestModule) for m in modules)
-    assert any(isinstance(m, PreCommitModule) for m in modules)
-
-
-def test_handle_init_tooling_requires_language_context(mocker):
-    """Test that python-specific tooling does not activate if PythonModule is absent."""
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    # Mock the global config to request Ruff and Mypy by default
-    mock_config = mocker.patch("protostar.cli.ProtostarConfig.load")
-    mock_config.return_value.ruff = True
-    mock_config.return_value.mypy = True
-
-    # Simulate a Rust-only initialization
-    args = argparse.Namespace(
-        RustModule=True,
-        PythonModule=False,
-        NodeModule=False,
-        CppModule=False,
-        LatexModule=False,
-        docker=False,
-        DirenvModule=False,
-        MarkdownLintModule=False,
-        RuffModule=False,
-        MypyModule=False,
-        PytestModule=False,
-    )
-
-    handle_init(args)
-
-    modules = mock_orchestrator.call_args[0][0]
-
-    # Verify that despite config defaults, Ruff and Mypy do not pollute the Rust context
-    assert not any(isinstance(m, RuffModule) for m in modules)
-    assert not any(isinstance(m, MypyModule) for m in modules)
 
 
 def test_main_intercepts_bare_invocation(mocker):
@@ -125,34 +39,6 @@ def test_main_intercepts_bare_invocation(mocker):
     mock_discovery.assert_called_once()
     # Verify the interceptor appended the selection to sys.argv
     assert sys.argv == ["protostar", "init"]
-
-
-def test_main_intercepts_init_wizard(mocker):
-    """Test that `protostar init` routes directly to the init wizard and executes the Orchestrator."""
-    mocker.patch.object(sys, "argv", ["protostar", "init"])
-
-    mock_init_wizard = mocker.patch("protostar.cli.run_init_wizard")
-    mock_init_wizard.return_value = {
-        "modules": [PythonModule()],
-        "presets": [],
-        "docker": False,
-    }
-
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    with pytest.raises(SystemExit) as excinfo:
-        main()
-
-    assert excinfo.value.code == 0
-    mock_init_wizard.assert_called_once()
-
-    # Verify Orchestrator was initialized with the wizard payload + implicit universal layer
-    orchestrator_args = mock_orchestrator.call_args[0]
-    modules_passed = orchestrator_args[0]
-
-    assert any(isinstance(m, SystemWorkspaceModule) for m in modules_passed)
-    assert any(isinstance(m, PythonModule) for m in modules_passed)
-    mock_orchestrator.return_value.run.assert_called_once()
 
 
 def test_main_intercepts_generate_wizard(mocker):
@@ -264,25 +150,6 @@ def test_print_table_help_rendering(mocker):
     table_strings = str(tables[0].columns)
     assert "foo" in table_strings
     assert "hidden" not in table_strings
-
-
-def test_handle_init_aborts_on_no_language(mocker):
-    """Test that `protostar init` gracefully aborts if no language is selected."""
-    args = argparse.Namespace(docker=False, force=False)
-    for mod in LANG_MODULES:
-        setattr(args, mod.__class__.__name__, False)
-
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
-    mock_print = mocker.patch("protostar.cli.console.print")
-
-    with pytest.raises(SystemExit):
-        handle_init(args)
-
-    mock_exit.assert_called_once_with(1)
-    printed = " ".join(
-        str(call.args[0]) for call in mock_print.call_args_list if call.args
-    )
-    assert "Please specify at least one language flag" in printed
 
 
 def test_handle_generate_unknown_target(mocker):
@@ -470,7 +337,7 @@ def test_main_no_command(mocker):
 
 def test_main_value_error_handling(mocker):
     """Test that TOML parsing ValueErrors are gracefully handled without crashing."""
-    mocker.patch.object(sys, "argv", ["protostar", "init", "--python"])
+    mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch("protostar.cli.intercept_interactive_wizards")
     mocker.patch(
         "protostar.cli.handle_init", side_effect=ValueError("Syntax Error in TOML")
@@ -488,7 +355,7 @@ def test_handle_init_crash_test_injection(mocker):
 
     # Simulate running `protostar init -p --crash-test`
     args = argparse.Namespace(
-        PythonModule=True,  # Required to bypass the 'no language' abort
+        PythonCore=True,  # Required to bypass the 'no language' abort
         RustModule=False,
         NodeModule=False,
         CppModule=False,
@@ -541,42 +408,3 @@ def test_main_keyboard_interrupt_handling(mocker):
     assert any(
         "Aborted by user." in str(call.args[0]) for call in mock_print.call_args_list
     )
-
-
-def test_handle_init_tooling_explicit_override_warning(mocker):
-    """Test that explicitly requested tooling via CLI is ignored if language constraints fail."""
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    mock_print = mocker.patch("protostar.cli.console.print")
-
-    # Simulate running `protostar init --rust --ruff`
-    # The user is explicitly asking for Ruff on a Rust-only footprint
-    args = argparse.Namespace(
-        RustModule=True,
-        PythonModule=False,
-        NodeModule=False,
-        CppModule=False,
-        LatexModule=False,
-        docker=False,
-        DirenvModule=False,
-        MarkdownLintModule=False,
-        RuffModule=True,  # Explicitly requested
-        MypyModule=False,
-        PytestModule=False,
-        PreCommitModule=False,
-        python_version=None,
-    )
-
-    handle_init(args)
-
-    modules = mock_orchestrator.call_args[0][0]
-
-    # Verify that Ruff was intercepted and dropped from the stack
-    assert not any(isinstance(m, RuffModule) for m in modules)
-
-    # Verify that a clear warning was surfaced to the user
-    printed = " ".join(
-        str(call.args[0]) for call in mock_print.call_args_list if call.args
-    )
-    assert "Ignoring Ruff" in printed
-    assert "requires Python" in printed

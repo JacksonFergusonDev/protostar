@@ -6,10 +6,7 @@ from typing import Any
 
 from .config import ProtostarConfig
 from .generators import GENERATOR_REGISTRY
-from .modules import (
-    LANG_MODULES,
-    TOOLING_MODULES,
-)
+from .modules import TOOLING_MODULES
 from .presets import PRESETS
 
 
@@ -65,65 +62,31 @@ def run_init_wizard() -> dict[str, Any] | None:
     config = ProtostarConfig.load()
     choices: list[Choice | Separator] = []
 
-    # 1. Languages
-    choices.append(Separator("--- Languages (Select at least one) ---"))
-    for lang_mod in LANG_MODULES:
-        choices.append(Choice(title=lang_mod.name, value=lang_mod))
-
-    # 2. Presets
+    # 1. Presets
     choices.append(Separator("--- Presets ---"))
     for preset in PRESETS:
         choices.append(Choice(title=preset.name, value=preset))
 
-    # 3. Context & Tooling
+    # 2. Context & Tooling
     choices.append(Separator("--- Context & Tooling ---"))
     choices.append(Choice(title="Docker (.dockerignore)", value="docker"))
 
     for tool_mod in TOOLING_MODULES:
-        # Dynamically evaluate the global configuration default
         is_checked = getattr(config, tool_mod.config_key, False)
         choices.append(Choice(title=tool_mod.name, value=tool_mod, checked=is_checked))
 
-    def _validate_init(result: list[Any]) -> bool | str:
-        """Ensures valid language and tooling combinations.
-
-        Args:
-            result: The user's current checklist selection vector.
-
-        Returns:
-            True if the selection is valid, or an error string to display in the TUI.
-        """
-        selected_langs = {
-            item.__class__.__name__ for item in result if item in LANG_MODULES
-        }
-
-        if not selected_langs:
-            return "Please select at least one language footprint."
-
-        for item in result:
-            reqs = getattr(item, "required_languages", None)
-            if reqs and not set(reqs).intersection(selected_langs):
-                clean_reqs = [r.replace("Module", "") for r in reqs]
-                return f"Conflict: {item.name} requires {', '.join(clean_reqs)}."
-
-        return True
-
-    # For benchmarking: Intercept execution right before blocking the thread with the prompt
     if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
         sys.exit(0)
 
     selected = questionary.checkbox(
         "Select the components for your new environment:",
         choices=choices,
-        validate=_validate_init,
     ).ask()
 
     if selected is None:
         return None
 
-    modules = [
-        item for item in selected if item in LANG_MODULES or item in TOOLING_MODULES
-    ]
+    modules = [item for item in selected if item in TOOLING_MODULES]
     presets = [item for item in selected if item in PRESETS]
     docker = "docker" in selected
 

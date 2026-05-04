@@ -27,19 +27,12 @@ python_package_manager = "uv"
 # Default Python version
 python_version = "3.13"
 
-# Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
-node_package_manager = "npm"
-
 # Optional dev tool toggles for Python
 # markdownlint = true
 # no-ruff = true  # Disables the default Ruff scaffolding
 # mypy = true
 # pytest = true
 # pre_commit = true
-
-[presets]
-# Generator presets for scaffolding boilerplate
-latex = "minimal"
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures
@@ -71,7 +64,6 @@ class ProtostarConfig:
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_package_manager (str): The preferred Python manager ('uv', 'pip').
         python_version (str | None): The specific Python version to scaffold.
-        node_package_manager (str): The preferred JS manager ('npm', 'pnpm', 'yarn').
         markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
@@ -86,7 +78,6 @@ class ProtostarConfig:
     direnv: bool = False
     python_package_manager: str = "uv"
     python_version: str | None = "3.13"
-    node_package_manager: str = "npm"
     markdownlint: bool = False
     ruff: bool = True
     mypy: bool = False

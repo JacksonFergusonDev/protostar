@@ -12,19 +12,12 @@ python_package_manager = "uv"
 # Default Python version
 python_version = "3.13"
 
-# Preferred Node.js package manager: 'npm', 'pnpm', or 'yarn'
-node_package_manager = "npm"
-
 # Optional dev tool toggles for Python
 # markdownlint = true
 # no-ruff = true  # Disables the default Ruff scaffolding
 # mypy = true
 # pytest = true
 # pre_commit = true
-
-[presets]
-# Generator presets for scaffolding boilerplate
-latex = "minimal"
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures

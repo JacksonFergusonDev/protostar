@@ -21,9 +21,6 @@ class BootstrapModule(abc.ABC):
     config_key: ClassVar[str] = ""
     """The global configuration key used to evaluate if this module is active."""
 
-    required_languages: ClassVar[tuple[str, ...] | None] = None
-    """A tuple of language module class names required to activate this tooling."""
-
     @property
     @abc.abstractmethod
     def name(self) -> str:

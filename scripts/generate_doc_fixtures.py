@@ -21,10 +21,9 @@ from protostar.config import DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from protostar.generators import GENERATOR_REGISTRY
 from protostar.manifest import EnvironmentManifest
 from protostar.modules import (
-    LANG_MODULES,
     TOOLING_MODULES,
     BootstrapModule,
-    PythonModule,
+    PythonCore,
     RuffModule,
 )
 from protostar.presets import PRESETS, AstroPreset, PresetModule
@@ -32,13 +31,13 @@ from protostar.presets import PRESETS, AstroPreset, PresetModule
 # Define matrices for combinatorial CLI execution scenarios
 FIXTURES = {
     "cli": [
-        ["--python", "--cli", "--mypy", "--pytest", "--pre-commit", "--markdownlint"],
+        ["--cli", "--mypy", "--pytest", "--pre-commit", "--markdownlint"],
     ],
-    "astro": [["--python", "--astro"]],
-    "ml": [["--python", "--ml", "--docker"]],
+    "astro": [["--astro"]],
+    "ml": [["--ml", "--docker"]],
     "ml_merged": [
-        ["--python", "--ml", "--docker"],
-        ["--python", "--astro", "--mypy", "--docker", "--force"],
+        ["--ml", "--docker"],
+        ["--astro", "--mypy", "--docker", "--force"],
     ],
 }
 
@@ -233,26 +232,6 @@ def generate_capability_tables() -> None:
     def _format_flags(flags: tuple[str, ...]) -> str:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
-    # Language definitions matrix
-    lang_headers = [
-        "Language Footprint",
-        "CLI Flags",
-        "Description",
-        "Collision Markers",
-    ]
-    lang_rows = [
-        [
-            mod.name,
-            _format_flags(mod.cli_flags),
-            mod.cli_help,
-            ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*",
-        ]
-        for mod in LANG_MODULES
-    ]
-    _write_fixture(
-        "table_languages.md", _format_markdown_table(lang_headers, lang_rows)
-    )
-
     # Tooling integration matrix
     tool_headers = ["Tooling Module", "CLI Flags", "Description", "Collision Markers"]
     tool_rows = [
@@ -286,8 +265,8 @@ def generate_manifest_state() -> None:
     """Simulates an initialization sequence to compute a deterministic JSON manifest."""
     manifest = EnvironmentManifest()
 
-    # Simulate: `protostar init --python --astro --ruff`
-    bootstrap_mods: list[BootstrapModule] = [PythonModule(), RuffModule()]
+    # Simulate: `protostar init --astro --ruff`
+    bootstrap_mods: list[BootstrapModule] = [PythonCore(), RuffModule()]
     preset_mods: list[PresetModule] = [AstroPreset()]
 
     for b_mod in bootstrap_mods:
