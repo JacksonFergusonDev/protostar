@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777868435952,
+  "lastUpdate": 1777928141856,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1841,6 +1841,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 187.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4a11e2714c4682588d0d94564e27f645c6d28e2",
+          "message": "refactor(core): establish python singularity and amputate multi-language multiplexer (#83)\n\nExecutes Phase 1 of the roadmap by stripping superficial multi-language support \nand evolving Protostar into a dedicated, hyper-optimized Python engine.\n\n- chore(ci): temporarily set codecov to informational to allow massive code deletion\n- refactor(core): strip `required_languages` constraints from base abstractions\n- refactor(config): purge node and latex variables from global configuration schema\n- refactor(modules): delete Rust, Node, C++, and LaTeX modules; promote `PythonCore`\n- refactor(frontend): wire CLI and TUI wizard to bypass language selection loops\n- test: synchronize integration tests and doc fixtures with new python-only baseline",
+          "timestamp": "2026-05-04T13:54:48-07:00",
+          "tree_id": "e22af82fa723e968b9f913eda0b2df397635bed4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b4a11e2714c4682588d0d94564e27f645c6d28e2"
+        },
+        "date": 1777928141551,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 111.51,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 182.82,
             "unit": "ms"
           }
         ]
