@@ -60,7 +60,7 @@ Configures universal environment artifacts and workspace hygiene. The determinis
 
 ### 2. Language Layer
 
-The core runtime environment (e.g., Python, C++, Node). This layer establishes the primary dependency managers (like `uv` or `pip`), injects the baseline project configuration files (like `pyproject.toml`), and conditionally evaluates the global configuration to inject IDE-specific setup (such as pointing VS Code to the generated Python interpreter).
+The core runtime environment (i.e., Python). This layer establishes the primary dependency managers (like `uv` or `pip`), injects the baseline project configuration files (like `pyproject.toml`), and conditionally evaluates the global configuration to inject IDE-specific setup (such as pointing VS Code to the generated Python interpreter).
 
 ### 3. Tooling Layer
 
@@ -99,12 +99,6 @@ strict = true
 warn_return_any = true
         """)
 ```
-
-### `required_languages` (Optional Constraint)
-
-To enforce strict topological boundaries, modules can declare a `required_languages` tuple mapping to the class names of supported footprints (e.g., `("PythonModule",)`). The Orchestrator evaluates this attribute during the *Collision Intercept* and *Manifest Aggregation* phases.
-
-If a user explicitly requests a tool without its requisite language layer via the headless CLI (e.g., `protostar init --rust --ruff`), the Orchestrator intercepts the dependency graph mismatch, safely drops the conflicting tooling module, and surfaces a terminal warning to the standard output instead of polluting the workspace with inert configuration files. In interactive TUI runs, this vector is utilized to dynamically invalidate illegal combinations before execution begins.
 
 ## API Reference
 

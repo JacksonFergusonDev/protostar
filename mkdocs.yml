@@ -14,9 +14,8 @@ nav:
     - Generate: usage/generate.md
     - Configuration: usage/configuration.md
   - Flags:
-    - Languages: flags/languages.md
-    - Presets: flags/presets.md
     - Tooling: flags/tooling.md
+    - Presets: flags/presets.md
   - Mechanics:
     - Manifest: mechanics/manifest.md
     - Orchestrator: mechanics/orchestrator.md
