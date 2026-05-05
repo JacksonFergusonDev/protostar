@@ -46,7 +46,7 @@ Ready to dive deeper? The README only scratches the surface.
 
 Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/stable/)** for:
 
-- **Command Reference:** Full flags and capabilities for `init` and `generate`.
+- **Command Reference:** Full flags and capabilities for `init`.
 - **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, and Embedded workflows.
 - **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
 - **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
@@ -57,11 +57,11 @@ Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/
 
 Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
 
-1. **`init` vs. `generate`:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the foundational architecture. The `protostar generate` command provides discrete, repeatable scaffolding for files you create regularly (like C++ classes or LaTeX reports).
+1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, locking in your dependency managers and directory structures.
 
 1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
 
-1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, `cargo`, or `direnv`) are present before any state is mutated. If a check fails, the environment remains completely untouched.
+1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
 
 1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses deterministic AST modification to deep-merge TOML configurations, and safely aborts if generated files already exist.
 
