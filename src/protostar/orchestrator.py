@@ -18,7 +18,7 @@ console = Console()
 
 
 class Orchestrator:
-    """Manages the lifecycle of the environment scaffolding process."""
+    """Manages the lifecycle of the Python environment scaffolding process."""
 
     def __init__(
         self,

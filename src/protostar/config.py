@@ -66,7 +66,7 @@ class ProtostarConfig:
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
         pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
         pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
-        presets (dict[str, Any]): Generation presets, mapped to strings or nested dicts.
+        presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
     """
