@@ -18,51 +18,6 @@ def clear_config_cache() -> Generator[None, None, None]:
     ProtostarConfig._instance = None
 
 
-def test_config_scope_enforcement(mocker):
-    """Test that local TOML files cannot override global init blocks (env, presets, dev)."""
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_logger = mocker.patch("protostar.config.logger.warning")
-
-    # Mock the global config payload
-    global_payload = {
-        "env": {
-            "ide": "cursor",
-            "python_version": "3.11",
-        },
-        "presets": {"latex": "minimal"},
-    }
-
-    # Mock the local workspace override (these should be stripped!)
-    local_payload = {
-        "env": {
-            "ide": "jetbrains",
-            "python_version": "3.12",
-        },
-        "presets": {"latex": "science"},
-    }
-
-    # Intercept tomllib to return our mock payloads sequentially
-    mocker.patch(
-        "protostar.config.tomllib.load", side_effect=[global_payload, local_payload]
-    )
-    mocker.patch("builtins.open", mocker.mock_open())
-
-    config = ProtostarConfig.load()
-
-    # Assert that the global values were preserved and local overrides were actively ignored
-    assert config.ide == "cursor"
-    assert config.python_version == "3.11"
-    assert config.presets["latex"] == "minimal"
-
-    # Verify the scope warning was surfaced to the user via the logger
-    mock_logger.assert_called()
-    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
-
-    assert "Scope Warning" in logged_text
-    assert "env" in logged_text
-    assert "presets" in logged_text
-
-
 def test_config_no_ruff_inversion(mocker):
     """Test that the 'no-ruff' toggle correctly inverts to config.ruff = False."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
@@ -84,11 +39,8 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     mock_global_config = tmp_path / "config.toml"
     mock_global_config.write_text("invalid [ toml syntax === \n")
 
-    mock_local_config = tmp_path / ".protostar.toml"
-
     # 2. Redirect the module's constants to point to our temporary sandboxed files
     mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
-    mocker.patch("protostar.config.LOCAL_CONFIG_FILE", mock_local_config)
 
     # Execute the load sequence and expect a ValueError bubbled up for the CLI to handle
     with pytest.raises(ValueError, match="Syntax error in configuration file") as exc:
@@ -117,10 +69,7 @@ def test_config_advanced_overrides_parsing(mocker, tmp_path):
         'custom_ruff = "[tool.ruff]\\nline-length = 100"\n'
     )
 
-    mock_local_config = tmp_path / ".protostar.toml"
-
     mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
-    mocker.patch("protostar.config.LOCAL_CONFIG_FILE", mock_local_config)
 
     config = protostar.config.ProtostarConfig.load()
 

@@ -17,8 +17,7 @@ from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
 
 import protostar.cli
-from protostar.config import DEFAULT_CONFIG_CONTENT, ProtostarConfig
-from protostar.generators import GENERATOR_REGISTRY
+from protostar.config import DEFAULT_CONFIG_CONTENT
 from protostar.manifest import EnvironmentManifest
 from protostar.modules import (
     TOOLING_MODULES,
@@ -189,41 +188,6 @@ class ManifestEncoder(json.JSONEncoder):
 def generate_default_config() -> None:
     """Writes the default global TOML configuration to a documentation fixture."""
     _write_fixture("default_config.md", DEFAULT_CONFIG_CONTENT, language="toml")
-
-
-def generate_generator_outputs() -> None:
-    """Executes code generators within an isolated directory and extracts outputs."""
-    config = ProtostarConfig()
-
-    # Map generator targets to dummy identifiers for execution
-    identifiers = {
-        "cpp-class": "ExampleClass",
-        "tex": "report.tex",
-        "pio": "esp32dev",
-        "cmake": None,
-        "circuitpython": None,
-    }
-
-    with tempfile.TemporaryDirectory() as temp_dir:
-        original_cwd = os.getcwd()
-        os.chdir(temp_dir)
-
-        try:
-            for target_name, generator in GENERATOR_REGISTRY.items():
-                identifier = identifiers.get(target_name)
-                output_paths = generator.execute(identifier, config)
-
-                markdown_blocks = []
-                for path in output_paths:
-                    lang = _resolve_markdown_language(path.name)
-                    file_content = path.read_text().strip()
-                    markdown_blocks.append(
-                        f"**`{path.name}`**\n\n```{lang}\n{file_content}\n```"
-                    )
-
-                _write_fixture(f"gen_{target_name}.md", "\n\n".join(markdown_blocks))
-        finally:
-            os.chdir(original_cwd)
 
 
 def generate_capability_tables() -> None:
@@ -475,7 +439,6 @@ def main() -> None:
         # Fast executions (instant)
         generate_cli_help_svgs()
         generate_default_config()
-        generate_generator_outputs()
         generate_capability_tables()
         generate_manifest_state()
 

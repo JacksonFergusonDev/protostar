@@ -5,7 +5,6 @@ import sys
 from typing import Any
 
 from .config import ProtostarConfig
-from .generators import GENERATOR_REGISTRY
 from .modules import TOOLING_MODULES
 from .presets import PRESETS
 
@@ -33,7 +32,6 @@ def run_discovery_wizard() -> str | None:
         "What would you like to do?",
         choices=[
             questionary.Choice("Initialize a new environment", value="init"),
-            questionary.Choice("Generate boilerplate code", value="generate"),
             questionary.Choice("Manage global configuration", value="config"),
         ],
     ).ask()
@@ -95,41 +93,3 @@ def run_init_wizard() -> dict[str, Any] | None:
         "presets": presets,
         "docker": docker,
     }
-
-
-def run_generate_wizard() -> dict[str, str | None] | None:
-    """Runs the target generation selection wizard.
-
-    Returns:
-        A dictionary containing the 'target' (str) and 'name' (str | None).
-        Returns None if cancelled or non-interactive.
-    """
-    if not _should_run_wizard():
-        return None
-
-    import questionary
-    from questionary import Choice
-
-    choices = []
-    for key, generator in GENERATOR_REGISTRY.items():
-        desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
-        title = f"{key:<15} - {desc}"
-        choices.append(Choice(title=title, value=key))
-
-    target = questionary.select(
-        "Select a boilerplate target to generate:",
-        choices=choices,
-    ).ask()
-
-    if not target:
-        return None
-
-    name = questionary.text(
-        "Enter the identifier or filename (optional, press Enter to skip):"
-    ).ask()
-
-    if name is None:  # User triggered a KeyboardInterrupt (Ctrl+C)
-        return None
-
-    # Treat empty strings from the prompt as None to align with argparse behavior
-    return {"target": str(target), "name": str(name).strip() if name else None}

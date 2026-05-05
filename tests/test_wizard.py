@@ -6,7 +6,6 @@ from protostar.config import ProtostarConfig
 from protostar.wizard import (
     _should_run_wizard,
     run_discovery_wizard,
-    run_generate_wizard,
     run_init_wizard,
 )
 
@@ -33,32 +32,6 @@ def test_discovery_wizard_execution(mocker):
 
     result = run_discovery_wizard()
     assert result == "init"
-
-
-def test_generate_wizard_state_mapping(mocker):
-    """Test the generate wizard correctly parses target and name strings."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-
-    mock_select = mocker.patch("questionary.select")
-    mock_select.return_value.ask.return_value = "cpp_class"
-
-    mock_text = mocker.patch("questionary.text")
-    mock_text.return_value.ask.return_value = " AstroEngine "
-
-    result = run_generate_wizard()
-
-    assert result is not None
-    assert result["target"] == "cpp_class"
-    assert result["name"] == "AstroEngine"  # Verifies stripping
-
-
-def test_wizards_abort_on_non_interactive(mocker):
-    """Test all wizards safely return None if executed in a CI or piped environment."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=False)
-
-    assert run_discovery_wizard() is None
-    assert run_init_wizard() is None
-    assert run_generate_wizard() is None
 
 
 def test_benchmark_env_bypasses_tty_check(mocker):
@@ -92,26 +65,3 @@ def test_run_init_wizard_cancellation(mocker):
     mock_checkbox.return_value.ask.return_value = None
 
     assert run_init_wizard() is None
-
-
-def test_run_generate_wizard_cancellation_target(mocker):
-    """Test that the generate wizard handles cancellation at the target prompt."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-
-    mock_select = mocker.patch("questionary.select")
-    mock_select.return_value.ask.return_value = None  # User aborts here
-
-    assert run_generate_wizard() is None
-
-
-def test_run_generate_wizard_cancellation_name(mocker):
-    """Test that the generate wizard handles cancellation at the naming prompt."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-
-    mock_select = mocker.patch("questionary.select")
-    mock_select.return_value.ask.return_value = "cpp_class"
-
-    mock_text = mocker.patch("questionary.text")
-    mock_text.return_value.ask.return_value = None  # User aborts here (Ctrl+C)
-
-    assert run_generate_wizard() is None
