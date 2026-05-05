@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777953683054,
+  "lastUpdate": 1778020806674,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1943,6 +1943,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 180.36,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0623d6124d4b3a91e9030ad25bf8ec6ac29ad4a1",
+          "message": "docs: align documentation with python-exclusive architecture (#86)\n\nCompletes phase 4 of the roadmap by updating all documentation, README files, \nand contribution guidelines to reflect the removal of the `protostar generate` \ncommand and all non-Python scaffolding logic.\n\n- Removed all references to the `generate` workflow and related terminal assets.\n- Pruned non-Python parameters (e.g., node_package_manager, LaTeX styles) from config schemas.\n- Deleted the local `.protostar.toml` configuration documentation.\n- Removed legacy language comparisons (Rust, Node.js, C++) from the engine mechanics.\n- Updated `testing.md` and `CONTRIBUTING.md` to enforce the Python-only contribution boundary, swapping out legacy mocked test examples.",
+          "timestamp": "2026-05-05T15:39:01-07:00",
+          "tree_id": "aea63870ddc8156983dbb5400214644eb8772a8d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0623d6124d4b3a91e9030ad25bf8ec6ac29ad4a1"
+        },
+        "date": 1778020805843,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.06,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 181.52,
             "unit": "ms"
           }
         ]
