@@ -6,7 +6,6 @@ Protostar has one job: save the user time on setup they would have done anyway. 
 
 - Would *most* users want this, or just some?
 - Would a user plausibly revert this manually after running the tool?
-- Does this belong in `init` (run once) or `generate` (run repeatedly)?
 
 If the answer to either of the first two is "maybe not", the feature probably doesn't belong in the tool.
 
@@ -29,16 +28,6 @@ A module only interacts with the manifest interface. It must not inspect what ot
 ### 5. Presets are Independent Pipeline Injections
 
 Presets inherit from the `PresetModule` abstract base class and evaluate independently during the manifest aggregation phase. They do not override language modules; they strictly append domain-specific dependencies and directory scaffolding to the `EnvironmentManifest`.
-
-### 6. Configuration Scope Boundaries
-
-To prevent configuration drift and unexpected mutations, Protostar enforces a strict boundary between global and local configuration states:
-
-- **Global Configuration (`~/.config/protostar/config.toml`):** The singular source of truth for repository initialization (`protostar init`). This file dictates base environment toggles (`[env]`), global developer tools (`[dev]`), and domain-specific scaffolding (`[presets]`).
-
-- **Local Configuration (`.protostar.toml`):** Strictly reserved for configuring discrete file generation (`protostar generate`) specific to the active repository (e.g., custom C++ namespace targets or LaTeX macro overrides).
-
-**Rule:** The orchestrator will actively strip and ignore any `init`-specific blocks found in a local `.protostar.toml` file to guarantee idempotent scaffolding.
 
 ## Coding Standards
 
@@ -129,7 +118,7 @@ uv run pytest
     Use clear, descriptive commit messages.
 
     ```bash
-    git commit -m "feat: add support for Go"
+    git commit -m "feat: added something cool"
     git push origin feature/my-amazing-feature
     ```
 

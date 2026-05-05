@@ -17,13 +17,13 @@ Use the `tmp_path` fixture provided by `pytest` for any test requiring an actual
 === "Logical Validation (Mocked)"
 
     ```python
-    def test_latex_generator_aborts_on_existing_file(mocker, mock_config):
-        # Patch the target to simulate an existing file without touching the disk
-        mocker.patch("protostar.generators.latex.Path.exists", return_value=True)
+    def test_direnv_module_aborts_if_not_installed(mocker):
+        # Patch shutil.which to simulate direnv not being installed
+        mocker.patch("protostar.modules.tooling_layer.shutil.which", return_value=None)
 
-        generator = LatexGenerator()
-        with pytest.raises(FileExistsError, match="Target file already exists"):
-            generator.execute("main.tex", mock_config)
+        module = DirenvModule()
+        with pytest.raises(RuntimeError, match="direnv is not installed"):
+            module.pre_flight()
     ```
 
 === "Physical Sandbox (`tmp_path`)"
@@ -47,7 +47,7 @@ Use the `tmp_path` fixture provided by `pytest` for any test requiring an actual
 
 ### 2. Subprocess Mocking
 
-Many modules queue shell commands (e.g., `git init`, `cargo init`, `npm init`). Unless a test is explicitly marked for integration, **all `subprocess.run` calls must be mocked**.
+Many modules queue shell commands (e.g., `git init`, `uv init`). Unless a test is explicitly marked for integration, **all `subprocess.run` calls must be mocked**.
 
 We utilize `pytest-mock` (the `mocker` fixture) to intercept the `execute_subprocess` wrapper. This ensures tests run in milliseconds and do not require the CI runner to have heavy binary toolchains installed.
 
@@ -62,17 +62,6 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
     assert ["git", "init"] in manifest.system_tasks
 
 ```
-
----
-
-## The Non-Python Exemption (Declarative Testing)
-
-Protostar is heavily optimized for Python environments. While we support C++, Rust, Node.js, and LaTeX footprints, these target environments are currently **deprioritized for End-to-End (E2E) testing**.
-
-We strictly test non-Python modules via **Declarative Validation**. Instead of shelling out to the host machine to compile a generated `CMakeLists.txt` or execute an `npm` package configuration, we assert that the `EnvironmentManifest` correctly queued the required operations and configuration payloads.
-
-!!! info "Seeking Domain Contributors"
-    Because the core maintainership is deeply biased toward Python capabilities, we rely on community experts for non-Python domains. If you are a Rust, C++, or Node.js expert, contributions to enhance the declarative boundaries or add isolated, nightly integration tests for these environments are welcome.
 
 ---
 
