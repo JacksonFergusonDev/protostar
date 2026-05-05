@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777940008680,
+  "lastUpdate": 1777953683054,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1909,6 +1909,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 184.13,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "be680efba772c6ceee4b46c6444c0bb6ce461aab",
+          "message": "refactor(core): streamline architecture for exclusive python initialization (#85)\n\nFinalizes Phase 3 of the architectural refactor, permanently removing the structural vestiges of the `generate` command and multi-language support. \n\n- Removed the `run_discovery_wizard` multiplexer TUI.\n- Rewired the CLI parser to map the bare `protostar` command directly to the `init` wizard.\n- Stripped local `.protostar.toml` parsing logic from the configuration loader, as localized AST overrides are obsolete without the `generate` pipeline.\n- Scrubbed `argparse` descriptions, CLI help text, and internal docstrings of deprecated multi-language references.",
+          "timestamp": "2026-05-04T21:00:25-07:00",
+          "tree_id": "f0a2280fe0d03ac2ff3487c85ac46ba884d0456b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/be680efba772c6ceee4b46c6444c0bb6ce461aab"
+        },
+        "date": 1777953682151,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.81,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 180.36,
             "unit": "ms"
           }
         ]
