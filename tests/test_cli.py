@@ -16,24 +16,6 @@ from protostar.cli import (
 )
 
 
-def test_main_intercepts_bare_invocation(mocker):
-    """Test that a zero-argument execution routes to the discovery wizard."""
-    # Mock sys.argv to simulate running just `protostar`
-    mocker.patch.object(sys, "argv", ["protostar"])
-
-    mock_discovery = mocker.patch(
-        "protostar.cli.run_discovery_wizard", return_value="init"
-    )
-
-    # We expect sys.exit to be called because parse_args won't actually execute handle_init in our mock
-    with pytest.raises(SystemExit):
-        main()
-
-    mock_discovery.assert_called_once()
-    # Verify the interceptor appended the selection to sys.argv
-    assert sys.argv == ["protostar", "init"]
-
-
 def test_proto_help_formatter_usage(mocker):
     """Test that the custom formatter correctly overrides the usage prefix."""
     parser = argparse.ArgumentParser(formatter_class=ProtoHelpFormatter)
@@ -71,15 +53,7 @@ def test_intercept_interactive_wizards_cancellations(mocker):
     """Test that cancelling wizards safely exits the process with code 130."""
     parser = mocker.Mock()
 
-    # 1. Discovery Wizard Cancellation
-    mocker.patch.object(sys, "argv", ["protostar"])
-    mocker.patch("protostar.cli.run_discovery_wizard", return_value=None)
-    with pytest.raises(SystemExit) as exc_info:
-        intercept_interactive_wizards(parser)
-    assert exc_info.value.code == 130
-    parser.print_help.assert_not_called()
-
-    # 2. Init Wizard Cancellation
+    # Init Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch("protostar.cli.run_init_wizard", return_value=None)
     with pytest.raises(SystemExit) as exc_info:

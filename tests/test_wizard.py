@@ -5,7 +5,6 @@ import pytest
 from protostar.config import ProtostarConfig
 from protostar.wizard import (
     _should_run_wizard,
-    run_discovery_wizard,
     run_init_wizard,
 )
 
@@ -20,18 +19,6 @@ def test_should_run_wizard_tty(mocker):
 
     mock_sys.stdin.isatty.return_value = False
     assert _should_run_wizard() is False
-
-
-def test_discovery_wizard_execution(mocker):
-    """Test the discovery multiplexer parses questionary output."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-
-    # Mock the chained questionary.select(...).ask() call
-    mock_select = mocker.patch("questionary.select")
-    mock_select.return_value.ask.return_value = "init"
-
-    result = run_discovery_wizard()
-    assert result == "init"
 
 
 def test_benchmark_env_bypasses_tty_check(mocker):

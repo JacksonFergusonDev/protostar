@@ -66,7 +66,7 @@ class ProtostarConfig:
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
         pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
         pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
-        presets (dict[str, Any]): Generation presets, mapped to strings or nested dicts.
+        presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
     """
@@ -89,11 +89,10 @@ class ProtostarConfig:
 
     @classmethod
     def load(cls, force_reload: bool = False) -> "ProtostarConfig":
-        """Loads and parses global and local Protostar configuration files.
+        """Loads and parses the global Protostar configuration file.
 
-        Evaluates the global XDG configuration first, then merges any overrides
-        from a local '.protostar.toml' file in the current working directory.
-        Implements a class-level cache to prevent repeated disk I/O across the lifecycle.
+        Evaluates the global XDG configuration and implements a class-level cache
+        to prevent repeated disk I/O across the lifecycle.
 
         Args:
             force_reload: If True, bypasses the cache and forces a disk read.
@@ -133,7 +132,7 @@ class ProtostarConfig:
     # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
-        cls, path: Path, instance: "ProtostarConfig", is_local: bool = False
+        cls, path: Path, instance: "ProtostarConfig"
     ) -> "ProtostarConfig":
         """Helper to parse a TOML file and merge its values into a config instance.
 
@@ -144,9 +143,8 @@ class ProtostarConfig:
         assignment.
 
         Args:
-            path: The filesystem path to the local or global configuration file.
+            path: The filesystem path to the configuration file.
             instance: The active ProtostarConfig object to mutate.
-            is_local: A flag indicating whether the configuration file is local.
 
         Returns:
             A new ProtostarConfig instance containing the merged state.

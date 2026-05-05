@@ -16,30 +16,6 @@ def _should_run_wizard() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def run_discovery_wizard() -> str | None:
-    """Runs the primary discovery multiplexer wizard.
-
-    Returns:
-        The selected action string ('init', 'generate', 'config'), or None if
-        the user cancels the prompt or the environment is non-interactive.
-    """
-    if not _should_run_wizard():
-        return None
-
-    import questionary
-
-    action = questionary.select(
-        "What would you like to do?",
-        choices=[
-            questionary.Choice("Initialize a new environment", value="init"),
-            questionary.Choice("Manage global configuration", value="config"),
-        ],
-    ).ask()
-
-    # Cast to str | None to satisfy strict typing, as .ask() returns Any
-    return str(action) if action else None
-
-
 def run_init_wizard() -> dict[str, Any] | None:
     """Runs the environment initialization checklist.
 

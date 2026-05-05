@@ -30,7 +30,7 @@ from .presets import (
     PRESETS,
     PresetModule,
 )
-from .wizard import run_discovery_wizard, run_init_wizard
+from .wizard import run_init_wizard
 
 console = Console()
 
@@ -217,7 +217,7 @@ def build_parser() -> argparse.ArgumentParser:
         __version__ = "unknown"
 
     parser = argparse.ArgumentParser(
-        description="A modular CLI tool for quickly scaffolding software environments. ",
+        description="A modular CLI tool for quickly scaffolding Python environments. ",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
         add_help=False,
@@ -256,8 +256,8 @@ def build_parser() -> argparse.ArgumentParser:
     # --- Init Subparser ---
     init_parser = subparsers.add_parser(
         "init",
-        help="Initialize a new environment and aggregate manifest configurations.",
-        description="Scaffolds base configurations, dependencies, and environment files.",
+        help="Initialize a new Python environment and aggregate manifest configurations.",
+        description="Scaffolds base Python configurations, dependencies, and environment files.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         epilog="[bold]Example:[/bold]\n  protostar init --python --astro --mypy",
@@ -367,10 +367,7 @@ def build_parser() -> argparse.ArgumentParser:
 def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
     if len(sys.argv) == 1:
-        action = run_discovery_wizard()
-        if not action:
-            sys.exit(130)
-        sys.argv.append(action)
+        sys.argv.append("init")
 
     # Intercept parameter-less subcommands for interactive wizards
     if len(sys.argv) == 2:
