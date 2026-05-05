@@ -133,15 +133,8 @@ headless-demo: sync
     rm -rf tmp_headless
     @printf "{{ green }}✔ Headless demo generated{{ nc }}\n"
 
-# Generate generation demo
-gen-demo: sync
-    @printf "\n{{ blue }}=== Generating Generation Demo ==={{ nc }}\n"
-    vhs demo/generate.tape
-    rm -rf tmp_gen
-    @printf "{{ green }}✔ Generation demo generated{{ nc }}\n"
-
 # Generate all demos
-all-demo: wizard-demo headless-demo gen-demo
+all-demo: wizard-demo headless-demo
     @printf "\n{{ blue }}=== All demos generated ==={{ nc }}\n"
 
 # Start the documentation preview server

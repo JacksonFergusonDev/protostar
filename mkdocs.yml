@@ -1,5 +1,5 @@
 site_name: Protostar
-site_description: High-velocity, zero-friction environment scaffolding.
+site_description: High-velocity, zero-friction python environment scaffolding.
 site_url: https://jacksonfergusondev.github.io/protostar/
 repo_url: https://github.com/jacksonfergusondev/protostar
 repo_name: jacksonfergusondev/protostar
@@ -11,7 +11,6 @@ nav:
   - Getting Started: getting-started.md
   - Usage:
     - Init: usage/init.md
-    - Generate: usage/generate.md
     - Configuration: usage/configuration.md
   - Flags:
     - Tooling: flags/tooling.md
