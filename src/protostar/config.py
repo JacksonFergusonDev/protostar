@@ -11,9 +11,6 @@ logger = logging.getLogger("protostar")
 # Platform-agnostic resolution leveraging standard XDG-like fallbacks
 CONFIG_FILE = Path.home() / ".config" / "protostar" / "config.toml"
 
-# Local workspace configuration resolution
-LOCAL_CONFIG_FILE = Path(".protostar.toml")
-
 DEFAULT_CONFIG_CONTENT = """[env]
 # Preferred IDE: 'vscode', 'cursor', 'jetbrains', or 'none'
 # ide = "vscode"
@@ -112,12 +109,6 @@ class ProtostarConfig:
         if CONFIG_FILE.exists():
             instance = cls._parse_and_merge(CONFIG_FILE, instance)
 
-        if LOCAL_CONFIG_FILE.exists():
-            logger.debug(
-                f"Discovered local configuration override at {LOCAL_CONFIG_FILE}"
-            )
-            instance = cls._parse_and_merge(LOCAL_CONFIG_FILE, instance, is_local=True)
-
         cls._instance = instance
         return instance
 
@@ -179,24 +170,7 @@ class ProtostarConfig:
             return instance
 
         # --- Schema Validation & Scope Enforcement ---
-        from protostar.generators import GENERATOR_REGISTRY
-
-        generate_keys = set(GENERATOR_REGISTRY.keys())
-        init_keys = {"env", "presets", "dev"}
-
-        if is_local:
-            blocked_found = init_keys.intersection(data.keys())
-            if blocked_found:
-                logger.warning(
-                    f"Scope Warning: Found global init blocks ({', '.join(blocked_found)}) "
-                    f"in local {path}. Local configs are strictly for 'generate'. These blocks will be ignored."
-                )
-                for k in blocked_found:
-                    data.pop(k)
-
-            allowed_keys = generate_keys
-        else:
-            allowed_keys = init_keys | generate_keys
+        allowed_keys = {"env", "presets", "dev"}
 
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:

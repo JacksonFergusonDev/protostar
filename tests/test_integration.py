@@ -106,30 +106,6 @@ def test_orchestrator_idempotency(run_cli: Any, seed_global_config: Any) -> None
         assert len(config.get("project", {}).get("dependencies", [])) == 0
 
 
-@pytest.mark.parametrize(
-    ("target", "name", "expected_files"),
-    [
-        (
-            "circuitpython",
-            "ignored",
-            ["code.py", ".pyrightconfig.json"],
-        ),
-        ("pio", "esp32dev", ["platformio.ini"]),
-    ],
-)
-def test_generator_routing(
-    run_cli: Any, target: str, name: str, expected_files: list[str]
-) -> None:
-    """Verifies discrete file generation for the remaining embedded targets."""
-    code, stdout, stderr, workspace = run_cli("generate", target, name)
-    assert code == 0, f"Generator failed.\nSTDERR: {stderr}\nSTDOUT: {stdout}"
-
-    for filename in expected_files:
-        assert (workspace / filename).exists()
-
-    assert not (workspace / "pyproject.toml").exists()
-
-
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
 def test_python_version_cohesion_e2e(
     monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture, tmp_path: Path

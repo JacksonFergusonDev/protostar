@@ -19,7 +19,6 @@ from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
-from .generators import GENERATOR_REGISTRY
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -31,155 +30,9 @@ from .presets import (
     PRESETS,
     PresetModule,
 )
-from .wizard import run_discovery_wizard, run_generate_wizard, run_init_wizard
+from .wizard import run_discovery_wizard, run_init_wizard
 
 console = Console()
-
-
-class LazyTargetHelp(str):
-    """A str subclass that embeds a Rich-rendered target table as its string value.
-
-    Inheriting from str ensures full compatibility with argparse and rich-argparse
-    regardless of whether they use duck-typing or isinstance checks internally.
-    The get_renderable() method provides a native Rich renderable for the custom
-    print_table_help formatter, preserving styled terminal output.
-    """
-
-    def __new__(cls) -> "LazyTargetHelp":
-        """Constructs the instance with the rendered table as its string value.
-
-        Evaluates the terminal width at construction time and captures a
-        ANSI-stripped Rich table render as the underlying str value. ANSI codes
-        are stripped via color_system=None to prevent argparse from counting
-        invisible styling bytes during column alignment.
-
-        Returns:
-            A LazyTargetHelp instance whose string value is the rendered table.
-        """
-        return super().__new__(cls, cls._build_string())
-
-    @staticmethod
-    def _build_string() -> str:
-        """Renders the generator registry as a plain-text table string.
-
-        Uses a width-constrained, color-stripped console to produce a string
-        safe for argparse's internal help formatting logic.
-
-        Returns:
-            A formatted string containing the target table and its header.
-        """
-        # Subtract 32 columns to account for argparse's indentation and
-        # decoration overhead, preventing table overflow in the help output.
-        capture_console = Console(
-            width=Console().width - 32,
-            color_system=None,
-        )
-
-        target_table = Table(
-            show_header=False,
-            box=box.ROUNDED,
-            show_lines=True,
-            padding=(0, 1),
-            pad_edge=False,
-        )
-        target_table.add_column("Target", no_wrap=True)
-        target_table.add_column("Description")
-
-        for key, generator in GENERATOR_REGISTRY.items():
-            desc = generator.__doc__.strip().split("\n")[0] if generator.__doc__ else ""
-            target_table.add_row(key, desc)
-
-        with capture_console.capture() as capture:
-            capture_console.print(target_table)
-
-        return f"The boilerplate target to evaluate and generate:\n{capture.get()}"
-
-    def get_renderable(self) -> Any:
-        """Provides a native Rich renderable for the custom print_table_help formatter.
-
-        Constructs a styled Rich table with column colouring and a descriptive
-        header, used exclusively by print_table_help() when rendering the
-        help output directly to the terminal via a Rich Console.
-
-        Returns:
-            A Rich Group containing a header Text and a styled Table.
-        """
-        table = Table(
-            title="How NAME is evaluated:",
-            box=box.ROUNDED,
-            show_lines=False,
-            show_header=False,
-            padding=(0, 1),
-            title_justify="left",
-            title_style="bold blue",
-        )
-        table.add_column("Target", style="cyan", no_wrap=True)
-        table.add_column("Description")
-        table.add_column("Example", style="dim")
-
-        table.add_row(
-            "pio", "The board target ID", "(e.g., proto generate pio esp32dev)"
-        )
-        table.add_row(
-            "circuitpython",
-            "Ignored automatically",
-            "(e.g., proto generate circuitpython)",
-        )
-
-        return table
-
-
-class GenerateEpilogTable:
-    """Delays and structures the generate command epilog as a native Rich table."""
-
-    def __str__(self) -> str:
-        """Fallback string representation."""
-        return "How NAME is evaluated:"
-
-    def __mod__(self, params: dict[str, Any]) -> str:
-        """Intercepts argparse's string interpolation."""
-        return self.__str__() % params
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegates missing string methods to the evaluated string."""
-        return getattr(str(self), name)
-
-    def get_renderable(self) -> Any:
-        """Provides a native Rich table for the custom help renderer."""
-        from rich.table import Table
-
-        table = Table(
-            title="How NAME is evaluated:",
-            box=box.ROUNDED,
-            show_lines=False,
-            show_header=False,
-            padding=(0, 1),
-            title_justify="left",
-            title_style="bold blue",
-        )
-        table.add_column("Target", style="cyan", no_wrap=True)
-        table.add_column("Description")
-        table.add_column("Example", style="dim")
-
-        table.add_row(
-            "tex", "The output filename", "(e.g., proto generate tex report.tex)"
-        )
-        table.add_row(
-            "cpp-class",
-            "The class identifier",
-            "(e.g., proto generate cpp-class Engine)",
-        )
-        table.add_row(
-            "pio", "The board target ID", "(e.g., proto generate pio esp32dev)"
-        )
-        table.add_row("cmake", "Ignored automatically", "(e.g., proto generate cmake)")
-        table.add_row(
-            "circuitpython",
-            "Ignored automatically",
-            "(e.g., proto generate circuitpython)",
-        )
-
-        return table
 
 
 def handle_init(args: argparse.Namespace) -> None:
@@ -246,28 +99,6 @@ def handle_init(args: argparse.Namespace) -> None:
         force=getattr(args, "force", False),
     )
     engine.run()
-
-
-def handle_generate(args: argparse.Namespace) -> None:
-    """Handles the 'generate' subcommand for post-setup file scaffolding.
-
-    Dynamically routes the execution to the corresponding TargetGenerator.
-    """
-    config = ProtostarConfig.load()
-
-    generator = GENERATOR_REGISTRY.get(args.target)
-    if not generator:
-        console.print(
-            f"[bold red]Generation Aborted:[/bold red] Unknown target '{args.target}'."
-        )
-        return
-
-    try:
-        out_paths = generator.execute(args.name, config)
-        for path in out_paths:
-            console.print(f"[bold green]Generated:[/bold green] {path}")
-    except (FileExistsError, ValueError) as e:
-        console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
 
 
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
@@ -488,38 +319,6 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.set_defaults(func=handle_init)
     init_parser.print_help = types.MethodType(print_table_help, init_parser)  # type: ignore[method-assign]
 
-    # --- Generate Subparser ---
-    generate_parser = subparsers.add_parser(
-        "generate",
-        help="Generate boilerplate files and project scaffolding.",
-        description="Generates boilerplate code or files based on the configured environment.",
-        formatter_class=ProtoHelpFormatter,
-        usage=argparse.SUPPRESS,
-        epilog=cast(str, GenerateEpilogTable()),
-    )
-
-    target_group = generate_parser.add_argument_group("Generation Target")
-
-    # The string evaluation is now deferred to the LazyTargetHelp object
-    target_group.add_argument(
-        "target",
-        choices=list(GENERATOR_REGISTRY.keys()),
-        metavar="TARGET",
-        help=cast(str, LazyTargetHelp()),
-    )
-
-    # Output Parameters remains standard
-    param_group = generate_parser.add_argument_group("Output Parameters")
-    param_group.add_argument(
-        "name",
-        nargs="?",
-        metavar="NAME",
-        help="The primary identifier or filename for the output.",
-    )
-
-    generate_parser.set_defaults(func=handle_generate)
-    generate_parser.print_help = types.MethodType(print_table_help, generate_parser)  # type: ignore[method-assign]
-
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
         "config",
@@ -594,28 +393,6 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 modules, config, presets, docker=selections["docker"], force=False
             )
             engine.run()
-            sys.exit(0)
-
-        elif cmd == "generate":
-            selections = run_generate_wizard()
-            if not selections:
-                sys.exit(130)
-
-            config = ProtostarConfig.load()
-            target_generator = GENERATOR_REGISTRY.get(str(selections["target"]))
-
-            if not target_generator:
-                console.print(
-                    f"[bold red]Generation Aborted:[/bold red] Unknown target '{selections['target']}'."
-                )
-                sys.exit(1)
-
-            try:
-                out_paths = target_generator.execute(selections["name"], config)
-                for path in out_paths:
-                    console.print(f"[bold green]Generated:[/bold green] {path}")
-            except (FileExistsError, ValueError) as e:
-                console.print(f"[bold red]Generation Aborted:[/bold red] {e}")
             sys.exit(0)
 
 

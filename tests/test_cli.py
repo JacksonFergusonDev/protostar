@@ -2,22 +2,17 @@ import argparse
 import importlib.metadata
 import subprocess
 import sys
-import types
 
 import pytest
-from rich.table import Table
 
 from protostar.cli import (
-    GenerateEpilogTable,
     ProtoHelpFormatter,
     build_parser,
     configure_logging,
     handle_config,
-    handle_generate,
     handle_init,
     intercept_interactive_wizards,
     main,
-    print_table_help,
 )
 
 
@@ -39,44 +34,6 @@ def test_main_intercepts_bare_invocation(mocker):
     assert sys.argv == ["protostar", "init"]
 
 
-def test_main_intercepts_generate_wizard(mocker):
-    """Test that `protostar generate` routes to the wizard and executes the target generator."""
-    mocker.patch.object(sys, "argv", ["protostar", "generate"])
-
-    mock_gen_wizard = mocker.patch("protostar.cli.run_generate_wizard")
-    mock_gen_wizard.return_value = {"target": "cpp_class", "name": "OrbitalMechanics"}
-    mocker.patch("protostar.cli.ProtostarConfig.load")
-
-    # Mock the generator execution
-    mock_target_gen = mocker.MagicMock()
-    mock_target_gen.execute.return_value = []
-
-    mock_registry = mocker.patch("protostar.cli.GENERATOR_REGISTRY")
-    mock_registry.get.return_value = mock_target_gen
-
-    with pytest.raises(SystemExit) as excinfo:
-        main()
-
-    assert excinfo.value.code == 0
-    mock_gen_wizard.assert_called_once()
-    mock_target_gen.execute.assert_called_once_with("OrbitalMechanics", mocker.ANY)
-
-
-def test_generate_epilog_table_proxy():
-    """Test that the epilog proxy evaluates cleanly as both a string and a table."""
-    proxy = GenerateEpilogTable()
-
-    # 1. Test string fallbacks
-    assert str(proxy) == "How NAME is evaluated:"
-    assert (proxy % {}) == "How NAME is evaluated:"
-    assert proxy.upper() == "HOW NAME IS EVALUATED:"
-
-    # 2. Test native table generation
-    renderable = proxy.get_renderable()
-    assert isinstance(renderable, Table)
-    assert renderable.title == "How NAME is evaluated:"
-
-
 def test_proto_help_formatter_usage(mocker):
     """Test that the custom formatter correctly overrides the usage prefix."""
     parser = argparse.ArgumentParser(formatter_class=ProtoHelpFormatter)
@@ -87,86 +44,6 @@ def test_proto_help_formatter_usage(mocker):
     # Ensure the capitalized 'Usage:' prefix is applied
     assert "Usage:" in help_output
     assert "usage:" not in help_output
-
-
-def test_print_table_help_rendering(mocker):
-    """Test that the custom table renderer parses actions and delegates to rich."""
-    mock_print = mocker.patch("protostar.cli.console.print")
-
-    parser = argparse.ArgumentParser(description="Test parser description")
-
-    # 1. Standard argument
-    parser.add_argument("--foo", help="Foo argument help")
-
-    # 2. Suppressed argument (should be filtered out)
-    parser.add_argument("--hidden", help=argparse.SUPPRESS)
-
-    # 3. Proxy epilog
-    parser.epilog = GenerateEpilogTable()  # type: ignore[assignment]
-
-    # Monkey-patch the method just like the main execution does
-    parser.print_help = types.MethodType(print_table_help, parser)  # type: ignore[method-assign]
-
-    parser.print_help()
-
-    # Aggregate all the objects sent to console.print
-    printed_args = [call.args[0] for call in mock_print.call_args_list if call.args]
-
-    # Verify description printed
-    assert "Test parser description\n" in printed_args
-
-    # Verify the table was generated
-    tables = [obj for obj in printed_args if isinstance(obj, Table)]
-    assert len(tables) > 0
-
-    # The epilog renderable should be the last table
-    assert tables[-1].title == "How NAME is evaluated:"
-
-    # Ensure suppressed arguments didn't make it to the output
-    table_strings = str(tables[0].columns)
-    assert "foo" in table_strings
-    assert "hidden" not in table_strings
-
-
-def test_handle_generate_unknown_target(mocker):
-    """Test that handle_generate catches invalid targets safely."""
-    args = argparse.Namespace(target="unknown_target", name="foo")
-    mock_print = mocker.patch("protostar.cli.console.print")
-
-    handle_generate(args)
-
-    printed = " ".join(
-        str(call.args[0]) for call in mock_print.call_args_list if call.args
-    )
-    assert "Unknown target" in printed
-
-
-def test_handle_generate_success_and_error(mocker):
-    """Test both the happy path and collision exceptions in file generation."""
-    args = argparse.Namespace(target="cpp_class", name="Engine")
-    mocker.patch("protostar.cli.ProtostarConfig.load")
-    mock_print = mocker.patch("protostar.cli.console.print")
-
-    mock_gen = mocker.Mock()
-    mock_gen.execute.return_value = ["Engine.hpp"]
-    mocker.patch.dict("protostar.cli.GENERATOR_REGISTRY", {"cpp_class": mock_gen})
-
-    # Success Path
-    handle_generate(args)
-    assert any(
-        "Generated" in str(call.args[0])
-        for call in mock_print.call_args_list
-        if call.args
-    )
-
-    # FileExistsError Path
-    mock_gen.execute.side_effect = FileExistsError("File already exists")
-    handle_generate(args)
-    assert any(
-        "Generation Aborted" in str(call.args[0])
-        for call in mock_print.call_args_list
-        if call.args
-    )
 
 
 def test_build_parser_package_not_found(mocker):
@@ -209,42 +86,6 @@ def test_intercept_interactive_wizards_cancellations(mocker):
         intercept_interactive_wizards(parser)
     assert exc_info.value.code == 130
     parser.parse_args.assert_not_called()
-
-    # 3. Generate Wizard Cancellation
-    mocker.patch.object(sys, "argv", ["protostar", "generate"])
-    mocker.patch("protostar.cli.run_generate_wizard", return_value=None)
-    with pytest.raises(SystemExit) as exc_info:
-        intercept_interactive_wizards(parser)
-    assert exc_info.value.code == 130
-    parser.parse_args.assert_not_called()
-
-
-def test_intercept_generate_wizard_errors(mocker):
-    """Test error handling routing inside the generate TUI wrapper."""
-    parser = mocker.Mock()
-    mock_print = mocker.patch("protostar.cli.console.print")
-    mocker.patch.object(sys, "argv", ["protostar", "generate"])
-
-    # 1. Unknown target returned by wizard
-    mocker.patch(
-        "protostar.cli.run_generate_wizard",
-        return_value={"target": "unknown", "name": "foo"},
-    )
-    with pytest.raises(SystemExit):
-        intercept_interactive_wizards(parser)
-    assert any("Unknown target" in str(c) for c in mock_print.call_args_list)
-
-    # 2. Target execution crash
-    mock_gen = mocker.Mock()
-    mock_gen.execute.side_effect = ValueError("Bad identifier")
-    mocker.patch.dict("protostar.cli.GENERATOR_REGISTRY", {"cpp_class": mock_gen})
-    mocker.patch(
-        "protostar.cli.run_generate_wizard",
-        return_value={"target": "cpp_class", "name": "foo"},
-    )
-    with pytest.raises(SystemExit):
-        intercept_interactive_wizards(parser)
-    assert any("Generation Aborted" in str(c) for c in mock_print.call_args_list)
 
 
 def test_configure_logging():
