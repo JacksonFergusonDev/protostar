@@ -62,13 +62,19 @@ Because Protostar is a scaffolding tool, its execution inherently interacts with
 
 ### Development Setup
 
-This project uses [uv](https://github.com/astral-sh/uv) for dependency management and requires Python 3.12+.
+To contribute to this project, you will need the following system-level dependencies installed:
+
+- **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)**: For dependency and environment management.
+- **[just](https://just.systems/man/en/packages.html)**: Our command runner.
+
+*(For macOS users with homebrew: `brew install uv just`)*
 
 1. **Fork & Clone**
     Fork the repo and clone it locally:
 
     ```bash
-    git clone https://github.com/yourusername/protostar.git
+    git clone https://github.com/JacksonFergusonDev/protostar.git
     cd protostar
     ```
 
@@ -83,15 +89,23 @@ This project uses [uv](https://github.com/astral-sh/uv) for dependency managemen
     Set up pre-commit hooks to handle linting and type checking automatically.
 
     ```bash
-    pre-commit install
+    uv run pre-commit install
     ```
 
-### Running Tests
+### Running Tests & Tooling
 
-We use `pytest` for the test suite.
+We use `just` as our command runner to standardize test execution, linting, and formatting.
+
+To see all available commands and their descriptions, run `just` in the repository root:
 
 ```bash
-uv run pytest
+just
+```
+
+To execute the standard test matrix:
+
+```bash
+just test
 ```
 
 ### Pull Requests
@@ -103,18 +117,21 @@ uv run pytest
     ```
 
 1. **Make Changes**
+
     Write your code. Ensure your changes are tightly scoped to a single feature, preset, or bug fix. Avoid monolithic pull requests that mix refactoring with new logic.
 
 1. **Verify**
-    Ensure your code passes the linter and tests locally.
+
+    Ensure your code passes the linter, type checker, and test suite locally. We provide a single command that emulates the GitHub Actions CI pipeline. Run this before pushing:
 
     ```bash
-    uv run pytest
+    just ci
     ```
 
     (Pre-commit will also run `ruff` and `mypy` when you commit).
 
 1. **Commit & Push**
+
     Use clear, descriptive commit messages.
 
     ```bash
@@ -123,4 +140,5 @@ uv run pytest
     ```
 
 1. **Open a Pull Request**
+
     Submit your PR against the `main` branch.

@@ -87,36 +87,34 @@ Found in `tests/test_exhaustive.py`, these tests leverage `itertools.combination
 
 ## Running the Suite
 
-We utilize a `Makefile` to standardize test execution and abstract the underlying `uv` and `pytest` invocations. This is the recommended approach for local development to ensure parity with the GitHub Actions CI runners.
+We utilize `just` to standardize test execution, abstracting the underlying `uv`, `ruff`, and `pytest` invocations. This is the recommended approach for local development to ensure parity with the GitHub Actions CI runners.
 
-=== "Standard Suite"
-    Executes the standard test matrix without coverage overhead.
-    ```bash
-    make test
-    ```
-
-=== "Coverage Run"
-    Executes the suite and validates coverage thresholds (fail under 90%).
-    ```bash
-    make test-cov
-    ```
-
-=== "Detailed Coverage Report"
-    Generates a line-by-line coverage report and outputs missing branches to the terminal.
-    ```bash
-    make test-cov-report
-    ```
+!!! tip "Self-Documenting Tooling"
+    For the complete list of available development, formatting, and benchmarking commands, simply run `just` in the root of the repository.
 
 === "Pre-Push CI Emulation"
-    Runs the exact pipeline executed by GitHub Actions, sequentially triggering `install`, `lint`, `typecheck`, and `test-cov`. Run this before opening a pull request.
+    Runs the exact pipeline executed by GitHub Actions, sequentially triggering `lint`, `typecheck`, and `test-cov`. Run this before opening a pull request.
     ```bash
-    make ci
+    just ci
+    ```
+
+=== "Documentation Generation"
+    Generates all Markdown fixtures for the documentation. Use the `--fast` variant (`just docs-fixtures-fast`) to skip slower subprocess executions during rapid iteration.
+    ```bash
+    just docs-fixtures
+    ```
+
+=== "Local Server"
+    Spins up the Zensical server for local documentation preview.
+    ```bash
+    just serve
     ```
 
 !!! tip "Manual Execution"
-    If you need to pass specific markers or flags directly to pytest (e.g., to run a single file or skip exhaustive tests), bypass the Makefile and use `uv` directly:
+    If you need to pass specific markers or flags directly to pytest (e.g., to run a single file or skip exhaustive tests), bypass the runner and use `uv` directly:
     ```bash
-    uv run pytest tests/test_executor.py uv run pytest -m "not exhaustive"
+    uv run pytest tests/test_executor.py
+    uv run pytest -m "not exhaustive"
     ```
 
 ### Pytest Configuration

@@ -15,7 +15,7 @@ default:
 
 # Sync/install dependencies using uv
 sync:
-    uv sync --all-extras --dev --quiet
+    uv sync --quiet
 
 # Auto-format Python code using Ruff
 format: sync
@@ -107,13 +107,13 @@ clean:
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
 
-# Generate ALL Markdown fixtures for documentation (Includes slower subprocess environments)
+# Generate ALL Markdown fixtures for documentation
 docs-fixtures: sync
     @printf "\n{{ blue }}=== Generating All Documentation Fixtures ==={{ nc }}\n"
     uv run python scripts/generate_doc_fixtures.py
     @printf "{{ green }}✔ Documentation fixtures generated in docs/includes/{{ nc }}\n"
 
-# Generate only the fast documentation fixtures (Skips Protostar init executions)
+# Generate only the fast documentation fixtures
 docs-fixtures-fast: sync
     @printf "\n{{ blue }}=== Generating Fast Documentation Fixtures ==={{ nc }}\n"
     uv run python scripts/generate_doc_fixtures.py --fast
