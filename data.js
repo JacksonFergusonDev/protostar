@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778020806674,
+  "lastUpdate": 1778023156213,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1977,6 +1977,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 181.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1eac60864e53695615bce4771e10744f90a23abf",
+          "message": "docs: migrate developer onboarding from make to just (#87)\n\n- Added explicit system-level requirements (uv, just) to CONTRIBUTING.md.\n- Routed git hook initialization through `uv run pre-commit install` for strict isolation.\n- Replaced all legacy Makefile references in testing.md with current justfile targets.\n- Simplified `uv sync` execution in the justfile and cleaned up target comments.\n- Updated the repository URL in the git clone instructions.",
+          "timestamp": "2026-05-05T16:18:24-07:00",
+          "tree_id": "ede84bb47714ea0223343b927cf872b4a30a7520",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1eac60864e53695615bce4771e10744f90a23abf"
+        },
+        "date": 1778023154901,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 90.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 145.96,
             "unit": "ms"
           }
         ]
