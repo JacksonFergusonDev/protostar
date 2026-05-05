@@ -30,7 +30,7 @@ from .presets import (
     PRESETS,
     PresetModule,
 )
-from .wizard import run_discovery_wizard, run_init_wizard
+from .wizard import run_init_wizard
 
 console = Console()
 
@@ -367,10 +367,7 @@ def build_parser() -> argparse.ArgumentParser:
 def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
     if len(sys.argv) == 1:
-        action = run_discovery_wizard()
-        if not action:
-            sys.exit(130)
-        sys.argv.append(action)
+        sys.argv.append("init")
 
     # Intercept parameter-less subcommands for interactive wizards
     if len(sys.argv) == 2:
