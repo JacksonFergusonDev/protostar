@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777928141856,
+  "lastUpdate": 1777940008680,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -1875,6 +1875,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 182.82,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "33ff1b7d715176a676d8e7274bf586792f8062a9",
+          "message": "refactor(generators): deprecate and remove the generate subsystem entirely (#84)\n\nExecutes Phase 2 of the roadmap. Following the transition to a dedicated Python \nengine, the `generate` command has been removed to enforce a strict Unix philosophy. \nProtostar is now exclusively a high-velocity environment bootstrapper, completely \ndropping secondary file-templating responsibilities to eliminate technical debt.\n\n- refactor(generators): delete the `src/protostar/generators` directory completely\n- refactor(cli): remove the `generate` subparser, epilogs, and lazy loaders\n- refactor(frontend): remove generator routing from the interactive TUI multiplexer\n- test: purge all generator unit and integration tests\n- docs: synchronize doc fixture script to ignore deleted targets",
+          "timestamp": "2026-05-04T17:12:31-07:00",
+          "tree_id": "a4674d6ec7faabd1449411baae287bc54ab66877",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/33ff1b7d715176a676d8e7274bf586792f8062a9"
+        },
+        "date": 1777940007753,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 114.86,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 184.13,
             "unit": "ms"
           }
         ]
