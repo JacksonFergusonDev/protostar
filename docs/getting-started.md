@@ -77,8 +77,6 @@ Protostar is self-documenting. You can view the full capabilities matrix and sub
     You can also get localized help for specific subcommands by running:
     ```bash
     protostar help init
-    # or
-    protostar help generate
     ```
 
 ## Shell Autocomplete & Aliasing

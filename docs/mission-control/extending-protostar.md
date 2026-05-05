@@ -86,9 +86,6 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
                 show_root_toc_entry: true
                 separate_signature: true
 
-!!! info "Enforcing Language Constraints"
-    If your custom tool is language-specific (like a Python linter or a Rust formatter), declare the `required_languages` tuple as a class attribute (e.g., `required_languages = ("PythonModule",)`). This guarantees that the CLI will dynamically intercept invalid combinations—preventing developers from attempting chaotic anomalies like forcefully shoving Ruff into a strict Node.js environment—by safely dropping the invalid flag and surfacing a terminal warning.
-
 ??? abstract "Deep Dive: Pre-flight vs Build"
     - **`pre_flight()`**: Executes before *any* state changes occur. If `shutil.which("just")` fails here, the orchestrator immediately halts, guaranteeing the environment remains untouched.
     - **`build()`**: Only queues state changes. Notice how we use `manifest.add_file_injection()` instead of `Path("justfile").write_text()`.

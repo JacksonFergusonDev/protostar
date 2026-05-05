@@ -98,9 +98,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - **Model Checkpoints:** The ML preset aggressively injects ignores for tensor artifacts (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`) to ensure massive model weights never pollute the git tree.
 
 !!! info "The Python Gravity Well"
-    Protostar was originally engineered to accelerate Python development pipelines, and its Python scaffolding (specifically via `uv`) is highly refined and deeply integrated.
-
-    While Protostar natively supports scaffolding for C++, Rust, Node.js, and LaTeX, these footprints currently represent basic, standard implementations. If you are a domain expert in these ecosystems, we gladly welcome PRs to help stabilize and expand their dependency pipelines to match the maturity of the Python layer.
+    Protostar is engineered specifically to accelerate Python development pipelines. Its Python scaffolding (specifically leveraging `uv`) is highly refined, deeply integrated, and serves as the exclusive focus of the engine.
 
 ---
 
@@ -169,9 +167,7 @@ If you select __Merge__, Protostar performs a surgical AST injection.
 *Curious how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments? Read the [Mechanics: Executor](../mechanics/executor.md) deep dive.*
 
 !!! success "Strict Footprint Validation"
-    Protostar enforces explicit language boundaries for all tooling operations. If you pass an impossible configuration matrix via the CLI—such as attempting to scaffold Python typing tools in a Rust-only environment (`protostar init --rust --mypy`)—Protostar will not crash or dump inert configurations into your repository. It evaluates the topological constraint, drops the invalid tool, and prints a clean diagnostic warning before proceeding with the rest of the valid scaffolding sequence.
-
----
+    Protostar enforces explicit dependency boundaries for all tooling operations. If you pass an impossible or conflicting configuration matrix via the CLI, Protostar will not crash or dump inert configurations into your repository. It evaluates the topological constraints, drops the invalid tool, and prints a clean diagnostic warning before proceeding with the rest of the valid scaffolding sequence.
 
 ## The Capabilities Matrix
 
