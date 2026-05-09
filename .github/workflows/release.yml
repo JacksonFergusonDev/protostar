@@ -28,55 +28,13 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # release/v1
 
-  update-homebrew:
-    name: Update Homebrew tap formula + resources
+  sync-homebrew:
+    name: Delegate Homebrew Update
     needs: build-n-publish
-    runs-on: ubuntu-latest
-    env:
-      TAG: ${{ github.ref_name }}
-    steps:
-      - name: Check out Homebrew Tap
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          repository: JacksonFergusonDev/homebrew-tap
-          token: ${{ secrets.TAP_GITHUB_TOKEN }}
-          path: homebrew-tap
-
-      - name: Check out Protostar repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          path: protostar-repo
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v8.1.0
-
-      - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@9926e3be887aa6c9523a027099bf5e882056f5c1
-
-      - name: Tap the repository
-        run: brew tap JacksonFergusonDev/homebrew-tap ./homebrew-tap
-
-      - name: Update Formula
-        run: |
-          uv run protostar-repo/scripts/update_homebrew.py \
-            --version "${TAG#v}" \
-            --formula-path "./homebrew-tap/Formula/protostar.rb"
-
-      - name: Commit and Push
-        working-directory: homebrew-tap
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/protostar.rb
-
-          if git diff --cached --quiet; then
-            echo "No formula changes to commit."
-            exit 0
-          fi
-
-          # Sync the locally generated formula to Homebrew's global tap registry
-          cp Formula/protostar.rb "$(brew --repository jacksonfergusondev/homebrew-tap)/Formula/"
-
-          brew audit --strict --online jacksonfergusondev/homebrew-tap/protostar
-          git commit -m "chore: bump protostar to ${TAG} and sync python resources"
-          git push
+    uses: JacksonFergusonDev/ci-cd-tooling/.github/workflows/update-homebrew.yml@main
+    with:
+      tag: ${{ github.ref_name }}
+      package_name: "protostar"
+      formula_path: "Formula/protostar.rb"
+    secrets:
+      TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
