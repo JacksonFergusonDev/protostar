@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778023156213,
+  "lastUpdate": 1778296056323,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2011,6 +2011,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 145.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "54cf66044420256808d06ff2c6620bd77be2a0c1",
+          "message": "ci: delegate homebrew release to centralized tooling\n\nReplaces the hardcoded Homebrew deployment job with a reusable workflow\ncall to `ci-cd-tooling`. This delegates PyPI polling, dependency\nresolution, and formula synchronization to the centralized infrastructure,\naligning the repository with the standardized ecosystem architecture.",
+          "timestamp": "2026-05-08T20:06:34-07:00",
+          "tree_id": "c09e030028a856901e8178c9680d173b912ae428",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/54cf66044420256808d06ff2c6620bd77be2a0c1"
+        },
+        "date": 1778296056013,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 113.79,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 181.95,
             "unit": "ms"
           }
         ]
