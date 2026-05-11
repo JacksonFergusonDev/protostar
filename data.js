@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778296056323,
+  "lastUpdate": 1778486314337,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2045,6 +2045,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 181.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "28cbab2d43ce6355dd3af326a59160be3a27d2f8",
+          "message": "docs(branding): update logo typography and ensure deterministic rendering (#88)\n\n- Increased README logo width to 480px and corrected the alt text to \"Protostar Logo\".\n- Converted SVG logo text to paths via Inkscape to guarantee consistent cross-OS rendering.\n- Shrink-wrapped SVG bounding boxes with a 10px margin for tighter layout integration.\n- Backed up editable source SVGs to `docs/branding/` to preserve future editability, isolating the destructive path conversion.",
+          "timestamp": "2026-05-11T00:57:38-07:00",
+          "tree_id": "6ba2a3bf15b87f3a79ff985a5f1bd32f7b557616",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/28cbab2d43ce6355dd3af326a59160be3a27d2f8"
+        },
+        "date": 1778486313945,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 122.37,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.07,
             "unit": "ms"
           }
         ]
