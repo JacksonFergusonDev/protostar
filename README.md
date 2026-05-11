@@ -1,13 +1,12 @@
 <!-- markdownlint-disable-file MD041 -->
-
 <div align="center">
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme-light.svg">
-  <img alt="Pulsar demo"
+  <img alt="Protostar Logo"
        src="docs/assets/readme-light.svg"
-       width="400"
+       width="480"
        style="max-width:100%; height:auto;">
 </picture>
 
