@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
     - name: Install uv
       uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
@@ -32,10 +32,10 @@ jobs:
         python-version: "3.14"
 
     - name: Install hyperfine
-      uses: taiki-e/install-action@5c1067cb42c4cbaae13044ec9b28241535544abf # hyperfine
+      uses: taiki-e/install-action@d8055f5aa4515e0781b947765fa3d1559d2d3f45 # hyperfine
 
     - name: Install just
-      uses: taiki-e/install-action@0334dda302527f8273dd5d46ea2b78b0fa074ee1 # just
+      uses: taiki-e/install-action@8991259aacd8c48a9c45228f33e9a308d825765b # just
 
     - name: Install dependencies
       run: uv sync --group ci
