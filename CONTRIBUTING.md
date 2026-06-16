@@ -71,6 +71,7 @@ To contribute to this project, you will need the following system-level dependen
 *(For macOS users with homebrew: `brew install uv just`)*
 
 1. **Fork & Clone**
+
     Fork the repo and clone it locally:
 
     ```bash
@@ -79,6 +80,7 @@ To contribute to this project, you will need the following system-level dependen
     ```
 
 1. **Environment Setup**
+
     We use `uv` to manage the virtual environment and dependencies. Running sync will install the core application alongside the `dev` dependency group (which includes `build`, `bump-my-version`, `mypy`, `pre-commit`, `pytest`, `pytest-cov`, `pytest-mock`, and `ruff`).
 
     ```bash
@@ -86,6 +88,7 @@ To contribute to this project, you will need the following system-level dependen
     ```
 
 1. **Install Hooks**
+
     Set up pre-commit hooks to handle linting and type checking automatically.
 
     ```bash
