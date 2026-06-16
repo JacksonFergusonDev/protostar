@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781615623278,
+  "lastUpdate": 1781615783700,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2147,6 +2147,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 184.25,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "df8e81172b432a961848e6e47b4990bf5220050a",
+          "message": "docs: swap hero dark mode asset to favicon and remove deprecated graphic\n\nReplaces the dark-themed hero visual asset `hero-page.svg` with `favicon.svg` within `docs/index.md` to unify light/dark asset tracking, and deletes the unreferenced `docs/assets/hero-page.svg`.",
+          "timestamp": "2026-06-16T15:12:59+02:00",
+          "tree_id": "2db5c5fbf07e44aeb946d61dcc656ad8f2e13361",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/df8e81172b432a961848e6e47b4990bf5220050a"
+        },
+        "date": 1781615783367,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 119.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 192.68,
             "unit": "ms"
           }
         ]
