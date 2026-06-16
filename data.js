@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781615783700,
+  "lastUpdate": 1781642081761,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2181,6 +2181,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 192.68,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "39fe96cebce95d02b99bb1db33e442e1b5ffb568",
+          "message": "docs: fix markdown formatting and list spacing in CONTRIBUTING.md",
+          "timestamp": "2026-06-16T22:32:19+02:00",
+          "tree_id": "7695cb25acd2c933b1b10776d5f2df132be839c1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/39fe96cebce95d02b99bb1db33e442e1b5ffb568"
+        },
+        "date": 1781642081192,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 118.01,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.57,
             "unit": "ms"
           }
         ]
