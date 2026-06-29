@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781642081761,
+  "lastUpdate": 1782749437488,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2215,6 +2215,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "afe4960525230a958ec7d836c11bcb486ac0f3ce",
+          "message": "chore(pre-commit): update hook versions\n\n* bump ruff-pre-commit to v0.15.20\n* bump mypy to v2.1.0\n* bump markdownlint-cli2 to v0.22.1\n* bump renovate-config-validator to v43.247.1",
+          "timestamp": "2026-06-29T16:39:10+01:00",
+          "tree_id": "d37a983fe8df81864d84ba438f42b2bf1f3f5eb3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/afe4960525230a958ec7d836c11bcb486ac0f3ce"
+        },
+        "date": 1782749437157,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.5,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.41,
             "unit": "ms"
           }
         ]
