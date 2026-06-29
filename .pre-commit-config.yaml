@@ -13,27 +13,27 @@ repos:
 
   # 2. Python-specific toolchain
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.10
+    rev: v0.15.20
     hooks:
       - id: ruff-format
       - id: ruff
         args: [ --fix ]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.1
+    rev: v2.1.0
     hooks:
       - id: mypy
 
   # 3. Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.22.0
+    rev: v0.22.1
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]
 
   # 4. Renovate configuration validation
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 43.125.0
+    rev: 43.247.1
     hooks:
       - id: renovate-config-validator
         files: '.github/renovate.json'
