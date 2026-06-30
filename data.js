@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782749437488,
+  "lastUpdate": 1782858081726,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2249,6 +2249,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.41,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5023ddb5822ec5c8fdf379ba411b5d136bbda057",
+          "message": "refactor: establish public API facade and centralize package metadata (#90)\n\n- Expose `BootstrapModule`, `EnvironmentManifest`, and `PresetModule` via `__all__` in the root `__init__.py` to provide a clean public API for extensibility.\n- Migrate dynamic `importlib.metadata` version resolution to the package root to comply with PEP 396.\n- Refactor `cli.py` to inherit the `__version__` attribute directly from the root namespace, simplifying parser initialization.",
+          "timestamp": "2026-06-30T15:20:25-07:00",
+          "tree_id": "710c8528c44b607d2d8889f22bb701c8cc8b4183",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5023ddb5822ec5c8fdf379ba411b5d136bbda057"
+        },
+        "date": 1782858080762,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 113.88,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 186.4,
             "unit": "ms"
           }
         ]
