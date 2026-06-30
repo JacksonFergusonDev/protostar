@@ -1,5 +1,4 @@
 import argparse
-import importlib.metadata
 import logging
 import os
 import shlex
@@ -17,6 +16,8 @@ from rich.logging import RichHandler
 from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
+
+from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from .modules import (
@@ -211,11 +212,6 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
-    try:
-        __version__ = importlib.metadata.version("protostar")
-    except importlib.metadata.PackageNotFoundError:
-        __version__ = "unknown"
-
     parser = argparse.ArgumentParser(
         description="A modular CLI tool for quickly scaffolding Python environments. ",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
