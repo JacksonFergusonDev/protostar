@@ -113,12 +113,15 @@ class SystemExecutor:
         full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
 
         if "{{MYPY_DEPENDENCIES}}" in full_yaml:
-            deps = self.manifest.dependencies + self.manifest.dev_dependencies
+            deps = self.manifest.dependencies
             if deps:
                 deps_formatted = "\n".join(f"          - {d}" for d in deps)
+                full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
             else:
-                deps_formatted = "          []"
-            full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
+                # If no runtime dependencies, strip the key cleanly
+                full_yaml = full_yaml.replace(
+                    "        additional_dependencies:\n{{MYPY_DEPENDENCIES}}", ""
+                )
 
         target.write_text(full_yaml)
         logger.debug("Scaffolded .pre-commit-config.yaml")
