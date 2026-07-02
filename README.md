@@ -24,7 +24,7 @@
 
 </div>
 
-Setting up a new project often requires the same manual steps: configuring linters, writing `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
+Setting up a new python project often requires the same manual steps: configuring linters, writing `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
 
 ---
 
@@ -115,7 +115,7 @@ Protostar is designed to be run right after you `mkdir` a new project.
 
 ### The Interactive Wizard
 
-If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI). This wizard allows you to visually select your languages, tools, and presets without needing to memorize CLI flags.
+If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI). This wizard allows you to visually select your domain presets and development tooling without needing to memorize CLI flags.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -128,7 +128,7 @@ protostar
 For rapid, repeatable initialization, bypass the TUI entirely by providing your desired environment matrix as CLI flags.
 
 ```bash
-protostar init --python --astro --docker --direnv -m --mypy --pytest --pre-commit
+protostar init --astro --docker --direnv -m --mypy --pytest --pre-commit
 ```
 
 *Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
@@ -139,7 +139,7 @@ protostar init --python --astro --docker --direnv -m --mypy --pytest --pre-commi
 
 This tool uses a highly decoupled, plugin-style architecture. The CLI parser dynamically evaluates module registries at runtime.
 
-- **To add support for a new language:** Subclass `BootstrapModule`.
+- **To add support for a new core tool (e.g., a linter or formatter):** Subclass `BootstrapModule`.
 - **To add a new dependency pipeline:** Subclass `PresetModule`.
 
 We maintain strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
