@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783002984586,
+  "lastUpdate": 1783003355258,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2351,6 +2351,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "3dfcae4c380b364e0cd0b8bf8d6bbcda345cb330",
+          "message": "docs: align README with Python-exclusive architecture\n\nRemoves references to legacy multi-language support, deprecated multi-language\nwizard steps, and the obsolete `--python` CLI flag from the primary documentation\nbenchmarks. Updates developer extension instructions to accurately reflect the\ncurrent role of `BootstrapModule` as a core tooling injection layer rather than\na language configuration layer.",
+          "timestamp": "2026-07-02T15:41:35+01:00",
+          "tree_id": "91e8af2cd10e8f58b429128c838399fb75a8ff32",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3dfcae4c380b364e0cd0b8bf8d6bbcda345cb330"
+        },
+        "date": 1783003354955,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 113.95,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 183.8,
             "unit": "ms"
           }
         ]
