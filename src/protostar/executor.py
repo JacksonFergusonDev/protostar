@@ -96,7 +96,6 @@ class SystemExecutor:
             return
 
         base_yaml = """repos:
-  # 1. Generic hooks (configured to ignore Python to avoid formatting conflicts)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -105,10 +104,13 @@ class SystemExecutor:
       - id: end-of-file-fixer
         exclude: \\.py$
       - id: check-yaml
-      - id: check-added-large-files
-"""
-        hooks_yaml = "\n".join(self.manifest.pre_commit_hooks)
-        full_yaml = f"{base_yaml}\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
+      - id: check-added-large-files"""
+
+        # Enforce exactly one empty line between all dynamic payloads
+        hooks_yaml = "\n\n".join(self.manifest.pre_commit_hooks)
+
+        # Enforce exactly one empty line between the base block and the dynamic payloads
+        full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
 
         if "{{MYPY_DEPENDENCIES}}" in full_yaml:
             deps = self.manifest.dependencies + self.manifest.dev_dependencies
