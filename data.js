@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783004755420,
+  "lastUpdate": 1783005548955,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2419,6 +2419,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.81,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "2ae67450df7249d6a989226a00d630115e44187a",
+          "message": "ci(release): point homebrew sync workflow to @main\n\nUpdates the reusable workflow reference to track the main branch instead of a\npinned commit SHA. This ensures the pipeline receives infrastructure updates\nautomatically, specifically the `brew trust` patch required for CI tap\nauditing.",
+          "timestamp": "2026-07-02T16:17:59+01:00",
+          "tree_id": "133ea9952010a84c262c969eef4030336b45d27c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2ae67450df7249d6a989226a00d630115e44187a"
+        },
+        "date": 1783005548632,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 124.54,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 210.2,
             "unit": "ms"
           }
         ]
