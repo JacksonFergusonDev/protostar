@@ -2,6 +2,7 @@ import argparse
 import importlib.metadata
 import subprocess
 import sys
+from typing import cast
 
 import pytest
 
@@ -199,3 +200,85 @@ def test_main_keyboard_interrupt_handling(mocker):
     assert any(
         "Aborted by user." in str(call.args[0]) for call in mock_print.call_args_list
     )
+
+
+def test_dispatch_help_topic(mocker):
+    """Test dispatching help strictly for a localized subcommand."""
+    parser = build_parser()
+
+    # Safely extract the init subparser
+    subparsers = cast(
+        argparse._SubParsersAction,
+        next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+    )
+    init_parser = subparsers.choices["init"]
+
+    mock_sub_help = mocker.patch.object(init_parser, "print_help")
+
+    args = parser.parse_args(["help", "init"])
+    args.func(args)
+    mock_sub_help.assert_called_once()
+
+
+def test_intercept_interactive_wizards_success(mocker):
+    """Test successful execution pathway of the terminal UI wizard."""
+    parser = mocker.Mock()
+
+    # Emulate running `protostar` with no arguments
+    mocker.patch.object(sys, "argv", ["protostar"])
+
+    selections = {"modules": [], "presets": [], "docker": True}
+    mocker.patch("protostar.cli.run_init_wizard", return_value=selections)
+    mocker.patch("protostar.cli.ProtostarConfig.load")
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        intercept_interactive_wizards(parser)
+
+    mock_orchestrator.return_value.run.assert_called_once()
+    mock_exit.assert_called_once_with(0)
+
+
+def test_print_table_help_execution(mocker):
+    """Test the custom table help formatter does not raise on layout evaluation."""
+    parser = build_parser()
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    # Safely extract the init subparser
+    subparsers = cast(
+        argparse._SubParsersAction,
+        next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+    )
+    init_parser = subparsers.choices["init"]
+
+    init_parser.print_help()
+
+    assert mock_print.called
+
+
+def test_handle_config_parent_dir_creation(mocker, tmp_path):
+    """Test configuration gracefully builds missing parent directories."""
+    mock_config_file = tmp_path / "deep" / "nested" / "config.toml"
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch.dict("os.environ", {"EDITOR": "nano"})
+    mocker.patch("shutil.which", return_value="/usr/bin/nano")
+    mocker.patch("subprocess.run")
+
+    handle_config(argparse.Namespace())
+
+    assert mock_config_file.parent.exists()
+    assert mock_config_file.exists()
+
+
+def test_main_verbose_flag(mocker):
+    """Test that the --verbose flag correctly triggers logging configuration."""
+    # Place the global flag before the 'init' subcommand
+    mocker.patch.object(sys, "argv", ["protostar", "--verbose", "init"])
+    mocker.patch("protostar.cli.intercept_interactive_wizards")
+    mock_configure_logging = mocker.patch("protostar.cli.configure_logging")
+    mocker.patch("protostar.cli.handle_init")
+
+    main()
+
+    mock_configure_logging.assert_called_once()

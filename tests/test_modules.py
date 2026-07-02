@@ -1,7 +1,15 @@
+from pathlib import Path
+
 import pytest
 
 from protostar.config import ProtostarConfig
-from protostar.modules import PythonCore
+from protostar.modules import (
+    DirenvModule,
+    MarkdownLintModule,
+    PreCommitModule,
+    PytestModule,
+    PythonCore,
+)
 
 
 def test_python_module_uv_build(manifest, mocker):
@@ -133,3 +141,127 @@ def test_python_module_pre_flight_missing_pip(mocker):
 
     with pytest.raises(RuntimeError, match="Missing dependency: 'python' is required"):
         mod.pre_flight()
+
+
+# --- DirenvModule Tests ---
+
+
+def test_direnv_pre_flight_missing(mocker):
+    """Test DirenvModule aborts pre-flight if direnv is missing."""
+    mocker.patch("shutil.which", return_value=None)
+    with pytest.raises(RuntimeError, match="direnv is not installed"):
+        DirenvModule().pre_flight()
+
+
+def test_direnv_collision_markers():
+    assert DirenvModule().collision_markers == [Path(".envrc")]
+
+
+def test_direnv_build(manifest, mocker):
+    """Test DirenvModule generates the `.envrc` injection and queues evaluation."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
+    mod = DirenvModule()
+    mod.build(manifest)
+
+    assert ".envrc.local" in manifest.vcs_ignores
+    assert ".direnv/" in manifest.vcs_ignores
+    assert ".envrc" in manifest.file_injections
+    assert any(t.command == ["direnv", "allow"] for t in manifest.post_install_tasks)
+
+
+def test_direnv_build_file_exists(manifest, mocker):
+    """Test DirenvModule skips `.envrc` injection if it already exists."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+    mod = DirenvModule()
+    mod.build(manifest)
+    assert ".envrc" not in manifest.file_injections
+
+
+# --- MarkdownLintModule Tests ---
+
+
+def test_markdownlint_collision_markers():
+    assert MarkdownLintModule().collision_markers == [Path(".markdownlint.yaml")]
+
+
+def test_markdownlint_build(manifest, mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    mod = MarkdownLintModule()
+    mod.build(manifest)
+
+    assert ".markdownlint.yaml" in manifest.file_injections
+    assert any("markdownlint-cli" in hook for hook in manifest.pre_commit_hooks)
+
+
+def test_markdownlint_build_file_exists(manifest, mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+    mod = MarkdownLintModule()
+    mod.build(manifest)
+    assert ".markdownlint.yaml" not in manifest.file_injections
+
+
+# --- PytestModule Tests ---
+
+
+def test_pytest_build(manifest):
+    mod = PytestModule()
+    mod.build(manifest)
+
+    assert "pytest" in manifest.dev_dependencies
+    assert "pytest-cov" in manifest.dev_dependencies
+    assert "tests" in manifest.directories
+    assert ".coverage" in manifest.workspace_hides
+    assert "pyproject.toml" in manifest.file_appends
+
+
+# --- PreCommitModule Tests ---
+
+
+def test_pre_commit_pre_flight_missing(mocker):
+    """Test PreCommitModule aborts pre-flight if git is missing."""
+    mocker.patch("shutil.which", return_value=None)
+    with pytest.raises(RuntimeError, match="Missing dependency: 'git'"):
+        PreCommitModule().pre_flight()
+
+
+def test_pre_commit_collision_markers():
+    assert PreCommitModule().collision_markers == [Path(".pre-commit-config.yaml")]
+
+
+def test_pre_commit_build_uv(manifest, mocker):
+    """Test PreCommitModule configures standard hooks routing via uv."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
+
+    mod = PreCommitModule()
+    mod.build(manifest)
+
+    assert manifest.wants_pre_commit is True
+    assert "pre-commit" in manifest.dev_dependencies
+    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
+    assert any(
+        t.command == ["uv", "run", "pre-commit", "install"]
+        for t in manifest.post_install_tasks
+    )
+    assert any(
+        t.command == ["uv", "run", "pre-commit", "autoupdate"]
+        for t in manifest.post_install_tasks
+    )
+
+
+def test_pre_commit_build_pip(manifest, mocker):
+    """Test PreCommitModule configures standard hooks routing via pip/venv."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
+    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
+
+    mod = PreCommitModule()
+    mod.build(manifest)
+    assert any(
+        t.command == [".venv/bin/pre-commit", "install"]
+        for t in manifest.post_install_tasks
+    )
