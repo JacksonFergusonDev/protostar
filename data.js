@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782959942022,
+  "lastUpdate": 1783002984586,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2317,6 +2317,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 211.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8cdf789b39430908ace578ebc4917d761feadcbb",
+          "message": "feat: bridge testing coverage gaps and restore codecov enforcement quality gates (#93)\n\n* chore: expand test suite to close coverage gaps in cli and tooling layers\n\n- Add robust pre-flight, collision, and build pipeline verification for DirenvModule, MarkdownLintModule, PytestModule, and PreCommitModule.\n- Add coverage for alternative Python packaging paradigms (uv vs. pip/venv environment hooks configuration).\n- Secure test coverage across argparse table help formatting execution pipelines, verbose telemetry initialization pathways, and interactive TUI routing intercept closures.\n- Fix static type tracking analysis constraints via deliberate explicit casting allocations over internal argparse choices nodes to eliminate mypy resolution issues.\n\n* chore: restore production Codecov metrics and enforcement thresholds\n\nReverts the temporary lockdown of coverage reporting used during the monolithic refactoring phase. Reactivates strict multi-layered validation metrics:\n- Re-enables project-wide baseline evaluation with an auto-target metric and a strict 2% regression constraint envelope.\n- Enforces an 80% localized threshold limit on newly injected code patches to guarantee long-term system stability.\n- Disables explicit pull-request comment noise while anchoring CI status locks onto reporting engine execution states.",
+          "timestamp": "2026-07-02T07:35:23-07:00",
+          "tree_id": "51fe898071db0ae703e51643a36e8db234734eaf",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8cdf789b39430908ace578ebc4917d761feadcbb"
+        },
+        "date": 1783002983939,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 125.52,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.96,
             "unit": "ms"
           }
         ]
