@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783012799241,
+  "lastUpdate": 1783074680787,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2521,6 +2521,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 205.76,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8892c7b08b852bbce64058ca50706c7a709ed146",
+          "message": "refactor: streamline and standardize pre-commit configuration pipeline (#94)\n\n- Strips opinionated comments and implements consistent double-newline block separation across all dynamic pre-commit hook injections.\n- Shuts down dependency inflation inside the isolated mypy hook environment by skipping the development utility group entirely and targeting core production requirements.\n- Cleanly strips out empty `additional_dependencies` blocks when tracking bare-bones workspace initializations.\n- Synchronizes documentation markdown fixtures to match production generator formatting.",
+          "timestamp": "2026-07-03T03:30:24-07:00",
+          "tree_id": "73afc0c3c41f622ca8b1c932c457fb6edefe3e5a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8892c7b08b852bbce64058ca50706c7a709ed146"
+        },
+        "date": 1783074680446,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 123.55,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 200.21,
             "unit": "ms"
           }
         ]
