@@ -142,7 +142,7 @@ def test_executor_append_files_late_binding(mocker, mock_config):
 
 
 def test_executor_writes_pre_commit_config(mocker, mock_config):
-    """Test that the executor concatenates hooks and interpolates Mypy dependencies."""
+    """Test that the executor concatenates hooks and interpolates only production Mypy dependencies."""
     manifest = EnvironmentManifest()
     manifest.wants_pre_commit = True
     manifest.add_dependency("fastapi")
@@ -169,7 +169,36 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
     assert "id: mypy" in written_data
     assert "{{MYPY_DEPENDENCIES}}" not in written_data
     assert "- fastapi" in written_data
-    assert "- pytest" in written_data
+    # Verify dev dependencies are deliberately excluded from the mypy hook
+    assert "- pytest" not in written_data
+
+
+def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
+    """Test that mypy late-binding cleanly strips additional_dependencies if no production dependencies exist."""
+    manifest = EnvironmentManifest()
+    manifest.wants_pre_commit = True
+
+    hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        additional_dependencies:
+{{MYPY_DEPENDENCIES}}"""
+    manifest.add_pre_commit_hook(hook_payload)
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.Path.write_text")
+
+    executor._write_pre_commit_config()
+    written_data = mock_write.call_args[0][0]
+
+    assert "id: mypy" in written_data
+    # Verify the entire key and token block was stripped cleanly
+    assert "additional_dependencies" not in written_data
+    assert "{{MYPY_DEPENDENCIES}}" not in written_data
+    assert "[]" not in written_data
 
 
 def test_executor_writes_dockerignore(mocker, mock_config):
@@ -576,21 +605,6 @@ def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_conf
 
     executor._write_pre_commit_config()
     mock_write.assert_not_called()
-
-
-def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
-    """Test that mypy late-binding injects an empty array if no python dependencies exist."""
-    manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
-    manifest.pre_commit_hooks.append("id: mypy\n{{MYPY_DEPENDENCIES}}")
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
-
-    executor._write_pre_commit_config()
-    written_data = mock_write.call_args[0][0]
-    assert "[]" in written_data
 
 
 def test_executor_deep_merge_tomlkit_aot_append(mock_config):
