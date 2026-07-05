@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783074680787,
+  "lastUpdate": 1783287207199,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2555,6 +2555,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 200.21,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "d77aadfeb3b97d6f1802401392834b19267c9cf9",
+          "message": "chore(pyproject,ruff): normalize toml formatting and expand lint config\n\nUpdate pyproject.toml for consistency, readability, and a more explicit\nlint configuration.\n\n* Reformat authors and docs arrays into single-line form\n* Normalize spacing in inline table for license field\n* Standardize trailing commas and indentation in multiline arrays\n* Expand Ruff lint rule selection into explicit groups (A, B, C4, D,\n  E, F, I, N, PT, RET, RUF, SIM, T20, UP)\n* Update Ruff configuration comments and grouping for clarity\n* Reformat isort section-order for improved readability\n* Add trailing comma in pytest marker list for consistency",
+          "timestamp": "2026-07-05T22:31:44+01:00",
+          "tree_id": "6ba2d044d93b01f4385b186d5627f96cb02f9c80",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d77aadfeb3b97d6f1802401392834b19267c9cf9"
+        },
+        "date": 1783287206895,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.41,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 191.98,
             "unit": "ms"
           }
         ]
