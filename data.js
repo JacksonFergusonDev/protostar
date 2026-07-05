@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783287777769,
+  "lastUpdate": 1783288732473,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2623,6 +2623,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 182.18,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "1c7b80b4ec14897a5b5a56c8a3bf1cd1aa8ca016",
+          "message": "refactor: update package layout and type exports\n\n- Add py.typed to declare PEP 561 compliance.\n- Remove tests/ and scripts/ __init__.py package markers.\n- Configure explicit_package_bases and mypy_path in mypy.",
+          "timestamp": "2026-07-05T22:57:50+01:00",
+          "tree_id": "d9a00b8cd19855463b8694c434a999e32cca7672",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1c7b80b4ec14897a5b5a56c8a3bf1cd1aa8ca016"
+        },
+        "date": 1783288732064,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.02,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.38,
             "unit": "ms"
           }
         ]
