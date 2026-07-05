@@ -3,9 +3,7 @@ name = "protostar"
 version = "0.8.2"
 description = "High-velocity, zero-friction environment scaffolding."
 readme = "README.md"
-authors = [
-    { name = "Jackson Ferguson", email = "jackson.ferguson0@gmail.com" },
-]
+authors = [{ name = "Jackson Ferguson", email = "jackson.ferguson0@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "argcomplete>=3.6.3",
@@ -14,7 +12,7 @@ dependencies = [
     "rich-argparse>=1.7.2",
     "tomlkit>=0.14.0",
 ]
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
@@ -56,10 +54,7 @@ ci = [
     "pytest-mock>=3.15.1",
     "ruff>=0.14.13",
 ]
-docs = [
-    "mkdocstrings[python]>=1.0.3",
-    "zensical>=0.0.26",
-]
+docs = ["mkdocstrings[python]>=1.0.3", "zensical>=0.0.26"]
 dev = [
     { include-group = "ci" },
     { include-group = "docs" },
@@ -78,20 +73,36 @@ target-version = "py312"
 extend-exclude = ["docs", "site"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D", "RUF", "N", "RET"]
-ignore = [
-    "E501",
-    "D100",
-    "D104",
-    "D107",
+select = [
+    "A",   # flake8-builtins
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "D",   # pydocstyle
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "PT",  # flake8-pytest
+    "RET", # flake8-return
+    "RUF", # Ruff-specific
+    "SIM", # flake8-simplify
+    "T20", # flake8-print
+    "UP",  # pyupgrade
 ]
+ignore = ["D100", "D104", "D107", "E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.isort]
 known-first-party = ["protostar"]
-section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["T201", "D"]
@@ -122,7 +133,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "integration: marks tests that perform actual disk I/O and subprocess calls",
-    "exhaustive: marks heavy combinatorial tests"
+    "exhaustive: marks heavy combinatorial tests",
 ]
 
 [tool.coverage.run]
