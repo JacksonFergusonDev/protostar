@@ -44,6 +44,12 @@ typecheck: sync
     uv run mypy .
     @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
 
+# Run only fast unit tests (excludes integration and exhaustive markers)
+test-unit: sync
+    @printf "\n{{ blue }}=== Running Unit Tests ==={{ nc }}\n"
+    uv run pytest -m "not integration and not exhaustive"
+    @printf "{{ green }}✔ Unit tests passed{{ nc }}\n"
+
 # Run the full automated testing matrix
 test: sync
     @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
@@ -141,3 +147,38 @@ all-demo: wizard-demo headless-demo
 serve: sync
     @printf "\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\n"
     uv run zensical serve -o
+
+# Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
+bump part: lint typecheck test-unit
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Ensuring local repository is up to date..."
+    git pull --ff-only
+
+    echo "Checking for pre-existing uncommitted changes..."
+    if [[ -n "$(git status --porcelain --untracked-files=no -- pyproject.toml uv.lock)" ]]; then
+        echo "Error: pyproject.toml or uv.lock already has uncommitted changes. Commit or stash them first." >&2
+        exit 1
+    fi
+
+    VERSION=$(uv run scripts/bump.py {{ part }})
+    NEW_TAG="v$VERSION"
+
+    echo "Checking tag $NEW_TAG does not already exist..."
+    if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+        echo "Error: tag $NEW_TAG already exists." >&2
+        git checkout -- pyproject.toml
+        exit 1
+    fi
+
+    echo "Updating lockfile for $NEW_TAG..."
+    uv sync
+
+    echo "Staging changes and creating commit..."
+    git add pyproject.toml uv.lock
+    git commit -m "chore: bump version to $VERSION"
+    git tag -a "$NEW_TAG" -m "Bump version to $NEW_TAG"
+
+    echo "Shipping atomically to remote..."
+    git push origin HEAD --tags
