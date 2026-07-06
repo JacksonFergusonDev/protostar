@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783288732473,
+  "lastUpdate": 1783347074951,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2657,6 +2657,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.38,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "96084bb47cbf86d28d66eda29d669affeee5d905",
+          "message": "chore: remove bump-my-version in favor of custom bump task\n\n- Delete `[tool.bumpversion]` configuration from `pyproject.toml`.\n- Remove `bump-my-version` and its unused transient trees from `pyproject.toml` and `uv.lock`.\n- Implement defensive SemVer updater script using `tomlkit` in `scripts/bump.py`.\n- Add robust `just bump <part>` recipe automating fast-forward pulls, lockfile synchronization, and atomic Git tagging/pushing.",
+          "timestamp": "2026-07-06T15:04:16+01:00",
+          "tree_id": "d02a0ef485c605c81a793dd4f2da338317379a97",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/96084bb47cbf86d28d66eda29d669affeee5d905"
+        },
+        "date": 1783347074633,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 118.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 190.93,
             "unit": "ms"
           }
         ]
