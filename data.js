@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783442482745,
+  "lastUpdate": 1783442707190,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2725,6 +2725,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 180.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "2936ee0005ee72d060768ec6e8b60ec4126cd2a2",
+          "message": "refactor(config): remove deprecated no-ruff configuration key\n\n- Removed bespoke inversion logic for the legacy `no-ruff` key in the config parser.\n- The `ruff` attribute is now handled exclusively by the generalized `typing.get_type_hints` validation pipeline.\n- Updated `DEFAULT_CONFIG_CONTENT` to use the standard `ruff = false` syntax.\n- Migrated test suite configurations to validate standard `ruff` type-checking and toggle behavior, bypassing the cache with `force_reload=True` for clean reads.",
+          "timestamp": "2026-07-07T19:44:06+03:00",
+          "tree_id": "297078834ad0fd8ae270e9bb0c56caaf0214933d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2936ee0005ee72d060768ec6e8b60ec4126cd2a2"
+        },
+        "date": 1783442706860,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 123.64,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 204.96,
             "unit": "ms"
           }
         ]
