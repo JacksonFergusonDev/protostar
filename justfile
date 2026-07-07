@@ -84,8 +84,8 @@ test-benchmark-slower: sync
         'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
-# Run the exact pipeline executed by GitHub Actions
-ci: lint typecheck test-cov
+# Run the fast local CI pipeline executed before pushing
+ci: lint typecheck test-unit check-fixtures
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -124,6 +124,12 @@ docs-fixtures-fast: sync
     @printf "\n{{ blue }}=== Generating Fast Documentation Fixtures ==={{ nc }}\n"
     uv run python scripts/generate_doc_fixtures.py --fast
     @printf "{{ green }}✔ Fast documentation fixtures generated in docs/includes/{{ nc }}\n"
+
+# Check if documentation fixtures are out of sync with the codebase
+check-fixtures: docs-fixtures
+    @printf "\n{{ blue }}=== Checking Documentation Fixture Drift ==={{ nc }}\n"
+    @git diff --exit-code docs/includes/ > /dev/null || (printf "{{ yellow }}⚠ Fixture drift detected. The generator modified files in docs/includes/. Please commit them.{{ nc }}\n" && exit 1)
+    @printf "{{ green }}✔ Documentation fixtures are up-to-date{{ nc }}\n"
 
 # Generate wizard demo
 wizard-demo: sync
