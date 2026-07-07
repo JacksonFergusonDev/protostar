@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783442707190,
+  "lastUpdate": 1783443110268,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2759,6 +2759,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "59bcec3bb1ad8667b3eeb0daea26c69dc4998883",
+          "message": "chore: optimize local CI pipeline and add fixture drift checks\n\n- Replaced `test-cov` with `test-unit` in the `ci` recipe to bypass\n  slow integration and exhaustive test suites locally.\n- Added a `check-fixtures` target that leverages `docs-fixtures`\n  and evaluates path divergence via `git diff --exit-code`.\n- Integrated `check-fixtures` into `just ci` to halt the pre-push\n  pipeline if auto-generated markdown assets are out of sync.",
+          "timestamp": "2026-07-07T19:50:06+03:00",
+          "tree_id": "3c508c289e6b9c194415c5bb5b25f5fc87def42d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/59bcec3bb1ad8667b3eeb0daea26c69dc4998883"
+        },
+        "date": 1783443109953,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.06,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 191.27,
             "unit": "ms"
           }
         ]
