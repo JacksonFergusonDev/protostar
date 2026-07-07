@@ -14,7 +14,7 @@ python_version = "3.13"
 
 # Optional dev tool toggles for Python
 # markdownlint = true
-# no-ruff = true  # Disables the default Ruff scaffolding
+# ruff = false  # Disables the default Ruff scaffolding
 # mypy = true
 # pytest = true
 # pre_commit = true

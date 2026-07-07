@@ -18,16 +18,17 @@ def clear_config_cache() -> Generator[None, None, None]:
     ProtostarConfig._instance = None
 
 
-def test_config_no_ruff_inversion(mocker):
-    """Test that the 'no-ruff' toggle correctly inverts to config.ruff = False."""
+def test_config_ruff_toggle(mocker):
+    """Test that the 'ruff' toggle correctly sets config.ruff = False."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
 
-    payload = {"env": {"no-ruff": True}}
+    payload = {"env": {"ruff": False}}
 
     mocker.patch("protostar.config.tomllib.load", return_value=payload)
     mocker.patch("builtins.open", mocker.mock_open())
 
-    config = ProtostarConfig.load()
+    # Ensure we bypass the class cache for a clean read
+    config = ProtostarConfig.load(force_reload=True)
     assert config.ruff is False
 
 
@@ -153,25 +154,28 @@ def test_config_unknown_root_keys(mocker):
     assert "unknown_block" in logged_text
 
 
-def test_config_no_ruff_invalid_type(mocker):
-    """Test that an invalid type for the inverted 'no-ruff' edge case triggers a warning."""
+def test_config_ruff_invalid_type(mocker):
+    """Test that an invalid type for the 'ruff' key triggers a generalized warning."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
     mock_logger = mocker.patch("protostar.config.logger.warning")
 
     # Pass a string instead of a boolean
-    payload = {"env": {"no-ruff": "yes"}}
+    payload = {"env": {"ruff": "yes"}}
 
     mocker.patch("protostar.config.tomllib.load", return_value=payload)
     mocker.patch("builtins.open", mocker.mock_open())
 
-    config = ProtostarConfig.load()
+    config = ProtostarConfig.load(force_reload=True)
 
     # Should safely drop the string and fall back to the True default
     assert config.ruff is True
 
     mock_logger.assert_called()
     logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
-    assert "'[env].no-ruff' must be a boolean. Falling back to default." in logged_text
+
+    # Assert against the dynamic type-checking warning string
+    assert "Invalid type for '[env].ruff'" in logged_text
+    assert "Expected <class 'bool'>" in logged_text
 
 
 def test_config_complex_generic_type_passthrough(mocker):

@@ -26,7 +26,7 @@ python_version = "3.13"
 
 # Optional dev tool toggles for Python
 # markdownlint = true
-# no-ruff = true  # Disables the default Ruff scaffolding
+# ruff = false  # Disables the default Ruff scaffolding
 # mypy = true
 # pytest = true
 # pre_commit = true
@@ -213,14 +213,6 @@ class ProtostarConfig:
                     continue
 
                 updates[key] = value
-
-            if "no-ruff" in env_data:
-                if not isinstance(env_data["no-ruff"], bool):
-                    logger.warning(
-                        "Config Warning: '[env].no-ruff' must be a boolean. Falling back to default."
-                    )
-                else:
-                    updates["ruff"] = not env_data["no-ruff"]
 
         if "presets" in data:
             merged_presets = dict(instance.presets)
