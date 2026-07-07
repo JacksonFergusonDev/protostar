@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783443110268,
+  "lastUpdate": 1783443343612,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2793,6 +2793,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 191.27,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9a62027c890339b06155d5460eb08df0ff9b3ce8",
+          "message": "ci: add python 3.13 to test matrix\n\nExpands the GitHub Actions CI matrix to explicitly test against Python\n3.13. This ensures intermediate runtime stability and guarantees coverage\nfor breaking changes or module deprecations introduced in the 3.13 cycle,\npreventing version-specific dependency resolution failures.",
+          "timestamp": "2026-07-07T19:54:30+03:00",
+          "tree_id": "9c52aaa7bfe230745b7c3216dc8f1ab439dd3b9c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9a62027c890339b06155d5460eb08df0ff9b3ce8"
+        },
+        "date": 1783443343197,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 115.52,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 185.72,
             "unit": "ms"
           }
         ]
