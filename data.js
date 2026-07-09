@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783594786305,
+  "lastUpdate": 1783623533497,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2861,6 +2861,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 193.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6057526a84004c923a3de5e20c72a2467898b830",
+          "message": "refactor(core): centralize exception formatting and stabilize subprocess execution (#95)\n\nResolves an issue where brittle string parsing masked network timeouts during dependency resolution. Eliminates premature `sys.exit()` calls in execution leaf nodes, establishing a unified presentation layer at the CLI entry point.\n\n- Removes brittle downstream error scraping in `system.py`.\n- Introduces `ProtostarError` and `ConfigurationError` for semantic error routing.\n- Strips presentation logic (`console.print`, `sys.exit`) from `executor.py` and `config.py`.\n- Centralizes error formatting in `cli.main()` using `rich.panel.Panel` for operational errors and `rich.traceback` for unhandled bugs.\n- Updates the test suite to achieve 100% coverage on the new centralized error architecture.",
+          "timestamp": "2026-07-09T11:57:55-07:00",
+          "tree_id": "64e679436ee0b1243728ba969c5fb0dc5c436fec",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6057526a84004c923a3de5e20c72a2467898b830"
+        },
+        "date": 1783623532551,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 114.89,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 187.58,
             "unit": "ms"
           }
         ]
