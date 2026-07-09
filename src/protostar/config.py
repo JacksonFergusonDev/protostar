@@ -6,6 +6,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
+from .errors import ConfigurationError
+
 logger = logging.getLogger("protostar")
 
 # Platform-agnostic resolution leveraging standard XDG-like fallbacks
@@ -156,7 +158,7 @@ class ProtostarConfig:
             with open(path, "rb") as f:
                 data = tomllib.load(f)
         except tomllib.TOMLDecodeError as e:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Syntax error in configuration file {path}.\n"
                 f"Details: {e}\n"
                 "Please fix the syntax error or delete the file to regenerate the defaults."

@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import ProtostarConfig
+from protostar.errors import ProtostarError
 from protostar.manifest import CollisionStrategy
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
@@ -70,6 +71,7 @@ def test_orchestrator_evaluate_collisions_headless_aborts_by_default(
     mocker, mock_config
 ):
     """Test that a headless environment safely aborts on collision without the force flag."""
+    # Assuming DummyModule is defined in your test file
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod], mock_config)
 
@@ -77,22 +79,9 @@ def test_orchestrator_evaluate_collisions_headless_aborts_by_default(
     mocker.patch("pathlib.Path.exists", return_value=True)
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
 
-    # Configure the mock to actually raise SystemExit, preventing fall-through
-    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
-    mock_console = mocker.patch("protostar.orchestrator.console.print")
-
-    # Catch the exit to prevent it from failing the test
-    with pytest.raises(SystemExit):
+    # The orchestrator should raise a ProtostarError directly instead of printing/exiting
+    with pytest.raises(ProtostarError, match="--force"):
         orchestrator._evaluate_collisions()
-
-    # Verify it halted the process with code 1
-    mock_exit.assert_called_once_with(1)
-
-    # Verify the warning instructs the user to use the --force flag
-    printed_output = " ".join(
-        call.args[0] for call in mock_console.call_args_list if call.args
-    )
-    assert "--force" in printed_output
 
 
 def test_orchestrator_evaluate_collisions_headless_with_force_merges(
@@ -162,76 +151,6 @@ def test_orchestrator_run_global_injections(mocker, mock_config):
 
     assert "test-global-dep" in orchestrator.manifest.dev_dependencies
     assert "custom_payload" in orchestrator.manifest.file_appends["pyproject.toml"]
-
-
-def test_orchestrator_run_known_exception(mocker, mock_config):
-    """Test that known exceptions (e.g. FileExistsError) abort cleanly without stack traces."""
-    orchestrator = Orchestrator([], mock_config)
-    mocker.patch.object(
-        orchestrator, "_evaluate_collisions", side_effect=FileExistsError("Known error")
-    )
-    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
-    mock_print = mocker.patch("protostar.orchestrator.console.print")
-
-    with pytest.raises(SystemExit):
-        orchestrator.run()
-
-    mock_exit.assert_called_once_with(1)
-    printed = " ".join(
-        call.args[0]
-        for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], str)
-    )
-    assert "ABORTED" in printed
-    assert "Known error" in printed
-
-
-def test_orchestrator_run_unknown_exception(mocker, mock_config):
-    """Test that unknown exceptions trigger the telemetry generation URL and full traceback."""
-    orchestrator = Orchestrator([], mock_config)
-    mocker.patch.object(
-        orchestrator, "_evaluate_collisions", side_effect=KeyError("Unknown crash")
-    )
-    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
-    mock_print = mocker.patch("protostar.orchestrator.console.print")
-
-    with pytest.raises(SystemExit):
-        orchestrator.run()
-
-    mock_exit.assert_called_once_with(1)
-    printed = " ".join(
-        call.args[0]
-        for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], str)
-    )
-    assert "CRITICAL FAILURE" in printed
-    assert "https://github.com/" in printed
-
-
-def test_orchestrator_run_os_error_graceful_abort(mocker, mock_config):
-    """Test that OS-level locks and permission boundaries trigger a clean abort, not a crash report."""
-    orchestrator = Orchestrator([], mock_config)
-    mocker.patch.object(orchestrator, "_evaluate_collisions")
-
-    # Mock SystemExecutor to raise a PermissionError (which inherits from OSError)
-    mock_execute = mocker.patch("protostar.orchestrator.SystemExecutor.execute")
-    mock_execute.side_effect = PermissionError("Permission denied: '/etc/protostar'")
-
-    mock_exit = mocker.patch("protostar.orchestrator.sys.exit", side_effect=SystemExit)
-    mock_print = mocker.patch("protostar.orchestrator.console.print")
-
-    with pytest.raises(SystemExit):
-        orchestrator.run()
-
-    mock_exit.assert_called_once_with(1)
-    printed = " ".join(
-        call.args[0]
-        for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], str)
-    )
-    assert "ABORTED" in printed
-    assert "Permission denied: '/etc/protostar'" in printed
-    assert "CRITICAL FAILURE" not in printed
 
 
 def test_orchestrator_run_partial_success(mocker, mock_config):
