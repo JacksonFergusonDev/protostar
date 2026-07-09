@@ -6,6 +6,7 @@ import traceback
 import urllib.parse
 
 from rich.console import Console
+from rich.panel import Panel
 
 from .config import ProtostarConfig
 from .executor import SystemExecutor
@@ -174,12 +175,24 @@ class Orchestrator:
         except Exception as e:
             # Catch expected operational errors and OS-level I/O constraints
             if isinstance(e, (RuntimeError, ValueError, FileExistsError, OSError)):
-                console.print(f"\n[bold red]ABORTED:[/bold red] {e}")
+                console.print()
+                console.print(
+                    Panel(
+                        str(e),
+                        title="[bold red]Execution Aborted",
+                        border_style="red",
+                        expand=False,
+                        padding=(1, 2),
+                    )
+                )
                 sys.exit(1)
 
             console.print(
                 "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
             )
+
+            # Print the syntax-highlighted rich traceback to the terminal
+            console.print_exception(show_locals=False, max_frames=10)
 
             tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
             issue_body = (
@@ -195,12 +208,11 @@ class Orchestrator:
             issue_url = f"https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body={encoded_body}"
 
             console.print(
-                "This looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
+                "\nThis looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
             )
             # Render via Rich's OSC 8 link syntax
             console.print(
                 f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
             )
 
-            logger.debug("Stack trace:", exc_info=True)
             sys.exit(1)
