@@ -3,7 +3,6 @@ import json
 import logging
 import re
 import subprocess
-import sys
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -11,6 +10,7 @@ from typing import Any
 from rich.console import Console
 
 from .config import ProtostarConfig
+from .errors import ConfigurationError
 from .manifest import CollisionStrategy, EnvironmentManifest
 from .system import execute_subprocess
 
@@ -70,15 +70,12 @@ class SystemExecutor:
                     with target.open("rb") as f:
                         tomllib.load(f)
                 except tomllib.TOMLDecodeError as e:
-                    console.print(
-                        f"\n[bold red]Validation Failure:[/bold red] Syntax error in existing workspace file: {filepath}"
-                    )
-                    console.print(f"Details: {e}")
-                    console.print(
-                        "\nProtostar cannot safely merge configurations into a malformed file. "
+                    raise ConfigurationError(
+                        f"Syntax error in existing workspace file: {filepath}\n"
+                        f"Details: {e}\n"
+                        "Protostar cannot safely merge configurations into a malformed file. "
                         "Please fix the syntax error and re-run the command."
-                    )
-                    sys.exit(1)
+                    ) from e
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and interpolates the pre-commit configuration."""
@@ -313,10 +310,9 @@ class SystemExecutor:
                             doc, payload_doc, overwrite=is_overwrite
                         )
                     except Exception as e:
-                        console.print(
-                            f"\n[bold red]Internal Error:[/bold red] Failed to parse injected TOML payload for {filepath}.\nDetails: {e}"
-                        )
-                        sys.exit(1)
+                        raise ConfigurationError(
+                            f"Failed to parse injected TOML payload for {filepath}.\nDetails: {e}"
+                        ) from e
 
                 if ast_mutated:
                     new_content = tomlkit.dumps(doc)
