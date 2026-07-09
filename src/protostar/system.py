@@ -43,18 +43,11 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
         )
         logger.error(f"Task failed: {' '.join(cmd)}\nOutput:\n{output}")
 
-        # Catch known edge cases where uv fails to resolve/download python versions
-        if cmd[0] == "uv" and "python" in output.lower():
-            raise RuntimeError(
-                f"Command failed during setup: {cmd[0]}\n"
-                "Hint: `uv` encountered an error resolving the requested Python version. "
-                "If you have a global `uv.toml` (e.g., at `~/.config/uv/uv.toml`), "
-                "ensure `python-downloads` is not set to 'never', or verify the requested "
-                "version exists locally.\n\n"
-                f"Diagnostics:\n{output}"
-            ) from e
-
+        # Give Protostar's context first, then yield the floor to the downstream tool.
         error_msg = (
-            f"Command failed during setup: {' '.join(cmd)}\n\nDiagnostics:\n{output}"
+            f"Protostar failed to execute: {' '.join(cmd)}\n"
+            f"Subprocess exited with code {e.returncode}.\n\n"
+            f"--- Upstream Diagnostics ({cmd[0]}) ---\n"
+            f"{output}"
         )
         raise RuntimeError(error_msg) from e
