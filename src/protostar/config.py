@@ -12,7 +12,7 @@ logger = logging.getLogger("protostar")
 CONFIG_FILE = Path.home() / ".config" / "protostar" / "config.toml"
 
 DEFAULT_CONFIG_CONTENT = """[env]
-# Preferred IDE: 'vscode', 'cursor', 'jetbrains', or 'none'
+# Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
 
 # Auto-scaffold direnv with python environments
@@ -57,7 +57,7 @@ class ProtostarConfig:
     """Global configuration settings for the Protostar CLI.
 
     Attributes:
-        ide (str | None): The preferred IDE (e.g., 'vscode', 'jetbrains', 'cursor', 'none').
+        ide (str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_package_manager (str): The preferred Python manager ('uv', 'pip').
         python_version (str | None): The specific Python version to scaffold.

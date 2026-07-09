@@ -1,6 +1,6 @@
 ```toml
 [env]
-# Preferred IDE: 'vscode', 'cursor', 'jetbrains', or 'none'
+# Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
 
 # Auto-scaffold direnv with python environments
