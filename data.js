@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783443343612,
+  "lastUpdate": 1783594786305,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2827,6 +2827,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 185.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "437fe0105d4bbfb1915493cf5d2377a6805a8f25",
+          "message": "docs: remove JetBrains from documented IDE options\n\nJetBrains IDEs are not actively scaffolded by Protostar, so\nlisting them in the default config comment and Config docstring\nimplied a support level that doesn’t exist. Remove 'jetbrains'\nfrom the supported IDE string and update the corresponding\ndoc fixture to keep documentation in sync.",
+          "timestamp": "2026-07-09T13:48:04+03:00",
+          "tree_id": "e2f35c9def26f5408ddd29e5997fbca4aeeabf0f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/437fe0105d4bbfb1915493cf5d2377a6805a8f25"
+        },
+        "date": 1783594785682,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 121.29,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 193.87,
             "unit": "ms"
           }
         ]
