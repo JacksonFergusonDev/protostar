@@ -1,11 +1,14 @@
 import argparse
 import logging
 import os
+import platform
 import shlex
 import shutil
 import subprocess
 import sys
+import traceback
 import types
+import urllib.parse
 from collections.abc import Iterable
 from typing import Any, ClassVar, cast
 
@@ -13,6 +16,7 @@ import argcomplete
 from rich import box
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.panel import Panel
 from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
@@ -20,6 +24,7 @@ from rich_argparse import RawTextRichHelpFormatter
 from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
+from .errors import ConfigurationError, ProtostarError
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -421,27 +426,22 @@ def handle_config(args: argparse.Namespace) -> None:
     editor_cmd = shlex.split(editor_env)
 
     if not editor_cmd:
-        console.print(
-            "[bold red]Configuration Error:[/bold red] The $EDITOR environment variable is empty."
-        )
-        sys.exit(1)
+        raise ConfigurationError("The $EDITOR environment variable is empty.")
 
     if not shutil.which(editor_cmd[0]):
-        console.print(
-            f"[bold red]Configuration Error:[/bold red] Could not resolve editor executable '{editor_cmd[0]}'.\n"
+        raise ConfigurationError(
+            f"Could not resolve editor executable '{editor_cmd[0]}'.\n"
             "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
         )
-        sys.exit(1)
 
     editor_cmd.append(str(CONFIG_FILE))
 
     try:
         subprocess.run(editor_cmd, check=True)
     except subprocess.CalledProcessError as e:
-        console.print(
-            f"[bold red]Editor Error:[/bold red] Editor '{editor_env}' exited with non-zero status: {e}"
-        )
-        sys.exit(1)
+        raise ConfigurationError(
+            f"Editor '{editor_env}' exited with non-zero status: {e}"
+        ) from e
 
 
 def main() -> None:
@@ -462,14 +462,50 @@ def main() -> None:
 
         args.func(args)
 
-    except ValueError as e:
-        # Gracefully handle the TOML syntax errors bubbled up from ProtostarConfig
-        console.print(f"\n[bold red]Configuration Error:[/bold red] {e}")
+    except (ProtostarError, RuntimeError, FileExistsError, OSError) as e:
+        # Expected operational errors route here
+        console.print()
+        console.print(
+            Panel(
+                str(e),
+                title="[bold red]Execution Aborted",
+                border_style="red",
+                expand=False,
+                padding=(1, 2),
+            )
+        )
         sys.exit(1)
     except KeyboardInterrupt:
         # Catch Ctrl+C cleanly
         console.print("\n[bold red]Aborted by user.[/bold red]")
         sys.exit(130)
+    except Exception as e:
+        # Unexpected bugs route here for the crash report payload
+        console.print(
+            "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
+        )
+
+        console.print_exception(show_locals=False, max_frames=10)
+
+        tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        issue_body = (
+            "### Environment\n"
+            f"- **OS**: {platform.system()} {platform.release()}\n"
+            f"- **Python**: {sys.version.split()[0]}\n"
+            f"- **Command**: `{' '.join(sys.argv)}`\n\n"
+            "### Traceback\n"
+            f"```python\n{tb_str}\n```\n"
+        )
+        encoded_body = urllib.parse.quote(issue_body)
+        issue_url = f"https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body={encoded_body}"
+
+        console.print(
+            "\nThis looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
+        )
+        console.print(
+            f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":

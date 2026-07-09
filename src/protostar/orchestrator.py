@@ -1,14 +1,11 @@
 import logging
 import os
-import platform
 import sys
-import traceback
-import urllib.parse
 
 from rich.console import Console
-from rich.panel import Panel
 
 from .config import ProtostarConfig
+from .errors import ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest
 from .modules import BootstrapModule
@@ -71,14 +68,11 @@ class Orchestrator:
 
         # 2. Evaluate non-interactive fallback logic
         if not sys.stdin.isatty() or "PYTEST_CURRENT_TEST" in os.environ:
-            console.print(
-                "\n[bold red]Orbital Collision Detected:[/bold red] The target workspace is not empty."
-            )
-            console.print(
+            raise ProtostarError(
+                "Orbital Collision Detected: The target workspace is not empty.\n"
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"
-                "Use the [bold cyan]--force[/bold cyan] flag to bypass this check and merge safely."
+                "Use the --force flag to bypass this check and merge safely."
             )
-            sys.exit(1)
 
         # 3. Fallback to interactive prompt
         import questionary
@@ -127,92 +121,44 @@ class Orchestrator:
         """Executes the pre-flight, build, and realization phases."""
         console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
 
-        try:
-            # Phase 1: Collision Intercept
-            self._evaluate_collisions()
+        # Phase 1: Collision Intercept
+        self._evaluate_collisions()
 
-            # Phase 2: Pre-flight Verification
-            for mod in self.modules:
-                mod.pre_flight()
+        # Phase 2: Pre-flight Verification
+        for mod in self.modules:
+            mod.pre_flight()
 
-            # Phase 3: Manifest Aggregation
-            for mod in self.modules:
-                mod.build(self.manifest)
+        # Phase 3: Manifest Aggregation
+        for mod in self.modules:
+            mod.build(self.manifest)
 
-            for preset in self.presets:
-                logger.debug(f"Building {preset.name} preset.")
-                preset.build(self.manifest)
+        for preset in self.presets:
+            logger.debug(f"Building {preset.name} preset.")
+            preset.build(self.manifest)
 
-            # Inject global configuration states using the injected config
-            if self.config.global_dev_dependencies:
-                logger.debug("Injecting global dev dependencies from configuration.")
-                for dep in self.config.global_dev_dependencies:
-                    self.manifest.add_dev_dependency(dep)
+        # Inject global configuration states using the injected config
+        if self.config.global_dev_dependencies:
+            logger.debug("Injecting global dev dependencies from configuration.")
+            for dep in self.config.global_dev_dependencies:
+                self.manifest.add_dev_dependency(dep)
 
-            if self.config.pyproject_injections:
-                logger.debug(
-                    "Injecting global pyproject.toml payloads from configuration."
-                )
-                for payload in self.config.pyproject_injections.values():
-                    self.manifest.add_file_append("pyproject.toml", payload)
+        if self.config.pyproject_injections:
+            logger.debug("Injecting global pyproject.toml payloads from configuration.")
+            for payload in self.config.pyproject_injections.values():
+                self.manifest.add_file_append("pyproject.toml", payload)
 
-            # Phase 4: System Execution
-            executor = SystemExecutor(self.manifest, self.config, self.docker)
-            executor.execute()
+        # Phase 4: System Execution
+        executor = SystemExecutor(self.manifest, self.config, self.docker)
+        executor.execute()
 
-            # Phase 5: Telemetry Evaluation
-            if executor.warnings:
-                console.print(
-                    "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, but some non-critical tasks encountered issues."
-                )
-                for warning in executor.warnings:
-                    console.print(f"[yellow]  ⚠ {warning}[/yellow]")
-            else:
-                console.print(
-                    "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
-                )
-
-        except Exception as e:
-            # Catch expected operational errors and OS-level I/O constraints
-            if isinstance(e, (RuntimeError, ValueError, FileExistsError, OSError)):
-                console.print()
-                console.print(
-                    Panel(
-                        str(e),
-                        title="[bold red]Execution Aborted",
-                        border_style="red",
-                        expand=False,
-                        padding=(1, 2),
-                    )
-                )
-                sys.exit(1)
-
+        # Phase 5: Telemetry Evaluation
+        if executor.warnings:
             console.print(
-                "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
+                "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, but some non-critical tasks encountered issues."
             )
-
-            # Print the syntax-highlighted rich traceback to the terminal
-            console.print_exception(show_locals=False, max_frames=10)
-
-            tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
-            issue_body = (
-                "### Environment\n"
-                f"- **OS**: {platform.system()} {platform.release()}\n"
-                f"- **Python**: {sys.version.split()[0]}\n"
-                f"- **Command**: `{' '.join(sys.argv)}`\n\n"
-                "### Traceback\n"
-                f"```python\n{tb_str}\n```\n"
-            )
-
-            encoded_body = urllib.parse.quote(issue_body)
-            issue_url = f"https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body={encoded_body}"
-
+            for warning in executor.warnings:
+                console.print(f"[yellow]  ⚠ {warning}[/yellow]")
+        else:
             console.print(
-                "\nThis looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
+                "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
             )
-            # Render via Rich's OSC 8 link syntax
-            console.print(
-                f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
-            )
-
-            sys.exit(1)
