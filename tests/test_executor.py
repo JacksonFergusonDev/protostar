@@ -8,6 +8,7 @@ import pytest
 import tomlkit
 
 from protostar.config import ProtostarConfig
+from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 
@@ -627,6 +628,7 @@ def test_executor_deep_merge_tomlkit_aot_append(mock_config):
 
 def test_executor_validate_targets_success(mocker, mock_config):
     """Test that pre-execution validation passes silently on valid TOML files."""
+
     manifest = EnvironmentManifest()
     manifest.add_file_append("pyproject.toml", "[tool.ruff]")
     executor = SystemExecutor(manifest, mock_config)
@@ -636,14 +638,12 @@ def test_executor_validate_targets_success(mocker, mock_config):
     mock_file = mocker.mock_open(read_data=b'[project]\nname = "test"\n')
     mocker.patch("protostar.executor.Path.open", mock_file)
 
-    mock_exit = mocker.patch("protostar.executor.sys.exit")
-
+    # Should execute cleanly without raising any exceptions
     executor._validate_targets()
-    mock_exit.assert_not_called()
 
 
 def test_executor_validate_targets_malformed_toml(mocker, mock_config):
-    """Test that malformed existing TOML triggers a hard abort during pre-execution validation."""
+    """Test that malformed existing TOML triggers a ConfigurationError during pre-execution."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
     executor = SystemExecutor(manifest, mock_config)
@@ -652,19 +652,15 @@ def test_executor_validate_targets_malformed_toml(mocker, mock_config):
 
     mock_file = mocker.mock_open(read_data=b"[invalid toml == \n")
     mocker.patch("protostar.executor.Path.open", mock_file)
-    mock_print = mocker.patch("protostar.executor.console.print")
 
-    with pytest.raises(SystemExit) as exc:
+    with pytest.raises(
+        ConfigurationError, match="Syntax error in existing workspace file"
+    ):
         executor._validate_targets()
-
-    assert exc.value.code == 1
-    printed = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
-    assert "Validation Failure" in printed
-    assert "Syntax error in existing workspace file" in printed
 
 
 def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
-    """Test that malformed payload TOML triggers an internal error abort during execution."""
+    """Test that malformed payload TOML triggers a ConfigurationError during execution."""
     manifest = EnvironmentManifest()
     manifest.add_file_append("test.toml", "[invalid payload == \n")
     executor = SystemExecutor(manifest, mock_config)
@@ -677,15 +673,10 @@ def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
     mock_file = mocker.mock_open(read_data=b"[project]\n")
     mocker.patch("protostar.executor.Path.open", mock_file)
 
-    mock_print = mocker.patch("protostar.executor.console.print")
-
-    with pytest.raises(SystemExit) as exc:
+    with pytest.raises(
+        ConfigurationError, match="Failed to parse injected TOML payload"
+    ):
         executor._append_files()
-
-    assert exc.value.code == 1
-    printed = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
-    assert "Internal Error" in printed
-    assert "Failed to parse injected TOML payload" in printed
 
 
 def test_executor_append_files_string_fallback_redundant(mocker, mock_config):

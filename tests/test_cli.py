@@ -15,6 +15,7 @@ from protostar.cli import (
     intercept_interactive_wizards,
     main,
 )
+from protostar.errors import ConfigurationError
 
 
 def test_proto_help_formatter_usage(mocker):
@@ -99,20 +100,20 @@ def test_handle_config_errors(mocker, tmp_path):
 
     # 1. Empty EDITOR
     mocker.patch.dict("os.environ", {"EDITOR": ""})
-    with pytest.raises(SystemExit):
+    with pytest.raises(ConfigurationError, match="environment variable is empty"):
         handle_config(args)
 
     # 2. Missing EDITOR executable
     mocker.patch.dict("os.environ", {"EDITOR": "not-a-real-editor"})
     mocker.patch("shutil.which", return_value=None)
-    with pytest.raises(SystemExit):
+    with pytest.raises(ConfigurationError, match="Could not resolve editor executable"):
         handle_config(args)
 
     # 3. Subprocess fails
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mocker.patch("subprocess.run", side_effect=subprocess.CalledProcessError(1, "nano"))
-    with pytest.raises(SystemExit):
+    with pytest.raises(ConfigurationError, match="exited with non-zero status"):
         handle_config(args)
 
 
@@ -282,3 +283,83 @@ def test_main_verbose_flag(mocker):
     main()
 
     mock_configure_logging.assert_called_once()
+
+
+def test_main_handles_expected_operational_errors(mocker):
+    """Test that known operational errors bubble up to main, are wrapped in a rich Panel, and exit cleanly."""
+    from protostar.cli import main
+    from protostar.errors import ProtostarError
+
+    mocker.patch("protostar.cli.build_parser")
+    # Simulate an error raised from deep within the execution sequence
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=ProtostarError("Known config collision"),
+    )
+    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(1)
+
+    # Locate the call that rendered the Rich Panel, guarding against empty print() calls
+    panel_call = next(
+        call
+        for call in mock_print.call_args_list
+        if call.args and hasattr(call.args[0], "renderable")
+    )
+    assert "Known config collision" in str(panel_call.args[0].renderable)
+    assert "Execution Aborted" in str(panel_call.args[0].title)
+
+
+def test_main_handles_unexpected_bugs(mocker):
+    """Test that unknown exceptions trigger the traceback and GitHub telemetry payload."""
+    from protostar.cli import main
+
+    mocker.patch("protostar.cli.build_parser")
+    # Simulate an unhandled Python bug (e.g., dictionary lookup failure)
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=KeyError("Random dictionary crash"),
+    )
+    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_print_exception = mocker.patch("protostar.cli.console.print_exception")
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(1)
+    mock_print_exception.assert_called_once()
+
+    printed = " ".join(
+        str(call.args[0])
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], str)
+    )
+    assert "CRITICAL FAILURE" in printed
+    assert "https://github.com/jacksonfergusondev/protostar/issues/new" in printed
+
+
+def test_main_handles_keyboard_interrupt(mocker):
+    """Test that Ctrl+C exists gracefully with code 130."""
+    from protostar.cli import main
+
+    mocker.patch("protostar.cli.build_parser")
+    # Simulate the user aborting the prompt
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards", side_effect=KeyboardInterrupt
+    )
+    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(130)
+    printed = " ".join(
+        str(call.args[0]) for call in mock_print.call_args_list if call.args
+    )
+    assert "Aborted by user" in printed

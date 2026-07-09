@@ -50,33 +50,16 @@ def test_execute_subprocess_timeout_expired(mocker):
 
 
 def test_execute_subprocess_failure(mocker):
-    """Test that execute_subprocess intercepts subprocess errors and raises a clean RuntimeError."""
+    """Test that execute_subprocess intercepts subprocess errors and correctly formats upstream diagnostics."""
     mock_run = mocker.patch("protostar.system.subprocess.run")
     # Simulate a command failure with captured stderr
     mock_run.side_effect = subprocess.CalledProcessError(
         returncode=1, cmd=["false"], stderr="Network timeout during package resolution"
     )
 
-    # Verify the exception message contains the correctly formatted stderr details
+    # Verify the exception message contains the downstream tool's name and the stderr block
     with pytest.raises(
         RuntimeError,
-        match="Diagnostics:\n--- STDERR ---\nNetwork timeout during package resolution",
+        match=r"--- Upstream Diagnostics \(false\) ---\n--- STDERR ---\nNetwork timeout",
     ):
         execute_subprocess(["false"])
-
-
-def test_execute_subprocess_uv_python_error_hint(mocker):
-    """Test that uv python resolution errors raise a contextual hint."""
-    mock_run = mocker.patch("protostar.system.subprocess.run")
-    # Simulate uv failing because it can't download the python version
-    mock_run.side_effect = subprocess.CalledProcessError(
-        returncode=1,
-        cmd=["uv", "init"],
-        stderr="error: python-downloads is set to 'never'",
-    )
-
-    with pytest.raises(
-        RuntimeError,
-        match=r"uv.*encountered an error resolving the requested Python version",
-    ):
-        execute_subprocess(["uv", "init"])

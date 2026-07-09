@@ -3,7 +3,9 @@ from pathlib import Path
 
 import pytest
 
+import protostar.config
 from protostar.config import ProtostarConfig
+from protostar.errors import ConfigurationError
 
 
 @pytest.fixture(autouse=True)
@@ -33,8 +35,7 @@ def test_config_ruff_toggle(mocker):
 
 
 def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
-    """Test that a malformed TOML file raises a ValueError instead of exiting."""
-    import protostar.config
+    """Test that a malformed TOML file raises a ConfigurationError instead of a generic ValueError."""
 
     # 1. Create a real, temporary file with deliberately broken TOML syntax
     mock_global_config = tmp_path / "config.toml"
@@ -43,8 +44,10 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
     # 2. Redirect the module's constants to point to our temporary sandboxed files
     mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
 
-    # Execute the load sequence and expect a ValueError bubbled up for the CLI to handle
-    with pytest.raises(ValueError, match="Syntax error in configuration file") as exc:
+    # Execute the load sequence and expect a ConfigurationError bubbled up
+    with pytest.raises(
+        ConfigurationError, match="Syntax error in configuration file"
+    ) as exc:
         protostar.config.ProtostarConfig.load()
 
     assert "Syntax error in configuration file" in str(exc.value)
