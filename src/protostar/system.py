@@ -23,7 +23,7 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as e:
-        logger.error(f"Task timed out after {timeout} seconds: {' '.join(cmd)}")
+        logger.debug(f"Task timed out after {timeout} seconds: {' '.join(cmd)}")
         raise RuntimeError(
             f"Command timed out after {timeout} seconds: {' '.join(cmd)}\n"
             "Hint: This is often caused by a stalled network request or an unresponsive registry."
@@ -41,7 +41,7 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
             if output_blocks
             else "No standard output or error captured."
         )
-        logger.error(f"Task failed: {' '.join(cmd)}\nOutput:\n{output}")
+        logger.debug(f"Task failed: {' '.join(cmd)}\nOutput:\n{output}")
 
         # Give Protostar's context first, then yield the floor to the downstream tool.
         error_msg = (
