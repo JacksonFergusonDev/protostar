@@ -51,7 +51,7 @@ In a fraction of a second, Protostar:
 
 - Initialized the repository and scaffolded the base directory structure (e.g., `src/`, `tests/`, `data/`).
 - Resolved and injected the scientific computing stack (`numpy`, `scipy`, `pandas`, `matplotlib`) alongside `pytest` into your dependency manager (preferring `uv` if available).
-- Generated a strictly typed `pyproject.toml`, injected a `.markdownlint.yaml` configuration, and safely deduplicated your `.gitignore` without overwriting existing entries.
+- Generated a strictly typed `pyproject.toml`, injected a `.markdownlint-cli2.yaml` configuration, and safely deduplicated your `.gitignore` without overwriting existing entries.
 
 ![Headless Scaffolding](../assets/demo_headless.gif){ width="700" }
 

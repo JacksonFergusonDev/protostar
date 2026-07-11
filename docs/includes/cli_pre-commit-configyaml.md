@@ -10,21 +10,21 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.48.0
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.0
     hooks:
-      - id: markdownlint
+      - id: markdownlint-cli2
         args: ["--fix"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.11
+    rev: v0.15.21
     hooks:
       - id: ruff-format
       - id: ruff
         args: [ --fix ]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.1
+    rev: v2.2.0
     hooks:
       - id: mypy
         additional_dependencies:

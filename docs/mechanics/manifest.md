@@ -36,7 +36,7 @@ During the `build()` phase, modules utilize the manifest's unified API to regist
     Manages physical file scaffolding.
 
     * `directories`: A mathematical set of directories to be scaffolded via `mkdir -p`.
-    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping a `.markdownlint.yaml` file).
+    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping a `.markdownlint-cli2.yaml` file).
     * `file_appends`: A mapping of file paths to lists of configuration blocks. Used primarily for late-binding AST deep-merges into files like `pyproject.toml`.
 
 === "Exclusions & IDE Context"

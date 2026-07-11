@@ -5,7 +5,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "rich>=15.0.0",
-    "typer>=0.24.1",
+    "typer>=0.26.8",
 ]
 
 [tool.ruff]
@@ -38,12 +38,12 @@ testpaths = [
 
 [dependency-groups]
 dev = [
-    "mypy>=1.20.1",
-    "pre-commit>=4.5.1",
-    "pytest>=9.0.3",
+    "mypy>=2.2.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
-    "ruff>=0.15.11",
+    "ruff>=0.15.21",
 ]
 
 ```

@@ -131,7 +131,7 @@ For rapid, repeatable initialization, bypass the TUI entirely by providing your 
 protostar init --astro --docker --direnv -m --mypy --pytest --pre-commit
 ```
 
-*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
+*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
 
 ---
 

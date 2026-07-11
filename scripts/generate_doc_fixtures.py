@@ -46,7 +46,7 @@ TARGETS = [
     ".gitignore",
     ".pre-commit-config.yaml",
     ".dockerignore",
-    ".markdownlint.yaml",
+    ".markdownlint-cli2.yaml",
     ".gitattributes",
 ]
 

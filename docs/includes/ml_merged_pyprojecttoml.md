@@ -4,19 +4,19 @@ name = "demo-project"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "astropy>=7.2.0",
+    "astropy>=8.0.1",
     "astroquery>=0.4.11",
-    "huggingface-hub>=1.11.0",
-    "matplotlib>=3.10.8",
+    "huggingface-hub>=1.23.0",
+    "matplotlib>=3.11.0",
     "nbdime>=4.0.4",
-    "numpy>=2.4.4",
-    "pandas>=3.0.2",
+    "numpy>=2.5.1",
+    "pandas>=3.0.3",
     "photutils>=3.0.0",
-    "scikit-learn>=1.8.0",
-    "scipy>=1.17.1",
-    "specutils>=2.3.0",
-    "torch>=2.11.0",
-    "tqdm>=4.67.3",
+    "scikit-learn>=1.9.0",
+    "scipy>=1.18.0",
+    "specutils>=2.4.0",
+    "torch>=2.13.0",
+    "tqdm>=4.68.4",
 ]
 
 [tool.ruff]
@@ -42,8 +42,8 @@ disallow_untyped_defs = true
 
 [dependency-groups]
 dev = [
-    "mypy>=1.20.1",
-    "ruff>=0.15.11",
+    "mypy>=2.2.0",
+    "ruff>=0.15.21",
 ]
 
 ```

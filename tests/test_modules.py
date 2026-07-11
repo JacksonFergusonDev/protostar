@@ -184,7 +184,7 @@ def test_direnv_build_file_exists(manifest, mocker):
 
 
 def test_markdownlint_collision_markers():
-    assert MarkdownLintModule().collision_markers == [Path(".markdownlint.yaml")]
+    assert MarkdownLintModule().collision_markers == [Path(".markdownlint-cli2.yaml")]
 
 
 def test_markdownlint_build(manifest, mocker):
@@ -192,15 +192,15 @@ def test_markdownlint_build(manifest, mocker):
     mod = MarkdownLintModule()
     mod.build(manifest)
 
-    assert ".markdownlint.yaml" in manifest.file_injections
-    assert any("markdownlint-cli" in hook for hook in manifest.pre_commit_hooks)
+    assert ".markdownlint-cli2.yaml" in manifest.file_injections
+    assert any("markdownlint-cli2" in hook for hook in manifest.pre_commit_hooks)
 
 
 def test_markdownlint_build_file_exists(manifest, mocker):
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
     mod = MarkdownLintModule()
     mod.build(manifest)
-    assert ".markdownlint.yaml" not in manifest.file_injections
+    assert ".markdownlint-cli2.yaml" not in manifest.file_injections
 
 
 # --- PytestModule Tests ---

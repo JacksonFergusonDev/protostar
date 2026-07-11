@@ -76,10 +76,10 @@ class DirenvModule(BootstrapModule):
 
 
 class MarkdownLintModule(BootstrapModule):
-    """Configures a relaxed, pragmatic .markdownlint.yaml ruleset."""
+    """Configures a relaxed, pragmatic .markdownlint-cli2.yaml ruleset."""
 
     cli_flags: ClassVar[tuple[str, ...]] = ("-m", "--markdownlint")
-    cli_help: ClassVar[str] = "Scaffold a relaxed .markdownlint.yaml configuration"
+    cli_help: ClassVar[str] = "Scaffold a relaxed .markdownlint-cli2.yaml configuration"
     config_key: ClassVar[str] = "markdownlint"
 
     @property
@@ -90,77 +90,83 @@ class MarkdownLintModule(BootstrapModule):
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for markdownlint."""
-        return [Path(".markdownlint.yaml")]
+        return [Path(".markdownlint-cli2.yaml")]
 
     def build(self, manifest: "EnvironmentManifest") -> None:
-        """Injects the .markdownlint.yaml boilerplate file and pre-commit hook."""
+        """Injects the .markdownlint-cli2.yaml boilerplate file and pre-commit hook."""
         logger.debug("Building MarkdownLint tooling layer.")
 
-        hook_payload = """  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.47.0
+        hook_payload = """  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.0
     hooks:
-      - id: markdownlint
+      - id: markdownlint-cli2
         args: ["--fix"]"""
         manifest.add_pre_commit_hook(hook_payload)
 
-        if Path(".markdownlint.yaml").exists():
-            logger.debug("Skipping .markdownlint.yaml generation; file already exists.")
+        if Path(".markdownlint-cli2.yaml").exists():
+            logger.debug(
+                "Skipping .markdownlint-cli2.yaml generation; file already exists."
+            )
             return
 
-        content = """# Inherit default rules
-default: true
+        content = """gitignore: true
 
-# --- Disabled Rules ---
+config:
 
-# MD013: Line length
-# Rationale: Hard-wrapping text disrupts IDE reading flow, breaks URLs, and creates arbitrary diff churn.
-MD013: false
+  # Inherit default rules
+  default: true
 
-# MD033: Inline HTML
-# Rationale: Required for layout elements unsupported by strict Markdown (e.g., <details> blocks, complex tables).
-MD033: false
+  # --- Disabled Rules ---
 
-# --- Refined Rules ---
+  # MD013: Line length
+  # Rationale: Hard-wrapping text disrupts IDE reading flow, breaks URLs, and creates arbitrary diff churn.
+  MD013: false
 
-# MD024: Multiple headings with the same content
-# Rationale: Allows duplicate subheadings (e.g., "Parameters") under different primary function headings.
-MD024:
-  siblings_only: true
+  # MD033: Inline HTML
+  # Rationale: Required for layout elements unsupported by strict Markdown (e.g., <details> blocks, complex tables).
+  MD033: false
 
-# --- AST/Parser Enforcement ---
+  # --- Refined Rules ---
 
-# MD031: Fenced code blocks should be surrounded by blank lines
-# Rationale: Prevents strict parsers from rendering backticks as raw text instead of <pre><code> blocks.
-MD031: true
+  # MD024: Multiple headings with the same content
+  # Rationale: Allows duplicate subheadings (e.g., "Parameters") under different primary function headings.
+  MD024:
+    siblings_only: true
 
-# MD032: Lists should be surrounded by blank lines
-# Rationale: Prevents contiguous text from merging into lists, ensuring correct AST generation.
-MD032: true
+  # --- AST/Parser Enforcement ---
 
-# --- Structural Consistency ---
+  # MD031: Fenced code blocks should be surrounded by blank lines
+  # Rationale: Prevents strict parsers from rendering backticks as raw text instead of <pre><code> blocks.
+  MD031: true
 
-# MD003: Heading style
-# Rationale: Enforces ATX style (# Heading) exclusively.
-MD003:
-  style: "atx"
+  # MD032: Lists should be surrounded by blank lines
+  # Rationale: Prevents contiguous text from merging into lists, ensuring correct AST generation.
+  MD032: true
 
-# MD004: Unordered list style
-# Rationale: Enforces dash markers for consistency across the syntax tree.
-MD004:
-  style: "dash"
+  # --- Structural Consistency ---
 
-# MD009: Trailing spaces
-# Rationale: Allows exactly two spaces for hard line breaks; flags arbitrary whitespace.
-MD009:
-  br_spaces: 2
-  strict: false
+  # MD003: Heading style
+  # Rationale: Enforces ATX style (# Heading) exclusively.
+  MD003:
+    style: "atx"
 
-# MD029: Ordered list item prefix
-# Rationale: Enforces the "one" style (1., 1., 1.) to minimize Git diff noise when rearranging list items.
-MD029:
-  style: "one"
+  # MD004: Unordered list style
+  # Rationale: Enforces dash markers for consistency across the syntax tree.
+  MD004:
+    style: "dash"
+
+  # MD009: Trailing spaces
+  # Rationale: Allows exactly two spaces for hard line breaks; flags arbitrary whitespace.
+  MD009:
+    br_spaces: 2
+    strict: false
+
+  # MD029: Ordered list item prefix
+  # Rationale: Enforces the "one" style (1., 1., 1.) to minimize Git diff noise when rearranging list items.
+  MD029:
+    style: "one"
 """
-        manifest.add_file_injection(".markdownlint.yaml", content)
+        manifest.add_file_injection(".markdownlint-cli2.yaml", content)
 
 
 class RuffModule(BootstrapModule):

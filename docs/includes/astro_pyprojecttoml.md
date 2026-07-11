@@ -4,15 +4,15 @@ name = "demo-project"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "astropy>=7.2.0",
+    "astropy>=8.0.1",
     "astroquery>=0.4.11",
-    "matplotlib>=3.10.8",
+    "matplotlib>=3.11.0",
     "nbdime>=4.0.4",
-    "numpy>=2.4.4",
-    "pandas>=3.0.2",
+    "numpy>=2.5.1",
+    "pandas>=3.0.3",
     "photutils>=3.0.0",
-    "scipy>=1.17.1",
-    "specutils>=2.3.0",
+    "scipy>=1.18.0",
+    "specutils>=2.4.0",
 ]
 
 [tool.ruff]
@@ -31,7 +31,7 @@ ignore = []
 
 [dependency-groups]
 dev = [
-    "ruff>=0.15.11",
+    "ruff>=0.15.21",
 ]
 
 ```
