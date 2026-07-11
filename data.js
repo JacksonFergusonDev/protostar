@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783764238740,
+  "lastUpdate": 1783764517774,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -2929,6 +2929,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 199.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "4b03b3e1b4fca385f9d3705f15a9f461504c7d01",
+          "message": "feat(tooling): migrate markdownlint to markdownlint-cli2 and update fixtures\n\nSwaps out the deprecated `markdownlint-cli` implementation for `markdownlint-cli2` within the `MarkdownLintModule`.\n\n- Updates the pre-commit hook repository reference to `DavidAnson/markdownlint-cli2` at `v0.23.0`\n- Migrates the default configuration format from `.markdownlint.yaml` to `.markdownlint-cli2.yaml`\n- Incorporates the `gitignore: true` parser option and nests the lint rules under the required `config:` block\n- Refactors collision checks and file injection bindings to target the new file layout",
+          "timestamp": "2026-07-11T13:07:27+03:00",
+          "tree_id": "115460ca266cd211c6f0bbbb8ef68e804f330fd2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4b03b3e1b4fca385f9d3705f15a9f461504c7d01"
+        },
+        "date": 1783764517242,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 90.79,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 148.38,
             "unit": "ms"
           }
         ]
