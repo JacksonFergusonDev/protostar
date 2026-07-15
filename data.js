@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784146130513,
+  "lastUpdate": 1784146878188,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3031,6 +3031,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 188.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f5990ad6f8a72d150124ef899aa38647d66f182b",
+          "message": "refactor(tooling): strip redundant ClassVar annotations from subclasses\n\nRemoves explicit `ClassVar` typing from all `BootstrapModule` subclasses\nin `src/protostar/modules/tooling_layer.py`.\n\nSince the `BootstrapModule` base class explicitly defines the type contracts\nfor `cli_flags`, `cli_help`, and `config_key`, mypy intrinsically enforces\nthese constraints down the Method Resolution Order (MRO). Repeating the\ntyping in every subclass was just adding unnecessary syntax mass without\nany functional static analysis benefit.\n\nThis change aligns the tooling modules with the preset modules, adhering to\nDRY principles and improving structural readability. (Sorry, Zen of Python,\nbut explicit is not better than implicit when it's just dead weight).",
+          "timestamp": "2026-07-15T23:19:37+03:00",
+          "tree_id": "27e15058d1eff684e219a4227a3d5ad482423365",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f5990ad6f8a72d150124ef899aa38647d66f182b"
+        },
+        "date": 1784146877868,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 115.44,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 188.91,
             "unit": "ms"
           }
         ]
