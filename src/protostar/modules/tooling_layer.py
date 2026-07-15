@@ -1,7 +1,7 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from protostar.config import ProtostarConfig
 
@@ -16,9 +16,9 @@ logger = logging.getLogger("protostar")
 class DirenvModule(BootstrapModule):
     """Configures a .envrc file and evaluates it via direnv."""
 
-    cli_flags: ClassVar[tuple[str, ...]] = ("--direnv",)
-    cli_help: ClassVar[str] = "Scaffold a .envrc and evaluate the virtual environment"
-    config_key: ClassVar[str] = "direnv"
+    cli_flags = ("--direnv",)
+    cli_help = "Scaffold a .envrc and evaluate the virtual environment"
+    config_key = "direnv"
 
     @property
     def name(self) -> str:
@@ -78,9 +78,9 @@ class DirenvModule(BootstrapModule):
 class MarkdownLintModule(BootstrapModule):
     """Configures a relaxed, pragmatic .markdownlint-cli2.yaml ruleset."""
 
-    cli_flags: ClassVar[tuple[str, ...]] = ("-m", "--markdownlint")
-    cli_help: ClassVar[str] = "Scaffold a relaxed .markdownlint-cli2.yaml configuration"
-    config_key: ClassVar[str] = "markdownlint"
+    cli_flags = ("-m", "--markdownlint")
+    cli_help = "Scaffold a relaxed .markdownlint-cli2.yaml configuration"
+    config_key = "markdownlint"
 
     @property
     def name(self) -> str:
@@ -172,9 +172,9 @@ config:
 class RuffModule(BootstrapModule):
     """Configures the Ruff linter and formatter with a standard baseline."""
 
-    cli_flags: ClassVar[tuple[str, ...]] = ("--ruff",)
-    cli_help: ClassVar[str] = "Scaffold Ruff linter and formatter"
-    config_key: ClassVar[str] = "ruff"
+    cli_flags = ("--ruff",)
+    cli_help = "Scaffold Ruff linter and formatter"
+    config_key = "ruff"
 
     @property
     def name(self) -> str:
@@ -216,9 +216,9 @@ ignore = []
 class MypyModule(BootstrapModule):
     """Configures the Mypy static type checker with strict enforcement."""
 
-    cli_flags: ClassVar[tuple[str, ...]] = ("--mypy",)
-    cli_help: ClassVar[str] = "Scaffold Mypy static type checker"
-    config_key: ClassVar[str] = "mypy"
+    cli_flags = ("--mypy",)
+    cli_help = "Scaffold Mypy static type checker"
+    config_key = "mypy"
 
     @property
     def name(self) -> str:
@@ -254,9 +254,9 @@ disallow_untyped_defs = true
 class PytestModule(BootstrapModule):
     """Configures the Pytest testing framework and coverage artifacts."""
 
-    cli_flags: ClassVar[tuple[str, ...]] = ("--pytest",)
-    cli_help: ClassVar[str] = "Scaffold Pytest testing framework"
-    config_key: ClassVar[str] = "pytest"
+    cli_flags = ("--pytest",)
+    cli_help = "Scaffold Pytest testing framework"
+    config_key = "pytest"
 
     @property
     def name(self) -> str:
@@ -290,9 +290,9 @@ testpaths = [
 class PreCommitModule(BootstrapModule):
     """Configures pre-commit hooks and installs the git hook scripts."""
 
-    cli_flags: ClassVar[tuple[str, ...]] = ("--pre-commit",)
-    cli_help: ClassVar[str] = "Scaffold pre-commit hooks and configuration"
-    config_key: ClassVar[str] = "pre_commit"
+    cli_flags = ("--pre-commit",)
+    cli_help = "Scaffold pre-commit hooks and configuration"
+    config_key = "pre_commit"
 
     @property
     def name(self) -> str:
