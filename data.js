@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784293001951,
+  "lastUpdate": 1784293628157,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3371,6 +3371,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 208.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c22f0d9ef9b073b8e62adf501f912689a62903b",
+          "message": "refactor: migrate subprocess runner to typed exceptions (#110)\n\n- Replace generic RuntimeError calls with CommandTimeoutError and CommandExecutionError.\n- Enforce strict exception chaining on subprocess timeouts and failure terminations.\n- Retain structural verification integrity by storing raw stdout/stderr streams.\n- Refactor test_system to evaluate explicit exception attributes instead of error strings.",
+          "timestamp": "2026-07-17T06:06:14-07:00",
+          "tree_id": "d17d03e728881f6bc11fcc28e662425ddf48e627",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5c22f0d9ef9b073b8e62adf501f912689a62903b"
+        },
+        "date": 1784293627855,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.33,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.01,
             "unit": "ms"
           }
         ]
