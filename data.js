@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784286930430,
+  "lastUpdate": 1784287628142,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3133,6 +3133,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 186.69,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "ae052cd0b289a93a6fe28b470b0dab295a1d25f9",
+          "message": "chore(scripts): isolate doc fixture generation from host config\n\nInject temporary `$HOME` and `$XDG_CONFIG_HOME` paths into the isolated environment to sandbox subprocess execution, preventing local user configurations from bleeding into generated artifacts. Additionally, monkeypatch `CONFIG_FILE` and clear the `ProtostarConfig` singleton cache at runtime to ensure in-process manifest generation strictly adheres to default state.\n\nThis guarantees deterministic documentation payloads regardless of the host environment and prevents transient parsing warnings from polluting the generated markdown files.",
+          "timestamp": "2026-07-17T12:26:00+01:00",
+          "tree_id": "d45cff313a578cc60386da62ac20cd860f12ad56",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ae052cd0b289a93a6fe28b470b0dab295a1d25f9"
+        },
+        "date": 1784287627837,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 178.71,
             "unit": "ms"
           }
         ]
