@@ -7,9 +7,11 @@ from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
     DirenvModule,
     MarkdownLintModule,
+    MypyModule,
     PreCommitModule,
     PytestModule,
     PythonCore,
+    RuffModule,
 )
 
 
@@ -296,3 +298,24 @@ def test_markdownlint_skips_when_file_exists(tmp_path, monkeypatch) -> None:
     assert skip_events[0].phase == mod.name
     assert "already exists" in skip_events[0].message
     assert ".markdownlint-cli2.yaml" not in manifest.file_injections
+
+
+def test_markdownlint_module_injects_ide_extension():
+    manifest = EnvironmentManifest()
+    module = MarkdownLintModule()
+    module.build(manifest)
+    assert "DavidAnson.vscode-markdownlint" in manifest.ide_extensions
+
+
+def test_ruff_module_injects_ide_extension():
+    manifest = EnvironmentManifest()
+    module = RuffModule()
+    module.build(manifest)
+    assert "charliermarsh.ruff" in manifest.ide_extensions
+
+
+def test_mypy_module_injects_ide_extension():
+    manifest = EnvironmentManifest()
+    module = MypyModule()
+    module.build(manifest)
+    assert "ms-python.mypy-type-checker" in manifest.ide_extensions

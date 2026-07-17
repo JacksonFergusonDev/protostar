@@ -181,3 +181,16 @@ def test_manifest_diagnostic_collection() -> None:
     assert event.message == "A test warning occurred."
     assert event.severity == Severity.WARNING
     assert event.detail == "Some traceback or detail"
+
+
+def test_add_ide_extension_aggregates_uniquely():
+    manifest = EnvironmentManifest()
+    manifest.add_ide_extension("charliermarsh.ruff")
+    manifest.add_ide_extension("ms-python.mypy-type-checker")
+
+    # Attempt to add a duplicate
+    manifest.add_ide_extension("charliermarsh.ruff")
+
+    assert len(manifest.ide_extensions) == 2
+    assert "charliermarsh.ruff" in manifest.ide_extensions
+    assert "ms-python.mypy-type-checker" in manifest.ide_extensions

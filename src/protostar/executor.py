@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import re
+import shutil
 import subprocess
 import tomllib
 from pathlib import Path
@@ -51,6 +52,51 @@ class SystemExecutor:
         self._write_ide_settings()
         self._install_dependencies()
         self._execute_post_install_tasks()
+        self._check_ide_extensions()
+
+    def _check_ide_extensions(self) -> None:
+        """Verifies that the configured IDE has the recommended extensions installed.
+
+        Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
+        diagnostic only on a successful check that uncovers missing extensions.
+        """
+        if not self.manifest.ide_extensions or self.config.ide not in (
+            "vscode",
+            "cursor",
+        ):
+            return
+
+        binary_map = {"vscode": "code", "cursor": "cursor"}
+        ide_binary = binary_map[self.config.ide]
+
+        if not shutil.which(ide_binary):
+            return
+
+        try:
+            result = subprocess.run(
+                [ide_binary, "--list-extensions"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5,
+            )
+            # Normalize to lowercase for safe diffing
+            installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
+            missing = [
+                ext
+                for ext in self.manifest.ide_extensions
+                if ext.lower() not in installed
+            ]
+
+            if missing:
+                self.manifest.add_diagnostic(
+                    phase="IDE",
+                    message=f"Missing recommended {self.config.ide} extensions: {', '.join(missing)}",
+                    severity=Severity.WARNING,
+                )
+        except Exception:
+            # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
+            pass
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.

@@ -101,6 +101,8 @@ class MarkdownLintModule(BootstrapModule):
         """Injects the .markdownlint-cli2.yaml boilerplate file and pre-commit hook."""
         logger.debug("Building MarkdownLint tooling layer.")
 
+        manifest.add_ide_extension("DavidAnson.vscode-markdownlint")
+
         hook_payload = """  - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.0
     hooks:
@@ -193,6 +195,7 @@ class RuffModule(BootstrapModule):
         logger.debug("Building Ruff tooling layer.")
         manifest.add_dev_dependency("ruff")
         manifest.add_environment_artifact(".ruff_cache/")
+        manifest.add_ide_extension("charliermarsh.ruff")
 
         hook_payload = """  - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.4
@@ -237,6 +240,7 @@ class MypyModule(BootstrapModule):
         logger.debug("Building Mypy tooling layer.")
         manifest.add_dev_dependency("mypy")
         manifest.add_environment_artifact(".mypy_cache/")
+        manifest.add_ide_extension("ms-python.mypy-type-checker")
 
         # The MYPY_DEPENDENCIES token is late-bound by the orchestrator
         # to ensure all dynamically added packages are typed.

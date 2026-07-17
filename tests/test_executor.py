@@ -3,6 +3,7 @@ import json
 import subprocess
 import tomllib
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 import tomlkit
@@ -1079,3 +1080,102 @@ def test_executor_skips_malformed_ide_settings(tmp_path, monkeypatch) -> None:
     assert warning.severity == Severity.WARNING
     assert "is malformed" in warning.message
     assert "Skipping IDE settings injection" in warning.message
+
+
+@pytest.fixture
+def ide_manifest():
+    """Fixture providing a manifest seeded with extension IDs."""
+    manifest = EnvironmentManifest()
+    manifest.ide_extensions = {"charliermarsh.ruff", "ms-python.mypy-type-checker"}
+    return manifest
+
+
+def test_ide_extension_check_bypassed_if_wrong_ide(ide_manifest, mocker):
+    config = ProtostarConfig(ide="none")
+    executor = SystemExecutor(ide_manifest, config)
+    mock_which = mocker.patch("protostar.executor.shutil.which")
+
+    executor._check_ide_extensions()
+
+    # It shouldn't even search for the binary
+    mock_which.assert_not_called()
+
+
+def test_ide_extension_check_bypassed_if_binary_missing(ide_manifest, mocker):
+    config = ProtostarConfig(ide="vscode")
+    executor = SystemExecutor(ide_manifest, config)
+    mock_which = mocker.patch("protostar.executor.shutil.which", return_value=None)
+    mock_run = mocker.patch("protostar.executor.subprocess.run")
+
+    executor._check_ide_extensions()
+
+    mock_which.assert_called_once_with("code")
+    mock_run.assert_not_called()
+
+
+def test_ide_extension_check_succeeds_without_warnings(ide_manifest, mocker):
+    config = ProtostarConfig(ide="cursor")
+    executor = SystemExecutor(ide_manifest, config)
+
+    mocker.patch(
+        "protostar.executor.shutil.which", return_value="/usr/local/bin/cursor"
+    )
+
+    mock_result = MagicMock()
+    mock_result.stdout = (
+        "charliermarsh.ruff\nms-python.mypy-type-checker\nsome-other-ext\n"
+    )
+    mock_run = mocker.patch(
+        "protostar.executor.subprocess.run", return_value=mock_result
+    )
+
+    executor._check_ide_extensions()
+
+    mock_run.assert_called_once_with(
+        ["cursor", "--list-extensions"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=5,
+    )
+    assert not executor.manifest.diagnostics
+
+
+def test_ide_extension_check_flags_missing_extensions(ide_manifest, mocker):
+    config = ProtostarConfig(ide="vscode")
+    executor = SystemExecutor(ide_manifest, config)
+
+    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
+
+    # Simulate a system where Mypy is missing
+    mock_result = MagicMock()
+    mock_result.stdout = "charliermarsh.ruff\n"
+    mocker.patch("protostar.executor.subprocess.run", return_value=mock_result)
+
+    executor._check_ide_extensions()
+
+    assert len(executor.manifest.diagnostics) == 1
+    diagnostic = executor.manifest.diagnostics[0]
+
+    assert diagnostic.phase == "IDE"
+    assert diagnostic.severity == Severity.WARNING
+    assert "ms-python.mypy-type-checker" in diagnostic.message
+
+
+def test_ide_extension_check_fails_silently_on_subprocess_error(ide_manifest, mocker):
+    config = ProtostarConfig(ide="vscode")
+    executor = SystemExecutor(ide_manifest, config)
+
+    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
+
+    # Simulate a timeout or CLI crash
+    mocker.patch(
+        "protostar.executor.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="code", timeout=5),
+    )
+
+    # Execution should not raise an exception
+    executor._check_ide_extensions()
+
+    # It should fail silently without appending diagnostics
+    assert not executor.manifest.diagnostics
