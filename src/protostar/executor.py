@@ -302,10 +302,7 @@ class SystemExecutor:
         if not self.manifest.file_appends:
             return
 
-        # Resolve the active Python version
         python_version = None
-
-        # 1. pyproject.toml `requires-python` (uv-managed projects)
         pyproject_path = Path("pyproject.toml")
         if pyproject_path.exists():
             try:
@@ -317,9 +314,6 @@ class SystemExecutor:
                     match = re.search(r"(\d+\.\d+)", req_python)
                     if match:
                         python_version = match.group(1)
-                        logger.debug(
-                            f"Resolved Python version {python_version} from pyproject.toml"
-                        )
             except Exception as e:
                 logger.debug(f"Failed to parse pyproject.toml for python version: {e}")
 
@@ -329,9 +323,15 @@ class SystemExecutor:
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
-            original_content = target.read_text() if target.exists() else ""
-            if not target.exists():
-                target.parent.mkdir(parents=True, exist_ok=True)
+
+            try:
+                original_content = target.read_text() if target.exists() else ""
+                if not target.exists():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise FileSystemError(
+                    "read target append context", str(target), e
+                ) from e
 
             if target.suffix == ".toml":
                 import tomlkit
@@ -364,7 +364,12 @@ class SystemExecutor:
                     new_content = tomlkit.dumps(doc)
                     new_content = re.sub(r"\n{3,}", "\n\n", new_content)
                     if new_content.strip() != original_content.strip():
-                        target.write_text(new_content)
+                        try:
+                            target.write_text(new_content)
+                        except OSError as e:
+                            raise FileSystemError(
+                                "mutate configuration AST", str(target), e
+                            ) from e
                         logger.debug(f"Updated configuration AST in {filepath}")
                 continue
 
@@ -392,7 +397,13 @@ class SystemExecutor:
 
             combined_content = "\n\n".join(missing_payloads)
             prefix = "\n\n" if existing_clean and combined_content else ""
-            target.write_text(existing_clean + prefix + combined_content + "\n")
+
+            try:
+                target.write_text(existing_clean + prefix + combined_content + "\n")
+            except OSError as e:
+                raise FileSystemError(
+                    "append configurations block", str(target), e
+                ) from e
             logger.debug(f"Updated configuration string block in {filepath}")
 
     def _write_ignores(self) -> None:
@@ -401,18 +412,25 @@ class SystemExecutor:
             return
 
         gitignore = Path(".gitignore")
-        existing_content = gitignore.read_text() if gitignore.exists() else ""
-        missing = [p for p in self.manifest.vcs_ignores if p not in existing_content]
+        try:
+            existing_content = gitignore.read_text() if gitignore.exists() else ""
+            missing = [
+                p for p in self.manifest.vcs_ignores if p not in existing_content
+            ]
 
-        if missing:
-            with gitignore.open("a") as f:
-                prefix = (
-                    "\n"
-                    if existing_content and not existing_content.endswith("\n")
-                    else ""
-                )
-                f.write(prefix + "\n".join(sorted(missing)) + "\n")
-            logger.debug(f"Appended {len(missing)} items to .gitignore")
+            if missing:
+                with gitignore.open("a") as f:
+                    prefix = (
+                        "\n"
+                        if existing_content and not existing_content.endswith("\n")
+                        else ""
+                    )
+                    f.write(prefix + "\n".join(sorted(missing)) + "\n")
+                logger.debug(f"Appended {len(missing)} items to .gitignore")
+        except OSError as e:
+            raise FileSystemError(
+                "update workspace ignore manifest (.gitignore)", str(gitignore), e
+            ) from e
 
     def _write_docker_artifacts(self) -> None:
         """Generates a .dockerignore to optimize container build contexts."""
@@ -420,27 +438,33 @@ class SystemExecutor:
             return
 
         dockerignore = Path(".dockerignore")
-        existing_content = dockerignore.read_text() if dockerignore.exists() else ""
-        base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
+        try:
+            existing_content = dockerignore.read_text() if dockerignore.exists() else ""
+            base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
 
-        has_uv_init = any(
-            task.command[:2] == ["uv", "init"] for task in self.manifest.system_tasks
-        )
-        if has_uv_init:
-            base_ignores.add(".python-version")
+            has_uv_init = any(
+                task.command[:2] == ["uv", "init"]
+                for task in self.manifest.system_tasks
+            )
+            if has_uv_init:
+                base_ignores.add(".python-version")
 
-        combined_ignores = self.manifest.vcs_ignores | base_ignores
-        missing = [p for p in combined_ignores if p not in existing_content]
+            combined_ignores = self.manifest.vcs_ignores | base_ignores
+            missing = [p for p in combined_ignores if p not in existing_content]
 
-        if missing:
-            with dockerignore.open("a") as f:
-                prefix = (
-                    "\n"
-                    if existing_content and not existing_content.endswith("\n")
-                    else ""
-                )
-                f.write(prefix + "\n".join(sorted(missing)) + "\n")
-            logger.debug(f"Appended {len(missing)} items to .dockerignore")
+            if missing:
+                with dockerignore.open("a") as f:
+                    prefix = (
+                        "\n"
+                        if existing_content and not existing_content.endswith("\n")
+                        else ""
+                    )
+                    f.write(prefix + "\n".join(sorted(missing)) + "\n")
+                logger.debug(f"Appended {len(missing)} items to .dockerignore")
+        except OSError as e:
+            raise FileSystemError(
+                "scaffold container runtime ignore configurations", str(dockerignore), e
+            ) from e
 
     def _write_ide_settings(self) -> None:
         """Writes the aggregated IDE configuration to the appropriate local files."""
@@ -452,23 +476,24 @@ class SystemExecutor:
         settings = {}
 
         if settings_path.exists():
-            original_content = settings_path.read_text()
-            if not original_content.strip():
-                # Handle completely empty files gracefully by defaulting to {}
-                pass
-            else:
-                try:
+            try:
+                original_content = settings_path.read_text()
+                if original_content.strip():
                     parsed_data = json.loads(original_content)
                     if not isinstance(parsed_data, dict):
                         raise ValueError("Root JSON element is not an object.")
                     settings = parsed_data
-                except (json.JSONDecodeError, ValueError):
-                    self.manifest.add_diagnostic(
-                        phase="Executor",
-                        message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                        severity=Severity.WARNING,
-                    )
-                    return
+            except (json.JSONDecodeError, ValueError):
+                self.manifest.add_diagnostic(
+                    phase="Executor",
+                    message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
+                    severity=Severity.WARNING,
+                )
+                return
+            except OSError as e:
+                raise FileSystemError(
+                    "inspect active IDE settings files", str(settings_path), e
+                ) from e
 
         # 1-level deep dictionary merge
         for key, value in self.manifest.ide_settings.items():
@@ -477,9 +502,13 @@ class SystemExecutor:
             else:
                 settings[key] = value
 
-        vscode_dir.mkdir(exist_ok=True)
-        # json.dumps inherently preserves dictionary insertion order in standard CPython
-        settings_path.write_text(json.dumps(settings, indent=4) + "\n")
+        try:
+            vscode_dir.mkdir(exist_ok=True)
+            settings_path.write_text(json.dumps(settings, indent=4) + "\n")
+        except OSError as e:
+            raise FileSystemError(
+                "synchronize IDE workspace preferences", str(settings_path), e
+            ) from e
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
