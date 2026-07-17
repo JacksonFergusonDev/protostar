@@ -3,7 +3,6 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.config import ProtostarConfig
 from protostar.manifest import Severity
 
 from .base import BootstrapModule
@@ -55,17 +54,10 @@ class DirenvModule(BootstrapModule):
             )
             return
 
-        config = ProtostarConfig.load()
-        init_cmd = (
-            "uv sync"
-            if config.python_package_manager == "uv"
-            else "python3 -m venv .venv"
-        )
-
         content = (
             "# Ensure the venv exists\n"
             'if [ ! -d ".venv" ]; then\n'
-            f"    {init_cmd}\n"
+            "    uv sync\n"
             "fi\n\n"
             "# Activate properly — direnv captures env changes, not shell functions\n"
             'export VIRTUAL_ENV="$(pwd)/.venv"\n'
@@ -344,28 +336,14 @@ class PreCommitModule(BootstrapModule):
         if not Path(".git").exists():
             manifest.add_system_task(["git", "init"])
 
-        # Dynamically evaluate the active package manager to route the binary execution
-        config = ProtostarConfig.load()
-
         # `autoupdate` pulls remote git repositories to update hook definitions,
         # requiring a wider time window than a local install.
-        if config.python_package_manager == "uv":
-            manifest.add_post_install_task(
-                ["uv", "run", "pre-commit", "install"],
-                description="Installing pre-commit git hooks",
-            )
-            manifest.add_post_install_task(
-                ["uv", "run", "pre-commit", "autoupdate"],
-                timeout=300,
-                description="Updating pre-commit hooks to latest versions...",
-            )
-        else:
-            manifest.add_post_install_task(
-                [".venv/bin/pre-commit", "install"],
-                description="Installing pre-commit git hooks",
-            )
-            manifest.add_post_install_task(
-                [".venv/bin/pre-commit", "autoupdate"],
-                timeout=300,
-                description="Updating pre-commit hooks to latest versions...",
-            )
+        manifest.add_post_install_task(
+            ["uv", "run", "pre-commit", "install"],
+            description="Installing pre-commit git hooks",
+        )
+        manifest.add_post_install_task(
+            ["uv", "run", "pre-commit", "autoupdate"],
+            timeout=300,
+            description="Updating pre-commit hooks to latest versions...",
+        )
