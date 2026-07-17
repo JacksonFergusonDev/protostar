@@ -7,7 +7,7 @@ from rich.console import Console
 from .config import ProtostarConfig
 from .errors import ProtostarError
 from .executor import SystemExecutor
-from .manifest import CollisionStrategy, EnvironmentManifest
+from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
 from .presets.base import PresetModule
 
@@ -125,6 +125,13 @@ class Orchestrator:
         self._evaluate_collisions()
 
         # Phase 2: Pre-flight Verification
+        for warning in self.config._parsing_warnings:
+            self.manifest.add_diagnostic(
+                phase="Config",
+                message=warning,
+                severity=Severity.WARNING,
+            )
+
         for mod in self.modules:
             mod.pre_flight()
 
