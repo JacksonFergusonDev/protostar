@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784286663032,
+  "lastUpdate": 1784286930430,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3099,6 +3099,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "544a0458cf0b5272aeccdbb50872646405417b4a",
+          "message": "feat(core): decouple developer telemetry from user-facing diagnostics (#107)\n\nRestructures the logging and notification architecture to prevent unformatted stderr leakage and enforce a clean CLI UX. \n\n- Injects a `NullHandler` to silence the root logger by default.\n- Introduces a `DiagnosticEvent` dataclass and a centralized collector in `EnvironmentManifest`.\n- Routes config fallbacks, module execution skips, and disk I/O anomalies to the diagnostic state object instead of stdout/stderr.\n- Implements a color-coded `rich.Panel` in the Orchestrator to summarize aggregated anomalies post-execution.\n- Migrates the unit test suite to utilize deterministic, state-based assertions instead of mock-based I/O intercepts.",
+          "timestamp": "2026-07-17T04:14:36-07:00",
+          "tree_id": "da7381f4d95207d32aa34c0936f9a6eb696f3b5c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/544a0458cf0b5272aeccdbb50872646405417b4a"
+        },
+        "date": 1784286930105,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.56,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 186.69,
             "unit": "ms"
           }
         ]
