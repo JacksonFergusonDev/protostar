@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784293628157,
+  "lastUpdate": 1784294279165,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3405,6 +3405,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.01,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b6ea0fc99c61f7f6a2c90d9db3d772b9a10d8145",
+          "message": "refactor: standardize pre-flight checks with MissingDependencyError (#111)\n\n* refactor: raise MissingDependencyError for absent uv binary in lang layer\n\nUpdates PythonCore.pre_flight to drop generic RuntimeError strings, raising a\nstructured MissingDependencyError instead. Isolates the binary identity, its\noperational target purpose, and terminal installation context fields.\n\n* refactor: raise MissingDependencyError for missing tools in tooling layer\n\nRefactors the pre-flight checks inside DirenvModule and PreCommitModule to\nleverage structured MissingDependencyError definitions instead of coarse\nRuntimeError statements.\n\n* test: fix pre-flight test assertions to expect MissingDependencyError\n\nRefactors existing test cases in test_modules.py that checked for legacy\nRuntimeErrors. Updates them to expect MissingDependencyError and asserts\nagainst their inner metadata attributes.",
+          "timestamp": "2026-07-17T06:17:08-07:00",
+          "tree_id": "1573bb5054457e2dc3224febc7d5a2468ae72452",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b6ea0fc99c61f7f6a2c90d9db3d772b9a10d8145"
+        },
+        "date": 1784294278303,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 93.82,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 151.93,
             "unit": "ms"
           }
         ]
