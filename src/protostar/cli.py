@@ -10,7 +10,6 @@ import traceback
 import types
 import urllib.parse
 from collections.abc import Iterable
-from pathlib import Path
 from typing import Any, ClassVar, cast
 
 import argcomplete
@@ -54,11 +53,8 @@ def handle_init(args: argparse.Namespace) -> None:
     Dynamically constructs the environment manifest by evaluating flags mapped
     to the respective OS, IDE, and preset registries.
     """
-    override_path = None
-    if getattr(args, "from_path", None):
-        override_path = Path(args.from_path)
-
-    config = ProtostarConfig.load(override_path=override_path)
+    override_target = getattr(args, "from_path", None)
+    config = ProtostarConfig.load(override_target=override_target)
     modules: list[BootstrapModule] = []
     presets: list[PresetModule] = []
 

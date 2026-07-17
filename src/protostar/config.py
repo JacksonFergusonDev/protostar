@@ -94,7 +94,7 @@ class ProtostarConfig:
 
     @classmethod
     def load(
-        cls, force_reload: bool = False, override_path: Path | None = None
+        cls, force_reload: bool = False, override_target: str | None = None
     ) -> "ProtostarConfig":
         """Loads and parses the global Protostar configuration file.
 
@@ -103,25 +103,38 @@ class ProtostarConfig:
 
         Args:
             force_reload: If True, bypasses the cache and forces a disk read.
-            override_path: An optional path to a portable configuration to overlay.
+            override_target: An optional path or URL to a portable configuration to overlay.
 
         Returns:
             The loaded ProtostarConfig instance.
         """
-        if cls._instance is not None and not force_reload and override_path is None:
+        if cls._instance is not None and not force_reload and override_target is None:
             return cls._instance
 
         instance = cls()
 
         if CONFIG_FILE.exists():
-            instance = cls._parse_and_merge(CONFIG_FILE, instance)
+            instance = cls._parse_and_merge(
+                CONFIG_FILE.read_text(encoding="utf-8"), str(CONFIG_FILE), instance
+            )
 
-        if override_path is not None:
-            if not override_path.exists():
-                raise ConfigurationError(
-                    f"Configuration file not found: {override_path}"
+        if override_target is not None:
+            if override_target.startswith("http://") or override_target.startswith(
+                "https://"
+            ):
+                from .network import fetch_remote_config
+
+                content = fetch_remote_config(override_target)
+                instance = cls._parse_and_merge(content, override_target, instance)
+            else:
+                target_path = Path(override_target)
+                if not target_path.exists():
+                    raise ConfigurationError(
+                        f"Configuration file not found: {target_path}"
+                    )
+                instance = cls._parse_and_merge(
+                    target_path.read_text(encoding="utf-8"), str(target_path), instance
                 )
-            instance = cls._parse_and_merge(override_path, instance)
 
         cls._instance = instance
         return instance
@@ -147,9 +160,9 @@ class ProtostarConfig:
     # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
-        cls, path: Path, instance: "ProtostarConfig"
+        cls, content: str, source: str, instance: "ProtostarConfig"
     ) -> "ProtostarConfig":
-        """Helper to parse a TOML file and merge its values into a config instance.
+        """Helper to parse a TOML string and merge its values into a config instance.
 
         Dynamically evaluates dataclass fields to prevent brittle parsing logic,
         while maintaining specific handlers for complex nested dictionaries.
@@ -158,27 +171,27 @@ class ProtostarConfig:
         assignment.
 
         Args:
-            path: The filesystem path to the configuration file.
+            content: The raw TOML string to parse.
+            source: The origin of the content (for error reporting).
             instance: The active ProtostarConfig object to mutate.
 
         Returns:
             A new ProtostarConfig instance containing the merged state.
 
         Raises:
-            ValueError: If the TOML file contains syntax errors.
+            ConfigurationError: If the TOML string contains syntax errors.
         """
         try:
-            with open(path, "rb") as f:
-                data = tomllib.load(f)
+            data = tomllib.loads(content)
         except tomllib.TOMLDecodeError as e:
             raise ConfigurationError(
-                f"Syntax error in configuration file {path}.\n"
+                f"Syntax error in configuration source '{source}'.\n"
                 f"Details: {e}\n"
-                "Please fix the syntax error or delete the file to regenerate the defaults."
+                "Please fix the syntax error to proceed."
             ) from e
         except Exception as e:
             instance._parsing_warnings.append(
-                f"Failed to load config from {path}: {e}. Falling back to defaults."
+                f"Failed to load config from {source}: {e}. Falling back to defaults."
             )
             return instance
 
@@ -189,7 +202,7 @@ class ProtostarConfig:
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:
             warnings.append(
-                f"Unrecognized root keys in {path}: {', '.join(unknown_keys)}."
+                f"Unrecognized root keys in {source}: {', '.join(unknown_keys)}."
             )
 
         updates: dict[str, Any] = {}
