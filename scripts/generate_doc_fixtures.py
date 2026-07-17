@@ -320,11 +320,17 @@ def build_fixtures() -> None:
 
     for name, commands in FIXTURES.items():
         with tempfile.TemporaryDirectory() as tmpdir:
+            # --- Override host config paths for the subprocess ---
+            isolated_env = clean_env.copy()
+            isolated_env["HOME"] = tmpdir
+            isolated_env["USERPROFILE"] = tmpdir
+            isolated_env["XDG_CONFIG_HOME"] = tmpdir
+
             # Create a static working directory to prevent random project names
             static_cwd = Path(tmpdir) / "demo_project"
             static_cwd.mkdir()
 
-            _execute_fixture_scenario(commands, static_cwd, clean_env)
+            _execute_fixture_scenario(commands, static_cwd, isolated_env)
             _extract_and_write_targets(static_cwd, name)
 
 
@@ -430,6 +436,16 @@ def main() -> None:
         help="Skip slow combinatorial subprocess executions (e.g., Protostar init).",
     )
     args = parser.parse_args()
+
+    # --- Isolate in-process configuration ---
+    # Monkeypatch the config path so in-process calls (like generate_manifest_state)
+    # evaluate against a missing file and default to base settings.
+    import protostar.config
+
+    protostar.config.CONFIG_FILE = (
+        Path(tempfile.gettempdir()) / "non_existent_protostar_config.toml"
+    )
+    protostar.config.ProtostarConfig._instance = None
 
     try:
         INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
