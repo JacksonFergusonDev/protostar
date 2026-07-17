@@ -1,4 +1,9 @@
-from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.manifest import (
+    CollisionStrategy,
+    DiagnosticEvent,
+    EnvironmentManifest,
+    Severity,
+)
 
 
 def test_manifest_initialization(manifest):
@@ -156,3 +161,23 @@ def test_add_pre_commit_hook(manifest):
     assert len(manifest.pre_commit_hooks) == 2
     assert "- id: ruff" in manifest.pre_commit_hooks
     assert "- id: mypy" in manifest.pre_commit_hooks
+
+
+def test_manifest_diagnostic_collection() -> None:
+    manifest = EnvironmentManifest()
+    assert len(manifest.diagnostics) == 0
+
+    manifest.add_diagnostic(
+        phase="TestPhase",
+        message="A test warning occurred.",
+        severity=Severity.WARNING,
+        detail="Some traceback or detail",
+    )
+
+    assert len(manifest.diagnostics) == 1
+    event = manifest.diagnostics[0]
+    assert isinstance(event, DiagnosticEvent)
+    assert event.phase == "TestPhase"
+    assert event.message == "A test warning occurred."
+    assert event.severity == Severity.WARNING
+    assert event.detail == "Some traceback or detail"

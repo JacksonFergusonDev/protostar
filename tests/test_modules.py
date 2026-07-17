@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import ProtostarConfig
+from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
     DirenvModule,
     MarkdownLintModule,
@@ -265,3 +266,33 @@ def test_pre_commit_build_pip(manifest, mocker):
         t.command == [".venv/bin/pre-commit", "install"]
         for t in manifest.post_install_tasks
     )
+
+
+def test_direnv_skips_when_file_exists(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".envrc").touch()
+
+    manifest = EnvironmentManifest()
+    mod = DirenvModule()
+    mod.build(manifest)
+
+    skip_events = [d for d in manifest.diagnostics if d.severity == Severity.SKIP]
+    assert len(skip_events) == 1
+    assert skip_events[0].phase == mod.name
+    assert "already exists" in skip_events[0].message
+    assert ".envrc" not in manifest.file_injections
+
+
+def test_markdownlint_skips_when_file_exists(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".markdownlint-cli2.yaml").touch()
+
+    manifest = EnvironmentManifest()
+    mod = MarkdownLintModule()
+    mod.build(manifest)
+
+    skip_events = [d for d in manifest.diagnostics if d.severity == Severity.SKIP]
+    assert len(skip_events) == 1
+    assert skip_events[0].phase == mod.name
+    assert "already exists" in skip_events[0].message
+    assert ".markdownlint-cli2.yaml" not in manifest.file_injections

@@ -66,6 +66,7 @@
     "pre_commit_hooks": [
         "  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.4\n    hooks:\n      - id: ruff-format\n      - id: ruff\n        args: [ --fix ]"
     ],
-    "collision_strategy": "merge"
+    "collision_strategy": "merge",
+    "diagnostics": []
 }
 ```
