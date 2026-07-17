@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from protostar.errors import MissingDependencyError
 from protostar.manifest import Severity
 
 from .base import BootstrapModule
@@ -28,11 +29,14 @@ class DirenvModule(BootstrapModule):
     def pre_flight(self) -> None:
         """Ensures direnv is installed and available before disk mutations occur."""
         if not shutil.which("direnv"):
-            raise RuntimeError(
-                "direnv is not installed. Install it with: brew install direnv\n\n"
+            hint = (
+                "Install it with: brew install direnv\n\n"
                 "Once installed, ensure the shell hook is active in your ~/.zshrc:\n"
                 '    eval "$(direnv hook zsh)"\n\n'
                 "Then re-run: protostar init"
+            )
+            raise MissingDependencyError(
+                dependency="direnv", purpose="direnv integration", install_hint=hint
             )
 
     @property
@@ -303,15 +307,12 @@ class PreCommitModule(BootstrapModule):
         return "Pre-Commit"
 
     def pre_flight(self) -> None:
-        """Verifies that the 'git' executable is available in the system PATH.
-
-        Raises:
-            RuntimeError: If 'git' is not installed or accessible.
-        """
+        """Verifies that the 'git' executable is available in the system PATH."""
         if not shutil.which("git"):
-            raise RuntimeError(
-                "Missing dependency: 'git' is required for pre-commit hooks. "
-                "Please install Git and try again."
+            raise MissingDependencyError(
+                dependency="git",
+                purpose="pre-commit hooks",
+                install_hint="Please install Git and try again.",
             )
 
     @property
