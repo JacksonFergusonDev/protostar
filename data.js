@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784287856943,
+  "lastUpdate": 1784288236819,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3235,6 +3235,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 181.63,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "6832684861d5a716b5e6548530fbb6c0ca396506",
+          "message": "feat: verify recommended VS Code and Cursor extensions post-install\n\nIntroduces a non-blocking diagnostic phase that check if recommended\nIDE extensions matching the active tooling modules (e.g., Ruff, Mypy,\nMarkdownLint) are installed when `config.ide` is configured.\n\n- Updates `EnvironmentManifest` to aggregate target extension IDs.\n- Hooks `MarkdownLintModule`, `RuffModule`, and `MypyModule` to register\n  their upstream extension vectors.\n- Appends `_check_ide_extensions` to the end of the `SystemExecutor`\n  pipeline, using `code` or `cursor` CLI binaries to parse installed\n  packages.\n- Adheres to the side-effect isolation guardrail by executing late in\n  the lifecycle and failing silently on system timeouts or missing CLI\n  path states, bubbling anomalies exclusively via `DiagnosticEvent`.",
+          "timestamp": "2026-07-17T12:36:13+01:00",
+          "tree_id": "9862fac8d61a4e9063bd1abbed150168c0fb6b7d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6832684861d5a716b5e6548530fbb6c0ca396506"
+        },
+        "date": 1784288236511,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 187.28,
             "unit": "ms"
           }
         ]
