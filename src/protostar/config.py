@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from .errors import ConfigurationError
+from .templating import extract_variables, render_template
+from .wizard import resolve_missing_variables
 
 logger = logging.getLogger("protostar")
 
@@ -94,7 +96,10 @@ class ProtostarConfig:
 
     @classmethod
     def load(
-        cls, force_reload: bool = False, override_target: str | None = None
+        cls,
+        force_reload: bool = False,
+        override_target: str | None = None,
+        template_context: dict[str, str] | None = None,
     ) -> "ProtostarConfig":
         """Loads and parses the global Protostar configuration file.
 
@@ -104,6 +109,7 @@ class ProtostarConfig:
         Args:
             force_reload: If True, bypasses the cache and forces a disk read.
             override_target: An optional path or URL to a portable configuration to overlay.
+            template_context: Variables passed via CLI to inject into the template.
 
         Returns:
             The loaded ProtostarConfig instance.
@@ -125,16 +131,23 @@ class ProtostarConfig:
                 from .network import fetch_remote_config
 
                 content = fetch_remote_config(override_target)
-                instance = cls._parse_and_merge(content, override_target, instance)
             else:
                 target_path = Path(override_target)
                 if not target_path.exists():
                     raise ConfigurationError(
                         f"Configuration file not found: {target_path}"
                     )
-                instance = cls._parse_and_merge(
-                    target_path.read_text(encoding="utf-8"), str(target_path), instance
-                )
+                content = target_path.read_text(encoding="utf-8")
+
+            variables = extract_variables(content)
+            context = template_context or {}
+            missing = [v for v in variables if v not in context]
+
+            if missing:
+                context.update(resolve_missing_variables(missing))
+
+            content = render_template(content, context)
+            instance = cls._parse_and_merge(content, override_target, instance)
 
         cls._instance = instance
         return instance
