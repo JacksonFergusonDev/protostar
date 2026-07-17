@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784290803606,
+  "lastUpdate": 1784292109237,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3303,6 +3303,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 187.02,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "3ec25640fec8f00372b8baabba502088926e3d10",
+          "message": "fix: cap GitHub issue traceback to 10 frames\n\nRestricts the serialized telemetry string used for automated GitHub\nissue generation to a maximum depth of 10 frames. This mirrors the visual\nlimit enforced by the Rich console and prevents unhandled errors with\ndeep execution stacks from generating URL query strings that exceed maximum\nbrowser or proxy length thresholds (~8KB).",
+          "timestamp": "2026-07-17T13:40:41+01:00",
+          "tree_id": "01b731921b25b1ee87fde6c8c334ee80c2e448b8",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3ec25640fec8f00372b8baabba502088926e3d10"
+        },
+        "date": 1784292108915,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 119.68,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 198.2,
             "unit": "ms"
           }
         ]
