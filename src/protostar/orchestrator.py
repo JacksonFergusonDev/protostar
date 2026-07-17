@@ -155,6 +155,11 @@ class Orchestrator:
             for payload in self.config.pyproject_injections.values():
                 self.manifest.add_file_append("pyproject.toml", payload)
 
+        if self.config.files:
+            logger.debug("Injecting static files from configuration.")
+            for filepath, content in self.config.files.items():
+                self.manifest.add_file_injection(filepath, content)
+
         # Phase 4: System Execution
         executor = SystemExecutor(self.manifest, self.config, self.docker)
         executor.execute()
