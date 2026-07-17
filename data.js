@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784299216711,
+  "lastUpdate": 1784306345370,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3541,6 +3541,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 181.76,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f1414571be58cb7fef2ea83a0a75fd1b0da5bbc1",
+          "message": "fix: catch CommandExecutionError/CommandTimeoutError instead of RuntimeError in dependency install, surface stdout/stderr in error panel",
+          "timestamp": "2026-07-17T12:38:00-04:00",
+          "tree_id": "89c9537fe93aca8e7e6f223ac8b53a91ae0ec958",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f1414571be58cb7fef2ea83a0a75fd1b0da5bbc1"
+        },
+        "date": 1784306344833,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.57,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 187.28,
             "unit": "ms"
           }
         ]
