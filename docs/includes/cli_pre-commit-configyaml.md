@@ -8,6 +8,7 @@ repos:
       - id: end-of-file-fixer
         exclude: \.py$
       - id: check-yaml
+        exclude: \.py$
       - id: check-added-large-files
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
