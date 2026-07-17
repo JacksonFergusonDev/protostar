@@ -487,7 +487,10 @@ def main() -> None:
 
         console.print_exception(show_locals=False, max_frames=10)
 
-        tb_str = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        # Cap the traceback to 10 frames to avoid exceeding URL length limits
+        tb_str = "".join(
+            traceback.format_exception(type(e), e, e.__traceback__, limit=10)
+        )
         issue_body = (
             "### Environment\n"
             f"- **OS**: {platform.system()} {platform.release()}\n"
