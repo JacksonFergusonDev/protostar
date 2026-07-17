@@ -288,7 +288,7 @@ class SystemExecutor:
         if not self.manifest.file_appends:
             return
 
-        # Resolve the active Python version via a fallback chain
+        # Resolve the active Python version
         python_version = None
 
         # 1. pyproject.toml `requires-python` (uv-managed projects)
@@ -309,24 +309,7 @@ class SystemExecutor:
             except Exception as e:
                 logger.debug(f"Failed to parse pyproject.toml for python version: {e}")
 
-        # 2. .venv/pyvenv.cfg `version` field (pip/venv-managed projects)
-        if not python_version:
-            pyvenv_path = Path(".venv/pyvenv.cfg")
-            if pyvenv_path.exists():
-                content = pyvenv_path.read_text()
-                match = re.search(r"^version\s*=\s*(\d+\.\d+)", content, re.MULTILINE)
-                if match:
-                    python_version = match.group(1)
-                    logger.debug(
-                        f"Resolved Python version {python_version} from pyvenv.cfg"
-                    )
-                else:
-                    logger.warning(
-                        "Found .venv/pyvenv.cfg but could not extract Python version. "
-                        "Falling back to default."
-                    )
-
-        # 3. Protostar config or hardcoded default
+        # 2. Protostar config or hardcoded default
         if not python_version:
             python_version = self.config.python_version or "3.13"
 
@@ -485,85 +468,37 @@ class SystemExecutor:
         settings_path.write_text(json.dumps(settings, indent=4) + "\n")
 
     def _install_dependencies(self) -> None:
-        """Installs queued dependencies using the active Python manager."""
+        """Installs queued dependencies using uv."""
         if not self.manifest.dependencies and not self.manifest.dev_dependencies:
             return
 
         # Apply a generous 10-minute leash for heavy, network-bound payload resolutions
         resolution_timeout = 600
 
-        if self.config.python_package_manager == "uv":
-            if self.manifest.dependencies:
-                cmd = ["uv", "add", *self.manifest.dependencies]
-                try:
-                    with console.status(
-                        f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
-                    ):
-                        execute_subprocess(cmd, timeout=resolution_timeout)
-                except RuntimeError as e:
-                    self.manifest.add_diagnostic(
-                        phase="Executor",
-                        message=f"Standard dependency resolution failed: {e}",
-                        severity=Severity.WARNING,
-                    )
-
-            if self.manifest.dev_dependencies:
-                dev_cmd = ["uv", "add", "--dev", *self.manifest.dev_dependencies]
-                try:
-                    with console.status(
-                        f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
-                    ):
-                        execute_subprocess(dev_cmd, timeout=resolution_timeout)
-                except RuntimeError as e:
-                    self.manifest.add_diagnostic(
-                        phase="Executor",
-                        message=f"Development dependency resolution failed: {e}",
-                        severity=Severity.WARNING,
-                    )
-        else:
-            venv_pip = Path(".venv/bin/pip")
-            pip_cmd = str(venv_pip) if venv_pip.exists() else "pip"
-            all_deps = self.manifest.dependencies + self.manifest.dev_dependencies
-            cmd = [pip_cmd, "install", *all_deps]
-
+        if self.manifest.dependencies:
+            cmd = ["uv", "add", *self.manifest.dependencies]
             try:
                 with console.status(
-                    f"Resolving and installing {len(all_deps)} total dependencies"
+                    f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
                 ):
                     execute_subprocess(cmd, timeout=resolution_timeout)
             except RuntimeError as e:
                 self.manifest.add_diagnostic(
                     phase="Executor",
-                    message=f"Pip dependency resolution failed: {e}",
+                    message=f"Standard dependency resolution failed: {e}",
                     severity=Severity.WARNING,
                 )
 
-            req_path = Path("requirements.txt")
-            if req_path.exists():
-                console.print(
-                    "[yellow]Warning:[/yellow] requirements.txt already exists. "
-                    "Dependencies were installed to the virtual environment, but the file was not overwritten."
+        if self.manifest.dev_dependencies:
+            dev_cmd = ["uv", "add", "--dev", *self.manifest.dev_dependencies]
+            try:
+                with console.status(
+                    f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
+                ):
+                    execute_subprocess(dev_cmd, timeout=resolution_timeout)
+            except RuntimeError as e:
+                self.manifest.add_diagnostic(
+                    phase="Executor",
+                    message=f"Development dependency resolution failed: {e}",
+                    severity=Severity.WARNING,
                 )
-            else:
-                try:
-                    result = subprocess.run(
-                        [pip_cmd, "freeze"],
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                        timeout=30,
-                    )
-                    req_path.write_text(result.stdout)
-                    logger.debug("Successfully froze dependencies to requirements.txt")
-                except subprocess.TimeoutExpired:
-                    self.manifest.add_diagnostic(
-                        phase="Executor",
-                        message="Failed to freeze dependencies to requirements.txt: Process timed out.",
-                        severity=Severity.WARNING,
-                    )
-                except Exception as e:
-                    self.manifest.add_diagnostic(
-                        phase="Executor",
-                        message=f"Failed to freeze dependencies to requirements.txt: {e}",
-                        severity=Severity.WARNING,
-                    )
