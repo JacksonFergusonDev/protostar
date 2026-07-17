@@ -1061,3 +1061,126 @@ def test_executor_handles_mkdir_io_failure(mocker):
 
     assert "create scaffolding directory" in exc_info.value.operation
     assert "src/core" in exc_info.value.path
+
+
+def test_append_files_handles_read_or_mkdir_failure(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    # Mock target.exists to return False so it hits the parent directory creation path
+    mocker.patch.object(Path, "exists", return_value=False)
+    mocker.patch.object(Path, "mkdir", side_effect=OSError(13, "Permission denied"))
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._append_files()
+
+    assert "read target append context" in exc_info.value.operation
+    assert "pyproject.toml" in exc_info.value.path
+
+
+def test_append_files_handles_toml_write_failure(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    # Simulate an existing valid pyproject.toml on disk
+    mocker.patch.object(Path, "exists", return_value=True)
+    mocker.patch.object(Path, "read_text", return_value="[project]\nname = 'test'")
+    mocker.patch.object(
+        Path, "write_text", side_effect=OSError(28, "No space left on device")
+    )
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._append_files()
+
+    assert "mutate configuration AST" in exc_info.value.operation
+    assert "pyproject.toml" in exc_info.value.path
+
+
+def test_append_files_handles_string_block_write_failure(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_file_append(".envrc", "export FOO=bar")
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    mocker.patch.object(Path, "exists", return_value=True)
+    mocker.patch.object(Path, "read_text", return_value="")
+    mocker.patch.object(
+        Path, "write_text", side_effect=OSError(5, "Input/output error")
+    )
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._append_files()
+
+    assert "append configurations block" in exc_info.value.operation
+    assert ".envrc" in exc_info.value.path
+
+
+def test_write_ignores_handles_os_error(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_vcs_ignore(".venv/")
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    mocker.patch.object(Path, "exists", return_value=True)
+    mocker.patch.object(Path, "read_text", return_value="")
+    mocker.patch.object(Path, "open", side_effect=OSError(13, "Permission denied"))
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_ignores()
+
+    assert "update workspace ignore manifest (.gitignore)" in exc_info.value.operation
+    assert ".gitignore" in exc_info.value.path
+
+
+def test_write_docker_artifacts_handles_os_error(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_vcs_ignore(".venv/")
+    # Force docker attribute to true to enter the block
+    executor = SystemExecutor(manifest, ProtostarConfig(), docker=True)
+
+    mocker.patch.object(Path, "exists", return_value=True)
+    mocker.patch.object(Path, "read_text", return_value="")
+    mocker.patch.object(Path, "open", side_effect=OSError(13, "Permission denied"))
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_docker_artifacts()
+
+    assert (
+        "scaffold container runtime ignore configurations" in exc_info.value.operation
+    )
+    assert ".dockerignore" in exc_info.value.path
+
+
+def test_write_ide_settings_handles_read_os_error(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_ide_setting("foo", "bar")
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    # Force .vscode/settings.json to exist but crash out when read
+    mocker.patch.object(Path, "exists", return_value=True)
+    mocker.patch.object(Path, "read_text", side_effect=OSError(5, "Input/output error"))
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_ide_settings()
+
+    assert "inspect active IDE settings files" in exc_info.value.operation
+    assert "settings.json" in exc_info.value.path
+
+
+def test_write_ide_settings_handles_write_os_error(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_ide_setting("foo", "bar")
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    # Let reading work smoothly (or assume no file exists)
+    mocker.patch.object(Path, "exists", return_value=False)
+    mocker.patch.object(Path, "mkdir")  # swallow directory creation
+    mocker.patch.object(
+        Path, "write_text", side_effect=OSError(13, "Permission denied")
+    )
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_ide_settings()
+
+    assert "synchronize IDE workspace preferences" in exc_info.value.operation
+    assert "settings.json" in exc_info.value.path
