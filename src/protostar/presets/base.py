@@ -2,8 +2,10 @@ import abc
 import logging
 from typing import TYPE_CHECKING, ClassVar
 
+from protostar.manifest import Severity
+
 if TYPE_CHECKING:
-    from protostar.manifest import EnvironmentManifest, Severity
+    from protostar.manifest import EnvironmentManifest
 
 logger = logging.getLogger("protostar")
 
