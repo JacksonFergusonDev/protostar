@@ -4,7 +4,7 @@ import pytest
 
 from protostar.config import ProtostarConfig
 from protostar.errors import ProtostarError
-from protostar.manifest import CollisionStrategy
+from protostar.manifest import CollisionStrategy, Severity
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
 from protostar.presets.base import PresetModule
@@ -157,16 +157,74 @@ def test_orchestrator_run_partial_success(mocker, mock_config):
     """Test that populated warnings trigger the PARTIAL SUCCESS terminal output."""
     orchestrator = Orchestrator([], mock_config)
     mocker.patch.object(orchestrator, "_evaluate_collisions")
+    mocker.patch("protostar.orchestrator.SystemExecutor")
 
-    # Mock SystemExecutor to simulate warnings surfaced during execution
-    mock_executor_class = mocker.patch("protostar.orchestrator.SystemExecutor")
-    mock_executor_instance = mock_executor_class.return_value
-    mock_executor_instance.warnings = ["Mocked resolution failure"]
+    # Inject a warning directly into the manifest
+    orchestrator.manifest.add_diagnostic(
+        phase="Executor",
+        message="Mocked resolution failure",
+        severity=Severity.WARNING,
+    )
 
     mock_print = mocker.patch("protostar.orchestrator.console.print")
 
     orchestrator.run()
 
-    printed_text = " ".join(str(call.args[0]) for call in mock_print.call_args_list)
+    # Safely extract text only from print calls that actually contained arguments
+    printed_text = " ".join(
+        str(call.args[0]) for call in mock_print.call_args_list if call.args
+    )
     assert "PARTIAL SUCCESS" in printed_text
-    assert "Mocked resolution failure" in printed_text
+
+
+def test_orchestrator_transfers_config_warnings(mocker) -> None:
+    # 1. Create a config with a cached parsing warning
+    config = ProtostarConfig()
+    config._parsing_warnings = ["A simulated configuration warning."]
+
+    # 2. Mock execution boundaries to isolate the test
+    mocker.patch("protostar.orchestrator.SystemExecutor")
+
+    orchestrator = Orchestrator(modules=[], config=config)
+
+    # Mock collision evaluation so it doesn't try to prompt or abort
+    mocker.patch.object(orchestrator, "_evaluate_collisions")
+
+    # 3. Run the orchestrator
+    orchestrator.run()
+
+    # 4. Verify the warning was transferred to the manifest correctly
+    assert len(orchestrator.manifest.diagnostics) == 1
+    event = orchestrator.manifest.diagnostics[0]
+
+    assert event.phase == "Config"
+    assert event.message == "A simulated configuration warning."
+    assert event.severity == Severity.WARNING
+
+
+def test_orchestrator_panel_rendering(mocker, capsys) -> None:
+    # 1. Inject a diagnostic event directly into an empty orchestrator
+    config = ProtostarConfig()
+    orchestrator = Orchestrator(modules=[], config=config)
+
+    mocker.patch("protostar.orchestrator.SystemExecutor")
+    mocker.patch.object(orchestrator, "_evaluate_collisions")
+
+    orchestrator.run()
+
+    # No diagnostics = SUCCESS output
+    captured = capsys.readouterr()
+    assert "SUCCESS" in captured.out
+    assert "PARTIAL SUCCESS" not in captured.out
+    assert "Diagnostic Summary" not in captured.out
+
+    # 2. Add a warning and re-run
+    orchestrator.manifest.add_diagnostic(
+        phase="Test", message="Simulated warning", severity=Severity.WARNING
+    )
+    orchestrator.run()
+
+    captured = capsys.readouterr()
+    assert "Diagnostic Summary" in captured.out
+    assert "Simulated warning" in captured.out
+    assert "PARTIAL SUCCESS" in captured.out

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import ProtostarConfig
+from protostar.manifest import Severity
 
 from .base import BootstrapModule
 
@@ -47,7 +48,11 @@ class DirenvModule(BootstrapModule):
         manifest.add_vcs_ignore(".direnv/")
 
         if Path(".envrc").exists():
-            logger.debug("Skipping .envrc generation; file already exists.")
+            manifest.add_diagnostic(
+                phase=self.name,
+                message="Skipping .envrc generation; file already exists.",
+                severity=Severity.SKIP,
+            )
             return
 
         config = ProtostarConfig.load()
@@ -104,8 +109,10 @@ class MarkdownLintModule(BootstrapModule):
         manifest.add_pre_commit_hook(hook_payload)
 
         if Path(".markdownlint-cli2.yaml").exists():
-            logger.debug(
-                "Skipping .markdownlint-cli2.yaml generation; file already exists."
+            manifest.add_diagnostic(
+                phase=self.name,
+                message="Skipping .markdownlint-cli2.yaml generation; file already exists.",
+                severity=Severity.SKIP,
             )
             return
 

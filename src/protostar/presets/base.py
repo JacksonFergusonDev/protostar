@@ -2,6 +2,8 @@ import abc
 import logging
 from typing import TYPE_CHECKING, ClassVar
 
+from protostar.manifest import Severity
+
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
 
@@ -43,7 +45,11 @@ class PresetModule(abc.ABC):
         if not isinstance(overrides, dict):
             return False
 
-        logger.debug(f"Applying custom configuration overrides for {self.name} preset.")
+        manifest.add_diagnostic(
+            phase=self.name,
+            message="Applying custom configuration overrides. Default dependencies and directories were skipped.",
+            severity=Severity.SKIP,
+        )
 
         for dep in overrides.get("dependencies", []):
             manifest.add_dependency(dep)

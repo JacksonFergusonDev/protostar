@@ -3,11 +3,12 @@ import os
 import sys
 
 from rich.console import Console
+from rich.panel import Panel
 
 from .config import ProtostarConfig
 from .errors import ProtostarError
 from .executor import SystemExecutor
-from .manifest import CollisionStrategy, EnvironmentManifest
+from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
 from .presets.base import PresetModule
 
@@ -125,6 +126,13 @@ class Orchestrator:
         self._evaluate_collisions()
 
         # Phase 2: Pre-flight Verification
+        for warning in self.config._parsing_warnings:
+            self.manifest.add_diagnostic(
+                phase="Config",
+                message=warning,
+                severity=Severity.WARNING,
+            )
+
         for mod in self.modules:
             mod.pre_flight()
 
@@ -152,12 +160,38 @@ class Orchestrator:
         executor.execute()
 
         # Phase 5: Telemetry Evaluation
-        if executor.warnings:
+        if self.manifest.diagnostics:
+            lines = []
+            has_warnings = False
+
+            for event in self.manifest.diagnostics:
+                if event.severity == Severity.WARNING:
+                    has_warnings = True
+                    lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
+                elif event.severity == Severity.SKIP:
+                    lines.append(
+                        rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
+                    )
+                else:
+                    lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
+
+            console.print()
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold]Diagnostic Summary",
+                    border_style="yellow" if has_warnings else "blue",
+                    expand=False,
+                    padding=(1, 2),
+                )
+            )
+        else:
+            has_warnings = False
+
+        if has_warnings:
             console.print(
                 "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, but some non-critical tasks encountered issues."
             )
-            for warning in executor.warnings:
-                console.print(f"[yellow]  ⚠ {warning}[/yellow]")
         else:
             console.print(
                 "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."

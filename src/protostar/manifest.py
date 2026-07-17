@@ -3,6 +3,31 @@ import enum
 from typing import Any
 
 
+class Severity(enum.Enum):
+    """Enumeration of severity levels for diagnostic events."""
+
+    INFO = "info"
+    SKIP = "skip"
+    WARNING = "warning"
+
+
+@dataclasses.dataclass
+class DiagnosticEvent:
+    """A structured record of a non-fatal anomaly or skipped operation.
+
+    Attributes:
+        phase: The execution phase or module name (e.g., 'Config', 'Direnv').
+        message: A concise description of the event.
+        severity: The severity level of the event.
+        detail: Optional extended diagnostic information.
+    """
+
+    phase: str
+    message: str
+    severity: Severity = Severity.INFO
+    detail: str | None = None
+
+
 class CollisionStrategy(enum.Enum):
     """Enumeration of strategies for resolving state collisions during realization."""
 
@@ -62,6 +87,7 @@ class EnvironmentManifest:
     wants_pre_commit: bool = False
     pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
+    diagnostics: list[DiagnosticEvent] = dataclasses.field(default_factory=list)
 
     def add_vcs_ignore(self, path: str) -> None:
         """Appends a file or directory pattern to the VCS ignore list (.gitignore)."""
@@ -147,3 +173,24 @@ class EnvironmentManifest:
         """Queues a YAML payload block for the .pre-commit-config.yaml file."""
         if payload not in self.pre_commit_hooks:
             self.pre_commit_hooks.append(payload)
+
+    def add_diagnostic(
+        self,
+        phase: str,
+        message: str,
+        severity: Severity = Severity.INFO,
+        detail: str | None = None,
+    ) -> None:
+        """Queues a diagnostic event for the post-execution summary panel.
+
+        Args:
+            phase: The execution phase or module generating the event.
+            message: A concise description of the skipped operation or anomaly.
+            severity: The severity level of the event. Defaults to INFO.
+            detail: Optional extended diagnostic information.
+        """
+        self.diagnostics.append(
+            DiagnosticEvent(
+                phase=phase, message=message, severity=severity, detail=detail
+            )
+        )

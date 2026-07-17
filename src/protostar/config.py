@@ -85,6 +85,9 @@ class ProtostarConfig:
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
+    _parsing_warnings: list[str] = field(
+        default_factory=list, init=False, repr=False, compare=False
+    )
 
     # In-memory cache to prevent repeated disk I/O
     _instance: ClassVar["ProtostarConfig | None"] = None
@@ -164,18 +167,19 @@ class ProtostarConfig:
                 "Please fix the syntax error or delete the file to regenerate the defaults."
             ) from e
         except Exception as e:
-            logger.warning(
+            instance._parsing_warnings.append(
                 f"Failed to load config from {path}: {e}. Falling back to defaults."
             )
             return instance
 
         # --- Schema Validation & Scope Enforcement ---
         allowed_keys = {"env", "presets", "dev"}
+        warnings: list[str] = []
 
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:
-            logger.warning(
-                f"Config Warning: Unrecognized root keys in {path}: {', '.join(unknown_keys)}."
+            warnings.append(
+                f"Unrecognized root keys in {path}: {', '.join(unknown_keys)}."
             )
 
         updates: dict[str, Any] = {}
@@ -208,8 +212,8 @@ class ProtostarConfig:
                     allowed = (expected,)
 
                 if value is not None and allowed and not isinstance(value, allowed):
-                    logger.warning(
-                        f"Config Warning: Invalid type for '[env].{key}'. Expected {expected}, "
+                    warnings.append(
+                        f"Invalid type for '[env].{key}'. Expected {expected}, "
                         f"got {type(value).__name__}. Falling back to default."
                     )
                     continue
@@ -229,4 +233,6 @@ class ProtostarConfig:
             if "pyproject" in dev_data:
                 updates["pyproject_injections"] = dev_data["pyproject"]
 
-        return replace(instance, **updates)
+        new_instance = replace(instance, **updates)
+        new_instance._parsing_warnings = instance._parsing_warnings + warnings
+        return new_instance

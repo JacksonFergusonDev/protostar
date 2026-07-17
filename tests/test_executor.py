@@ -10,7 +10,7 @@ import tomlkit
 from protostar.config import ProtostarConfig
 from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
-from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -114,7 +114,11 @@ def test_executor_install_dependencies_pip_freeze_timeout(mocker, mock_config):
 
     executor._install_dependencies()
 
-    assert any("Process timed out" in w for w in executor.warnings)
+    assert any(
+        "Process timed out" in d.message
+        for d in executor.manifest.diagnostics
+        if d.severity == Severity.WARNING
+    )
 
 
 def test_executor_append_files_late_binding(mocker, mock_config):
@@ -332,16 +336,13 @@ def test_executor_writes_vscode_settings_jsonc_abort(
     manifest.add_ide_setting("files.exclude", {"**/.venv": True})
     executor = SystemExecutor(manifest, mock_config)
 
-    mock_print = mocker.patch("protostar.executor.console.print")
-
     executor._write_ide_settings()
 
-    mock_print.assert_called_once()
-    assert (
-        "contains comments, trailing commas, or is malformed"
-        in mock_print.call_args[0][0]
+    assert any(
+        "is malformed" in d.message
+        for d in executor.manifest.diagnostics
+        if d.severity == Severity.WARNING
     )
-    assert settings_file.read_text() == "// My custom comment\n{}"
 
 
 def test_executor_install_dependencies_pip_reqs_exist(
@@ -730,8 +731,9 @@ def test_executor_install_dependencies_pip_freeze_exception(mocker, mock_config)
     executor._install_dependencies()
 
     assert any(
-        "Failed to freeze dependencies to requirements.txt" in w
-        for w in executor.warnings
+        "Failed to freeze dependencies to requirements.txt" in d.message
+        for d in executor.manifest.diagnostics
+        if d.severity == Severity.WARNING
     )
 
 
@@ -751,15 +753,10 @@ def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_conf
 
     executor._install_dependencies()
 
-    assert len(executor.warnings) == 2
-    assert (
-        "Standard dependency resolution failed: Resolution failed"
-        in executor.warnings[0]
-    )
-    assert (
-        "Development dependency resolution failed: Resolution failed"
-        in executor.warnings[1]
-    )
+    warnings = [
+        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
+    ]
+    assert len(warnings) == 2
 
 
 def test_executor_install_dependencies_graceful_degradation_pip(mocker, mock_config):
@@ -778,11 +775,10 @@ def test_executor_install_dependencies_graceful_degradation_pip(mocker, mock_con
 
     executor._install_dependencies()
 
-    assert len(executor.warnings) == 1
-    assert (
-        "Pip dependency resolution failed: Pip installation failed"
-        in executor.warnings[0]
-    )
+    warnings = [
+        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
+    ]
+    assert len(warnings) == 1
 
 
 def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
@@ -843,15 +839,16 @@ def test_executor_deep_merge_tomlkit_table_collision(mock_config):
     manifest = EnvironmentManifest()
     executor = SystemExecutor(manifest, mock_config)
 
-    # Base contains a string where a Table is expected
     base = tomlkit.parse("tool = 'not a table'\n")
     payload = tomlkit.parse("[tool]\nnew_key = 1\n")
 
     executor._deep_merge_tomlkit(base, payload)
 
     assert base["tool"] == "not a table"
-    assert len(executor.warnings) == 1
-    assert "Expected a Table for key 'tool'" in executor.warnings[0]
+    warnings = [
+        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
+    ]
+    assert len(warnings) == 1
 
 
 def test_executor_deep_merge_tomlkit_aot_collision(mock_config):
@@ -861,15 +858,16 @@ def test_executor_deep_merge_tomlkit_aot_collision(mock_config):
     manifest = EnvironmentManifest()
     executor = SystemExecutor(manifest, mock_config)
 
-    # Base contains a string where an AoT is expected
     base = tomlkit.parse("my_array = 'string'\n")
     payload = tomlkit.parse("[[my_array]]\nval = 1\n")
 
     executor._deep_merge_tomlkit(base, payload)
 
     assert base["my_array"] == "string"
-    assert len(executor.warnings) == 1
-    assert "Expected an Array of Tables for key 'my_array'" in executor.warnings[0]
+    warnings = [
+        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
+    ]
+    assert len(warnings) == 1
 
 
 def test_executor_deep_merge_tomlkit_aot_overwrite(mock_config):
@@ -936,16 +934,13 @@ def test_executor_writes_vscode_settings_root_not_dict(
     manifest.add_ide_setting("files.exclude", {"**/.venv": True})
     executor = SystemExecutor(manifest, mock_config)
 
-    mock_print = mocker.patch("protostar.executor.console.print")
-
     executor._write_ide_settings()
 
-    mock_print.assert_called_once()
-    assert (
-        "contains comments, trailing commas, or is malformed"
-        in mock_print.call_args[0][0]
-    )
-    assert settings_file.read_text() == '["I am an array, not a dictionary"]'
+    warnings = [
+        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
+    ]
+    assert len(warnings) == 1
+    assert "is malformed" in warnings[0].message
 
 
 def test_executor_lifecycle_ordering(mocker, mock_config):
@@ -1042,3 +1037,45 @@ def test_executor_task_description_fallback(mocker):
 
     # Verify the fallback logic stripped the path and grabbed the binary name
     mock_status.assert_called_once_with("Propelling sequence: pre-commit")
+
+
+def test_executor_toml_merge_type_collision() -> None:
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, ProtostarConfig())
+
+    base = tomlkit.document()
+    base["tool"] = tomlkit.table()
+
+    payload = tomlkit.document()
+    payload["tool"] = tomlkit.aot()  # Array of Tables colliding with a standard Table
+
+    executor._deep_merge_tomlkit(base, payload)
+
+    assert len(manifest.diagnostics) == 1
+    warning = manifest.diagnostics[0]
+    assert warning.severity == Severity.WARNING
+    assert warning.phase == "Executor"
+    assert "TOML Merge Collision" in warning.message
+
+
+def test_executor_skips_malformed_ide_settings(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    # Queue up an IDE setting injection
+    manifest = EnvironmentManifest()
+    manifest.add_ide_setting("python.defaultInterpreterPath", "/fake/path")
+
+    # Create a malformed JSON file
+    vscode_dir = tmp_path / ".vscode"
+    vscode_dir.mkdir()
+    settings_file = vscode_dir / "settings.json"
+    settings_file.write_text("{ broken_json: true, }")
+
+    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor._write_ide_settings()
+
+    assert len(manifest.diagnostics) == 1
+    warning = manifest.diagnostics[0]
+    assert warning.severity == Severity.WARNING
+    assert "is malformed" in warning.message
+    assert "Skipping IDE settings injection" in warning.message

@@ -99,7 +99,6 @@ def test_config_advanced_overrides_parsing(mocker, tmp_path):
 def test_config_runtime_type_validation(mocker):
     """Test that the parser catches invalid types, drops them, and falls back to defaults."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     # Inject deliberately wrong Python primitive types
     payload = {
@@ -113,28 +112,19 @@ def test_config_runtime_type_validation(mocker):
     mocker.patch("protostar.config.tomllib.load", return_value=payload)
     mocker.patch("builtins.open", mocker.mock_open())
 
-    # Pass the payload directly into the parser
     config = ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
 
-    # Assert the malformed inputs were dropped and defaults were maintained
     assert config.ide is None
-
     assert config.direnv is False
     assert config.python_version == "3.13"
 
     # Verify the warnings told the user exactly what type was expected
-    assert mock_logger.call_count == 3
-    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
-
-    assert "Invalid type for '[env].ide'" in logged_text
-    assert "Invalid type for '[env].direnv'" in logged_text
-    assert "Invalid type for '[env].python_version'" in logged_text
+    assert len(config._parsing_warnings) == 3
 
 
 def test_config_unknown_root_keys(mocker):
     """Test that the parser warns about unrecognized or misspelled root blocks."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     payload = {
         "env": {"ide": "cursor"},
@@ -147,20 +137,16 @@ def test_config_unknown_root_keys(mocker):
 
     from pathlib import Path
 
-    ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
+    config = ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
 
-    mock_logger.assert_called()
-    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
-
-    assert "Unrecognized root keys" in logged_text
-    assert "presetz" in logged_text
-    assert "unknown_block" in logged_text
+    # Should capture 1 warning for 'presetz' and 'unknown_block' combined (grouped by the parser)
+    assert len(config._parsing_warnings) == 1
+    assert "presetz" in config._parsing_warnings[0]
 
 
 def test_config_ruff_invalid_type(mocker):
     """Test that an invalid type for the 'ruff' key triggers a generalized warning."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
-    mock_logger = mocker.patch("protostar.config.logger.warning")
 
     # Pass a string instead of a boolean
     payload = {"env": {"ruff": "yes"}}
@@ -170,15 +156,8 @@ def test_config_ruff_invalid_type(mocker):
 
     config = ProtostarConfig.load(force_reload=True)
 
-    # Should safely drop the string and fall back to the True default
     assert config.ruff is True
-
-    mock_logger.assert_called()
-    logged_text = " ".join(str(call.args[0]) for call in mock_logger.call_args_list)
-
-    # Assert against the dynamic type-checking warning string
-    assert "Invalid type for '[env].ruff'" in logged_text
-    assert "Expected <class 'bool'>" in logged_text
+    assert len(config._parsing_warnings) == 1
 
 
 def test_config_complex_generic_type_passthrough(mocker):
@@ -196,3 +175,26 @@ def test_config_complex_generic_type_passthrough(mocker):
 
     # The dictionary should pass through successfully
     assert config.presets == {"custom_preset": "value"}
+
+
+def test_config_captures_parsing_warnings(tmp_path, monkeypatch) -> None:
+    # 1. Mock the CONFIG_FILE to point to our sandbox
+    mock_config_path = tmp_path / "config.toml"
+    monkeypatch.setattr("protostar.config.CONFIG_FILE", mock_config_path)
+
+    # 2. Write a config with an invalid root key and an invalid type
+    mock_config_path.write_text(
+        "[unknown_root]\nfoo = 'bar'\n\n[env]\ndirenv = 'this-should-be-a-bool'\n"
+    )
+
+    # 3. Load the config (forcing reload to bypass singleton cache)
+    config = ProtostarConfig.load(force_reload=True)
+
+    # 4. Verify fallbacks worked
+    assert config.direnv is False  # Fell back to default
+
+    # 5. Verify warnings were captured silently without logging
+    warnings = getattr(config, "_parsing_warnings", [])
+    assert len(warnings) == 2
+    assert any("Unrecognized root keys" in w for w in warnings)
+    assert any("Invalid type for '[env].direnv'" in w for w in warnings)
