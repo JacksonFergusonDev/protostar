@@ -90,4 +90,4 @@ If you are extending Protostar with custom domains or tooling layers, your `Boot
             separate_signature: true
             members_order: source
 
-Head over to __[Extending Protostar](../5_mission-control/extending-protostar.md)__ for more information.
+Head over to __[Extending Protostar](../mission-control/extending-protostar.md)__ for more information.

@@ -38,7 +38,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
         --8<-- "cli_gitignore.md"
 
     ??? abstract "See the generated `.markdownlint-cli2.yaml`"
-        --8<-- "cli_markdownlint-cli2yaml"
+        --8<-- "cli_markdownlint-cli2yaml.md"
 
     ??? abstract "See the generated `.pre-commit-config.yaml`"
         --8<-- "cli_pre-commit-configyaml.md"
