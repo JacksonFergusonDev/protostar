@@ -46,6 +46,18 @@ classDiagram
 
 ## Class Definitions
 
+!!! abstract "Telemetry & Error Handling: `ProtostarError`"
+
+    Strictly typed operational errors that halt the execution pipeline safely and return POSIX-compliant exit codes.
+
+    ::: protostar.errors.ProtostarError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
 !!! abstract "Core Interface: Define the foundational environment footprint (languages, core tooling). Evaluated during `protostar init`."
 
     ::: protostar.modules.base.BootstrapModule

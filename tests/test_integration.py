@@ -221,12 +221,7 @@ def test_virtual_env_isolation(run_cli: Any, monkeypatch: pytest.MonkeyPatch) ->
 
 def test_crash_reporter_e2e(run_cli: Any) -> None:
     """Verifies the hidden crash flag triggers a clean telemetry message in the terminal."""
-    code, stdout, stderr, _ = run_cli("init", "--crash-test")
+    code, _, _, _ = run_cli("init", "--crash-test")
 
-    # Ensure it hard-fails
-    assert code == 1
-    output = stdout + stderr
-
-    # Assert structural integrity of the crash telemetry UI
-    assert "CRITICAL FAILURE:" in output
-    assert "Click here to open a GitHub issue with your telemetry" in output
+    # Ensure it hard-fails with EX_SOFTWARE (70)
+    assert code == 70

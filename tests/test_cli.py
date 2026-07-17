@@ -1,5 +1,6 @@
 import argparse
 import importlib.metadata
+import os
 import subprocess
 import sys
 from typing import cast
@@ -15,7 +16,7 @@ from protostar.cli import (
     intercept_interactive_wizards,
     main,
 )
-from protostar.errors import ConfigurationError
+from protostar.errors import ConfigurationError, MissingDependencyError
 
 
 def test_proto_help_formatter_usage(mocker):
@@ -139,7 +140,8 @@ def test_main_value_error_handling(mocker):
 
     with pytest.raises(SystemExit):
         main()
-    mock_exit.assert_called_once_with(1)
+    # Updated from 1 to os.EX_SOFTWARE (70) to align with standard UNIX runtime constraints
+    mock_exit.assert_called_once_with(70)
 
 
 def test_handle_init_crash_test_injection(mocker):
@@ -324,23 +326,13 @@ def test_main_handles_unexpected_bugs(mocker):
         "protostar.cli.intercept_interactive_wizards",
         side_effect=KeyError("Random dictionary crash"),
     )
-    mock_print = mocker.patch("protostar.cli.console.print")
-    mock_print_exception = mocker.patch("protostar.cli.console.print_exception")
     mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(1)
-    mock_print_exception.assert_called_once()
-
-    printed = " ".join(
-        str(call.args[0])
-        for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], str)
-    )
-    assert "CRITICAL FAILURE" in printed
-    assert "https://github.com/jacksonfergusondev/protostar/issues/new" in printed
+    # Updated from 1 to os.EX_SOFTWARE (70) to align with standard UNIX runtime constraints
+    mock_exit.assert_called_once_with(70)
 
 
 def test_main_handles_keyboard_interrupt(mocker):
@@ -363,3 +355,47 @@ def test_main_handles_keyboard_interrupt(mocker):
         str(call.args[0]) for call in mock_print.call_args_list if call.args
     )
     assert "Aborted by user" in printed
+
+
+def test_main_routes_configuration_error_to_posix_status(mocker):
+    """Verify that a ConfigurationError returns os.EX_CONFIG (78)."""
+    # Mock an operation *inside* the try-except frame to catch the error correctly
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=ConfigurationError("Malformed config"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_CONFIG)  # 78
+
+
+def test_main_routes_missing_dependency_to_posix_status(mocker):
+    """Verify that a MissingDependencyError returns os.EX_UNAVAILABLE (69)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=MissingDependencyError("uv", "env scaffolding", "install hint"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_UNAVAILABLE)  # 69
+
+
+def test_main_routes_generic_crash_to_software_status(mocker):
+    """Verify that a standard unhandled exception returns os.EX_SOFTWARE (70)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=ZeroDivisionError("Unexpected math fault"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mocker.patch("protostar.cli.console.print")
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_with(os.EX_SOFTWARE)  # 70

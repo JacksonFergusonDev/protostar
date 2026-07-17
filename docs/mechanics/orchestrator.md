@@ -106,8 +106,9 @@ flowchart TD
 
 The Orchestrator serves as the absolute boundary for exception propagation. By trapping errors at the highest level, it guarantees that users are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
 
-- __Expected Anomalies:__ Standard errors like `FileExistsError`, `OSError` (e.g., read-only filesystems), or `RuntimeError` (e.g., network timeouts during dependency resolution) are caught and gracefully presented as a clean abort message in the terminal.
-- __Critical Failures:__ If Protostar encounters an unhandled internal exception (a genuine bug or AST parsing collapse), it traps the stack trace, collects a vector of the environment state, and outputs a URL-encoded link. Clicking this link instantly opens a pre-populated GitHub issue so the telemetry isn't lost to the void.
+- __Expected Anomalies:__ Domain-specific exceptions inheriting from `ProtostarError` (such as `FileSystemError` for I/O constraints, or `MissingDependencyError` for absent binaries) are caught and gracefully presented as a clean abort message in the terminal, alongside a decoupled remediation hint. The Orchestrator routes these expected operational failures to their appropriate UNIX standard exit codes (e.g., `os.EX_IOERR`, `os.EX_UNAVAILABLE`).
+
+- __Critical Failures:__ If Protostar encounters an unhandled internal exception (a genuine bug or AST parsing collapse), it assumes the state is unstable. It traps the stack trace, collects a vector of the environment state, and outputs a URL-encoded link. Clicking this link instantly opens a pre-populated GitHub issue so the telemetry isn't lost to the void, before exiting with `os.EX_SOFTWARE`.
 
 !!! example "Simulated Critical Failure Payload"
     When a catastrophic failure occurs, the Orchestrator encodes the following telemetry into the GitHub issue body:

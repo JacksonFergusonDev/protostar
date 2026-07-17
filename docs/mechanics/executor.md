@@ -83,7 +83,7 @@ The merge behavior is governed by the orchestrator's resolved `CollisionStrategy
 
 Directly calling `subprocess.run` in a CLI tool often leads to silent failures or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `protostar.system.execute_subprocess`.
 
-This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts to prevent the orchestrator from blocking indefinitely on stalled network requests. If the process returns a non-zero exit code or exceeds its execution timeout, the streams are concatenated and raised within a `RuntimeError`. This ensures the Orchestrator can catch the failure and present the raw diagnostics to the user without dropping context.
+This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts to prevent the orchestrator from blocking indefinitely on stalled network requests. If the process returns a non-zero exit code or exceeds its execution timeout, the executor raises a strictly typed `CommandExecutionError` or `CommandTimeoutError`. These exceptions structurally preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to the user without destructively flattening the context into a generic string blob.
 
 !!! example "Simulated Subprocess Telemetry Output"
     When a shell execution fails, the captured streams are formatted to pinpoint the exact failure mechanism:

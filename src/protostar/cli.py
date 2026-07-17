@@ -24,7 +24,12 @@ from rich_argparse import RawTextRichHelpFormatter
 from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
-from .errors import ConfigurationError, ProtostarError
+from .errors import (
+    ConfigurationError,
+    FileSystemError,
+    MissingDependencyError,
+    ProtostarError,
+)
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -462,25 +467,43 @@ def main() -> None:
 
         args.func(args)
 
-    except (ProtostarError, RuntimeError, FileExistsError, OSError) as e:
-        # Expected operational errors route here
+    except ProtostarError as e:
+        # Expected domain errors route here for clean terminal formatting
         console.print()
+
+        body = str(e)
+        if getattr(e, "hint", None):
+            body += f"\n\n[dim]Hint: {e.hint}[/dim]"
+
         console.print(
             Panel(
-                str(e),
+                body,
                 title="[bold red]Execution Aborted",
                 border_style="red",
                 expand=False,
                 padding=(1, 2),
             )
         )
-        sys.exit(1)
+
+        # Route specific domain exceptions to standard POSIX status codes
+        if isinstance(e, ConfigurationError):
+            sys.exit(os.EX_CONFIG)  # 78: Malformed configuration tables
+        if isinstance(e, MissingDependencyError):
+            sys.exit(
+                os.EX_UNAVAILABLE
+            )  # 69: Expected background tool executable missing
+        if isinstance(e, FileSystemError):
+            sys.exit(os.EX_IOERR)  # 74: Critical disk access or storage write faults
+
+        sys.exit(1)  # Generic operational failure fallback
+
     except KeyboardInterrupt:
         # Catch Ctrl+C cleanly
         console.print("\n[bold red]Aborted by user.[/bold red]")
         sys.exit(130)
+
     except Exception as e:
-        # Unexpected bugs route here for the crash report payload
+        # Unexpected core system bugs route here for the crash report payload
         console.print(
             "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
         )
@@ -508,7 +531,7 @@ def main() -> None:
         console.print(
             f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
         )
-        sys.exit(1)
+        sys.exit(os.EX_SOFTWARE)  # 70: Internal software malfunction code
 
 
 if __name__ == "__main__":

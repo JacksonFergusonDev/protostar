@@ -29,6 +29,14 @@ A module only interacts with the manifest interface. It must not inspect what ot
 
 Presets inherit from the `PresetModule` abstract base class and evaluate independently during the manifest aggregation phase. They do not override language modules; they strictly append domain-specific dependencies and directory scaffolding to the `EnvironmentManifest`.
 
+### 6. Structural Error Handling Paradigm
+
+To guarantee that the workspace remains deterministic, error management follows a strict type verification structure:
+
+- **Never Raise Coarse Exceptions:** Do not raise bare `RuntimeError`, `ValueError`, or `OSError` instances inside pipeline operations. Always throw a specific, domain-modeled subclass of `ProtostarError`.
+- **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
+- **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier.
+
 ## Coding Standards
 
 1. **Type Hinting:** All new application functions and methods must include strict Python 3.12 type hints. We use `mypy` to statically enforce this (`disallow_untyped_defs = true`). The test suite (`tests/*`) is granted an exemption from strict untyped definition checks.
