@@ -8,6 +8,14 @@ __version__ = "unknown"
 with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("protostar")
 
+from .errors import (
+    CommandExecutionError,
+    CommandTimeoutError,
+    ConfigurationError,
+    FileSystemError,
+    MissingDependencyError,
+    ProtostarError,
+)
 from .manifest import EnvironmentManifest
 from .modules.base import BootstrapModule
 from .presets.base import PresetModule
@@ -17,6 +25,12 @@ logging.getLogger("protostar").addHandler(logging.NullHandler())
 
 __all__ = [
     "BootstrapModule",
+    "CommandExecutionError",
+    "CommandTimeoutError",
+    "ConfigurationError",
     "EnvironmentManifest",
+    "FileSystemError",
+    "MissingDependencyError",
     "PresetModule",
+    "ProtostarError",
 ]

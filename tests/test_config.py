@@ -1,11 +1,19 @@
 from collections.abc import Generator
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 import protostar.config
 from protostar.config import ProtostarConfig
-from protostar.errors import ConfigurationError
+from protostar.errors import (
+    CommandExecutionError,
+    CommandTimeoutError,
+    ConfigurationError,
+    FileSystemError,
+    MissingDependencyError,
+    ProtostarError,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -198,3 +206,43 @@ def test_config_captures_parsing_warnings(tmp_path, monkeypatch) -> None:
     assert len(warnings) == 2
     assert any("Unrecognized root keys" in w for w in warnings)
     assert any("Invalid type for '[env].direnv'" in w for w in warnings)
+
+
+def test_protostar_error_hint_binding():
+    err = ProtostarError("Failure summary", hint="Try turning it off and on again")
+    assert err.hint == "Try turning it off and on again"
+    assert str(err) == "Failure summary"
+
+
+def test_missing_dependency_error_formatting():
+    err = MissingDependencyError(
+        dependency="direnv",
+        purpose="environment switching",
+        install_hint="brew install direnv",
+    )
+    assert err.dependency == "direnv"
+    assert "required for environment switching" in str(err)
+    assert err.hint == "brew install direnv"
+
+
+def test_command_execution_error_properties():
+    err = CommandExecutionError(["uv", "sync"], returncode=2, stderr="Resolution error")
+    assert err.command == ["uv", "sync"]
+    assert err.returncode == 2
+    assert err.stderr == "Resolution error"
+
+
+def test_command_timeout_error_defaults():
+    err = CommandTimeoutError(["git", "clone"], timeout=30)
+    assert err.timeout == 30
+    # Cast to str to satisfy static analysis, as we know hint is not None here
+    assert "stalled network request" in cast(str, err.hint)
+
+
+def test_filesystem_error_unwraps_os_error():
+    os_err = PermissionError(13, "Permission denied")
+    err = FileSystemError("write", ".envrc", os_err)
+    assert err.operation == "write"
+    assert err.path == ".envrc"
+    assert "Permission denied" in str(err)
+    assert err.original == os_err
