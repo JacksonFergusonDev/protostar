@@ -67,6 +67,8 @@ class ProtostarConfig:
         presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
+        files (dict[str, str]): Exact file paths mapped to their raw contents for injection.
+        variables (dict[str, Any]): Arbitrary key-value pairs for dynamic configuration.
     """
 
     ide: str | None = None
@@ -80,6 +82,9 @@ class ProtostarConfig:
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict)
+    variables: dict[str, Any] = field(default_factory=dict)
+
     _parsing_warnings: list[str] = field(
         default_factory=list, init=False, repr=False, compare=False
     )
@@ -168,7 +173,7 @@ class ProtostarConfig:
             return instance
 
         # --- Schema Validation & Scope Enforcement ---
-        allowed_keys = {"env", "presets", "dev"}
+        allowed_keys = {"env", "presets", "dev", "files", "variables"}
         warnings: list[str] = []
 
         unknown_keys = set(data.keys()) - allowed_keys
@@ -227,6 +232,16 @@ class ProtostarConfig:
 
             if "pyproject" in dev_data:
                 updates["pyproject_injections"] = dev_data["pyproject"]
+
+        if "files" in data:
+            merged_files = dict(instance.files)
+            merged_files.update(data["files"])
+            updates["files"] = merged_files
+
+        if "variables" in data:
+            merged_vars = dict(instance.variables)
+            merged_vars.update(data["variables"])
+            updates["variables"] = merged_vars
 
         new_instance = replace(instance, **updates)
         new_instance._parsing_warnings = instance._parsing_warnings + warnings
