@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784297157257,
+  "lastUpdate": 1784299216711,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3507,6 +3507,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 191.66,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d106943f6f369c923f327a859cd8f453ead3f4f3",
+          "message": "refactor: finalize centralized error control, POSIX tracking, and documentation (#113)\n\n- Narrow cli.main intercept boundaries to catch ProtostarError variants exclusively.\n- Implement isolated, dim terminal block formatting for decoupled validation hints.\n- Map system failures directly onto standard UNIX constants (EX_CONFIG, EX_UNAVAILABLE, EX_IOERR).\n- Route unexpected internal crashes to EX_SOFTWARE with truncated issue URL parameters.\n- Add robust verification conditions to test_cli and document conventions in CONTRIBUTING.md.\n- Update MkDocs architectural documentation (executor.md, orchestrator.md) to reflect strict error typing.\n- Inject ProtostarError hierarchy into the auto-generated api-reference.md for plugin developers.",
+          "timestamp": "2026-07-17T07:39:14-07:00",
+          "tree_id": "e2821f223bfe737b18aacd0116d2f97816dd1e72",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d106943f6f369c923f327a859cd8f453ead3f4f3"
+        },
+        "date": 1784299215802,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.19,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 181.76,
             "unit": "ms"
           }
         ]
