@@ -8,7 +8,6 @@ from typing import Any, ClassVar
 
 from .errors import ConfigurationError
 from .templating import extract_variables, render_template
-from .wizard import resolve_missing_variables
 
 logger = logging.getLogger("protostar")
 
@@ -144,6 +143,8 @@ class ProtostarConfig:
             missing = [v for v in variables if v not in context]
 
             if missing:
+                from .wizard import resolve_missing_variables
+
                 context.update(resolve_missing_variables(missing))
 
             content = render_template(content, context)

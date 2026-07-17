@@ -4,7 +4,10 @@ import os
 import sys
 from typing import Any
 
+from rich.console import Console
+
 from .config import ProtostarConfig
+from .errors import ConfigurationError
 from .modules import TOOLING_MODULES
 from .presets import PRESETS
 
@@ -83,8 +86,6 @@ def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
     Raises:
         ConfigurationError: If the environment is non-interactive.
     """
-    from .errors import ConfigurationError
-
     if not _should_run_wizard():
         raise ConfigurationError(
             "Non-interactive environment detected, but the configuration requires "
@@ -93,7 +94,6 @@ def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
         )
 
     import questionary
-    from rich.console import Console
 
     console = Console()
     console.print("\n[bold cyan]Configuration Variables Required[/bold cyan]")

@@ -10,7 +10,7 @@ from .errors import ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
-from .presets.base import PresetModule
+from .presets import PresetModule
 
 logger = logging.getLogger("protostar")
 console = Console()
