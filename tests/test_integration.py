@@ -56,24 +56,6 @@ def test_python_environment_scaffolding(
         )
 
 
-def test_pip_fallback_integration(run_cli: Any, seed_global_config: Any) -> None:
-    """Verifies pip package manager gracefully degrades and outputs to requirements.txt."""
-    seed_global_config('[env]\npython_package_manager = "pip"\n')
-
-    code, stdout, stderr, workspace = run_cli(
-        "init", "--python-version", "3.12", "--ruff"
-    )
-
-    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
-    assert (workspace / ".venv").exists()
-
-    req_path = workspace / "requirements.txt"
-    assert req_path.exists(), "pip fallback failed to generate requirements.txt"
-
-    reqs = req_path.read_text().lower()
-    assert "ruff" in reqs, "ruff missing from requirements.txt"
-
-
 def test_orchestrator_idempotency(run_cli: Any, seed_global_config: Any) -> None:
     """Ensures repeated executions with --force safely merge configurations."""
     seed_global_config(

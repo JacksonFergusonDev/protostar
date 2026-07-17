@@ -23,7 +23,7 @@ def test_python_module_uv_build(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide=None)
 
-    mod = PythonCore(package_manager="uv")
+    mod = PythonCore()
     mod.build(manifest)
 
     assert ".venv/" in manifest.vcs_ignores
@@ -53,7 +53,7 @@ def test_python_module_uv_with_version(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide=None)
 
-    mod = PythonCore(package_manager="uv", python_version="3.12")
+    mod = PythonCore(python_version="3.12")
     mod.build(manifest)
 
     assert any(
@@ -79,7 +79,7 @@ def test_python_module_ide_injection_active(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide="vscode")
 
-    mod = PythonCore(package_manager="uv")
+    mod = PythonCore()
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" in manifest.ide_settings
@@ -95,54 +95,18 @@ def test_python_module_ide_injection_inactive(manifest, mocker):
     mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
     mock_config.return_value = ProtostarConfig(ide=None)
 
-    mod = PythonCore(package_manager="uv")
+    mod = PythonCore()
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" not in manifest.ide_settings
 
 
-def test_python_module_pip_build(manifest, mocker):
-    """Test Python manifest correctly initializes standard library venv for pip."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-
-    mod = PythonCore(package_manager="pip")
-    mod.build(manifest)
-
-    assert ".venv/" in manifest.vcs_ignores
-    assert any(
-        t.command == ["python3.13", "-m", "venv", ".venv"]
-        for t in manifest.system_tasks
-    )
-
-
-def test_python_module_pip_with_version(manifest, mocker):
-    """Test Python manifest formats the python executable correctly for pip venvs."""
-    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-
-    mod = PythonCore(package_manager="pip", python_version="3.11")
-    mod.build(manifest)
-
-    assert any(
-        t.command == ["python3.11", "-m", "venv", ".venv"]
-        for t in manifest.system_tasks
-    )
-
-
 def test_python_module_pre_flight_missing_uv(mocker):
     """Test PythonCore aborts pre-flight if uv is missing."""
-    mod = PythonCore(package_manager="uv")
+    mod = PythonCore()
     mocker.patch("shutil.which", return_value=None)
 
     with pytest.raises(RuntimeError, match="Missing dependency: 'uv' is required"):
-        mod.pre_flight()
-
-
-def test_python_module_pre_flight_missing_pip(mocker):
-    """Test PythonCore aborts pre-flight if python/python3 are missing."""
-    mod = PythonCore(package_manager="pip")
-    mocker.patch("shutil.which", return_value=None)
-
-    with pytest.raises(RuntimeError, match="Missing dependency: 'python' is required"):
         mod.pre_flight()
 
 
@@ -163,8 +127,6 @@ def test_direnv_collision_markers():
 def test_direnv_build(manifest, mocker):
     """Test DirenvModule generates the `.envrc` injection and queues evaluation."""
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
 
     mod = DirenvModule()
     mod.build(manifest)
@@ -237,8 +199,6 @@ def test_pre_commit_collision_markers():
 def test_pre_commit_build_uv(manifest, mocker):
     """Test PreCommitModule configures standard hooks routing via uv."""
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="uv")
 
     mod = PreCommitModule()
     mod.build(manifest)
@@ -252,20 +212,6 @@ def test_pre_commit_build_uv(manifest, mocker):
     )
     assert any(
         t.command == ["uv", "run", "pre-commit", "autoupdate"]
-        for t in manifest.post_install_tasks
-    )
-
-
-def test_pre_commit_build_pip(manifest, mocker):
-    """Test PreCommitModule configures standard hooks routing via pip/venv."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-    mock_config = mocker.patch("protostar.modules.tooling_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(python_package_manager="pip")
-
-    mod = PreCommitModule()
-    mod.build(manifest)
-    assert any(
-        t.command == [".venv/bin/pre-commit", "install"]
         for t in manifest.post_install_tasks
     )
 
