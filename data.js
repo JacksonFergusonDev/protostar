@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784292109237,
+  "lastUpdate": 1784293001951,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3337,6 +3337,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 198.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "268bb42fdaeb5b24ad00053cb7efe287c78e6baf",
+          "message": "refactor: implement domain-specific exception hierarchy (#109)\n\n- Introduce typed exception subclasses for dependency, command execution, timeout, and filesystem failures.\n- Add structured 'hint' support to ProtostarError base class for consistent user-facing remediation.\n- Export expanded error vocabulary from package root for plugin stability.\n- Add comprehensive unit testing for exception metadata integrity and formatting.\n\nThis commit sets the architectural foundation for structured error handling, \nreplacing brittle, coincidental string matching of base RuntimeError/OSError \nwith explicit, domain-modeled exception types.",
+          "timestamp": "2026-07-17T05:55:44-07:00",
+          "tree_id": "4bf41accb8c7f3b67479bd6662e97fc845ba6bc9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/268bb42fdaeb5b24ad00053cb7efe287c78e6baf"
+        },
+        "date": 1784293001621,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 126.98,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 208.95,
             "unit": "ms"
           }
         ]
