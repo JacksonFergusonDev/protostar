@@ -11,7 +11,7 @@ from typing import Any
 from rich.console import Console
 
 from .config import ProtostarConfig
-from .errors import ConfigurationError
+from .errors import ConfigurationError, FileSystemError
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 
@@ -148,6 +148,7 @@ class SystemExecutor:
       - id: end-of-file-fixer
         exclude: \\.py$
       - id: check-yaml
+        exclude: \\.py$
       - id: check-added-large-files"""
 
         # Enforce exactly one empty line between all dynamic payloads
@@ -167,7 +168,10 @@ class SystemExecutor:
                     "        additional_dependencies:\n{{MYPY_DEPENDENCIES}}", ""
                 )
 
-        target.write_text(full_yaml)
+        try:
+            target.write_text(full_yaml)
+        except OSError as e:
+            raise FileSystemError("write configuration file", str(target), e) from e
         logger.debug("Scaffolded .pre-commit-config.yaml")
 
     def _write_injected_files(self) -> None:
@@ -181,8 +185,13 @@ class SystemExecutor:
                 not target.exists()
                 or self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
             ):
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_text(content)
+                try:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(content)
+                except OSError as e:
+                    raise FileSystemError(
+                        "inject boilerplate file", str(target), e
+                    ) from e
                 logger.debug(f"Injected configuration file: {filepath}")
 
     def _create_directories(self) -> None:
@@ -192,7 +201,12 @@ class SystemExecutor:
 
         for dir_path in self.manifest.directories:
             path = Path(dir_path)
-            path.mkdir(parents=True, exist_ok=True)
+            try:
+                path.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise FileSystemError(
+                    "create scaffolding directory", str(path), e
+                ) from e
             logger.debug(f"Scaffolded directory: {path}")
 
     def _execute_tasks(self) -> None:
