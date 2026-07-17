@@ -11,7 +11,12 @@ from typing import Any
 from rich.console import Console
 
 from .config import ProtostarConfig
-from .errors import ConfigurationError, FileSystemError
+from .errors import (
+    CommandExecutionError,
+    CommandTimeoutError,
+    ConfigurationError,
+    FileSystemError,
+)
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 
@@ -525,7 +530,7 @@ class SystemExecutor:
                     f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
                 ):
                     execute_subprocess(cmd, timeout=resolution_timeout)
-            except RuntimeError as e:
+            except (CommandExecutionError, CommandTimeoutError) as e:
                 self.manifest.add_diagnostic(
                     phase="Executor",
                     message=f"Standard dependency resolution failed: {e}",
@@ -539,7 +544,7 @@ class SystemExecutor:
                     f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
                 ):
                     execute_subprocess(dev_cmd, timeout=resolution_timeout)
-            except RuntimeError as e:
+            except (CommandExecutionError, CommandTimeoutError) as e:
                 self.manifest.add_diagnostic(
                     phase="Executor",
                     message=f"Development dependency resolution failed: {e}",

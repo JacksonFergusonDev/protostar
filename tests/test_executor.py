@@ -9,7 +9,12 @@ import pytest
 import tomlkit
 
 from protostar.config import ProtostarConfig
-from protostar.errors import ConfigurationError, FileSystemError
+from protostar.errors import (
+    CommandExecutionError,
+    CommandTimeoutError,
+    ConfigurationError,
+    FileSystemError,
+)
 from protostar.executor import SystemExecutor
 from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
 
@@ -606,20 +611,24 @@ def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_conf
     manifest.dependencies = ["invalid-pkg"]
     manifest.dev_dependencies = ["invalid-dev-pkg"]
 
-    mock_config.python_package_manager = "uv"
     executor = SystemExecutor(manifest, mock_config)
 
+    # Use the specific domain error the executor is now expecting
     mocker.patch(
         "protostar.executor.execute_subprocess",
-        side_effect=RuntimeError("Resolution failed"),
+        side_effect=CommandExecutionError(
+            command=["uv", "add", "invalid-pkg"],
+            returncode=1,
+            stdout="Error: failed to resolve",
+            stderr="Package not found",
+        ),
     )
 
     executor._install_dependencies()
 
-    warnings = [
-        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
-    ]
-    assert len(warnings) == 2
+    assert len(manifest.diagnostics) == 2
+    assert "Standard dependency resolution failed" in manifest.diagnostics[0].message
+    assert manifest.diagnostics[0].severity == Severity.WARNING
 
 
 def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
@@ -1184,3 +1193,24 @@ def test_write_ide_settings_handles_write_os_error(mocker):
 
     assert "synchronize IDE workspace preferences" in exc_info.value.operation
     assert "settings.json" in exc_info.value.path
+
+
+def test_executor_install_dependencies_timeout_degradation(mocker, mock_config):
+    """Test that dependency resolution timeouts append a diagnostic warning rather than crashing."""
+    manifest = EnvironmentManifest()
+    manifest.dependencies = ["massive-pkg"]
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch(
+        "protostar.executor.execute_subprocess",
+        side_effect=CommandTimeoutError(
+            command=["uv", "add", "massive-pkg"], timeout=600
+        ),
+    )
+
+    executor._install_dependencies()
+
+    assert len(manifest.diagnostics) == 1
+    assert "Command timed out" in manifest.diagnostics[0].message
+    assert manifest.diagnostics[0].severity == Severity.WARNING

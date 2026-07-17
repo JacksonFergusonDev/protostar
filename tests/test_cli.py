@@ -16,7 +16,11 @@ from protostar.cli import (
     intercept_interactive_wizards,
     main,
 )
-from protostar.errors import ConfigurationError, MissingDependencyError
+from protostar.errors import (
+    CommandExecutionError,
+    ConfigurationError,
+    MissingDependencyError,
+)
 
 
 def test_proto_help_formatter_usage(mocker):
@@ -399,3 +403,38 @@ def test_main_routes_generic_crash_to_software_status(mocker):
         main()
 
     mock_exit.assert_called_with(os.EX_SOFTWARE)  # 70
+
+
+def test_cli_handles_command_execution_error_output(mocker):
+    """Test that the CLI extracts and displays stdout/stderr from CommandExecutionError."""
+    # Mock CLI arguments to bypass the TUI wizard
+    mocker.patch("sys.argv", ["protostar", "init", "-f"])
+
+    # Force the orchestrator to throw the specific error we want to format
+    mocker.patch(
+        "protostar.cli.Orchestrator.run",
+        side_effect=CommandExecutionError(
+            command=["uv", "init"],
+            returncode=1,
+            stdout="Resolving dependencies...",
+            stderr="Network timeout",
+        ),
+    )
+
+    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_exit = mocker.patch("sys.exit")
+
+    main()
+
+    # The CLI should intercept the domain error and trigger a standard exit(1)
+    mock_exit.assert_called_with(1)
+
+    # Extract the payload passed to rich.console.print
+    # The last call is the panel rendering the error
+    panel_arg = mock_print.call_args_list[-1][0][0]
+    panel_body = str(panel_arg.renderable)
+
+    assert "--- STDOUT ---" in panel_body
+    assert "Resolving dependencies..." in panel_body
+    assert "--- STDERR ---" in panel_body
+    assert "Network timeout" in panel_body

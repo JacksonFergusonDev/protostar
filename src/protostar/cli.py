@@ -25,6 +25,7 @@ from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from .errors import (
+    CommandExecutionError,
     ConfigurationError,
     FileSystemError,
     MissingDependencyError,
@@ -472,6 +473,11 @@ def main() -> None:
         console.print()
 
         body = str(e)
+        if isinstance(e, CommandExecutionError):
+            if e.stdout:
+                body += f"\n\n[dim]--- STDOUT ---[/dim]\n{e.stdout.strip()}"
+            if e.stderr:
+                body += f"\n\n[dim]--- STDERR ---[/dim]\n{e.stderr.strip()}"
         if getattr(e, "hint", None):
             body += f"\n\n[dim]Hint: {e.hint}[/dim]"
 
