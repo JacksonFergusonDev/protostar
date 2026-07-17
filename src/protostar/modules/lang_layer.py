@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import ProtostarConfig
+from protostar.errors import MissingDependencyError
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -40,9 +41,10 @@ class PythonCore(BootstrapModule):
     def pre_flight(self) -> None:
         """Ensures uv is available."""
         if not shutil.which("uv"):
-            raise RuntimeError(
-                "Missing dependency: 'uv' is required for Python scaffolding. "
-                "Install it via `curl -LsSf https://astral.sh/uv/install.sh | sh`."
+            raise MissingDependencyError(
+                dependency="uv",
+                purpose="Python scaffolding",
+                install_hint="Install it via `curl -LsSf https://astral.sh/uv/install.sh | sh`.",
             )
 
     @property
