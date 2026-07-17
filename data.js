@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784296041928,
+  "lastUpdate": 1784297157257,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3473,6 +3473,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 191.37,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "74b57d2813b73ffb64f81787c7edbac178c88dd3",
+          "message": "refactor: wrap execution mutations with contextual FileSystemError (#112)\n\n* refactor: wrap file injections and directory setup with FileSystemError\n\nIntroduces OSError try-catch defensive blocks surrounding file injections,\ndirectory construction, and pre-commit YAML scaffolding mutations. Converts\nbare system exceptions cleanly into contextual FileSystemError definitions.\n\n* refactor: secure configuration file appends and syncs via FileSystemError\n\nApplies strict exception isolation blocks across late-binding configuration\nappends, .gitignore expansions, container optimizations, and local vscode\nsettings workspace sync adjustments.\n\n* test: create executor filesystem boundary mutation test coverage\n\nAdds explicit validation checks asserting that SystemExecutor converts typical\nlow-level OSError parameters (PermissionError, space allocation faults) smoothly\ninto contextualized, structural FileSystemError variants.\n\n* docs: update fixtures\n\n* test: achieve 100% test coverage for executor I/O exceptions\n\nIntroduces comprehensive mock boundary tests mapping to every unique\nFileSystemError context string variant in executor.py. Uses pytest-mock\nto simulate systemic disk full, permission denied, and hardware I/O\nfailures across appends, workspace ignores, container definitions, and\nIDE preference layouts to satisfy codecov validation targets.",
+          "timestamp": "2026-07-17T15:03:37+01:00",
+          "tree_id": "c891f3ba34feddb15071d2569dbcb9ee1402f4c4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/74b57d2813b73ffb64f81787c7edbac178c88dd3"
+        },
+        "date": 1784297156719,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.91,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 191.66,
             "unit": "ms"
           }
         ]
