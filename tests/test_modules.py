@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import ProtostarConfig
+from protostar.errors import MissingDependencyError
 from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
     DirenvModule,
@@ -106,8 +107,11 @@ def test_python_module_pre_flight_missing_uv(mocker):
     mod = PythonCore()
     mocker.patch("shutil.which", return_value=None)
 
-    with pytest.raises(RuntimeError, match="Missing dependency: 'uv' is required"):
+    with pytest.raises(MissingDependencyError) as exc_info:
         mod.pre_flight()
+
+    assert exc_info.value.dependency == "uv"
+    assert "Python scaffolding" in exc_info.value.purpose
 
 
 # --- DirenvModule Tests ---
@@ -116,8 +120,12 @@ def test_python_module_pre_flight_missing_uv(mocker):
 def test_direnv_pre_flight_missing(mocker):
     """Test DirenvModule aborts pre-flight if direnv is missing."""
     mocker.patch("shutil.which", return_value=None)
-    with pytest.raises(RuntimeError, match="direnv is not installed"):
+
+    with pytest.raises(MissingDependencyError) as exc_info:
         DirenvModule().pre_flight()
+
+    assert exc_info.value.dependency == "direnv"
+    assert "direnv integration" in exc_info.value.purpose
 
 
 def test_direnv_collision_markers():
@@ -188,8 +196,12 @@ def test_pytest_build(manifest):
 def test_pre_commit_pre_flight_missing(mocker):
     """Test PreCommitModule aborts pre-flight if git is missing."""
     mocker.patch("shutil.which", return_value=None)
-    with pytest.raises(RuntimeError, match="Missing dependency: 'git'"):
+
+    with pytest.raises(MissingDependencyError) as exc_info:
         PreCommitModule().pre_flight()
+
+    assert exc_info.value.dependency == "git"
+    assert "pre-commit hooks" in exc_info.value.purpose
 
 
 def test_pre_commit_collision_markers():
@@ -265,3 +277,34 @@ def test_mypy_module_injects_ide_extension():
     module = MypyModule()
     module.build(manifest)
     assert "ms-python.mypy-type-checker" in manifest.ide_extensions
+
+
+def test_python_core_pre_flight_missing_uv(mocker):
+    mocker.patch("shutil.which", return_value=None)
+    module = PythonCore()
+
+    with pytest.raises(MissingDependencyError) as exc_info:
+        module.pre_flight()
+
+    assert exc_info.value.dependency == "uv"
+    assert "Python scaffolding" in exc_info.value.purpose
+
+
+def test_direnv_module_pre_flight_missing_direnv(mocker):
+    mocker.patch("shutil.which", return_value=None)
+    module = DirenvModule()
+
+    with pytest.raises(MissingDependencyError) as exc_info:
+        module.pre_flight()
+
+    assert exc_info.value.dependency == "direnv"
+
+
+def test_pre_commit_module_pre_flight_missing_git(mocker):
+    mocker.patch("shutil.which", return_value=None)
+    module = PreCommitModule()
+
+    with pytest.raises(MissingDependencyError) as exc_info:
+        module.pre_flight()
+
+    assert exc_info.value.dependency == "git"
