@@ -93,7 +93,9 @@ class ProtostarConfig:
     _instance: ClassVar["ProtostarConfig | None"] = None
 
     @classmethod
-    def load(cls, force_reload: bool = False) -> "ProtostarConfig":
+    def load(
+        cls, force_reload: bool = False, override_path: Path | None = None
+    ) -> "ProtostarConfig":
         """Loads and parses the global Protostar configuration file.
 
         Evaluates the global XDG configuration and implements a class-level cache
@@ -101,17 +103,25 @@ class ProtostarConfig:
 
         Args:
             force_reload: If True, bypasses the cache and forces a disk read.
+            override_path: An optional path to a portable configuration to overlay.
 
         Returns:
             The loaded ProtostarConfig instance.
         """
-        if cls._instance is not None and not force_reload:
+        if cls._instance is not None and not force_reload and override_path is None:
             return cls._instance
 
         instance = cls()
 
         if CONFIG_FILE.exists():
             instance = cls._parse_and_merge(CONFIG_FILE, instance)
+
+        if override_path is not None:
+            if not override_path.exists():
+                raise ConfigurationError(
+                    f"Configuration file not found: {override_path}"
+                )
+            instance = cls._parse_and_merge(override_path, instance)
 
         cls._instance = instance
         return instance
