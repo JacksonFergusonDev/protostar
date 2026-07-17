@@ -11,7 +11,7 @@ from rich.console import Console
 
 from .config import ProtostarConfig
 from .errors import ConfigurationError
-from .manifest import CollisionStrategy, EnvironmentManifest
+from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 
 logger = logging.getLogger("protostar")
@@ -37,7 +37,6 @@ class SystemExecutor:
         self.manifest = manifest
         self.config = config
         self.docker = docker
-        self.warnings: list[str] = []
 
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
@@ -87,8 +86,10 @@ class SystemExecutor:
             target.exists()
             and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
         ):
-            logger.debug(
-                "Skipping .pre-commit-config.yaml generation; file already exists."
+            self.manifest.add_diagnostic(
+                phase="Executor",
+                message="Skipping .pre-commit-config.yaml generation; file already exists.",
+                severity=Severity.SKIP,
             )
             return
 
@@ -194,9 +195,10 @@ class SystemExecutor:
                 if isinstance(value, tomlkit.items.Table):
                     # Type Parity Guard
                     if not isinstance(base[key], tomlkit.items.Table):
-                        self.warnings.append(
-                            f"TOML Merge Collision: Expected a Table for key '{key}', "
-                            f"but found {type(base[key]).__name__}. Skipping injection."
+                        self.manifest.add_diagnostic(
+                            phase="Executor",
+                            message=f"TOML Merge Collision: Expected a Table for key '{key}', but found {type(base[key]).__name__}. Skipping injection.",
+                            severity=Severity.WARNING,
                         )
                         continue
 
@@ -213,9 +215,10 @@ class SystemExecutor:
                 elif isinstance(value, tomlkit.items.AoT):
                     # Type Parity Guard
                     if not isinstance(base[key], tomlkit.items.AoT):
-                        self.warnings.append(
-                            f"TOML Merge Collision: Expected an Array of Tables for key '{key}', "
-                            f"but found {type(base[key]).__name__}. Skipping injection."
+                        self.manifest.add_diagnostic(
+                            phase="Executor",
+                            message=f"TOML Merge Collision: Expected an Array of Tables for key '{key}', but found {type(base[key]).__name__}. Skipping injection.",
+                            severity=Severity.WARNING,
                         )
                         continue
 
@@ -417,10 +420,10 @@ class SystemExecutor:
                         raise ValueError("Root JSON element is not an object.")
                     settings = parsed_data
                 except (json.JSONDecodeError, ValueError):
-                    console.print(
-                        "Existing settings.json contains comments, "
-                        "trailing commas, or is malformed. Skipping IDE settings injection "
-                        "to prevent data loss."
+                    self.manifest.add_diagnostic(
+                        phase="Executor",
+                        message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
+                        severity=Severity.WARNING,
                     )
                     return
 
@@ -452,7 +455,11 @@ class SystemExecutor:
                     ):
                         execute_subprocess(cmd, timeout=resolution_timeout)
                 except RuntimeError as e:
-                    self.warnings.append(f"Standard dependency resolution failed: {e}")
+                    self.manifest.add_diagnostic(
+                        phase="Executor",
+                        message=f"Standard dependency resolution failed: {e}",
+                        severity=Severity.WARNING,
+                    )
 
             if self.manifest.dev_dependencies:
                 dev_cmd = ["uv", "add", "--dev", *self.manifest.dev_dependencies]
@@ -462,8 +469,10 @@ class SystemExecutor:
                     ):
                         execute_subprocess(dev_cmd, timeout=resolution_timeout)
                 except RuntimeError as e:
-                    self.warnings.append(
-                        f"Development dependency resolution failed: {e}"
+                    self.manifest.add_diagnostic(
+                        phase="Executor",
+                        message=f"Development dependency resolution failed: {e}",
+                        severity=Severity.WARNING,
                     )
         else:
             venv_pip = Path(".venv/bin/pip")
@@ -477,7 +486,11 @@ class SystemExecutor:
                 ):
                     execute_subprocess(cmd, timeout=resolution_timeout)
             except RuntimeError as e:
-                self.warnings.append(f"Pip dependency resolution failed: {e}")
+                self.manifest.add_diagnostic(
+                    phase="Executor",
+                    message=f"Pip dependency resolution failed: {e}",
+                    severity=Severity.WARNING,
+                )
 
             req_path = Path("requirements.txt")
             if req_path.exists():
@@ -497,10 +510,14 @@ class SystemExecutor:
                     req_path.write_text(result.stdout)
                     logger.debug("Successfully froze dependencies to requirements.txt")
                 except subprocess.TimeoutExpired:
-                    self.warnings.append(
-                        "Failed to freeze dependencies to requirements.txt: Process timed out."
+                    self.manifest.add_diagnostic(
+                        phase="Executor",
+                        message="Failed to freeze dependencies to requirements.txt: Process timed out.",
+                        severity=Severity.WARNING,
                     )
                 except Exception as e:
-                    self.warnings.append(
-                        f"Failed to freeze dependencies to requirements.txt: {e}"
+                    self.manifest.add_diagnostic(
+                        phase="Executor",
+                        message=f"Failed to freeze dependencies to requirements.txt: {e}",
+                        severity=Severity.WARNING,
                     )
