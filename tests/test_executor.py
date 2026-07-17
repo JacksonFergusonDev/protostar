@@ -56,72 +56,6 @@ def test_executor_install_dependencies_uv(mocker, mock_config):
     mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"], timeout=600)
 
 
-def test_executor_install_dependencies_pip_freeze(
-    monkeypatch, mocker, tmp_path, mock_config
-):
-    """Test that the executor runs a local pip installation and writes a freeze state."""
-    monkeypatch.chdir(tmp_path)
-
-    manifest = EnvironmentManifest()
-    manifest.add_dependency("dummy-pkg")
-    manifest.add_dev_dependency("dev-pkg")
-
-    mock_config.python_package_manager = "pip"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
-    mock_run = mocker.patch("protostar.executor.subprocess.run")
-
-    pip_bin = tmp_path / ".venv" / "bin"
-    pip_bin.mkdir(parents=True)
-    pip_exe = pip_bin / "pip"
-    pip_exe.touch()
-
-    mock_run.return_value.stdout = "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
-
-    executor._install_dependencies()
-
-    mock_execute.assert_called_once_with(
-        [".venv/bin/pip", "install", "dummy-pkg", "dev-pkg"], timeout=600
-    )
-    mock_run.assert_called_once_with(
-        [".venv/bin/pip", "freeze"],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=30,
-    )
-
-    assert (
-        tmp_path / "requirements.txt"
-    ).read_text() == "dummy-pkg==1.0.0\ndev-pkg==2.0.0\n"
-
-
-def test_executor_install_dependencies_pip_freeze_timeout(mocker, mock_config):
-    """Test that a pip freeze timeout is gracefully aggregated in warnings."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["requests"]
-
-    mock_config.python_package_manager = "pip"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.execute_subprocess")
-    mocker.patch("protostar.executor.Path.exists", return_value=False)
-
-    mocker.patch(
-        "protostar.executor.subprocess.run",
-        side_effect=subprocess.TimeoutExpired(cmd=["pip", "freeze"], timeout=30),
-    )
-
-    executor._install_dependencies()
-
-    assert any(
-        "Process timed out" in d.message
-        for d in executor.manifest.diagnostics
-        if d.severity == Severity.WARNING
-    )
-
-
 def test_executor_append_files_late_binding(mocker, mock_config):
     """Test that configuration payloads are interpolated with the active python version."""
     manifest = EnvironmentManifest()
@@ -301,27 +235,6 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     assert ".python-version" in written_data
 
 
-def test_executor_append_files_pip_fallback(monkeypatch, tmp_path, mock_config):
-    """Test that the executor scrapes pyvenv.cfg if pyproject.toml is missing."""
-    monkeypatch.chdir(tmp_path)
-
-    venv_dir = tmp_path / ".venv"
-    venv_dir.mkdir()
-    (venv_dir / "pyvenv.cfg").write_text("home = /usr/bin\nversion = 3.10.12\n")
-
-    manifest = EnvironmentManifest()
-    manifest.add_file_append("pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"')
-    executor = SystemExecutor(manifest, mock_config)
-
-    executor._append_files()
-
-    written_data = (tmp_path / "pyproject.toml").read_text()
-    parsed_toml = tomllib.loads(written_data)
-
-    # Verify the fallback resolved and injected the correct version structurally
-    assert parsed_toml["python_version"] == "3.10"
-
-
 def test_executor_writes_vscode_settings_jsonc_abort(
     monkeypatch, mocker, tmp_path, mock_config
 ):
@@ -344,33 +257,6 @@ def test_executor_writes_vscode_settings_jsonc_abort(
         for d in executor.manifest.diagnostics
         if d.severity == Severity.WARNING
     )
-
-
-def test_executor_install_dependencies_pip_reqs_exist(
-    monkeypatch, mocker, tmp_path, mock_config
-):
-    """Test that pip freeze skips overwriting an existing requirements.txt."""
-    monkeypatch.chdir(tmp_path)
-
-    req_file = tmp_path / "requirements.txt"
-    req_file.write_text("my-custom-pkg==1.0.0\n")
-
-    manifest = EnvironmentManifest()
-    manifest.add_dependency("dummy-pkg")
-
-    mock_config.python_package_manager = "pip"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.execute_subprocess")
-    mock_run = mocker.patch("protostar.executor.subprocess.run")
-    mock_print = mocker.patch("protostar.executor.console.print")
-
-    executor._install_dependencies()
-
-    mock_print.assert_called()
-    assert "requirements.txt already exists" in mock_print.call_args[0][0]
-    mock_run.assert_not_called()
-    assert req_file.read_text() == "my-custom-pkg==1.0.0\n"
 
 
 def test_executor_writes_injected_files_overwrite(mocker, mock_config):
@@ -713,31 +599,6 @@ def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
     mock_exists.assert_not_called()
 
 
-def test_executor_install_dependencies_pip_freeze_exception(mocker, mock_config):
-    """Test that a pip freeze subprocess crash is gracefully aggregated in warnings."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["requests"]
-
-    mock_config.python_package_manager = "pip"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.execute_subprocess")
-    mocker.patch("protostar.executor.Path.exists", return_value=False)
-
-    mocker.patch(
-        "protostar.executor.subprocess.run",
-        side_effect=subprocess.CalledProcessError(1, "pip freeze"),
-    )
-
-    executor._install_dependencies()
-
-    assert any(
-        "Failed to freeze dependencies to requirements.txt" in d.message
-        for d in executor.manifest.diagnostics
-        if d.severity == Severity.WARNING
-    )
-
-
 def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_config):
     """Test that uv resolution failures are appended to warnings without aborting."""
     manifest = EnvironmentManifest()
@@ -758,28 +619,6 @@ def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_conf
         d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
     ]
     assert len(warnings) == 2
-
-
-def test_executor_install_dependencies_graceful_degradation_pip(mocker, mock_config):
-    """Test that pip resolution failures are appended to warnings without aborting."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["invalid-pkg"]
-
-    mock_config.python_package_manager = "pip"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch(
-        "protostar.executor.execute_subprocess",
-        side_effect=RuntimeError("Pip installation failed"),
-    )
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-
-    executor._install_dependencies()
-
-    warnings = [
-        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
-    ]
-    assert len(warnings) == 1
 
 
 def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):

@@ -20,9 +20,6 @@ DEFAULT_CONFIG_CONTENT = """[env]
 # Auto-scaffold direnv with python environments
 direnv = false
 
-# Preferred Python package manager: 'uv' or 'pip'
-python_package_manager = "uv"
-
 # Default Python version
 python_version = "3.13"
 
@@ -61,7 +58,6 @@ class ProtostarConfig:
     Attributes:
         ide (str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
-        python_package_manager (str): The preferred Python manager ('uv', 'pip').
         python_version (str | None): The specific Python version to scaffold.
         markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
@@ -75,7 +71,6 @@ class ProtostarConfig:
 
     ide: str | None = None
     direnv: bool = False
-    python_package_manager: str = "uv"
     python_version: str | None = "3.13"
     markdownlint: bool = False
     ruff: bool = True

@@ -6,9 +6,6 @@
 # Auto-scaffold direnv with python environments
 direnv = false
 
-# Preferred Python package manager: 'uv' or 'pip'
-python_package_manager = "uv"
-
 # Default Python version
 python_version = "3.13"
 

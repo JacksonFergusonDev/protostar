@@ -4,8 +4,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.config import ProtostarConfig
-
 from .base import PresetModule
 
 if TYPE_CHECKING:
@@ -75,12 +73,7 @@ class AstroPreset(PresetModule):
             )
 
         # 3. Queue nbdime configuration
-        config = ProtostarConfig.load()
-        if config.python_package_manager == "uv":
-            nbdime_cmd = ["uv", "run", "nbdime", "config-git", "--enable"]
-        else:
-            nbdime_cmd = [".venv/bin/nbdime", "config-git", "--enable"]
-
         manifest.add_post_install_task(
-            nbdime_cmd, description="Configuring nbdime git integration"
+            ["uv", "run", "nbdime", "config-git", "--enable"],
+            description="Configuring nbdime git integration",
         )
