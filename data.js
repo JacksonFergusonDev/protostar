@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784288236819,
+  "lastUpdate": 1784290803606,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3269,6 +3269,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 187.28,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "127add52622920ca61252b481d65d35596364568",
+          "message": "refactor: enforce strict uv architecture and remove pip support (#108)\n\nThis commit drops `pip` as a supported package manager to reduce architectural branching logic and enforce a deterministic, high-velocity execution pipeline.\n\n- Removed `python_package_manager` from `ProtostarConfig`.\n- Locked `PythonCore` to `uv init` and stripped Python/pip system requirements.\n- Removed `pip` subprocess execution, exception handling, and `requirements.txt` freezing from `SystemExecutor`.\n- Removed `.venv/pyvenv.cfg` regex fallback parsing for Python version resolution.\n- Hardcoded `uv sync` and `uv run` commands into `direnv`, `pre-commit`, and `nbdime` tooling.\n- Cleaned up obsolete `pip` branches and mocks from the test suite.",
+          "timestamp": "2026-07-17T05:19:10-07:00",
+          "tree_id": "f390d3085a895f1918f00110323c52146254d6d0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/127add52622920ca61252b481d65d35596364568"
+        },
+        "date": 1784290803232,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.99,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 187.02,
             "unit": "ms"
           }
         ]
