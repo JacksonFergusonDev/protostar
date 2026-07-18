@@ -3,8 +3,10 @@ import os
 import pytest
 
 from protostar.config import ProtostarConfig
+from protostar.errors import ConfigurationError
 from protostar.wizard import (
     _should_run_wizard,
+    resolve_missing_variables,
     run_init_wizard,
 )
 
@@ -52,3 +54,27 @@ def test_run_init_wizard_cancellation(mocker):
     mock_checkbox.return_value.ask.return_value = None
 
     assert run_init_wizard() is None
+
+
+def test_resolve_missing_variables_non_interactive(mocker):
+    """Test that resolving variables fails in a non-interactive environment."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=False)
+
+    with pytest.raises(
+        ConfigurationError, match="Non-interactive environment detected"
+    ):
+        resolve_missing_variables(["project_name", "author"])
+
+
+def test_resolve_missing_variables_interactive(mocker):
+    """Test that questionary successfully collects missing variables."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+
+    mock_ask = mocker.Mock(return_value="Orbit App")
+    mock_text = mocker.Mock(return_value=mocker.Mock(ask=mock_ask))
+    mocker.patch("questionary.text", mock_text)
+
+    context = resolve_missing_variables(["project_name"])
+
+    assert context == {"project_name": "Orbit App"}
+    mock_text.assert_called_once_with("project_name:")

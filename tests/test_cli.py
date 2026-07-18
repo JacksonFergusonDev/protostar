@@ -9,6 +9,7 @@ import pytest
 
 from protostar.cli import (
     ProtoHelpFormatter,
+    _parse_dynamic_kwargs,
     build_parser,
     configure_logging,
     handle_config,
@@ -438,3 +439,23 @@ def test_cli_handles_command_execution_error_output(mocker):
     assert "Resolving dependencies..." in panel_body
     assert "--- STDERR ---" in panel_body
     assert "Network timeout" in panel_body
+
+
+def test_parse_dynamic_kwargs_valid():
+    """Test that dynamic CLI kwargs are parsed correctly."""
+    args = ["--project_name=orbit", "--author", "jackson", "--flag_without_value"]
+    kwargs = _parse_dynamic_kwargs(args)
+
+    assert kwargs == {
+        "project_name": "orbit",
+        "author": "jackson",
+        "flag_without_value": "",
+    }
+
+
+def test_parse_dynamic_kwargs_rejects_positional():
+    """Test that positional arguments raise a ConfigurationError."""
+    args = ["--project_name", "orbit", "invalid_positional"]
+
+    with pytest.raises(ConfigurationError, match="Unrecognized positional argument"):
+        _parse_dynamic_kwargs(args)

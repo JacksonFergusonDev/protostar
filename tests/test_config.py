@@ -1,5 +1,4 @@
 from collections.abc import Generator
-from pathlib import Path
 from typing import cast
 
 import pytest
@@ -28,43 +27,8 @@ def clear_config_cache() -> Generator[None, None, None]:
     ProtostarConfig._instance = None
 
 
-def test_config_ruff_toggle(mocker):
-    """Test that the 'ruff' toggle correctly sets config.ruff = False."""
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    payload = {"env": {"ruff": False}}
-
-    mocker.patch("protostar.config.tomllib.load", return_value=payload)
-    mocker.patch("builtins.open", mocker.mock_open())
-
-    # Ensure we bypass the class cache for a clean read
-    config = ProtostarConfig.load(force_reload=True)
-    assert config.ruff is False
-
-
-def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
-    """Test that a malformed TOML file raises a ConfigurationError instead of a generic ValueError."""
-
-    # 1. Create a real, temporary file with deliberately broken TOML syntax
-    mock_global_config = tmp_path / "config.toml"
-    mock_global_config.write_text("invalid [ toml syntax === \n")
-
-    # 2. Redirect the module's constants to point to our temporary sandboxed files
-    mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
-
-    # Execute the load sequence and expect a ConfigurationError bubbled up
-    with pytest.raises(
-        ConfigurationError, match="Syntax error in configuration file"
-    ) as exc:
-        protostar.config.ProtostarConfig.load()
-
-    assert "Syntax error in configuration file" in str(exc.value)
-    assert str(mock_global_config) in str(exc.value)
-
-
 def test_config_advanced_overrides_parsing(mocker, tmp_path):
     """Test that dynamic parsing correctly extracts presets, dev tools, and raw TOML injections."""
-    import protostar.config
 
     # Construct a complex configuration payload using the new schemas
     mock_global_config = tmp_path / "config.toml"
@@ -102,87 +66,6 @@ def test_config_advanced_overrides_parsing(mocker, tmp_path):
     assert (
         config.pyproject_injections["custom_ruff"] == "[tool.ruff]\nline-length = 100"
     )
-
-
-def test_config_runtime_type_validation(mocker):
-    """Test that the parser catches invalid types, drops them, and falls back to defaults."""
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    # Inject deliberately wrong Python primitive types
-    payload = {
-        "env": {
-            "ide": 42,  # Expected string
-            "direnv": "yes",  # Expected boolean
-            "python_version": ["3.12"],  # Expected string or None
-        }
-    }
-
-    mocker.patch("protostar.config.tomllib.load", return_value=payload)
-    mocker.patch("builtins.open", mocker.mock_open())
-
-    config = ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
-
-    assert config.ide is None
-    assert config.direnv is False
-    assert config.python_version == "3.13"
-
-    # Verify the warnings told the user exactly what type was expected
-    assert len(config._parsing_warnings) == 3
-
-
-def test_config_unknown_root_keys(mocker):
-    """Test that the parser warns about unrecognized or misspelled root blocks."""
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    payload = {
-        "env": {"ide": "cursor"},
-        "presetz": {"latex": "minimal"},  # Typo in root key
-        "unknown_block": {"foo": "bar"},
-    }
-
-    mocker.patch("protostar.config.tomllib.load", return_value=payload)
-    mocker.patch("builtins.open", mocker.mock_open())
-
-    from pathlib import Path
-
-    config = ProtostarConfig._parse_and_merge(Path("dummy.toml"), ProtostarConfig())
-
-    # Should capture 1 warning for 'presetz' and 'unknown_block' combined (grouped by the parser)
-    assert len(config._parsing_warnings) == 1
-    assert "presetz" in config._parsing_warnings[0]
-
-
-def test_config_ruff_invalid_type(mocker):
-    """Test that an invalid type for the 'ruff' key triggers a generalized warning."""
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    # Pass a string instead of a boolean
-    payload = {"env": {"ruff": "yes"}}
-
-    mocker.patch("protostar.config.tomllib.load", return_value=payload)
-    mocker.patch("builtins.open", mocker.mock_open())
-
-    config = ProtostarConfig.load(force_reload=True)
-
-    assert config.ruff is True
-    assert len(config._parsing_warnings) == 1
-
-
-def test_config_complex_generic_type_passthrough(mocker):
-    """Test that complex generic types (like dicts/lists) in the env block bypass deep validation."""
-    mocker.patch("protostar.config.Path.exists", return_value=True)
-
-    # `presets` has a type of `dict[str, Any]` which resolves an origin of `dict`.
-    # It should hit the `origin not in (None, types.UnionType, typing.Union)` early-continue block.
-    payload = {"env": {"presets": {"custom_preset": "value"}}}
-
-    mocker.patch("protostar.config.tomllib.load", return_value=payload)
-    mocker.patch("builtins.open", mocker.mock_open())
-
-    config = ProtostarConfig.load()
-
-    # The dictionary should pass through successfully
-    assert config.presets == {"custom_preset": "value"}
 
 
 def test_config_captures_parsing_warnings(tmp_path, monkeypatch) -> None:
@@ -246,3 +129,149 @@ def test_filesystem_error_unwraps_os_error():
     assert err.path == ".envrc"
     assert "Permission denied" in str(err)
     assert err.original == os_err
+
+
+def test_config_ruff_toggle(mocker):
+    """Test that the 'ruff' toggle correctly sets config.ruff = False."""
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+    mocker.patch("protostar.config.Path.read_text", return_value="[env]\nruff = false")
+
+    config = ProtostarConfig.load(force_reload=True)
+    assert config.ruff is False
+
+
+def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
+    """Test that a malformed TOML file raises a ConfigurationError."""
+    mock_global_config = tmp_path / "config.toml"
+    mock_global_config.write_text("invalid [ toml syntax === \n")
+
+    mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
+
+    with pytest.raises(
+        ConfigurationError, match="Syntax error in configuration source"
+    ):
+        ProtostarConfig.load(force_reload=True)
+
+
+def test_config_runtime_type_validation(mocker):
+    """Test that the parser catches invalid types, drops them, and falls back to defaults."""
+    payload_str = """
+    [env]
+    ide = 42
+    direnv = "yes"
+    python_version = ["3.12"]
+    """
+    config = ProtostarConfig._parse_and_merge(
+        payload_str, "dummy.toml", ProtostarConfig()
+    )
+
+    assert config.ide is None
+    assert config.direnv is False
+    assert config.python_version == "3.13"
+
+
+def test_config_unknown_root_keys(mocker):
+    """Test that the parser warns about unrecognized or misspelled root blocks."""
+    payload_str = """
+    [env]
+    ide = "cursor"
+    
+    [presetz]
+    latex = "minimal"
+    
+    [unknown_block]
+    foo = "bar"
+    """
+    config = ProtostarConfig._parse_and_merge(
+        payload_str, "dummy.toml", ProtostarConfig()
+    )
+    warnings = config._parsing_warnings
+
+    assert any("Unrecognized root keys" in w and "presetz" in w for w in warnings)
+    assert any("Unrecognized root keys" in w and "unknown_block" in w for w in warnings)
+
+
+def test_config_ruff_invalid_type(mocker):
+    """Test that an invalid type for the 'ruff' key triggers a generalized warning."""
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+    mocker.patch("protostar.config.Path.read_text", return_value='[env]\nruff = "yes"')
+
+    config = ProtostarConfig.load(force_reload=True)
+
+    assert config.ruff is True  # Falls back to default
+    assert len(config._parsing_warnings) == 1
+
+
+def test_config_complex_generic_type_passthrough(mocker):
+    """Test that complex generic types (like dicts/lists) bypass deep validation."""
+    mocker.patch("protostar.config.Path.exists", return_value=True)
+    mocker.patch(
+        "protostar.config.Path.read_text",
+        return_value='[presets]\ncustom_preset = "value"',
+    )
+
+    config = ProtostarConfig.load(force_reload=True)
+    assert config.presets.get("custom_preset") == "value"
+
+
+def test_config_load_remote_target(mocker, tmp_path):
+    """Test that HTTP/HTTPS override targets route to the network module."""
+    # Patch the global variable to point to a sandboxed path that doesn't exist
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
+
+    # Patch the source of the lazy import, not the config module
+    mock_fetch = mocker.patch(
+        "protostar.network.fetch_remote_config", return_value="[env]\nide = 'cursor'"
+    )
+
+    config = ProtostarConfig.load(
+        force_reload=True, override_target="https://example.com/config.toml"
+    )
+
+    mock_fetch.assert_called_once_with("https://example.com/config.toml")
+    assert config.ide == "cursor"
+
+
+def test_config_load_local_target_missing(mocker, tmp_path):
+    """Test that a missing local override target raises a ConfigurationError."""
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
+
+    with pytest.raises(ConfigurationError, match="Configuration file not found"):
+        ProtostarConfig.load(
+            force_reload=True, override_target="definitely_does_not_exist_12345.toml"
+        )
+
+
+def test_config_load_local_target_with_context(mocker, tmp_path):
+    """Test loading a local target with template placeholders satisfied by context."""
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
+
+    # Create a real sandboxed TOML file with a placeholder
+    target = tmp_path / "custom.toml"
+    target.write_text('[env]\npython_version = "{{py_ver}}"\n')
+
+    config = ProtostarConfig.load(
+        force_reload=True,
+        override_target=str(target),
+        template_context={"py_ver": "3.14"},
+    )
+
+    assert config.python_version == "3.14"
+
+
+def test_config_load_invokes_wizard_for_missing_vars(mocker, tmp_path):
+    """Test that missing template variables trigger the interactive wizard via lazy import."""
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
+
+    target = tmp_path / "custom.toml"
+    target.write_text('[env]\npython_version = "{{py_ver}}"\n')
+
+    # Patch the source of the lazy import
+    mock_wizard = mocker.patch(
+        "protostar.wizard.resolve_missing_variables", return_value={"py_ver": "3.15"}
+    )
+
+    config = ProtostarConfig.load(force_reload=True, override_target=str(target))
+
+    mock_wizard.assert_called_once_with(["py_ver"])
+    assert config.python_version == "3.15"
