@@ -53,11 +53,15 @@ def handle_init(args: argparse.Namespace) -> None:
     Dynamically constructs the environment manifest by evaluating flags mapped
     to the respective OS, IDE, and preset registries.
     """
+    from .wizard import resolve_missing_variables
+
     override_target = getattr(args, "from_path", None)
     template_context = getattr(args, "template_context", {})
 
     config = ProtostarConfig.load(
-        override_target=override_target, template_context=template_context
+        override_target=override_target,
+        template_context=template_context,
+        variable_resolver=resolve_missing_variables,
     )
 
     modules: list[BootstrapModule] = []

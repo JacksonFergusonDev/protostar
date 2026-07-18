@@ -2,11 +2,13 @@ import logging
 import tomllib
 import types
 import typing
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
 from .errors import ConfigurationError
+from .network import fetch_remote_config
 from .templating import extract_variables, render_template
 
 logger = logging.getLogger("protostar")
@@ -99,6 +101,7 @@ class ProtostarConfig:
         force_reload: bool = False,
         override_target: str | None = None,
         template_context: dict[str, str] | None = None,
+        variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
     ) -> "ProtostarConfig":
         """Loads and parses the global Protostar configuration file.
 
@@ -109,6 +112,7 @@ class ProtostarConfig:
             force_reload: If True, bypasses the cache and forces a disk read.
             override_target: An optional path or URL to a portable configuration to overlay.
             template_context: Variables passed via CLI to inject into the template.
+            variable_resolver: A callable that resolves missing template variables
 
         Returns:
             The loaded ProtostarConfig instance.
@@ -127,8 +131,6 @@ class ProtostarConfig:
             if override_target.startswith("http://") or override_target.startswith(
                 "https://"
             ):
-                from .network import fetch_remote_config
-
                 content = fetch_remote_config(override_target)
             else:
                 target_path = Path(override_target)
@@ -139,13 +141,18 @@ class ProtostarConfig:
                 content = target_path.read_text(encoding="utf-8")
 
             variables = extract_variables(content)
-            context = template_context or {}
+            context = dict(template_context) if template_context else {}
             missing = [v for v in variables if v not in context]
 
             if missing:
-                from .wizard import resolve_missing_variables
-
-                context.update(resolve_missing_variables(missing))
+                if variable_resolver is not None:
+                    context.update(variable_resolver(missing))
+                else:
+                    raise ConfigurationError(
+                        f"Configuration template requires variables: {', '.join(missing)}. "
+                        "Please provide them via CLI flags (e.g. --variable_name=value) "
+                        "or run in an interactive terminal."
+                    )
 
             content = render_template(content, context)
             instance = cls._parse_and_merge(content, override_target, instance)
