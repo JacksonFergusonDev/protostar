@@ -221,7 +221,7 @@ def test_config_load_remote_target(mocker, tmp_path):
 
     # Patch the source of the lazy import, not the config module
     mock_fetch = mocker.patch(
-        "protostar.network.fetch_remote_config", return_value="[env]\nide = 'cursor'"
+        "protostar.config.fetch_remote_config", return_value="[env]\nide = 'cursor'"
     )
 
     config = ProtostarConfig.load(
@@ -271,7 +271,23 @@ def test_config_load_invokes_wizard_for_missing_vars(mocker, tmp_path):
         "protostar.wizard.resolve_missing_variables", return_value={"py_ver": "3.15"}
     )
 
-    config = ProtostarConfig.load(force_reload=True, override_target=str(target))
+    config = ProtostarConfig.load(
+        force_reload=True,
+        override_target=str(target),
+        variable_resolver=mock_wizard,
+    )
 
     mock_wizard.assert_called_once_with(["py_ver"])
     assert config.python_version == "3.15"
+
+
+def test_config_load_missing_vars_without_resolver_raises(mocker, tmp_path):
+    """Verify that missing template variables raise an error when no resolver is provided."""
+    # Patch global config file so we don't pick up the user's actual config
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "nonexistent.toml")
+
+    target = tmp_path / "templated.toml"
+    target.write_text('[env]\npython_version = "{{py_ver}}"\n')
+
+    with pytest.raises(ConfigurationError, match="requires variables"):
+        ProtostarConfig.load(force_reload=True, override_target=str(target))
