@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784340214506,
+  "lastUpdate": 1784342118553,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3609,6 +3609,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 186.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "adee0deb40f50b0b537614fe0441b40b188dad32",
+          "message": "refactor: decouple config loading from interactive wizard (#115)\n\nReplace the direct wizard call in config.py with a variable_resolver\ncallback pattern. This restores a clean layered architecture where\nthe configuration module (a pure data layer) never depends on UI code.\nThe CLI orchestrator now injects the interactive resolver, keeping the\ndependency direction one-way and enabling independent testing.",
+          "timestamp": "2026-07-17T19:34:23-07:00",
+          "tree_id": "ba1ab24a47c172731db0ec70d0369d9eddf432d8",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/adee0deb40f50b0b537614fe0441b40b188dad32"
+        },
+        "date": 1784342117987,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 123.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 191.25,
             "unit": "ms"
           }
         ]
