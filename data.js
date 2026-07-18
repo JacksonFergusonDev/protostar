@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784306345370,
+  "lastUpdate": 1784340214506,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3575,6 +3575,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 187.28,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "67037e44b3d5116b4bd1c2966c059e142ce6a52c",
+          "message": "feat: implement --from flag for portable environments and templated configurations (#114)\n\nIntroduces the ability to scaffold environments using portable TOML specifications \nvia local file paths or remote HTTPS URLs, complete with an interactive fallback \nwizard for template variables.\n\n- Expands `ProtostarConfig` schema to support `[files]` and `[variables]`.\n- Implements `network.py` to fetch remote configs, enforcing HTTPS and automating GitHub/GitLab blob-to-raw URL translation.\n- Adds `templating.py` to perform AST-safe variable interpolation for `{{placeholders}}` prior to TOML parsing.\n- Updates `cli.py` with `parse_known_args()` to capture dynamic variable overrides (e.g., `--project_name=orbit`).\n- Integrates a `questionary` wizard to prompt for unresolved variables, strictly aborting in non-interactive CI environments.\n- Bridges configuration file payloads directly into the `EnvironmentManifest` execution pipeline.\n- Expands the test suite with strict disk I/O and network boundary mocking.",
+          "timestamp": "2026-07-17T19:02:39-07:00",
+          "tree_id": "36e5bd7208ef24f62ae6bd6f2fd95e8bee970a04",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/67037e44b3d5116b4bd1c2966c059e142ce6a52c"
+        },
+        "date": 1784340213956,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.23,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 186.5,
             "unit": "ms"
           }
         ]
