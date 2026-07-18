@@ -10,7 +10,7 @@ from .errors import ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
-from .presets.base import PresetModule
+from .presets import PresetModule
 
 logger = logging.getLogger("protostar")
 console = Console()
@@ -154,6 +154,11 @@ class Orchestrator:
             logger.debug("Injecting global pyproject.toml payloads from configuration.")
             for payload in self.config.pyproject_injections.values():
                 self.manifest.add_file_append("pyproject.toml", payload)
+
+        if self.config.files:
+            logger.debug("Injecting static files from configuration.")
+            for filepath, content in self.config.files.items():
+                self.manifest.add_file_injection(filepath, content)
 
         # Phase 4: System Execution
         executor = SystemExecutor(self.manifest, self.config, self.docker)

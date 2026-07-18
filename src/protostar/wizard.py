@@ -4,7 +4,10 @@ import os
 import sys
 from typing import Any
 
+from rich.console import Console
+
 from .config import ProtostarConfig
+from .errors import ConfigurationError
 from .modules import TOOLING_MODULES
 from .presets import PRESETS
 
@@ -69,3 +72,41 @@ def run_init_wizard() -> dict[str, Any] | None:
         "presets": presets,
         "docker": docker,
     }
+
+
+def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
+    """Prompts the user for values to fill template placeholders.
+
+    Args:
+        variables: A list of variable keys missing from the template context.
+
+    Returns:
+        A dictionary mapping the variables to the user's string inputs.
+
+    Raises:
+        ConfigurationError: If the environment is non-interactive.
+    """
+    if not _should_run_wizard():
+        raise ConfigurationError(
+            "Non-interactive environment detected, but the configuration requires "
+            f"the following variables: {', '.join(variables)}\n"
+            'Please provide them via CLI flags (e.g. --variable_name="value").'
+        )
+
+    import questionary
+
+    console = Console()
+    console.print("\n[bold cyan]Configuration Variables Required[/bold cyan]")
+    console.print("The requested environment specification contains placeholders.\n")
+
+    context = {}
+    for var in variables:
+        answer = questionary.text(f"{var}:").ask()
+        if answer is None:
+            console.print(
+                "\n[bold red]ABORTED:[/bold red] Variable resolution cancelled."
+            )
+            sys.exit(130)
+        context[var] = answer
+
+    return context

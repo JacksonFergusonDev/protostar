@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from .errors import ConfigurationError
+from .templating import extract_variables, render_template
 
 logger = logging.getLogger("protostar")
 
@@ -67,6 +68,8 @@ class ProtostarConfig:
         presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
+        files (dict[str, str]): Exact file paths mapped to their raw contents for injection.
+        variables (dict[str, Any]): Arbitrary key-value pairs for dynamic configuration.
     """
 
     ide: str | None = None
@@ -80,6 +83,9 @@ class ProtostarConfig:
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
+    files: dict[str, str] = field(default_factory=dict)
+    variables: dict[str, Any] = field(default_factory=dict)
+
     _parsing_warnings: list[str] = field(
         default_factory=list, init=False, repr=False, compare=False
     )
@@ -88,7 +94,12 @@ class ProtostarConfig:
     _instance: ClassVar["ProtostarConfig | None"] = None
 
     @classmethod
-    def load(cls, force_reload: bool = False) -> "ProtostarConfig":
+    def load(
+        cls,
+        force_reload: bool = False,
+        override_target: str | None = None,
+        template_context: dict[str, str] | None = None,
+    ) -> "ProtostarConfig":
         """Loads and parses the global Protostar configuration file.
 
         Evaluates the global XDG configuration and implements a class-level cache
@@ -96,17 +107,48 @@ class ProtostarConfig:
 
         Args:
             force_reload: If True, bypasses the cache and forces a disk read.
+            override_target: An optional path or URL to a portable configuration to overlay.
+            template_context: Variables passed via CLI to inject into the template.
 
         Returns:
             The loaded ProtostarConfig instance.
         """
-        if cls._instance is not None and not force_reload:
+        if cls._instance is not None and not force_reload and override_target is None:
             return cls._instance
 
         instance = cls()
 
         if CONFIG_FILE.exists():
-            instance = cls._parse_and_merge(CONFIG_FILE, instance)
+            instance = cls._parse_and_merge(
+                CONFIG_FILE.read_text(encoding="utf-8"), str(CONFIG_FILE), instance
+            )
+
+        if override_target is not None:
+            if override_target.startswith("http://") or override_target.startswith(
+                "https://"
+            ):
+                from .network import fetch_remote_config
+
+                content = fetch_remote_config(override_target)
+            else:
+                target_path = Path(override_target)
+                if not target_path.exists():
+                    raise ConfigurationError(
+                        f"Configuration file not found: {target_path}"
+                    )
+                content = target_path.read_text(encoding="utf-8")
+
+            variables = extract_variables(content)
+            context = template_context or {}
+            missing = [v for v in variables if v not in context]
+
+            if missing:
+                from .wizard import resolve_missing_variables
+
+                context.update(resolve_missing_variables(missing))
+
+            content = render_template(content, context)
+            instance = cls._parse_and_merge(content, override_target, instance)
 
         cls._instance = instance
         return instance
@@ -132,9 +174,9 @@ class ProtostarConfig:
     # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
-        cls, path: Path, instance: "ProtostarConfig"
+        cls, content: str, source: str, instance: "ProtostarConfig"
     ) -> "ProtostarConfig":
-        """Helper to parse a TOML file and merge its values into a config instance.
+        """Helper to parse a TOML string and merge its values into a config instance.
 
         Dynamically evaluates dataclass fields to prevent brittle parsing logic,
         while maintaining specific handlers for complex nested dictionaries.
@@ -143,38 +185,38 @@ class ProtostarConfig:
         assignment.
 
         Args:
-            path: The filesystem path to the configuration file.
+            content: The raw TOML string to parse.
+            source: The origin of the content (for error reporting).
             instance: The active ProtostarConfig object to mutate.
 
         Returns:
             A new ProtostarConfig instance containing the merged state.
 
         Raises:
-            ValueError: If the TOML file contains syntax errors.
+            ConfigurationError: If the TOML string contains syntax errors.
         """
         try:
-            with open(path, "rb") as f:
-                data = tomllib.load(f)
+            data = tomllib.loads(content)
         except tomllib.TOMLDecodeError as e:
             raise ConfigurationError(
-                f"Syntax error in configuration file {path}.\n"
+                f"Syntax error in configuration source '{source}'.\n"
                 f"Details: {e}\n"
-                "Please fix the syntax error or delete the file to regenerate the defaults."
+                "Please fix the syntax error to proceed."
             ) from e
         except Exception as e:
             instance._parsing_warnings.append(
-                f"Failed to load config from {path}: {e}. Falling back to defaults."
+                f"Failed to load config from {source}: {e}. Falling back to defaults."
             )
             return instance
 
         # --- Schema Validation & Scope Enforcement ---
-        allowed_keys = {"env", "presets", "dev"}
+        allowed_keys = {"env", "presets", "dev", "files", "variables"}
         warnings: list[str] = []
 
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:
             warnings.append(
-                f"Unrecognized root keys in {path}: {', '.join(unknown_keys)}."
+                f"Unrecognized root keys in {source}: {', '.join(unknown_keys)}."
             )
 
         updates: dict[str, Any] = {}
@@ -227,6 +269,16 @@ class ProtostarConfig:
 
             if "pyproject" in dev_data:
                 updates["pyproject_injections"] = dev_data["pyproject"]
+
+        if "files" in data:
+            merged_files = dict(instance.files)
+            merged_files.update(data["files"])
+            updates["files"] = merged_files
+
+        if "variables" in data:
+            merged_vars = dict(instance.variables)
+            merged_vars.update(data["variables"])
+            updates["variables"] = merged_vars
 
         new_instance = replace(instance, **updates)
         new_instance._parsing_warnings = instance._parsing_warnings + warnings

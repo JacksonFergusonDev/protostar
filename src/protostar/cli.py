@@ -53,7 +53,13 @@ def handle_init(args: argparse.Namespace) -> None:
     Dynamically constructs the environment manifest by evaluating flags mapped
     to the respective OS, IDE, and preset registries.
     """
-    config = ProtostarConfig.load()
+    override_target = getattr(args, "from_path", None)
+    template_context = getattr(args, "template_context", {})
+
+    config = ProtostarConfig.load(
+        override_target=override_target, template_context=template_context
+    )
+
     modules: list[BootstrapModule] = []
     presets: list[PresetModule] = []
 
@@ -279,6 +285,13 @@ def build_parser() -> argparse.ArgumentParser:
     # Base Configuration
     base_group = init_parser.add_argument_group("Base Configuration")
     base_group.add_argument(
+        "--from",
+        type=str,
+        dest="from_path",
+        help="Path to a portable configuration TOML file to apply.",
+        metavar="PATH",
+    )
+    base_group.add_argument(
         "--python-version",
         type=str,
         help="Specify the Python version to scaffold (e.g., 3.12). Overrides global configuration.",
@@ -450,14 +463,58 @@ def handle_config(args: argparse.Namespace) -> None:
         ) from e
 
 
+def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
+    """Parses trailing unknown CLI arguments into a variable dictionary.
+
+    Args:
+        unknown_args: The trailing list of arguments rejected by the main parser.
+
+    Returns:
+        A dictionary mapping the dynamic flag names to their values.
+
+    Raises:
+        ConfigurationError: If positional (non-flag) arguments are encountered.
+    """
+    kwargs = {}
+    i = 0
+    while i < len(unknown_args):
+        arg = unknown_args[i]
+        if arg.startswith("--"):
+            key = arg.lstrip("-")
+            if "=" in key:
+                k, v = key.split("=", 1)
+                kwargs[k] = v
+            else:
+                if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith(
+                    "--"
+                ):
+                    kwargs[key] = unknown_args[i + 1]
+                    i += 1
+                else:
+                    kwargs[key] = ""
+        else:
+            raise ConfigurationError(
+                f"Unrecognized positional argument for templating: {arg}"
+            )
+        i += 1
+    return kwargs
+
+
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
     parser = build_parser()
 
     try:
         intercept_interactive_wizards(parser)
+        args, unknown = parser.parse_known_args()
 
-        args = parser.parse_args()
+        if unknown and (
+            getattr(args, "command", None) != "init"
+            or not getattr(args, "from_path", None)
+        ):
+            parser.error(f"unrecognized arguments: {' '.join(unknown)}")
+
+        args.template_context = _parse_dynamic_kwargs(unknown)
 
         if getattr(args, "verbose", False):
             configure_logging()

@@ -228,3 +228,18 @@ def test_orchestrator_panel_rendering(mocker, capsys) -> None:
     assert "Diagnostic Summary" in captured.out
     assert "Simulated warning" in captured.out
     assert "PARTIAL SUCCESS" in captured.out
+
+
+def test_orchestrator_injects_files_from_config(mocker):
+    """Test that files defined in the global config are routed to the manifest."""
+    config = ProtostarConfig(files={"src/main.py": "print('hello')"})
+
+    # Patch the method directly on the source class to guarantee interception,
+    # preventing the real SystemExecutor from polluting the host disk.
+    mocker.patch("protostar.executor.SystemExecutor.execute")
+
+    orchestrator = Orchestrator(modules=[], config=config)
+    orchestrator.run()
+
+    assert "src/main.py" in orchestrator.manifest.file_injections
+    assert orchestrator.manifest.file_injections["src/main.py"] == "print('hello')"
