@@ -99,9 +99,13 @@ class SystemExecutor:
                     message=f"Missing recommended {self.config.ide} extensions: {', '.join(missing)}",
                     severity=Severity.WARNING,
                 )
-        except Exception:
+        except Exception as e:
             # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
-            pass
+            self.manifest.add_diagnostic(
+                phase="IDE",
+                message=f"IDE extension verification skipped due to an unexpected error: {e}",
+                severity=Severity.SKIP,
+            )
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.
@@ -535,6 +539,9 @@ class SystemExecutor:
                     phase="Executor",
                     message=f"Standard dependency resolution failed: {e}",
                     severity=Severity.WARNING,
+                    detail=e.output_detail
+                    if isinstance(e, CommandExecutionError)
+                    else None,
                 )
 
         if self.manifest.dev_dependencies:
@@ -549,4 +556,7 @@ class SystemExecutor:
                     phase="Executor",
                     message=f"Development dependency resolution failed: {e}",
                     severity=Severity.WARNING,
+                    detail=e.output_detail
+                    if isinstance(e, CommandExecutionError)
+                    else None,
                 )

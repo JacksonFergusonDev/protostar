@@ -1011,7 +1011,9 @@ def test_ide_extension_check_flags_missing_extensions(ide_manifest, mocker):
     assert "ms-python.mypy-type-checker" in diagnostic.message
 
 
-def test_ide_extension_check_fails_silently_on_subprocess_error(ide_manifest, mocker):
+def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(
+    ide_manifest, mocker
+):
     config = ProtostarConfig(ide="vscode")
     executor = SystemExecutor(ide_manifest, config)
 
@@ -1023,11 +1025,15 @@ def test_ide_extension_check_fails_silently_on_subprocess_error(ide_manifest, mo
         side_effect=subprocess.TimeoutExpired(cmd="code", timeout=5),
     )
 
-    # Execution should not raise an exception
     executor._check_ide_extensions()
 
-    # It should fail silently without appending diagnostics
-    assert not executor.manifest.diagnostics
+    # It should no longer fail silently, but append a SKIP diagnostic
+    assert len(executor.manifest.diagnostics) == 1
+    diagnostic = executor.manifest.diagnostics[0]
+
+    assert diagnostic.phase == "IDE"
+    assert diagnostic.severity.value == "skip"
+    assert "skipped due to an unexpected error" in diagnostic.message
 
 
 def test_executor_handles_write_permission_denied(mocker):
@@ -1214,3 +1220,63 @@ def test_executor_install_dependencies_timeout_degradation(mocker, mock_config):
     assert len(manifest.diagnostics) == 1
     assert "Command timed out" in manifest.diagnostics[0].message
     assert manifest.diagnostics[0].severity == Severity.WARNING
+
+
+def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_dependency("numpy")
+    config = ProtostarConfig()
+    executor = SystemExecutor(manifest, config)
+
+    # Mock a subprocess failure with rich telemetry
+    error = CommandExecutionError(
+        command=["uv", "add", "numpy"],
+        returncode=1,
+        stdout="Resolving dependencies...",
+        stderr="error: package numpy not found",
+    )
+    mocker.patch("protostar.executor.execute_subprocess", side_effect=error)
+
+    # Execution should handle the error gracefully without raising
+    executor._install_dependencies()
+
+    assert len(executor.manifest.diagnostics) == 1
+    diagnostic = executor.manifest.diagnostics[0]
+
+    assert diagnostic.phase == "Executor"
+    assert diagnostic.severity == Severity.WARNING
+    assert "Standard dependency resolution failed" in diagnostic.message
+
+    # Verify the telemetry was extracted via the new output_detail property
+    assert diagnostic.detail is not None
+    assert "--- STDERR ---" in diagnostic.detail
+    assert "error: package numpy not found" in diagnostic.detail
+
+
+def test_install_dev_dependencies_adds_warning_with_telemetry_on_failure(mocker):
+    manifest = EnvironmentManifest()
+    manifest.add_dev_dependency("pytest")
+    config = ProtostarConfig()
+    executor = SystemExecutor(manifest, config)
+
+    # Mock a subprocess failure with rich telemetry
+    error = CommandExecutionError(
+        command=["uv", "add", "--dev", "pytest"],
+        returncode=1,
+        stderr="error: network timeout",
+    )
+    mocker.patch("protostar.executor.execute_subprocess", side_effect=error)
+
+    # Execution should handle the error gracefully without raising
+    executor._install_dependencies()
+
+    assert len(executor.manifest.diagnostics) == 1
+    diagnostic = executor.manifest.diagnostics[0]
+
+    assert diagnostic.phase == "Executor"
+    assert diagnostic.severity == Severity.WARNING
+    assert "Development dependency resolution failed" in diagnostic.message
+
+    # Verify the telemetry was extracted via the new output_detail property
+    assert diagnostic.detail is not None
+    assert "error: network timeout" in diagnostic.detail

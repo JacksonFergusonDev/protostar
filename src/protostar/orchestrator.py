@@ -180,6 +180,10 @@ class Orchestrator:
                 else:
                     lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
 
+                # Append the payload detail indented below the main event
+                if event.detail:
+                    lines.append(f"  [dim]{event.detail}[/dim]")
+
             console.print()
             console.print(
                 Panel(
