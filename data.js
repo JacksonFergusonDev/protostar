@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784342118553,
+  "lastUpdate": 1785362792951,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3643,6 +3643,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 191.25,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "08bba6887435875f47f2f5fd7e332968933292da",
+          "message": "build(justfile): enable strict shell options globally\n\n- Set `-e` (errexit) and `-o pipefail` in the global shell configuration\n  to ensure recipes abort on command failures and pipeline errors.\n- Remove redundant `set -euo pipefail` from the `bump` recipe since\n  the global shell now provides the strict behavior.\n\nThis improves safety and consistency across all just recipes.",
+          "timestamp": "2026-07-29T15:05:17-07:00",
+          "tree_id": "0fd97605a7279bf794d71926551d3715e12b434c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/08bba6887435875f47f2f5fd7e332968933292da"
+        },
+        "date": 1785362791995,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 127.68,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 198.67,
             "unit": "ms"
           }
         ]
