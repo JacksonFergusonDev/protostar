@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785362792951,
+  "lastUpdate": 1785368156286,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3677,6 +3677,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 198.67,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f740866032cf870f54935f909a2af0cd36064b42",
+          "message": "**chore(codecov): relax patch coverage enforcement**\n\nLower the patch coverage target and make patch coverage\ninformational to reduce friction for small PRs while keeping\ncoverage reports visible.",
+          "timestamp": "2026-07-29T16:33:46-07:00",
+          "tree_id": "a5b3fe89f29be344a08efd724fcf32ade40ca6f2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f740866032cf870f54935f909a2af0cd36064b42"
+        },
+        "date": 1785368155396,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 122.17,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 186.96,
             "unit": "ms"
           }
         ]
