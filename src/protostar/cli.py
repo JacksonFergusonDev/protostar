@@ -534,11 +534,8 @@ def main() -> None:
         console.print()
 
         body = str(e)
-        if isinstance(e, CommandExecutionError):
-            if e.stdout:
-                body += f"\n\n[dim]--- STDOUT ---[/dim]\n{e.stdout.strip()}"
-            if e.stderr:
-                body += f"\n\n[dim]--- STDERR ---[/dim]\n{e.stderr.strip()}"
+        if isinstance(e, CommandExecutionError) and e.output_detail:
+            body += f"\n\n[dim]{e.output_detail}[/dim]"
         if getattr(e, "hint", None):
             body += f"\n\n[dim]Hint: {e.hint}[/dim]"
 

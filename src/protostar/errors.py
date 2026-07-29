@@ -38,6 +38,16 @@ class CommandExecutionError(ProtostarError):
         self.stdout = stdout
         self.stderr = stderr
 
+    @property
+    def output_detail(self) -> str | None:
+        """Formats captured stdout/stderr into a display-ready block, or None if empty."""
+        blocks = []
+        if self.stdout:
+            blocks.append(f"--- STDOUT ---\n{self.stdout.strip()}")
+        if self.stderr:
+            blocks.append(f"--- STDERR ---\n{self.stderr.strip()}")
+        return "\n\n".join(blocks) or None
+
 
 class CommandTimeoutError(ProtostarError):
     """Raised when a managed subprocess exceeds its allocated runtime window."""
