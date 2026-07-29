@@ -1,4 +1,4 @@
-set shell := ["bash", "-uc"]
+set shell := ["bash", "-euc", "-o", "pipefail"]
 set unstable
 set quiet
 
@@ -157,7 +157,6 @@ serve: sync
 # Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
 bump part: lint typecheck test-unit
     #!/usr/bin/env bash
-    set -euo pipefail
 
     echo "Ensuring local repository is up to date..."
     git pull --ff-only
