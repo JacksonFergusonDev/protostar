@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785368208905,
+  "lastUpdate": 1785368734285,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3745,6 +3745,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 196.99,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1f481a1633fcc34b8aba69c8d069865f5d0b7dfb",
+          "message": "fix: expose subprocess telemetry in non-fatal diagnostic payloads (#118)\n\n- Adds `output_detail` property to `CommandExecutionError` to encapsulate stdout/stderr formatting.\n- Refactors fatal error handling in `cli.py` to use the new `output_detail` property.\n- Pipes the formatted detail payload into `add_diagnostic` during `uv add` execution failures.\n- Updates the `Orchestrator` to render the `detail` string inside the diagnostic summary panel.\n- Replaces the bare `except Exception: pass` in `_check_ide_extensions` with a logged `Severity.SKIP` diagnostic.",
+          "timestamp": "2026-07-29T16:44:36-07:00",
+          "tree_id": "d80ec4a495a6271748ba29a1fe519933f6619cd0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1f481a1633fcc34b8aba69c8d069865f5d0b7dfb"
+        },
+        "date": 1785368733704,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 128.85,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 193.27,
             "unit": "ms"
           }
         ]
