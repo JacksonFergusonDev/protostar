@@ -18,6 +18,7 @@ from rich.text import Text
 
 import protostar.cli
 from protostar.config import DEFAULT_CONFIG_CONTENT
+from protostar.fs import atomic_write_text
 from protostar.manifest import EnvironmentManifest
 from protostar.modules import (
     TOOLING_MODULES,
@@ -70,7 +71,7 @@ def _write_fixture(filename: str, content: str, language: str | None = None) -> 
 
     formatted_content = f"```{language}\n{content}```\n" if language else content
 
-    output_path.write_text(formatted_content)
+    atomic_write_text(output_path, formatted_content)
     print(f"Generated: {output_path.name}")
 
 

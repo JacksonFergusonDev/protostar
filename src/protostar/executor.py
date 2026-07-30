@@ -17,6 +17,7 @@ from .errors import (
     ConfigurationError,
     FileSystemError,
 )
+from .fs import atomic_write_text
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 
@@ -182,7 +183,7 @@ class SystemExecutor:
                 )
 
         try:
-            target.write_text(full_yaml)
+            atomic_write_text(target, full_yaml)
         except OSError as e:
             raise FileSystemError("write configuration file", str(target), e) from e
         logger.debug("Scaffolded .pre-commit-config.yaml")
@@ -200,7 +201,7 @@ class SystemExecutor:
             ):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_text(content)
+                    atomic_write_text(target, content)
                 except OSError as e:
                     raise FileSystemError(
                         "inject boilerplate file", str(target), e
@@ -378,7 +379,7 @@ class SystemExecutor:
                     new_content = re.sub(r"\n{3,}", "\n\n", new_content)
                     if new_content.strip() != original_content.strip():
                         try:
-                            target.write_text(new_content)
+                            atomic_write_text(target, new_content)
                         except OSError as e:
                             raise FileSystemError(
                                 "mutate configuration AST", str(target), e
@@ -412,7 +413,9 @@ class SystemExecutor:
             prefix = "\n\n" if existing_clean and combined_content else ""
 
             try:
-                target.write_text(existing_clean + prefix + combined_content + "\n")
+                atomic_write_text(
+                    target, existing_clean + prefix + combined_content + "\n"
+                )
             except OSError as e:
                 raise FileSystemError(
                     "append configurations block", str(target), e
@@ -432,13 +435,15 @@ class SystemExecutor:
             ]
 
             if missing:
-                with gitignore.open("a") as f:
-                    prefix = (
-                        "\n"
-                        if existing_content and not existing_content.endswith("\n")
-                        else ""
-                    )
-                    f.write(prefix + "\n".join(sorted(missing)) + "\n")
+                prefix = (
+                    "\n"
+                    if existing_content and not existing_content.endswith("\n")
+                    else ""
+                )
+                atomic_write_text(
+                    gitignore,
+                    existing_content + prefix + "\n".join(sorted(missing)) + "\n",
+                )
                 logger.debug(f"Appended {len(missing)} items to .gitignore")
         except OSError as e:
             raise FileSystemError(
@@ -466,13 +471,15 @@ class SystemExecutor:
             missing = [p for p in combined_ignores if p not in existing_content]
 
             if missing:
-                with dockerignore.open("a") as f:
-                    prefix = (
-                        "\n"
-                        if existing_content and not existing_content.endswith("\n")
-                        else ""
-                    )
-                    f.write(prefix + "\n".join(sorted(missing)) + "\n")
+                prefix = (
+                    "\n"
+                    if existing_content and not existing_content.endswith("\n")
+                    else ""
+                )
+                atomic_write_text(
+                    dockerignore,
+                    existing_content + prefix + "\n".join(sorted(missing)) + "\n",
+                )
                 logger.debug(f"Appended {len(missing)} items to .dockerignore")
         except OSError as e:
             raise FileSystemError(
@@ -517,7 +524,7 @@ class SystemExecutor:
 
         try:
             vscode_dir.mkdir(exist_ok=True)
-            settings_path.write_text(json.dumps(settings, indent=4) + "\n")
+            atomic_write_text(settings_path, json.dumps(settings, indent=4) + "\n")
         except OSError as e:
             raise FileSystemError(
                 "synchronize IDE workspace preferences", str(settings_path), e

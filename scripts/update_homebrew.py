@@ -18,6 +18,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from protostar.fs import atomic_write_text
+
 
 def get_pypi_metadata(
     package_name: str, version: str, max_retries: int = 60, delay: int = 2
@@ -96,7 +98,7 @@ def update_formula_url_sha(formula_path: Path, new_url: str, new_sha: str) -> No
         count=1,
     )
 
-    formula_path.write_text(content, encoding="utf-8")
+    atomic_write_text(formula_path, content)
     print("Updated formula root properties: url and sha256.")
 
 
@@ -212,7 +214,7 @@ def splice_resources(formula_path: Path, resources: str) -> None:
         new_lines.append(resources.rstrip("\n"))
     new_lines.extend(lines[end_idx:])
 
-    formula_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    atomic_write_text(formula_path, "\n".join(new_lines) + "\n")
     print("Successfully spliced dependency resources into formula.")
 
 

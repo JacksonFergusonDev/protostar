@@ -31,6 +31,7 @@ from .errors import (
     MissingDependencyError,
     ProtostarError,
 )
+from .fs import atomic_write_text
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -450,7 +451,7 @@ def handle_config(args: argparse.Namespace) -> None:
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     if not CONFIG_FILE.exists():
-        CONFIG_FILE.write_text(DEFAULT_CONFIG_CONTENT)
+        atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
         console.print(
             f"[bold green]Initialized default configuration at {CONFIG_FILE}[/bold green]"
         )
