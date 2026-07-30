@@ -236,7 +236,7 @@ class MypyModule(BootstrapModule):
         logger.debug("Building Mypy tooling layer.")
         manifest.add_dev_dependency("mypy")
         manifest.add_environment_artifact(".mypy_cache/")
-        manifest.add_ide_extension("ms-python.mypy-type-checker")
+        manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
 
         # The MYPY_DEPENDENCIES token is late-bound by the orchestrator
         # to ensure all dynamically added packages are typed.
