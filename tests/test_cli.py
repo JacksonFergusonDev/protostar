@@ -279,10 +279,21 @@ def test_handle_config_parent_dir_creation(mocker, tmp_path):
     assert mock_config_file.exists()
 
 
-def test_main_verbose_flag(mocker):
-    """Test that the --verbose flag correctly triggers logging configuration."""
-    # Place the global flag before the 'init' subcommand
+def test_main_verbose_flag_before_subcommand(mocker):
+    """Test that the --verbose flag correctly triggers logging configuration before the subcommand."""
     mocker.patch.object(sys, "argv", ["protostar", "--verbose", "init"])
+    mocker.patch("protostar.cli.intercept_interactive_wizards")
+    mock_configure_logging = mocker.patch("protostar.cli.configure_logging")
+    mocker.patch("protostar.cli.handle_init")
+
+    main()
+
+    mock_configure_logging.assert_called_once()
+
+
+def test_main_verbose_flag_after_subcommand(mocker):
+    """Test that the --verbose flag correctly triggers logging configuration after the subcommand."""
+    mocker.patch.object(sys, "argv", ["protostar", "init", "--verbose"])
     mocker.patch("protostar.cli.intercept_interactive_wizards")
     mock_configure_logging = mocker.patch("protostar.cli.configure_logging")
     mocker.patch("protostar.cli.handle_init")
