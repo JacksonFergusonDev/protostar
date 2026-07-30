@@ -35,12 +35,12 @@ def test_executor_writes_injected_files(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_injected_files()
 
     mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-    mock_write.assert_called_once_with("mock content")
+    mock_write.assert_called_once_with(Path(".test_config.yaml"), "mock content")
 
 
 def test_executor_install_dependencies_uv(mocker, mock_config):
@@ -75,11 +75,11 @@ def test_executor_append_files_late_binding(mocker, mock_config):
 
     mock_file = mocker.mock_open(read_data=b'[project]\nrequires-python = ">=3.11"\n')
     mocker.patch("protostar.executor.Path.open", mock_file)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
 
-    written_data = mock_write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
     parsed_toml = tomllib.loads(written_data)
 
     # Assert structural integrity rather than string presence
@@ -104,11 +104,11 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_pre_commit_config()
 
-    written_data = mock_write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
 
     assert "trailing-whitespace" in written_data
     assert "id: mypy" in written_data
@@ -134,10 +134,10 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_pre_commit_config()
-    written_data = mock_write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
 
     assert "id: mypy" in written_data
     # Verify the entire key and token block was stripped cleanly
@@ -155,12 +155,11 @@ def test_executor_writes_dockerignore(mocker, mock_config):
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value=".env\n")
 
-    mock_file = mocker.mock_open()
-    mocker.patch("protostar.executor.Path.open", mock_file)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_docker_artifacts()
 
-    written_data = mock_file().write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
     assert "custom_build_artifact/" in written_data
     assert ".git/" in written_data
     assert "README*" in written_data
@@ -177,11 +176,12 @@ def test_executor_writes_gitignore(mocker, mock_config):
         "protostar.executor.Path.read_text", return_value="existing_ignore.txt\n"
     )
 
-    mock_file = mocker.mock_open()
-    mocker.patch("protostar.executor.Path.open", mock_file)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_ignores()
-    mock_file().write.assert_called_once_with("new_ignore.txt\n")
+    mock_write.assert_called_once_with(
+        Path(".gitignore"), "existing_ignore.txt\nnew_ignore.txt\n"
+    )
 
 
 def test_executor_writes_vscode_settings(mocker, mock_config):
@@ -197,12 +197,12 @@ def test_executor_writes_vscode_settings(mocker, mock_config):
         "protostar.executor.Path.read_text",
         return_value=json.dumps(existing_settings),
     )
-    mock_write_text = mocker.patch("protostar.executor.Path.write_text")
+    mock_write_text = mocker.patch("protostar.executor.atomic_write_text")
     mocker.patch("protostar.executor.Path.mkdir")
 
     executor._write_ide_settings()
 
-    written_data = mock_write_text.call_args[0][0]
+    written_data = mock_write_text.call_args[0][1]
     parsed_write = json.loads(written_data)
 
     assert "**/.venv" in parsed_write["files.exclude"]
@@ -231,12 +231,11 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_file = mocker.mock_open()
-    mocker.patch("protostar.executor.Path.open", mock_file)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_docker_artifacts()
 
-    written_data = mock_file().write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
     assert ".python-version" in written_data
 
 
@@ -272,10 +271,10 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_injected_files()
-    mock_write.assert_called_once_with("new content")
+    mock_write.assert_called_once_with(Path(".test_config.yaml"), "new content")
 
 
 def test_executor_mkdir_os_error_propagation(mocker, mock_config):
@@ -301,7 +300,7 @@ def test_executor_write_text_permission_error_propagation(mocker, mock_config):
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mocker.patch("protostar.executor.Path.mkdir")
     mocker.patch(
-        "protostar.executor.Path.write_text",
+        "protostar.executor.atomic_write_text",
         side_effect=PermissionError("Permission denied"),
     )
 
@@ -386,7 +385,7 @@ def test_executor_append_files_ast_no_op_write(mocker, mock_config):
     mock_file = mocker.mock_open(read_data=original_content.encode("utf-8"))
     mocker.patch("protostar.executor.Path.open", mock_file)
 
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
 
@@ -435,10 +434,10 @@ def test_executor_append_files_ast_merge(mocker, mock_config):
     mock_file = mocker.mock_open(read_data=base_content.encode("utf-8"))
     mocker.patch("protostar.executor.Path.open", mock_file)
 
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
-    written_data = mock_write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
 
     parsed_toml = tomllib.loads(written_data)
 
@@ -468,11 +467,11 @@ def test_executor_append_files_ast_overwrite(mocker, mock_config):
     mock_file = mocker.mock_open(read_data=base_content.encode("utf-8"))
     mocker.patch("protostar.executor.Path.open", mock_file)
 
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
 
-    written_data = mock_write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
     parsed_toml = tomllib.loads(written_data)
 
     # Verify the table was entirely replaced in the AST, not just merged
@@ -496,7 +495,7 @@ def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_conf
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._write_pre_commit_config()
     mock_write.assert_not_called()
@@ -586,7 +585,7 @@ def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
     mock_write.assert_not_called()
@@ -647,7 +646,7 @@ def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
     )
 
     mock_logger = mocker.patch("protostar.executor.logger.debug")
-    mocker.patch("protostar.executor.Path.write_text")
+    mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
 
@@ -666,7 +665,7 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value="existing_data")
-    mock_write = mocker.patch("protostar.executor.Path.write_text")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
     executor._append_files()
 
@@ -678,7 +677,7 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
         f"# --- Protostar Injection: {hash2} ---\nnew_payload_2\n# --- End Protostar Injection ---\n"
     )
 
-    written_data = mock_write.call_args[0][0]
+    written_data = mock_write.call_args[0][1]
     assert written_data == expected_data
 
 
@@ -1047,9 +1046,10 @@ def test_executor_handles_write_permission_denied(mocker):
     # CHANGED: Stub Path.exists to prevent the file existence check from triggering an early return
     mocker.patch.object(Path, "exists", return_value=False)
 
-    # Force Path.write_text to crash out mimicking a blocked access request
-    mocker.patch.object(
-        Path, "write_text", side_effect=PermissionError(13, "Permission denied")
+    # Force atomic write helper to crash out mimicking a blocked access request
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=PermissionError(13, "Permission denied"),
     )
 
     with pytest.raises(FileSystemError) as exc_info:
@@ -1102,8 +1102,9 @@ def test_append_files_handles_toml_write_failure(mocker):
     # Simulate an existing valid pyproject.toml on disk
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="[project]\nname = 'test'")
-    mocker.patch.object(
-        Path, "write_text", side_effect=OSError(28, "No space left on device")
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=OSError(28, "No space left on device"),
     )
 
     with pytest.raises(FileSystemError) as exc_info:
@@ -1120,8 +1121,9 @@ def test_append_files_handles_string_block_write_failure(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
-    mocker.patch.object(
-        Path, "write_text", side_effect=OSError(5, "Input/output error")
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=OSError(5, "Input/output error"),
     )
 
     with pytest.raises(FileSystemError) as exc_info:
@@ -1138,7 +1140,10 @@ def test_write_ignores_handles_os_error(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
-    mocker.patch.object(Path, "open", side_effect=OSError(13, "Permission denied"))
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=OSError(13, "Permission denied"),
+    )
 
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_ignores()
@@ -1155,7 +1160,10 @@ def test_write_docker_artifacts_handles_os_error(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
-    mocker.patch.object(Path, "open", side_effect=OSError(13, "Permission denied"))
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=OSError(13, "Permission denied"),
+    )
 
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_docker_artifacts()
@@ -1190,8 +1198,9 @@ def test_write_ide_settings_handles_write_os_error(mocker):
     # Let reading work smoothly (or assume no file exists)
     mocker.patch.object(Path, "exists", return_value=False)
     mocker.patch.object(Path, "mkdir")  # swallow directory creation
-    mocker.patch.object(
-        Path, "write_text", side_effect=OSError(13, "Permission denied")
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=OSError(13, "Permission denied"),
     )
 
     with pytest.raises(FileSystemError) as exc_info:

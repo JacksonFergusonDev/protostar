@@ -6,6 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any, TypedDict
 
+from protostar.fs import atomic_write_text
+
 
 class BenchmarkOutput(TypedDict):
     """Schema for github-action-benchmark JSON format."""
@@ -112,8 +114,7 @@ def main() -> None:
         print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    with args.output.open("w", encoding="utf-8") as f:
-        json.dump(converted_data, f, indent=2)
+    atomic_write_text(args.output, json.dumps(converted_data, indent=2))
 
 
 if __name__ == "__main__":

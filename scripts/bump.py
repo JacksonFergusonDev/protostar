@@ -1,30 +1,15 @@
-import os
 import re
 import sys
-import tempfile
 from pathlib import Path
 
 import tomlkit
+
+from protostar.fs import atomic_write_text
 
 SEMVER_RE = re.compile(
     r"^(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)"
     r"(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
 )
-
-
-def atomic_write(path: Path, content: str) -> None:
-    """Write file contents atomically via temp file + os.replace."""
-    fd, tmp_name = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
-    )
-    tmp_path = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(content)
-        os.replace(tmp_path, path)
-    except Exception:
-        tmp_path.unlink(missing_ok=True)
-        raise
 
 
 def main() -> None:
@@ -85,7 +70,7 @@ def main() -> None:
     # 4. Mutate node and write back atomically
     doc["project"]["version"] = new_version
     try:
-        atomic_write(pyproject_path, tomlkit.dumps(doc))
+        atomic_write_text(pyproject_path, tomlkit.dumps(doc))
     except Exception as e:
         print(f"Failed to write updated pyproject.toml: {e}", file=sys.stderr)
         sys.exit(1)
