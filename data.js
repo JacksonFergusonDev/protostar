@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785371029297,
+  "lastUpdate": 1785372086581,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3813,6 +3813,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 206.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "ab8e71d3fbcdc4a177516642b402a78b8329970b",
+          "message": "build(deps): replace pre-commit with prek\n\nSwap pre-commit for prek (>=0.4.11) in pyproject.toml, update\nCONTRIBUTING.md, and update uv.lock. prek serves as a drop-in\nRust replacement to speed up hook execution and eliminate\nvirtualenv/cfgv/identify dependencies.",
+          "timestamp": "2026-07-29T17:39:29-07:00",
+          "tree_id": "532d41931d76e8b840a5b11fa7387f7f7028dad6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ab8e71d3fbcdc4a177516642b402a78b8329970b"
+        },
+        "date": 1785372086235,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 122.96,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 188.38,
             "unit": "ms"
           }
         ]
