@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785373057089,
+  "lastUpdate": 1785374628756,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3881,6 +3881,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 193.14,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e53dcbed4a120364c425f9be3ec26deecc0ac7d1",
+          "message": "fix(cli): allow trailing global flags and correct help menu capitalization (#120)\n\nExtracted global flags (`--version`, `--verbose`) into a shared `base_parser` \nand inherited them across the root parser and all subparsers. This resolves \nthe argparse limitation where global flags placed after a subcommand throw \nan 'unrecognized arguments' error. The `default=argparse.SUPPRESS` kwarg \nwas also applied to prevent subparsers from inadvertently overwriting the \nparsed root namespace.\n\nAdditionally, updated the custom Rich table formatter to explicitly \ncapitalize the default argparse 'options' group, restoring visual parity \nbetween the root and subcommand help menus. Test coverage was expanded \nto explicitly validate the positional independence of global flags.",
+          "timestamp": "2026-07-29T18:22:49-07:00",
+          "tree_id": "ed17c85d29fdc1fb093727e34a0788270e699cb2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e53dcbed4a120364c425f9be3ec26deecc0ac7d1"
+        },
+        "date": 1785374627753,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 125.74,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.95,
             "unit": "ms"
           }
         ]
