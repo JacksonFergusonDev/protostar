@@ -87,11 +87,15 @@ class SystemExecutor:
             )
             # Normalize to lowercase for safe diffing
             installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
-            missing = [
-                ext
-                for ext in self.manifest.ide_extensions
-                if ext.lower() not in installed
-            ]
+            missing = []
+
+            for ext_req in self.manifest.ide_extensions:
+                if isinstance(ext_req, tuple):
+                    if not any(e.lower() in installed for e in ext_req):
+                        missing.append(f"{' or '.join(ext_req)}")
+                else:
+                    if ext_req.lower() not in installed:
+                        missing.append(ext_req)
 
             if missing:
                 self.manifest.add_diagnostic(

@@ -86,12 +86,12 @@ class EnvironmentManifest:
     file_appends: dict[str, list[str]] = dataclasses.field(default_factory=dict)
     wants_pre_commit: bool = False
     pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
-    ide_extensions: set[str] = dataclasses.field(default_factory=set)
+    ide_extensions: set[str | tuple[str, ...]] = dataclasses.field(default_factory=set)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
     diagnostics: list[DiagnosticEvent] = dataclasses.field(default_factory=list)
 
-    def add_ide_extension(self, extension_id: str) -> None:
-        """Queues an IDE extension ID for verification during the realization phase."""
+    def add_ide_extension(self, extension_id: str | tuple[str, ...]) -> None:
+        """Queues an IDE extension ID (or fallback tuple) for verification during the realization phase."""
         self.ide_extensions.add(extension_id)
 
     def add_vcs_ignore(self, path: str) -> None:

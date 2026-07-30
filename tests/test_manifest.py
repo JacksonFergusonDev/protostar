@@ -194,3 +194,14 @@ def test_add_ide_extension_aggregates_uniquely():
     assert len(manifest.ide_extensions) == 2
     assert "charliermarsh.ruff" in manifest.ide_extensions
     assert "ms-python.mypy-type-checker" in manifest.ide_extensions
+
+
+def test_manifest_accepts_mixed_ide_extensions():
+    """Verifies the manifest correctly stores both strings and tuples for extensions."""
+    manifest = EnvironmentManifest()
+    manifest.add_ide_extension("charliermarsh.ruff")
+    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
+
+    assert len(manifest.ide_extensions) == 2
+    assert "charliermarsh.ruff" in manifest.ide_extensions
+    assert ("ms-python.mypy-type-checker", "matangover.mypy") in manifest.ide_extensions

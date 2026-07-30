@@ -1280,3 +1280,71 @@ def test_install_dev_dependencies_adds_warning_with_telemetry_on_failure(mocker)
     # Verify the telemetry was extracted via the new output_detail property
     assert diagnostic.detail is not None
     assert "error: network timeout" in diagnostic.detail
+
+
+def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
+    """Verifies that the first element in an extension tuple satisfies the requirement."""
+    manifest = EnvironmentManifest()
+    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
+
+    config = ProtostarConfig(ide="vscode")
+    executor = SystemExecutor(manifest, config)
+
+    # Mock shutil.which to pretend 'code' is installed
+    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
+
+    # Mock subprocess to return the primary extension
+    mock_run = mocker.patch("protostar.executor.subprocess.run")
+    mock_run.return_value = MagicMock(
+        stdout="ms-python.mypy-type-checker\nother.extension\n"
+    )
+
+    executor._check_ide_extensions()
+
+    # No diagnostic warnings should be generated
+    assert not any(d.severity == Severity.WARNING for d in manifest.diagnostics)
+
+
+def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
+    """Verifies that the secondary element in an extension tuple satisfies the requirement."""
+    manifest = EnvironmentManifest()
+    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
+
+    config = ProtostarConfig(ide="vscode")
+    executor = SystemExecutor(manifest, config)
+
+    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
+
+    # Mock subprocess to return the fallback extension instead
+    mock_run = mocker.patch("protostar.executor.subprocess.run")
+    mock_run.return_value = MagicMock(stdout="matangover.mypy\nother.extension\n")
+
+    executor._check_ide_extensions()
+
+    # No diagnostic warnings should be generated
+    assert not any(d.severity == Severity.WARNING for d in manifest.diagnostics)
+
+
+def test_ide_extension_check_fails_missing_tuple(mocker):
+    """Verifies that an unfulfilled tuple generates a properly formatted diagnostic."""
+    manifest = EnvironmentManifest()
+    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
+    manifest.add_ide_extension("charliermarsh.ruff")
+
+    config = ProtostarConfig(ide="vscode")
+    executor = SystemExecutor(manifest, config)
+
+    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
+
+    # Mock subprocess to return neither mypy extension, but return ruff
+    mock_run = mocker.patch("protostar.executor.subprocess.run")
+    mock_run.return_value = MagicMock(stdout="charliermarsh.ruff\nother.extension\n")
+
+    executor._check_ide_extensions()
+
+    warnings = [d for d in manifest.diagnostics if d.severity == Severity.WARNING]
+    assert len(warnings) == 1
+
+    # Ensure the diagnostic cleanly formats the unfulfilled tuple with 'or'
+    assert "ms-python.mypy-type-checker or matangover.mypy" in warnings[0].message
+    assert "charliermarsh.ruff" not in warnings[0].message
