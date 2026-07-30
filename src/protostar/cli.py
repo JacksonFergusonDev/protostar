@@ -168,9 +168,14 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
         if not actions:
             continue
 
+        # Catch the default argparse 'options' group and capitalize it
+        display_title = (
+            group.title.capitalize() if group.title == "options" else group.title
+        )
+
         table = Table(
             show_header=False,
-            title=group.title,
+            title=display_title,  # Inject the patched title
             box=box.ROUNDED,
             show_lines=False,
             padding=(0, 1),
@@ -233,12 +238,28 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
+    base_parser = argparse.ArgumentParser(add_help=False)
+    base_parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show the application's version and exit.",
+    )
+    base_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=argparse.SUPPRESS,  # Prevents subparser from overwriting root namespace
+        help="Enable verbose debug output and rich tracebacks.",
+    )
+
     parser = argparse.ArgumentParser(
         description="A modular CLI tool for quickly scaffolding Python environments. ",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
         add_help=False,
         usage=argparse.SUPPRESS,
+        parents=[base_parser],
     )
 
     # Manually re-add the help flags but suppress them from the visual output
@@ -248,20 +269,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="help",
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
-    )
-
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"%(prog)s {__version__}",
-        help="Show the application's version and exit.",
-    )
-
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Enable verbose debug output and rich tracebacks.",
     )
 
     subparsers = parser.add_subparsers(
@@ -278,6 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         epilog="[bold]Example:[/bold]\n  protostar init --python --astro --mypy",
+        parents=[base_parser],
     )
 
     init_parser.add_argument(
@@ -350,6 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Opens the global configuration file in your system's default $EDITOR.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
+        parents=[base_parser],
     )
     config_parser.set_defaults(func=handle_config)
 
@@ -359,6 +368,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show this help message or a subcommand's manual.",
         description="Displays the CLI help manual.",
         formatter_class=ProtoHelpFormatter,
+        parents=[base_parser],
     )
 
     # Dynamically grab registered commands, excluding 'help' itself
