@@ -58,7 +58,7 @@ docs = ["mkdocstrings[python]>=1.0.3", "zensical>=0.0.26"]
 dev = [
     { include-group = "ci" },
     { include-group = "docs" },
-    "pre-commit>=4.5.1",
+    "prek>=0.4.11",
 ]
 
 # ==================================================

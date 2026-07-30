@@ -46,7 +46,7 @@ To guarantee that the workspace remains deterministic, error management follows 
 1. **Formatting & Linting:** Code is formatted and linted using `ruff`.
     - Use 4-space indentation and double quotes.
     - The formatter enforces an 88-character line length.
-    - Do not bypass the pre-commit hooks, as they will automatically apply the required `isort` block ordering and formatting rules.
+    - Do not bypass the prek hooks, as they will automatically apply the required `isort` block ordering and formatting rules.
 
 ## Testing Guidelines
 
@@ -89,18 +89,16 @@ To contribute to this project, you will need the following system-level dependen
 
 1. **Environment Setup**
 
-    We use `uv` to manage the virtual environment and dependencies. Running sync will install the core application alongside the `dev` dependency group (which includes `build`, `bump-my-version`, `mypy`, `pre-commit`, `pytest`, `pytest-cov`, `pytest-mock`, and `ruff`).
-
     ```bash
     uv sync
     ```
 
 1. **Install Hooks**
 
-    Set up pre-commit hooks to handle linting and type checking automatically.
+    Set up prek hooks to handle linting and type checking automatically.
 
     ```bash
-    uv run pre-commit install
+    uv run prek install
     ```
 
 ### Running Tests & Tooling
@@ -139,7 +137,7 @@ just test
     just ci
     ```
 
-    (Pre-commit will also run `ruff` and `mypy` when you commit).
+    (Prek will also run `ruff` and `mypy` when you commit).
 
 1. **Commit & Push**
 
