@@ -276,7 +276,9 @@ def test_mypy_module_injects_ide_extension():
     manifest = EnvironmentManifest()
     module = MypyModule()
     module.build(manifest)
-    assert "ms-python.mypy-type-checker" in manifest.ide_extensions
+
+    # Assert the fallback tuple is injected rather than a single string
+    assert ("ms-python.mypy-type-checker", "matangover.mypy") in manifest.ide_extensions
 
 
 def test_python_core_pre_flight_missing_uv(mocker):
