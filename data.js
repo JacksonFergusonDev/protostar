@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785372086581,
+  "lastUpdate": 1785373057089,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3847,6 +3847,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 188.38,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "74ed462113c11ee1ca058505cbe3ce5c32d18a98",
+          "message": "feat(executor): implement logical OR fallbacks for IDE extensions (#119)\n\n* feat(executor): implement logical OR fallbacks for IDE extensions\n\nUpdates the `EnvironmentManifest` to accept tuples within the `ide_extensions`\nset, allowing modules to define acceptable alternative extensions. The\n`SystemExecutor` now evaluates tuples using an `any()` check against the\ninstalled extensions array, outputting a cleanly formatted 'or' diagnostic\nif the dependency group is unfulfilled.\n\nUpdates the `MypyModule` to accept either `ms-python.mypy-type-checker` or\nthe popular community alternative `matangover.mypy`.\n\n* test(modules): update mypy extension assertions and add fallback coverage\n\nFixes `test_mypy_module_injects_ide_extension` in `tests/test_modules.py`\nto assert against the new fallback tuple `(\"ms-python.mypy-type-checker\",\n\"matangover.mypy\")`.\n\nAdds unit tests in `tests/test_executor.py` and `tests/test_manifest.py` to:\n- Verify primary and fallback extensions satisfy the IDE check in `SystemExecutor`.\n- Ensure unfulfilled extension tuples generate a formatted diagnostic using 'or'.\n- Confirm `EnvironmentManifest` accepts both string and tuple extension types.",
+          "timestamp": "2026-07-29T17:56:39-07:00",
+          "tree_id": "0886606a12c2cd4f0f8640fd75adc56ffe17e430",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/74ed462113c11ee1ca058505cbe3ce5c32d18a98"
+        },
+        "date": 1785373056580,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 126.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 193.14,
             "unit": "ms"
           }
         ]
