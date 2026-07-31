@@ -43,7 +43,7 @@ protostar init
 For rapid, repeatable initialization, you can bypass the TUI entirely by providing your desired environment matrix as CLI flags. Universal system workspace hygiene is automatically applied, and IDE settings are conditionally injected based on your global configuration and chosen language footprints.
 
 ```bash
-protostar init --python --scientific --pytest --markdownlint
+protostar init --scientific --pytest --markdownlint
 ```
 
 **What just happened?**
@@ -54,18 +54,6 @@ In a fraction of a second, Protostar:
 - Generated a strictly typed `pyproject.toml`, injected a `.markdownlint-cli2.yaml` configuration, and safely deduplicated your `.gitignore` without overwriting existing entries.
 
 ![Headless Scaffolding](../assets/demo_headless.gif){ width="700" }
-
-## Generating Boilerplate
-
-While `init` handles the global repository architecture, the `generate` command handles repetitive, discrete file scaffolding.
-
-```bash
-protostar generate cpp-class TelemetryIngestor
-```
-
-This safely drops a `TelemetryIngestor.hpp` and `TelemetryIngestor.cpp` into your working directory with standard include guards and empty constructors, aborting safely if the files already exist.
-
-![Target Generation](../assets/demo_generate.gif){ width="700" }
 
 ## Exploration & Help
 

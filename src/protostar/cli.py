@@ -285,7 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Scaffolds base Python configurations, dependencies, and environment files.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
-        epilog="[bold]Example:[/bold]\n  protostar init --python --astro --mypy",
+        epilog="[bold]Example:[/bold]\n  protostar init --astro --mypy",
         parents=[base_parser],
     )
 

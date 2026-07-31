@@ -1,6 +1,6 @@
 # The Module Architecture
 
-At its core, Protostar is not a monolithic script; it is a polymorphic module resolution engine. The CLI parser's sole responsibility is translating a matrix of boolean flags (e.g., `--python --astro --ruff`) into an ordered array of instantiated module objects.
+At its core, Protostar is not a monolithic script; it is a polymorphic module resolution engine. The CLI parser's sole responsibility is translating a matrix of boolean flags (e.g., `--astro --ruff`) into an ordered array of instantiated module objects.
 
 These modules act as autonomous, stateless plugins that interact strictly with the `EnvironmentManifest`. They do not know about each other, they do not read the host filesystem, and they do not execute system commands directly.
 
