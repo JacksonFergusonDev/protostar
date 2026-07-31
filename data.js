@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785473160242,
+  "lastUpdate": 1785474380061,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4017,6 +4017,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.26,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "86242d341b98b9e89c16e5a6265b3034d778989d",
+          "message": "feat(cli): add `--reset` flag with confirmation prompt to `protostar config` (#123)\n\nAllows users to reset their global configuration file (~/.config/protostar/config.toml)\nto its default state via `protostar config --reset`.\n- Prompt user for confirmation before resetting existing configuration data.\n- Support `-f`/`--force` flag on `protostar config` to bypass confirmation prompt.\n- Add unit test suite in `tests/test_cli.py` covering prompt confirmation, cancellation, and force flag behavior.",
+          "timestamp": "2026-07-30T22:05:24-07:00",
+          "tree_id": "115b762086d810653d18cff0d03fc3b1ec7a54af",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/86242d341b98b9e89c16e5a6265b3034d778989d"
+        },
+        "date": 1785474379382,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 121.75,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 186.72,
             "unit": "ms"
           }
         ]
