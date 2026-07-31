@@ -17,6 +17,7 @@ from protostar.cli import (
     intercept_interactive_wizards,
     main,
 )
+from protostar.config import DEFAULT_CONFIG_CONTENT
 from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
@@ -96,6 +97,71 @@ def test_handle_config_success(mocker, tmp_path):
     assert mock_config_file.exists()
     assert "ide =" in mock_config_file.read_text()
     mock_run.assert_called_once_with(["nano", str(mock_config_file)], check=True)
+
+
+def test_handle_config_reset_confirmed(mocker, tmp_path):
+    """Test that handle_config with --reset overwrites existing config when confirmed."""
+    mock_config_file = tmp_path / "config.toml"
+    mock_config_file.write_text("custom_setting = true\n")
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mock_confirm = mocker.patch("questionary.confirm")
+    mock_confirm.return_value.ask.return_value = True
+    mock_run = mocker.patch("subprocess.run")
+
+    args = argparse.Namespace(reset=True, force=False)
+    handle_config(args)
+
+    assert mock_config_file.exists()
+    assert mock_config_file.read_text() == DEFAULT_CONFIG_CONTENT
+    mock_run.assert_not_called()
+    mock_confirm.assert_called_once_with(
+        "Warning: this will erase your current configuration, are you sure you want to do this?",
+        default=False,
+    )
+
+
+def test_handle_config_reset_cancelled(mocker, tmp_path):
+    """Test that handle_config with --reset does not overwrite config when cancelled."""
+    mock_config_file = tmp_path / "config.toml"
+    initial_content = "custom_setting = true\n"
+    mock_config_file.write_text(initial_content)
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mock_confirm = mocker.patch("questionary.confirm")
+    mock_confirm.return_value.ask.return_value = False
+    mock_run = mocker.patch("subprocess.run")
+
+    args = argparse.Namespace(reset=True, force=False)
+    handle_config(args)
+
+    assert mock_config_file.exists()
+    assert mock_config_file.read_text() == initial_content
+    mock_run.assert_not_called()
+
+
+def test_handle_config_reset_force(mocker, tmp_path):
+    """Test that handle_config with --reset and --force bypasses confirmation prompt."""
+    mock_config_file = tmp_path / "config.toml"
+    mock_config_file.write_text("custom_setting = true\n")
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mock_confirm = mocker.patch("questionary.confirm")
+    mock_run = mocker.patch("subprocess.run")
+
+    args = argparse.Namespace(reset=True, force=True)
+    handle_config(args)
+
+    assert mock_config_file.exists()
+    assert mock_config_file.read_text() == DEFAULT_CONFIG_CONTENT
+    mock_run.assert_not_called()
+    mock_confirm.assert_not_called()
+
+
+def test_build_parser_config_reset():
+    """Test that the parser correctly parses the --reset and --force flags for config."""
+    parser = build_parser()
+    args = parser.parse_args(["config", "--reset", "--force"])
+    assert args.command == "config"
+    assert args.reset is True
+    assert args.force is True
 
 
 def test_handle_config_errors(mocker, tmp_path):

@@ -361,6 +361,17 @@ def build_parser() -> argparse.ArgumentParser:
         usage=argparse.SUPPRESS,
         parents=[base_parser],
     )
+    config_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Bypass confirmation prompt when resetting configuration.",
+    )
+    config_parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Reset the global configuration file to its default state.",
+    )
     config_parser.set_defaults(func=handle_config)
 
     # --- Help Subparser ---
@@ -449,6 +460,24 @@ def handle_config(args: argparse.Namespace) -> None:
     """
     if not CONFIG_FILE.parent.exists():
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    if getattr(args, "reset", False):
+        if not getattr(args, "force", False):
+            import questionary
+
+            confirmed = questionary.confirm(
+                "Warning: this will erase your current configuration, are you sure you want to do this?",
+                default=False,
+            ).ask()
+            if not confirmed:
+                console.print("[yellow]Configuration reset aborted.[/yellow]")
+                return
+
+        atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
+        console.print(
+            f"[bold green]Reset configuration at {CONFIG_FILE} to default state.[/bold green]"
+        )
+        return
 
     if not CONFIG_FILE.exists():
         atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
