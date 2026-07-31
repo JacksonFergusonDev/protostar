@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785474380061,
+  "lastUpdate": 1785476867752,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4051,6 +4051,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 186.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96dd770d18ec461f4923c36a33a76885462ca077",
+          "message": "docs: synchronize documentation with codebase and fix drift (#124)\n\n- Added missing `REST API` and `CLI Application` presets to the README.md\n- Removed deprecated `--python` flag from documentation examples and CLI epilog, as Python is now an implicitly loaded mandatory layer\n- Removed the deprecated \"Generating Boilerplate\" section and `generate` subcommand references from getting-started.md",
+          "timestamp": "2026-07-30T22:46:45-07:00",
+          "tree_id": "f576185317fad938a9ce2fc37100c8eedde1a9aa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/96dd770d18ec461f4923c36a33a76885462ca077"
+        },
+        "date": 1785476866803,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 126.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 193.07,
             "unit": "ms"
           }
         ]
