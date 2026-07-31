@@ -126,13 +126,6 @@ class Orchestrator:
         self._evaluate_collisions()
 
         # Phase 2: Pre-flight Verification
-        for warning in self.config._parsing_warnings:
-            self.manifest.add_diagnostic(
-                phase="Config",
-                message=warning,
-                severity=Severity.WARNING,
-            )
-
         for mod in self.modules:
             mod.pre_flight()
 

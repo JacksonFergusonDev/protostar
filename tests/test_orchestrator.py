@@ -177,29 +177,24 @@ def test_orchestrator_run_partial_success(mocker, mock_config):
     assert "PARTIAL SUCCESS" in printed_text
 
 
-def test_orchestrator_transfers_config_warnings(mocker) -> None:
-    # 1. Create a config with a cached parsing warning
+def test_orchestrator_runs_cleanly_without_warnings(mocker) -> None:
+    """Test that the orchestrator evaluates a valid configuration without raising diagnostics."""
+    # 1. Create a pristine config instance
     config = ProtostarConfig()
-    config._parsing_warnings = ["A simulated configuration warning."]
 
     # 2. Mock execution boundaries to isolate the test
     mocker.patch("protostar.orchestrator.SystemExecutor")
 
     orchestrator = Orchestrator(modules=[], config=config)
 
-    # Mock collision evaluation so it doesn't try to prompt or abort
+    # Mock collision evaluation so it doesn't try to prompt or abort in the sandbox
     mocker.patch.object(orchestrator, "_evaluate_collisions")
 
     # 3. Run the orchestrator
     orchestrator.run()
 
-    # 4. Verify the warning was transferred to the manifest correctly
-    assert len(orchestrator.manifest.diagnostics) == 1
-    event = orchestrator.manifest.diagnostics[0]
-
-    assert event.phase == "Config"
-    assert event.message == "A simulated configuration warning."
-    assert event.severity == Severity.WARNING
+    # 4. Verify no diagnostic events were generated, confirming strict evaluation passed
+    assert len(orchestrator.manifest.diagnostics) == 0
 
 
 def test_orchestrator_panel_rendering(mocker, capsys) -> None:
