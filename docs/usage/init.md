@@ -28,7 +28,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     The following repository tree examples assume you have explicitly configured an IDE in your global settings (e.g., `ide = "vscode"`) in addition to globally enabling direnv. This represents the best practice configuration for vscode users scaffolding python environments. If your config remains set to the default `None`, the `.vscode/settings.json` file will not be generated, though the universal `.vscode/` exclusion will still be safely appended to your `.gitignore`.
 
 === "The CLI Application (Tooling Focus)"
-    __Command:__ `protostar init --python --cli --mypy --pytest --pre-commit --markdownlint`
+    __Command:__ `protostar init --cli --mypy --pytest --pre-commit --markdownlint`
 
     This footprint demonstrates Protostar's ability to wire complex tooling together automatically.
 
@@ -54,7 +54,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - **A Note on Speed:** Standard Protostar executions take fractions of a second. However, because `--pre-commit` was flagged, Protostar queued a `pre-commit autoupdate` subprocess at the end of the run to ensure your git hooks are pinned to the absolute latest network releases. This shifts the total execution time to roughly ~4-9 seconds.
 
 === "The Astrophysics Pipeline (Data Focus)"
-    __Command:__ `protostar init --python --astro`
+    __Command:__ `protostar init --astro`
 
     This footprint focuses on managing heavy, serialized data assets and preventing repository bloat.
 
@@ -77,7 +77,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - **Artifact Exclusions:** The `.gitignore` was populated with `*.fits`, `*.csv`, and `*.parquet`, preventing you from accidentally committing massive telemetry cubes to version control.
 
 === "The Machine Learning Stack (Artifact Focus)"
-    __Command:__ `protostar init --python --ml --docker`
+    __Command:__ `protostar init --ml --docker`
 
     This footprint focuses on containerization and strictly excluding model artifacts.
 
@@ -106,11 +106,11 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
 Developers are rightfully terrified of CLI tools that touch their existing configurations. Protostar is engineered specifically to alleviate this anxiety.
 
-Lets say you initialized a machine learning repo yesterday with `protostar init --python --ml --docker`
+Lets say you initialized a machine learning repo yesterday with `protostar init --ml --docker`
 
 But today you remembered you'll be doing quasar analysis, and you want to enforce strict typing with `mypy`
 
-You simply run `protostar init --python --astro --mypy --docker` in that existing directory.
+You simply run `protostar init --astro --mypy --docker` in that existing directory.
 
 Because Protostar detects existing configuration markers (like `pyproject.toml`), it instantly halts the execution and triggers the __Gravitational Anomaly__ intercept prompt:
 

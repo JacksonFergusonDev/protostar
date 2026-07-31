@@ -46,7 +46,7 @@ Ready to dive deeper? The README only scratches the surface.
 Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/stable/)** for:
 
 - **Command Reference:** Full flags and capabilities for `init`.
-- **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, and Embedded workflows.
+- **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, Embedded, REST API, and CLI Application workflows.
 - **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
 - **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
 

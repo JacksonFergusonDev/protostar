@@ -117,7 +117,7 @@ The Orchestrator serves as the absolute boundary for exception propagation. By t
 
     - __OS__: Darwin 25.3.0
     - __Python__: 3.14.3
-    - __Command__: `protostar init --python --astro --crash-test`
+    - __Command__: `protostar init --astro --crash-test`
 
     ### Traceback
 
