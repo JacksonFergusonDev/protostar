@@ -68,29 +68,6 @@ def test_config_advanced_overrides_parsing(mocker, tmp_path):
     )
 
 
-def test_config_captures_parsing_warnings(tmp_path, monkeypatch) -> None:
-    # 1. Mock the CONFIG_FILE to point to our sandbox
-    mock_config_path = tmp_path / "config.toml"
-    monkeypatch.setattr("protostar.config.CONFIG_FILE", mock_config_path)
-
-    # 2. Write a config with an invalid root key and an invalid type
-    mock_config_path.write_text(
-        "[unknown_root]\nfoo = 'bar'\n\n[env]\ndirenv = 'this-should-be-a-bool'\n"
-    )
-
-    # 3. Load the config (forcing reload to bypass singleton cache)
-    config = ProtostarConfig.load(force_reload=True)
-
-    # 4. Verify fallbacks worked
-    assert config.direnv is False  # Fell back to default
-
-    # 5. Verify warnings were captured silently without logging
-    warnings = getattr(config, "_parsing_warnings", [])
-    assert len(warnings) == 2
-    assert any("Unrecognized root keys" in w for w in warnings)
-    assert any("Invalid type for '[env].direnv'" in w for w in warnings)
-
-
 def test_protostar_error_hint_binding():
     err = ProtostarError("Failure summary", hint="Try turning it off and on again")
     assert err.hint == "Try turning it off and on again"
@@ -153,53 +130,60 @@ def test_parse_and_merge_handles_malformed_toml(mocker, tmp_path):
         ProtostarConfig.load(force_reload=True)
 
 
-def test_config_runtime_type_validation(mocker):
-    """Test that the parser catches invalid types, drops them, and falls back to defaults."""
+def test_config_raises_on_parsing_errors(tmp_path, monkeypatch) -> None:
+    """Test that the parser hard-fails on unknown root keys."""
+    mock_config_path = tmp_path / "config.toml"
+    monkeypatch.setattr("protostar.config.CONFIG_FILE", mock_config_path)
+
+    # Write a config with an invalid root key and an invalid type
+    mock_config_path.write_text(
+        "[unknown_root]\nfoo = 'bar'\n\n[env]\ndirenv = 'this-should-be-a-bool'\n"
+    )
+
+    with pytest.raises(ConfigurationError, match="Unrecognized root keys"):
+        ProtostarConfig.load(force_reload=True)
+
+
+def test_config_runtime_type_validation(mocker) -> None:
+    """Test that the parser catches invalid types and aborts execution."""
     payload_str = """
     [env]
     ide = 42
     direnv = "yes"
     python_version = ["3.12"]
     """
-    config = ProtostarConfig._parse_and_merge(
-        payload_str, "dummy.toml", ProtostarConfig()
-    )
-
-    assert config.ide is None
-    assert config.direnv is False
-    assert config.python_version == "3.13"
+    with pytest.raises(ConfigurationError, match=r"Type mismatch.*ide"):
+        ProtostarConfig._parse_and_merge(payload_str, "dummy.toml", ProtostarConfig())
 
 
-def test_config_unknown_root_keys(mocker):
-    """Test that the parser warns about unrecognized or misspelled root blocks."""
+def test_config_unknown_root_keys(mocker) -> None:
+    """Test that the parser strictly enforces allowed root blocks."""
     payload_str = """
     [env]
     ide = "cursor"
-    
+
     [presetz]
     latex = "minimal"
-    
+
     [unknown_block]
     foo = "bar"
     """
-    config = ProtostarConfig._parse_and_merge(
-        payload_str, "dummy.toml", ProtostarConfig()
-    )
-    warnings = config._parsing_warnings
+    with pytest.raises(ConfigurationError, match="Unrecognized root keys") as exc_info:
+        ProtostarConfig._parse_and_merge(payload_str, "dummy.toml", ProtostarConfig())
 
-    assert any("Unrecognized root keys" in w and "presetz" in w for w in warnings)
-    assert any("Unrecognized root keys" in w and "unknown_block" in w for w in warnings)
+    # Assert both keys are present in the error message without relying on order
+    error_msg = str(exc_info.value)
+    assert "presetz" in error_msg
+    assert "unknown_block" in error_msg
 
 
-def test_config_ruff_invalid_type(mocker):
-    """Test that an invalid type for the 'ruff' key triggers a generalized warning."""
+def test_config_ruff_invalid_type(mocker) -> None:
+    """Test that an invalid type for the 'ruff' boolean triggers a ConfigurationError."""
     mocker.patch("protostar.config.Path.exists", return_value=True)
     mocker.patch("protostar.config.Path.read_text", return_value='[env]\nruff = "yes"')
 
-    config = ProtostarConfig.load(force_reload=True)
-
-    assert config.ruff is True  # Falls back to default
-    assert len(config._parsing_warnings) == 1
+    with pytest.raises(ConfigurationError, match=r"Type mismatch.*ruff"):
+        ProtostarConfig.load(force_reload=True)
 
 
 def test_config_complex_generic_type_passthrough(mocker):

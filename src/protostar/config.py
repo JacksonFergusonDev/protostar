@@ -88,10 +88,6 @@ class ProtostarConfig:
     files: dict[str, str] = field(default_factory=dict)
     variables: dict[str, Any] = field(default_factory=dict)
 
-    _parsing_warnings: list[str] = field(
-        default_factory=list, init=False, repr=False, compare=False
-    )
-
     # In-memory cache to prevent repeated disk I/O
     _instance: ClassVar["ProtostarConfig | None"] = None
 
@@ -211,19 +207,19 @@ class ProtostarConfig:
                 "Please fix the syntax error to proceed."
             ) from e
         except Exception as e:
-            instance._parsing_warnings.append(
-                f"Failed to load config from {source}: {e}. Falling back to defaults."
-            )
-            return instance
+            raise ConfigurationError(
+                f"Unexpected error while parsing configuration source '{source}'.\n"
+                f"Details: {e}"
+            ) from e
 
         # --- Schema Validation & Scope Enforcement ---
         allowed_keys = {"env", "presets", "dev", "files", "variables"}
-        warnings: list[str] = []
 
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:
-            warnings.append(
-                f"Unrecognized root keys in {source}: {', '.join(unknown_keys)}."
+            raise ConfigurationError(
+                f"Unrecognized root keys in {source}: {', '.join(unknown_keys)}.\n"
+                f"Allowed keys are: {', '.join(allowed_keys)}."
             )
 
         updates: dict[str, Any] = {}
@@ -256,11 +252,10 @@ class ProtostarConfig:
                     allowed = (expected,)
 
                 if value is not None and allowed and not isinstance(value, allowed):
-                    warnings.append(
-                        f"Invalid type for '[env].{key}'. Expected {expected}, "
-                        f"got {type(value).__name__}. Falling back to default."
+                    raise ConfigurationError(
+                        f"Type mismatch in {source} for '[env].{key}'.\n"
+                        f"Expected {expected}, but got {type(value).__name__}."
                     )
-                    continue
 
                 updates[key] = value
 
@@ -287,6 +282,4 @@ class ProtostarConfig:
             merged_vars.update(data["variables"])
             updates["variables"] = merged_vars
 
-        new_instance = replace(instance, **updates)
-        new_instance._parsing_warnings = instance._parsing_warnings + warnings
-        return new_instance
+        return replace(instance, **updates)
