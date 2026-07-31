@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785443433971,
+  "lastUpdate": 1785473160242,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -3983,6 +3983,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 193.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b8c1b85a7e5f7b66bf6b4f3f84eaaa4b0564fcdb",
+          "message": "refactor: enforce strict configuration schema validation (#122)\n\nReplaces the permissive warning-and-fallback mechanism in ProtostarConfig with strict schema enforcement, aligning with the fail-loud architectural principle.\n\n- Removed `_parsing_warnings` from `ProtostarConfig`.\n- Config parser now raises `ConfigurationError` on type mismatches, unknown root keys, and unexpected parsing errors.\n- Removed obsolete warning evaluation from the Orchestrator lifecycle.\n- Rewrote config tests to assert strict exception raising and fixed non-deterministic set ordering in regex assertions.\n- Replaced warning transfer test in orchestrator with a pristine execution test.",
+          "timestamp": "2026-07-30T21:44:56-07:00",
+          "tree_id": "77564546984a2ad4cc03c391ba8577c3009783d7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b8c1b85a7e5f7b66bf6b4f3f84eaaa4b0564fcdb"
+        },
+        "date": 1785473159271,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.56,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 204.26,
             "unit": "ms"
           }
         ]
