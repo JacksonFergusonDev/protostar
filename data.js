@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785476867752,
+  "lastUpdate": 1785578608136,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4085,6 +4085,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 193.07,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d1989bc8140ee03bbcb60ca2514bf16bc4d8db3a",
+          "message": "chore(deps): update davidanson/markdownlint-cli2-action action to v24 (#125)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-08-01T10:02:41Z",
+          "tree_id": "c6302c95517d82e8fbc5750f31685d64656519af",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d1989bc8140ee03bbcb60ca2514bf16bc4d8db3a"
+        },
+        "date": 1785578607656,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 98.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 149.62,
             "unit": "ms"
           }
         ]
