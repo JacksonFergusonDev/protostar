@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786384062310,
+  "lastUpdate": 1786384916104,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4187,6 +4187,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 207.63,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "8c63821be3d66b6d8fe379986add8d2515d07330",
+          "message": "chore: delegate version bumping to remote ci-cd-tooling script\n\nRemoves the local `scripts/bump.py` and updates the `justfile` bump\nrecipe to invoke the centralized script directly from\n`JacksonFergusonDev/ci-cd-tooling` via `uv run`.",
+          "timestamp": "2026-08-10T11:00:10-07:00",
+          "tree_id": "b3a13eed95b720eeb380748b253a557f20518422",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8c63821be3d66b6d8fe379986add8d2515d07330"
+        },
+        "date": 1786384915299,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 142.06,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 222.49,
             "unit": "ms"
           }
         ]
