@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786327380888,
+  "lastUpdate": 1786384062310,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4153,6 +4153,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 190.34,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "20adfb3e62056a4cc664280050e10d7773bd1d0d",
+          "message": "chore: remove redundant local update_homebrew script\n\nEliminates `scripts/update_homebrew.py` and its corresponding\nunit test module. Release pipelines now exclusively delegate\nHomebrew formula synchronization to the reusable\n`update-homebrew.yml` workflow provided by\n`JacksonFergusonDev/ci-cd-tooling`.",
+          "timestamp": "2026-08-10T10:45:15-07:00",
+          "tree_id": "ebc2b24a945e66808e4c7aa880c42603c3664835",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/20adfb3e62056a4cc664280050e10d7773bd1d0d"
+        },
+        "date": 1786384061754,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.69,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 207.63,
             "unit": "ms"
           }
         ]
