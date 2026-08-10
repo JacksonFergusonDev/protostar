@@ -167,7 +167,7 @@ bump part: lint typecheck test-unit
         exit 1
     fi
 
-    VERSION=$(uv run scripts/bump.py {{ part }})
+    VERSION=$(uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py {{ part }})
     NEW_TAG="v$VERSION"
 
     echo "Checking tag $NEW_TAG does not already exist..."
