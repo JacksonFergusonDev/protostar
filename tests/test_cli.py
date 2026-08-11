@@ -536,3 +536,49 @@ def test_parse_dynamic_kwargs_rejects_positional():
 
     with pytest.raises(ConfigurationError, match="Unrecognized positional argument"):
         _parse_dynamic_kwargs(args)
+
+
+def test_handle_init_template_resolution(mocker, tmp_path):
+    """Test that passing --template resolves the internal template."""
+    import importlib.resources
+
+    # We will mock Orchestrator.run so it doesn't actually scaffold
+    mocker.patch("protostar.cli.Orchestrator.run")
+
+    args = argparse.Namespace(
+        template_name="astro",
+        from_path=None,
+        template_context={},
+        python_version="3.12",
+        docker=False,
+    )
+
+    # We need to mock ProtostarConfig.load because we don't want to rely on the actual config file on disk
+    mock_load = mocker.patch("protostar.cli.ProtostarConfig.load")
+
+    from protostar.cli import handle_init
+
+    handle_init(args)
+
+    # Ensure load was called with the absolute path of the built-in astro.toml
+    expected_path = str(
+        importlib.resources.files("protostar.templates").joinpath("astro.toml")
+    )
+    mock_load.assert_called_once()
+    assert mock_load.call_args.kwargs["override_target"] == expected_path
+
+
+def test_handle_init_template_and_from_exclusive(mocker):
+    """Test that --template and --from cannot be used together."""
+    args = argparse.Namespace(
+        template_name="astro",
+        from_path="some/path.toml",
+        template_context={},
+    )
+    from protostar.cli import handle_init
+
+    with pytest.raises(
+        ConfigurationError,
+        match=r"Cannot use both '--template' and '--from' simultaneously\.",
+    ):
+        handle_init(args)
