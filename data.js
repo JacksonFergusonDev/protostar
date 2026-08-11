@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786384916104,
+  "lastUpdate": 1786489569812,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4221,6 +4221,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 222.49,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f71295b7bd50fe8b05bac859c870b0d442d71029",
+          "message": "docs(config): document portable configurations and --from flag (#126)\n\n- Add Portable Configurations usage guide and template authoring specs to docs/usage/configuration.md\n- Add internal mechanics documentation in docs/mechanics/portable_configurations.md explaining remote fetching, dynamic templating, and AST config merging\n- Update mkdocs.yml navigation tree to expose Portable Configurations under Mechanics",
+          "timestamp": "2026-08-11T16:05:01-07:00",
+          "tree_id": "a6434257f8dd3db11154c9ffd84fd01badbcd97c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f71295b7bd50fe8b05bac859c870b0d442d71029"
+        },
+        "date": 1786489568721,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132.91,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.99,
             "unit": "ms"
           }
         ]
