@@ -1,4 +1,5 @@
 import argparse
+import importlib.resources
 import logging
 import os
 import platform
@@ -57,7 +58,23 @@ def handle_init(args: argparse.Namespace) -> None:
     from .wizard import resolve_missing_variables
 
     override_target = getattr(args, "from_path", None)
+    template_name = getattr(args, "template_name", None)
     template_context = getattr(args, "template_context", {})
+
+    if override_target and template_name:
+        raise ConfigurationError(
+            "Cannot use both '--template' and '--from' simultaneously."
+        )
+
+    if template_name:
+        target = importlib.resources.files("protostar.templates").joinpath(
+            f"{template_name}.toml"
+        )
+        if not target.is_file():
+            raise ConfigurationError(f"Built-in template '{template_name}' not found.")
+        # We can cast it to str because we know Protostar isn't typically zip-safe,
+        # but if we wanted to be perfectly robust we could use as_file().
+        override_target = str(target)
 
     config = ProtostarConfig.load(
         override_target=override_target,
@@ -77,7 +94,12 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 3. Preset Layers
     for preset in PRESETS:
-        if preset.cli_flags and getattr(args, preset.__class__.__name__, False):
+        cli_flag_active = preset.cli_flags and getattr(
+            args, preset.__class__.__name__, False
+        )
+        config_active = preset.config_key in config.active_presets
+
+        if cli_flag_active or config_active:
             presets.append(preset)
 
     # 4. Tooling Layers
@@ -295,8 +317,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=argparse.SUPPRESS,
     )
 
-    # Base Configuration
     base_group = init_parser.add_argument_group("Base Configuration")
+    base_group.add_argument(
+        "-t",
+        "--template",
+        type=str,
+        dest="template_name",
+        help="Name of a built-in template to apply (e.g., 'astro', 'cli').",
+        metavar="NAME",
+    )
     base_group.add_argument(
         "--from",
         type=str,
