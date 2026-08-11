@@ -64,3 +64,69 @@ ignore = ["E501", "D100", "D104", "D107"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 '''
 ```
+
+## Portable Configurations (`--from`)
+
+The `--from` flag allows you to initialize or augment an environment using a portable TOML configuration template. This is incredibly useful for standardizing team workflows, sharing custom architectures across repositories, or maintaining a universal remote configuration.
+
+When using the `--from` flag, Protostar first reads your global configuration, then overlays the portable configuration on top.
+
+### Sourcing Portable Configurations
+
+You can source portable configurations either locally from your filesystem or remotely via HTTP/HTTPS.
+
+**From a Local File:**
+
+```bash
+protostar init --from ./team-config.toml
+```
+
+**From a Remote URL:**
+
+```bash
+protostar init --from https://raw.githubusercontent.com/org/configs/main/protostar.toml
+```
+
+### Passing Template Variables
+
+Portable configurations can contain Jinja-style placeholders (e.g., `{{ project_name }}`). You can satisfy these variables by passing them as dynamic keyword arguments alongside the `--from` flag:
+
+```bash
+protostar init --from ./template.toml --project_name="MyApp" --author="Jane Doe"
+```
+
+If the template requires variables that you haven't provided via CLI flags, Protostar will interactively prompt you for the missing values.
+
+### Creating a Portable Template
+
+Creating a portable template is functionally identical to modifying your own global configuration, but with the added ability to leverage `{{ variable }}` templating.
+
+A portable TOML template can contain any of the following standard sections:
+
+- `[env]`: Base environment settings (e.g., `python_version = "3.12"`, `ide = "vscode"`, `ruff = true`).
+- `[presets.preset_name]`: Overrides for specific preset dependencies and directories.
+- `[dev]`: Instructions for injecting `extra_dependencies` or raw `pyproject` string injections.
+- `[files]`: A powerful block mapping relative file paths to raw string content. This is perfect for scaffolding `README.md` files or custom scripts.
+- `[variables]`: Arbitrary key-value metadata for the configuration.
+
+#### Example: A Team Initialization Template
+
+```toml
+[env]
+python_version = "3.12"
+ruff = true
+pytest = true
+ide = "vscode"
+
+[dev]
+extra_dependencies = ["pytest-cov", "httpx"]
+
+[files]
+"README.md" = '''
+# {{ project_name }}
+
+Scaffolded by Protostar for team {{ team_name }}.
+
+## Setup
+Run `uv sync` to install dependencies.
+```
