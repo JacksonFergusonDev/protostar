@@ -20,6 +20,7 @@ nav:
     - Orchestrator: mechanics/orchestrator.md
     - Executor: mechanics/executor.md
     - Modules: mechanics/modules.md
+    - Portable Configurations: mechanics/portable_configurations.md
   - Mission Control:
     - Overview: mission-control/overview.md
     - Extending Protostar: mission-control/extending-protostar.md
