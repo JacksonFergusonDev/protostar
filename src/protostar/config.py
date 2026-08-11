@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from .errors import ConfigurationError
+from .interpolation import extract_variables, render_template
 from .network import fetch_remote_config
-from .templating import extract_variables, render_template
 
 logger = logging.getLogger("protostar")
 

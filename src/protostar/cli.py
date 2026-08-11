@@ -538,7 +538,7 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
                     kwargs[key] = ""
         else:
             raise ConfigurationError(
-                f"Unrecognized positional argument for templating: {arg}"
+                f"Unrecognized positional argument for interpolation: {arg}"
             )
         i += 1
     return kwargs
