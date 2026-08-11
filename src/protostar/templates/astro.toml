@@ -1,0 +1,17 @@
+[env]
+active_presets = ["astro"]
+
+# Tooling opinions for a Jupyter/Scientific workflow
+ruff = true
+direnv = true
+mypy = false
+pytest = false
+pre_commit = false
+
+[dev.pyproject]
+# Surgically append data-science specific linting rules to Ruff
+# without destroying the baseline configuration.
+data_science_linting = '''
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "RUF", "PD", "NPY"]
+'''

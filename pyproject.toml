@@ -46,6 +46,10 @@ exclude = [
     "/.readthedocs.yaml",
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/protostar"]
+include = ["src/protostar/**/*.py", "src/protostar/**/*.toml"]
+
 [dependency-groups]
 ci = [
     "mypy>=1.19.1",

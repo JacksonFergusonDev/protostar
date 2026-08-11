@@ -1,0 +1,1 @@
+"""Opinionated templates for Protostar."""
