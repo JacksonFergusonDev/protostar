@@ -33,16 +33,48 @@ def run_init_wizard() -> dict[str, Any] | None:
     if not _should_run_wizard():
         return None
 
+    import importlib.resources
+
     import questionary
     from questionary import Choice, Separator
 
-    config = ProtostarConfig.load()
+    templates = ["None"]
+    try:
+        template_dir = importlib.resources.files("protostar.templates")
+        for item in template_dir.iterdir():
+            if item.is_file() and item.name.endswith(".toml"):
+                templates.append(item.name[:-5])
+    except Exception:
+        pass
+
+    if len(templates) > 1:
+        answer = questionary.select(
+            "Start from a built-in template?",
+            choices=templates,
+        ).ask()
+
+        if answer is None:
+            return None
+
+        if answer != "None":
+            target = importlib.resources.files("protostar.templates").joinpath(
+                f"{answer}.toml"
+            )
+            config = ProtostarConfig.load(
+                override_target=str(target), force_reload=True
+            )
+        else:
+            config = ProtostarConfig.load()
+    else:
+        config = ProtostarConfig.load()
+
     choices: list[Choice | Separator] = []
 
     # 1. Presets
     choices.append(Separator("--- Presets ---"))
     for preset in PRESETS:
-        choices.append(Choice(title=preset.name, value=preset))
+        is_checked = preset.config_key in config.active_presets
+        choices.append(Choice(title=preset.name, value=preset, checked=is_checked))
 
     # 2. Context & Tooling
     choices.append(Separator("--- Context & Tooling ---"))
