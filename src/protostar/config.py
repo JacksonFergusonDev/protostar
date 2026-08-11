@@ -32,6 +32,7 @@ python_version = "3.13"
 # mypy = true
 # pytest = true
 # pre_commit = true
+# active_presets = []
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures
@@ -82,6 +83,7 @@ class ProtostarConfig:
     mypy: bool = False
     pytest: bool = False
     pre_commit: bool = False
+    active_presets: list[str] = field(default_factory=list)
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
@@ -226,6 +228,14 @@ class ProtostarConfig:
 
         if "env" in data:
             env_data = data["env"]
+
+            if "active_presets" in env_data and source == str(CONFIG_FILE):
+                raise ConfigurationError(
+                    "The 'active_presets' key is not allowed in the global configuration file "
+                    f"({CONFIG_FILE}), as it would permanently inject those dependencies into every "
+                    "future project.\n\n"
+                    "Please use 'active_presets' exclusively within portable templates or --from targets."
+                )
 
             # get_type_hints resolves stringified annotations (PEP 563 /
             # `from __future__ import annotations`) into real type objects.
