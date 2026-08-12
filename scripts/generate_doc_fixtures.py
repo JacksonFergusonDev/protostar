@@ -252,9 +252,22 @@ def generate_manifest_state() -> None:
 
 def generate_tree(dir_path: Path) -> str:
     """Executes the tree CLI utility to generate a clean directory structure text representation."""
+    env = os.environ.copy()
+    env["LC_ALL"] = "C"
+
     result = subprocess.run(
-        ["tree", "-a", "-I", ".git", "--gitignore", "--noreport", "."],
+        [
+            "tree",
+            "-a",
+            "-I",
+            ".git",
+            "--gitignore",
+            "--noreport",
+            "--charset=utf-8",
+            ".",
+        ],
         cwd=dir_path,
+        env=env,
         capture_output=True,
         text=True,
         check=True,
