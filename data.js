@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786508362075,
+  "lastUpdate": 1786508924422,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4323,6 +4323,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 160.78,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "61e58c82d55bf19288486b290d9ed5f41bbf8472",
+          "message": "fix(tests): isolate subprocess environment from CI leaks in integration tests\n\nPopped `VIRTUAL_ENV`, `XDG_CACHE_HOME`, `PRE_COMMIT_HOME`, and `GIT_CONFIG_*`\nfrom the mocked environment in the `run_cli` test fixture.\n\nThis resolves transient failures in `test_pre_commit_lifecycle_integration`\ncaused by parallel CI runners sharing the global pre-commit cache, which\nled to race conditions and corrupted `.pre-commit-hooks.yaml` reads during\n`uv run pre-commit autoupdate`. This also resolves the `uv` warnings about\nmismatched active virtual environments.",
+          "timestamp": "2026-08-11T21:27:44-07:00",
+          "tree_id": "5892358b1964795d51c31c7ead80eb1d68fc5b37",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/61e58c82d55bf19288486b290d9ed5f41bbf8472"
+        },
+        "date": 1786508923754,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 125.41,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 191.5,
             "unit": "ms"
           }
         ]
