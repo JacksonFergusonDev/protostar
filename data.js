@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786508924422,
+  "lastUpdate": 1786509667759,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4357,6 +4357,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 191.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5004a28f6de8d05e658aa1ca947a6a22f796ef36",
+          "message": "feat: expand --from flag support to Bitbucket, Codeberg, and Sourcehut (#130)\n\n* feat: add Bitbucket, Codeberg, and Sourcehut to fetch_remote_config\n\n* test: add tests for Bitbucket, Codeberg, and Sourcehut url translation\n\n* docs: document supported git providers for the --from flag",
+          "timestamp": "2026-08-11T21:40:06-07:00",
+          "tree_id": "29cad4166647310c26720ce53a07f6e5aa56bbd7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5004a28f6de8d05e658aa1ca947a6a22f796ef36"
+        },
+        "date": 1786509666997,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.89,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 210.34,
             "unit": "ms"
           }
         ]
