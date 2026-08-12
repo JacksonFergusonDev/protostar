@@ -402,3 +402,55 @@ class PrekModule(BootstrapModule):
             timeout=300,
             description="Updating prek hooks to latest versions...",
         )
+
+
+class CommitizinModule(BootstrapModule):
+    """Configures commitizen for semantic version bumping and changelog generation."""
+
+    cli_flags = ("--commitizen",)
+    cli_help = "Scaffold commitizen version bumping and changelog tooling"
+    config_key = "commitizen"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Commitizen"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for commitizen."""
+        return []
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues commitizen dev dependency, gitignore entry, pre-commit hook, and pyproject config.
+
+        Args:
+            manifest: The centralized state object.
+        """
+        logger.debug("Building Commitizen tooling layer.")
+
+        manifest.add_dev_dependency("commitizen")
+        manifest.add_environment_artifact(".cz-cache/")
+
+        # The cz check hook enforces Conventional Commit message format.
+        # Uses the official commitizen pre-commit mirror, which vendors its own
+        # Python environment — no venv wiring required beyond what pre-commit handles.
+        hook_payload = """  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.8.3
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]"""
+        manifest.add_pre_commit_hook(hook_payload)
+
+        # version_provider = "pep621" reads/writes [project].version in pyproject.toml
+        # directly — no duplication, no separate version file. This is the correct
+        # choice since `uv init` scaffolds a standard PEP 621 pyproject.toml.
+        config = """[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+version_scheme = "semver2"
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_incremental = true
+"""
+        manifest.add_file_append("pyproject.toml", config)
