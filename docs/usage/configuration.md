@@ -73,7 +73,7 @@ When using the `--from` flag, Protostar first reads your global configuration, t
 
 ### Sourcing Portable Configurations
 
-You can source portable configurations either locally from your filesystem or remotely via HTTP/HTTPS.
+You can source portable configurations either locally from your filesystem or remotely via HTTP/HTTPS. When fetching from remote URLs, Protostar automatically translates web UI URLs into raw file URLs for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut.
 
 **From a Local File:**
 

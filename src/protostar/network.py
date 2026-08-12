@@ -45,6 +45,27 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
         url,
     )
 
+    # Translate Bitbucket source URLs
+    url = re.sub(
+        r"^https://bitbucket\.org/([^/]+)/([^/]+)/src/(.+)$",
+        r"https://bitbucket.org/\1/\2/raw/\3",
+        url,
+    )
+
+    # Translate Codeberg source URLs
+    url = re.sub(
+        r"^https://codeberg\.org/([^/]+)/([^/]+)/src/(.+)$",
+        r"https://codeberg.org/\1/\2/raw/\3",
+        url,
+    )
+
+    # Translate Sourcehut tree URLs
+    url = re.sub(
+        r"^https://git\.sr\.ht/([^/]+)/([^/]+)/tree/(.+?)/item/(.+)$",
+        r"https://git.sr.ht/\1/\2/blob/\3/\4",
+        url,
+    )
+
     try:
         with urllib.request.urlopen(url, timeout=timeout) as response:
             return str(response.read().decode("utf-8"))

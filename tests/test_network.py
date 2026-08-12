@@ -57,6 +57,45 @@ def test_fetch_remote_config_gitlab_translation(mocker):
     assert called_url == "https://gitlab.com/user/repo/-/raw/main/protostar.toml"
 
 
+def test_fetch_remote_config_bitbucket_translation(mocker):
+    """Test that Bitbucket source URLs are translated to raw."""
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_response = mocker.Mock()
+    mock_response.read.return_value = b""
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    fetch_remote_config("https://bitbucket.org/user/repo/src/main/protostar.toml")
+
+    called_url = mock_urlopen.call_args[0][0]
+    assert called_url == "https://bitbucket.org/user/repo/raw/main/protostar.toml"
+
+
+def test_fetch_remote_config_codeberg_translation(mocker):
+    """Test that Codeberg source URLs are translated to raw."""
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_response = mocker.Mock()
+    mock_response.read.return_value = b""
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    fetch_remote_config("https://codeberg.org/user/repo/src/branch/main/protostar.toml")
+
+    called_url = mock_urlopen.call_args[0][0]
+    assert called_url == "https://codeberg.org/user/repo/raw/branch/main/protostar.toml"
+
+
+def test_fetch_remote_config_sourcehut_translation(mocker):
+    """Test that Sourcehut tree URLs are translated to blob."""
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_response = mocker.Mock()
+    mock_response.read.return_value = b""
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    fetch_remote_config("https://git.sr.ht/~user/repo/tree/master/item/protostar.toml")
+
+    called_url = mock_urlopen.call_args[0][0]
+    assert called_url == "https://git.sr.ht/~user/repo/blob/master/protostar.toml"
+
+
 def test_fetch_remote_config_handles_url_error(mocker):
     """Test that URLErrors are caught and wrapped in a ConfigurationError."""
     mocker.patch("urllib.request.urlopen", side_effect=URLError("Connection refused"))
