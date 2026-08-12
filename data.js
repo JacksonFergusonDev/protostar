@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786507240759,
+  "lastUpdate": 1786508362075,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4289,6 +4289,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 193.3,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90a63f667400005aa93bf870ba32fecdf4bc4100",
+          "message": "refactor(interpolation): disambiguate load-time config variable syntax from late-binding tokens (#129)\n\n* Fix #127: Disambiguate interpolation syntax for config variables vs. late-binding tokens\n\n* Fix tests for new interpolation syntax",
+          "timestamp": "2026-08-11T21:18:29-07:00",
+          "tree_id": "8fb9aafec843e9880963b5edfa204e8ad0d12d70",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/90a63f667400005aa93bf870ba32fecdf4bc4100"
+        },
+        "date": 1786508361357,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 103.29,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 160.78,
             "unit": "ms"
           }
         ]
