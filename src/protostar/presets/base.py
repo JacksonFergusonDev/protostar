@@ -66,6 +66,9 @@ class PresetModule(abc.ABC):
         for directory in overrides.get("directories", []):
             manifest.add_directory(directory)
 
+        for file_path, content in overrides.get("files", {}).items():
+            manifest.add_file_injection(file_path, content)
+
         return True
 
     @property
@@ -82,6 +85,11 @@ class PresetModule(abc.ABC):
     def default_ignores(self) -> list[str]:
         """Returns a list of default VCS ignore patterns for this preset."""
         return []
+
+    @property
+    def default_files(self) -> dict[str, str]:
+        """Returns a dict mapping file paths to their initial content to scaffold."""
+        return {}
 
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends preset-specific dependencies and directories to the manifest.
@@ -105,3 +113,6 @@ class PresetModule(abc.ABC):
 
         for artifact in self.default_ignores:
             manifest.add_vcs_ignore(artifact)
+
+        for file_path, content in self.default_files.items():
+            manifest.add_file_injection(file_path, content)

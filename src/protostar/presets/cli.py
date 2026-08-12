@@ -32,3 +32,8 @@ class CliPreset(PresetModule):
     def default_ignores(self) -> list[str]:
         """Returns a list of default VCS ignore patterns for this preset."""
         return []
+
+    @property
+    def default_files(self) -> dict[str, str]:
+        """Returns a dict mapping file paths to their initial content to scaffold."""
+        return {"README.md": ""}
