@@ -15,6 +15,7 @@ python_version = "3.13"
 # mypy = true
 # pytest = true
 # pre_commit = true
+# active_presets = []
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures
