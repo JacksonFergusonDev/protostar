@@ -431,7 +431,7 @@ class SystemExecutor:
                         )
 
                     # Add main Tool Configuration header before the first tool header if not exists
-                    if "# === Tool Configuration ===" not in new_content:
+                    if "# Tool Configuration" not in new_content:
                         tool_match = re.search(
                             r"^# ---- (Ruff|Mypy|Pytest) ---- #\s*$",
                             new_content,
