@@ -75,8 +75,16 @@ def test_orchestrator_evaluate_collisions_headless_aborts_by_default(
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod], mock_config)
 
-    # Simulate the marker existing and a headless environment by patching the base pathlib object
-    mocker.patch("pathlib.Path.exists", return_value=True)
+    # Simulate the marker existing and a headless environment by mocking the property
+    marker = mocker.MagicMock()
+    marker.exists.return_value = True
+    marker.__str__.return_value = "dummy_marker.txt"
+    mocker.patch.object(
+        DummyModule,
+        "collision_markers",
+        new_callable=mocker.PropertyMock,
+        return_value=[marker],
+    )
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
 
     # The orchestrator should raise a ProtostarError directly instead of printing/exiting
@@ -93,7 +101,15 @@ def test_orchestrator_evaluate_collisions_headless_with_force_merges(
     # Initialize with the force flag enabled
     orchestrator = Orchestrator([dummy_mod], mock_config, force=True)
 
-    mocker.patch("pathlib.Path.exists", return_value=True)
+    marker = mocker.MagicMock()
+    marker.exists.return_value = True
+    marker.__str__.return_value = "dummy_marker.txt"
+    mocker.patch.object(
+        DummyModule,
+        "collision_markers",
+        new_callable=mocker.PropertyMock,
+        return_value=[marker],
+    )
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
 
     orchestrator._evaluate_collisions()
@@ -106,7 +122,15 @@ def test_orchestrator_evaluate_collisions_interactive_abort(mocker, mock_config)
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod], mock_config)
 
-    mocker.patch("pathlib.Path.exists", return_value=True)
+    marker = mocker.MagicMock()
+    marker.exists.return_value = True
+    marker.__str__.return_value = "dummy_marker.txt"
+    mocker.patch.object(
+        DummyModule,
+        "collision_markers",
+        new_callable=mocker.PropertyMock,
+        return_value=[marker],
+    )
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
     mocker.patch.dict("os.environ", clear=True)
 
@@ -125,7 +149,15 @@ def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker, mock_con
     dummy_mod = DummyModule()
     orchestrator = Orchestrator([dummy_mod], mock_config)
 
-    mocker.patch("pathlib.Path.exists", return_value=True)
+    marker = mocker.MagicMock()
+    marker.exists.return_value = True
+    marker.__str__.return_value = "dummy_marker.txt"
+    mocker.patch.object(
+        DummyModule,
+        "collision_markers",
+        new_callable=mocker.PropertyMock,
+        return_value=[marker],
+    )
     mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
     mocker.patch.dict("os.environ", clear=True)
 
