@@ -553,8 +553,11 @@ def test_handle_init_template_resolution(mocker, tmp_path):
         docker=False,
     )
 
-    # We need to mock ProtostarConfig.load because we don't want to rely on the actual config file on disk
-    mock_load = mocker.patch("protostar.cli.ProtostarConfig.load")
+    from protostar.config import ProtostarConfig
+
+    mock_load = mocker.patch(
+        "protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig()
+    )
 
     from protostar.cli import handle_init
 
@@ -580,6 +583,28 @@ def test_handle_init_template_and_from_exclusive(mocker):
     with pytest.raises(
         ConfigurationError,
         match=r"Cannot use both '--template' and '--from' simultaneously\.",
+    ):
+        handle_init(args)
+
+
+def test_handle_init_pre_commit_and_prek_exclusive(mocker):
+    """Test that --pre-commit and --prek cannot be used together."""
+    args = argparse.Namespace(
+        template_name=None,
+        from_path=None,
+        template_context={},
+        PreCommitModule=True,
+        PrekModule=True,
+        docker=False,
+    )
+    from protostar.cli import handle_init
+    from protostar.config import ProtostarConfig
+
+    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
+
+    with pytest.raises(
+        ConfigurationError,
+        match=r"Cannot use both '--pre-commit' and '--prek' simultaneously\.",
     ):
         handle_init(args)
 

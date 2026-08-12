@@ -347,3 +347,58 @@ class PreCommitModule(BootstrapModule):
             timeout=300,
             description="Updating pre-commit hooks to latest versions...",
         )
+
+
+class PrekModule(BootstrapModule):
+    """Configures prek hooks and installs the git hook scripts."""
+
+    cli_flags = ("--prek",)
+    cli_help = (
+        "Scaffold prek hooks and configuration (faster Rust alternative to pre-commit)"
+    )
+    config_key = "prek"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Prek"
+
+    def pre_flight(self) -> None:
+        """Verifies that the 'git' executable is available in the system PATH."""
+        if not shutil.which("git"):
+            raise MissingDependencyError(
+                dependency="git",
+                purpose="prek hooks",
+                install_hint="Please install Git and try again.",
+            )
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for prek."""
+        return [Path(".pre-commit-config.yaml")]
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Flags prek activation, queues dependencies, and sets up git hooks.
+
+        Evaluates the local workspace for an existing Git repository before
+        queueing initialization commands to ensure idempotency.
+        """
+        logger.debug("Building Prek tooling layer.")
+
+        # Trigger the orchestrator to assemble and write the YAML file
+        manifest.wants_prek = True
+        manifest.add_dev_dependency("prek")
+
+        # Git must be initialized before prek can install its hooks.
+        if not Path(".git").exists():
+            manifest.add_system_task(["git", "init"])
+
+        manifest.add_post_install_task(
+            ["uv", "run", "prek", "install"],
+            description="Installing prek git hooks",
+        )
+        manifest.add_post_install_task(
+            ["uv", "run", "prek", "update"],
+            timeout=300,
+            description="Updating prek hooks to latest versions...",
+        )

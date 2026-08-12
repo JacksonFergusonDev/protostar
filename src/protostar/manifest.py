@@ -85,6 +85,7 @@ class EnvironmentManifest:
     file_injections: dict[str, str] = dataclasses.field(default_factory=dict)
     file_appends: dict[str, list[str]] = dataclasses.field(default_factory=dict)
     wants_pre_commit: bool = False
+    wants_prek: bool = False
     pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
     ide_extensions: set[str | tuple[str, ...]] = dataclasses.field(default_factory=set)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE

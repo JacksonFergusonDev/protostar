@@ -8,6 +8,7 @@ from .tooling_layer import (
     MarkdownLintModule,
     MypyModule,
     PreCommitModule,
+    PrekModule,
     PytestModule,
     RuffModule,
 )
@@ -19,6 +20,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     MypyModule(),
     PytestModule(),
     PreCommitModule(),
+    PrekModule(),
 )
 
 __all__ = [
@@ -27,6 +29,7 @@ __all__ = [
     "DirenvModule",
     "MypyModule",
     "PreCommitModule",
+    "PrekModule",
     "PytestModule",
     "PythonCore",
     "RuffModule",
