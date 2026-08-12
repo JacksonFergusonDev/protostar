@@ -146,7 +146,7 @@ class SystemExecutor:
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and interpolates the pre-commit configuration."""
-        if not self.manifest.wants_pre_commit:
+        if not self.manifest.wants_pre_commit and not self.manifest.wants_prek:
             return
 
         target = Path(".pre-commit-config.yaml")
