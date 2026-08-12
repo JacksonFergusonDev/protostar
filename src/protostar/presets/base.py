@@ -30,6 +30,12 @@ class PresetModule(abc.ABC):
         """Returns the dictionary key used in config.toml for overrides."""
         return self.__class__.__name__.replace("Preset", "").lower()
 
+    # --- Decision Note: Configuration Precedence Cascade ---
+    # Protostar resolves component activation using the following strict priority (highest to lowest):
+    #   1. Explicit CLI Flags (e.g., `--astro` / `--no-astro` override everything)
+    #   2. Template Directives (`--from` or `--template` overrides global config)
+    #   3. Local `[presets.<name>]` / `[env]` entries in user config.toml
+    #   4. Preset / Module hardcoded default fallbacks
     def _apply_overrides(self, manifest: "EnvironmentManifest") -> bool:
         """Applies user-defined overrides from the global configuration if present.
 

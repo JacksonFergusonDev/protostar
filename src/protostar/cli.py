@@ -443,6 +443,13 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# --- CLI Design Note: Pre-Parser Interception & POSIX Exit Mapping ---
+# 1. Interactive TUI Interception: Evaluates raw `sys.argv` before `argparse.parse_args()`
+#    to seamlessly drop users into interactive wizards when flags are omitted, avoiding generic
+#    argparse help outputs.
+# 2. POSIX Sysexits Mapping: Domain exceptions map directly to standard POSIX status codes
+#    (e.g., EX_CONFIG=78, EX_UNAVAILABLE=69, EX_IOERR=74) to allow automated shell scripts and CI/CD
+#    runners to programmatically differentiate configuration errors from disk or network failures.
 def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
     if len(sys.argv) == 1:

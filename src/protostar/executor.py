@@ -45,6 +45,14 @@ class SystemExecutor:
         self.config = config
         self.docker = docker
 
+    # --- Architecture Note: Deterministic Pipeline Sequencing ---
+    # The execution phases in `execute()` follow a strict dependency order:
+    #   1. Pre-flight Validation: Fast C-optimized TOML syntax check before writing to disk.
+    #   2. Directory & File Realization: Basic structure & config injection prior to task invocation.
+    #   3. System Tasks: Git initialization must occur before pre-commit/nbdime post-install tasks.
+    #   4. Dependency Resolution: `uv add` runs before post-install tasks so installed binaries
+    #      are present in `.venv/bin`.
+    #   5. IDE Diagnostics: Runs last as non-blocking telemetry warnings.
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
         self._validate_targets()
@@ -244,6 +252,17 @@ class SystemExecutor:
             with console.status(msg):
                 execute_subprocess(task.command, timeout=task.timeout)
 
+    # --- Architectural Note: AST-Preserving TOML Merging ---
+    # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
+    #
+    # Rationale:
+    #   1. Comment & Format Preservation: Simple deserialization/reserialization strips user comments,
+    #      custom ordering, and blank lines in pyproject.toml.
+    #   2. Selective Overwrites: In OVERWRITE mode, scalar keys are purged from target tables while
+    #      sibling tables (e.g., [tool.pytest] vs [tool.ruff]) are preserved to prevent destroying
+    #      unrelated tooling configuration.
+    #   3. AST Parity Guards: Type mismatches (e.g., merging a table into a scalar key) emit non-fatal
+    #      diagnostics rather than corrupting the AST.
     def _deep_merge_tomlkit(
         self, base: Any, payload: Any, overwrite: bool = False
     ) -> None:

@@ -3,8 +3,14 @@
 import re
 
 
+# --- Design Note: Lightweight Regex Interpolation vs Jinja2 ---
+# Custom regex matching with `<% var %>` delimiters and `toml_escape()` is used instead of Jinja2
+# or string.Template:
+#   1. Zero External Dependencies: Avoids adding heavy templating dependencies to the CLI footprint.
+#   2. TOML Injection Prevention: `toml_escape()` sanitizes input variables against quotes and newline
+#      breakouts before string substitution into target TOML manifests.
 def extract_variables(content: str) -> list[str]:
-    """Scans a raw string for {{variable}} placeholders.
+    """Scans a raw string for <% variable %> placeholders.
 
     Args:
         content: The raw text to scan.
