@@ -155,7 +155,8 @@ class ProtostarConfig:
             content = render_template(content, context)
             instance = cls._parse_and_merge(content, override_target, instance)
 
-        cls._instance = instance
+        if override_target is None:
+            cls._instance = instance
         return instance
 
     # --- Dependency Note: Why Not Pydantic? ---
