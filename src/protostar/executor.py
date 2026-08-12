@@ -172,9 +172,14 @@ class SystemExecutor:
         full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
 
         if "{{MYPY_DEPENDENCIES}}" in full_yaml:
+            # We use manual string manipulation here instead of a YAML library (like PyYAML)
+            # to avoid adding a heavy third-party dependency for a very minor feature.
+            # If the schema of .pre-commit-config.yaml ever becomes significantly more
+            # complex, this should be refactored to use a dedicated YAML serialization library.
             deps = self.manifest.dependencies
             if deps:
-                deps_formatted = "\n".join(f"          - {d}" for d in deps)
+                # Guarantee exactly 10 spaces of indentation for each list item
+                deps_formatted = "\n".join(f"{' ' * 10}- {d}" for d in deps)
                 full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
             else:
                 # If no runtime dependencies, strip the key cleanly
