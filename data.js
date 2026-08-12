@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786513186008,
+  "lastUpdate": 1786513832934,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4493,6 +4493,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 196.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "ae2adc1561e3910ef6b3f2c94fa6fb3fb87d5def",
+          "message": "docs(architecture): add high-level decision comments and fix placeholder docstrings\n\n- Add architectural block comment in executor.py for tomlkit AST merging & scalar purging.\n- Document deterministic pipeline execution sequence in executor.py.\n- Document pre-parser sys.argv interception and POSIX exit code mappings in cli.py.\n- Outline 4-tier configuration precedence cascade in presets/base.py.\n- Fix extract_variables docstring placeholder syntax to <% var %> and document regex escaping strategy in interpolation.py.",
+          "timestamp": "2026-08-11T22:49:15-07:00",
+          "tree_id": "443151341a091e7b7aaaffab66fe164431723f86",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ae2adc1561e3910ef6b3f2c94fa6fb3fb87d5def"
+        },
+        "date": 1786513831885,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 106.29,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 159.74,
             "unit": "ms"
           }
         ]
