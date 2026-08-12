@@ -172,9 +172,14 @@ class SystemExecutor:
         full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
 
         if "{{MYPY_DEPENDENCIES}}" in full_yaml:
+            # We use manual string manipulation here instead of a YAML library (like PyYAML)
+            # to avoid adding a heavy third-party dependency for a very minor feature.
+            # If the schema of .pre-commit-config.yaml ever becomes significantly more
+            # complex, this should be refactored to use a dedicated YAML serialization library.
             deps = self.manifest.dependencies
             if deps:
-                deps_formatted = "\n".join(f"          - {d}" for d in deps)
+                # Guarantee exactly 10 spaces of indentation for each list item
+                deps_formatted = "\n".join(f"{' ' * 10}- {d}" for d in deps)
                 full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
             else:
                 # If no runtime dependencies, strip the key cleanly
@@ -430,9 +435,8 @@ class SystemExecutor:
         gitignore = Path(".gitignore")
         try:
             existing_content = gitignore.read_text() if gitignore.exists() else ""
-            missing = [
-                p for p in self.manifest.vcs_ignores if p not in existing_content
-            ]
+            existing_lines = {line.strip() for line in existing_content.splitlines()}
+            missing = [p for p in self.manifest.vcs_ignores if p not in existing_lines]
 
             if missing:
                 prefix = (
@@ -458,6 +462,7 @@ class SystemExecutor:
         dockerignore = Path(".dockerignore")
         try:
             existing_content = dockerignore.read_text() if dockerignore.exists() else ""
+            existing_lines = {line.strip() for line in existing_content.splitlines()}
             base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
 
             has_uv_init = any(
@@ -468,7 +473,7 @@ class SystemExecutor:
                 base_ignores.add(".python-version")
 
             combined_ignores = self.manifest.vcs_ignores | base_ignores
-            missing = [p for p in combined_ignores if p not in existing_content]
+            missing = [p for p in combined_ignores if p not in existing_lines]
 
             if missing:
                 prefix = (

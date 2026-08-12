@@ -45,5 +45,9 @@ def render_template(content: str, context: dict[str, str]) -> str:
     for key, value in context.items():
         safe_value = toml_escape(value)
         pattern = r"<\%\s*" + re.escape(key) + r"\s*\%>"
-        rendered = re.sub(pattern, safe_value, rendered)
+
+        def replacement(_match: re.Match[str], sv: str = safe_value) -> str:
+            return sv
+
+        rendered = re.sub(pattern, replacement, rendered)
     return rendered

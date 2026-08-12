@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 
 from rich.console import Console
@@ -68,7 +67,7 @@ class Orchestrator:
             return
 
         # 2. Evaluate non-interactive fallback logic
-        if not sys.stdin.isatty() or "PYTEST_CURRENT_TEST" in os.environ:
+        if not sys.stdin.isatty():
             raise ProtostarError(
                 "Orbital Collision Detected: The target workspace is not empty.\n"
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"

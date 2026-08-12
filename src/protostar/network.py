@@ -68,7 +68,7 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
 
     try:
         with urllib.request.urlopen(url, timeout=timeout) as response:
-            return str(response.read().decode("utf-8"))
+            return str(response.read(1024 * 1024).decode("utf-8"))
     except URLError as e:
         raise ConfigurationError(
             f"Failed to fetch remote configuration from {url}.\nDetails: {e}"
