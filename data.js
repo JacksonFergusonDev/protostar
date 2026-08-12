@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786489569812,
+  "lastUpdate": 1786507240759,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4255,6 +4255,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.99,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7cdd790f2f9c0f12de2b0d0686339522af191a6b",
+          "message": "feat(templates): implement opinionated templates and tri-state CLI toggling (#128)\n\n- Add `--template` flag for built-in turnkey environments (astro, cli)\n- Add interactive TUI prompt for template selection in `wizard.py`\n- Add `active_presets` parsing with strict validation in `config.py` to prevent global contamination\n- Refactor CLI booleans to `BooleanOptionalAction` to support template overriding via `--no-<flag>`\n- Rename `templating.py` to `interpolation.py` to prevent namespace collision\n- Document templates across README, usage, and mechanics for all user personas\n- Remove `{{VAR}}` interpolation footgun from `astro.toml`\n- Sync test suites and `docs/includes` fixtures",
+          "timestamp": "2026-08-11T20:59:41-07:00",
+          "tree_id": "a2ce6f93e2f4f46918515b768804237a98449a16",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7cdd790f2f9c0f12de2b0d0686339522af191a6b"
+        },
+        "date": 1786507239628,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 129.82,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 193.3,
             "unit": "ms"
           }
         ]
