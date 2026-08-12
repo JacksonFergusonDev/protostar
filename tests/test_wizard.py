@@ -36,6 +36,9 @@ def test_run_init_wizard_benchmark_abort(mocker):
     mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
     mocker.patch.dict(os.environ, {"PROTOSTAR_BENCHMARK_WIZARD": "1"})
 
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "None"
+
     with pytest.raises(SystemExit) as exc_info:
         run_init_wizard()
 
@@ -49,6 +52,9 @@ def test_run_init_wizard_cancellation(mocker):
         "protostar.wizard.ProtostarConfig.load", return_value=ProtostarConfig()
     )
     mocker.patch.dict(os.environ, {}, clear=True)
+
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "None"
 
     mock_checkbox = mocker.patch("questionary.checkbox")
     mock_checkbox.return_value.ask.return_value = None
