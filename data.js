@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786510187789,
+  "lastUpdate": 1786511163566,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4425,6 +4425,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 152.51,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f0940c6f6c2fb38c764ce2a58a6492faa25ad376",
+          "message": "docs: document missing CLI flags and config commands\n\nDocument previously undocumented and weakly documented features across\nthe README and official documentation:\n- Document `protostar config --reset` and `--force` in configuration.md\n- Document `--crash-test` telemetry simulation flag in testing.md\n- Document `--force` / `-f` headless collision bypass in README.md and init.md\n- Document `--python-version` CLI overrides in README.md and init.md\n- Document `--verbose` / `-v` global debug flag in README.md and init.md",
+          "timestamp": "2026-08-11T22:05:02-07:00",
+          "tree_id": "4e9484e15c258ff4570f2d6a0ad1cbfea28656a4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f0940c6f6c2fb38c764ce2a58a6492faa25ad376"
+        },
+        "date": 1786511163013,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.2,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.51,
             "unit": "ms"
           }
         ]
