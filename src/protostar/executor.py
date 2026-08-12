@@ -264,7 +264,11 @@ class SystemExecutor:
     #   3. AST Parity Guards: Type mismatches (e.g., merging a table into a scalar key) emit non-fatal
     #      diagnostics rather than corrupting the AST.
     def _deep_merge_tomlkit(
-        self, base: Any, payload: Any, overwrite: bool = False
+        self,
+        base: Any,
+        payload: Any,
+        overwrite: bool = False,
+        path: tuple[str, ...] = (),
     ) -> None:
         """Recursively deep-merges a tomlkit payload into a base document.
 
@@ -273,12 +277,14 @@ class SystemExecutor:
             payload: The incoming tomlkit table to merge into the base.
             overwrite: If True, unmatched scalar keys in the base will be purged,
                 and array-of-tables will be completely replaced.
+            path: The tuple of keys representing the current path in the document.
         """
         import tomlkit.items
 
         # Purge scalar/array keys in base that are missing from the payload
         # to enforce strict AST overwriting, while preserving sibling tables.
-        if overwrite:
+        # We explicitly protect the root document and the [project] table from being purged.
+        if overwrite and len(path) > 0 and path[0] != "project":
             keys_to_remove = []
             for b_key, b_val in base.items():
                 if b_key not in payload and not isinstance(
@@ -305,10 +311,16 @@ class SystemExecutor:
                         for v in value.values()
                     )
 
-                    if overwrite and not has_sub_tables:
+                    is_project = (key == "project" and len(path) == 0) or (
+                        len(path) > 0 and path[0] == "project"
+                    )
+
+                    if overwrite and not has_sub_tables and not is_project:
                         base[key] = value
                     else:
-                        self._deep_merge_tomlkit(base[key], value, overwrite)
+                        self._deep_merge_tomlkit(
+                            base[key], value, overwrite, (*path, key)
+                        )
 
                 elif isinstance(value, tomlkit.items.AoT):
                     # Type Parity Guard
