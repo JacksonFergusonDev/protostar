@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from .errors import ConfigurationError
+from .interpolation import extract_variables, render_template
 from .network import fetch_remote_config
-from .templating import extract_variables, render_template
 
 logger = logging.getLogger("protostar")
 
@@ -32,6 +32,7 @@ python_version = "3.13"
 # mypy = true
 # pytest = true
 # pre_commit = true
+# active_presets = []
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures
@@ -82,6 +83,7 @@ class ProtostarConfig:
     mypy: bool = False
     pytest: bool = False
     pre_commit: bool = False
+    active_presets: list[str] = field(default_factory=list)
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
@@ -227,6 +229,14 @@ class ProtostarConfig:
         if "env" in data:
             env_data = data["env"]
 
+            if "active_presets" in env_data and source == str(CONFIG_FILE):
+                raise ConfigurationError(
+                    "The 'active_presets' key is not allowed in the global configuration file "
+                    f"({CONFIG_FILE}), as it would permanently inject those dependencies into every "
+                    "future project.\n\n"
+                    "Please use 'active_presets' exclusively within portable templates or --from targets."
+                )
+
             # get_type_hints resolves stringified annotations (PEP 563 /
             # `from __future__ import annotations`) into real type objects.
             # f.type would return raw strings in that context and break
@@ -240,7 +250,23 @@ class ProtostarConfig:
                 expected = resolved_hints[key]
                 origin = typing.get_origin(expected)
 
-                if origin not in (None, types.UnionType, typing.Union):
+                if origin is list:
+                    if not isinstance(value, list):
+                        raise ConfigurationError(
+                            f"Type mismatch in {source} for '[env].{key}'.\n"
+                            f"Expected list, but got {type(value).__name__}."
+                        )
+                    inner_type = typing.get_args(expected)[0]
+                    for item in value:
+                        if not isinstance(item, inner_type):
+                            raise ConfigurationError(
+                                f"Type mismatch in {source} for '[env].{key}' elements.\n"
+                                f"Expected {inner_type.__name__}, but got {type(item).__name__}."
+                            )
+                    updates[key] = value
+                    continue
+
+                if origin not in (None, types.UnionType, typing.Union, list):
                     updates[key] = value
                     continue
 
@@ -281,5 +307,16 @@ class ProtostarConfig:
             merged_vars = dict(instance.variables)
             merged_vars.update(data["variables"])
             updates["variables"] = merged_vars
+
+        if "active_presets" in updates:
+            from .presets import PRESETS
+
+            valid_preset_keys = {p.config_key for p in PRESETS}
+            for p_name in updates["active_presets"]:
+                if p_name not in valid_preset_keys:
+                    raise ConfigurationError(
+                        f"Unknown preset requested in {source}: '{p_name}'.\n"
+                        f"Valid active_presets are: {', '.join(sorted(valid_preset_keys))}."
+                    )
 
         return replace(instance, **updates)

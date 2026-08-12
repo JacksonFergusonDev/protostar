@@ -97,17 +97,28 @@ protostar init --from ./template.toml --project_name="MyApp" --author="Jane Doe"
 
 If the template requires variables that you haven't provided via CLI flags, Protostar will interactively prompt you for the missing values.
 
-### Creating a Portable Template
+### Authoring Custom Templates
 
-Creating a portable template is functionally identical to modifying your own global configuration, but with the added ability to leverage `{{ variable }}` templating.
+Creating a portable template is functionally identical to modifying your own global configuration, but with the added ability to leverage `{{ variable }}` templating and preset composition.
 
 A portable TOML template can contain any of the following standard sections:
 
 - `[env]`: Base environment settings (e.g., `python_version = "3.12"`, `ide = "vscode"`, `ruff = true`).
+  - `active_presets`: A special list in the `[env]` block (e.g., `active_presets = ["astro"]`). This allows templates to declaratively activate domain presets without requiring the user to pass flags.
 - `[presets.preset_name]`: Overrides for specific preset dependencies and directories.
 - `[dev]`: Instructions for injecting `extra_dependencies` or raw `pyproject` string injections.
 - `[files]`: A powerful block mapping relative file paths to raw string content. This is perfect for scaffolding `README.md` files or custom scripts.
 - `[variables]`: Arbitrary key-value metadata for the configuration.
+
+> [!WARNING]
+> **The Interpolation Footgun**
+>
+> Protostar uses the exact same syntax (`{{VARIABLE_NAME}}`) for two completely different phases:
+>
+> 1. **Configuration Load Time:** When parsing the template TOML, Protostar scans for `{{VAR}}` to trigger interactive prompts for missing variables.
+> 1. **Execution Time:** The orchestrator injects late-binding tokens (like `{{PYTHON_VERSION}}` or `{{MYPY_DEPENDENCIES}}`) into dynamically generated configurations.
+>
+> **Do not use double-curly-brace interpolation syntax inside template configurations (like `[dev.pyproject]`) if you intend for it to be evaluated by the executor!** Doing so will cause Protostar to intercept it at load time and prompt the user in the terminal (e.g., `PYTHON_VERSION:`).
 
 #### Example: A Team Initialization Template
 

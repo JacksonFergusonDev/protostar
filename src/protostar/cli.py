@@ -1,4 +1,5 @@
 import argparse
+import importlib.resources
 import logging
 import os
 import platform
@@ -57,7 +58,23 @@ def handle_init(args: argparse.Namespace) -> None:
     from .wizard import resolve_missing_variables
 
     override_target = getattr(args, "from_path", None)
+    template_name = getattr(args, "template_name", None)
     template_context = getattr(args, "template_context", {})
+
+    if override_target and template_name:
+        raise ConfigurationError(
+            "Cannot use both '--template' and '--from' simultaneously."
+        )
+
+    if template_name:
+        target = importlib.resources.files("protostar.templates").joinpath(
+            f"{template_name}.toml"
+        )
+        if not target.is_file():
+            raise ConfigurationError(f"Built-in template '{template_name}' not found.")
+        # We can cast it to str because we know Protostar isn't typically zip-safe,
+        # but if we wanted to be perfectly robust we could use as_file().
+        override_target = str(target)
 
     config = ProtostarConfig.load(
         override_target=override_target,
@@ -77,7 +94,14 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 3. Preset Layers
     for preset in PRESETS:
-        if preset.cli_flags and getattr(args, preset.__class__.__name__, False):
+        is_active = preset.config_key in config.active_presets
+
+        if preset.cli_flags:
+            cli_override = getattr(args, preset.__class__.__name__, None)
+            if cli_override is not None:
+                is_active = cli_override
+
+        if is_active:
             presets.append(preset)
 
     # 4. Tooling Layers
@@ -295,8 +319,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=argparse.SUPPRESS,
     )
 
-    # Base Configuration
     base_group = init_parser.add_argument_group("Base Configuration")
+    base_group.add_argument(
+        "-t",
+        "--template",
+        type=str,
+        dest="template_name",
+        help="Name of a built-in template to apply (e.g., 'astro', 'cli').",
+        metavar="NAME",
+    )
     base_group.add_argument(
         "--from",
         type=str,
@@ -318,7 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
         if preset.cli_flags:
             preset_group.add_argument(
                 *preset.cli_flags,
-                action="store_true",
+                action=argparse.BooleanOptionalAction,
                 help=preset.cli_help,
                 dest=preset.__class__.__name__,
             )
@@ -538,7 +569,7 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
                     kwargs[key] = ""
         else:
             raise ConfigurationError(
-                f"Unrecognized positional argument for templating: {arg}"
+                f"Unrecognized positional argument for interpolation: {arg}"
             )
         i += 1
     return kwargs

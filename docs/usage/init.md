@@ -169,6 +169,35 @@ If you select __Merge__, Protostar performs a surgical AST injection.
 !!! success "Strict Footprint Validation"
     Protostar enforces explicit dependency boundaries for all tooling operations. If you pass an impossible or conflicting configuration matrix via the CLI, Protostar will not crash or dump inert configurations into your repository. It evaluates the topological constraints, drops the invalid tool, and prints a clean diagnostic warning before proceeding with the rest of the valid scaffolding sequence.
 
+## Opinionated Templates
+
+While Protostar is highly modular, sometimes you just want a vetted, turnkey environment without selecting a dozen checkboxes. Protostar ships with built-in __Opinionated Templates__ that bundle specific tools and overrides for popular workflows.
+
+You can select a template in the interactive wizard, or trigger it headlessly:
+
+```bash
+protostar init --template astro
+```
+
+### `--template` vs `--from`
+
+Protostar provides two different flags for template-driven configuration:
+
+- `--template`: Scaffolds from a __trusted, built-in template__ shipped natively with the Protostar package (e.g., `astro`, `cli`).
+- `--from`: Fetches an __external, portable configuration__ via a remote URL or local file path. Use this for organizational standards or custom setups.
+
+### Tri-State CLI Toggles
+
+When you load a template, it automatically evaluates its default tooling selections. However, Protostar's CLI uses __tri-state toggling__, meaning you can always manually override a template's default on the fly.
+
+For example, if the `astro` template enables `direnv` by default, but you explicitly don't want it for this specific project, you can negate it using the `--no-<flag>` syntax:
+
+```bash
+protostar init --template astro --no-direnv
+```
+
+This ensures templates remain helpful starting points rather than rigid constraints.
+
 ## The Capabilities Matrix
 
 You can mix and match these flags to generate exactly the environment you need. To view this matrix in your terminal at any time, run `protostar help init`.

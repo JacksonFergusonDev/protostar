@@ -115,7 +115,9 @@ Protostar is designed to be run right after you `mkdir` a new project.
 
 ### The Interactive Wizard
 
-If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI). This wizard allows you to visually select your domain presets and development tooling without needing to memorize CLI flags.
+If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI).
+
+The wizard will first ask if you want to scaffold using a vetted **Opinionated Template** (like the `astro` or `cli` templates), which automatically pre-configures a robust toolchain for you. Alternatively, you can opt to build a custom environment matrix by manually checking boxes for each individual preset and development tool.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -125,13 +127,27 @@ protostar
 
 ### Headless Scaffolding
 
-For rapid, repeatable initialization, bypass the TUI entirely by providing your desired environment matrix as CLI flags.
+For rapid, repeatable initialization, bypass the TUI entirely. You can either scaffold directly from a built-in template:
+
+```bash
+protostar init --template astro
+```
+
+Or you can construct your own environment footprint from scratch using CLI flags:
 
 ```bash
 protostar init --astro --docker --direnv -m --mypy --pytest --pre-commit
 ```
 
 *Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
+
+### Portable Configurations
+
+If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them during initialization:
+
+```bash
+protostar init --from https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml
+```
 
 ---
 

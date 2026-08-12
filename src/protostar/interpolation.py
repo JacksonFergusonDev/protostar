@@ -1,4 +1,4 @@
-"""Templating utilities for safely injecting variables into TOML strings."""
+"""Interpolation utilities for safely injecting variables into TOML strings."""
 
 import re
 
@@ -35,7 +35,7 @@ def render_template(content: str, context: dict[str, str]) -> str:
     """Replaces placeholders in the content with TOML-escaped context values.
 
     Args:
-        content: The raw TOML specification template.
+        content: The raw TOML specification content.
         context: A mapping of variable names to their raw substitution values.
 
     Returns:

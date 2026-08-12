@@ -1,4 +1,4 @@
-from protostar.templating import extract_variables, render_template, toml_escape
+from protostar.interpolation import extract_variables, render_template, toml_escape
 
 
 def test_extract_variables():

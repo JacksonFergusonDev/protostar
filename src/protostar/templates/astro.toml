@@ -1,0 +1,21 @@
+[env]
+active_presets = ["astro"]
+
+# Tooling opinions for a Jupyter/Scientific workflow
+ruff = true
+direnv = true
+mypy = false
+pytest = false
+pre_commit = false
+
+[dev.pyproject]
+# Surgically append data-science specific linting rules to Ruff
+# without destroying the baseline configuration.
+#
+# > [!WARNING]
+# > Do not use double-curly-brace interpolation syntax inside template configs,
+# > as it will trigger interactive prompts at load time before engine execution.
+data_science_linting = '''
+[tool.ruff.lint]
+extend-select = ["PD", "NPY"]
+'''

@@ -275,3 +275,46 @@ def test_config_load_missing_vars_without_resolver_raises(mocker, tmp_path):
 
     with pytest.raises(ConfigurationError, match="requires variables"):
         ProtostarConfig.load(force_reload=True, override_target=str(target))
+
+
+def test_config_active_presets(mocker, tmp_path):
+    """Test that active_presets is correctly parsed and footgun protection works."""
+    mock_global_config = tmp_path / "valid.toml"
+    mock_global_config.write_text('[env]\nactive_presets = ["astro", "cli"]\n')
+
+    # Using as override_target should parse successfully
+    config = ProtostarConfig.load(
+        override_target=str(mock_global_config), force_reload=True
+    )
+    assert config.active_presets == ["astro", "cli"]
+
+    # Setting it as the global config file should trigger the footgun trap
+    mocker.patch("protostar.config.CONFIG_FILE", mock_global_config)
+    with pytest.raises(
+        ConfigurationError, match="not allowed in the global configuration file"
+    ):
+        ProtostarConfig.load(force_reload=True, override_target=None)
+
+
+def test_config_active_presets_type_validation(tmp_path):
+    """Test that active_presets validates generic list structure."""
+    mock_config = tmp_path / "invalid.toml"
+
+    # Test string instead of list
+    mock_config.write_text('[env]\nactive_presets = "astro"\n')
+    with pytest.raises(ConfigurationError, match="Expected list, but got str"):
+        ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+
+    # Test list of ints instead of list of strings
+    mock_config.write_text("[env]\nactive_presets = [1]\n")
+    with pytest.raises(ConfigurationError, match="Expected str, but got int"):
+        ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+
+
+def test_config_active_presets_name_validation(tmp_path):
+    """Test that active_presets enforces valid preset names."""
+    mock_config = tmp_path / "invalid_names.toml"
+    mock_config.write_text('[env]\nactive_presets = ["fake_preset"]\n')
+
+    with pytest.raises(ConfigurationError, match="Unknown preset requested"):
+        ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
