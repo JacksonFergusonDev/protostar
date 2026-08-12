@@ -11,7 +11,11 @@ pre_commit = false
 [dev.pyproject]
 # Surgically append data-science specific linting rules to Ruff
 # without destroying the baseline configuration.
+#
+# > [!WARNING]
+# > Do not use `{{VAR}}` interpolation syntax inside template configs,
+# > as it will trigger interactive prompts at load time before engine execution.
 data_science_linting = '''
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "RUF", "PD", "NPY"]
+extend-select = ["PD", "NPY"]
 '''

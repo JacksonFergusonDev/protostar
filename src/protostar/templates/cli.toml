@@ -8,9 +8,6 @@ mypy = true
 pytest = true
 pre_commit = true
 
-[dev.pyproject]
-strict_typing = '''
-[tool.mypy]
-strict = true
-disallow_untyped_defs = true
-'''
+# > [!WARNING]
+# > Do not use `{{VAR}}` interpolation syntax inside template configs,
+# > as it will trigger interactive prompts at load time before engine execution.
