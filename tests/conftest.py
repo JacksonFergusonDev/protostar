@@ -47,6 +47,13 @@ def run_cli(
         env["HOME"] = str(tmp_path)
         env["USERPROFILE"] = str(tmp_path)
 
+        # Remove any leaked environment variables that might interfere with isolation
+        env.pop("VIRTUAL_ENV", None)
+        env.pop("PRE_COMMIT_HOME", None)
+        env.pop("XDG_CACHE_HOME", None)
+        env.pop("GIT_CONFIG_GLOBAL", None)
+        env.pop("GIT_CONFIG_SYSTEM", None)
+
         # Force execution via the local python module instead of the global binary
         result = subprocess.run(
             [sys.executable, "-m", "protostar.cli", *args],
