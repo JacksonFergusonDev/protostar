@@ -20,7 +20,6 @@ select = [
     "UP",  # pyupgrade
     "RUF", # ruff-specific rules
 ]
-ignore = []
 
 [tool.mypy]
 python_version = "3.13"

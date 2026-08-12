@@ -2,8 +2,7 @@
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"] # Expanding the lint rules
-ignore = []
+select = ["E", "F", "I", "B", "UP", "RUF"]
 
 [tool.mypy]
 strict = true

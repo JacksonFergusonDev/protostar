@@ -333,7 +333,6 @@ def test_executor_deep_merge_tomlkit(mock_config):
 
     # 3. Verify nested list replacements
     assert "UP" in merged_dict["tool"]["ruff"]["lint"]["select"]
-    assert merged_dict["tool"]["ruff"]["lint"]["ignore"] == []
 
     # 4. Verify new root tables were injected
     assert merged_dict["tool"]["mypy"]["strict"] is True

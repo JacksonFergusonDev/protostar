@@ -214,7 +214,6 @@ select = [
     "UP",  # pyupgrade
     "RUF", # ruff-specific rules
 ]
-ignore = []
 """
         manifest.add_file_append("pyproject.toml", config)
 

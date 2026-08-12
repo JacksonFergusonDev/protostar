@@ -22,7 +22,6 @@ select = [
     "UP",  # pyupgrade
     "RUF", # ruff-specific rules
 ]
-ignore = []
 
 [dependency-groups]
 dev = [
