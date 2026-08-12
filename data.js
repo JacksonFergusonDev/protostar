@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786559987885,
+  "lastUpdate": 1786571144810,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4663,6 +4663,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.7,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3a3a94114ce76629881510f3b246f6bb2e45b015",
+          "message": "feat: inject project metadata and add visual separators to pyproject.toml scaffolding (#133)\n\n* feat: add pyproject.toml section and tool headers\n\n* feat: prompt for project metadata in interactive wizard\n\n* feat: inject project metadata into pyproject.toml\n\n* fix: resolve pyproject.toml idempotency issue and update docs fixture\n\n* fix: protect [project] root table from scalar purging during OVERWRITE strategy",
+          "timestamp": "2026-08-12T14:44:43-07:00",
+          "tree_id": "01a2e40c0e17d47d2bb667e70ae4d5c0e05fcbb6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3a3a94114ce76629881510f3b246f6bb2e45b015"
+        },
+        "date": 1786571143620,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 123.38,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.37,
             "unit": "ms"
           }
         ]
