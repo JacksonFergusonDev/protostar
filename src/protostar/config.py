@@ -32,6 +32,7 @@ python_version = "3.13"
 # mypy = true
 # pytest = true
 # pre_commit = true
+# commitizen = true  # Scaffold commitizen version bumping and changelog tooling
 # active_presets = []
 
 # --- Advanced Configuration Overrides ---
@@ -68,6 +69,7 @@ class ProtostarConfig:
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
         pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
         pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
+        commitizen (bool): Whether to auto-scaffold commitizen version bumping and changelog tooling.
         presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
@@ -83,6 +85,7 @@ class ProtostarConfig:
     mypy: bool = False
     pytest: bool = False
     pre_commit: bool = False
+    commitizen: bool = False
     active_presets: list[str] = field(default_factory=list)
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
