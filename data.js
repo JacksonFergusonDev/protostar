@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786571144810,
+  "lastUpdate": 1786571491182,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4697,6 +4697,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.37,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f8cacf567c4ab5a7188215044bbb690ab9ce73ca",
+          "message": "feat(presets): scaffold README.md for CLI and API presets\n\n- Introduce `default_files` property on `PresetModule` to allow presets to scaffold files.\n- Process `default_files` and `files` overrides during manifest realization.\n- Add an empty `README.md` file to `CliPreset` and `ApiPreset` defaults.\n- Update CLI directory tree documentation snippet to include `README.md`.",
+          "timestamp": "2026-08-12T14:50:18-07:00",
+          "tree_id": "fef51960a58b0d0bb6ca52cde061fbaa0c30d325",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f8cacf567c4ab5a7188215044bbb690ab9ce73ca"
+        },
+        "date": 1786571490077,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 196.85,
             "unit": "ms"
           }
         ]
