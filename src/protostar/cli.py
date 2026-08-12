@@ -121,6 +121,17 @@ def handle_init(args: argparse.Namespace) -> None:
         if is_active:
             modules.append(mod)
 
+    # Validate mutually exclusive tooling modules
+    active_tooling_names = [type(mod).__name__ for mod in modules]
+    if (
+        "PreCommitModule" in active_tooling_names
+        and "PrekModule" in active_tooling_names
+    ):
+        raise ConfigurationError(
+            "Cannot use both '--pre-commit' and '--prek' simultaneously. "
+            "Please choose one git hook manager."
+        )
+
     # 5. Undocumented Crash Test Injection
     if getattr(args, "crash_test", False):
 
