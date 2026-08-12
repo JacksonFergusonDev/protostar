@@ -318,3 +318,18 @@ def test_config_active_presets_name_validation(tmp_path):
 
     with pytest.raises(ConfigurationError, match="Unknown preset requested"):
         ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+
+
+def test_config_commitizen_defaults_to_false():
+    """Test that commitizen defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.commitizen is False
+
+
+def test_config_commitizen_parsed_from_env(tmp_path):
+    """Test that commitizen = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\ncommitizen = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.commitizen is True
