@@ -202,7 +202,8 @@ class RuffModule(BootstrapModule):
         manifest.add_pre_commit_hook(hook_payload)
 
         # Ruff natively inherits its target Python version from project.requires-python
-        config = """[tool.ruff]
+        config = """# ---- Ruff ---- #
+[tool.ruff]
 line-length = 88
 
 [tool.ruff.lint]
@@ -247,7 +248,8 @@ class MypyModule(BootstrapModule):
 {{MYPY_DEPENDENCIES}}"""
         manifest.add_pre_commit_hook(hook_payload)
 
-        config = """[tool.mypy]
+        config = """# ---- Mypy ---- #
+[tool.mypy]
 python_version = "{{PYTHON_VERSION}}"
 strict = true
 warn_return_any = true
@@ -283,7 +285,8 @@ class PytestModule(BootstrapModule):
         for artifact in artifacts:
             manifest.add_environment_artifact(artifact)
 
-        config = """[tool.pytest.ini_options]
+        config = """# ---- Pytest ---- #
+[tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers"
 testpaths = [

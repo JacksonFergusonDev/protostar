@@ -147,6 +147,12 @@ class Orchestrator:
             for payload in self.config.pyproject_injections.values():
                 self.manifest.add_file_append("pyproject.toml", payload)
 
+        if self.manifest.file_appends.get("pyproject.toml"):
+            header = "\n# ==================================================\n# Tool Configuration\n# ==================================================\n\n"
+            self.manifest.file_appends["pyproject.toml"][0] = (
+                header + self.manifest.file_appends["pyproject.toml"][0]
+            )
+
         if self.config.files:
             logger.debug("Injecting static files from configuration.")
             for filepath, content in self.config.files.items():
