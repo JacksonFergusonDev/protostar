@@ -435,9 +435,8 @@ class SystemExecutor:
         gitignore = Path(".gitignore")
         try:
             existing_content = gitignore.read_text() if gitignore.exists() else ""
-            missing = [
-                p for p in self.manifest.vcs_ignores if p not in existing_content
-            ]
+            existing_lines = {line.strip() for line in existing_content.splitlines()}
+            missing = [p for p in self.manifest.vcs_ignores if p not in existing_lines]
 
             if missing:
                 prefix = (
@@ -463,6 +462,7 @@ class SystemExecutor:
         dockerignore = Path(".dockerignore")
         try:
             existing_content = dockerignore.read_text() if dockerignore.exists() else ""
+            existing_lines = {line.strip() for line in existing_content.splitlines()}
             base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
 
             has_uv_init = any(
@@ -473,7 +473,7 @@ class SystemExecutor:
                 base_ignores.add(".python-version")
 
             combined_ignores = self.manifest.vcs_ignores | base_ignores
-            missing = [p for p in combined_ignores if p not in existing_content]
+            missing = [p for p in combined_ignores if p not in existing_lines]
 
             if missing:
                 prefix = (
