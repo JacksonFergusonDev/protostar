@@ -89,7 +89,7 @@ protostar init --from https://raw.githubusercontent.com/org/configs/main/protost
 
 ### Passing Template Variables
 
-Portable configurations can contain Jinja-style placeholders (e.g., `{{ project_name }}`). You can satisfy these variables by passing them as dynamic keyword arguments alongside the `--from` flag:
+Portable configurations can contain ERB-style placeholders (e.g., `<% project_name %>`). You can satisfy these variables by passing them as dynamic keyword arguments alongside the `--from` flag:
 
 ```bash
 protostar init --from ./template.toml --project_name="MyApp" --author="Jane Doe"
@@ -99,7 +99,7 @@ If the template requires variables that you haven't provided via CLI flags, Prot
 
 ### Authoring Custom Templates
 
-Creating a portable template is functionally identical to modifying your own global configuration, but with the added ability to leverage `{{ variable }}` templating and preset composition.
+Creating a portable template is functionally identical to modifying your own global configuration, but with the added ability to leverage `<% variable %>` templating and preset composition.
 
 A portable TOML template can contain any of the following standard sections:
 
@@ -109,16 +109,6 @@ A portable TOML template can contain any of the following standard sections:
 - `[dev]`: Instructions for injecting `extra_dependencies` or raw `pyproject` string injections.
 - `[files]`: A powerful block mapping relative file paths to raw string content. This is perfect for scaffolding `README.md` files or custom scripts.
 - `[variables]`: Arbitrary key-value metadata for the configuration.
-
-> [!WARNING]
-> **The Interpolation Footgun**
->
-> Protostar uses the exact same syntax (`{{VARIABLE_NAME}}`) for two completely different phases:
->
-> 1. **Configuration Load Time:** When parsing the template TOML, Protostar scans for `{{VAR}}` to trigger interactive prompts for missing variables.
-> 1. **Execution Time:** The orchestrator injects late-binding tokens (like `{{PYTHON_VERSION}}` or `{{MYPY_DEPENDENCIES}}`) into dynamically generated configurations.
->
-> **Do not use double-curly-brace interpolation syntax inside template configurations (like `[dev.pyproject]`) if you intend for it to be evaluated by the executor!** Doing so will cause Protostar to intercept it at load time and prompt the user in the terminal (e.g., `PYTHON_VERSION:`).
 
 #### Example: A Team Initialization Template
 
@@ -134,9 +124,9 @@ extra_dependencies = ["pytest-cov", "httpx"]
 
 [files]
 "README.md" = '''
-# {{ project_name }}
+# <% project_name %>
 
-Scaffolded by Protostar for team {{ team_name }}.
+Scaffolded by Protostar for team <% team_name %>.
 
 ## Setup
 Run `uv sync` to install dependencies.

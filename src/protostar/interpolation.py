@@ -12,7 +12,7 @@ def extract_variables(content: str) -> list[str]:
     Returns:
         A deduplicated list of placeholder names, preserving insertion order.
     """
-    pattern = r"\{\{\s*([a-zA-Z0-9_]+)\s*\}\}"
+    pattern = r"<\%\s*([a-zA-Z0-9_]+)\s*\%>"
     matches = re.findall(pattern, content)
     # dict.fromkeys() preserves insertion order while removing duplicates
     return list(dict.fromkeys(matches))
@@ -44,6 +44,6 @@ def render_template(content: str, context: dict[str, str]) -> str:
     rendered = content
     for key, value in context.items():
         safe_value = toml_escape(value)
-        pattern = r"\{\{\s*" + re.escape(key) + r"\s*\}\}"
+        pattern = r"<\%\s*" + re.escape(key) + r"\s*\%>"
         rendered = re.sub(pattern, safe_value, rendered)
     return rendered
