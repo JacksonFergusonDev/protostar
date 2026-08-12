@@ -143,7 +143,7 @@ protostar init --astro --docker --direnv -m --mypy --pytest --pre-commit
 
 ### Portable Configurations
 
-If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them during initialization:
+If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them during initialization. Protostar natively supports fetching raw files from standard URLs, and automatically translates web UI links into raw text links for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut:
 
 ```bash
 protostar init --from https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml
