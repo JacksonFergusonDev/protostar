@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786511163566,
+  "lastUpdate": 1786513186008,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4459,6 +4459,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.51,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "90ee7842f9ff4b47b22f0b646559821ee149169e",
+          "message": "fix: address core engine findings, edge cases, and test isolation (#131)\n\nAddress correctness bugs, edge cases, and test isolation issues:\n\n- Fix TOML escaping bug in template interpolation (`re.sub` lambda replacement)\n- Prevent config cache poisoning when loading override targets\n- Programmatically format pre-commit YAML dependency lists with explicit indentation\n- Switch .gitignore and .dockerignore deduplication to line-by-line matching\n- Impose 1MB read limit defense on remote config fetcher\n- Remove PYTEST_CURRENT_TEST check in orchestrator and fix global pathlib mocking\n- Document private argparse API usage in CLI help formatter\n- Raise test coverage enforcement threshold to 90% in pyproject.toml",
+          "timestamp": "2026-08-11T22:38:47-07:00",
+          "tree_id": "39529d77e7b5d4cb9289842017195407a9f4712d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/90ee7842f9ff4b47b22f0b646559821ee149169e"
+        },
+        "date": 1786513185058,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 128.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 196.2,
             "unit": "ms"
           }
         ]
