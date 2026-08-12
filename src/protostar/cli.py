@@ -182,6 +182,8 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
     if self.description:
         console.print(f"{self.description}\n")
 
+    # Note: argparse does not provide a public API for iterating over groups.
+    # Accessing _action_groups and _group_actions is the standard community workaround.
     for group in self._action_groups:
         # Filter out explicitly suppressed arguments and the default HelpAction
         actions = [
