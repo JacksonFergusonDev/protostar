@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786515864004,
+  "lastUpdate": 1786559699345,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4595,6 +4595,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 196.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4d4c15bd7eaf66f045a5da5a18ef435911b2f22b",
+          "message": "feat: add prek as an alternative git hook manager (#132)\n\n* feat: add PrekModule and manifest support for prek\n\n* feat: add CLI validation for mutually exclusive pre-commit and prek flags\n\n* test: add unit and CLI tests for prek integration\n\n* fix: resolve CLI unit test mocking error for prek integration\n\n* fix: generate pre-commit config file when prek is requested\n\n* docs: add prek documentation and design decision note\n\n* docs: update fixtures",
+          "timestamp": "2026-08-12T11:33:59-07:00",
+          "tree_id": "f00ecbaf6f2c15b6e0f412e35131590c97ac38c0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4d4c15bd7eaf66f045a5da5a18ef435911b2f22b"
+        },
+        "date": 1786559698762,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 129.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 195.21,
             "unit": "ms"
           }
         ]
