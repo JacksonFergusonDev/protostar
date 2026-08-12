@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786559699345,
+  "lastUpdate": 1786559987885,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4629,6 +4629,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.21,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "3cec27b57e24513ab558f44c8f6c1e41159b2fac",
+          "message": "docs: use prek instead of pre-commit for generating doc fixtures\n\nUpdate the CLI execution matrix in `generate_doc_fixtures.py` to use `--prek`\ninstead of `--pre-commit`, and update the regenerated `cli_pyprojecttoml.md`\nfixture accordingly.",
+          "timestamp": "2026-08-12T11:38:40-07:00",
+          "tree_id": "7bc5c15f383ecbf2d3279cdce120e516ef5ae1b8",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3cec27b57e24513ab558f44c8f6c1e41159b2fac"
+        },
+        "date": 1786559987132,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.7,
             "unit": "ms"
           }
         ]
