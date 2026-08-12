@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786513832934,
+  "lastUpdate": 1786514418240,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4527,6 +4527,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 159.74,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a9d616d3d948cfc8c8c6bb096d59d14443926edd",
+          "message": "docs: fix incorrect interpolation syntax in mechanics documentation\n\n- Updates `docs/mechanics/portable_configurations.md` to correctly reference ERB-style `<% variable %>` placeholders instead of Jinja-style `{{ variable }}`.\n- Resolves a contradiction with `docs/usage/configuration.md` and aligns the mechanics documentation with the actual regex parsing implementation in `interpolation.py`.",
+          "timestamp": "2026-08-11T22:59:05-07:00",
+          "tree_id": "f033a926f2ffc7532f34a56ab2bad729f1abdbee",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a9d616d3d948cfc8c8c6bb096d59d14443926edd"
+        },
+        "date": 1786514417130,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 142.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 223.86,
             "unit": "ms"
           }
         ]
