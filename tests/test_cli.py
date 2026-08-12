@@ -584,6 +584,28 @@ def test_handle_init_template_and_from_exclusive(mocker):
         handle_init(args)
 
 
+def test_handle_init_pre_commit_and_prek_exclusive(mocker):
+    """Test that --pre-commit and --prek cannot be used together."""
+    args = argparse.Namespace(
+        template_name=None,
+        from_path=None,
+        template_context={},
+        PreCommitModule=True,
+        PrekModule=True,
+        docker=False,
+    )
+    from protostar.cli import handle_init
+    from protostar.config import ProtostarConfig
+
+    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
+
+    with pytest.raises(
+        ConfigurationError,
+        match=r"Cannot use both '--pre-commit' and '--prek' simultaneously\.",
+    ):
+        handle_init(args)
+
+
 def test_handle_init_template_preset_precedence(mocker):
     """Test that CLI flags (--no-astro) can override template preset defaults."""
     from protostar.cli import handle_init

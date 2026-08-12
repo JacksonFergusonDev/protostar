@@ -10,6 +10,7 @@ from protostar.modules import (
     MarkdownLintModule,
     MypyModule,
     PreCommitModule,
+    PrekModule,
     PytestModule,
     PythonCore,
     RuffModule,
@@ -224,6 +225,44 @@ def test_pre_commit_build_uv(manifest, mocker):
     )
     assert any(
         t.command == ["uv", "run", "pre-commit", "autoupdate"]
+        for t in manifest.post_install_tasks
+    )
+
+
+# --- PrekModule Tests ---
+
+
+def test_prek_pre_flight_missing(mocker):
+    """Test PrekModule aborts pre-flight if git is missing."""
+    mocker.patch("shutil.which", return_value=None)
+
+    with pytest.raises(MissingDependencyError) as exc_info:
+        PrekModule().pre_flight()
+
+    assert exc_info.value.dependency == "git"
+    assert "prek hooks" in exc_info.value.purpose
+
+
+def test_prek_collision_markers():
+    assert PrekModule().collision_markers == [Path(".pre-commit-config.yaml")]
+
+
+def test_prek_build_uv(manifest, mocker):
+    """Test PrekModule configures standard hooks routing via uv."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+
+    mod = PrekModule()
+    mod.build(manifest)
+
+    assert manifest.wants_prek is True
+    assert "prek" in manifest.dev_dependencies
+    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
+    assert any(
+        t.command == ["uv", "run", "prek", "install"]
+        for t in manifest.post_install_tasks
+    )
+    assert any(
+        t.command == ["uv", "run", "prek", "update"]
         for t in manifest.post_install_tasks
     )
 
