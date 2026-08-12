@@ -48,10 +48,13 @@ def run_init_wizard() -> dict[str, Any] | None:
         pass
 
     if len(templates) > 1:
-        answer = questionary.select(
-            "Start from a built-in template?",
-            choices=templates,
-        ).ask()
+        if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
+            answer = "None"
+        else:
+            answer = questionary.select(
+                "Start from a built-in template?",
+                choices=templates,
+            ).ask()
 
         if answer is None:
             return None
