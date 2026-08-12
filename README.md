@@ -64,7 +64,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses deterministic AST modification to deep-merge TOML configurations, and safely aborts if generated files already exist.
 
-1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment vector to eliminate debugging entropy.
+1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment vector to eliminate debugging entropy. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
 
 ---
 
@@ -140,6 +140,8 @@ protostar init --astro --docker --direnv -m --mypy --pytest --pre-commit
 ```
 
 *Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
+
+To bypass any interactive collision prompts when running in headless CI environments, use the `--force` (or `-f`) flag. You can also explicitly override the Python version specified in your global configuration by passing `--python-version` (e.g., `--python-version 3.12`).
 
 ### Portable Configurations
 

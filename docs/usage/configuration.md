@@ -4,6 +4,18 @@ Your global configuration file acts as the singular source of truth for environm
 protostar config
 ```
 
+If you need to restore your configuration to the factory defaults, use the `--reset` flag:
+
+```bash
+protostar config --reset
+```
+
+This will prompt for confirmation. To bypass the prompt (useful in CI/CD or automated scripts), append the `--force` (or `-f`) flag:
+
+```bash
+protostar config --reset --force
+```
+
 ## The Default Baseline
 
 If you just installed Protostar, this is your baseline configuration. It dictates base environment toggles, preferred developer tools, package managers, and domain-specific dependency overrides.

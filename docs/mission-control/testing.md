@@ -83,6 +83,16 @@ We use the custom `run_cli` fixture in `conftest.py` to spawn the `uv` toolchain
 
 Found in `tests/test_exhaustive.py`, these tests leverage `itertools.combinations` to permute every domain-specific preset against each other. This guarantees that loading multiple presets (e.g., `--astro` alongside `--ml`) does not cause `KeyError` collisions or corrupted TOML AST injections.
 
+### Telemetry Testing (`--crash-test`)
+
+If you are working on the orchestrator's exception handling or the GitHub issue telemetry generation, you can simulate a catastrophic failure without having to manually break the codebase. Pass the hidden `--crash-test` flag to the `init` command to raise an intentional exception at the end of the module evaluation phase:
+
+```bash
+protostar init --crash-test
+```
+
+This guarantees the crash reporter is invoked, allowing you to inspect the URL-encoded GitHub issue generation.
+
 ---
 
 ## Running the Suite

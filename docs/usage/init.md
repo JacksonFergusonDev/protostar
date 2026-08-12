@@ -166,6 +166,9 @@ If you select __Merge__, Protostar performs a surgical AST injection.
 
 *Curious how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments? Read the [Mechanics: Executor](../mechanics/executor.md) deep dive.*
 
+!!! tip "Headless Operations"
+    If you are running Protostar in a CI/CD environment or automated script where interactive prompts are impossible, you can append the `--force` (or `-f`) flag. This automatically bypasses the collision prompt and defaults to a safe `Merge` strategy.
+
 !!! success "Strict Footprint Validation"
     Protostar enforces explicit dependency boundaries for all tooling operations. If you pass an impossible or conflicting configuration matrix via the CLI, Protostar will not crash or dump inert configurations into your repository. It evaluates the topological constraints, drops the invalid tool, and prints a clean diagnostic warning before proceeding with the rest of the valid scaffolding sequence.
 
@@ -197,6 +200,11 @@ protostar init --template astro --no-direnv
 ```
 
 This ensures templates remain helpful starting points rather than rigid constraints.
+
+## Advanced Operations
+
+- __Python Version Overrides__: By default, Protostar uses the Python version defined in your global configuration. You can dynamically override this for a single run using the `--python-version` flag (e.g., `protostar init --template cli --python-version 3.12`).
+- __Verbose Output__: If you encounter unexpected behavior and need to see exactly what the orchestrator is doing, append the global `--verbose` (or `-v`) flag to enable rich debug logs and full tracebacks.
 
 ## The Capabilities Matrix
 
