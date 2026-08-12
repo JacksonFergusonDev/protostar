@@ -13,7 +13,7 @@ pre_commit = false
 # without destroying the baseline configuration.
 #
 # > [!WARNING]
-# > Do not use `{{VAR}}` interpolation syntax inside template configs,
+# > Do not use double-curly-brace interpolation syntax inside template configs,
 # > as it will trigger interactive prompts at load time before engine execution.
 data_science_linting = '''
 [tool.ruff.lint]

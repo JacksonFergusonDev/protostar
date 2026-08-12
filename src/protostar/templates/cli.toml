@@ -9,5 +9,5 @@ pytest = true
 pre_commit = true
 
 # > [!WARNING]
-# > Do not use `{{VAR}}` interpolation syntax inside template configs,
+# > Do not use double-curly-brace interpolation syntax inside template configs,
 # > as it will trigger interactive prompts at load time before engine execution.
