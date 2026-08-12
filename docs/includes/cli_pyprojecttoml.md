@@ -7,6 +7,15 @@ dependencies = [
     "rich>=15.0.0",
     "typer>=0.26.8",
 ]
+description = "Add your description here."
+readme = "README.md"
+authors = [{ name = "your-name", email = "your-email" }]
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- Ruff ---- #
 
 [tool.ruff]
 line-length = 88
@@ -21,12 +30,16 @@ select = [
     "RUF", # ruff-specific rules
 ]
 
+# ---- Mypy ---- #
+
 [tool.mypy]
 python_version = "3.13"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+# ---- Pytest ---- #
 
 [tool.pytest.ini_options]
 minversion = "7.0"

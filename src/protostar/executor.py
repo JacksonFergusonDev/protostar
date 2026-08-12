@@ -400,6 +400,60 @@ class SystemExecutor:
 
                 if ast_mutated:
                     new_content = tomlkit.dumps(doc)
+
+                    # Apply visual separators safely using anchored regex to prevent substring collisions
+                    if not re.search(
+                        r"^# ---- Ruff ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.ruff\]\s*$",
+                            "# ---- Ruff ---- #\n\n[tool.ruff]",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+                    if not re.search(
+                        r"^# ---- Mypy ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.mypy\]\s*$",
+                            "# ---- Mypy ---- #\n\n[tool.mypy]",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+                    if not re.search(
+                        r"^# ---- Pytest ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.pytest\.ini_options\]\s*$",
+                            "# ---- Pytest ---- #\n\n[tool.pytest.ini_options]",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+
+                    # Add main Tool Configuration header before the first tool header if not exists
+                    if "# === Tool Configuration ===" not in new_content:
+                        tool_match = re.search(
+                            r"^# ---- (Ruff|Mypy|Pytest) ---- #\s*$",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+                        if tool_match:
+                            header = "# ==================================================\n# Tool Configuration\n# ==================================================\n\n"
+                            # Ensure empty line before the header
+                            prefix = (
+                                "\n"
+                                if not new_content[: tool_match.start()].endswith(
+                                    "\n\n"
+                                )
+                                else ""
+                            )
+                            new_content = (
+                                new_content[: tool_match.start()]
+                                + prefix
+                                + header
+                                + new_content[tool_match.start() :]
+                            )
+
                     new_content = re.sub(r"\n{3,}", "\n\n", new_content)
                     if new_content.strip() != original_content.strip():
                         try:

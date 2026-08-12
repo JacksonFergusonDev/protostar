@@ -17,8 +17,13 @@ logger = logging.getLogger("protostar")
 class PythonCore(BootstrapModule):
     """Configures a modern Python environment using uv as the fundamental baseline."""
 
-    def __init__(self, python_version: str | None = None) -> None:
+    def __init__(
+        self,
+        python_version: str | None = None,
+        project_metadata: dict[str, str] | None = None,
+    ) -> None:
         self._python_version = python_version
+        self.project_metadata = project_metadata or {}
 
     @property
     def python_version(self) -> str | None:
@@ -74,6 +79,18 @@ class PythonCore(BootstrapModule):
             manifest.add_system_task(
                 cmd, description="Scaffolding uv virtual environment"
             )
+
+        # Inject standard PEP 621 project metadata
+        desc = self.project_metadata.get("description", "Add your description here.")
+        name = self.project_metadata.get("author_name", "your-name")
+        email = self.project_metadata.get("author_email", "your-email")
+
+        project_metadata_payload = f"""[project]
+description = "{desc}"
+readme = "README.md"
+authors = [{{ name = "{name}", email = "{email}" }}]
+"""
+        manifest.add_file_append("pyproject.toml", project_metadata_payload)
 
         # --- IDE Injection ---
         config = ProtostarConfig.load()

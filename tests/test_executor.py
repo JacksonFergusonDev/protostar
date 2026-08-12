@@ -370,7 +370,7 @@ def test_executor_deep_merge_tomlkit_empty_aot(mock_config):
 
 def test_executor_append_files_ast_no_op_write(mocker, mock_config):
     """Test that file writing is bypassed if the merged AST yields identical content."""
-    original_content = "[tool.mypy]\nstrict = true\n"
+    original_content = "[tool.fake_tool]\nstrict = true\n"
 
     manifest = EnvironmentManifest()
     # Queue a payload that is perfectly identical to the existing base document

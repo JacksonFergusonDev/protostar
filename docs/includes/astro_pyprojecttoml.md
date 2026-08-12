@@ -14,6 +14,15 @@ dependencies = [
     "scipy>=1.18.0",
     "specutils>=2.4.0",
 ]
+description = "Add your description here."
+readme = "README.md"
+authors = [{ name = "your-name", email = "your-email" }]
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- Ruff ---- #
 
 [tool.ruff]
 line-length = 88

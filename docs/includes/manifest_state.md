@@ -59,6 +59,7 @@
     },
     "file_appends": {
         "pyproject.toml": [
+            "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\nauthors = [{ name = \"your-name\", email = \"your-email\" }]\n",
             "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"E\",   # pycodestyle errors\n    \"F\",   # pyflakes\n    \"I\",   # isort\n    \"B\",   # flake8-bugbear\n    \"UP\",  # pyupgrade\n    \"RUF\", # ruff-specific rules\n]\n"
         ]
     },
