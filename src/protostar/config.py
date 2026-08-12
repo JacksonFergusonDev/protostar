@@ -250,7 +250,23 @@ class ProtostarConfig:
                 expected = resolved_hints[key]
                 origin = typing.get_origin(expected)
 
-                if origin not in (None, types.UnionType, typing.Union):
+                if origin is list:
+                    if not isinstance(value, list):
+                        raise ConfigurationError(
+                            f"Type mismatch in {source} for '[env].{key}'.\n"
+                            f"Expected list, but got {type(value).__name__}."
+                        )
+                    inner_type = typing.get_args(expected)[0]
+                    for item in value:
+                        if not isinstance(item, inner_type):
+                            raise ConfigurationError(
+                                f"Type mismatch in {source} for '[env].{key}' elements.\n"
+                                f"Expected {inner_type.__name__}, but got {type(item).__name__}."
+                            )
+                    updates[key] = value
+                    continue
+
+                if origin not in (None, types.UnionType, typing.Union, list):
                     updates[key] = value
                     continue
 
@@ -291,5 +307,16 @@ class ProtostarConfig:
             merged_vars = dict(instance.variables)
             merged_vars.update(data["variables"])
             updates["variables"] = merged_vars
+
+        if "active_presets" in updates:
+            from .presets import PRESETS
+
+            valid_preset_keys = {p.config_key for p in PRESETS}
+            for p_name in updates["active_presets"]:
+                if p_name not in valid_preset_keys:
+                    raise ConfigurationError(
+                        f"Unknown preset requested in {source}: '{p_name}'.\n"
+                        f"Valid active_presets are: {', '.join(sorted(valid_preset_keys))}."
+                    )
 
         return replace(instance, **updates)
