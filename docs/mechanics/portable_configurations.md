@@ -1,14 +1,17 @@
-# Portable Configurations
+# Templates & Portable Configurations
 
-The `--from` feature empowers Protostar to dynamically fetch, render, and apply portable TOML configurations on the fly. This enables teams to standardize environments or inject custom files directly during the scaffolding phase.
+The `--template` and `--from` features empower Protostar to dynamically fetch, render, and apply TOML configurations on the fly. This enables teams to standardize environments or inject custom files directly during the scaffolding phase.
 
-This document covers the mechanical lifecycle of a portable configuration template from initial evaluation to AST injection.
+This document covers the mechanical lifecycle of a configuration template from initial evaluation to AST injection.
 
 ---
 
-## 1. Remote Fetching and Resolution
+## 1. Resolution and Fetching
 
-When the CLI detects the `--from` flag, it determines if the target is a local file or a remote URI.
+When the CLI detects the `--template` or `--from` flag, it resolves the target configuration.
+
+- **`--template <name>`:** Resolves to a built-in configuration file shipped inside `protostar.templates` (via `importlib.resources`).
+- **`--from <uri>`:** Determines if the target is a local file or a remote URI.
 
 ```python
 if override_target.startswith("http://") or override_target.startswith("https://"):
@@ -63,6 +66,24 @@ Protostar's `ProtostarConfig.load` uses a unified loading strategy:
 1. **Surgical Overlay**: `_parse_and_merge` reads the incoming TOML and updates the `ProtostarConfig` object in-memory.
 
 This guarantees that a user's local baseline defaults (like `ide = "vscode"`) remain intact unless explicitly overwritten by the portable configuration.
+
+### The `active_presets` Validation Trap
+
+Templates can define an `active_presets` list in their `[env]` block to automatically toggle domain pipelines. However, if a user accidentally places `active_presets` in their *global* `~/.protostar.toml` file, it would irreversibly force that preset onto every future repository they scaffold!
+
+To prevent this, `config.py` uses a validation trap. `active_presets` is strictly validated using Python's `typing.get_origin`. If the TOML parser encounters it during the **Base User Config** phase, the global loader intentionally drops the key or errors out, ensuring it can *only* be safely applied during the **Template Overlay** phase.
+
+---
+
+## 4. The CLI Precedence Chain
+
+Once the `ProtostarConfig` object is fully loaded with the template overlay, control is handed back to `cli.py` (`handle_init`).
+
+Because users need to be able to temporarily disable a tool that a template enables by default, Protostar employs a strict precedence chain: `Global Defaults < Template Defaults < CLI Overrides`.
+
+To achieve this, dynamically mounted CLI flags (e.g., `--astro`, `--direnv`) use `argparse.BooleanOptionalAction`. This allows the CLI to differentiate between a flag that wasn't passed (`None`), a flag that was explicitly passed (`True`), and a flag that was explicitly negated (`False` via `--no-<flag>`).
+
+If a CLI flag is explicitly provided (not `None`), it forcefully overrides whatever boolean state the template requested.
 
 ---
 
