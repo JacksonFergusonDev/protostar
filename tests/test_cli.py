@@ -582,3 +582,30 @@ def test_handle_init_template_and_from_exclusive(mocker):
         match=r"Cannot use both '--template' and '--from' simultaneously\.",
     ):
         handle_init(args)
+
+
+def test_handle_init_template_preset_precedence(mocker):
+    """Test that CLI flags (--no-astro) can override template preset defaults."""
+    from protostar.cli import handle_init
+    from protostar.config import ProtostarConfig
+
+    # Mock config to simulate a template loading `active_presets = ["astro"]`
+    mock_config = ProtostarConfig(active_presets=["astro"])
+    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=mock_config)
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+
+    # Simulate passing `--no-astro` (which parses as AstroPreset=False)
+    args = argparse.Namespace(
+        template_name="astro",
+        from_path=None,
+        template_context={},
+        python_version="3.12",
+        docker=False,
+        AstroPreset=False,
+    )
+
+    handle_init(args)
+
+    # Check the presets passed to the Orchestrator
+    presets = mock_orchestrator.call_args[0][2]
+    assert len(presets) == 0, "Astro preset should be disabled by --no-astro override"
