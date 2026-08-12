@@ -98,6 +98,27 @@ def run_init_wizard() -> dict[str, Any] | None:
     if selected is None:
         return None
 
+    from rich.console import Console
+
+    console = Console()
+    console.print("\n[bold cyan]--- Project Metadata ---[/bold cyan]")
+
+    desc = questionary.text(
+        "Project description (optional, press Enter to skip):"
+    ).ask()
+    if desc is None:
+        return None
+
+    author_name = questionary.text("Author name (optional, press Enter to skip):").ask()
+    if author_name is None:
+        return None
+
+    author_email = questionary.text(
+        "Author email (optional, press Enter to skip):"
+    ).ask()
+    if author_email is None:
+        return None
+
     modules = [item for item in selected if item in TOOLING_MODULES]
     presets = [item for item in selected if item in PRESETS]
     docker = "docker" in selected
@@ -106,6 +127,11 @@ def run_init_wizard() -> dict[str, Any] | None:
         "modules": modules,
         "presets": presets,
         "docker": docker,
+        "project_metadata": {
+            "description": desc or "Add your description here.",
+            "author_name": author_name or "your-name",
+            "author_email": author_email or "your-email",
+        },
     }
 
 

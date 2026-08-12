@@ -89,7 +89,11 @@ def handle_init(args: argparse.Namespace) -> None:
     modules.append(SystemWorkspaceModule())
 
     # 2. Mandatory Python Core
-    python_core = PythonCore(python_version=getattr(args, "python_version", None))
+    project_metadata = getattr(args, "project_metadata", None)
+    python_core = PythonCore(
+        python_version=getattr(args, "python_version", None),
+        project_metadata=project_metadata,
+    )
     modules.append(python_core)
 
     # 3. Preset Layers
@@ -481,7 +485,9 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
             # Inject mandatory universal layers implicitly
             modules.insert(0, SystemWorkspaceModule())
-            modules.insert(1, PythonCore())
+            modules.insert(
+                1, PythonCore(project_metadata=selections.get("project_metadata"))
+            )
 
             engine = Orchestrator(
                 modules, config, presets, docker=selections["docker"], force=False

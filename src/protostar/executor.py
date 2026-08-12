@@ -264,7 +264,11 @@ class SystemExecutor:
     #   3. AST Parity Guards: Type mismatches (e.g., merging a table into a scalar key) emit non-fatal
     #      diagnostics rather than corrupting the AST.
     def _deep_merge_tomlkit(
-        self, base: Any, payload: Any, overwrite: bool = False
+        self,
+        base: Any,
+        payload: Any,
+        overwrite: bool = False,
+        path: tuple[str, ...] = (),
     ) -> None:
         """Recursively deep-merges a tomlkit payload into a base document.
 
@@ -273,12 +277,14 @@ class SystemExecutor:
             payload: The incoming tomlkit table to merge into the base.
             overwrite: If True, unmatched scalar keys in the base will be purged,
                 and array-of-tables will be completely replaced.
+            path: The tuple of keys representing the current path in the document.
         """
         import tomlkit.items
 
         # Purge scalar/array keys in base that are missing from the payload
         # to enforce strict AST overwriting, while preserving sibling tables.
-        if overwrite:
+        # We explicitly protect the root document and the [project] table from being purged.
+        if overwrite and len(path) > 0 and path[0] != "project":
             keys_to_remove = []
             for b_key, b_val in base.items():
                 if b_key not in payload and not isinstance(
@@ -305,10 +311,16 @@ class SystemExecutor:
                         for v in value.values()
                     )
 
-                    if overwrite and not has_sub_tables:
+                    is_project = (key == "project" and len(path) == 0) or (
+                        len(path) > 0 and path[0] == "project"
+                    )
+
+                    if overwrite and not has_sub_tables and not is_project:
                         base[key] = value
                     else:
-                        self._deep_merge_tomlkit(base[key], value, overwrite)
+                        self._deep_merge_tomlkit(
+                            base[key], value, overwrite, (*path, key)
+                        )
 
                 elif isinstance(value, tomlkit.items.AoT):
                     # Type Parity Guard
@@ -400,6 +412,60 @@ class SystemExecutor:
 
                 if ast_mutated:
                     new_content = tomlkit.dumps(doc)
+
+                    # Apply visual separators safely using anchored regex to prevent substring collisions
+                    if not re.search(
+                        r"^# ---- Ruff ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.ruff\]\s*$",
+                            "# ---- Ruff ---- #\n\n[tool.ruff]",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+                    if not re.search(
+                        r"^# ---- Mypy ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.mypy\]\s*$",
+                            "# ---- Mypy ---- #\n\n[tool.mypy]",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+                    if not re.search(
+                        r"^# ---- Pytest ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.pytest\.ini_options\]\s*$",
+                            "# ---- Pytest ---- #\n\n[tool.pytest.ini_options]",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+
+                    # Add main Tool Configuration header before the first tool header if not exists
+                    if "# Tool Configuration" not in new_content:
+                        tool_match = re.search(
+                            r"^# ---- (Ruff|Mypy|Pytest) ---- #\s*$",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
+                        if tool_match:
+                            header = "# ==================================================\n# Tool Configuration\n# ==================================================\n\n"
+                            # Ensure empty line before the header
+                            prefix = (
+                                "\n"
+                                if not new_content[: tool_match.start()].endswith(
+                                    "\n\n"
+                                )
+                                else ""
+                            )
+                            new_content = (
+                                new_content[: tool_match.start()]
+                                + prefix
+                                + header
+                                + new_content[tool_match.start() :]
+                            )
+
                     new_content = re.sub(r"\n{3,}", "\n\n", new_content)
                     if new_content.strip() != original_content.strip():
                         try:
