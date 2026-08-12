@@ -94,12 +94,14 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 3. Preset Layers
     for preset in PRESETS:
-        cli_flag_active = preset.cli_flags and getattr(
-            args, preset.__class__.__name__, False
-        )
-        config_active = preset.config_key in config.active_presets
+        is_active = preset.config_key in config.active_presets
 
-        if cli_flag_active or config_active:
+        if preset.cli_flags:
+            cli_override = getattr(args, preset.__class__.__name__, None)
+            if cli_override is not None:
+                is_active = cli_override
+
+        if is_active:
             presets.append(preset)
 
     # 4. Tooling Layers
@@ -347,7 +349,7 @@ def build_parser() -> argparse.ArgumentParser:
         if preset.cli_flags:
             preset_group.add_argument(
                 *preset.cli_flags,
-                action="store_true",
+                action=argparse.BooleanOptionalAction,
                 help=preset.cli_help,
                 dest=preset.__class__.__name__,
             )
