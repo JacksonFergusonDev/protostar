@@ -38,7 +38,7 @@ testpaths = [
 [dependency-groups]
 dev = [
     "mypy>=2.2.0",
-    "pre-commit>=4.6.0",
+    "prek>=0.4.13",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",

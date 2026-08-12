@@ -31,7 +31,7 @@ from protostar.presets import PRESETS, AstroPreset, PresetModule
 # Define matrices for combinatorial CLI execution scenarios
 FIXTURES = {
     "cli": [
-        ["--cli", "--mypy", "--pytest", "--pre-commit", "--markdownlint"],
+        ["--cli", "--mypy", "--pytest", "--prek", "--markdownlint"],
     ],
     "astro": [["--astro"]],
     "ml": [["--ml", "--docker"]],
