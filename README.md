@@ -136,10 +136,10 @@ protostar init --template astro
 Or you can construct your own environment footprint from scratch using CLI flags:
 
 ```bash
-protostar init --astro --docker --direnv -m --mypy --pytest --pre-commit
+protostar init --astro --docker --direnv -m --mypy --pytest --prek
 ```
 
-*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with dynamic pre-commit hooks.*
+*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with fast git hooks via `prek`.*
 
 To bypass any interactive collision prompts when running in headless CI environments, use the `--force` (or `-f`) flag. You can also explicitly override the Python version specified in your global configuration by passing `--python-version` (e.g., `--python-version 3.12`).
 
