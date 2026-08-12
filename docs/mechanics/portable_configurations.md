@@ -25,13 +25,13 @@ If the target is a remote URL, `fetch_remote_config` resolves the HTTP/HTTPS req
 
 ## 2. Dynamic Templating
 
-Because portable configurations are designed to be shared, they often contain parameterized fields using Jinja-style placeholders (e.g., `{{ project_name }}`).
+Because portable configurations are designed to be shared, they often contain parameterized fields using ERB-style placeholders (e.g., `<% project_name %>`).
 
 Before parsing the TOML, Protostar's templating engine dynamically injects runtime context into the configuration payload.
 
 ### Variable Extraction
 
-The raw string is scanned via regex (`extract_variables`) to locate all `{{ variable }}` boundaries. This prevents the system from naively merging a template containing unpopulated variables which would break downstream tooling.
+The raw string is scanned via regex (`extract_variables`) to locate all `<% variable %>` boundaries. This prevents the system from naively merging a template containing unpopulated variables which would break downstream tooling.
 
 ### The CLI Kwarg Parser
 
