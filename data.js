@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786571491182,
+  "lastUpdate": 1786578733137,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4731,6 +4731,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 196.85,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "122a1ad59f390e0195a25eddf2c886dcf9304acd",
+          "message": "chore(docs): fix non-deterministic sorting in doc fixtures generation\n\nForces the `tree` command to use the `C` locale (`LC_ALL=C`) when generating directory structures in `scripts/generate_doc_fixtures.py`.\n\nPreviously, `tree` would rely on the host machine's default locale, resulting in case-insensitive sorting locally (MacOS) and case-sensitive sorting in CI (Ubuntu), which caused GitHub Actions to report the fixtures as out-of-date.\n\nAdditionally passes `--charset=utf-8` to ensure `tree` continues to output Unicode box-drawing characters despite being in the `C` locale.",
+          "timestamp": "2026-08-12T16:51:07-07:00",
+          "tree_id": "e7ed180226f6f971157c7f08c3dd063701bbeeba",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/122a1ad59f390e0195a25eddf2c886dcf9304acd"
+        },
+        "date": 1786578732372,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.67,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.83,
             "unit": "ms"
           }
         ]
