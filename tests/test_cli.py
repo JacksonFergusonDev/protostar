@@ -553,8 +553,11 @@ def test_handle_init_template_resolution(mocker, tmp_path):
         docker=False,
     )
 
-    # We need to mock ProtostarConfig.load because we don't want to rely on the actual config file on disk
-    mock_load = mocker.patch("protostar.cli.ProtostarConfig.load")
+    from protostar.config import ProtostarConfig
+
+    mock_load = mocker.patch(
+        "protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig()
+    )
 
     from protostar.cli import handle_init
 
