@@ -232,7 +232,7 @@ def test_config_load_local_target_with_context(mocker, tmp_path):
 
     # Create a real sandboxed TOML file with a placeholder
     target = tmp_path / "custom.toml"
-    target.write_text('[env]\npython_version = "{{py_ver}}"\n')
+    target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
     config = ProtostarConfig.load(
         force_reload=True,
@@ -248,7 +248,7 @@ def test_config_load_invokes_wizard_for_missing_vars(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
 
     target = tmp_path / "custom.toml"
-    target.write_text('[env]\npython_version = "{{py_ver}}"\n')
+    target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
     # Patch the source of the lazy import
     mock_wizard = mocker.patch(
@@ -271,7 +271,7 @@ def test_config_load_missing_vars_without_resolver_raises(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "nonexistent.toml")
 
     target = tmp_path / "templated.toml"
-    target.write_text('[env]\npython_version = "{{py_ver}}"\n')
+    target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
     with pytest.raises(ConfigurationError, match="requires variables"):
         ProtostarConfig.load(force_reload=True, override_target=str(target))
