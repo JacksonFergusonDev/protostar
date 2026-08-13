@@ -10,3 +10,4 @@
 | Pre-Commit | `--pre-commit` | Scaffold pre-commit hooks and configuration | `.pre-commit-config.yaml` |
 | Prek | `--prek` | Scaffold prek hooks and configuration (faster Rust alternative to pre-commit) | `.pre-commit-config.yaml` |
 | Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | *None* |
+| Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `renovate.json` |

@@ -8,6 +8,7 @@ mypy = true
 pytest = true
 prek = true
 commitizen = true
+renovate = true
 
 [dev]
 extra_dependencies = ["pytest-cov"]

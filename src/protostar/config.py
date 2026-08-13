@@ -33,6 +33,7 @@ python_version = "3.13"
 # pytest = true
 # pre_commit = true
 # commitizen = true  # Scaffold commitizen version bumping and changelog tooling
+# renovate = true    # Scaffold Renovate dependency update configuration
 # active_presets = []
 
 # --- Advanced Configuration Overrides ---

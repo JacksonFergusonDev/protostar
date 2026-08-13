@@ -12,6 +12,7 @@ from .tooling_layer import (
     PrekModule,
     PyreflyModule,
     PytestModule,
+    RenovateModule,
     RuffModule,
     TyModule,
 )
@@ -27,6 +28,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     PreCommitModule(),
     PrekModule(),
     CommitizinModule(),
+    RenovateModule(),
 )
 
 __all__ = [
@@ -41,6 +43,7 @@ __all__ = [
     "PyreflyModule",
     "PytestModule",
     "PythonCore",
+    "RenovateModule",
     "RuffModule",
     "SystemWorkspaceModule",
     "TyModule",

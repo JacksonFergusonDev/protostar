@@ -553,3 +553,98 @@ class PyreflyModule(BootstrapModule):
 type-checking-mode = "strict"
 """
         manifest.add_file_append("pyproject.toml", config)
+
+
+class RenovateModule(BootstrapModule):
+    """Configures Renovate dependency update tooling."""
+
+    cli_flags = ("--renovate",)
+    cli_help = "Scaffold Renovate dependency update configuration"
+    config_key = "renovate"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Renovate"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for Renovate."""
+        return [Path(".github/renovate.json")]
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Renovate configuration file and pre-commit validator hook.
+
+        Args:
+            manifest: The centralized state object.
+        """
+        logger.debug("Building Renovate tooling layer.")
+
+        hook_payload = """  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 44.24.3
+    hooks:
+      - id: renovate-config-validator
+        files: '.github/renovate.json'"""
+        manifest.add_pre_commit_hook(hook_payload)
+
+        if Path(".github/renovate.json").exists():
+            manifest.add_diagnostic(
+                phase=self.name,
+                message=(
+                    "Skipping .github/renovate.json generation; file already exists."
+                ),
+                severity=Severity.SKIP,
+            )
+            return
+
+        config = """{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":semanticCommits"
+  ],
+  "schedule": [
+    "before 4am on monday"
+  ],
+  "internalChecksFilter": "strict",
+  "rebaseWhen": "conflicted",
+  "vulnerabilityAlerts": {
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Require a package to be 2 weeks old before updating, but exclude vulnerability remediation from this wait.",
+      "matchUpdateTypes": [
+        "major",
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "minimumReleaseAge": "2 weeks"
+    },
+    {
+      "description": "Group all python dev-dependencies into one PR and automerge them.",
+      "matchFileNames": [
+        "pyproject.toml"
+      ],
+      "matchDepTypes": [
+        "dependency-groups"
+      ],
+      "groupName": "python-dev-tools",
+      "automerge": true
+    },
+    {
+      "description": "Group GitHub Actions updates into one PR and automerge them.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github-actions",
+      "automerge": true
+    }
+  ]
+}
+"""
+        manifest.add_file_injection(".github/renovate.json", config)

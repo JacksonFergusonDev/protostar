@@ -14,6 +14,7 @@ from protostar.modules import (
     PrekModule,
     PytestModule,
     PythonCore,
+    RenovateModule,
     RuffModule,
 )
 
@@ -443,3 +444,50 @@ def test_commitizen_module_adds_gitignore_entry():
 
     assert ".cz-cache/" in manifest.vcs_ignores
     assert ".cz-cache/" in manifest.workspace_hides
+
+
+def test_renovate_module_properties():
+    module = RenovateModule()
+    assert module.name == "Renovate"
+    assert module.cli_flags == ("--renovate",)
+    assert module.config_key == "renovate"
+    assert module.collision_markers == [Path(".github/renovate.json")]
+
+
+def test_renovate_module_injects_file(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    manifest = EnvironmentManifest()
+    module = RenovateModule()
+    module.build(manifest)
+
+    assert ".github/renovate.json" in manifest.file_injections
+    content = manifest.file_injections[".github/renovate.json"]
+    assert "renovate-schema.json" in content
+    assert "config:best-practices" in content
+    assert "before 4am on monday" in content
+    assert "python-dev-tools" in content
+    assert "github-actions" in content
+
+
+def test_renovate_module_adds_pre_commit_hook():
+    manifest = EnvironmentManifest()
+    module = RenovateModule()
+    module.build(manifest)
+
+    assert any(
+        "renovatebot/pre-commit-hooks" in hook and "renovate-config-validator" in hook
+        for hook in manifest.pre_commit_hooks
+    )
+
+
+def test_renovate_module_skips_when_file_exists(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+    manifest = EnvironmentManifest()
+    module = RenovateModule()
+    module.build(manifest)
+
+    assert ".github/renovate.json" not in manifest.file_injections
+    assert any(
+        d.phase == "Renovate" and d.severity == Severity.SKIP
+        for d in manifest.diagnostics
+    )
