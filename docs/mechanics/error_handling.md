@@ -1,0 +1,159 @@
+# Error Handling Architecture
+
+Protostar enforces a deterministic, type-safe error handling paradigm designed to guarantee that host workspace mutations fail safely and transparently. Execution logic is structured so that operational errors never leave the workspace in a fragmented or irrecoverable state.
+
+During standard CLI usage, domain-specific operational exceptions are intercepted at the highest level of the execution pipeline, formatted into high-visibility terminal panels with decoupled remediation hints, and routed to standardized POSIX exit codes.
+
+<div class="grid cards" markdown>
+
+- :material-shield-alert-outline: __Fail-Fast Verification__
+
+    System dependencies and configuration constraints are verified during the `pre_flight()` phase *before* any disk mutations occur. If a binary is missing, execution halts immediately with `MissingDependencyError` before creating files or directories.
+
+- :material-console-line: __Rich Terminal Formatting__
+
+    All operational failures inherit from `ProtostarError`. The CLI entry point traps these exceptions and renders them as styled Rich panels with explicit titles, captured subprocess output, and decoupled remediation hints.
+
+- :material-code-json: __Subprocess Telemetry__
+
+    Subprocess calls executed by `system.run_command` capture both `stdout` and `stderr`. On non-zero exits or timeouts, detailed output streams are preserved in `CommandExecutionError` or `CommandTimeoutError` without flattening diagnostic context.
+
+- :material-numeric: __POSIX Exit Code Compliance__
+
+    Protostar maps domain exception types directly to standard POSIX exit codes (e.g., `EX_CONFIG`, `EX_UNAVAILABLE`, `EX_IOERR`), ensuring seamless integration with CI/CD runners and shell scripts.
+
+</div>
+
+---
+
+## Exception Propagation Topology
+
+The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, shell subprocesses) up to the top-level CLI boundary in `cli.py`:
+
+```mermaid
+flowchart TD
+    %% Styling
+    classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
+    classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
+
+    Start([CLI Invocation]) --> PreFlight
+
+    subgraph PreFlight [1. Pre-Flight Checks]
+        direction TB
+        PF{Missing Dependency?}:::phase
+        PF -- Yes --> E_Dep[MissingDependencyError]:::error
+        PF -- No --> Config[2. Config & Manifest Parsing]:::phase
+    end
+
+    subgraph Parsing [2. Configuration & AST]
+        direction TB
+        Config{Malformed TOML / Spec?}:::phase
+        Config -- Yes --> E_Cfg[ConfigurationError]:::error
+        Config -- No --> Execution[3. Side-Effect Realization]:::phase
+    end
+
+    subgraph SideEffects [3. Disk & Subprocess Execution]
+        direction TB
+        Execution --> Disk{Disk I/O Fault?}:::phase
+        Disk -- Yes --> E_FS[FileSystemError]:::error
+        Disk -- No --> Sub{Subprocess Fault?}:::phase
+        Sub -- Exit != 0 --> E_Exec[CommandExecutionError]:::error
+        Sub -- Timeout --> E_Time[CommandTimeoutError]:::error
+        Sub -- Success --> End([Environment Stabilized]):::success
+    end
+
+    E_Dep & E_Cfg & E_FS & E_Exec & E_Time --> Handler[cli.py :: main Trap]:::core
+
+    Handler --> Panel[Format Rich Error Panel & Output Detail]
+    Panel --> POSIX{POSIX Exit Code Router}
+
+    POSIX -- ConfigurationError --> EX78([os.EX_CONFIG: 78]):::error
+    POSIX -- MissingDependencyError --> EX69([os.EX_UNAVAILABLE: 69]):::error
+    POSIX -- FileSystemError --> EX74([os.EX_IOERR: 74]):::error
+    POSIX -- Other ProtostarError --> EX1([Exit Code 1]):::error
+```
+
+---
+
+## The Exception Hierarchy
+
+All domain-modeled operational exceptions inherit from `ProtostarError` in `protostar.errors`.
+
+```text
+ProtostarError (Exception)
+ ├── ConfigurationError
+ ├── MissingDependencyError
+ ├── CommandExecutionError
+ ├── CommandTimeoutError
+ └── FileSystemError
+```
+
+### `ProtostarError`
+
+Base exception for all expected operational failures in Protostar. Accepts a descriptive `message` and an optional `hint` parameter containing user-facing installation or remediation instructions.
+
+```python
+class ProtostarError(Exception):
+    def __init__(self, message: str, *, hint: str | None = None) -> None: ...
+```
+
+### `ConfigurationError`
+
+Raised when a configuration file (such as `protostar.toml` or `pyproject.toml`) is malformed, invalid, or missing required attributes. Also raised for invalid template names or dynamic parameter mismatches.
+
+### `MissingDependencyError`
+
+Raised during pre-flight checks when a system-level binary (such as `uv`, `cargo`, `git`, `direnv`, or `just`) is missing from `$PATH`. Stores the missing dependency name, its operational purpose, and an installation hint.
+
+### `CommandExecutionError`
+
+Raised when a managed shell subprocess returns a non-zero exit code. Captures the command line list, return code, `stdout`, and `stderr`. Provides a display-ready `output_detail` property for terminal rendering.
+
+### `CommandTimeoutError`
+
+Raised when a subprocess exceeds its allotted execution window. Automatically attaches a remediation hint regarding network stalls or unresponsive package registries.
+
+### `FileSystemError`
+
+Raised when a local disk operation (read, write, directory creation, or JSON/TOML modification) fails due to an `OSError`. Preserves the operation name, target file path, and original `OSError`.
+
+---
+
+## POSIX Exit Code Matrix
+
+Protostar routes operational exceptions to standard UNIX exit codes (defined in `os`), allowing automation tooling and CI pipelines to programmatically identify failure causes:
+
+| Exception Class | POSIX Code Name | Integer Exit Code | Primary Trigger Condition |
+| :--- | :--- | :--- | :--- |
+| `ConfigurationError` | `os.EX_CONFIG` | `78` | Invalid TOML syntax, malformed preset key, missing config file |
+| `MissingDependencyError` | `os.EX_UNAVAILABLE` | `69` | Required system binary (e.g. `uv`, `git`) missing during `pre_flight()` |
+| `FileSystemError` | `os.EX_IOERR` | `74` | File write permission denied, disk full, invalid path I/O |
+| `CommandExecutionError` | Generic Exit | `1` | Subprocess (e.g. `uv sync`, `git init`) exited non-zero |
+| `CommandTimeoutError` | Generic Exit | `1` | Subprocess exceeded execution timeout threshold |
+| *Unhandled Internal Bug* | `os.EX_SOFTWARE` | `70` | Unexpected Python exception / AST parsing collapse |
+
+---
+
+## Crash Diagnostics & Telemetry
+
+Protostar cleanly separates expected operational failures from unexpected internal crashes:
+
+### Verbose Logging (`--verbose`)
+
+By default, expected operational failures output a clean Rich error panel without stack trace noise. Running any command with `--verbose` enables full debug logging and displays the full Python traceback:
+
+```bash
+protostar init --verbose
+```
+
+### Automated Bug Reporting
+
+When Protostar encounters an unhandled internal exception (an unexpected Python bug or AST collapse), it traps the stack trace, gathers non-sensitive system environment vectors (OS, Python version, command invocation), constructs a pre-populated GitHub issue URL, and exits with `os.EX_SOFTWARE` (`70`). Clicking the generated link opens a pre-formatted issue ticket on GitHub so telemetry is captured immediately.
+
+---
+
+## API Reference
+
+For detailed docstrings and class signatures, see the [Error Handling API Reference](../mission-control/api-reference.md#class-definitions).

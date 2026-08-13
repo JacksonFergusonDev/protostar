@@ -41,10 +41,10 @@ flowchart TD
         direction TB
         C{Collision Intercept}:::phase
         C -- Conflicting Configs --> P[TUI: Merge / Overwrite / Abort]
-        P -- Abort --> Exit1([Safe Exit Code 1]):::error
+        P -- Abort --> Exit1([POSIX Exit Code 78 / Code 1]):::error
         C -- Clean Workspace --> F[Pre-Flight Checks]:::phase
         P -- Authorize --> F
-        F -- Missing Binaries --> Exit2([Safe Exit Code 1]):::error
+        F -- Missing Binaries --> Exit2([POSIX Exit Code 69: EX_UNAVAILABLE]):::error
     end
 
     O --> VerificationPhase
