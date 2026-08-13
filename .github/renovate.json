@@ -6,10 +6,9 @@
         ":prHourlyLimit2"
     ],
     "schedule": [
-        "before 4am on the first day of the month"
+        "before 4am on monday"
     ],
     "internalChecksFilter": "strict",
-    "prCreation": "immediate",
     "rebaseWhen": "conflicted",
     "labels": [
         "dependencies",
@@ -28,8 +27,7 @@
                 "minor",
                 "patch",
                 "pin",
-                "digest",
-                "lockFileMaintenance"
+                "digest"
             ],
             "minimumReleaseAge": "2 weeks"
         },
