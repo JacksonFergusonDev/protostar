@@ -221,7 +221,17 @@ def test_pre_commit_build_uv(manifest, mocker):
     assert "pre-commit" in manifest.dev_dependencies
     assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
     assert any(
-        t.command == ["uv", "run", "pre-commit", "install"]
+        t.command
+        == [
+            "uv",
+            "run",
+            "pre-commit",
+            "install",
+            "--hook-type",
+            "pre-commit",
+            "--hook-type",
+            "commit-msg",
+        ]
         for t in manifest.post_install_tasks
     )
     assert any(
@@ -259,7 +269,17 @@ def test_prek_build_uv(manifest, mocker):
     assert "prek" in manifest.dev_dependencies
     assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
     assert any(
-        t.command == ["uv", "run", "prek", "install"]
+        t.command
+        == [
+            "uv",
+            "run",
+            "prek",
+            "install",
+            "--hook-type",
+            "pre-commit",
+            "--hook-type",
+            "commit-msg",
+        ]
         for t in manifest.post_install_tasks
     )
     assert any(
