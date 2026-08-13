@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786645088943,
+  "lastUpdate": 1786646276804,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5139,6 +5139,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.24,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "976c579d42c664091cdfdfc24e4b1bf2c800c7f0",
+          "message": "feat(modules): scaffold zensical documentation framework (#142)\n\n* feat(manifest): add docs_dependencies field\n\n* feat(executor): support docs_dependencies and PROJECT_NAME interpolation\n\n* feat(modules): add ZensicalModule implementation\n\n* test(executor): update expected pyproject parse error message\n\n* fix(zensical): fix array merging and wiring dev group\n\n* fix(zensical): use file injection for mkdocs and interpolate PROJECT_NAME\n\n* docs: update fixtures",
+          "timestamp": "2026-08-13T11:36:58-07:00",
+          "tree_id": "ed8ba98e05dd9112a90e0a52da86a18cfdfead65",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/976c579d42c664091cdfdfc24e4b1bf2c800c7f0"
+        },
+        "date": 1786646276129,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.87,
             "unit": "ms"
           }
         ]
