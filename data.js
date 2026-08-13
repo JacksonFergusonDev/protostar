@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786581157178,
+  "lastUpdate": 1786582022744,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4799,6 +4799,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "68fd8825efbdbd1a7a1095c8fe57b0c409d50430",
+          "message": "fix(executor): position [dependency-groups] above tool configuration header\n\nReorder `_install_dependencies` before `_append_files` in `SystemExecutor.execute` so `uv add` populates `[dependency-groups]` before tooling sections and headers are appended. Also update documentation example artifacts to reflect the updated section ordering in `pyproject.toml`.",
+          "timestamp": "2026-08-12T17:45:50-07:00",
+          "tree_id": "2862d582c22d29ffaf5fdd042cc98a2c994c1e4d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/68fd8825efbdbd1a7a1095c8fe57b0c409d50430"
+        },
+        "date": 1786582021672,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 129.2,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.06,
             "unit": "ms"
           }
         ]
