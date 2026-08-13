@@ -30,6 +30,7 @@ direnv = false
 
 # Default Python version
 python_version = "3.13"
+# supported_os = ["MacOS", "Linux", "Windows"]
 
 # Optional dev tool toggles for Python
 # markdownlint = true
@@ -71,6 +72,7 @@ class ProtostarConfig:
         ide (str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_version (str | None): The specific Python version to scaffold.
+        supported_os (list[str]): The supported operating systems to scaffold CI for.
         markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
@@ -92,6 +94,7 @@ class ProtostarConfig:
     github_username: str | None = None
     direnv: bool = False
     python_version: str | None = "3.13"
+    supported_os: list[str] = field(default_factory=list)
     markdownlint: bool = False
     ruff: bool = True
     mypy: bool = False
