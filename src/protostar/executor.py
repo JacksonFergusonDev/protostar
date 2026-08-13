@@ -318,10 +318,10 @@ class SystemExecutor:
         run: uv run pytest"""
 
         # Assemble the rest of the steps
-        tool_steps = "\\n".join(self.manifest.ci_steps)
+        tool_steps = "\n".join(self.manifest.ci_steps)
         if pytest_step:
             if tool_steps:
-                tool_steps += "\\n" + pytest_step
+                tool_steps += "\n" + pytest_step
             else:
                 tool_steps = pytest_step
 
@@ -349,7 +349,7 @@ jobs:
       - uses: actions/checkout@v7
       
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.0.0
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -389,7 +389,7 @@ jobs:
       - uses: actions/checkout@v7
       
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.0.0
         
       - name: Build package
         run: uv build
