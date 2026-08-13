@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786646276804,
+  "lastUpdate": 1786651267738,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5173,6 +5173,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9bc856468952a39ec84c5ed06d1b13b923db3a2d",
+          "message": "feat(wizard): add global config fallbacks and enhanced pyproject metadata (#143)\n\n* feat(config): add author and github global configuration fields\n\n* feat(wizard): add git config fallback and explicitly prompt for python/os in cli template\n\n* feat(core): generate pyproject.toml classifiers and github urls based on wizard metadata\n\n* fix(wizard): leave author name and email empty by default if not found in git config\n\n* feat(wizard): allow empty metadata and add global config hint\n\n* docs: update fixtures\n\n* test: temporarily drop test coverage requirements to 85%\n\n* fix(core): restore default placeholders for description and authors if skipped\n\n* docs: update manifest fixture",
+          "timestamp": "2026-08-13T13:00:08-07:00",
+          "tree_id": "608bb2d2b1fc2719ad6b3c4bdf314a75a087fb5e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9bc856468952a39ec84c5ed06d1b13b923db3a2d"
+        },
+        "date": 1786651267123,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.3,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.85,
             "unit": "ms"
           }
         ]
