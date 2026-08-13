@@ -5,6 +5,7 @@
 | Ruff | `--ruff` | Scaffold Ruff linter and formatter | *None* |
 | Mypy | `--mypy` | Scaffold Mypy static type checker | *None* |
 | Ty | `--ty` | Scaffold Ty static type checker | *None* |
+| Pyrefly | `--pyrefly` | Scaffold pyrefly static type checker | *None* |
 | Pytest | `--pytest` | Scaffold Pytest testing framework | *None* |
 | Pre-Commit | `--pre-commit` | Scaffold pre-commit hooks and configuration | `.pre-commit-config.yaml` |
 | Prek | `--prek` | Scaffold prek hooks and configuration (faster Rust alternative to pre-commit) | `.pre-commit-config.yaml` |
