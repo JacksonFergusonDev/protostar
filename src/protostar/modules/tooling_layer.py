@@ -211,7 +211,7 @@ class RuffModule(BootstrapModule):
             "        run: uv run ruff check --output-format=github .\n"
             "\n"
             "      - name: Run Ruff Formatter\n"
-            "        run: uv run ruff format --check ."
+            "        run: uv run ruff format --check --output-format=github ."
         )
 
         # Ruff natively inherits its target Python version from project.requires-python

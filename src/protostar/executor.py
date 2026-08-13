@@ -369,12 +369,12 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-
-      - name: Set up Python ${{{{ matrix.python-version }}}}
-        run: uv python install ${{{{ matrix.python-version }}}}
+          python-version: ${{{{ matrix.python-version }}}}
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: |
+          uv sync --all-extras --dev
+          uv pip install pytest-github-actions-annotate-failures
 
 {tool_steps}
 """
