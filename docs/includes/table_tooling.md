@@ -13,3 +13,5 @@
 | Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `renovate.json` |
 | Codecov | `--codecov` | Scaffold Codecov configuration | `codecov.yml` |
 | Zensical | `--zensical` | Scaffold Zensical documentation | `mkdocs.yml`, `docs` |
+| GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `ci.yml` |
+| GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `release.yml` |

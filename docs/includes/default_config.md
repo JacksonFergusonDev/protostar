@@ -13,6 +13,7 @@ direnv = false
 
 # Default Python version
 python_version = "3.13"
+# supported_os = ["MacOS", "Linux", "Windows"]
 
 # Optional dev tool toggles for Python
 # markdownlint = true
