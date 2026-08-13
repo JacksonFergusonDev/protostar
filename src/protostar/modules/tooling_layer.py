@@ -768,7 +768,7 @@ Add your project overview here.
 
 Refer to the [installation guide](getting-started.md) or browse the [API Reference](api-reference.md).
 """
-            manifest.add_file_append("docs/index.md", index_content)
+            manifest.add_file_injection("docs/index.md", index_content)
 
         if Path("mkdocs.yml").exists():
             manifest.add_diagnostic(
@@ -814,4 +814,4 @@ plugins:
 extra:
   generator: false
 """
-            manifest.add_file_append("mkdocs.yml", mkdocs_content)
+            manifest.add_file_injection("mkdocs.yml", mkdocs_content)

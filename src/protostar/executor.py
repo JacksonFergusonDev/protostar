@@ -205,8 +205,20 @@ class SystemExecutor:
         """Writes all queued boilerplate files to the local workspace."""
         if not self.manifest.file_injections:
             return
+        project_name = Path.cwd().name
+        pyproject_path = Path("pyproject.toml")
+        if pyproject_path.exists():
+            try:
+                with pyproject_path.open("rb") as f:
+                    pyproject_data = tomllib.load(f)
+                    project_name = pyproject_data.get("project", {}).get(
+                        "name", project_name
+                    )
+            except Exception:
+                pass
 
         for filepath, content in self.manifest.file_injections.items():
+            content = content.replace("{{PROJECT_NAME}}", project_name)
             target = Path(filepath)
             if (
                 not target.exists()
