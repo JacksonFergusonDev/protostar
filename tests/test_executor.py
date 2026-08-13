@@ -649,9 +649,7 @@ def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
 
     executor._append_files()
 
-    mock_logger.assert_any_call(
-        "Failed to parse pyproject.toml for python version: Mocked parse error"
-    )
+    mock_logger.assert_any_call("Failed to parse pyproject.toml: Mocked parse error")
 
 
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
