@@ -105,8 +105,8 @@ def resolve_metadata(
     all_keys = required_keys | optional_keys
     to_prompt = []
 
-    for key in all_keys:
-        if key not in METADATA_FIELDS:
+    for key in METADATA_FIELDS:
+        if key not in all_keys:
             continue
 
         field = METADATA_FIELDS[key]
