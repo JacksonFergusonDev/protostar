@@ -46,11 +46,51 @@ classDiagram
 
 ## Class Definitions
 
-!!! abstract "Telemetry & Error Handling: `ProtostarError`"
+!!! abstract "Telemetry & Error Handling: `protostar.errors`"
 
     Strictly typed operational errors that halt the execution pipeline safely and return POSIX-compliant exit codes.
 
     ::: protostar.errors.ProtostarError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.ConfigurationError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.MissingDependencyError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.CommandExecutionError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.CommandTimeoutError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.FileSystemError
         options:
             show_source: true
             show_bases: true

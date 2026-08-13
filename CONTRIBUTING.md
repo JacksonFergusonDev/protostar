@@ -33,9 +33,15 @@ Presets inherit from the `PresetModule` abstract base class and evaluate indepen
 
 To guarantee that the workspace remains deterministic, error management follows a strict type verification structure:
 
-- **Never Raise Coarse Exceptions:** Do not raise bare `RuntimeError`, `ValueError`, or `OSError` instances inside pipeline operations. Always throw a specific, domain-modeled subclass of `ProtostarError`.
+- **Never Raise Coarse Exceptions:** Do not raise bare `RuntimeError`, `ValueError`, or `OSError` instances inside pipeline operations. Always throw a specific, domain-modeled subclass of `ProtostarError` defined in `protostar.errors`:
+  - `ConfigurationError`: For invalid/malformed configuration files or invalid template specifications.
+  - `MissingDependencyError`: For pre-flight binary checks when required system tools are absent.
+  - `CommandExecutionError`: For non-zero return codes from managed subprocesses.
+  - `CommandTimeoutError`: For subprocesses exceeding allocated runtime limits.
+  - `FileSystemError`: For local disk I/O, file writing, or directory creation failures.
+- **Respect POSIX Exit Code Mappings:** The top-level CLI main routine automatically routes domain exceptions to standardized POSIX return codes (`os.EX_CONFIG` / 78, `os.EX_UNAVAILABLE` / 69, `os.EX_IOERR` / 74). Ensure your exception selection aligns with the expected POSIX category.
 - **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
-- **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier.
+- **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
 
 ## Coding Standards
 
