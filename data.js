@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786596111544,
+  "lastUpdate": 1786597847107,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5037,6 +5037,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.09,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d1436a2f585d26c1ee5a4bc81381a2f1f6bac74b",
+          "message": "feat(modules): scaffold opinionated Codecov configuration (#140)\n\n* feat(config): add codecov configuration toggle to ProtostarConfig\n\n* feat(modules): implement CodecovModule for scaffolding opinionated codecov.yml\n\n* docs: update documentation and generated fixtures for codecov module (resolves #106)",
+          "timestamp": "2026-08-12T22:09:46-07:00",
+          "tree_id": "c54aeccd4f67fce28284357b4a8538b340b26d89",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d1436a2f585d26c1ee5a4bc81381a2f1f6bac74b"
+        },
+        "date": 1786597846185,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.84,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 200.1,
             "unit": "ms"
           }
         ]
