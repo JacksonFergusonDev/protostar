@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786584457573,
+  "lastUpdate": 1786591301714,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4867,6 +4867,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1029d98d0bbb5b72e8ef72bf0c43901962f4ed15",
+          "message": "feat(templates): overhaul CLI template and update base tooling configs (#136)\n\n* feat(executor): add __replace__ marker support for TOML tables\n\n* feat(modules): update base tooling configs for Ruff, Mypy, and Pytest\n\n* feat(templates): update cli.toml tooling configs and switch to prek\n\n* test: update Pytest, Ruff, and Mypy config tests and add __replace__ test\n\n* test: remove unused mypy ignore on fixture and add pytest to hook\n\n* docs: update fixtures\n\n* test: remove pytest-cov from base integration test expectation",
+          "timestamp": "2026-08-12T20:20:44-07:00",
+          "tree_id": "0db4d181e61adaa2d4f6d37e761791149eba2dc4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1029d98d0bbb5b72e8ef72bf0c43901962f4ed15"
+        },
+        "date": 1786591301197,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.86,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.19,
             "unit": "ms"
           }
         ]
