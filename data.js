@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786578733137,
+  "lastUpdate": 1786581157178,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4765,6 +4765,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.83,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d2276b923e49b72675c48062cf86ef90abe1e98f",
+          "message": "feat: add commitizen version bumping scaffolding (#134)\n\n* feat(config): add commitizen field to ProtostarConfig\n\n* feat(modules): add CommitizinModule to tooling_layer\n\n* feat(modules): register CommitizinModule in TOOLING_MODULES\n\n* feat(templates): enable commitizen in cli template\n\n* test(modules): add unit tests for CommitizinModule\n\n* test(config): add commitizen config parsing tests\n\n* fix(modules): add commit-msg hook installation, changelog stub, and TOML formatting\n\n* docs: update fixtures",
+          "timestamp": "2026-08-12T17:31:36-07:00",
+          "tree_id": "0c25fe7ecc95277da4aed72cbfdf3c41b225a628",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d2276b923e49b72675c48062cf86ef90abe1e98f"
+        },
+        "date": 1786581156680,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 142.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 218.57,
             "unit": "ms"
           }
         ]
