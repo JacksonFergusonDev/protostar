@@ -89,10 +89,8 @@ def handle_init(args: argparse.Namespace) -> None:
     modules.append(SystemWorkspaceModule())
 
     # 2. Mandatory Python Core
-    project_metadata = getattr(args, "project_metadata", None)
     python_core = PythonCore(
         python_version=getattr(args, "python_version", None),
-        project_metadata=project_metadata,
     )
     modules.append(python_core)
 
@@ -152,6 +150,16 @@ def handle_init(args: argparse.Namespace) -> None:
 
         modules.append(CrashModule())
 
+    from .metadata import resolve_metadata
+
+    required_keys: set[str] = set()
+    for mod in modules:
+        required_keys.update(mod.required_metadata)
+
+    resolved_metadata = resolve_metadata(
+        required_keys, optional_keys=set(), tui_mode=False
+    )
+
     # Execute
     engine = Orchestrator(
         modules,
@@ -159,11 +167,12 @@ def handle_init(args: argparse.Namespace) -> None:
         presets,
         docker=args.docker,
         force=getattr(args, "force", False),
+        metadata=resolved_metadata,
     )
     engine.run()
 
 
-class ProtoHelpFormatter(RawTextRichHelpFormatter):
+class ProtoHelpFormatter(RawTextRichHelpFormatter):  # type: ignore[misc]
     """Custom help formatter for Protostar CLI using rich-argparse.
 
     Inherits from RawTextRichHelpFormatter to leverage native rich styling
@@ -485,12 +494,15 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
             # Inject mandatory universal layers implicitly
             modules.insert(0, SystemWorkspaceModule())
-            modules.insert(
-                1, PythonCore(project_metadata=selections.get("project_metadata"))
-            )
+            modules.insert(1, PythonCore())
 
             engine = Orchestrator(
-                modules, config, presets, docker=selections["docker"], force=False
+                modules,
+                config,
+                presets,
+                docker=selections["docker"],
+                force=False,
+                metadata=selections.get("project_metadata"),
             )
             engine.run()
             sys.exit(0)
