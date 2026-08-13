@@ -7,3 +7,4 @@ direnv = true
 mypy = true
 pytest = true
 pre_commit = true
+commitizen = true

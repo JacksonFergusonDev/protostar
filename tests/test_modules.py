@@ -6,6 +6,7 @@ from protostar.config import ProtostarConfig
 from protostar.errors import MissingDependencyError
 from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
+    CommitizinModule,
     DirenvModule,
     MarkdownLintModule,
     MypyModule,
@@ -220,7 +221,17 @@ def test_pre_commit_build_uv(manifest, mocker):
     assert "pre-commit" in manifest.dev_dependencies
     assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
     assert any(
-        t.command == ["uv", "run", "pre-commit", "install"]
+        t.command
+        == [
+            "uv",
+            "run",
+            "pre-commit",
+            "install",
+            "--hook-type",
+            "pre-commit",
+            "--hook-type",
+            "commit-msg",
+        ]
         for t in manifest.post_install_tasks
     )
     assert any(
@@ -258,7 +269,17 @@ def test_prek_build_uv(manifest, mocker):
     assert "prek" in manifest.dev_dependencies
     assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
     assert any(
-        t.command == ["uv", "run", "prek", "install"]
+        t.command
+        == [
+            "uv",
+            "run",
+            "prek",
+            "install",
+            "--hook-type",
+            "pre-commit",
+            "--hook-type",
+            "commit-msg",
+        ]
         for t in manifest.post_install_tasks
     )
     assert any(
@@ -349,3 +370,51 @@ def test_pre_commit_module_pre_flight_missing_git(mocker):
         module.pre_flight()
 
     assert exc_info.value.dependency == "git"
+
+
+def test_commitizen_module_injects_dev_dependency():
+    manifest = EnvironmentManifest()
+    module = CommitizinModule()
+    module.build(manifest)
+
+    assert "commitizen" in manifest.dev_dependencies
+
+
+def test_commitizen_module_appends_pyproject_config():
+    manifest = EnvironmentManifest()
+    module = CommitizinModule()
+    module.build(manifest)
+
+    appends = manifest.file_appends.get("pyproject.toml", [])
+    assert any("[tool.commitizen]" in block for block in appends)
+
+
+def test_commitizen_module_appends_pyproject_version_provider():
+    manifest = EnvironmentManifest()
+    module = CommitizinModule()
+    module.build(manifest)
+
+    appends = manifest.file_appends.get("pyproject.toml", [])
+    combined = "\n".join(appends)
+    assert 'version_provider = "pep621"' in combined
+    assert 'version_scheme = "semver2"' in combined
+    assert 'tag_format = "v$version"' in combined
+
+
+def test_commitizen_module_adds_pre_commit_hook():
+    manifest = EnvironmentManifest()
+    module = CommitizinModule()
+    module.build(manifest)
+
+    assert any(
+        "commitizen-tools/commitizen" in hook for hook in manifest.pre_commit_hooks
+    )
+
+
+def test_commitizen_module_adds_gitignore_entry():
+    manifest = EnvironmentManifest()
+    module = CommitizinModule()
+    module.build(manifest)
+
+    assert ".cz-cache/" in manifest.vcs_ignores
+    assert ".cz-cache/" in manifest.workspace_hides

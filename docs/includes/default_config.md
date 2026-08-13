@@ -15,6 +15,7 @@ python_version = "3.13"
 # mypy = true
 # pytest = true
 # pre_commit = true
+# commitizen = true  # Scaffold commitizen version bumping and changelog tooling
 # active_presets = []
 
 # --- Advanced Configuration Overrides ---
