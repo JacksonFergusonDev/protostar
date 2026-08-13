@@ -305,9 +305,11 @@ class SystemExecutor:
                 pytest_step = f"""      - name: Run Tests with Coverage
         if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
         run: uv run pytest --cov --cov-report=xml
+
       - name: Run Tests
         if: matrix.os != '{primary_os}' || matrix.python-version != '{primary_python}'
         run: uv run pytest
+
       - name: Upload Coverage
         if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
         uses: codecov/codecov-action@v7
@@ -318,10 +320,10 @@ class SystemExecutor:
         run: uv run pytest"""
 
         # Assemble the rest of the steps
-        tool_steps = "\n".join(self.manifest.ci_steps)
+        tool_steps = "\n\n".join(self.manifest.ci_steps)
         if pytest_step:
             if tool_steps:
-                tool_steps += "\n" + pytest_step
+                tool_steps += "\n\n" + pytest_step
             else:
                 tool_steps = pytest_step
 

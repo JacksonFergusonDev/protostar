@@ -209,6 +209,7 @@ class RuffModule(BootstrapModule):
         manifest.add_ci_step(
             "      - name: Run Ruff Linter\n"
             "        run: uv run ruff check --output-format=github .\n"
+            "\n"
             "      - name: Run Ruff Formatter\n"
             "        run: uv run ruff format --check ."
         )
