@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786582022744,
+  "lastUpdate": 1786584457573,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4833,6 +4833,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.06,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3cd2f3f5bc5dd7469cef60f651f8aa52d2a9bfd2",
+          "message": "chore(mypy): enable strict mode and resolve type errors (#135)\n\n* chore(mypy): enable strict mode in pyproject.toml\n\n* fix(mypy): resolve strict mode type errors across codebase",
+          "timestamp": "2026-08-12T18:26:38-07:00",
+          "tree_id": "dd4386acaa606a7b795b51ac141a8c64833265bd",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3cd2f3f5bc5dd7469cef60f651f8aa52d2a9bfd2"
+        },
+        "date": 1786584456804,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.96,
             "unit": "ms"
           }
         ]
