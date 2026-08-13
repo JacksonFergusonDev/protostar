@@ -436,9 +436,9 @@ def generate_cli_help_svgs() -> None:
         # Restore the native consoles
         protostar.cli.console = original_global_console
         if original_formatter_console is None:
-            protostar.cli.ProtoHelpFormatter.console = None  # type: ignore[method-assign, assignment]
+            protostar.cli.ProtoHelpFormatter.console = None  # type: ignore[assignment]
         else:
-            protostar.cli.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign, assignment]
+            protostar.cli.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign]
 
 
 def main() -> None:
