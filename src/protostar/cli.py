@@ -172,7 +172,7 @@ def handle_init(args: argparse.Namespace) -> None:
     engine.run()
 
 
-class ProtoHelpFormatter(RawTextRichHelpFormatter):  # type: ignore[misc]
+class ProtoHelpFormatter(RawTextRichHelpFormatter):
     """Custom help formatter for Protostar CLI using rich-argparse.
 
     Inherits from RawTextRichHelpFormatter to leverage native rich styling

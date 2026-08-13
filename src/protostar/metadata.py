@@ -133,7 +133,9 @@ def resolve_metadata(
     # Execute prompts
     for key, field, default_val in to_prompt:
         if field.prompt_type == "text":
-            resolved[key] = questionary.text(field.label, default=default_val).ask()
+            resolved[key] = questionary.text(
+                field.label, default=str(default_val) if default_val is not None else ""
+            ).ask()
             if resolved[key] is None:
                 raise KeyboardInterrupt
         elif field.prompt_type == "checkbox":
