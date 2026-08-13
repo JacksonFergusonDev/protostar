@@ -16,7 +16,6 @@ dev = [
     "mypy>=2.2.0",
     "prek>=0.4.13",
     "pytest>=9.1.1",
-    "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
     "ruff>=0.15.21",
 ]
@@ -32,30 +31,41 @@ line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "I",   # isort
+    "A",   # flake8-builtins
     "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # isort
+    "RUF", # Ruff-specific
     "UP",  # pyupgrade
-    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501", # Line too long - handled automatically by `ruff format`
 ]
 
 # ---- Mypy ---- #
 
 [tool.mypy]
+mypy_path = "src"
 python_version = "3.13"
-strict = true
+pretty = true
+show_error_codes = true
+show_error_context = true
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
+check_untyped_defs = true
+explicit_package_bases = true
 
 # ---- Pytest ---- #
 
 [tool.pytest.ini_options]
-minversion = "7.0"
-addopts = "-ra -q --strict-markers"
+addopts = "--strict-markers"
 testpaths = [
     "tests",
+]
+pythonpath = [
+    ".",
 ]
 
 ```

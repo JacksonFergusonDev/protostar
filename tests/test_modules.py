@@ -186,10 +186,35 @@ def test_pytest_build(manifest):
     mod.build(manifest)
 
     assert "pytest" in manifest.dev_dependencies
-    assert "pytest-cov" in manifest.dev_dependencies
+    assert "pytest-mock" in manifest.dev_dependencies
+    assert "pytest-cov" not in manifest.dev_dependencies
     assert "tests" in manifest.directories
-    assert ".coverage" in manifest.workspace_hides
     assert "pyproject.toml" in manifest.file_appends
+
+
+def test_ruff_module_base_config():
+    manifest = EnvironmentManifest()
+    mod = RuffModule()
+    mod.build(manifest)
+
+    appends = manifest.file_appends.get("pyproject.toml", [])
+    combined = "\n".join(appends)
+    assert '"A",' in combined
+    assert '"C4",' in combined
+    assert '"RUF",' in combined
+    assert '"D",' not in combined
+
+
+def test_mypy_module_base_config():
+    manifest = EnvironmentManifest()
+    mod = MypyModule()
+    mod.build(manifest)
+
+    appends = manifest.file_appends.get("pyproject.toml", [])
+    combined = "\n".join(appends)
+    assert "pretty = true" in combined
+    assert "check_untyped_defs = true" in combined
+    assert "strict = true" not in combined
 
 
 # --- PreCommitModule Tests ---

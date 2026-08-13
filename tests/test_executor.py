@@ -1356,3 +1356,34 @@ def test_ide_extension_check_fails_missing_tuple(mocker):
     # Ensure the diagnostic cleanly formats the unfulfilled tuple with 'or'
     assert "ms-python.mypy-type-checker or matangover.mypy" in warnings[0].message
     assert "charliermarsh.ruff" not in warnings[0].message
+
+
+def test_executor_toml_table_replace(mock_config):
+    """Test that __replace__ = true cleanly replaces an existing TOML table."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base_doc = tomlkit.parse("""
+[tool.example]
+keep_this = true
+
+[tool.example.nested]
+old_key = 1
+""")
+
+    payload_doc = tomlkit.parse("""
+[tool.example.nested]
+__replace__ = true
+new_key = 2
+""")
+
+    executor._deep_merge_tomlkit(base_doc, payload_doc)
+
+    # Verify keep_this was preserved
+    assert base_doc["tool"]["example"]["keep_this"] is True
+
+    # Verify the nested table was replaced and old_key is gone
+    nested = base_doc["tool"]["example"]["nested"]
+    assert "new_key" in nested
+    assert "old_key" not in nested
+    assert "__replace__" not in nested

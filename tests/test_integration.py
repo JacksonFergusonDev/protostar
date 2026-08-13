@@ -20,7 +20,7 @@ pytestmark = pytest.mark.integration
 @pytest.mark.parametrize(
     ("flags", "expected_tools"),
     [
-        (["--ruff", "--pytest"], ["ruff", "pytest", "pytest-cov"]),
+        (["--ruff", "--pytest"], ["ruff", "pytest"]),
         (["--mypy"], ["mypy"]),
         (["--ruff", "--mypy", "--pytest"], ["ruff", "mypy", "pytest"]),
     ],

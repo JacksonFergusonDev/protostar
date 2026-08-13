@@ -207,12 +207,17 @@ line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "F",   # pyflakes
-    "I",   # isort
+    "A",   # flake8-builtins
     "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # isort
+    "RUF", # Ruff-specific
     "UP",  # pyupgrade
-    "RUF", # ruff-specific rules
+]
+ignore = [
+    "E501", # Line too long - handled automatically by `ruff format`
 ]
 """
         manifest.add_file_append("pyproject.toml", config)
@@ -248,11 +253,15 @@ class MypyModule(BootstrapModule):
         manifest.add_pre_commit_hook(hook_payload)
 
         config = """[tool.mypy]
+mypy_path = "src"
 python_version = "{{PYTHON_VERSION}}"
-strict = true
+pretty = true
+show_error_codes = true
+show_error_context = true
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
+check_untyped_defs = true
+explicit_package_bases = true
 """
         manifest.add_file_append("pyproject.toml", config)
 
@@ -273,21 +282,22 @@ class PytestModule(BootstrapModule):
         """Queues Pytest dev dependencies, ignores, and pyproject.toml configuration."""
         logger.debug("Building Pytest tooling layer.")
         manifest.add_dev_dependency("pytest")
-        manifest.add_dev_dependency("pytest-cov")
         manifest.add_dev_dependency("pytest-mock")
 
         # Deterministically scaffold the testing directory
         manifest.add_directory("tests")
 
-        artifacts = [".pytest_cache/", ".coverage", "htmlcov/", "coverage.xml"]
+        artifacts = [".pytest_cache/"]
         for artifact in artifacts:
             manifest.add_environment_artifact(artifact)
 
         config = """[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = "-ra -q --strict-markers"
+addopts = "--strict-markers"
 testpaths = [
     "tests",
+]
+pythonpath = [
+    ".",
 ]
 """
         manifest.add_file_append("pyproject.toml", config)
