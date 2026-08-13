@@ -104,6 +104,10 @@ def run_init_wizard() -> dict[str, Any] | None:
     console = Console()
     console.print("\n[bold cyan]--- Project Metadata ---[/bold cyan]")
 
+    console.print(
+        "\n[dim]Hint: You can skip these prompts in the future by adding your details to the global config (run `protostar config`).[/dim]"
+    )
+
     desc = questionary.text(
         "Project description (optional, press Enter to skip):"
     ).ask()
@@ -125,18 +129,22 @@ def run_init_wizard() -> dict[str, Any] | None:
             return None
 
     default_author = config.author_name or get_git_config("user.name") or ""
-    author_name = questionary.text("Author name:", default=default_author).ask()
+    author_name = questionary.text(
+        "Author name (optional, press Enter to skip):", default=default_author
+    ).ask()
     if author_name is None:
         return None
 
     default_email = config.author_email or get_git_config("user.email") or ""
-    author_email = questionary.text("Author email:", default=default_email).ask()
+    author_email = questionary.text(
+        "Author email (optional, press Enter to skip):", default=default_email
+    ).ask()
     if author_email is None:
         return None
 
     default_github = config.github_username or ""
     github_username = questionary.text(
-        "GitHub username (optional):", default=default_github
+        "GitHub username (optional, press Enter to skip):", default=default_github
     ).ask()
     if github_username is None:
         return None
@@ -171,9 +179,9 @@ def run_init_wizard() -> dict[str, Any] | None:
         "presets": presets,
         "docker": docker,
         "project_metadata": {
-            "description": desc or "Add your description here.",
-            "author_name": author_name or "your-name",
-            "author_email": author_email or "your-email",
+            "description": desc,
+            "author_name": author_name,
+            "author_email": author_email,
             "github_username": github_username,
             "minimum_python": min_python,
             "supported_os": supported_os,
