@@ -297,6 +297,15 @@ class SystemExecutor:
         for key, value in payload.items():
             if key in base:
                 if isinstance(value, tomlkit.items.Table):
+                    if value.get("__replace__") is True:
+                        clean = tomlkit.table()
+                        for k, v in value.items():
+                            if k != "__replace__":
+                                clean.add(k, v)
+                        del base[key]
+                        base[key] = clean
+                        continue
+
                     # Type Parity Guard
                     if not isinstance(base[key], tomlkit.items.Table):
                         self.manifest.add_diagnostic(
