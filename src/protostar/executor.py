@@ -59,6 +59,8 @@ class SystemExecutor:
         self._create_directories()
         self._write_injected_files()
         self._write_pre_commit_config()
+        self._write_ci_workflow()
+        self._write_release_workflow()
         self._execute_tasks()
         self._install_dependencies()
         self._append_files()
@@ -263,6 +265,139 @@ class SystemExecutor:
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
                 execute_subprocess(task.command, timeout=task.timeout)
+
+    def _write_ci_workflow(self) -> None:
+        """Assembles and writes the .github/workflows/ci.yml file if requested."""
+        if not self.manifest.wants_ci:
+            return
+
+        from protostar.utils import generate_python_version_range
+
+        # 1. Resolve matrix dimensions
+        supported_os = self.manifest.metadata.get("supported_os", ["Linux"])
+        runner_map = {
+            "MacOS": "macos-latest",
+            "Linux": "ubuntu-latest",
+            "Windows": "windows-latest",
+        }
+        os_matrix = [
+            runner_map.get(os_name, "ubuntu-latest") for os_name in supported_os
+        ]
+        if not os_matrix:
+            os_matrix = ["ubuntu-latest"]
+
+        min_python = self.manifest.metadata.get("minimum_python", "3.13")
+        python_matrix = generate_python_version_range(min_python)
+        if not python_matrix:
+            python_matrix = [min_python]
+
+        # Determine the primary runner for coverage
+        primary_os = "ubuntu-latest" if "ubuntu-latest" in os_matrix else os_matrix[0]
+        primary_python = python_matrix[-1]
+
+        # Build the pytest/codecov logic
+        has_pytest = "pytest" in self.manifest.ci_flags
+        has_codecov = "codecov" in self.manifest.ci_flags
+
+        pytest_step = ""
+        if has_pytest:
+            if has_codecov:
+                pytest_step = f"""      - name: Run Tests with Coverage
+        if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
+        run: uv run pytest --cov --cov-report=xml
+      - name: Run Tests
+        if: matrix.os != '{primary_os}' || matrix.python-version != '{primary_python}'
+        run: uv run pytest
+      - name: Upload Coverage
+        if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{{{ secrets.CODECOV_TOKEN }}}}"""
+            else:
+                pytest_step = """      - name: Run Tests
+        run: uv run pytest"""
+
+        # Assemble the rest of the steps
+        tool_steps = "\\n".join(self.manifest.ci_steps)
+        if pytest_step:
+            if tool_steps:
+                tool_steps += "\\n" + pytest_step
+            else:
+                tool_steps = pytest_step
+
+        os_matrix_str = ", ".join(f'"{o}"' for o in os_matrix)
+        python_matrix_str = ", ".join(f'"{p}"' for p in python_matrix)
+
+        workflow = f"""name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
+    runs-on: ${{{{ matrix.os }}}}
+    strategy:
+      matrix:
+        os: [{os_matrix_str}]
+        python-version: [{python_matrix_str}]
+
+    steps:
+      - uses: actions/checkout@v7
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python ${{{{ matrix.python-version }}}}
+        run: uv python install ${{{{ matrix.python-version }}}}
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+{tool_steps}
+"""
+        atomic_write_text(Path(".github/workflows/ci.yml"), workflow)
+
+    def _write_release_workflow(self) -> None:
+        """Assembles and writes the .github/workflows/release.yml file if requested."""
+        if not self.manifest.wants_release:
+            return
+
+        workflow = """name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  pypi-publish:
+    name: Build and Publish to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ github.event.repository.name }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        
+      - name: Build package
+        run: uv build
+        
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+"""
+        atomic_write_text(Path(".github/workflows/release.yml"), workflow)
 
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
