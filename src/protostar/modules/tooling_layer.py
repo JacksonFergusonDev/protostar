@@ -266,6 +266,35 @@ explicit_package_bases = true
         manifest.add_file_append("pyproject.toml", config)
 
 
+class TyModule(BootstrapModule):
+    """Configures the Astral Ty static type checker."""
+
+    cli_flags = ("--ty",)
+    cli_help = "Scaffold Ty static type checker"
+    config_key = "ty"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Ty"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Ty dev dependency, hooks, and pyproject.toml config."""
+        logger.debug("Building Ty tooling layer.")
+        manifest.add_dev_dependency("ty")
+        manifest.add_ide_extension("astral-sh.ty")
+
+        hook_payload = """  - repo: https://github.com/astral-sh/ty-pre-commit
+    rev: v0.0.65
+    hooks:
+      - id: ty"""
+        manifest.add_pre_commit_hook(hook_payload)
+
+        config = """[tool.ty]
+"""
+        manifest.add_file_append("pyproject.toml", config)
+
+
 class PytestModule(BootstrapModule):
     """Configures the Pytest testing framework and coverage artifacts."""
 

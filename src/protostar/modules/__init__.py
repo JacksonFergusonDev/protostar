@@ -12,6 +12,7 @@ from .tooling_layer import (
     PrekModule,
     PytestModule,
     RuffModule,
+    TyModule,
 )
 
 TOOLING_MODULES: tuple[BootstrapModule, ...] = (
@@ -19,6 +20,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     MarkdownLintModule(),
     RuffModule(),
     MypyModule(),
+    TyModule(),
     PytestModule(),
     PreCommitModule(),
     PrekModule(),
@@ -38,4 +40,5 @@ __all__ = [
     "PythonCore",
     "RuffModule",
     "SystemWorkspaceModule",
+    "TyModule",
 ]
