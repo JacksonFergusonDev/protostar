@@ -11,6 +11,16 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email" }]
 
+[dependency-groups]
+dev = [
+    "mypy>=2.2.0",
+    "prek>=0.4.13",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.15.21",
+]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -46,16 +56,6 @@ minversion = "7.0"
 addopts = "-ra -q --strict-markers"
 testpaths = [
     "tests",
-]
-
-[dependency-groups]
-dev = [
-    "mypy>=2.2.0",
-    "prek>=0.4.13",
-    "pytest>=9.1.1",
-    "pytest-cov>=7.1.0",
-    "pytest-mock>=3.15.1",
-    "ruff>=0.15.21",
 ]
 
 ```

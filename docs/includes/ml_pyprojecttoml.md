@@ -13,6 +13,11 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email" }]
 
+[dependency-groups]
+dev = [
+    "ruff>=0.15.21",
+]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -30,11 +35,6 @@ select = [
     "B",   # flake8-bugbear
     "UP",  # pyupgrade
     "RUF", # ruff-specific rules
-]
-
-[dependency-groups]
-dev = [
-    "ruff>=0.15.21",
 ]
 
 ```

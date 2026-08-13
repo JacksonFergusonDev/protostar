@@ -60,11 +60,11 @@ class SystemExecutor:
         self._write_injected_files()
         self._write_pre_commit_config()
         self._execute_tasks()
+        self._install_dependencies()
         self._append_files()
         self._write_ignores()
         self._write_docker_artifacts()
         self._write_ide_settings()
-        self._install_dependencies()
         self._execute_post_install_tasks()
         self._check_ide_extensions()
 

@@ -22,6 +22,12 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email" }]
 
+[dependency-groups]
+dev = [
+    "mypy>=2.2.0",
+    "ruff>=0.15.21",
+]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -49,11 +55,5 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
-
-[dependency-groups]
-dev = [
-    "mypy>=2.2.0",
-    "ruff>=0.15.21",
-]
 
 ```
