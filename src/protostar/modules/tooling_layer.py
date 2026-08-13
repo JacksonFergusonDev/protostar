@@ -518,3 +518,38 @@ update_changelog_on_bump = true
 changelog_incremental = true
 """
         manifest.add_file_append("pyproject.toml", config)
+
+
+class PyreflyModule(BootstrapModule):
+    """Configures the Meta pyrefly static type checker."""
+
+    cli_flags = ("--pyrefly",)
+    cli_help = "Scaffold pyrefly static type checker"
+    config_key = "pyrefly"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Pyrefly"
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Pyrefly dev dependency, ignores, hooks, and pyproject.toml config."""
+        logger.debug("Building Pyrefly tooling layer.")
+        manifest.add_dev_dependency("pyrefly")
+        manifest.add_environment_artifact(".pyrefly/")
+        manifest.add_ide_extension("meta.pyrefly")
+
+        hook_payload = """  - repo: https://github.com/facebook/pyrefly-pre-commit
+    rev: 1.3.0.dev1
+    hooks:
+      - id: pyrefly-check
+        name: Pyrefly (type checking)
+        pass_filenames: false
+        language: system"""
+        manifest.add_pre_commit_hook(hook_payload)
+
+        config = """[tool.pyrefly]
+# "strict" enables the full suite of type error diagnostics
+type-checking-mode = "strict"
+"""
+        manifest.add_file_append("pyproject.toml", config)
