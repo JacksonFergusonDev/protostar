@@ -290,7 +290,10 @@ class TyModule(BootstrapModule):
       - id: ty"""
         manifest.add_pre_commit_hook(hook_payload)
 
-        config = """[tool.ty]
+        config = """[tool.ty.rules]
+missing-type-argument = "error"
+redundant-cast = "warn"
+unused-ignore-comment = "warn"
 """
         manifest.add_file_append("pyproject.toml", config)
 
