@@ -106,6 +106,11 @@ class MarkdownLintModule(BootstrapModule):
         args: ["--fix"]"""
         manifest.add_pre_commit_hook(hook_payload)
 
+        manifest.add_ci_step(
+            "      - name: Run MarkdownLint\n"
+            "        uses: DavidAnson/markdownlint-cli2-action@v24"
+        )
+
         if Path(".markdownlint-cli2.yaml").exists():
             manifest.add_diagnostic(
                 phase=self.name,
@@ -201,6 +206,13 @@ class RuffModule(BootstrapModule):
         args: [ --fix ]"""
         manifest.add_pre_commit_hook(hook_payload)
 
+        manifest.add_ci_step(
+            "      - name: Run Ruff Linter\n"
+            "        run: uv run ruff check --output-format=github .\n"
+            "      - name: Run Ruff Formatter\n"
+            "        run: uv run ruff format --check ."
+        )
+
         # Ruff natively inherits its target Python version from project.requires-python
         config = """[tool.ruff]
 line-length = 88
@@ -251,6 +263,8 @@ class MypyModule(BootstrapModule):
         additional_dependencies:
 {{MYPY_DEPENDENCIES}}"""
         manifest.add_pre_commit_hook(hook_payload)
+
+        manifest.add_ci_step("      - name: Run Mypy\n        run: uv run mypy src/")
 
         config = """[tool.mypy]
 mypy_path = "src"
@@ -315,6 +329,7 @@ class PytestModule(BootstrapModule):
         logger.debug("Building Pytest tooling layer.")
         manifest.add_dev_dependency("pytest")
         manifest.add_dev_dependency("pytest-mock")
+        manifest.add_ci_flag("pytest")
 
         # Deterministically scaffold the testing directory
         manifest.add_directory("tests")
@@ -674,6 +689,7 @@ class CodecovModule(BootstrapModule):
             manifest: The centralized state object.
         """
         logger.debug("Building Codecov tooling layer.")
+        manifest.add_ci_flag("codecov")
 
         if Path(".github/codecov.yml").exists():
             manifest.add_diagnostic(
