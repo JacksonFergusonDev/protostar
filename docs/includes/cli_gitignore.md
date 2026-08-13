@@ -1,7 +1,6 @@
 ```text
 *~
 .DS_Store
-.coverage
 .env
 .idea/
 .mypy_cache/
@@ -11,6 +10,4 @@
 .vscode/
 Thumbs.db
 __pycache__/
-coverage.xml
-htmlcov/
 ```
