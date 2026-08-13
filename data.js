@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786651267738,
+  "lastUpdate": 1786661346854,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5207,6 +5207,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.85,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7837b6395ad9df792781c67503f3d10f2d838539",
+          "message": "feat: scaffold baseline CI/CD workflows (#99) (#144)\n\n* feat(metadata): add centralized MetadataField registry and resolve_metadata() function\n\nThis commit also adds supported_os field to ProtostarConfig to support CI generation.\n\n* feat(manifest): add metadata dict, ci_flags set, ci_steps list, wants_ci and wants_release fields\n\n* feat(base): add required_metadata and optional_metadata ClassVars to BootstrapModule\n\n* feat(orchestrator): inject resolved metadata into manifest before build phase\n\n* refactor(wizard): replace hardcoded prompts with centralized resolve_metadata()\n\n* refactor(cli): add metadata resolution to handle_init flags path\n\n* refactor(lang_layer): read metadata from manifest; extract version range to utils\n\n* feat(tooling): add ci_step/ci_flag contributions to existing modules\n\n* feat(ci): add CIModule and ReleaseModule\n\n* feat(executor): assemble and write ci.yml and release.yml from manifest state\n\n* test(cli): fix test_handle_init_template_resolution to expect multiple config load calls\n\n* test: unit tests for metadata resolver, CIModule, ReleaseModule, executor CI assembly\n\n* fix(executor): resolve ci generator newline bug and setup-uv action version\n\n* fix(ci): add required_metadata to CIModule\n\n* fix(ci): add blank lines between ci.yml steps\n\n* fix(metadata): enforce deterministic prompt ordering\n\n* feat(ci): enhance codecov integration with test analytics upload\n\n* fix(ci): refine ruff output format and setup-uv python matrix injection\n\n* test(ci): add coverage tests for pytest ci assembly branches\n\n* docs: update fixtures\n\n* fix(types): resolve mypy type check errors in cli and metadata",
+          "timestamp": "2026-08-13T15:48:06-07:00",
+          "tree_id": "346c0c9cff3e0e05851516ddc09aa0dfb4edaebe",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7837b6395ad9df792781c67503f3d10f2d838539"
+        },
+        "date": 1786661346349,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 140.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.36,
             "unit": "ms"
           }
         ]
