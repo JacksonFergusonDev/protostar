@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786661346854,
+  "lastUpdate": 1786663006685,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5241,6 +5241,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.36,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "b56ee98702ba0bbfedf8990bb4544ecdc5d4bba6",
+          "message": "docs: add module-level docstrings to core modules\n\nAdd descriptive docstrings to cli.py, config.py, metadata.py, and system.py\nto improve code documentation and clarify each module's responsibility.",
+          "timestamp": "2026-08-13T16:15:53-07:00",
+          "tree_id": "46363bb9499220e6e9eb9b876a55fcc7dbb81391",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b56ee98702ba0bbfedf8990bb4544ecdc5d4bba6"
+        },
+        "date": 1786663005636,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 77.87,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 117.59,
             "unit": "ms"
           }
         ]
