@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786593516156,
+  "lastUpdate": 1786594538583,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4935,6 +4935,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 207.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ace5ef1ddd0ca981cadee308e6dd7a29e2bda032",
+          "message": "feat: scaffold Pyrefly type checker module (#138)\n\n* feat: scaffold PyreflyModule in tooling layer\n\n* feat: register PyreflyModule in module registry\n\n* feat: add Pyrefly to tool config visual headers\n\n* docs: update fixtures",
+          "timestamp": "2026-08-12T21:14:37-07:00",
+          "tree_id": "d6c9324352e91406174937708e0217ceea22ecbf",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ace5ef1ddd0ca981cadee308e6dd7a29e2bda032"
+        },
+        "date": 1786594537540,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132.38,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.11,
             "unit": "ms"
           }
         ]
