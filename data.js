@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786594538583,
+  "lastUpdate": 1786595318889,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4969,6 +4969,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.11,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "90058bbdf1a2e21e64af9880c9b192a226f0a1ea",
+          "message": "chore(deps): improve renovate config defaults\n\n- Switch schedule from monthly to weekly (Monday) to reduce\n  compounding delay with the 2-week minimumReleaseAge buffer\n- Remove prCreation: immediate to defer to config:best-practices\n  not-pending default (creates PRs only after CI passes)\n- Remove lockFileMaintenance from minimumReleaseAge filter since\n  it is housekeeping, not a package release",
+          "timestamp": "2026-08-12T21:25:11-07:00",
+          "tree_id": "fddf0fcec7dee22308635bb2489517da1b71c1ed",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/90058bbdf1a2e21e64af9880c9b192a226f0a1ea"
+        },
+        "date": 1786595317908,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.65,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 203.81,
             "unit": "ms"
           }
         ]
