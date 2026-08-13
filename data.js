@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786597847107,
+  "lastUpdate": 1786598755121,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5071,6 +5071,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 200.1,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9ae1254471e03dd9233d46f987e0f6c381981a4c",
+          "message": "docs: document error handling architecture and POSIX exit codes (#141)\n\nAdd comprehensive documentation for Protostar's error handling paradigm, exception hierarchy, POSIX exit code mappings, and contributor rules.\n\nKey Updates:\n- docs/mechanics/error_handling.md: New mechanics guide covering fail-fast pre-flight checks, Rich terminal panels, stdout/stderr captured telemetry, POSIX exit code matrix (78, 69, 74, 70, 1), and GitHub crash report generation.\n- mkdocs.yml: Registered Error Handling in navigation under Mechanics.\n- docs/mission-control/api-reference.md: Added docstrings for all 5 exception subclasses in protostar.errors (ConfigurationError, MissingDependencyError, CommandExecutionError, CommandTimeoutError, FileSystemError).\n- docs/mechanics/orchestrator.md: Updated Mermaid flowchart exit nodes with explicit POSIX exit codes.\n- CONTRIBUTING.md: Expanded Rule 6 (Structural Error Handling Paradigm) with exception subclass definitions, POSIX compliance rules, and decoupled hint conventions.",
+          "timestamp": "2026-08-12T22:24:53-07:00",
+          "tree_id": "d5b5d09eadc9b88e127789f84aa3fb872e70bf55",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9ae1254471e03dd9233d46f987e0f6c381981a4c"
+        },
+        "date": 1786598754147,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.6,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 200.58,
             "unit": "ms"
           }
         ]
