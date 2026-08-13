@@ -564,8 +564,12 @@ def test_handle_init_template_resolution(mocker, tmp_path):
     expected_path = str(
         importlib.resources.files("protostar.templates").joinpath("astro.toml")
     )
-    mock_load.assert_called_once()
-    assert mock_load.call_args.kwargs["override_target"] == expected_path
+    mock_load.assert_any_call(
+        override_target=expected_path,
+        template_context={},
+        variable_resolver=mocker.ANY,
+    )
+    assert mock_load.call_count >= 1
 
 
 def test_handle_init_template_and_from_exclusive(mocker):

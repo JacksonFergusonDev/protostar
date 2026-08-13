@@ -71,6 +71,11 @@ class EnvironmentManifest:
         file_appends (dict[str, list[str]]): Exact paths mapped to lists of content to append.
         wants_pre_commit (bool): Flag indicating if pre-commit hooks should be scaffolded.
         pre_commit_hooks (list[str]): Raw YAML payloads for the pre-commit config.
+        metadata (dict[str, Any]): Resolved project metadata (e.g. minimum_python, supported_os).
+        wants_ci (bool): Flag indicating if GitHub Actions CI workflow should be scaffolded.
+        wants_release (bool): Flag indicating if GitHub Actions PyPI release workflow should be scaffolded.
+        ci_flags (set[str]): Tooling flags indicating specific behavior to inject into the CI workflow.
+        ci_steps (list[str]): Raw YAML payloads for individual CI steps.
         collision_strategy (CollisionStrategy): The execution route for intersecting files.
     """
 
@@ -88,6 +93,11 @@ class EnvironmentManifest:
     wants_pre_commit: bool = False
     wants_prek: bool = False
     pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
+    metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
+    wants_ci: bool = False
+    wants_release: bool = False
+    ci_flags: set[str] = dataclasses.field(default_factory=set)
+    ci_steps: list[str] = dataclasses.field(default_factory=list)
     ide_extensions: set[str | tuple[str, ...]] = dataclasses.field(default_factory=set)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
     diagnostics: list[DiagnosticEvent] = dataclasses.field(default_factory=list)
@@ -182,9 +192,18 @@ class EnvironmentManifest:
         self.file_appends[path].append(content)
 
     def add_pre_commit_hook(self, payload: str) -> None:
-        """Queues a YAML payload block for the .pre-commit-config.yaml file."""
+        """Appends a raw YAML payload to the pre-commit configuration."""
         if payload not in self.pre_commit_hooks:
             self.pre_commit_hooks.append(payload)
+
+    def add_ci_flag(self, key: str) -> None:
+        """Adds a CI flag to trigger specialized executor generation logic."""
+        self.ci_flags.add(key)
+
+    def add_ci_step(self, step_yaml: str) -> None:
+        """Appends a raw YAML payload to the CI configuration."""
+        if step_yaml not in self.ci_steps:
+            self.ci_steps.append(step_yaml)
 
     def add_diagnostic(
         self,

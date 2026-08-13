@@ -69,6 +69,13 @@
     "pre_commit_hooks": [
         "  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.4\n    hooks:\n      - id: ruff-format\n      - id: ruff\n        args: [ --fix ]"
     ],
+    "metadata": {},
+    "wants_ci": false,
+    "wants_release": false,
+    "ci_flags": [],
+    "ci_steps": [
+        "      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github ."
+    ],
     "ide_extensions": [
         "charliermarsh.ruff"
     ],

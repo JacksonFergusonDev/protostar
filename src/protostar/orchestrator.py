@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -25,6 +26,7 @@ class Orchestrator:
         presets: list[PresetModule] | None = None,
         docker: bool = False,
         force: bool = False,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Initializes the orchestrator with the requested modules and presets.
 
@@ -34,12 +36,14 @@ class Orchestrator:
             presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
             force: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
+            metadata: Pre-resolved metadata dictionary to inject into the manifest. Defaults to None.
         """
         self.modules = modules
         self.config = config
         self.presets = presets or []
         self.docker = docker
         self.force = force
+        self.metadata = metadata
         self.manifest = EnvironmentManifest()
 
     def _evaluate_collisions(self) -> None:
@@ -129,6 +133,9 @@ class Orchestrator:
             mod.pre_flight()
 
         # Phase 3: Manifest Aggregation
+        if self.metadata:
+            self.manifest.metadata.update(self.metadata)
+
         for mod in self.modules:
             mod.build(self.manifest)
 

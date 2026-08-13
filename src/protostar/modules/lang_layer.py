@@ -1,13 +1,15 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from protostar.config import ProtostarConfig
 from protostar.errors import MissingDependencyError
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
+
+from protostar.utils import generate_python_version_range
 
 from .base import BootstrapModule
 
@@ -20,10 +22,8 @@ class PythonCore(BootstrapModule):
     def __init__(
         self,
         python_version: str | None = None,
-        project_metadata: dict[str, Any] | None = None,
     ) -> None:
         self._python_version = python_version
-        self.project_metadata = project_metadata or {}
 
     @property
     def python_version(self) -> str | None:
@@ -80,12 +80,12 @@ class PythonCore(BootstrapModule):
                 cmd, description="Scaffolding uv virtual environment"
             )
 
-        desc = self.project_metadata.get("description") or "Add your description here."
-        name = self.project_metadata.get("author_name") or "your-name"
-        email = self.project_metadata.get("author_email") or "your-email"
-        github = self.project_metadata.get("github_username")
-        min_python = self.project_metadata.get("minimum_python")
-        supported_os: list[str] = self.project_metadata.get("supported_os", [])
+        desc = manifest.metadata.get("description") or "Add your description here."
+        name = manifest.metadata.get("author_name") or "your-name"
+        email = manifest.metadata.get("author_email") or "your-email"
+        github = manifest.metadata.get("github_username")
+        min_python = manifest.metadata.get("minimum_python")
+        supported_os: list[str] = manifest.metadata.get("supported_os", [])
 
         project_metadata_payload = f"""[project]
 description = "{desc}"
@@ -96,13 +96,8 @@ authors = [{{ name = "{name}", email = "{email}" }}]
             classifiers = []
             classifiers.append('"Programming Language :: Python :: 3"')
 
-            try:
-                major, minor = map(int, min_python.split("."))
-                if major == 3:
-                    for v in range(minor, 15):
-                        classifiers.append(f'"Programming Language :: Python :: 3.{v}"')
-            except Exception:
-                pass
+            for version in generate_python_version_range(min_python):
+                classifiers.append(f'"Programming Language :: Python :: {version}"')
 
             for os_name in supported_os:
                 if os_name == "MacOS":

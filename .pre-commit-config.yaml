@@ -26,6 +26,7 @@ repos:
         additional_dependencies:
           - pytest
           - tomlkit
+          - rich-argparse
 
   # 3. Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
