@@ -34,6 +34,7 @@
     "dev_dependencies": [
         "ruff"
     ],
+    "docs_dependencies": [],
     "system_tasks": [],
     "post_install_tasks": [
         {

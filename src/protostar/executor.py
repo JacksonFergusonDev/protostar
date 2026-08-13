@@ -205,8 +205,20 @@ class SystemExecutor:
         """Writes all queued boilerplate files to the local workspace."""
         if not self.manifest.file_injections:
             return
+        project_name = Path.cwd().name
+        pyproject_path = Path("pyproject.toml")
+        if pyproject_path.exists():
+            try:
+                with pyproject_path.open("rb") as f:
+                    pyproject_data = tomllib.load(f)
+                    project_name = pyproject_data.get("project", {}).get(
+                        "name", project_name
+                    )
+            except Exception:
+                pass
 
         for filepath, content in self.manifest.file_injections.items():
+            content = content.replace("{{PROJECT_NAME}}", project_name)
             target = Path(filepath)
             if (
                 not target.exists()
@@ -346,6 +358,21 @@ class SystemExecutor:
                     else:
                         for item in value:
                             base[key].append(item)
+                elif isinstance(value, tomlkit.items.Array):
+                    if not isinstance(base[key], tomlkit.items.Array):
+                        self.manifest.add_diagnostic(
+                            phase="Executor",
+                            message=f"TOML Merge Collision: Expected an Array for key '{key}', but found {type(base[key]).__name__}. Skipping injection.",
+                            severity=Severity.WARNING,
+                        )
+                        continue
+
+                    if overwrite:
+                        base[key] = value
+                    else:
+                        for item in value:
+                            if item not in base[key]:
+                                base[key].append(item)
                 else:
                     base[key] = value
             else:
@@ -362,23 +389,26 @@ class SystemExecutor:
             return
 
         python_version = None
+        project_name = None
         pyproject_path = Path("pyproject.toml")
         if pyproject_path.exists():
             try:
                 with pyproject_path.open("rb") as f:
                     pyproject_data = tomllib.load(f)
-                    req_python = pyproject_data.get("project", {}).get(
-                        "requires-python", ""
-                    )
+                    project = pyproject_data.get("project", {})
+                    req_python = project.get("requires-python", "")
                     match = re.search(r"(\d+\.\d+)", req_python)
                     if match:
                         python_version = match.group(1)
+                    project_name = project.get("name")
             except Exception as e:
-                logger.debug(f"Failed to parse pyproject.toml for python version: {e}")
+                logger.debug(f"Failed to parse pyproject.toml: {e}")
 
         # 2. Protostar config or hardcoded default
         if not python_version:
             python_version = self.config.python_version or "3.13"
+        if not project_name:
+            project_name = "My Project"
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
@@ -403,7 +433,9 @@ class SystemExecutor:
                 ast_mutated = False
 
                 for payload in contents:
-                    interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
+                    interpolated = payload.replace(
+                        "{{PYTHON_VERSION}}", python_version
+                    ).replace("{{PROJECT_NAME}}", project_name)
                     try:
                         payload_doc = tomlkit.parse(interpolated)
                         ast_mutated = True
@@ -517,7 +549,9 @@ class SystemExecutor:
             missing_payloads = []
 
             for payload in contents:
-                interpolated = payload.replace("{{PYTHON_VERSION}}", python_version)
+                interpolated = payload.replace(
+                    "{{PYTHON_VERSION}}", python_version
+                ).replace("{{PROJECT_NAME}}", project_name)
 
                 # Generate a deterministic boundary marker
                 payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
@@ -658,7 +692,11 @@ class SystemExecutor:
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
-        if not self.manifest.dependencies and not self.manifest.dev_dependencies:
+        if (
+            not self.manifest.dependencies
+            and not self.manifest.dev_dependencies
+            and not self.manifest.docs_dependencies
+        ):
             return
 
         # Apply a generous 10-minute leash for heavy, network-bound payload resolutions
@@ -692,6 +730,29 @@ class SystemExecutor:
                 self.manifest.add_diagnostic(
                     phase="Executor",
                     message=f"Development dependency resolution failed: {e}",
+                    severity=Severity.WARNING,
+                    detail=e.output_detail
+                    if isinstance(e, CommandExecutionError)
+                    else None,
+                )
+
+        if self.manifest.docs_dependencies:
+            docs_cmd = [
+                "uv",
+                "add",
+                "--group",
+                "docs",
+                *self.manifest.docs_dependencies,
+            ]
+            try:
+                with console.status(
+                    f"Resolving and installing {len(self.manifest.docs_dependencies)} documentation dependencies"
+                ):
+                    execute_subprocess(docs_cmd, timeout=resolution_timeout)
+            except (CommandExecutionError, CommandTimeoutError) as e:
+                self.manifest.add_diagnostic(
+                    phase="Executor",
+                    message=f"Documentation dependency resolution failed: {e}",
                     severity=Severity.WARNING,
                     detail=e.output_detail
                     if isinstance(e, CommandExecutionError)

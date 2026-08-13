@@ -79,6 +79,7 @@ class EnvironmentManifest:
     ide_settings: dict[str, Any] = dataclasses.field(default_factory=dict)
     dependencies: list[str] = dataclasses.field(default_factory=list)
     dev_dependencies: list[str] = dataclasses.field(default_factory=list)
+    docs_dependencies: list[str] = dataclasses.field(default_factory=list)
     system_tasks: list[SystemTask] = dataclasses.field(default_factory=list)
     post_install_tasks: list[SystemTask] = dataclasses.field(default_factory=list)
     directories: set[str] = dataclasses.field(default_factory=set)
@@ -159,6 +160,11 @@ class EnvironmentManifest:
         """Queues a development dependency for installation, preventing duplicates."""
         if package not in self.dev_dependencies:
             self.dev_dependencies.append(package)
+
+    def add_docs_dependency(self, package: str) -> None:
+        """Queues a documentation dependency for installation, preventing duplicates."""
+        if package not in self.docs_dependencies:
+            self.docs_dependencies.append(package)
 
     def add_directory(self, path: str) -> None:
         """Queues a relative directory path to be scaffolded."""

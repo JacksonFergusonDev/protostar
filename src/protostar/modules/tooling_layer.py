@@ -717,3 +717,101 @@ ignore:
   - "**/__init__.py"
 """
         manifest.add_file_injection(".github/codecov.yml", config)
+
+
+class ZensicalModule(BootstrapModule):
+    """Configures a minimal Zensical documentation setup."""
+
+    cli_flags = ("--zensical",)
+    cli_help = "Scaffold Zensical documentation"
+    config_key = "zensical"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Zensical"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for Zensical."""
+        return [Path("mkdocs.yml"), Path("docs/")]
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Zensical dependencies, scaffolding, and ignore rules."""
+        logger.debug("Building Zensical tooling layer.")
+
+        manifest.add_docs_dependency("mkdocstrings[python]")
+        manifest.add_docs_dependency("zensical")
+
+        manifest.add_environment_artifact("site/")
+        manifest.add_directory("docs")
+
+        pyproject_wiring = """[dependency-groups]
+dev = [
+    { include-group = "docs" },
+]
+"""
+        manifest.add_file_append("pyproject.toml", pyproject_wiring)
+
+        if Path("docs/index.md").exists():
+            manifest.add_diagnostic(
+                phase=self.name,
+                message="Skipping docs/index.md generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+        else:
+            index_content = """# Welcome to {{PROJECT_NAME}}
+
+Add your project overview here.
+
+## Getting Started
+
+Refer to the [installation guide](getting-started.md) or browse the [API Reference](api-reference.md).
+"""
+            manifest.add_file_injection("docs/index.md", index_content)
+
+        if Path("mkdocs.yml").exists():
+            manifest.add_diagnostic(
+                phase=self.name,
+                message="Skipping mkdocs.yml generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+        else:
+            mkdocs_content = """site_name: {{PROJECT_NAME}}
+site_description: Add your project description here.
+
+nav:
+  - Home: index.md
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: true
+
+extra:
+  generator: false
+"""
+            manifest.add_file_injection("mkdocs.yml", mkdocs_content)
