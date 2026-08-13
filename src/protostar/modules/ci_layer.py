@@ -16,6 +16,7 @@ class CIModule(BootstrapModule):
     cli_flags = ("--ci",)
     cli_help = "Scaffold standard GitHub Actions CI workflows"
     config_key = "ci"
+    required_metadata = ("supported_os", "minimum_python")
 
     @property
     def name(self) -> str:
