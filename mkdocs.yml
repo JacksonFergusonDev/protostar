@@ -1,6 +1,6 @@
 site_name: Protostar
 site_description: High-velocity, zero-friction python environment scaffolding.
-site_url: https://jacksonfergusondev.github.io/protostar/
+site_url: https://protostar.readthedocs.io/en/stable/
 repo_url: https://github.com/jacksonfergusondev/protostar
 repo_name: jacksonfergusondev/protostar
 edit_uri: edit/main/docs/
