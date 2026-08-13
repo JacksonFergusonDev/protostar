@@ -290,7 +290,9 @@ class TyModule(BootstrapModule):
       - id: ty"""
         manifest.add_pre_commit_hook(hook_payload)
 
-        config = """[tool.ty.rules]
+        config = """# ---- Ty ---- #
+
+[tool.ty.rules]
 missing-type-argument = "error"
 redundant-cast = "warn"
 unused-ignore-comment = "warn"
