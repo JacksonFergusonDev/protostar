@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786591301714,
+  "lastUpdate": 1786593516156,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -4901,6 +4901,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.19,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "16f98124c4e17ebfa64a607b504ac7a8fbe6488d",
+          "message": "feat: scaffold Astral's ty typechecker (#137)\n\n* feat: scaffold Astral's ty typechecker\n\n* fix: populate tool.ty.rules with baseline configuration\n\n* fix: add heading to ty pyproject configuration\n\n* fix: add Ty visual separator to pyproject.toml injections\n\n* docs: update fixtures",
+          "timestamp": "2026-08-12T20:57:28-07:00",
+          "tree_id": "64e14ec2899a8089c5c070d5a7606641cfe48a9a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/16f98124c4e17ebfa64a607b504ac7a8fbe6488d"
+        },
+        "date": 1786593515044,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.4,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 207.72,
             "unit": "ms"
           }
         ]
