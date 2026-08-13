@@ -47,6 +47,7 @@ def run_init_wizard() -> dict[str, Any] | None:
     except Exception:
         pass
 
+    answer = "None"
     if len(templates) > 1:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
@@ -103,21 +104,71 @@ def run_init_wizard() -> dict[str, Any] | None:
     console = Console()
     console.print("\n[bold cyan]--- Project Metadata ---[/bold cyan]")
 
+    console.print(
+        "\n[dim]Hint: You can skip these prompts in the future by adding your details to the global config (run `protostar config`).[/dim]"
+    )
+
     desc = questionary.text(
         "Project description (optional, press Enter to skip):"
     ).ask()
     if desc is None:
         return None
 
-    author_name = questionary.text("Author name (optional, press Enter to skip):").ask()
+    def get_git_config(key: str) -> str | None:
+        try:
+            import subprocess
+
+            result = subprocess.run(
+                ["git", "config", "--global", key],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            return result.stdout.strip() or None
+        except Exception:
+            return None
+
+    default_author = config.author_name or get_git_config("user.name") or ""
+    author_name = questionary.text(
+        "Author name (optional, press Enter to skip):", default=default_author
+    ).ask()
     if author_name is None:
         return None
 
+    default_email = config.author_email or get_git_config("user.email") or ""
     author_email = questionary.text(
-        "Author email (optional, press Enter to skip):"
+        "Author email (optional, press Enter to skip):", default=default_email
     ).ask()
     if author_email is None:
         return None
+
+    default_github = config.github_username or ""
+    github_username = questionary.text(
+        "GitHub username (optional, press Enter to skip):", default=default_github
+    ).ask()
+    if github_username is None:
+        return None
+
+    if answer == "cli":
+        min_python = questionary.text(
+            "Minimum Python version supported:", default=config.python_version or "3.13"
+        ).ask()
+        if min_python is None:
+            return None
+
+        supported_os = questionary.checkbox(
+            "Operating systems supported:",
+            choices=[
+                Choice(title="MacOS", value="MacOS", checked=True),
+                Choice(title="Linux", value="Linux", checked=True),
+                Choice(title="Windows", value="Windows", checked=True),
+            ],
+        ).ask()
+        if supported_os is None:
+            return None
+    else:
+        min_python = config.python_version or "3.13"
+        supported_os = []
 
     modules = [item for item in selected if item in TOOLING_MODULES]
     presets = [item for item in selected if item in PRESETS]
@@ -128,9 +179,12 @@ def run_init_wizard() -> dict[str, Any] | None:
         "presets": presets,
         "docker": docker,
         "project_metadata": {
-            "description": desc or "Add your description here.",
-            "author_name": author_name or "your-name",
-            "author_email": author_email or "your-email",
+            "description": desc,
+            "author_name": author_name,
+            "author_email": author_email,
+            "github_username": github_username,
+            "minimum_python": min_python,
+            "supported_os": supported_os,
         },
     }
 

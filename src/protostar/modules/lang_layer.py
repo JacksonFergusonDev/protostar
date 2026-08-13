@@ -1,7 +1,7 @@
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from protostar.config import ProtostarConfig
 from protostar.errors import MissingDependencyError
@@ -20,7 +20,7 @@ class PythonCore(BootstrapModule):
     def __init__(
         self,
         python_version: str | None = None,
-        project_metadata: dict[str, str] | None = None,
+        project_metadata: dict[str, Any] | None = None,
     ) -> None:
         self._python_version = python_version
         self.project_metadata = project_metadata or {}
@@ -80,16 +80,53 @@ class PythonCore(BootstrapModule):
                 cmd, description="Scaffolding uv virtual environment"
             )
 
-        # Inject standard PEP 621 project metadata
-        desc = self.project_metadata.get("description", "Add your description here.")
-        name = self.project_metadata.get("author_name", "your-name")
-        email = self.project_metadata.get("author_email", "your-email")
+        desc = self.project_metadata.get("description") or "Add your description here."
+        name = self.project_metadata.get("author_name") or "your-name"
+        email = self.project_metadata.get("author_email") or "your-email"
+        github = self.project_metadata.get("github_username")
+        min_python = self.project_metadata.get("minimum_python")
+        supported_os: list[str] = self.project_metadata.get("supported_os", [])
 
         project_metadata_payload = f"""[project]
 description = "{desc}"
 readme = "README.md"
 authors = [{{ name = "{name}", email = "{email}" }}]
 """
+        if min_python and supported_os:
+            classifiers = []
+            classifiers.append('"Programming Language :: Python :: 3"')
+
+            try:
+                major, minor = map(int, min_python.split("."))
+                if major == 3:
+                    for v in range(minor, 15):
+                        classifiers.append(f'"Programming Language :: Python :: 3.{v}"')
+            except Exception:
+                pass
+
+            for os_name in supported_os:
+                if os_name == "MacOS":
+                    classifiers.append('"Operating System :: MacOS"')
+                elif os_name == "Linux":
+                    classifiers.append('"Operating System :: POSIX :: Linux"')
+                elif os_name == "Windows":
+                    classifiers.append('"Operating System :: Microsoft :: Windows"')
+
+            if classifiers:
+                classifier_str = ",\n    ".join(classifiers)
+                project_metadata_payload += f"""classifiers = [
+    {classifier_str},
+]
+"""
+
+        if github:
+            repo_name = Path.cwd().name
+            project_metadata_payload += f"""
+[project.urls]
+Repository = "https://github.com/{github}/{repo_name}"
+Issues = "https://github.com/{github}/{repo_name}/issues"
+"""
+
         manifest.add_file_append("pyproject.toml", project_metadata_payload)
 
         # --- IDE Injection ---

@@ -20,6 +20,11 @@ DEFAULT_CONFIG_CONTENT = """[env]
 # Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
 
+# Default Author Information
+# author_name = "your-name"
+# author_email = "your-email"
+# github_username = "your-github-username"
+
 # Auto-scaffold direnv with python environments
 direnv = false
 
@@ -82,6 +87,9 @@ class ProtostarConfig:
     """
 
     ide: str | None = None
+    author_name: str | None = None
+    author_email: str | None = None
+    github_username: str | None = None
     direnv: bool = False
     python_version: str | None = "3.13"
     markdownlint: bool = False

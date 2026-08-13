@@ -3,6 +3,11 @@
 # Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
 
+# Default Author Information
+# author_name = "your-name"
+# author_email = "your-email"
+# github_username = "your-github-username"
+
 # Auto-scaffold direnv with python environments
 direnv = false
 
