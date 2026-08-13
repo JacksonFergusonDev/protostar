@@ -346,6 +346,21 @@ class SystemExecutor:
                     else:
                         for item in value:
                             base[key].append(item)
+                elif isinstance(value, tomlkit.items.Array):
+                    if not isinstance(base[key], tomlkit.items.Array):
+                        self.manifest.add_diagnostic(
+                            phase="Executor",
+                            message=f"TOML Merge Collision: Expected an Array for key '{key}', but found {type(base[key]).__name__}. Skipping injection.",
+                            severity=Severity.WARNING,
+                        )
+                        continue
+
+                    if overwrite:
+                        base[key] = value
+                    else:
+                        for item in value:
+                            if item not in base[key]:
+                                base[key].append(item)
                 else:
                     base[key] = value
             else:
@@ -717,20 +732,11 @@ class SystemExecutor:
                 "docs",
                 *self.manifest.docs_dependencies,
             ]
-            wire_cmd = [
-                "uv",
-                "add",
-                "--group",
-                "dev",
-                "--raw",
-                '{"include-group" = "docs"}',
-            ]
             try:
                 with console.status(
                     f"Resolving and installing {len(self.manifest.docs_dependencies)} documentation dependencies"
                 ):
                     execute_subprocess(docs_cmd, timeout=resolution_timeout)
-                    execute_subprocess(wire_cmd, timeout=resolution_timeout)
             except (CommandExecutionError, CommandTimeoutError) as e:
                 self.manifest.add_diagnostic(
                     phase="Executor",

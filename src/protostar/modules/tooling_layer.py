@@ -746,6 +746,13 @@ class ZensicalModule(BootstrapModule):
         manifest.add_environment_artifact("site/")
         manifest.add_directory("docs")
 
+        pyproject_wiring = """[dependency-groups]
+dev = [
+    { include-group = "docs" },
+]
+"""
+        manifest.add_file_append("pyproject.toml", pyproject_wiring)
+
         if Path("docs/index.md").exists():
             manifest.add_diagnostic(
                 phase=self.name,
