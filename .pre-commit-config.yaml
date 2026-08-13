@@ -23,6 +23,9 @@ repos:
     rev: v2.3.0
     hooks:
       - id: mypy
+        additional_dependencies:
+          - pytest
+          - tomlkit
 
   # 3. Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2

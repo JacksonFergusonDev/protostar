@@ -21,7 +21,7 @@ from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
-@pytest.fixture  # type: ignore[untyped-decorator]
+@pytest.fixture
 def mock_config() -> ProtostarConfig:
     """Provides a fresh baseline configuration for DI injections."""
     return ProtostarConfig()
