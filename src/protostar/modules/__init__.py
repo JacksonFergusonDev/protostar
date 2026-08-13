@@ -16,6 +16,7 @@ from .tooling_layer import (
     RenovateModule,
     RuffModule,
     TyModule,
+    ZensicalModule,
 )
 
 TOOLING_MODULES: tuple[BootstrapModule, ...] = (
@@ -31,6 +32,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     CommitizinModule(),
     RenovateModule(),
     CodecovModule(),
+    ZensicalModule(),
 )
 
 __all__ = [
@@ -50,4 +52,5 @@ __all__ = [
     "RuffModule",
     "SystemWorkspaceModule",
     "TyModule",
+    "ZensicalModule",
 ]
