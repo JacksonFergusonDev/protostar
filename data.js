@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786595318889,
+  "lastUpdate": 1786596111544,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5003,6 +5003,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 203.81,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f8db61f0e4e75d0d0838294cc17bcfe9c5751f3a",
+          "message": "feat(modules): add RenovateModule for Renovate dependency update scaffolding (#139)\n\n* feat(modules): add RenovateModule for Renovate dependency update scaffolding\n\n- Implement RenovateModule to scaffold .github/renovate.json with optimal defaults\n- Register renovate-config-validator pre-commit hook (rev 44.24.3)\n- Register RenovateModule in TOOLING_MODULES and update config comments\n\nCloses #105\n\n* test(modules): add unit tests for RenovateModule\n\n- Add test for RenovateModule properties (name, cli_flags, config_key, collision_markers)\n- Add test for file injection of .github/renovate.json\n- Add test for pre-commit validator hook injection\n- Add test for diagnostic skip when .github/renovate.json already exists\n\n* docs(templates): add renovate tooling to templates and update documentation fixtures\n\n- Enable renovate = true in CLI application template (cli.toml)\n- Regenerate documentation fixtures including table_tooling.md, default_config.md, and cli_init_help.svg",
+          "timestamp": "2026-08-12T21:40:50-07:00",
+          "tree_id": "dd827799f248d8a479fe2d9109ddc3256c131852",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f8db61f0e4e75d0d0838294cc17bcfe9c5751f3a"
+        },
+        "date": 1786596110592,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.45,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 204.09,
             "unit": "ms"
           }
         ]
