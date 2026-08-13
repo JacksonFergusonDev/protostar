@@ -21,5 +21,12 @@ PRESETS: tuple[PresetModule, ...] = (
 
 __all__ = [
     "PRESETS",
+    "ApiPreset",
+    "AstroPreset",
+    "CliPreset",
+    "DspPreset",
+    "EmbeddedPreset",
+    "MLPreset",
     "PresetModule",
+    "ScientificPreset",
 ]

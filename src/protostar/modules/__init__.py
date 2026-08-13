@@ -30,6 +30,7 @@ __all__ = [
     "BootstrapModule",
     "CommitizinModule",
     "DirenvModule",
+    "MarkdownLintModule",
     "MypyModule",
     "PreCommitModule",
     "PrekModule",

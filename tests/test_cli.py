@@ -3,7 +3,6 @@ import importlib.metadata
 import os
 import subprocess
 import sys
-from typing import cast
 
 import pytest
 
@@ -281,9 +280,8 @@ def test_dispatch_help_topic(mocker):
     parser = build_parser()
 
     # Safely extract the init subparser
-    subparsers = cast(
-        argparse._SubParsersAction,
-        next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+    subparsers = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
     )
     init_parser = subparsers.choices["init"]
 
@@ -320,9 +318,8 @@ def test_print_table_help_execution(mocker):
     mock_print = mocker.patch("protostar.cli.console.print")
 
     # Safely extract the init subparser
-    subparsers = cast(
-        argparse._SubParsersAction,
-        next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+    subparsers = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
     )
     init_parser = subparsers.choices["init"]
 
