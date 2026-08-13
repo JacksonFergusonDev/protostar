@@ -80,28 +80,18 @@ class PythonCore(BootstrapModule):
                 cmd, description="Scaffolding uv virtual environment"
             )
 
-        desc = self.project_metadata.get("description")
-        name = self.project_metadata.get("author_name")
-        email = self.project_metadata.get("author_email")
+        desc = self.project_metadata.get("description") or "Add your description here."
+        name = self.project_metadata.get("author_name") or "your-name"
+        email = self.project_metadata.get("author_email") or "your-email"
         github = self.project_metadata.get("github_username")
         min_python = self.project_metadata.get("minimum_python")
         supported_os: list[str] = self.project_metadata.get("supported_os", [])
 
-        project_metadata_payload = "[project]\n"
-        if desc:
-            project_metadata_payload += f'description = "{desc}"\n'
-        project_metadata_payload += 'readme = "README.md"\n'
-
-        if name or email:
-            author_str = ""
-            if name:
-                author_str += f'name = "{name}"'
-            if email:
-                if author_str:
-                    author_str += ", "
-                author_str += f'email = "{email}"'
-            project_metadata_payload += f"authors = [\n    {{ {author_str} }}\n]\n"
-
+        project_metadata_payload = f"""[project]
+description = "{desc}"
+readme = "README.md"
+authors = [{{ name = "{name}", email = "{email}" }}]
+"""
         if min_python and supported_os:
             classifiers = []
             classifiers.append('"Programming Language :: Python :: 3"')
