@@ -1,3 +1,5 @@
+"""System-level subprocess execution utilities for Protostar."""
+
 import logging
 import subprocess
 

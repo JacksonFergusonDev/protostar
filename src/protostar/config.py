@@ -1,3 +1,5 @@
+"""Configuration management and schema definitions for Protostar."""
+
 import logging
 import tomllib
 import types

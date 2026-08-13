@@ -1,3 +1,5 @@
+"""Project metadata definitions and resolution mechanisms for Protostar."""
+
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass

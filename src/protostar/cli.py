@@ -1,3 +1,5 @@
+"""Command-line interface and entry point for Protostar."""
+
 import argparse
 import importlib.resources
 import logging
