@@ -459,11 +459,20 @@ class SystemExecutor:
                             new_content,
                             flags=re.MULTILINE,
                         )
+                    if not re.search(
+                        r"^# ---- Ty ---- #", new_content, flags=re.MULTILINE
+                    ):
+                        new_content = re.sub(
+                            r"^\[tool\.ty(?:[^\]]*|)\]\s*$",
+                            "# ---- Ty ---- #\n\n\\g<0>",
+                            new_content,
+                            flags=re.MULTILINE,
+                        )
 
                     # Add main Tool Configuration header before the first tool header if not exists
                     if "# Tool Configuration" not in new_content:
                         tool_match = re.search(
-                            r"^# ---- (Ruff|Mypy|Pytest|Commitizen) ---- #\s*$",
+                            r"^# ---- (Ruff|Mypy|Pytest|Commitizen|Ty) ---- #\s*$",
                             new_content,
                             flags=re.MULTILINE,
                         )
