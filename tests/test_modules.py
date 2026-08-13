@@ -6,6 +6,7 @@ from protostar.config import ProtostarConfig
 from protostar.errors import MissingDependencyError
 from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
+    CodecovModule,
     CommitizinModule,
     DirenvModule,
     MarkdownLintModule,
@@ -489,5 +490,40 @@ def test_renovate_module_skips_when_file_exists(mocker):
     assert ".github/renovate.json" not in manifest.file_injections
     assert any(
         d.phase == "Renovate" and d.severity == Severity.SKIP
+        for d in manifest.diagnostics
+    )
+
+
+def test_codecov_module_properties():
+    module = CodecovModule()
+    assert module.name == "Codecov"
+    assert module.cli_flags == ("--codecov",)
+    assert module.config_key == "codecov"
+    assert module.collision_markers == [Path(".github/codecov.yml")]
+
+
+def test_codecov_module_injects_file(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    manifest = EnvironmentManifest()
+    module = CodecovModule()
+    module.build(manifest)
+
+    assert ".github/codecov.yml" in manifest.file_injections
+    content = manifest.file_injections[".github/codecov.yml"]
+    assert 'range: "80...100"' in content
+    assert "target: 80%" in content
+    assert "require_changes: true" in content
+    assert "tests/**" in content
+
+
+def test_codecov_module_skips_when_file_exists(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+    manifest = EnvironmentManifest()
+    module = CodecovModule()
+    module.build(manifest)
+
+    assert ".github/codecov.yml" not in manifest.file_injections
+    assert any(
+        d.phase == "Codecov" and d.severity == Severity.SKIP
         for d in manifest.diagnostics
     )

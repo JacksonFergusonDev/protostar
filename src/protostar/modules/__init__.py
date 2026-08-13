@@ -4,6 +4,7 @@ from .base import BootstrapModule
 from .lang_layer import PythonCore
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
+    CodecovModule,
     CommitizinModule,
     DirenvModule,
     MarkdownLintModule,
@@ -29,11 +30,13 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     PrekModule(),
     CommitizinModule(),
     RenovateModule(),
+    CodecovModule(),
 )
 
 __all__ = [
     "TOOLING_MODULES",
     "BootstrapModule",
+    "CodecovModule",
     "CommitizinModule",
     "DirenvModule",
     "MarkdownLintModule",

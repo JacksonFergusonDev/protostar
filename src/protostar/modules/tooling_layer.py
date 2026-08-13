@@ -648,3 +648,72 @@ class RenovateModule(BootstrapModule):
 }
 """
         manifest.add_file_injection(".github/renovate.json", config)
+
+
+class CodecovModule(BootstrapModule):
+    """Configures opinionated Codecov coverage and status thresholds."""
+
+    cli_flags = ("--codecov",)
+    cli_help = "Scaffold Codecov configuration"
+    config_key = "codecov"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Codecov"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for Codecov."""
+        return [Path(".github/codecov.yml")]
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues Codecov configuration file injection.
+
+        Args:
+            manifest: The centralized state object.
+        """
+        logger.debug("Building Codecov tooling layer.")
+
+        if Path(".github/codecov.yml").exists():
+            manifest.add_diagnostic(
+                phase=self.name,
+                message=(
+                    "Skipping .github/codecov.yml generation; file already exists."
+                ),
+                severity=Severity.SKIP,
+            )
+            return
+
+        config = """coverage:
+  precision: 2
+  round: down
+  range: "80...100"
+
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%
+        if_not_found: error
+        if_ci_failed: error
+    patch:
+      default:
+        target: 80%
+        threshold: 2%
+        if_not_found: success
+        if_ci_failed: error
+        informational: false
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
+
+ignore:
+  - "tests/**"
+  - "docs/**"
+  - "scripts/**"
+  - "**/__init__.py"
+"""
+        manifest.add_file_injection(".github/codecov.yml", config)
