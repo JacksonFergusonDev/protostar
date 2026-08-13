@@ -12,3 +12,4 @@
 | Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | *None* |
 | Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `renovate.json` |
 | Codecov | `--codecov` | Scaffold Codecov configuration | `codecov.yml` |
+| Zensical | `--zensical` | Scaffold Zensical documentation | `mkdocs.yml`, `docs` |
