@@ -9,6 +9,7 @@ pytest = true
 prek = true
 commitizen = true
 renovate = true
+codecov = true
 
 [dev]
 extra_dependencies = ["pytest-cov"]
