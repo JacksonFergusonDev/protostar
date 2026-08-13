@@ -17,6 +17,7 @@ python_version = "3.13"
 # pre_commit = true
 # commitizen = true  # Scaffold commitizen version bumping and changelog tooling
 # renovate = true    # Scaffold Renovate dependency update configuration
+# codecov = true     # Scaffold Codecov configuration
 # active_presets = []
 
 # --- Advanced Configuration Overrides ---

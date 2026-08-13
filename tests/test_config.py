@@ -333,3 +333,18 @@ def test_config_commitizen_parsed_from_env(tmp_path):
 
     config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
     assert config.commitizen is True
+
+
+def test_config_codecov_defaults_to_false():
+    """Test that codecov defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.codecov is False
+
+
+def test_config_codecov_parsed_from_env(tmp_path):
+    """Test that codecov = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\ncodecov = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.codecov is True
