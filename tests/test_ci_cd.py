@@ -46,6 +46,46 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
     assert "name: Upload test analytics to Codecov" in content
 
 
+def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) -> None:
+    manifest.wants_ci = True
+    manifest.metadata = {
+        "supported_os": ["Linux"],
+        "minimum_python": "3.11",
+    }
+    manifest.ci_flags = {"pytest"}
+    manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
+
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor._write_ci_workflow()
+
+    mock_write.assert_called_once()
+    args, _ = mock_write.call_args
+    _path, content = args
+    assert "name: Run tests with coverage" not in content
+    assert "name: Run Tests" in content
+    assert "Upload coverage to Codecov" not in content
+
+
+def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -> None:
+    manifest.wants_ci = True
+    manifest.metadata = {
+        "supported_os": ["Linux"],
+        "minimum_python": "3.11",
+    }
+    manifest.ci_flags = set()
+    manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
+
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor._write_ci_workflow()
+
+    mock_write.assert_called_once()
+    args, _ = mock_write.call_args
+    _path, content = args
+    assert "name: Run Tests" not in content
+
+
 def test_executor_release_assembly(manifest: EnvironmentManifest, mocker) -> None:
     manifest.wants_release = True
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
