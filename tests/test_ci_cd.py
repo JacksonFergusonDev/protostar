@@ -40,9 +40,10 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
     )
     assert '"ubuntu-latest", "macos-latest"' in content
     assert '"3.11", "3.12", "3.13", "3.14"' in content
-    assert "name: Run Tests with Coverage" in content
+    assert "name: Run tests with coverage # (for Codecov)" in content
     assert "name: Run Ruff" in content
-    assert "name: Upload Coverage" in content
+    assert "name: Upload coverage to Codecov" in content
+    assert "name: Upload test analytics to Codecov" in content
 
 
 def test_executor_release_assembly(manifest: EnvironmentManifest, mocker) -> None:

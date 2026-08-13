@@ -302,19 +302,33 @@ class SystemExecutor:
         pytest_step = ""
         if has_pytest:
             if has_codecov:
-                pytest_step = f"""      - name: Run Tests with Coverage
-        if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
-        run: uv run pytest --cov --cov-report=xml
+                pytest_step = f"""      - name: Run tests with coverage # (for Codecov)
+        if: ${{{{ matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}' }}}}
+        run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
-      - name: Run Tests
-        if: matrix.os != '{primary_os}' || matrix.python-version != '{primary_python}'
+      - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
+        if: ${{{{ !(matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}') }}}}
         run: uv run pytest
 
-      - name: Upload Coverage
+      - name: Upload coverage to Codecov
         if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
         uses: codecov/codecov-action@v7
         with:
-          token: ${{{{ secrets.CODECOV_TOKEN }}}}"""
+          token: ${{{{ secrets.CODECOV_TOKEN }}}}
+          files: coverage.xml
+          disable_search: true
+          name: coverage
+          fail_ci_if_error: true
+
+      - name: Upload test analytics to Codecov
+        if: ${{{{ matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}' && !cancelled() }}}}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{{{ secrets.CODECOV_TOKEN }}}}
+          files: junit.xml
+          disable_search: true
+          report_type: test_results
+          name: test-results"""
             else:
                 pytest_step = """      - name: Run Tests
         run: uv run pytest"""
