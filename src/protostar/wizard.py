@@ -124,12 +124,12 @@ def run_init_wizard() -> dict[str, Any] | None:
         except Exception:
             return None
 
-    default_author = config.author_name or get_git_config("user.name") or "your-name"
+    default_author = config.author_name or get_git_config("user.name") or ""
     author_name = questionary.text("Author name:", default=default_author).ask()
     if author_name is None:
         return None
 
-    default_email = config.author_email or get_git_config("user.email") or "your-email"
+    default_email = config.author_email or get_git_config("user.email") or ""
     author_email = questionary.text("Author email:", default=default_email).ask()
     if author_email is None:
         return None
@@ -172,8 +172,8 @@ def run_init_wizard() -> dict[str, Any] | None:
         "docker": docker,
         "project_metadata": {
             "description": desc or "Add your description here.",
-            "author_name": author_name,
-            "author_email": author_email,
+            "author_name": author_name or "your-name",
+            "author_email": author_email or "your-email",
             "github_username": github_username,
             "minimum_python": min_python,
             "supported_os": supported_os,
