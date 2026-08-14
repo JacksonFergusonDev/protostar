@@ -76,6 +76,11 @@ class EnvironmentManifest:
         wants_release (bool): Flag indicating if GitHub Actions PyPI release workflow should be scaffolded.
         ci_flags (set[str]): Tooling flags indicating specific behavior to inject into the CI workflow.
         ci_steps (list[str]): Raw YAML payloads for individual CI steps.
+        wants_just (bool): Flag indicating if a justfile should be scaffolded.
+        just_format_commands (list[str]): Shell commands for the format recipe.
+        just_lint_commands (list[str]): Shell commands for the lint recipe.
+        just_typecheck_commands (list[str]): Shell commands for the typecheck recipe.
+        just_clean_paths (list[str]): File/directory paths to remove in the clean recipe.
         collision_strategy (CollisionStrategy): The execution route for intersecting files.
     """
 
@@ -98,6 +103,11 @@ class EnvironmentManifest:
     wants_release: bool = False
     ci_flags: set[str] = dataclasses.field(default_factory=set)
     ci_steps: list[str] = dataclasses.field(default_factory=list)
+    wants_just: bool = False
+    just_format_commands: list[str] = dataclasses.field(default_factory=list)
+    just_lint_commands: list[str] = dataclasses.field(default_factory=list)
+    just_typecheck_commands: list[str] = dataclasses.field(default_factory=list)
+    just_clean_paths: list[str] = dataclasses.field(default_factory=list)
     ide_extensions: set[str | tuple[str, ...]] = dataclasses.field(default_factory=set)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
     diagnostics: list[DiagnosticEvent] = dataclasses.field(default_factory=list)
