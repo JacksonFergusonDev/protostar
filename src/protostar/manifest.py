@@ -72,6 +72,7 @@ class EnvironmentManifest:
         file_appends (dict[str, list[str]]): Exact paths mapped to lists of content to append.
         wants_pre_commit (bool): Flag indicating if pre-commit hooks should be scaffolded.
         pre_commit_hooks (list[str]): Raw YAML payloads for the pre-commit config.
+        pre_commit_local_hooks (list[str]): Raw YAML hook definitions for the local pre-commit toolchain.
         metadata (dict[str, Any]): Resolved project metadata (e.g. minimum_python, supported_os).
         wants_ci (bool): Flag indicating if GitHub Actions CI workflow should be scaffolded.
         wants_release (bool): Flag indicating if GitHub Actions PyPI release workflow should be scaffolded.
@@ -99,6 +100,7 @@ class EnvironmentManifest:
     wants_pre_commit: bool = False
     wants_prek: bool = False
     pre_commit_hooks: list[str] = field(default_factory=list)
+    pre_commit_local_hooks: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
     wants_ci: bool = False
     wants_release: bool = False
@@ -212,6 +214,11 @@ class EnvironmentManifest:
         """Appends a raw YAML payload to the pre-commit configuration."""
         if payload not in self.pre_commit_hooks:
             self.pre_commit_hooks.append(payload)
+
+    def add_pre_commit_local_hook(self, payload: str) -> None:
+        """Appends a raw YAML hook payload to the local pre-commit toolchain configuration."""
+        if payload not in self.pre_commit_local_hooks:
+            self.pre_commit_local_hooks.append(payload)
 
     def add_ci_flag(self, key: str) -> None:
         """Adds a CI flag to trigger specialized executor generation logic."""

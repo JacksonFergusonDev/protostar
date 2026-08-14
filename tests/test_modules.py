@@ -13,11 +13,13 @@ from protostar.modules import (
     MypyModule,
     PreCommitModule,
     PrekModule,
+    PyreflyModule,
     PytestModule,
     PythonCore,
     ReadTheDocsModule,
     RenovateModule,
     RuffModule,
+    TyModule,
     ZensicalModule,
 )
 
@@ -209,6 +211,20 @@ def test_ruff_module_base_config():
     assert '"D",' not in combined
 
 
+def test_ruff_module_adds_pre_commit_hook():
+    manifest = EnvironmentManifest()
+    mod = RuffModule()
+    mod.build(manifest)
+
+    assert len(manifest.pre_commit_local_hooks) == 1
+    hook = manifest.pre_commit_local_hooks[0]
+    assert "id: ruff-check" in hook
+    assert "id: ruff-format" in hook
+    assert "entry: uv run ruff check --fix" in hook
+    assert "entry: uv run ruff format" in hook
+    assert "language: system" in hook
+
+
 def test_mypy_module_base_config():
     manifest = EnvironmentManifest()
     mod = MypyModule()
@@ -219,6 +235,52 @@ def test_mypy_module_base_config():
     assert "pretty = true" in combined
     assert "check_untyped_defs = true" in combined
     assert "strict = true" not in combined
+
+
+def test_mypy_module_adds_pre_commit_hook():
+    manifest = EnvironmentManifest()
+    mod = MypyModule()
+    mod.build(manifest)
+
+    assert len(manifest.pre_commit_local_hooks) == 1
+    hook = manifest.pre_commit_local_hooks[0]
+    assert "id: mypy" in hook
+    assert "entry: uv run mypy" in hook
+    assert "language: system" in hook
+    assert "pass_filenames: true" in hook
+
+
+def test_ty_module_build():
+    manifest = EnvironmentManifest()
+    mod = TyModule()
+    mod.build(manifest)
+
+    assert "ty" in manifest.dev_dependencies
+    assert "astral-sh.ty" in manifest.ide_extensions
+    assert len(manifest.pre_commit_local_hooks) == 1
+    hook = manifest.pre_commit_local_hooks[0]
+    assert "id: ty" in hook
+    assert "entry: uv run ty check" in hook
+    assert "language: system" in hook
+    assert "pass_filenames: false" in hook
+    assert "uv run ty check" in manifest.just_typecheck_commands
+
+
+def test_pyrefly_module_build():
+    manifest = EnvironmentManifest()
+    mod = PyreflyModule()
+    mod.build(manifest)
+
+    assert "pyrefly" in manifest.dev_dependencies
+    assert ".pyrefly/" in manifest.vcs_ignores
+    assert "meta.pyrefly" in manifest.ide_extensions
+    assert len(manifest.pre_commit_local_hooks) == 1
+    hook = manifest.pre_commit_local_hooks[0]
+    assert "id: pyrefly-check" in hook
+    assert "entry: uv run pyrefly check" in hook
+    assert "language: system" in hook
+    assert "pass_filenames: false" in hook
+    assert "uv run pyrefly check" in manifest.just_typecheck_commands
 
 
 # --- PreCommitModule Tests ---

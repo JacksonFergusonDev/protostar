@@ -121,6 +121,89 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
     assert "- pytest" not in written_data
 
 
+def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
+    """Test that the executor aggregates local pre-commit hooks under a single repo: local block."""
+    manifest = EnvironmentManifest()
+    manifest.wants_pre_commit = True
+
+    ruff_payload = """      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        require_serial: true"""
+    manifest.add_pre_commit_local_hook(ruff_payload)
+
+    mypy_payload = """      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: true"""
+    manifest.add_pre_commit_local_hook(mypy_payload)
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_pre_commit_config()
+
+    written_data = mock_write.call_args[0][1]
+
+    assert "  - repo: local" in written_data
+    assert "    hooks:" in written_data
+    assert "- id: ruff-check" in written_data
+    assert "entry: uv run ruff check --fix" in written_data
+    assert "- id: ruff-format" in written_data
+    assert "entry: uv run ruff format" in written_data
+    assert "- id: mypy" in written_data
+    assert "entry: uv run mypy" in written_data
+    assert "language: system" in written_data
+
+
+def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_config):
+    """Test that the executor formats both local and remote repository hooks."""
+    manifest = EnvironmentManifest()
+    manifest.wants_pre_commit = True
+
+    ruff_payload = """      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        require_serial: true"""
+    manifest.add_pre_commit_local_hook(ruff_payload)
+
+    remote_payload = """  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.0
+    hooks:
+      - id: markdownlint-cli2
+        args: ["--fix"]"""
+    manifest.add_pre_commit_hook(remote_payload)
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_pre_commit_config()
+
+    written_data = mock_write.call_args[0][1]
+
+    assert "  - repo: local" in written_data
+    assert "- id: ruff-check" in written_data
+    assert "  - repo: https://github.com/DavidAnson/markdownlint-cli2" in written_data
+    assert "- id: markdownlint-cli2" in written_data
+
+
 def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     """Test that mypy late-binding cleanly strips additional_dependencies if no production dependencies exist."""
     manifest = EnvironmentManifest()

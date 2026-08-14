@@ -19,6 +19,7 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.file_appends, dict)
     assert manifest.wants_pre_commit is False
     assert isinstance(manifest.pre_commit_hooks, list)
+    assert isinstance(manifest.pre_commit_local_hooks, list)
     assert manifest.collision_strategy == CollisionStrategy.MERGE
 
 
@@ -161,6 +162,17 @@ def test_add_pre_commit_hook(manifest):
     assert len(manifest.pre_commit_hooks) == 2
     assert "- id: ruff" in manifest.pre_commit_hooks
     assert "- id: mypy" in manifest.pre_commit_hooks
+
+
+def test_add_pre_commit_local_hook(manifest):
+    """Test that local pre-commit hooks are queued and deduplicated correctly."""
+    manifest.add_pre_commit_local_hook("- id: ruff-check")
+    manifest.add_pre_commit_local_hook("- id: ruff-check")  # Should not duplicate
+    manifest.add_pre_commit_local_hook("- id: mypy")
+
+    assert len(manifest.pre_commit_local_hooks) == 2
+    assert "- id: ruff-check" in manifest.pre_commit_local_hooks
+    assert "- id: mypy" in manifest.pre_commit_local_hooks
 
 
 def test_manifest_diagnostic_collection() -> None:

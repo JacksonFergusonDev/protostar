@@ -188,8 +188,18 @@ class SystemExecutor:
         exclude: \\.py$
       - id: check-added-large-files"""
 
+        repo_blocks: list[str] = []
+
+        if self.manifest.pre_commit_local_hooks:
+            local_hooks = "\n\n".join(self.manifest.pre_commit_local_hooks)
+            local_block = f"  - repo: local\n    hooks:\n{local_hooks}"
+            repo_blocks.append(local_block)
+
+        if self.manifest.pre_commit_hooks:
+            repo_blocks.extend(self.manifest.pre_commit_hooks)
+
         # Enforce exactly one empty line between all dynamic payloads
-        hooks_yaml = "\n\n".join(self.manifest.pre_commit_hooks)
+        hooks_yaml = "\n\n".join(repo_blocks)
 
         # Enforce exactly one empty line between the base block and the dynamic payloads
         full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
