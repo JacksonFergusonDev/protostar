@@ -136,6 +136,15 @@ def handle_init(args: argparse.Namespace) -> None:
             "Please choose one git hook manager."
         )
 
+    if (
+        "ReadTheDocsModule" in active_tooling_names
+        and "ZensicalModule" not in active_tooling_names
+    ):
+        raise ConfigurationError(
+            "Cannot scaffold Read the Docs without the Zensical module enabled. "
+            "Please enable '--zensical' or configure 'zensical = true'."
+        )
+
     # 5. Undocumented Crash Test Injection
     if getattr(args, "crash_test", False):
 

@@ -635,3 +635,49 @@ def test_handle_init_template_preset_precedence(mocker):
     # Check the presets passed to the Orchestrator
     presets = mock_orchestrator.call_args[0][2]
     assert len(presets) == 0, "Astro preset should be disabled by --no-astro override"
+
+
+def test_handle_init_readthedocs_requires_zensical(mocker):
+    """Test that --readthedocs fails if --zensical is not enabled."""
+    args = argparse.Namespace(
+        template_name=None,
+        from_path=None,
+        template_context={},
+        ReadTheDocsModule=True,
+        ZensicalModule=False,
+        docker=False,
+    )
+    from protostar.cli import handle_init
+    from protostar.config import ProtostarConfig
+
+    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
+
+    with pytest.raises(
+        ConfigurationError,
+        match=r"Cannot scaffold Read the Docs without the Zensical module enabled\.",
+    ):
+        handle_init(args)
+
+
+def test_handle_init_readthedocs_with_zensical(mocker):
+    """Test that --readthedocs succeeds when --zensical is also enabled."""
+    args = argparse.Namespace(
+        template_name=None,
+        from_path=None,
+        template_context={},
+        ReadTheDocsModule=True,
+        ZensicalModule=True,
+        docker=False,
+    )
+    from protostar.cli import handle_init
+    from protostar.config import ProtostarConfig
+
+    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+
+    handle_init(args)
+
+    modules = mock_orchestrator.call_args[0][0]
+    module_names = [m.__class__.__name__ for m in modules]
+    assert "ReadTheDocsModule" in module_names
+    assert "ZensicalModule" in module_names
