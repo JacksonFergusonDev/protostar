@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786731761367,
+  "lastUpdate": 1786732478125,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5717,6 +5717,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6acffdad945122c2c8cda5bc17132ccd1202f3d3",
+          "message": "refactor(imports): hoist unnecessary lazy imports to module level (#152)\n\n* refactor(wizard): hoist importlib.resources and metadata imports to module level\n\n* refactor(cli): hoist wizard and metadata helper imports to module level\n\n* refactor(executor): hoist generate_python_version_range import to module level\n\n* refactor(modules): remove redundant ProtostarConfig import in lang_layer",
+          "timestamp": "2026-08-14T11:33:41-07:00",
+          "tree_id": "50c5927862477423ac196dbe84f5d6d6da3be266",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6acffdad945122c2c8cda5bc17132ccd1202f3d3"
+        },
+        "date": 1786732477496,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.09,
             "unit": "ms"
           }
         ]
