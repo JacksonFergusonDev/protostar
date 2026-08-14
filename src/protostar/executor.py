@@ -774,60 +774,26 @@ jobs:
                     new_content = tomlkit.dumps(doc)
 
                     # Apply visual separators safely using anchored regex to prevent substring collisions
-                    if not re.search(
-                        r"^# ---- Ruff ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.ruff\]\s*$",
-                            "# ---- Ruff ---- #\n\n[tool.ruff]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Mypy ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.mypy\]\s*$",
-                            "# ---- Mypy ---- #\n\n[tool.mypy]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Pytest ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.pytest\.ini_options\]\s*$",
-                            "# ---- Pytest ---- #\n\n[tool.pytest.ini_options]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Commitizen ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.commitizen\]\s*$",
-                            "# ---- Commitizen ---- #\n\n[tool.commitizen]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Ty ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.ty(?:[^\]]*|)\]\s*$",
-                            "# ---- Ty ---- #\n\n\\g<0>",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Pyrefly ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.pyrefly\]\s*$",
-                            "# ---- Pyrefly ---- #\n\n[tool.pyrefly]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
+                    tool_headers = [
+                        ("Ruff", r"\[tool\.ruff\]"),
+                        ("Mypy", r"\[tool\.mypy\]"),
+                        ("Pytest", r"\[tool\.pytest\.ini_options\]"),
+                        ("Commitizen", r"\[tool\.commitizen\]"),
+                        ("Ty", r"\[tool\.ty(?:[^\]]*|)\]"),
+                        ("Pyrefly", r"\[tool\.pyrefly\]"),
+                    ]
+
+                    for title, table_regex in tool_headers:
+                        marker = f"# ---- {title} ---- #"
+                        if not re.search(
+                            rf"^{marker}", new_content, flags=re.MULTILINE
+                        ):
+                            new_content = re.sub(
+                                rf"^{table_regex}\s*$",
+                                f"{marker}\n\n\\g<0>",
+                                new_content,
+                                flags=re.MULTILINE,
+                            )
 
                     # Add main Tool Configuration header before the first tool header if not exists
                     if "# Tool Configuration" not in new_content:
@@ -1011,6 +977,26 @@ jobs:
                 "synchronize IDE workspace preferences", str(settings_path), e
             ) from e
 
+    def _install_group(self, packages: list[str], args: list[str], label: str) -> None:
+        if not packages:
+            return
+
+        cmd = ["uv", "add", *args, *packages]
+        try:
+            with console.status(
+                f"Resolving and installing {len(packages)} {label} payloads"
+            ):
+                execute_subprocess(cmd, timeout=600)
+        except (CommandExecutionError, CommandTimeoutError) as e:
+            self.manifest.add_diagnostic(
+                phase="Executor",
+                message=f"{label.capitalize()} dependency resolution failed: {e}",
+                severity=Severity.WARNING,
+                detail=e.output_detail
+                if isinstance(e, CommandExecutionError)
+                else None,
+            )
+
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
         if (
@@ -1020,62 +1006,8 @@ jobs:
         ):
             return
 
-        # Apply a generous 10-minute leash for heavy, network-bound payload resolutions
-        resolution_timeout = 600
-
-        if self.manifest.dependencies:
-            cmd = ["uv", "add", *self.manifest.dependencies]
-            try:
-                with console.status(
-                    f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
-                ):
-                    execute_subprocess(cmd, timeout=resolution_timeout)
-            except (CommandExecutionError, CommandTimeoutError) as e:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message=f"Standard dependency resolution failed: {e}",
-                    severity=Severity.WARNING,
-                    detail=e.output_detail
-                    if isinstance(e, CommandExecutionError)
-                    else None,
-                )
-
-        if self.manifest.dev_dependencies:
-            dev_cmd = ["uv", "add", "--dev", *self.manifest.dev_dependencies]
-            try:
-                with console.status(
-                    f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
-                ):
-                    execute_subprocess(dev_cmd, timeout=resolution_timeout)
-            except (CommandExecutionError, CommandTimeoutError) as e:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message=f"Development dependency resolution failed: {e}",
-                    severity=Severity.WARNING,
-                    detail=e.output_detail
-                    if isinstance(e, CommandExecutionError)
-                    else None,
-                )
-
-        if self.manifest.docs_dependencies:
-            docs_cmd = [
-                "uv",
-                "add",
-                "--group",
-                "docs",
-                *self.manifest.docs_dependencies,
-            ]
-            try:
-                with console.status(
-                    f"Resolving and installing {len(self.manifest.docs_dependencies)} documentation dependencies"
-                ):
-                    execute_subprocess(docs_cmd, timeout=resolution_timeout)
-            except (CommandExecutionError, CommandTimeoutError) as e:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message=f"Documentation dependency resolution failed: {e}",
-                    severity=Severity.WARNING,
-                    detail=e.output_detail
-                    if isinstance(e, CommandExecutionError)
-                    else None,
-                )
+        self._install_group(self.manifest.dependencies, [], "standard")
+        self._install_group(self.manifest.dev_dependencies, ["--dev"], "development")
+        self._install_group(
+            self.manifest.docs_dependencies, ["--group", "docs"], "documentation"
+        )
