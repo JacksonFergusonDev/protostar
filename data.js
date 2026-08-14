@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786730347957,
+  "lastUpdate": 1786731580935,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5649,6 +5649,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 183.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "946957548a6b40e1b68810b3e098d4c61ee73a23",
+          "message": "refactor(metadata): decouple domain metadata resolution from questionary presentation layer (#151)\n\n* refactor(metadata): isolate domain metadata resolution from presentation layer\n\n* refactor(wizard): introduce prompt_metadata for interactive metadata collection\n\n* refactor(cli): transition headless init to resolve_auto_metadata",
+          "timestamp": "2026-08-14T11:18:43-07:00",
+          "tree_id": "00fa6b274862d74cb67290e5acd0f7082b549131",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/946957548a6b40e1b68810b3e098d4c61ee73a23"
+        },
+        "date": 1786731580375,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132.19,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 198.98,
             "unit": "ms"
           }
         ]
