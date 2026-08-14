@@ -348,3 +348,33 @@ def test_config_codecov_parsed_from_env(tmp_path):
 
     config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
     assert config.codecov is True
+
+
+def test_config_zensical_defaults_to_false():
+    """Test that zensical defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.zensical is False
+
+
+def test_config_zensical_parsed_from_env(tmp_path):
+    """Test that zensical = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\nzensical = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.zensical is True
+
+
+def test_config_readthedocs_defaults_to_false():
+    """Test that readthedocs defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.readthedocs is False
+
+
+def test_config_readthedocs_parsed_from_env(tmp_path):
+    """Test that readthedocs = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\nreadthedocs = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.readthedocs is True
