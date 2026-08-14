@@ -8,7 +8,7 @@ from typing import Any
 from rich.console import Console
 
 from .config import ProtostarConfig
-from .errors import ConfigurationError
+from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
 from .presets import PRESETS
@@ -29,7 +29,10 @@ def run_init_wizard() -> dict[str, Any] | None:
 
     Returns:
         A dictionary containing the selected 'modules' (list), 'presets' (list),
-        and 'docker' (bool) flag. Returns None if cancelled or non-interactive.
+        and 'docker' (bool) flag. Returns None if non-interactive.
+
+    Raises:
+        ExecutionAbortedError: If the user cancels the wizard during interactive prompts.
     """
     if not _should_run_wizard():
         return None
@@ -57,7 +60,7 @@ def run_init_wizard() -> dict[str, Any] | None:
             ).ask()
 
         if answer is None:
-            return None
+            raise ExecutionAbortedError("Template selection cancelled by user.")
 
         if answer != "None":
             target = importlib.resources.files("protostar.templates").joinpath(
@@ -96,7 +99,7 @@ def run_init_wizard() -> dict[str, Any] | None:
     ).ask()
 
     if selected is None:
-        return None
+        raise ExecutionAbortedError("Component selection cancelled by user.")
 
     modules = [item for item in selected if item in TOOLING_MODULES]
     presets = [item for item in selected if item in PRESETS]
@@ -130,10 +133,7 @@ def run_init_wizard() -> dict[str, Any] | None:
         "\n[dim]Hint: You can skip these prompts in the future by adding your details to the global config (run `protostar config`).[/dim]"
     )
 
-    try:
-        resolved_metadata = prompt_metadata(required_keys, optional_keys)
-    except KeyboardInterrupt:
-        return None
+    resolved_metadata = prompt_metadata(required_keys, optional_keys)
 
     return {
         "modules": modules,
@@ -158,7 +158,7 @@ def prompt_metadata(
         A dictionary of resolved metadata keys to user-confirmed values.
 
     Raises:
-        KeyboardInterrupt: If the user cancels any prompt.
+        ExecutionAbortedError: If the user cancels any prompt.
     """
     import questionary
 
@@ -186,7 +186,7 @@ def prompt_metadata(
                 default=str(default_val) if default_val is not None else "",
             ).ask()
             if answer is None:
-                raise KeyboardInterrupt
+                raise ExecutionAbortedError("Metadata configuration cancelled by user.")
             resolved[key] = answer
         elif field.prompt_type == "checkbox":
             choices = []
@@ -196,7 +196,7 @@ def prompt_metadata(
 
             answer = questionary.checkbox(field.label, choices=choices).ask()
             if answer is None:
-                raise KeyboardInterrupt
+                raise ExecutionAbortedError("Metadata configuration cancelled by user.")
             resolved[key] = answer
 
     return resolved
@@ -213,6 +213,7 @@ def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
 
     Raises:
         ConfigurationError: If the environment is non-interactive.
+        ExecutionAbortedError: If the user cancels variable input.
     """
     if not _should_run_wizard():
         raise ConfigurationError(
@@ -231,10 +232,7 @@ def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
     for var in variables:
         answer = questionary.text(f"{var}:").ask()
         if answer is None:
-            console.print(
-                "\n[bold red]ABORTED:[/bold red] Variable resolution cancelled."
-            )
-            sys.exit(130)
+            raise ExecutionAbortedError("Variable resolution cancelled by user.")
         context[var] = answer
 
     return context
