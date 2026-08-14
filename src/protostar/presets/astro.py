@@ -1,7 +1,6 @@
 """Preset module for astrophysics and observational data pipelines."""
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .base import PresetModule
@@ -65,12 +64,6 @@ class AstroPreset(PresetModule):
             "*.ipynb text eol=lf\n"
         )
         manifest.add_file_injection(".gitattributes", gitattributes_content)
-
-        # 2. nbdime requires a git repository to configure
-        if not Path(".git").exists():
-            manifest.add_system_task(
-                ["git", "init"], description="Initializing git repository"
-            )
 
         # 3. Queue nbdime configuration
         manifest.add_post_install_task(

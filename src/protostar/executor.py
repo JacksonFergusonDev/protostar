@@ -170,15 +170,7 @@ class SystemExecutor:
             return
 
         target = Path(".pre-commit-config.yaml")
-        if (
-            target.exists()
-            and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
-        ):
-            self.manifest.add_diagnostic(
-                phase="Executor",
-                message="Skipping .pre-commit-config.yaml generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if self.manifest.should_skip_file(target, phase="Pre-commit"):
             return
 
         base_yaml = """repos:
@@ -228,10 +220,7 @@ class SystemExecutor:
             )
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
-            if (
-                not target.exists()
-                or self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
-            ):
+            if not self.manifest.should_skip_file(target, phase="Executor"):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     atomic_write_text(target, content)
@@ -428,15 +417,7 @@ jobs:
             return
 
         target = Path("justfile")
-        if (
-            target.exists()
-            and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
-        ):
-            self.manifest.add_diagnostic(
-                phase="Executor",
-                message="Skipping justfile generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if self.manifest.should_skip_file(target, phase="Just"):
             return
 
         # Base header

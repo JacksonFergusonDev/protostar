@@ -1,4 +1,6 @@
 import logging
+import shutil
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .base import BootstrapModule
@@ -14,6 +16,7 @@ class SystemWorkspaceModule(BootstrapModule):
 
     Ignores common host machine artifacts, IDE workspace
     directories, and standard credential files to enforce repository hygiene.
+    Initializes a git repository if git is installed and not already present.
     """
 
     @property
@@ -24,6 +27,11 @@ class SystemWorkspaceModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends universal artifacts to the ignore and workspace hide lists."""
         logger.debug("Building universal system workspace layer.")
+
+        if shutil.which("git") and not Path(".git").exists():
+            manifest.add_system_task(
+                ["git", "init"], description="Initializing git repository"
+            )
 
         universal_artifacts = [
             ".DS_Store",
