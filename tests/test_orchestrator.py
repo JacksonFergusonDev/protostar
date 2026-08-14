@@ -99,7 +99,7 @@ def test_orchestrator_evaluate_collisions_headless_with_force_merges(
     dummy_mod = DummyModule()
 
     # Initialize with the force flag enabled
-    orchestrator = Orchestrator([dummy_mod], mock_config, force=True)
+    orchestrator = Orchestrator([dummy_mod], mock_config, force_merge=True)
 
     marker = mocker.MagicMock()
     marker.exists.return_value = True

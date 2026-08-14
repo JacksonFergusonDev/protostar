@@ -15,12 +15,14 @@ from .errors import (
     CommandExecutionError,
     CommandTimeoutError,
     ConfigurationError,
+    ExecutionAbortedError,
     FileSystemError,
+    ProtostarError,
 )
 from .fs import atomic_write_text
 from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
-from .system import execute_subprocess
+from .system import execute_subprocess, is_interactive
 from .workspace import (
     generate_python_version_range,
     resolve_package_name,
@@ -616,13 +618,63 @@ jobs:
             if key in base:
                 if isinstance(value, tomlkit.items.Table):
                     if value.get("__replace__") is True:
-                        clean = tomlkit.table()
-                        for k, v in value.items():
-                            if k != "__replace__":
-                                clean.add(k, v)
-                        del base[key]
-                        base[key] = clean
-                        continue
+                        table_path = ".".join([*path, key])
+
+                        if self.manifest.force_replace:
+                            action = "replace"
+                        elif self.manifest.force_merge:
+                            action = "merge"
+                        elif not is_interactive():
+                            raise ProtostarError(
+                                f"Template requested explicit replacement for '{table_path}' which would overwrite existing user data.\n"
+                                f"Aborting to prevent destructive mutations in a non-interactive context.\n"
+                                f"Use --force-merge or --force-replace to bypass this check."
+                            )
+                        else:
+                            import questionary
+                            from questionary import Choice
+
+                            console.print(
+                                f"\n[bold yellow]Configuration Collision:[/bold yellow] The template wants to completely replace [bold cyan]{table_path}[/bold cyan]."
+                            )
+
+                            action = questionary.select(
+                                "How would you like to proceed?",
+                                choices=[
+                                    Choice(
+                                        "Merge   (Safely deep-merge keys; keeps existing data)",
+                                        value="merge",
+                                    ),
+                                    Choice(
+                                        "Replace (Destructive; overwrites the entire table)",
+                                        value="replace",
+                                    ),
+                                    Choice(
+                                        "Skip    (Ignore this table entirely)",
+                                        value="skip",
+                                    ),
+                                    Choice(
+                                        "Abort   (Safely exit without modifying the environment)",
+                                        value="abort",
+                                    ),
+                                ],
+                            ).ask()
+
+                        if action == "abort" or action is None:
+                            raise ExecutionAbortedError()
+                        if action == "skip":
+                            continue
+                        if action == "merge":
+                            del value["__replace__"]
+                            # Fall through to standard merge
+                        else:
+                            clean = tomlkit.table()
+                            for k, v in value.items():
+                                if k != "__replace__":
+                                    clean.add(k, v)
+                            del base[key]
+                            base[key] = clean
+                            continue
 
                     # Type Parity Guard
                     if not isinstance(base[key], tomlkit.items.Table):

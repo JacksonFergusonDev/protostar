@@ -93,6 +93,8 @@
         "charliermarsh.ruff"
     ],
     "collision_strategy": "merge",
-    "diagnostics": []
+    "diagnostics": [],
+    "force_merge": false,
+    "force_replace": false
 }
 ```

@@ -13,6 +13,7 @@ from protostar.errors import (
     CommandExecutionError,
     CommandTimeoutError,
     ConfigurationError,
+    ExecutionAbortedError,
     FileSystemError,
 )
 from protostar.executor import SystemExecutor
@@ -1450,6 +1451,7 @@ def test_ide_extension_check_fails_missing_tuple(mocker):
 def test_executor_toml_table_replace(mock_config):
     """Test that __replace__ = true cleanly replaces an existing TOML table."""
     manifest = EnvironmentManifest()
+    manifest.force_replace = True
     executor = SystemExecutor(manifest, mock_config)
 
     base_doc = tomlkit.parse("""
@@ -1534,3 +1536,70 @@ def test_executor_interpolates_package_name_in_file_appends(
 
     script_content = (tmp_path / "script.sh").read_text()
     assert 'echo "Running my-cool-tool from my_cool_tool"' in script_content
+
+
+def test_executor_toml_table_replace_tui_abort(mocker, mock_config):
+    """Test that __replace__ collision TUI abort raises ExecutionAbortedError."""
+    mocker.patch("protostar.executor.is_interactive", return_value=True)
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "abort"
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base_doc = tomlkit.parse("[tool.example]\nkeep_this = true\n")
+    payload_doc = tomlkit.parse("[tool.example]\n__replace__ = true\nnew_key = 2\n")
+
+    with pytest.raises(ExecutionAbortedError):
+        executor._deep_merge_tomlkit(base_doc, payload_doc)
+
+
+def test_executor_toml_table_replace_tui_skip(mocker, mock_config):
+    """Test that __replace__ collision TUI skip ignores the table."""
+    mocker.patch("protostar.executor.is_interactive", return_value=True)
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "skip"
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base_doc = tomlkit.parse("[tool.example]\nkeep_this = true\n")
+    payload_doc = tomlkit.parse("[tool.example]\n__replace__ = true\nnew_key = 2\n")
+
+    executor._deep_merge_tomlkit(base_doc, payload_doc)
+    assert "new_key" not in base_doc["tool"]["example"]
+    assert base_doc["tool"]["example"]["keep_this"] is True
+
+
+def test_executor_toml_table_replace_tui_merge(mocker, mock_config):
+    """Test that __replace__ collision TUI merge safely merges the table."""
+    mocker.patch("protostar.executor.is_interactive", return_value=True)
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "merge"
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base_doc = tomlkit.parse("[tool.example]\nkeep_this = true\n")
+    payload_doc = tomlkit.parse("[tool.example]\n__replace__ = true\nnew_key = 2\n")
+
+    executor._deep_merge_tomlkit(base_doc, payload_doc)
+    assert base_doc["tool"]["example"]["new_key"] == 2
+    assert base_doc["tool"]["example"]["keep_this"] is True
+
+
+def test_executor_toml_table_replace_tui_replace(mocker, mock_config):
+    """Test that __replace__ collision TUI replace overwrites the table."""
+    mocker.patch("protostar.executor.is_interactive", return_value=True)
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "replace"
+
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    base_doc = tomlkit.parse("[tool.example]\nkeep_this = true\n")
+    payload_doc = tomlkit.parse("[tool.example]\n__replace__ = true\nnew_key = 2\n")
+
+    executor._deep_merge_tomlkit(base_doc, payload_doc)
+    assert base_doc["tool"]["example"]["new_key"] == 2
+    assert "keep_this" not in base_doc["tool"]["example"]
