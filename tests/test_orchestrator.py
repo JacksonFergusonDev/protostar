@@ -85,7 +85,7 @@ def test_orchestrator_evaluate_collisions_headless_aborts_by_default(
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=False)
 
     # The orchestrator should raise a ProtostarError directly instead of printing/exiting
     with pytest.raises(ProtostarError, match="--force"):
@@ -110,7 +110,7 @@ def test_orchestrator_evaluate_collisions_headless_with_force_merges(
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=False)
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=False)
 
     orchestrator._evaluate_collisions()
 
@@ -131,7 +131,7 @@ def test_orchestrator_evaluate_collisions_interactive_abort(mocker, mock_config)
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
     mocker.patch.dict("os.environ", clear=True)
 
     # Mock questionary to return ABORT
@@ -158,7 +158,7 @@ def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker, mock_con
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.sys.stdin.isatty", return_value=True)
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
     mocker.patch.dict("os.environ", clear=True)
 
     mock_questionary = mocker.patch("questionary.select")

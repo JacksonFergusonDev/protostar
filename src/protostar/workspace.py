@@ -1,9 +1,45 @@
-"""Utility functions for Protostar."""
+"""Workspace context and environment utilities for Protostar."""
 
 import re
 import tomllib
 from pathlib import Path
 from typing import Any
+
+
+def resolve_python_version(
+    metadata: dict[str, Any] | None = None,
+    pyproject_path: Path | None = None,
+    default: str | None = None,
+) -> str:
+    """Resolves the python version from metadata or pyproject.toml.
+
+    Args:
+        metadata: Optional dictionary containing resolved metadata.
+        pyproject_path: Optional path to pyproject.toml. Defaults to Path("pyproject.toml").
+        default: Optional fallback if all other sources are empty.
+
+    Returns:
+        The resolved python version string.
+    """
+    if metadata and metadata.get("python_version"):
+        return str(metadata["python_version"])
+
+    target_pyproject = pyproject_path or Path("pyproject.toml")
+    if target_pyproject.exists():
+        try:
+            with target_pyproject.open("rb") as f:
+                data = tomllib.load(f)
+                req_python = data.get("project", {}).get("requires-python", "")
+                match = re.search(r"(\d+\.\d+)", req_python)
+                if match:
+                    return match.group(1)
+        except Exception:
+            pass
+
+    if default:
+        return default
+
+    return "3.13"
 
 
 def generate_python_version_range(min_version: str, max_minor: int = 15) -> list[str]:

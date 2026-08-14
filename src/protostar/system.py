@@ -1,7 +1,9 @@
 """System-level subprocess execution utilities for Protostar."""
 
 import logging
+import os
 import subprocess
+import sys
 
 from .errors import CommandExecutionError, CommandTimeoutError
 
@@ -51,3 +53,25 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
             stdout=stdout,
             stderr=stderr,
         ) from e
+
+
+def is_interactive() -> bool:
+    """Evaluates if the environment supports interactive TTY prompts."""
+    if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
+        return True
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def get_git_config(key: str) -> str | None:
+    """Gets a global git configuration value."""
+    try:
+        result = subprocess.run(
+            ["git", "config", "--global", key],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        val = result.stdout.strip()
+        return val if val else None
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None

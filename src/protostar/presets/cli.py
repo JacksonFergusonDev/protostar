@@ -3,7 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from protostar.utils import resolve_package_name, resolve_project_name
+from protostar.workspace import resolve_package_name, resolve_project_name
 
 from .base import PresetModule
 
