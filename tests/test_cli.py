@@ -145,7 +145,7 @@ def test_handle_config_reset_force(mocker, tmp_path):
     mock_confirm = mocker.patch("questionary.confirm")
     mock_run = mocker.patch("subprocess.run")
 
-    args = argparse.Namespace(reset=True, force=True)
+    args = argparse.Namespace(reset=True, force_replace=True)
     handle_config(args)
 
     assert mock_config_file.exists()
@@ -157,10 +157,10 @@ def test_handle_config_reset_force(mocker, tmp_path):
 def test_build_parser_config_reset():
     """Test that the parser correctly parses the --reset and --force flags for config."""
     parser = build_parser()
-    args = parser.parse_args(["config", "--reset", "--force"])
+    args = parser.parse_args(["config", "--reset", "--force-replace"])
     assert args.command == "config"
     assert args.reset is True
-    assert args.force is True
+    assert args.force_replace is True
 
 
 def test_handle_config_errors(mocker, tmp_path):
@@ -483,7 +483,7 @@ def test_main_routes_generic_crash_to_software_status(mocker):
 def test_cli_handles_command_execution_error_output(mocker):
     """Test that the CLI extracts and displays stdout/stderr from CommandExecutionError."""
     # Mock CLI arguments to bypass the TUI wizard
-    mocker.patch("sys.argv", ["protostar", "init", "-f"])
+    mocker.patch("sys.argv", ["protostar", "init", "--force-merge"])
 
     # Force the orchestrator to throw the specific error we want to format
     mocker.patch(

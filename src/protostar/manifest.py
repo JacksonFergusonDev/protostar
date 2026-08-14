@@ -112,6 +112,8 @@ class EnvironmentManifest:
     ide_extensions: set[str | tuple[str, ...]] = field(default_factory=set)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
     diagnostics: list[DiagnosticEvent] = field(default_factory=list)
+    force_merge: bool = False
+    force_replace: bool = False
 
     def add_ide_extension(self, extension_id: str | tuple[str, ...]) -> None:
         """Queues an IDE extension ID (or fallback tuple) for verification during the realization phase."""

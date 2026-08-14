@@ -1450,6 +1450,7 @@ def test_ide_extension_check_fails_missing_tuple(mocker):
 def test_executor_toml_table_replace(mock_config):
     """Test that __replace__ = true cleanly replaces an existing TOML table."""
     manifest = EnvironmentManifest()
+    manifest.force_replace = True
     executor = SystemExecutor(manifest, mock_config)
 
     base_doc = tomlkit.parse("""

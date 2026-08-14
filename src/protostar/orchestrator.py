@@ -26,7 +26,8 @@ class Orchestrator:
         config: ProtostarConfig,
         presets: list[PresetModule] | None = None,
         docker: bool = False,
-        force: bool = False,
+        force_merge: bool = False,
+        force_replace: bool = False,
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Initializes the orchestrator with the requested modules and presets.
@@ -36,16 +37,20 @@ class Orchestrator:
             config: The active Protostar configuration instance.
             presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
-            force: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
+            force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
+            force_replace: If True, bypasses interactive prompts and forces replacement on collisions. Defaults to False.
             metadata: Pre-resolved metadata dictionary to inject into the manifest. Defaults to None.
         """
         self.modules = modules
         self.config = config
         self.presets = presets or []
         self.docker = docker
-        self.force = force
+        self.force_merge = force_merge
+        self.force_replace = force_replace
         self.metadata = metadata
-        self.manifest = EnvironmentManifest()
+        self.manifest = EnvironmentManifest(
+            force_merge=force_merge, force_replace=force_replace
+        )
 
     def _evaluate_collisions(self) -> None:
         """Evaluates the workspace for critical configuration file collisions.
@@ -63,10 +68,17 @@ class Orchestrator:
         if not collision_targets:
             return
 
-        # 1. Immediate override: Evaluate explicit force flag first
-        if self.force:
+        # 1. Immediate override: Evaluate explicit force flags first
+        if self.force_replace:
             logger.debug(
-                "--force flag provided. Defaulting to MERGE collision strategy."
+                "--force-replace flag provided. Defaulting to OVERWRITE collision strategy."
+            )
+            self.manifest.collision_strategy = CollisionStrategy.OVERWRITE
+            return
+
+        if self.force_merge:
+            logger.debug(
+                "--force-merge flag provided. Defaulting to MERGE collision strategy."
             )
             self.manifest.collision_strategy = CollisionStrategy.MERGE
             return
@@ -76,7 +88,7 @@ class Orchestrator:
             raise ProtostarError(
                 "Orbital Collision Detected: The target workspace is not empty.\n"
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"
-                "Use the --force flag to bypass this check and merge safely."
+                "Use the --force-merge or --force-replace flag to bypass this check."
             )
 
         # 3. Fallback to interactive prompt

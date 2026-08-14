@@ -178,7 +178,8 @@ def handle_init(args: argparse.Namespace) -> None:
         config,
         presets,
         docker=args.docker,
-        force=getattr(args, "force", False),
+        force_merge=getattr(args, "force_merge", False),
+        force_replace=getattr(args, "force_replace", False),
         metadata=resolved_metadata,
     )
     engine.run()
@@ -395,12 +396,17 @@ def build_parser() -> argparse.ArgumentParser:
     # Tooling Context
     tooling_group = init_parser.add_argument_group("Tooling & Context")
 
-    # The force flag for collision bypass
+    # The force flags for collision bypass
     tooling_group.add_argument(
-        "-f",
-        "--force",
+        "--force-merge",
         action="store_true",
-        help="Bypass interactive prompts and force a merge on file collisions.",
+        help="Bypass interactive prompts and safely merge on file collisions.",
+    )
+
+    tooling_group.add_argument(
+        "--force-replace",
+        action="store_true",
+        help="Bypass interactive prompts and forcibly overwrite file collisions.",
     )
 
     tooling_group.add_argument(
@@ -431,8 +437,7 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[base_parser],
     )
     config_parser.add_argument(
-        "-f",
-        "--force",
+        "--force-replace",
         action="store_true",
         help="Bypass confirmation prompt when resetting configuration.",
     )
@@ -513,7 +518,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 config,
                 presets,
                 docker=selections["docker"],
-                force=False,
+                force_merge=False,
+                force_replace=False,
                 metadata=selections.get("project_metadata"),
             )
             engine.run()
@@ -543,7 +549,9 @@ def handle_config(args: argparse.Namespace) -> None:
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     if getattr(args, "reset", False):
-        if not getattr(args, "force", False):
+        if not getattr(args, "force_merge", False) and not getattr(
+            args, "force_replace", False
+        ):
             import questionary
 
             confirmed = questionary.confirm(
