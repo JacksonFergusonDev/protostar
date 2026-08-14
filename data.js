@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786681689504,
+  "lastUpdate": 1786682875998,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5547,6 +5547,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.75,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d612a88f42429f7623e0b4fc9fd8bec8e80c68b3",
+          "message": "refactor: eliminate utils.py junk drawer (#148)\n\n* refactor: extract workspace utilities from utils and executor\n\n* refactor: remove utils.py junk drawer\n\n* test: fix mock for is_interactive in integration suite",
+          "timestamp": "2026-08-13T21:46:50-07:00",
+          "tree_id": "d0b91bc3123fa9ffe25766613f640cd0d5505539",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d612a88f42429f7623e0b4fc9fd8bec8e80c68b3"
+        },
+        "date": 1786682874844,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 140.36,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 211.9,
             "unit": "ms"
           }
         ]
