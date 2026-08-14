@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786681430436,
+  "lastUpdate": 1786681689504,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5513,6 +5513,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.34,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "04f8531e605c4afc13bf1533e4e6e9e477f5a732",
+          "message": "chore(pre-commit): migrate Python toolchain to local uv system hooks\n\nReplace external ruff and mypy pre-commit repository hooks with\nlocal system hooks running via `uv run`.\n\n- Align ruff and mypy versions with lockfile definitions in `uv.lock`\n- Enable mypy to resolve all project dependencies inside `.venv` without\n  manually syncing `additional_dependencies`\n- Execute `ruff check --fix` and `ruff format` using local environment binaries",
+          "timestamp": "2026-08-13T21:24:36-07:00",
+          "tree_id": "a5f23daa415fb3347c54f2b52f69db90857caa58",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/04f8531e605c4afc13bf1533e4e6e9e477f5a732"
+        },
+        "date": 1786681688965,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.59,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 218.75,
             "unit": "ms"
           }
         ]
