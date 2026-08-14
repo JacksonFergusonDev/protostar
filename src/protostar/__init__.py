@@ -15,6 +15,7 @@ from .errors import (
     FileSystemError,
     MissingDependencyError,
     ProtostarError,
+    SecurityViolationError,
 )
 from .manifest import EnvironmentManifest
 from .modules.base import BootstrapModule
@@ -33,4 +34,5 @@ __all__ = [
     "MissingDependencyError",
     "PresetModule",
     "ProtostarError",
+    "SecurityViolationError",
 ]
