@@ -695,7 +695,7 @@ def test_handle_init_docker_flag(mocker):
     from protostar.config import ProtostarConfig
 
     mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
-    mocker.patch("protostar.metadata.resolve_metadata", return_value={})
+    mocker.patch("protostar.metadata.resolve_auto_metadata", return_value={})
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
 
     handle_init(args)
