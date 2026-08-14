@@ -21,6 +21,7 @@ from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
     ExecutionAbortedError,
+    FileSystemError,
     MissingDependencyError,
 )
 
@@ -504,6 +505,20 @@ def test_main_routes_execution_aborted_to_posix_status(mocker):
         main()
 
     mock_exit.assert_called_once_with(130)
+
+
+def test_main_routes_filesystem_error_to_posix_status(mocker):
+    """Verify that a FileSystemError returns os.EX_IOERR (74)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=FileSystemError("write", "foo.txt", OSError("Permission denied")),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_IOERR)  # 74
 
 
 def test_main_routes_generic_crash_to_software_status(mocker):

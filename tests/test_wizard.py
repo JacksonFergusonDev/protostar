@@ -86,6 +86,32 @@ def test_run_init_wizard_template_cancellation(mocker):
         run_init_wizard()
 
 
+def test_run_init_wizard_success(mocker):
+    """Test that the init wizard collects selections and metadata successfully."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch(
+        "protostar.wizard.ProtostarConfig.load", return_value=ProtostarConfig()
+    )
+    mocker.patch.dict(os.environ, {}, clear=True)
+
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.return_value = "None"
+
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = ["docker"]
+
+    mock_metadata = mocker.patch(
+        "protostar.wizard.prompt_metadata", return_value={"description": "Test App"}
+    )
+
+    result = run_init_wizard()
+
+    assert result is not None
+    assert result["docker"] is True
+    assert result["project_metadata"] == {"description": "Test App"}
+    mock_metadata.assert_called_once()
+
+
 def test_resolve_missing_variables_non_interactive(mocker):
     """Test that resolving variables fails in a non-interactive environment."""
     mocker.patch("protostar.wizard._should_run_wizard", return_value=False)
