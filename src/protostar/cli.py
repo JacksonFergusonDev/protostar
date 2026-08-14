@@ -157,6 +157,8 @@ def handle_init(args: argparse.Namespace) -> None:
     required_keys: set[str] = set()
     for mod in modules:
         required_keys.update(mod.required_metadata)
+    for preset in presets:
+        required_keys.update(preset.required_metadata)
 
     resolved_metadata = resolve_metadata(
         required_keys, optional_keys=set(), tui_mode=False

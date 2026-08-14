@@ -5,6 +5,7 @@ from protostar.presets import (
     DspPreset,
     EmbeddedPreset,
     MLPreset,
+    PresetModule,
     ScientificPreset,
 )
 
@@ -127,3 +128,19 @@ def test_preset_apply_overrides(manifest, mocker):
     assert "custom-torch" in manifest.dependencies
     assert "pytest-ml" in manifest.dev_dependencies
     assert "custom_models/" in manifest.directories
+
+
+def test_preset_metadata_declarations():
+    """Test that PresetModule subclasses support required_metadata and optional_metadata."""
+
+    class CustomPreset(PresetModule):
+        required_metadata = ("required_field",)
+        optional_metadata = ("optional_field",)
+
+        @property
+        def name(self) -> str:
+            return "Custom"
+
+    preset = CustomPreset()
+    assert preset.required_metadata == ("required_field",)
+    assert preset.optional_metadata == ("optional_field",)
