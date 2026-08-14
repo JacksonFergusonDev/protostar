@@ -10,7 +10,7 @@ from typing import Any
 
 from rich.console import Console
 
-from .config import ProtostarConfig
+from .config import UserConfig
 from .errors import (
     CommandExecutionError,
     CommandTimeoutError,
@@ -40,7 +40,7 @@ class SystemExecutor:
     def __init__(
         self,
         manifest: EnvironmentManifest,
-        config: ProtostarConfig,
+        config: UserConfig,
         docker: bool = False,
     ) -> None:
         """Initializes the executor with the target manifest state.
