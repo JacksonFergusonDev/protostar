@@ -407,7 +407,7 @@ def build_parser() -> argparse.ArgumentParser:
     tooling_group.add_argument(
         "--docker",
         action="store_true",
-        help="Generate a .dockerignore based on the environment footprint",
+        help="Generate Dockerfile and .dockerignore container scaffolding",
     )
 
     for mod in TOOLING_MODULES:
