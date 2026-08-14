@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import ProtostarConfig
-from protostar.errors import ProtostarError
+from protostar.errors import ExecutionAbortedError, ProtostarError
 from protostar.manifest import CollisionStrategy, Severity
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
@@ -138,10 +138,36 @@ def test_orchestrator_evaluate_collisions_interactive_abort(mocker, mock_config)
     mock_questionary = mocker.patch("questionary.select")
     mock_questionary.return_value.ask.return_value = CollisionStrategy.ABORT
 
-    mock_exit = mocker.patch("protostar.orchestrator.sys.exit")
+    with pytest.raises(
+        ExecutionAbortedError, match=r"Environment initialization cancelled by user\."
+    ):
+        orchestrator._evaluate_collisions()
 
-    orchestrator._evaluate_collisions()
-    mock_exit.assert_called_once_with(1)
+
+def test_orchestrator_evaluate_collisions_interactive_cancellation(mocker, mock_config):
+    """Test that cancelling the collision prompt (Ctrl+C / Esc) raises ExecutionAbortedError."""
+    dummy_mod = DummyModule()
+    orchestrator = Orchestrator([dummy_mod], mock_config)
+
+    marker = mocker.MagicMock()
+    marker.exists.return_value = True
+    marker.__str__.return_value = "dummy_marker.txt"
+    mocker.patch.object(
+        DummyModule,
+        "collision_markers",
+        new_callable=mocker.PropertyMock,
+        return_value=[marker],
+    )
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
+    mocker.patch.dict("os.environ", clear=True)
+
+    mock_questionary = mocker.patch("questionary.select")
+    mock_questionary.return_value.ask.return_value = None
+
+    with pytest.raises(
+        ExecutionAbortedError, match=r"Environment initialization cancelled by user\."
+    ):
+        orchestrator._evaluate_collisions()
 
 
 def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker, mock_config):
