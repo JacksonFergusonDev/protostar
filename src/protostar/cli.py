@@ -35,6 +35,7 @@ from .errors import (
     ProtostarError,
 )
 from .fs import atomic_write_text
+from .metadata import resolve_auto_metadata
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -46,7 +47,10 @@ from .presets import (
     PRESETS,
     PresetModule,
 )
-from .wizard import run_init_wizard
+from .wizard import (
+    resolve_missing_variables,
+    run_init_wizard,
+)
 
 console = Console()
 
@@ -57,8 +61,6 @@ def handle_init(args: argparse.Namespace) -> None:
     Dynamically constructs the environment manifest by evaluating flags mapped
     to the respective OS, IDE, and preset registries.
     """
-    from .wizard import resolve_missing_variables
-
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
     template_context = getattr(args, "template_context", {})
@@ -160,8 +162,6 @@ def handle_init(args: argparse.Namespace) -> None:
                 pass
 
         modules.append(CrashModule())
-
-    from .metadata import resolve_auto_metadata
 
     required_keys: set[str] = set()
     for mod in modules:

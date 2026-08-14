@@ -1,5 +1,6 @@
 """Interactive Terminal User Interface (TUI) wizards for Protostar."""
 
+import importlib.resources
 import os
 import sys
 from typing import Any
@@ -8,6 +9,7 @@ from rich.console import Console
 
 from .config import ProtostarConfig
 from .errors import ConfigurationError
+from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
 from .presets import PRESETS
 from .system import is_interactive
@@ -31,8 +33,6 @@ def run_init_wizard() -> dict[str, Any] | None:
     """
     if not _should_run_wizard():
         return None
-
-    import importlib.resources
 
     import questionary
     from questionary import Choice, Separator
@@ -161,8 +161,6 @@ def prompt_metadata(
         KeyboardInterrupt: If the user cancels any prompt.
     """
     import questionary
-
-    from .metadata import METADATA_FIELDS
 
     config = ProtostarConfig.load()
     resolved: dict[str, Any] = {}

@@ -22,6 +22,7 @@ from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 from .workspace import (
+    generate_python_version_range,
     resolve_package_name,
     resolve_project_name,
     resolve_python_version,
@@ -266,8 +267,6 @@ class SystemExecutor:
         """Assembles and writes the .github/workflows/ci.yml file if requested."""
         if not self.manifest.wants_ci:
             return
-
-        from protostar.workspace import generate_python_version_range
 
         # 1. Resolve matrix dimensions
         supported_os = self.manifest.metadata.get("supported_os", ["Linux"])
