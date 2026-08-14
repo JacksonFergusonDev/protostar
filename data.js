@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786734336373,
+  "lastUpdate": 1786735917802,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5785,6 +5785,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b231141cf024aa254650d4824fed4f720b8d61fb",
+          "message": "refactor: unify interactive prompt aborts with ExecutionAbortedError (#154)\n\n* refactor(orchestrator): raise ExecutionAbortedError on collision strategy abort\n\n* refactor(wizard): raise ExecutionAbortedError on prompt cancellation\n\n* refactor(cli): handle ExecutionAbortedError and clean up manual sysexits\n\n* test: expand coverage for wizard and CLI error routing",
+          "timestamp": "2026-08-14T12:30:53-07:00",
+          "tree_id": "d1f816e761f8a7308b4b4554f9948876e9a81ddf",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b231141cf024aa254650d4824fed4f720b8d61fb"
+        },
+        "date": 1786735916759,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 140.63,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 216.48,
             "unit": "ms"
           }
         ]
