@@ -18,6 +18,7 @@ from .errors import (
     FileSystemError,
 )
 from .fs import atomic_write_text
+from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 from .workspace import (
@@ -49,6 +50,17 @@ class SystemExecutor:
         self.manifest = manifest
         self.config = config
         self.docker = docker
+
+    @property
+    def interpolation_context(self) -> dict[str, str]:
+        """Dynamically generates the context for template interpolation."""
+        return {
+            "PROJECT_NAME": resolve_project_name(self.manifest.metadata),
+            "PACKAGE_NAME": resolve_package_name(self.manifest.metadata),
+            "PYTHON_VERSION": resolve_python_version(self.manifest.metadata)
+            or self.config.python_version
+            or "3.13",
+        }
 
     # --- Architecture Note: Deterministic Pipeline Sequencing ---
     # The execution phases in `execute()` follow a strict dependency order:
@@ -187,20 +199,16 @@ class SystemExecutor:
         # Enforce exactly one empty line between the base block and the dynamic payloads
         full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
 
-        if "{{MYPY_DEPENDENCIES}}" in full_yaml:
-            # We use manual string manipulation here instead of a YAML library (like PyYAML)
-            # to avoid adding a heavy third-party dependency for a very minor feature.
-            # If the schema of .pre-commit-config.yaml ever becomes significantly more
-            # complex, this should be refactored to use a dedicated YAML serialization library.
+        if "<% MYPY_DEPENDENCIES %>" in full_yaml:
             deps = self.manifest.dependencies
             if deps:
                 # Guarantee exactly 10 spaces of indentation for each list item
                 deps_formatted = "\n".join(f"{' ' * 10}- {d}" for d in deps)
-                full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
+                full_yaml = full_yaml.replace("<% MYPY_DEPENDENCIES %>", deps_formatted)
             else:
                 # If no runtime dependencies, strip the key cleanly
                 full_yaml = full_yaml.replace(
-                    "        additional_dependencies:\n{{MYPY_DEPENDENCIES}}", ""
+                    "        additional_dependencies:\n<% MYPY_DEPENDENCIES %>", ""
                 )
 
         try:
@@ -214,16 +222,11 @@ class SystemExecutor:
         if not self.manifest.file_injections:
             return
 
-        project_name = resolve_project_name(self.manifest.metadata)
-        package_name = resolve_package_name(self.manifest.metadata)
-
         for filepath, content in self.manifest.file_injections.items():
-            interpolated_filepath = filepath.replace(
-                "{{PROJECT_NAME}}", project_name
-            ).replace("{{PACKAGE_NAME}}", package_name)
-            content = content.replace("{{PROJECT_NAME}}", project_name).replace(
-                "{{PACKAGE_NAME}}", package_name
+            interpolated_filepath = render_template(
+                filepath, self.interpolation_context
             )
+            content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
             if (
                 not target.exists()
@@ -243,13 +246,8 @@ class SystemExecutor:
         if not self.manifest.directories:
             return
 
-        project_name = resolve_project_name(self.manifest.metadata)
-        package_name = resolve_package_name(self.manifest.metadata)
-
         for dir_path in self.manifest.directories:
-            interpolated_path = dir_path.replace(
-                "{{PROJECT_NAME}}", project_name
-            ).replace("{{PACKAGE_NAME}}", package_name)
+            interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
             try:
                 path.mkdir(parents=True, exist_ok=True)
@@ -716,16 +714,6 @@ jobs:
         if not self.manifest.file_appends:
             return
 
-        python_version = resolve_python_version(
-            self.manifest.metadata, default=self.config.python_version or "3.13"
-        )
-        project_name = resolve_project_name(
-            self.manifest.metadata, default="My Project"
-        )
-        package_name = resolve_package_name(
-            self.manifest.metadata, default="my_project"
-        )
-
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
 
@@ -749,11 +737,7 @@ jobs:
                 ast_mutated = False
 
                 for payload in contents:
-                    interpolated = (
-                        payload.replace("{{PYTHON_VERSION}}", python_version)
-                        .replace("{{PROJECT_NAME}}", project_name)
-                        .replace("{{PACKAGE_NAME}}", package_name)
-                    )
+                    interpolated = render_template(payload, self.interpolation_context)
 
                     try:
                         payload_doc = tomlkit.parse(interpolated)
@@ -834,11 +818,7 @@ jobs:
             missing_payloads = []
 
             for payload in contents:
-                interpolated = (
-                    payload.replace("{{PYTHON_VERSION}}", python_version)
-                    .replace("{{PROJECT_NAME}}", project_name)
-                    .replace("{{PACKAGE_NAME}}", package_name)
-                )
+                interpolated = render_template(payload, self.interpolation_context)
 
                 # Generate a deterministic boundary marker
                 payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]

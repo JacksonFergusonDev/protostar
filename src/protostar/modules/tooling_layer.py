@@ -281,7 +281,7 @@ class MypyModule(BootstrapModule):
     hooks:
       - id: mypy
         additional_dependencies:
-{{MYPY_DEPENDENCIES}}"""
+<% MYPY_DEPENDENCIES %>"""
         manifest.add_pre_commit_hook(hook_payload)
 
         manifest.add_ci_step("      - name: Run Mypy\n        run: uv run mypy src/")
@@ -291,7 +291,7 @@ class MypyModule(BootstrapModule):
 
         config = """[tool.mypy]
 mypy_path = "src"
-python_version = "{{PYTHON_VERSION}}"
+python_version = "<% PYTHON_VERSION %>"
 pretty = true
 show_error_codes = true
 show_error_context = true
@@ -807,7 +807,7 @@ dev = [
                 severity=Severity.SKIP,
             )
         else:
-            index_content = """# Welcome to {{PROJECT_NAME}}
+            index_content = """# Welcome to <% PROJECT_NAME %>
 
 Add your project overview here.
 
@@ -824,7 +824,7 @@ Refer to the [installation guide](getting-started.md) or browse the [API Referen
                 severity=Severity.SKIP,
             )
         else:
-            mkdocs_content = """site_name: {{PROJECT_NAME}}
+            mkdocs_content = """site_name: <% PROJECT_NAME %>
 site_description: Add your project description here.
 
 nav:
