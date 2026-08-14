@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786736062100,
+  "lastUpdate": 1786737787245,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5853,6 +5853,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 221.31,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad5e26c2f3b114ec193ce931c49c0d60d22af3d4",
+          "message": "feat(tooling): scaffold local toolchain pre-commit hooks via uv run (#155)\n\n* feat(manifest): add support for local pre-commit hooks in EnvironmentManifest\n\n* feat(modules): update ruff and mypy modules to scaffold local toolchain pre-commit hooks\n\n* feat(executor): scaffold unified repo local block in pre-commit config\n\n* docs: update documentation and fixtures for local pre-commit toolchain\n\n* feat(modules): update ty and pyrefly modules to scaffold local toolchain pre-commit hooks",
+          "timestamp": "2026-08-14T13:02:14-07:00",
+          "tree_id": "49ea452c3eb6c899539ba1595730d3845defcadd",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ad5e26c2f3b114ec193ce931c49c0d60d22af3d4"
+        },
+        "date": 1786737786389,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 109.21,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 167.06,
             "unit": "ms"
           }
         ]
