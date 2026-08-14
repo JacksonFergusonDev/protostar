@@ -62,6 +62,7 @@ class SystemExecutor:
         self._write_pre_commit_config()
         self._write_ci_workflow()
         self._write_release_workflow()
+        self._write_justfile()
         self._execute_tasks()
         self._install_dependencies()
         self._append_files()
@@ -418,6 +419,174 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 """
         atomic_write_text(Path(".github/workflows/release.yml"), workflow)
+
+    def _write_justfile(self) -> None:
+        """Assembles and writes the justfile if requested."""
+        if not self.manifest.wants_just:
+            return
+
+        target = Path("justfile")
+        if (
+            target.exists()
+            and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
+        ):
+            self.manifest.add_diagnostic(
+                phase="Executor",
+                message="Skipping justfile generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+            return
+
+        # Base header
+        justfile_content = [
+            'set shell := ["bash", "-euc", "-o", "pipefail"]',
+            "set unstable",
+            "set quiet",
+            "",
+            "# --- ANSI Colors ---",
+            "",
+            "blue := '\\033[1;34m'",
+            "green := '\\033[1;32m'",
+            "yellow := '\\033[1;33m'",
+            "nc := '\\033[0m'",
+            "",
+            "# Show available commands",
+            "default:",
+            "    @just --list",
+            "",
+            "# Sync/install dependencies using uv",
+            "sync:",
+            "    uv sync --quiet",
+        ]
+
+        # Format recipe
+        if self.manifest.just_format_commands:
+            justfile_content.extend(
+                [
+                    "",
+                    "# Auto-format code",
+                    "format: sync",
+                    '    @printf "\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n"',
+                ]
+            )
+            for cmd in self.manifest.just_format_commands:
+                justfile_content.append(f"    {cmd}")
+            justfile_content.append(
+                '    @printf "{{ green }}✔ Formatting complete{{ nc }}\\n"'
+            )
+
+        # Lint recipe
+        if self.manifest.just_lint_commands:
+            justfile_content.extend(
+                [
+                    "",
+                    "# Run linters",
+                    "lint: sync",
+                    '    @printf "\\n{{ blue }}=== Running Linters ==={{ nc }}\\n"',
+                ]
+            )
+            for cmd in self.manifest.just_lint_commands:
+                justfile_content.append(f"    {cmd}")
+            justfile_content.append(
+                '    @printf "{{ green }}✔ Linting passed{{ nc }}\\n"'
+            )
+
+        # Typecheck recipe
+        if self.manifest.just_typecheck_commands:
+            justfile_content.extend(
+                [
+                    "",
+                    "# Run static type checking",
+                    "typecheck: sync",
+                    '    @printf "\\n{{ blue }}=== Running Type Checks ==={{ nc }}\\n"',
+                ]
+            )
+            for cmd in self.manifest.just_typecheck_commands:
+                justfile_content.append(f"    {cmd}")
+            justfile_content.append(
+                '    @printf "{{ green }}✔ Type checking passed{{ nc }}\\n"'
+            )
+
+        # Pytest recipes
+        if "pytest" in self.manifest.ci_flags:
+            justfile_content.extend(
+                [
+                    "",
+                    "# Run the full automated testing matrix",
+                    "test: sync",
+                    '    @printf "\\n{{ blue }}=== Running Tests ==={{ nc }}\\n"',
+                    "    uv run pytest",
+                    '    @printf "{{ green }}✔ All tests passed{{ nc }}\\n"',
+                    "",
+                    "# Run tests with coverage",
+                    "test-cov: sync",
+                    '    @printf "\\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\\n"',
+                    "    uv run pytest --cov",
+                    '    @printf "{{ green }}✔ Coverage run complete{{ nc }}\\n"',
+                ]
+            )
+
+        # CI recipe
+        ci_deps = []
+        if self.manifest.just_lint_commands:
+            ci_deps.append("lint")
+        if self.manifest.just_typecheck_commands:
+            ci_deps.append("typecheck")
+        if "pytest" in self.manifest.ci_flags:
+            ci_deps.append("test")
+
+        if ci_deps:
+            deps_str = " ".join(ci_deps)
+            justfile_content.extend(
+                [
+                    "",
+                    "# Run the fast local CI pipeline executed before pushing",
+                    f"ci: {deps_str}",
+                    '    @printf "\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n"',
+                ]
+            )
+
+        # Clean recipe
+        justfile_content.extend(
+            [
+                "",
+                "# Remove caches, artifacts, and temp files",
+                "clean:",
+                '    @printf "\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n"',
+            ]
+        )
+
+        clean_paths = self.manifest.just_clean_paths
+        if "pytest" in self.manifest.ci_flags:
+            clean_paths.extend(["htmlcov", ".coverage", "coverage.xml"])
+
+        if clean_paths:
+            justfile_content.append("    rm -rf \\")
+            for path in clean_paths[:-1]:
+                justfile_content.append(f"        {path} \\")
+            justfile_content.append(f"        {clean_paths[-1]}")
+
+        justfile_content.extend(
+            [
+                '    find . -type d -name "__pycache__" -exec rm -rf {} +',
+                '    @printf "{{ green }}✔ Workspace cleaned{{ nc }}\\n"',
+            ]
+        )
+
+        # Serve recipe (Zensical)
+        if "zensical" in self.manifest.ci_flags:
+            justfile_content.extend(
+                [
+                    "",
+                    "# Start the documentation preview server",
+                    "serve: sync",
+                    '    @printf "\\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\\n"',
+                    "    uv run zensical serve -o",
+                ]
+            )
+
+        full_content = "\n".join(justfile_content) + "\n"
+        atomic_write_text(target, full_content)
 
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
