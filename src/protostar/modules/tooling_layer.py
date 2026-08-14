@@ -93,7 +93,8 @@ class MarkdownLintModule(BootstrapModule):
 
         manifest.add_ide_extension("DavidAnson.vscode-markdownlint")
 
-        hook_payload = """  - repo: https://github.com/DavidAnson/markdownlint-cli2
+        hook_payload = """  # Markdown linting
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.0
     hooks:
       - id: markdownlint-cli2
@@ -528,7 +529,8 @@ class CommitizinModule(BootstrapModule):
         # The cz check hook enforces Conventional Commit message format.
         # Uses the official commitizen pre-commit mirror, which vendors its own
         # Python environment — no venv wiring required beyond what pre-commit handles.
-        hook_payload = """  - repo: https://github.com/commitizen-tools/commitizen
+        hook_payload = """  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.8.3
     hooks:
       - id: commitizen
@@ -611,7 +613,8 @@ class RenovateModule(BootstrapModule):
         """
         logger.debug("Building Renovate tooling layer.")
 
-        hook_payload = """  - repo: https://github.com/renovatebot/pre-commit-hooks
+        hook_payload = """  # Renovate config validation
+  - repo: https://github.com/renovatebot/pre-commit-hooks
     rev: 44.24.3
     hooks:
       - id: renovate-config-validator

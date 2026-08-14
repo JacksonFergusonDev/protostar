@@ -113,6 +113,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
 
     written_data = mock_write.call_args[0][1]
 
+    assert "# Generic hooks (configured to IGNORE Python)" in written_data
     assert "trailing-whitespace" in written_data
     assert "id: mypy" in written_data
     assert "<% MYPY_DEPENDENCIES %>" not in written_data
@@ -158,6 +159,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
 
     written_data = mock_write.call_args[0][1]
 
+    assert "  # Local Python Toolchain (Managed via uv.lock)" in written_data
     assert "  - repo: local" in written_data
     assert "    hooks:" in written_data
     assert "- id: ruff-check" in written_data
@@ -198,6 +200,8 @@ def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_c
 
     written_data = mock_write.call_args[0][1]
 
+    assert "# Generic hooks (configured to IGNORE Python)" in written_data
+    assert "  # Local Python Toolchain (Managed via uv.lock)" in written_data
     assert "  - repo: local" in written_data
     assert "- id: ruff-check" in written_data
     assert "  - repo: https://github.com/DavidAnson/markdownlint-cli2" in written_data
