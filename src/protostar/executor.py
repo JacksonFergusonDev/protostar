@@ -858,7 +858,7 @@ jobs:
             ) from e
 
     def _write_docker_artifacts(self) -> None:
-        """Generates a .dockerignore to optimize container build contexts."""
+        """Generates container artifacts (.dockerignore and Dockerfile)."""
         if not self.docker:
             return
 
@@ -866,7 +866,14 @@ jobs:
         try:
             existing_content = dockerignore.read_text() if dockerignore.exists() else ""
             existing_lines = {line.strip() for line in existing_content.splitlines()}
-            base_ignores = {".git/", "tests/", "docs/", "README*", ".vscode/", ".idea/"}
+            base_ignores = {
+                ".git/",
+                "tests/",
+                "docs/",
+                "README*",
+                ".vscode/",
+                ".idea/",
+            }
 
             has_uv_init = any(
                 task.command[:2] == ["uv", "init"]
@@ -891,8 +898,84 @@ jobs:
                 logger.debug(f"Appended {len(missing)} items to .dockerignore")
         except OSError as e:
             raise FileSystemError(
-                "scaffold container runtime ignore configurations", str(dockerignore), e
+                "scaffold container runtime ignore configurations",
+                str(dockerignore),
+                e,
             ) from e
+
+        dockerfile = Path("Dockerfile")
+        if not self.manifest.should_skip_file(dockerfile, phase="Docker"):
+            try:
+                context = self.interpolation_context
+                py_version = context["PYTHON_VERSION"]
+                project_name = context["PROJECT_NAME"]
+                package_name = context["PACKAGE_NAME"]
+
+                # Determine runtime command & exposure based on dependencies / presets
+                if (
+                    "fastapi" in self.manifest.dependencies
+                    or "uvicorn" in self.manifest.dependencies
+                ):
+                    port = str(self.manifest.metadata.get("docker_port") or "8000")
+                    runtime_block = (
+                        f"EXPOSE {port}\n\n"
+                        f'CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "{port}"]'
+                    )
+                elif "typer" in self.manifest.dependencies or any(
+                    "project.scripts" in app
+                    for app in self.manifest.file_appends.get("pyproject.toml", [])
+                ):
+                    runtime_block = f'ENTRYPOINT ["{project_name}"]'
+                else:
+                    runtime_block = f'CMD ["python", "-m", "{package_name}"]'
+
+                dockerfile_content = f"""# syntax=docker/dockerfile:1
+
+# --- Builder Stage ---
+FROM ghcr.io/astral-sh/uv:python{py_version}-bookworm-slim AS builder
+
+WORKDIR /app
+
+# Enable bytecode compilation and copy mode for uv
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
+# Install dependencies using cache and bind mounts for optimal layer caching
+RUN --mount=type=cache,target=/root/.cache/uv \\
+    --mount=type=bind,source=uv.lock,target=uv.lock \\
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \\
+    uv sync --frozen --no-install-project --no-dev
+
+# Copy application source and build the environment
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \\
+    uv sync --frozen --no-dev
+
+# --- Runtime Stage ---
+FROM python:{py_version}-slim-bookworm AS runtime
+
+WORKDIR /app
+
+# Security: Run as a non-privileged user
+RUN useradd -m -u 10001 appuser
+USER appuser
+
+# Copy virtual environment and application code from builder
+COPY --from=builder --chown=appuser:appuser /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+{runtime_block}
+"""
+                atomic_write_text(dockerfile, dockerfile_content)
+                logger.debug("Scaffolded Dockerfile")
+            except OSError as e:
+                raise FileSystemError(
+                    "scaffold container runtime configurations (Dockerfile)",
+                    str(dockerfile),
+                    e,
+                ) from e
 
     def _write_ide_settings(self) -> None:
         """Writes the aggregated IDE configuration to the appropriate local files."""

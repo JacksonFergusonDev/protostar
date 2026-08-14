@@ -237,8 +237,120 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
 
     executor._write_docker_artifacts()
 
-    written_data = mock_write.call_args[0][1]
-    assert ".python-version" in written_data
+    written_paths = {call[0][0]: call[0][1] for call in mock_write.call_args_list}
+    assert ".python-version" in written_paths[Path(".dockerignore")]
+    assert "FROM ghcr.io/astral-sh/uv:python" in written_paths[Path("Dockerfile")]
+
+
+def test_executor_writes_dockerfile_default(mocker, mock_config):
+    """Test that the executor writes a multi-stage Dockerfile with default configuration."""
+    manifest = EnvironmentManifest()
+    manifest.metadata = {"python_version": "3.12"}
+    executor = SystemExecutor(manifest, mock_config, docker=True)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_docker_artifacts()
+
+    written_paths = {call[0][0]: call[0][1] for call in mock_write.call_args_list}
+    dockerfile_content = written_paths[Path("Dockerfile")]
+
+    assert (
+        "FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder"
+        in dockerfile_content
+    )
+    assert "FROM python:3.12-slim-bookworm AS runtime" in dockerfile_content
+    assert "RUN useradd -m -u 10001 appuser" in dockerfile_content
+    assert "USER appuser" in dockerfile_content
+    assert "COPY --from=builder --chown=appuser:appuser /app /app" in dockerfile_content
+    assert 'ENV PATH="/app/.venv/bin:$PATH"' in dockerfile_content
+    assert 'CMD ["python", "-m", "protostar"]' in dockerfile_content
+
+
+def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
+    """Test that the executor writes an API-tailored Dockerfile when FastAPI/uvicorn is present."""
+    manifest = EnvironmentManifest()
+    manifest.dependencies = ["fastapi", "uvicorn"]
+    manifest.metadata = {"docker_port": "8080", "python_version": "3.13"}
+    executor = SystemExecutor(manifest, mock_config, docker=True)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_docker_artifacts()
+
+    written_paths = {call[0][0]: call[0][1] for call in mock_write.call_args_list}
+    dockerfile_content = written_paths[Path("Dockerfile")]
+
+    assert "EXPOSE 8080" in dockerfile_content
+    assert (
+        'CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "8080"]'
+        in dockerfile_content
+    )
+
+
+def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
+    """Test that the executor writes a CLI-tailored Dockerfile when typer/project.scripts is present."""
+    manifest = EnvironmentManifest()
+    manifest.dependencies = ["typer"]
+    manifest.add_file_append(
+        "pyproject.toml", "[project.scripts]\nmy-cli = 'my_cli.cli:app'\n"
+    )
+    executor = SystemExecutor(manifest, mock_config, docker=True)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_docker_artifacts()
+
+    written_paths = {call[0][0]: call[0][1] for call in mock_write.call_args_list}
+    dockerfile_content = written_paths[Path("Dockerfile")]
+
+    assert 'ENTRYPOINT ["protostar"]' in dockerfile_content
+
+
+def test_executor_skips_dockerfile_on_collision(mocker, mock_config):
+    """Test that existing Dockerfile is skipped when collision strategy is not overwrite."""
+    manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    executor = SystemExecutor(manifest, mock_config, docker=True)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mocker.patch("protostar.executor.Path.read_text", return_value="")
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_docker_artifacts()
+
+    written_paths = [call[0][0] for call in mock_write.call_args_list]
+    assert Path(".dockerignore") in written_paths
+    assert Path("Dockerfile") not in written_paths
+    assert any(
+        "Skipping Dockerfile generation" in d.message for d in manifest.diagnostics
+    )
+
+
+def test_write_dockerfile_handles_os_error(mocker, mock_config):
+    """Test that Dockerfile write errors raise FileSystemError."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config, docker=True)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+
+    def write_side_effect(path, content):
+        if path == Path("Dockerfile"):
+            raise OSError(13, "Permission denied")
+
+    mocker.patch("protostar.executor.atomic_write_text", side_effect=write_side_effect)
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_docker_artifacts()
+
+    assert (
+        "scaffold container runtime configurations (Dockerfile)"
+        in exc_info.value.operation
+    )
+    assert "Dockerfile" in exc_info.value.path
 
 
 def test_executor_writes_vscode_settings_jsonc_abort(
