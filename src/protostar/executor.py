@@ -177,6 +177,7 @@ class SystemExecutor:
             return
 
         base_yaml = """repos:
+  # Generic hooks (configured to IGNORE Python)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -192,7 +193,12 @@ class SystemExecutor:
 
         if self.manifest.pre_commit_local_hooks:
             local_hooks = "\n\n".join(self.manifest.pre_commit_local_hooks)
-            local_block = f"  - repo: local\n    hooks:\n{local_hooks}"
+            local_block = (
+                f"  # Local Python Toolchain (Managed via uv.lock)\n"
+                f"  - repo: local\n"
+                f"    hooks:\n"
+                f"{local_hooks}"
+            )
             repo_blocks.append(local_block)
 
         if self.manifest.pre_commit_hooks:
