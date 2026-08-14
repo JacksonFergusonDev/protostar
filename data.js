@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786680128849,
+  "lastUpdate": 1786681430436,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5479,6 +5479,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 199.03,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68dbe54f44498443a71f2483dd556fbd98478a71",
+          "message": "feat(modules): add readthedocs scaffolding and zensical dependency validation (#147)\n\n* feat(modules): add ReadTheDocsModule for Read the Docs scaffolding\n\n* feat(config): add readthedocs configuration option\n\n* feat(cli): enforce zensical dependency validation for readthedocs\n\n* docs: update tooling table and default config fixtures for readthedocs",
+          "timestamp": "2026-08-13T21:22:51-07:00",
+          "tree_id": "c744993cee1fcfc50dc96734a6f25c6d84deb859",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/68dbe54f44498443a71f2483dd556fbd98478a71"
+        },
+        "date": 1786681429681,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.34,
             "unit": "ms"
           }
         ]
