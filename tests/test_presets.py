@@ -92,13 +92,17 @@ def test_cli_preset_build(manifest):
     assert 'importlib.metadata.version("my-cli-tool")' in init_file
 
     assert "src/my_cli_tool/cli.py" in manifest.file_injections
-    assert "app = typer.Typer(" in manifest.file_injections["src/my_cli_tool/cli.py"]
+    cli_file = manifest.file_injections["src/my_cli_tool/cli.py"]
+    assert "from my_cli_tool import __version__" in cli_file
+    assert 'help="My awesome CLI tool."' in cli_file
+    assert "def version_callback(value: bool) -> None:" in cli_file
+    assert "@app.callback()" in cli_file
 
     assert "tests/test_cli.py" in manifest.file_injections
-    assert (
-        "from my_cli_tool.cli import app"
-        in manifest.file_injections["tests/test_cli.py"]
-    )
+    test_file = manifest.file_injections["tests/test_cli.py"]
+    assert "from my_cli_tool.cli import app" in test_file
+    assert "def test_version() -> None:" in test_file
+    assert "def test_help() -> None:" in test_file
 
     assert "README.md" in manifest.file_injections
     assert "# my-cli-tool" in manifest.file_injections["README.md"]

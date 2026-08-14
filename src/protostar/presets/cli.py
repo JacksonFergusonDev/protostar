@@ -80,34 +80,48 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 """
         manifest.add_file_injection(f"src/{package_name}/__init__.py", init_content)
 
+        help_text = desc if desc else f"Command-line interface for {raw_name}."
+
         # 3. Starter CLI entrypoint with Typer and Rich
         cli_content = f'''"""Command-line interface for {raw_name}."""
 
 import typer
 from rich.console import Console
 
+from {package_name} import __version__
+
 app = typer.Typer(
     name="{raw_name}",
-    help="Command-line interface for {raw_name}.",
+    help="{help_text}",
     add_completion=False,
 )
 console = Console()
 
 
-@app.command()
-def hello(name: str = "World") -> None:
-    """Says hello to NAME."""
-    console.print(f"Hello, [bold cyan]{{name}}[/bold cyan]!")
+def version_callback(value: bool) -> None:
+    """Print the version and exit eagerly."""
+    if value:
+        console.print(f"{raw_name} version [bold cyan]{{__version__}}[/bold cyan]")
+        raise typer.Exit()
 
 
-def main() -> None:
-    """Entry point for the CLI application."""
-    app()
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        help="Show the application version and exit.",
+        callback=version_callback,
+        is_eager=True,
+    ),
+) -> None:
+    """Configure global CLI state."""
 
 
 if __name__ == "__main__":
-    main()
+    app()
 '''
+
         manifest.add_file_injection(f"src/{package_name}/cli.py", cli_content)
 
         # 4. Starter CLI tests with Typer CliRunner
@@ -120,23 +134,22 @@ from {package_name}.cli import app
 runner = CliRunner()
 
 
-def test_hello_default() -> None:
-    """Test the hello command with default argument."""
-    result = runner.invoke(app, ["hello"])
+def test_version() -> None:
+    """Test the --version flag displays the version."""
+    result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "Hello, World!" in result.stdout
+    assert "{raw_name} version" in result.stdout
 
 
-def test_hello_custom_name() -> None:
-    """Test the hello command with a custom name."""
-    result = runner.invoke(app, ["hello", "--name", "Protostar"])
+def test_help() -> None:
+    """Test the --help flag displays the help message."""
+    result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "Hello, Protostar!" in result.stdout
+    assert "{raw_name}" in result.stdout
 '''
         manifest.add_file_injection("tests/test_cli.py", test_content)
 
         # 5. Starter README.md
-        desc = manifest.metadata.get("description", "")
         desc_line = f"\n{desc}\n" if desc else ""
         manifest.add_file_injection("README.md", f"# {raw_name}\n{desc_line}")
 
