@@ -38,7 +38,7 @@ jobs:
       uses: taiki-e/install-action@8991259aacd8c48a9c45228f33e9a308d825765b # just
 
     - name: Install dependencies
-      run: uv sync --group ci
+      run: uv sync --only-group ci
 
     - name: Run rigerous benchmarks
       run: just test-benchmark-slower

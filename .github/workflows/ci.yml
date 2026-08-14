@@ -28,7 +28,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv sync --group ci
+        uv sync --only-group ci
         uv pip install pytest-github-actions-annotate-failures
 
     - name: Run Ruff Linter
@@ -100,7 +100,7 @@ jobs:
       uses: taiki-e/install-action@8991259aacd8c48a9c45228f33e9a308d825765b # just
 
     - name: Install dependencies
-      run: uv sync --group ci
+      run: uv sync --only-group ci
 
     - name: Run benchmarks
       run: just test-benchmark
