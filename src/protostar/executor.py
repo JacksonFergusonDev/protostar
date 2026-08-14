@@ -512,12 +512,6 @@ jobs:
             justfile_content.extend(
                 [
                     "",
-                    "# Run only fast unit tests (excludes integration and exhaustive markers)",
-                    "test-unit: sync",
-                    '    @printf "\\n{{ blue }}=== Running Unit Tests ==={{ nc }}\\n"',
-                    '    uv run pytest -m "not integration and not exhaustive"',
-                    '    @printf "{{ green }}✔ Unit tests passed{{ nc }}\\n"',
-                    "",
                     "# Run the full automated testing matrix",
                     "test: sync",
                     '    @printf "\\n{{ blue }}=== Running Tests ==={{ nc }}\\n"',
@@ -539,7 +533,7 @@ jobs:
         if self.manifest.just_typecheck_commands:
             ci_deps.append("typecheck")
         if "pytest" in self.manifest.ci_flags:
-            ci_deps.append("test-unit")
+            ci_deps.append("test")
 
         if ci_deps:
             deps_str = " ".join(ci_deps)
