@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786735917802,
+  "lastUpdate": 1786736062100,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5819,6 +5819,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 216.48,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "4cf0c90be4cc878d1a327be71b025dc45367d0e6",
+          "message": "ci: update Codecov configuration to ignore non-source paths\n\n- Set `if_not_found: success` for project coverage to prevent CI failures\n  when coverage data is missing for certain files.\n- Add `ignore` block to exclude `tests/`, `docs/`, `scripts/`, and all\n  `__init__.py` files from coverage calculations, ensuring metrics reflect\n  only the actual application source code.",
+          "timestamp": "2026-08-14T12:33:04-07:00",
+          "tree_id": "cc64d67ddcaf70c82802b8daaec5c03d554674d4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4cf0c90be4cc878d1a327be71b025dc45367d0e6"
+        },
+        "date": 1786736061040,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 145.41,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 221.31,
             "unit": "ms"
           }
         ]
