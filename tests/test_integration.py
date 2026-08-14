@@ -77,7 +77,7 @@ def test_orchestrator_idempotency(run_cli: Any, seed_global_config: Any) -> None
 
     # --force flag to authorize the headless merge
     code2, stdout2, stderr2, _ = run_cli(
-        "init", "--python-version", "3.12", "--ruff", "--force"
+        "init", "--python-version", "3.12", "--ruff", "--force-merge"
     )
     assert code2 == 0, f"Second execution failed.\nSTDERR: {stderr2}\nSTDOUT: {stdout2}"
 
