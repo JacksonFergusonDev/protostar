@@ -29,8 +29,6 @@ class PythonCore(BootstrapModule):
     def python_version(self) -> str | None:
         """Lazily evaluates the requested python version from global config."""
         if self._python_version is None:
-            from protostar.config import ProtostarConfig
-
             self._python_version = ProtostarConfig.load().python_version
         return self._python_version
 
