@@ -84,11 +84,12 @@ def test_cli_preset_build(manifest):
     assert "tests" in manifest.directories
 
     # Verify injected boilerplate files
-    assert "src/my_cli_tool/__init__.py" in manifest.file_injections
-    assert (
-        '__version__ = "0.1.0"'
-        in manifest.file_injections["src/my_cli_tool/__init__.py"]
-    )
+    init_file = manifest.file_injections["src/my_cli_tool/__init__.py"]
+    assert '"""My awesome CLI tool."""' in init_file
+    assert "import contextlib" in init_file
+    assert "import importlib.metadata" in init_file
+    assert '__version__ = "unknown"' in init_file
+    assert 'importlib.metadata.version("my-cli-tool")' in init_file
 
     assert "src/my_cli_tool/cli.py" in manifest.file_injections
     assert "app = typer.Typer(" in manifest.file_injections["src/my_cli_tool/cli.py"]
@@ -108,6 +109,18 @@ def test_cli_preset_build(manifest):
     assert any(
         'my-cli-tool = "my_cli_tool.cli:app"' in append for append in pyproject_appends
     )
+
+
+def test_cli_preset_build_without_description(manifest):
+    """Test that __init__.py has no docstring if description metadata is omitted."""
+    manifest.metadata = {"project_name": "dark-matter"}
+    preset = CliPreset()
+    preset.build(manifest)
+
+    init_file = manifest.file_injections["src/dark_matter/__init__.py"]
+    assert not init_file.startswith('"""')
+    assert init_file.startswith("import contextlib")
+    assert 'importlib.metadata.version("dark-matter")' in init_file
 
 
 def test_dsp_preset_build(manifest):

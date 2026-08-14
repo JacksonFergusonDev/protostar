@@ -69,7 +69,15 @@ class CliPreset(PresetModule):
         manifest.add_directory("tests")
 
         # 2. Package __init__.py
-        init_content = f'"""Package {package_name}."""\n\n__version__ = "0.1.0"\n'
+        desc = manifest.metadata.get("description", "").strip()
+        docstring_header = f'"""{desc}"""\n\n' if desc else ""
+        init_content = f"""{docstring_header}import contextlib
+import importlib.metadata
+
+__version__ = "unknown"
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version("{raw_name}")
+"""
         manifest.add_file_injection(f"src/{package_name}/__init__.py", init_content)
 
         # 3. Starter CLI entrypoint with Typer and Rich
