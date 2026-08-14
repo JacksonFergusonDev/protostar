@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786739063498,
+  "lastUpdate": 1786750467276,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5955,6 +5955,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 190.53,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0a1b1229ed265f310f7a56dcf279c6df74b2663b",
+          "message": "refactor(config): split ProtostarConfig into UserConfig and TemplateBlueprint (#158)\n\n* refactor: extract UserConfig and TemplateBlueprint from ProtostarConfig\n\n* refactor: update cli.py to use UserConfig and TemplateBlueprint\n\n* refactor: update orchestrator.py to use UserConfig and TemplateBlueprint\n\n* refactor: update wizard, metadata, and executor to use UserConfig\n\n* refactor: update lang_layer and presets base to use UserConfig\n\n* test: update test suite for ProtostarConfig separation\n\n* fix: update lingering references to ProtostarConfig\n\n* fix(test): correct global config payload in test_orchestrator_idempotency",
+          "timestamp": "2026-08-14T16:33:15-07:00",
+          "tree_id": "9e69c656d2408f653117312edfefdaccf759351c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0a1b1229ed265f310f7a56dcf279c6df74b2663b"
+        },
+        "date": 1786750466229,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.95,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 196.8,
             "unit": "ms"
           }
         ]
