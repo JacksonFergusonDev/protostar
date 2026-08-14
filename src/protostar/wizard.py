@@ -10,13 +10,12 @@ from .config import ProtostarConfig
 from .errors import ConfigurationError
 from .modules import TOOLING_MODULES
 from .presets import PRESETS
+from .system import is_interactive
 
 
 def _should_run_wizard() -> bool:
     """Evaluates if the environment supports interactive TTY prompts."""
-    if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
-        return True
-    return sys.stdin.isatty() and sys.stdout.isatty()
+    return is_interactive()
 
 
 def run_init_wizard() -> dict[str, Any] | None:

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from protostar.utils import (
+from protostar.workspace import (
     generate_python_version_range,
     resolve_package_name,
     resolve_project_name,

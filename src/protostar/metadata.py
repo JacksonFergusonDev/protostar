@@ -1,6 +1,5 @@
 """Project metadata definitions and resolution mechanisms for Protostar."""
 
-import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -8,6 +7,7 @@ from typing import Any
 import questionary
 
 from .config import ProtostarConfig
+from .system import get_git_config
 
 
 @dataclass
@@ -20,20 +20,6 @@ class MetadataField:
     choices: list[str] | None
     auto_resolver: Callable[[ProtostarConfig], Any | None] | None
     default: Any | None
-
-
-def _get_git_config(key: str) -> str | None:
-    try:
-        result = subprocess.run(
-            ["git", "config", "--global", key],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        val = result.stdout.strip()
-        return val if val else None
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
 
 
 METADATA_FIELDS: dict[str, MetadataField] = {
@@ -50,7 +36,7 @@ METADATA_FIELDS: dict[str, MetadataField] = {
         label="Author name (optional, press Enter to skip):",
         prompt_type="text",
         choices=None,
-        auto_resolver=lambda cfg: cfg.author_name or _get_git_config("user.name"),
+        auto_resolver=lambda cfg: cfg.author_name or get_git_config("user.name"),
         default="",
     ),
     "author_email": MetadataField(
@@ -58,7 +44,7 @@ METADATA_FIELDS: dict[str, MetadataField] = {
         label="Author email (optional, press Enter to skip):",
         prompt_type="text",
         choices=None,
-        auto_resolver=lambda cfg: cfg.author_email or _get_git_config("user.email"),
+        auto_resolver=lambda cfg: cfg.author_email or get_git_config("user.email"),
         default="",
     ),
     "github_username": MetadataField(

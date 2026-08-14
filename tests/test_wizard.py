@@ -13,21 +13,17 @@ from protostar.wizard import (
 
 def test_should_run_wizard_tty(mocker):
     """Test the TTY gate correctly identifies interactive terminals."""
-    # Patch the entire sys module inside the wizard namespace to bypass Pytest's stream capturing
-    mock_sys = mocker.patch("protostar.wizard.sys")
-    mock_sys.stdin.isatty.return_value = True
-    mock_sys.stdout.isatty.return_value = True
+    mocker.patch("protostar.wizard.is_interactive", return_value=True)
     assert _should_run_wizard() is True
 
-    mock_sys.stdin.isatty.return_value = False
+    mocker.patch("protostar.wizard.is_interactive", return_value=False)
     assert _should_run_wizard() is False
 
 
 def test_benchmark_env_bypasses_tty_check(mocker):
     """Test that the benchmark env var forcefully passes the TTY gate."""
     mocker.patch.dict(os.environ, {"PROTOSTAR_BENCHMARK_WIZARD": "1"})
-    # Even if stdin is not a TTY, the benchmark flag overrides it
-    mocker.patch("protostar.wizard.sys.stdin.isatty", return_value=False)
+    mocker.patch("protostar.system.sys.stdin.isatty", return_value=False)
     assert _should_run_wizard() is True
 
 

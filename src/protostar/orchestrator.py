@@ -11,6 +11,7 @@ from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
 from .presets import PresetModule
+from .system import is_interactive
 
 logger = logging.getLogger("protostar")
 console = Console()
@@ -71,7 +72,7 @@ class Orchestrator:
             return
 
         # 2. Evaluate non-interactive fallback logic
-        if not sys.stdin.isatty():
+        if not is_interactive():
             raise ProtostarError(
                 "Orbital Collision Detected: The target workspace is not empty.\n"
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"
