@@ -77,3 +77,10 @@ class ExecutionAbortedError(ProtostarError):
 
     def __init__(self, message: str = "Execution aborted by user.") -> None:
         super().__init__(message)
+
+
+class SecurityViolationError(ProtostarError):
+    """Raised when a template attempts an unauthorized system or filesystem operation."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

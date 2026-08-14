@@ -32,3 +32,37 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
         with suppress(OSError):
             temp_path.unlink()
         raise
+
+
+def safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
+    """Safely extracts a zip archive, preventing path traversal vulnerabilities (Zip Slip).
+
+    Ensures that every member in the archive resolves to a path strictly within
+    the target directory before extraction.
+
+    Args:
+        zip_path: Path to the .zip archive.
+        target_dir: The directory where the archive should be extracted.
+
+    Raises:
+        SecurityViolationError: If any archive member attempts path traversal.
+    """
+    import zipfile
+
+    from .errors import SecurityViolationError
+
+    resolved_target_dir = target_dir.resolve()
+
+    with zipfile.ZipFile(zip_path, "r") as archive:
+        for member in archive.namelist():
+            # Create a path object for the extracted destination
+            member_path = (target_dir / member).resolve()
+
+            # Ensure the resolved path is strictly within the target directory
+            if not member_path.is_relative_to(resolved_target_dir):
+                raise SecurityViolationError(
+                    f"SECURITY VIOLATION: Zip archive member attempted path traversal outside target directory: {member}"
+                )
+
+        # If all members are safe, extract all
+        archive.extractall(path=target_dir)
