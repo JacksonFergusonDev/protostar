@@ -503,7 +503,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
         if cmd == "init":
             selections = run_init_wizard()
             if not selections:
-                sys.exit(130)
+                return
 
             config = ProtostarConfig.load()
             modules = selections["modules"]
@@ -558,6 +558,8 @@ def handle_config(args: argparse.Namespace) -> None:
                 "Warning: this will erase your current configuration, are you sure you want to do this?",
                 default=False,
             ).ask()
+            if confirmed is None:
+                raise ExecutionAbortedError("Configuration reset aborted.")
             if not confirmed:
                 console.print("[yellow]Configuration reset aborted.[/yellow]")
                 return
