@@ -11,6 +11,9 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email" }]
 
+[project.scripts]
+demo_project = "demo_project.cli:app"
+
 [dependency-groups]
 dev = [
     "mypy>=2.2.0",
