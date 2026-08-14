@@ -198,13 +198,20 @@ class RuffModule(BootstrapModule):
         manifest.add_environment_artifact(".ruff_cache/")
         manifest.add_ide_extension("charliermarsh.ruff")
 
-        hook_payload = """  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.4
-    hooks:
+        hook_payload = """      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        require_serial: true
+
       - id: ruff-format
-      - id: ruff
-        args: [ --fix ]"""
-        manifest.add_pre_commit_hook(hook_payload)
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        require_serial: true"""
+        manifest.add_pre_commit_local_hook(hook_payload)
 
         manifest.add_ci_step(
             "      - name: Run Ruff Linter\n"
@@ -263,15 +270,13 @@ class MypyModule(BootstrapModule):
         manifest.add_environment_artifact(".mypy_cache/")
         manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
 
-        # The MYPY_DEPENDENCIES token is late-bound by the orchestrator
-        # to ensure all dynamically added packages are typed.
-        hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.19.1
-    hooks:
-      - id: mypy
-        additional_dependencies:
-<% MYPY_DEPENDENCIES %>"""
-        manifest.add_pre_commit_hook(hook_payload)
+        hook_payload = """      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: true"""
+        manifest.add_pre_commit_local_hook(hook_payload)
 
         manifest.add_ci_step("      - name: Run Mypy\n        run: uv run mypy src/")
 
