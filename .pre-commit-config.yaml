@@ -11,22 +11,29 @@ repos:
         args: [--unsafe]
       - id: check-added-large-files
 
-  # 2. Python-specific toolchain
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.2
+  # 2. Local Python Toolchain (Managed via uv.lock)
+  - repo: local
     hooks:
-      - id: ruff-format
-      - id: ruff
-        args: [ --fix ]
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        require_serial: true
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.3.0
-    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        require_serial: true
+
       - id: mypy
-        additional_dependencies:
-          - pytest
-          - tomlkit
-          - rich-argparse
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: true
 
   # 3. Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
