@@ -315,11 +315,13 @@ class TyModule(BootstrapModule):
         manifest.add_dev_dependency("ty")
         manifest.add_ide_extension("astral-sh.ty")
 
-        hook_payload = """  - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.65
-    hooks:
-      - id: ty"""
-        manifest.add_pre_commit_hook(hook_payload)
+        hook_payload = """      - id: ty
+        name: ty check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false"""
+        manifest.add_pre_commit_local_hook(hook_payload)
 
         manifest.just_typecheck_commands.append("uv run ty check")
 
@@ -566,14 +568,13 @@ class PyreflyModule(BootstrapModule):
         manifest.add_environment_artifact(".pyrefly/")
         manifest.add_ide_extension("meta.pyrefly")
 
-        hook_payload = """  - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 1.3.0.dev1
-    hooks:
-      - id: pyrefly-check
-        name: Pyrefly (type checking)
-        pass_filenames: false
-        language: system"""
-        manifest.add_pre_commit_hook(hook_payload)
+        hook_payload = """      - id: pyrefly-check
+        name: pyrefly check
+        entry: uv run pyrefly check
+        language: system
+        types: [python]
+        pass_filenames: false"""
+        manifest.add_pre_commit_local_hook(hook_payload)
 
         manifest.just_typecheck_commands.append("uv run pyrefly check")
         manifest.just_clean_paths.append(".pyrefly/")
