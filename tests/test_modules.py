@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from protostar.config import ProtostarConfig
+from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, MissingDependencyError
 from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
@@ -29,8 +29,8 @@ def test_python_module_uv_build(manifest, mocker):
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
     # Prevent IDE injection to isolate build testing
-    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(ide=None)
+    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
+    mock_config.return_value = UserConfig(ide=None)
 
     mod = PythonCore()
     mod.build(manifest)
@@ -59,8 +59,8 @@ def test_python_module_uv_build(manifest, mocker):
 def test_python_module_uv_with_version(manifest, mocker):
     """Test Python manifest includes the specific python version flag alongside bare initialization."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(ide=None)
+    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
+    mock_config.return_value = UserConfig(ide=None)
 
     mod = PythonCore(python_version="3.12")
     mod.build(manifest)
@@ -85,8 +85,8 @@ def test_python_module_ide_injection_active(manifest, mocker):
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
     # Mock global config to explicitly request VS Code
-    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(ide="vscode")
+    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
+    mock_config.return_value = UserConfig(ide="vscode")
 
     mod = PythonCore()
     mod.build(manifest)
@@ -101,8 +101,8 @@ def test_python_module_ide_injection_inactive(manifest, mocker):
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
     # Mock global config to represent an unconfigured or non-VS Code state
-    mock_config = mocker.patch("protostar.modules.lang_layer.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(ide=None)
+    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
+    mock_config.return_value = UserConfig(ide=None)
 
     mod = PythonCore()
     mod.build(manifest)

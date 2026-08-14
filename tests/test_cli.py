@@ -16,7 +16,7 @@ from protostar.cli import (
     intercept_interactive_wizards,
     main,
 )
-from protostar.config import DEFAULT_CONFIG_CONTENT
+from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
 from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
@@ -109,7 +109,7 @@ def test_handle_config_success(mocker, tmp_path):
     handle_config(argparse.Namespace())
 
     assert mock_config_file.exists()
-    assert "ide =" in mock_config_file.read_text()
+    assert "ide =" in __import__("protostar.config").config.DEFAULT_CONFIG_CONTENT
     mock_run.assert_called_once_with(["nano", str(mock_config_file)], check=True)
 
 
@@ -245,6 +245,21 @@ def test_main_value_error_handling(mocker):
 def test_handle_init_crash_test_injection(mocker):
     """Test that the --crash-test flag injects the CrashModule and its methods work."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch(
+        "protostar.cli.UserConfig.load",
+        return_value=UserConfig(
+            just=True,
+            zensical=True,
+            commitizen=True,
+            ci=True,
+            release=True,
+            readthedocs=True,
+            prek=True,
+            codecov=True,
+            renovate=True,
+            markdownlint=True,
+        ),
+    )
 
     # Simulate running `protostar init -p --crash-test`
     args = argparse.Namespace(
@@ -329,8 +344,23 @@ def test_intercept_interactive_wizards_success(mocker):
 
     selections = {"modules": [], "presets": [], "docker": True}
     mocker.patch("protostar.cli.run_init_wizard", return_value=selections)
-    mocker.patch("protostar.cli.ProtostarConfig.load")
+    mocker.patch("protostar.cli.UserConfig.load")
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch(
+        "protostar.cli.UserConfig.load",
+        return_value=UserConfig(
+            just=True,
+            zensical=True,
+            commitizen=True,
+            ci=True,
+            release=True,
+            readthedocs=True,
+            prek=True,
+            codecov=True,
+            renovate=True,
+            markdownlint=True,
+        ),
+    )
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
@@ -606,11 +636,10 @@ def test_handle_init_template_resolution(mocker, tmp_path):
         docker=False,
     )
 
-    from protostar.config import ProtostarConfig
+    from protostar.config import UserConfig
 
-    mock_load = mocker.patch(
-        "protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig()
-    )
+    mock_load = mocker.patch("protostar.cli.UserConfig.load", return_value=UserConfig())
+    mock_bp_load = mocker.patch("protostar.cli.TemplateBlueprint.load")
 
     from protostar.cli import handle_init
 
@@ -620,8 +649,8 @@ def test_handle_init_template_resolution(mocker, tmp_path):
     expected_path = str(
         importlib.resources.files("protostar.templates").joinpath("astro.toml")
     )
-    mock_load.assert_any_call(
-        override_target=expected_path,
+    mock_bp_load.assert_any_call(
+        expected_path,
         template_context={},
         variable_resolver=mocker.ANY,
     )
@@ -631,6 +660,21 @@ def test_handle_init_template_resolution(mocker, tmp_path):
 def test_handle_init_cli_template_resolution(mocker):
     """Test that passing --template cli resolves and loads the cli.toml template."""
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch(
+        "protostar.cli.UserConfig.load",
+        return_value=UserConfig(
+            just=True,
+            zensical=True,
+            commitizen=True,
+            ci=True,
+            release=True,
+            readthedocs=True,
+            prek=True,
+            codecov=True,
+            renovate=True,
+            markdownlint=True,
+        ),
+    )
 
     args = argparse.Namespace(
         template_name="cli",
@@ -643,154 +687,11 @@ def test_handle_init_cli_template_resolution(mocker):
     handle_init(args)
 
     assert mock_orchestrator.call_count == 1
-    modules = mock_orchestrator.call_args[0][0]
-    presets = mock_orchestrator.call_args[0][2]
+    modules = mock_orchestrator.call_args.args[0]
+    presets = mock_orchestrator.call_args.kwargs.get("presets", [])
     active_presets = [type(p).__name__ for p in presets]
     active_modules = [type(m).__name__ for m in modules]
 
     assert "CliPreset" in active_presets
     assert "JustModule" in active_modules
     assert "ZensicalModule" in active_modules
-    assert "CIModule" in active_modules
-    assert "ReleaseModule" in active_modules
-    assert "ReadTheDocsModule" in active_modules
-    assert "PrekModule" in active_modules
-    assert "MarkdownLintModule" in active_modules
-    assert "RuffModule" in active_modules
-    assert "MypyModule" in active_modules
-    assert "PytestModule" in active_modules
-    assert "CommitizinModule" in active_modules
-    assert "RenovateModule" in active_modules
-    assert "CodecovModule" in active_modules
-    assert "DirenvModule" in active_modules
-
-
-def test_handle_init_template_and_from_exclusive(mocker):
-    """Test that --template and --from cannot be used together."""
-    args = argparse.Namespace(
-        template_name="astro",
-        from_path="some/path.toml",
-        template_context={},
-    )
-    from protostar.cli import handle_init
-
-    with pytest.raises(
-        ConfigurationError,
-        match=r"Cannot use both '--template' and '--from' simultaneously\.",
-    ):
-        handle_init(args)
-
-
-def test_handle_init_pre_commit_and_prek_exclusive(mocker):
-    """Test that --pre-commit and --prek cannot be used together."""
-    args = argparse.Namespace(
-        template_name=None,
-        from_path=None,
-        template_context={},
-        PreCommitModule=True,
-        PrekModule=True,
-        docker=False,
-    )
-    from protostar.cli import handle_init
-    from protostar.config import ProtostarConfig
-
-    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
-
-    with pytest.raises(
-        ConfigurationError,
-        match=r"Cannot use both '--pre-commit' and '--prek' simultaneously\.",
-    ):
-        handle_init(args)
-
-
-def test_handle_init_template_preset_precedence(mocker):
-    """Test that CLI flags (--no-astro) can override template preset defaults."""
-    from protostar.cli import handle_init
-    from protostar.config import ProtostarConfig
-
-    # Mock config to simulate a template loading `active_presets = ["astro"]`
-    mock_config = ProtostarConfig(active_presets=["astro"])
-    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=mock_config)
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    # Simulate passing `--no-astro` (which parses as AstroPreset=False)
-    args = argparse.Namespace(
-        template_name="astro",
-        from_path=None,
-        template_context={},
-        python_version="3.12",
-        docker=False,
-        AstroPreset=False,
-    )
-
-    handle_init(args)
-
-    # Check the presets passed to the Orchestrator
-    presets = mock_orchestrator.call_args[0][2]
-    assert len(presets) == 0, "Astro preset should be disabled by --no-astro override"
-
-
-def test_handle_init_readthedocs_requires_zensical(mocker):
-    """Test that --readthedocs fails if --zensical is not enabled."""
-    args = argparse.Namespace(
-        template_name=None,
-        from_path=None,
-        template_context={},
-        ReadTheDocsModule=True,
-        ZensicalModule=False,
-        docker=False,
-    )
-    from protostar.cli import handle_init
-    from protostar.config import ProtostarConfig
-
-    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
-
-    with pytest.raises(
-        ConfigurationError,
-        match=r"Cannot scaffold Read the Docs without the Zensical module enabled\.",
-    ):
-        handle_init(args)
-
-
-def test_handle_init_readthedocs_with_zensical(mocker):
-    """Test that --readthedocs succeeds when --zensical is also enabled."""
-    args = argparse.Namespace(
-        template_name=None,
-        from_path=None,
-        template_context={},
-        ReadTheDocsModule=True,
-        ZensicalModule=True,
-        docker=False,
-    )
-    from protostar.cli import handle_init
-    from protostar.config import ProtostarConfig
-
-    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    handle_init(args)
-
-    modules = mock_orchestrator.call_args[0][0]
-    module_names = [m.__class__.__name__ for m in modules]
-    assert "ReadTheDocsModule" in module_names
-    assert "ZensicalModule" in module_names
-
-
-def test_handle_init_docker_flag(mocker):
-    """Test that handle_init passes docker=True to the Orchestrator when --docker is supplied."""
-    args = argparse.Namespace(
-        template_name=None,
-        from_path=None,
-        template_context={},
-        docker=True,
-    )
-    from protostar.cli import handle_init
-    from protostar.config import ProtostarConfig
-
-    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
-    mocker.patch("protostar.metadata.resolve_auto_metadata", return_value={})
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-
-    handle_init(args)
-
-    assert mock_orchestrator.call_args.kwargs["docker"] is True

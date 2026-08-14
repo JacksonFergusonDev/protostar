@@ -52,5 +52,5 @@ def test_atomic_write_text_cleans_up_temp_file_on_failure(
     assert not target_file.exists()
 
     # The directory should be completely empty (the .critical_config.txt.*.tmp file must be unlinked)
-    leftover_files = list(tmp_path.iterdir())
+    leftover_files = [f for f in tmp_path.iterdir() if f.name != "config.toml"]
     assert len(leftover_files) == 0, f"Temporary files leaked: {leftover_files}"

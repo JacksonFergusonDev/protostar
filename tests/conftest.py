@@ -9,6 +9,19 @@ import pytest
 from protostar.manifest import EnvironmentManifest
 
 
+@pytest.fixture(autouse=True)
+def mock_global_config_file(mocker, tmp_path):
+    """Mocks the global configuration file for all tests to prevent reading the user's real config."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\n")
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config)
+    from protostar.config import UserConfig
+
+    UserConfig._instance = None
+    yield
+    UserConfig._instance = None
+
+
 @pytest.fixture
 def manifest():
     """Provides a fresh EnvironmentManifest for each test."""

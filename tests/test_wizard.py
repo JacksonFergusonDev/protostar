@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from protostar.config import ProtostarConfig
+from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, ExecutionAbortedError
 from protostar.wizard import (
     _should_run_wizard,
@@ -45,9 +45,7 @@ def test_run_init_wizard_benchmark_abort(mocker):
 def test_run_init_wizard_cancellation(mocker):
     """Test that the init wizard safely handles component checklist cancellation."""
     mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch(
-        "protostar.wizard.ProtostarConfig.load", return_value=ProtostarConfig()
-    )
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     mock_select = mocker.patch("questionary.select")
@@ -65,9 +63,7 @@ def test_run_init_wizard_cancellation(mocker):
 def test_run_init_wizard_template_cancellation(mocker):
     """Test that cancelling the built-in template selection raises ExecutionAbortedError."""
     mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch(
-        "protostar.wizard.ProtostarConfig.load", return_value=ProtostarConfig()
-    )
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     # Ensure templates > 1
@@ -89,9 +85,7 @@ def test_run_init_wizard_template_cancellation(mocker):
 def test_run_init_wizard_success(mocker):
     """Test that the init wizard collects selections and metadata successfully."""
     mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch(
-        "protostar.wizard.ProtostarConfig.load", return_value=ProtostarConfig()
-    )
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     mock_select = mocker.patch("questionary.select")
@@ -153,8 +147,8 @@ def test_resolve_missing_variables_cancellation(mocker):
 def test_prompt_metadata_success(mocker):
     """Test that prompt_metadata successfully gathers text and checkbox input."""
     mocker.patch(
-        "protostar.wizard.ProtostarConfig.load",
-        return_value=ProtostarConfig(author_name="Alice", supported_os=["Linux"]),
+        "protostar.wizard.UserConfig.load",
+        return_value=UserConfig(author_name="Alice", supported_os=["Linux"]),
     )
 
     mock_text = mocker.patch("questionary.text")
@@ -179,8 +173,8 @@ def test_prompt_metadata_success(mocker):
 def test_prompt_metadata_cancellation_text(mocker):
     """Test that prompt_metadata raises ExecutionAbortedError when text prompt is cancelled."""
     mocker.patch(
-        "protostar.wizard.ProtostarConfig.load",
-        return_value=ProtostarConfig(),
+        "protostar.wizard.UserConfig.load",
+        return_value=UserConfig(),
     )
     mock_text = mocker.patch("questionary.text")
     mock_text.return_value.ask.return_value = None
@@ -194,8 +188,8 @@ def test_prompt_metadata_cancellation_text(mocker):
 def test_prompt_metadata_cancellation_checkbox(mocker):
     """Test that prompt_metadata raises ExecutionAbortedError when checkbox prompt is cancelled."""
     mocker.patch(
-        "protostar.wizard.ProtostarConfig.load",
-        return_value=ProtostarConfig(),
+        "protostar.wizard.UserConfig.load",
+        return_value=UserConfig(),
     )
     mock_checkbox = mocker.patch("questionary.checkbox")
     mock_checkbox.return_value.ask.return_value = None

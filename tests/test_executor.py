@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 import tomlkit
 
-from protostar.config import ProtostarConfig
+from protostar.config import UserConfig
 from protostar.errors import (
     CommandExecutionError,
     CommandTimeoutError,
@@ -23,9 +23,9 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
-def mock_config() -> ProtostarConfig:
+def mock_config() -> UserConfig:
     """Provides a fresh baseline configuration for DI injections."""
-    return ProtostarConfig()
+    return UserConfig()
 
 
 def test_executor_writes_injected_files(mocker, mock_config):
@@ -1038,7 +1038,7 @@ def test_executor_uses_custom_task_description(mocker):
     manifest.add_system_task(["git", "init"], description="Initializing git repo")
 
     # We only need a dummy config to init the executor
-    config = ProtostarConfig()
+    config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
     executor._execute_tasks()
@@ -1055,7 +1055,7 @@ def test_executor_task_description_fallback(mocker):
     # Provide a command with a path, but NO description
     manifest.add_system_task([".venv/bin/pre-commit", "install"])
 
-    config = ProtostarConfig()
+    config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
     executor._execute_tasks()
@@ -1066,7 +1066,7 @@ def test_executor_task_description_fallback(mocker):
 
 def test_executor_toml_merge_type_collision() -> None:
     manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     base = tomlkit.document()
     base["tool"] = tomlkit.table()
@@ -1096,7 +1096,7 @@ def test_executor_skips_malformed_ide_settings(tmp_path, monkeypatch) -> None:
     settings_file = vscode_dir / "settings.json"
     settings_file.write_text("{ broken_json: true, }")
 
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
     executor._write_ide_settings()
 
     assert len(manifest.diagnostics) == 1
@@ -1115,7 +1115,7 @@ def ide_manifest():
 
 
 def test_ide_extension_check_bypassed_if_wrong_ide(ide_manifest, mocker):
-    config = ProtostarConfig(ide="none")
+    config = UserConfig(ide="none")
     executor = SystemExecutor(ide_manifest, config)
     mock_which = mocker.patch("protostar.executor.shutil.which")
 
@@ -1126,7 +1126,7 @@ def test_ide_extension_check_bypassed_if_wrong_ide(ide_manifest, mocker):
 
 
 def test_ide_extension_check_bypassed_if_binary_missing(ide_manifest, mocker):
-    config = ProtostarConfig(ide="vscode")
+    config = UserConfig(ide="vscode")
     executor = SystemExecutor(ide_manifest, config)
     mock_which = mocker.patch("protostar.executor.shutil.which", return_value=None)
     mock_run = mocker.patch("protostar.executor.subprocess.run")
@@ -1138,7 +1138,7 @@ def test_ide_extension_check_bypassed_if_binary_missing(ide_manifest, mocker):
 
 
 def test_ide_extension_check_succeeds_without_warnings(ide_manifest, mocker):
-    config = ProtostarConfig(ide="cursor")
+    config = UserConfig(ide="cursor")
     executor = SystemExecutor(ide_manifest, config)
 
     mocker.patch(
@@ -1166,7 +1166,7 @@ def test_ide_extension_check_succeeds_without_warnings(ide_manifest, mocker):
 
 
 def test_ide_extension_check_flags_missing_extensions(ide_manifest, mocker):
-    config = ProtostarConfig(ide="vscode")
+    config = UserConfig(ide="vscode")
     executor = SystemExecutor(ide_manifest, config)
 
     mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
@@ -1189,7 +1189,7 @@ def test_ide_extension_check_flags_missing_extensions(ide_manifest, mocker):
 def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(
     ide_manifest, mocker
 ):
-    config = ProtostarConfig(ide="vscode")
+    config = UserConfig(ide="vscode")
     executor = SystemExecutor(ide_manifest, config)
 
     mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
@@ -1216,7 +1216,7 @@ def test_executor_handles_write_permission_denied(mocker):
     manifest.wants_pre_commit = True
     manifest.pre_commit_hooks.append("  - repo: local")
 
-    config = ProtostarConfig()
+    config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
     # CHANGED: Stub Path.exists to prevent the file existence check from triggering an early return
@@ -1240,7 +1240,7 @@ def test_executor_handles_mkdir_io_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.add_directory("src/core")
 
-    config = ProtostarConfig()
+    config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
     mocker.patch.object(
@@ -1257,7 +1257,7 @@ def test_executor_handles_mkdir_io_failure(mocker):
 def test_append_files_handles_read_or_mkdir_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     # Mock target.exists to return False so it hits the parent directory creation path
     mocker.patch.object(Path, "exists", return_value=False)
@@ -1273,7 +1273,7 @@ def test_append_files_handles_read_or_mkdir_failure(mocker):
 def test_append_files_handles_toml_write_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     # Simulate an existing valid pyproject.toml on disk
     mocker.patch.object(Path, "exists", return_value=True)
@@ -1293,7 +1293,7 @@ def test_append_files_handles_toml_write_failure(mocker):
 def test_append_files_handles_string_block_write_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.add_file_append(".envrc", "export FOO=bar")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
@@ -1312,7 +1312,7 @@ def test_append_files_handles_string_block_write_failure(mocker):
 def test_write_ignores_handles_os_error(mocker):
     manifest = EnvironmentManifest()
     manifest.add_vcs_ignore(".venv/")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
@@ -1332,7 +1332,7 @@ def test_write_docker_artifacts_handles_os_error(mocker):
     manifest = EnvironmentManifest()
     manifest.add_vcs_ignore(".venv/")
     # Force docker attribute to true to enter the block
-    executor = SystemExecutor(manifest, ProtostarConfig(), docker=True)
+    executor = SystemExecutor(manifest, UserConfig(), docker=True)
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
@@ -1353,7 +1353,7 @@ def test_write_docker_artifacts_handles_os_error(mocker):
 def test_write_ide_settings_handles_read_os_error(mocker):
     manifest = EnvironmentManifest()
     manifest.add_ide_setting("foo", "bar")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     # Force .vscode/settings.json to exist but crash out when read
     mocker.patch.object(Path, "exists", return_value=True)
@@ -1369,7 +1369,7 @@ def test_write_ide_settings_handles_read_os_error(mocker):
 def test_write_ide_settings_handles_write_os_error(mocker):
     manifest = EnvironmentManifest()
     manifest.add_ide_setting("foo", "bar")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
 
     # Let reading work smoothly (or assume no file exists)
     mocker.patch.object(Path, "exists", return_value=False)
@@ -1410,7 +1410,7 @@ def test_executor_install_dependencies_timeout_degradation(mocker, mock_config):
 def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.add_dependency("numpy")
-    config = ProtostarConfig()
+    config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
     # Mock a subprocess failure with rich telemetry
@@ -1441,7 +1441,7 @@ def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
 def test_install_dev_dependencies_adds_warning_with_telemetry_on_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.add_dev_dependency("pytest")
-    config = ProtostarConfig()
+    config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
     # Mock a subprocess failure with rich telemetry
@@ -1472,7 +1472,7 @@ def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
     manifest = EnvironmentManifest()
     manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
 
-    config = ProtostarConfig(ide="vscode")
+    config = UserConfig(ide="vscode")
     executor = SystemExecutor(manifest, config)
 
     # Mock shutil.which to pretend 'code' is installed
@@ -1495,7 +1495,7 @@ def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
     manifest = EnvironmentManifest()
     manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
 
-    config = ProtostarConfig(ide="vscode")
+    config = UserConfig(ide="vscode")
     executor = SystemExecutor(manifest, config)
 
     mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
@@ -1516,7 +1516,7 @@ def test_ide_extension_check_fails_missing_tuple(mocker):
     manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
     manifest.add_ide_extension("charliermarsh.ruff")
 
-    config = ProtostarConfig(ide="vscode")
+    config = UserConfig(ide="vscode")
     executor = SystemExecutor(manifest, config)
 
     mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")

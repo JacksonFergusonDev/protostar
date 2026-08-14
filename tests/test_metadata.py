@@ -1,13 +1,13 @@
 import sys
 
-from protostar.config import ProtostarConfig
+from protostar.config import UserConfig
 from protostar.metadata import resolve_auto_metadata
 
 
 def test_resolve_auto_metadata_from_config(mocker):
-    """Test that resolve_auto_metadata extracts values from ProtostarConfig."""
-    mock_config = mocker.patch("protostar.metadata.ProtostarConfig.load")
-    mock_config.return_value = ProtostarConfig(
+    """Test that resolve_auto_metadata extracts values from UserConfig."""
+    mock_config = mocker.patch("protostar.metadata.UserConfig.load")
+    mock_config.return_value = UserConfig(
         author_name="Alice",
         author_email="alice@example.com",
         github_username="alice-dev",
@@ -27,9 +27,7 @@ def test_resolve_auto_metadata_from_config(mocker):
 
 def test_resolve_auto_metadata_from_git(mocker):
     """Test that git config auto-resolver works when config values are absent."""
-    mocker.patch(
-        "protostar.metadata.ProtostarConfig.load", return_value=ProtostarConfig()
-    )
+    mocker.patch("protostar.metadata.UserConfig.load", return_value=UserConfig())
     mocker.patch(
         "protostar.metadata.get_git_config",
         side_effect=lambda key: "Git User" if key == "user.name" else "git@user.com",
@@ -43,7 +41,7 @@ def test_resolve_auto_metadata_from_git(mocker):
 
 def test_resolve_auto_metadata_defaults():
     """Test that fields fall back to their defined default values."""
-    config = ProtostarConfig()
+    config = UserConfig()
     metadata = resolve_auto_metadata(
         {"docker_port", "minimum_python", "supported_os"}, config=config
     )
@@ -55,7 +53,7 @@ def test_resolve_auto_metadata_defaults():
 
 def test_resolve_auto_metadata_subset_keys():
     """Test resolving a specific subset of metadata keys."""
-    config = ProtostarConfig(author_name="Bob")
+    config = UserConfig(author_name="Bob")
     metadata = resolve_auto_metadata({"author_name"}, config=config)
 
     assert metadata == {"author_name": "Bob"}
