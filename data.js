@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786682875998,
+  "lastUpdate": 1786684939190,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5581,6 +5581,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 211.9,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c6990439beac4e3f01d55566b7e843c78838e5b1",
+          "message": "refactor: resolve DRY violations and centralize boilerplate (#149)\n\n* refactor: centralize task deduplication and diagnostic skips in manifest\n\n* refactor: eliminate boilerplate loops in executor\n\n* refactor: adopt interpolation engine over inline replacements\n\n* refactor: clean up module boilerplate and centralize git init\n\n* fix: ignore late binding variables during config parsing",
+          "timestamp": "2026-08-13T22:21:25-07:00",
+          "tree_id": "a112f5e560b7a21d8cc9d959e1f280f9230d8b11",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c6990439beac4e3f01d55566b7e843c78838e5b1"
+        },
+        "date": 1786684938172,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 104.39,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 157.32,
             "unit": "ms"
           }
         ]
