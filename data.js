@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786750467276,
+  "lastUpdate": 1786751924496,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5989,6 +5989,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 196.8,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ed42fd3518889a2ab8d221cd2210d7fcb0de986",
+          "message": "feat(core): implement security sandbox for template execution (#159)\n\n* feat(core): add SecurityViolationError domain exception\n\n* feat(core): implement safe zip extraction with path traversal protection\n\n* feat(core): enforce path jail and binary safelist in SystemExecutor\n\n* test(security): add comprehensive path jail and binary safelist tests\n\n* feat(core): add direnv to executor binary safelist",
+          "timestamp": "2026-08-14T16:57:45-07:00",
+          "tree_id": "c6c4838f2cc6870b05b6a4fc93a36b7e81440b5a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5ed42fd3518889a2ab8d221cd2210d7fcb0de986"
+        },
+        "date": 1786751923947,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.02,
             "unit": "ms"
           }
         ]
