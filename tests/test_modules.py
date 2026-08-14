@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import ProtostarConfig
-from protostar.errors import MissingDependencyError
+from protostar.errors import ConfigurationError, MissingDependencyError
 from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
     CodecovModule,
@@ -15,8 +15,10 @@ from protostar.modules import (
     PrekModule,
     PytestModule,
     PythonCore,
+    ReadTheDocsModule,
     RenovateModule,
     RuffModule,
+    ZensicalModule,
 )
 
 
@@ -525,5 +527,87 @@ def test_codecov_module_skips_when_file_exists(mocker):
     assert ".github/codecov.yml" not in manifest.file_injections
     assert any(
         d.phase == "Codecov" and d.severity == Severity.SKIP
+        for d in manifest.diagnostics
+    )
+
+
+def test_zensical_module_properties():
+    module = ZensicalModule()
+    assert module.name == "Zensical"
+    assert module.cli_flags == ("--zensical",)
+    assert module.config_key == "zensical"
+    assert module.collision_markers == [Path("mkdocs.yml"), Path("docs/")]
+
+
+def test_zensical_module_build(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    manifest = EnvironmentManifest()
+    module = ZensicalModule()
+    module.build(manifest)
+
+    assert "mkdocstrings[python]" in manifest.docs_dependencies
+    assert "zensical" in manifest.docs_dependencies
+    assert "site/" in manifest.vcs_ignores
+    assert "docs" in manifest.directories
+    assert "docs/index.md" in manifest.file_injections
+    assert "mkdocs.yml" in manifest.file_injections
+    assert "pyproject.toml" in manifest.file_appends
+
+
+def test_readthedocs_module_properties():
+    module = ReadTheDocsModule()
+    assert module.name == "Read the Docs"
+    assert module.cli_flags == ("--readthedocs",)
+    assert module.config_key == "readthedocs"
+    assert module.collision_markers == [Path(".readthedocs.yaml")]
+
+
+def test_readthedocs_module_requires_zensical():
+    manifest = EnvironmentManifest()
+    module = ReadTheDocsModule()
+
+    with pytest.raises(
+        ConfigurationError,
+        match="Read the Docs scaffolding requires the Zensical module to be enabled",
+    ):
+        module.build(manifest)
+
+
+def test_readthedocs_module_injects_file(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+    manifest = EnvironmentManifest()
+    ZensicalModule().build(manifest)
+    module = ReadTheDocsModule()
+    module.build(manifest)
+
+    assert ".readthedocs.yaml" in manifest.file_injections
+    content = manifest.file_injections[".readthedocs.yaml"]
+    assert "version: 2" in content
+    assert "os: ubuntu-24.04" in content
+    assert 'python: "3.12"' in content
+    assert "pip install uv" in content
+    assert 'uv venv "${READTHEDOCS_VIRTUALENV_PATH}"' in content
+    assert (
+        'UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --only-group'
+        " docs" in content
+    )
+    assert 'mkdir -p "$READTHEDOCS_OUTPUT/html"' in content
+    assert (
+        'UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv run zensical build'
+        in content
+    )
+    assert 'cp -r site/* "$READTHEDOCS_OUTPUT/html/"' in content
+
+
+def test_readthedocs_module_skips_when_file_exists(mocker):
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+    manifest = EnvironmentManifest()
+    manifest.add_docs_dependency("zensical")
+    module = ReadTheDocsModule()
+    module.build(manifest)
+
+    assert ".readthedocs.yaml" not in manifest.file_injections
+    assert any(
+        d.phase == "Read the Docs" and d.severity == Severity.SKIP
         for d in manifest.diagnostics
     )

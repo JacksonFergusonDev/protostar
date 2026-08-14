@@ -24,6 +24,9 @@ python_version = "3.13"
 # commitizen = true  # Scaffold commitizen version bumping and changelog tooling
 # renovate = true    # Scaffold Renovate dependency update configuration
 # codecov = true     # Scaffold Codecov configuration
+# zensical = true    # Scaffold Zensical documentation
+# readthedocs = true # Scaffold Read the Docs configuration
+# just = true        # Scaffold a justfile for command execution
 # active_presets = []
 
 # --- Advanced Configuration Overrides ---

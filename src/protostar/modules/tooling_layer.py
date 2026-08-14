@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.errors import MissingDependencyError
+from protostar.errors import ConfigurationError, MissingDependencyError
 from protostar.manifest import Severity
 
 from .base import BootstrapModule
@@ -788,6 +788,7 @@ class ZensicalModule(BootstrapModule):
 
         manifest.add_docs_dependency("mkdocstrings[python]")
         manifest.add_docs_dependency("zensical")
+        manifest.add_ci_flag("zensical")
 
         manifest.add_environment_artifact("site/")
         manifest.add_directory("docs")
@@ -865,6 +866,69 @@ extra:
   generator: false
 """
             manifest.add_file_injection("mkdocs.yml", mkdocs_content)
+
+
+class ReadTheDocsModule(BootstrapModule):
+    """Configures Read the Docs build configuration for documentation hosting."""
+
+    cli_flags = ("--readthedocs",)
+    cli_help = "Scaffold Read the Docs configuration"
+    config_key = "readthedocs"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Read the Docs"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for Read the Docs."""
+        return [Path(".readthedocs.yaml")]
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Queues .readthedocs.yaml file injection.
+
+        Args:
+            manifest: The centralized state object.
+
+        Raises:
+            ConfigurationError: If the Zensical module is not enabled.
+        """
+        logger.debug("Building Read the Docs tooling layer.")
+
+        if not any("zensical" in dep for dep in manifest.docs_dependencies):
+            raise ConfigurationError(
+                "Read the Docs scaffolding requires the Zensical module to be enabled."
+            )
+
+        if Path(".readthedocs.yaml").exists():
+            manifest.add_diagnostic(
+                phase=self.name,
+                message="Skipping .readthedocs.yaml generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+            return
+
+        config = """version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
+  jobs:
+    pre_create_environment:
+      - pip install uv
+    create_environment:
+      - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
+    install:
+      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --only-group docs
+    build:
+      html:
+        - mkdir -p "$READTHEDOCS_OUTPUT/html"
+        - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv run zensical build
+        - cp -r site/* "$READTHEDOCS_OUTPUT/html/"
+"""
+        manifest.add_file_injection(".readthedocs.yaml", config)
 
 
 class JustModule(BootstrapModule):

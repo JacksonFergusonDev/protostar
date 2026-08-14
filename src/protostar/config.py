@@ -43,6 +43,9 @@ python_version = "3.13"
 # commitizen = true  # Scaffold commitizen version bumping and changelog tooling
 # renovate = true    # Scaffold Renovate dependency update configuration
 # codecov = true     # Scaffold Codecov configuration
+# zensical = true    # Scaffold Zensical documentation
+# readthedocs = true # Scaffold Read the Docs configuration
+# just = true        # Scaffold a justfile for command execution
 # active_presets = []
 
 # --- Advanced Configuration Overrides ---
@@ -83,6 +86,9 @@ class ProtostarConfig:
         commitizen (bool): Whether to auto-scaffold commitizen version bumping and changelog tooling.
         renovate (bool): Whether to auto-scaffold Renovate dependency update configuration.
         codecov (bool): Whether to auto-scaffold Codecov configuration.
+        zensical (bool): Whether to auto-scaffold Zensical documentation.
+        readthedocs (bool): Whether to auto-scaffold Read the Docs configuration.
+        just (bool): Whether to auto-scaffold a justfile for command execution.
         presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
@@ -105,6 +111,9 @@ class ProtostarConfig:
     commitizen: bool = False
     renovate: bool = False
     codecov: bool = False
+    zensical: bool = False
+    readthedocs: bool = False
+    just: bool = False
     active_presets: list[str] = field(default_factory=list)
     presets: dict[str, Any] = field(default_factory=dict)
     global_dev_dependencies: list[str] = field(default_factory=list)
