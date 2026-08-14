@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786673446972,
+  "lastUpdate": 1786673650996,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5377,6 +5377,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 164.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f50e46fd2c00b85ebc7fba3fb75d51fd77f02805",
+          "message": "ci: add Ruff GitHub annotations and split linting steps\n\n- Install pytest-github-actions-annotate-failures to enable failure annotations\n- Use --output-format=github for ruff check and ruff format\n- Separate lint and format steps for clearer job output",
+          "timestamp": "2026-08-13T18:00:51-07:00",
+          "tree_id": "d38d046de5fb1fac5180fd64c5d5c33a274a9d1e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f50e46fd2c00b85ebc7fba3fb75d51fd77f02805"
+        },
+        "date": 1786673650385,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 137.1,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 203.45,
             "unit": "ms"
           }
         ]
