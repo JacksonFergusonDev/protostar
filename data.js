@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786732478125,
+  "lastUpdate": 1786734336373,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5751,6 +5751,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.09,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac2912bacf7712cc3bfaa65b2a807d05440f37d3",
+          "message": "feat: implement interactive TUI prompt for __replace__ template collisions (#153)\n\n* feat: add ExecutionAbortedError\n\n* feat: replace --force with --force-merge and --force-replace\n\n* test: add TUI tests for __replace__ collisions\n\n* chore: fix --force usage in generate_doc_fixtures.py and regenerate fixtures\n\n* test: fix --force usage in test_integration.py",
+          "timestamp": "2026-08-14T12:04:35-07:00",
+          "tree_id": "d57a9079ff24cdfbf349f5b21bfd21dfef461182",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ac2912bacf7712cc3bfaa65b2a807d05440f37d3"
+        },
+        "date": 1786734335246,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132.51,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.96,
             "unit": "ms"
           }
         ]
