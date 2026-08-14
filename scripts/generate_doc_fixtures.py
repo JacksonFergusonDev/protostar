@@ -463,7 +463,7 @@ def main() -> None:
     protostar.config.CONFIG_FILE = (
         Path(tempfile.gettempdir()) / "non_existent_protostar_config.toml"
     )
-    protostar.config.ProtostarConfig._instance = None
+    protostar.config.UserConfig._instance = None
 
     try:
         INCLUDES_DIR.mkdir(parents=True, exist_ok=True)

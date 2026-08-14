@@ -7,7 +7,7 @@ from typing import Any
 
 from rich.console import Console
 
-from .config import UserConfig, TemplateBlueprint
+from .config import UserConfig
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
@@ -50,6 +50,7 @@ def run_init_wizard() -> dict[str, Any] | None:
         pass
 
     answer = "None"
+    blueprint = None
     if len(templates) > 1:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
