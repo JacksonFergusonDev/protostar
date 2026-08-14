@@ -4,7 +4,7 @@ from typing import Any
 from rich.console import Console
 from rich.panel import Panel
 
-from .config import ProtostarConfig
+from .config import TemplateBlueprint, UserConfig
 from .errors import ExecutionAbortedError, ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
@@ -22,7 +22,8 @@ class Orchestrator:
     def __init__(
         self,
         modules: list[BootstrapModule],
-        config: ProtostarConfig,
+        user_config: UserConfig,
+        blueprint: TemplateBlueprint | None = None,
         presets: list[PresetModule] | None = None,
         docker: bool = False,
         force_merge: bool = False,
@@ -33,7 +34,8 @@ class Orchestrator:
 
         Args:
             modules: The ordered stack of bootstrap layers to execute.
-            config: The active Protostar configuration instance.
+            user_config: The active UserConfig instance.
+            blueprint: The template blueprint.
             presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
             force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
@@ -41,7 +43,8 @@ class Orchestrator:
             metadata: Pre-resolved metadata dictionary to inject into the manifest. Defaults to None.
         """
         self.modules = modules
-        self.config = config
+        self.user_config = user_config
+        self.blueprint = blueprint
         self.presets = presets or []
         self.docker = docker
         self.force_merge = force_merge
@@ -153,23 +156,26 @@ class Orchestrator:
             preset.build(self.manifest)
 
         # Inject global configuration states using the injected config
-        if self.config.global_dev_dependencies:
-            logger.debug("Injecting global dev dependencies from configuration.")
-            for dep in self.config.global_dev_dependencies:
-                self.manifest.add_dev_dependency(dep)
+        if self.blueprint:
+            if self.blueprint.dev_dependencies:
+                logger.debug("Injecting global dev dependencies from configuration.")
+                for dep in self.blueprint.dev_dependencies:
+                    self.manifest.add_dev_dependency(dep)
 
-        if self.config.pyproject_injections:
-            logger.debug("Injecting global pyproject.toml payloads from configuration.")
-            for payload in self.config.pyproject_injections.values():
-                self.manifest.add_file_append("pyproject.toml", payload)
+            if self.blueprint.pyproject_injections:
+                logger.debug(
+                    "Injecting global pyproject.toml payloads from configuration."
+                )
+                for payload in self.blueprint.pyproject_injections.values():
+                    self.manifest.add_file_append("pyproject.toml", payload)
 
-        if self.config.files:
-            logger.debug("Injecting static files from configuration.")
-            for filepath, content in self.config.files.items():
-                self.manifest.add_file_injection(filepath, content)
+            if self.blueprint.files:
+                logger.debug("Injecting static files from configuration.")
+                for filepath, content in self.blueprint.files.items():
+                    self.manifest.add_file_injection(filepath, content)
 
         # Phase 4: System Execution
-        executor = SystemExecutor(self.manifest, self.config, self.docker)
+        executor = SystemExecutor(self.manifest, self.user_config, self.docker)
         executor.execute()
 
         # Phase 5: Telemetry Evaluation

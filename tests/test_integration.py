@@ -58,9 +58,7 @@ def test_python_environment_scaffolding(
 
 def test_orchestrator_idempotency(run_cli: Any, seed_global_config: Any) -> None:
     """Ensures repeated executions with --force safely merge configurations."""
-    seed_global_config(
-        '[dev.pyproject]\ncustom_ruff = "[tool.ruff]\\nline-length = 150"\n'
-    )
+    seed_global_config('[env]\nide = "cursor"\n')
 
     code1, stdout1, stderr1, workspace = run_cli(
         "init", "--python-version", "3.12", "--ruff"

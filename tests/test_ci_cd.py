@@ -1,4 +1,4 @@
-from protostar.config import ProtostarConfig
+from protostar.config import UserConfig
 from protostar.executor import SystemExecutor
 from protostar.manifest import EnvironmentManifest
 from protostar.modules.ci_layer import CIModule, ReleaseModule
@@ -28,7 +28,7 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
     manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
     executor._write_ci_workflow()
 
     mock_write.assert_called_once()
@@ -56,7 +56,7 @@ def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) 
     manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
     executor._write_ci_workflow()
 
     mock_write.assert_called_once()
@@ -77,7 +77,7 @@ def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -
     manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
     executor._write_ci_workflow()
 
     mock_write.assert_called_once()
@@ -89,7 +89,7 @@ def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -
 def test_executor_release_assembly(manifest: EnvironmentManifest, mocker) -> None:
     manifest.wants_release = True
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
-    executor = SystemExecutor(manifest, ProtostarConfig())
+    executor = SystemExecutor(manifest, UserConfig())
     executor._write_release_workflow()
 
     mock_write.assert_called_once()

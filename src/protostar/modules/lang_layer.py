@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.config import ProtostarConfig
+from protostar.config import UserConfig
 from protostar.errors import MissingDependencyError
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ class PythonCore(BootstrapModule):
     def python_version(self) -> str | None:
         """Lazily evaluates the requested python version from global config."""
         if self._python_version is None:
-            self._python_version = ProtostarConfig.load().python_version
+            self._python_version = UserConfig.load().python_version
         return self._python_version
 
     @python_version.setter
@@ -123,7 +123,7 @@ Issues = "https://github.com/{github}/{repo_name}/issues"
         manifest.add_file_append("pyproject.toml", project_metadata_payload)
 
         # --- IDE Injection ---
-        config = ProtostarConfig.load()
+        config = UserConfig.load()
         if config.ide in ("vscode", "cursor"):
             interpreter_path = Path.cwd() / ".venv" / "bin" / "python"
             manifest.add_ide_setting(

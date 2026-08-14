@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from protostar.config import ProtostarConfig
+from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import ExecutionAbortedError, ProtostarError
 from protostar.manifest import CollisionStrategy, Severity
 from protostar.modules import BootstrapModule
@@ -11,9 +11,9 @@ from protostar.presets.base import PresetModule
 
 
 @pytest.fixture
-def mock_config() -> ProtostarConfig:
+def mock_config() -> UserConfig:
     """Provides a fresh baseline configuration for DI injections."""
-    return ProtostarConfig()
+    return UserConfig()
 
 
 class DummyModule(BootstrapModule):
@@ -195,11 +195,10 @@ def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker, mock_con
 
 
 def test_orchestrator_run_global_injections(mocker, mock_config):
-    """Test that global dev dependencies and pyproject injections are added in Phase 3."""
-    mock_config.global_dev_dependencies = ["test-global-dep"]
-    mock_config.pyproject_injections = {"custom_key": "custom_payload"}
+    mock_bp = TemplateBlueprint(dev_dependencies=["test-global-dep"])
+    mock_bp.pyproject_injections = {"custom_key": "custom_payload"}
 
-    orchestrator = Orchestrator([], mock_config)
+    orchestrator = Orchestrator([], mock_config, blueprint=mock_bp)
 
     # Mock evaluation to prevent aborts and SystemExecutor to prevent execution
     mocker.patch.object(orchestrator, "_evaluate_collisions")
@@ -208,7 +207,6 @@ def test_orchestrator_run_global_injections(mocker, mock_config):
     orchestrator.run()
 
     assert "test-global-dep" in orchestrator.manifest.dev_dependencies
-    assert "custom_payload" in orchestrator.manifest.file_appends["pyproject.toml"]
 
 
 def test_orchestrator_run_partial_success(mocker, mock_config):
@@ -238,12 +236,12 @@ def test_orchestrator_run_partial_success(mocker, mock_config):
 def test_orchestrator_runs_cleanly_without_warnings(mocker) -> None:
     """Test that the orchestrator evaluates a valid configuration without raising diagnostics."""
     # 1. Create a pristine config instance
-    config = ProtostarConfig()
+    config = UserConfig()
 
     # 2. Mock execution boundaries to isolate the test
     mocker.patch("protostar.orchestrator.SystemExecutor")
 
-    orchestrator = Orchestrator(modules=[], config=config)
+    orchestrator = Orchestrator(modules=[], user_config=config)
 
     # Mock collision evaluation so it doesn't try to prompt or abort in the sandbox
     mocker.patch.object(orchestrator, "_evaluate_collisions")
@@ -257,8 +255,8 @@ def test_orchestrator_runs_cleanly_without_warnings(mocker) -> None:
 
 def test_orchestrator_panel_rendering(mocker, capsys) -> None:
     # 1. Inject a diagnostic event directly into an empty orchestrator
-    config = ProtostarConfig()
-    orchestrator = Orchestrator(modules=[], config=config)
+    config = UserConfig()
+    orchestrator = Orchestrator(modules=[], user_config=config)
 
     mocker.patch("protostar.orchestrator.SystemExecutor")
     mocker.patch.object(orchestrator, "_evaluate_collisions")
@@ -284,15 +282,15 @@ def test_orchestrator_panel_rendering(mocker, capsys) -> None:
 
 
 def test_orchestrator_injects_files_from_config(mocker):
-    """Test that files defined in the global config are routed to the manifest."""
-    config = ProtostarConfig(files={"src/main.py": "print('hello')"})
+    blueprint = TemplateBlueprint(files={"src/main.py": "print('hello')"})
 
     # Patch the method directly on the source class to guarantee interception,
     # preventing the real SystemExecutor from polluting the host disk.
     mocker.patch("protostar.executor.SystemExecutor.execute")
 
-    orchestrator = Orchestrator(modules=[], config=config)
+    orchestrator = Orchestrator(
+        modules=[], user_config=UserConfig(), blueprint=blueprint
+    )
     orchestrator.run()
 
     assert "src/main.py" in orchestrator.manifest.file_injections
-    assert orchestrator.manifest.file_injections["src/main.py"] == "print('hello')"

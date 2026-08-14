@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from .config import ProtostarConfig
+from .config import UserConfig
 from .system import get_git_config
 
 
@@ -16,7 +16,7 @@ class MetadataField:
     label: str
     prompt_type: str  # "text" or "checkbox"
     choices: list[str] | None
-    auto_resolver: Callable[[ProtostarConfig], Any | None] | None
+    auto_resolver: Callable[[UserConfig], Any | None] | None
     default: Any | None
 
 
@@ -82,20 +82,20 @@ METADATA_FIELDS: dict[str, MetadataField] = {
 
 def resolve_auto_metadata(
     keys: set[str] | None = None,
-    config: ProtostarConfig | None = None,
+    config: UserConfig | None = None,
 ) -> dict[str, Any]:
     """Deterministically resolves metadata values from configuration or defaults.
 
     Args:
         keys: Optional subset of metadata keys to resolve. If None, resolves all
             known fields.
-        config: Optional ProtostarConfig instance. If None, loads from global config.
+        config: Optional UserConfig instance. If None, loads from global config.
 
     Returns:
         A dictionary mapping metadata keys to their resolved values.
     """
     if config is None:
-        config = ProtostarConfig.load()
+        config = UserConfig.load()
 
     resolved: dict[str, Any] = {}
     target_keys = set(METADATA_FIELDS.keys()) if keys is None else keys

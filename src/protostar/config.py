@@ -75,7 +75,7 @@ python_version = "3.13"
 
 
 @dataclass
-class ProtostarConfig:
+class UserConfig:
     """Global configuration settings for the Protostar CLI.
 
     Attributes:
@@ -129,39 +129,21 @@ class ProtostarConfig:
     ci: bool = False
     release: bool = False
     just: bool = False
-    active_presets: list[str] = field(default_factory=list)
-    presets: dict[str, Any] = field(default_factory=dict)
-    global_dev_dependencies: list[str] = field(default_factory=list)
-    pyproject_injections: dict[str, str] = field(default_factory=dict)
-    files: dict[str, str] = field(default_factory=dict)
-    variables: dict[str, Any] = field(default_factory=dict)
 
     # In-memory cache to prevent repeated disk I/O
-    _instance: ClassVar["ProtostarConfig | None"] = None
+    _instance: ClassVar["UserConfig | None"] = None
 
     @classmethod
-    def load(
-        cls,
-        force_reload: bool = False,
-        override_target: str | None = None,
-        template_context: dict[str, str] | None = None,
-        variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
-    ) -> "ProtostarConfig":
+    def load(cls, force_reload: bool = False) -> "UserConfig":
         """Loads and parses the global Protostar configuration file.
-
-        Evaluates the global XDG configuration and implements a class-level cache
-        to prevent repeated disk I/O across the lifecycle.
 
         Args:
             force_reload: If True, bypasses the cache and forces a disk read.
-            override_target: An optional path or URL to a portable configuration to overlay.
-            template_context: Variables passed via CLI to inject into the template.
-            variable_resolver: A callable that resolves missing template variables
 
         Returns:
-            The loaded ProtostarConfig instance.
+            The loaded UserConfig instance.
         """
-        if cls._instance is not None and not force_reload and override_target is None:
+        if cls._instance is not None and not force_reload:
             return cls._instance
 
         instance = cls()
@@ -171,82 +153,22 @@ class ProtostarConfig:
                 CONFIG_FILE.read_text(encoding="utf-8"), str(CONFIG_FILE), instance
             )
 
-        if override_target is not None:
-            if override_target.startswith("http://") or override_target.startswith(
-                "https://"
-            ):
-                content = fetch_remote_config(override_target)
-            else:
-                target_path = Path(override_target)
-                if not target_path.exists():
-                    raise ConfigurationError(
-                        f"Configuration file not found: {target_path}"
-                    )
-                content = target_path.read_text(encoding="utf-8")
-
-            variables = extract_variables(content)
-            context = dict(template_context) if template_context else {}
-
-            late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
-            missing = [
-                v for v in variables if v not in context and v not in late_binding_vars
-            ]
-
-            if missing:
-                if variable_resolver is not None:
-                    context.update(variable_resolver(missing))
-                else:
-                    raise ConfigurationError(
-                        f"Configuration template requires variables: {', '.join(missing)}. "
-                        "Please provide them via CLI flags (e.g. --variable_name=value) "
-                        "or run in an interactive terminal."
-                    )
-
-            content = render_template(content, context)
-            instance = cls._parse_and_merge(content, override_target, instance)
-
-        if override_target is None:
-            cls._instance = instance
+        cls._instance = instance
         return instance
 
-    # --- Dependency Note: Why Not Pydantic? ---
-    # Pydantic v2 was considered for config validation. The decision was to
-    # stay with manual isinstance checks for the following reasons:
-    #
-    #   1. Schema stability: ProtostarConfig is small and unlikely to grow
-    #      significantly. Pydantic earns its keep with complex, nested, or
-    #      frequently changing schemas — none of which apply here.
-    #
-    #   2. CLI import cost: Even at ~0.1s, Pydantic's import time is
-    #      perceptible in a CLI context where there is no persistent process
-    #      keeping it warm. Every subcommand pays this cost.
-    #
-    #   3. Binary dependency: pydantic-core is a compiled Rust extension
-    #      (~2-4MB, platform-specific wheel). This complicates installs in
-    #      minimal or unusual environments and feels disproportionate for
-    #      validating a handful of config fields written by the tool's own user.
-    #
-    # If the config schema grows to include cross-field validation, deeply
-    # nested preset models, or externally-sourced input, revisit this decision.
     @classmethod
     def _parse_and_merge(
-        cls, content: str, source: str, instance: "ProtostarConfig"
-    ) -> "ProtostarConfig":
+        cls, content: str, source: str, instance: "UserConfig"
+    ) -> "UserConfig":
         """Helper to parse a TOML string and merge its values into a config instance.
-
-        Dynamically evaluates dataclass fields to prevent brittle parsing logic,
-        while maintaining specific handlers for complex nested dictionaries.
-        Type annotations are resolved at runtime via typing.get_type_hints so
-        that Union types (e.g. str | None) are validated correctly before
-        assignment.
 
         Args:
             content: The raw TOML string to parse.
             source: The origin of the content (for error reporting).
-            instance: The active ProtostarConfig object to mutate.
+            instance: The active UserConfig object to mutate.
 
         Returns:
-            A new ProtostarConfig instance containing the merged state.
+            A new UserConfig instance containing the merged state.
 
         Raises:
             ConfigurationError: If the TOML string contains syntax errors.
@@ -265,9 +187,7 @@ class ProtostarConfig:
                 f"Details: {e}"
             ) from e
 
-        # --- Schema Validation & Scope Enforcement ---
-        allowed_keys = {"env", "presets", "dev", "files", "variables"}
-
+        allowed_keys = {"env"}
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:
             raise ConfigurationError(
@@ -288,10 +208,6 @@ class ProtostarConfig:
                     "Please use 'active_presets' exclusively within portable templates or --from targets."
                 )
 
-            # get_type_hints resolves stringified annotations (PEP 563 /
-            # `from __future__ import annotations`) into real type objects.
-            # f.type would return raw strings in that context and break
-            # isinstance checks.
             resolved_hints = typing.get_type_hints(cls)
 
             for key, value in env_data.items():
@@ -336,38 +252,96 @@ class ProtostarConfig:
 
                 updates[key] = value
 
-        if "presets" in data:
-            merged_presets = dict(instance.presets)
-            merged_presets.update(data["presets"])
-            updates["presets"] = merged_presets
+        return replace(instance, **updates)
+
+
+@dataclass
+class TemplateBlueprint:
+    """Represents the parsed template state for target environments."""
+
+    dependencies: list[str] = field(default_factory=list)
+    dev_dependencies: list[str] = field(default_factory=list)
+    docs_dependencies: list[str] = field(default_factory=list)
+    directories: list[str] = field(default_factory=list)
+    vcs_ignores: list[str] = field(default_factory=list)
+    system_tasks: list[list[str]] = field(default_factory=list)
+    post_install_tasks: list[list[str]] = field(default_factory=list)
+    files: dict[str, str] = field(default_factory=dict)
+    pyproject_injections: dict[str, str] = field(default_factory=dict)
+    active_presets: list[str] = field(default_factory=list)
+    tooling_overrides: dict[str, bool] = field(default_factory=dict)
+
+    @classmethod
+    def load(
+        cls,
+        target: str,
+        template_context: dict[str, str] | None = None,
+        variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
+    ) -> "TemplateBlueprint":
+        """Loads and parses a template blueprint."""
+        if target.startswith("http://") or target.startswith("https://"):
+            content = fetch_remote_config(target)
+        else:
+            target_path = Path(target)
+            if not target_path.exists():
+                raise ConfigurationError(f"Configuration file not found: {target_path}")
+            content = target_path.read_text(encoding="utf-8")
+
+        variables = extract_variables(content)
+        context = dict(template_context) if template_context else {}
+
+        late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
+        missing = [
+            v for v in variables if v not in context and v not in late_binding_vars
+        ]
+
+        if missing:
+            if variable_resolver is not None:
+                context.update(variable_resolver(missing))
+            else:
+                raise ConfigurationError(
+                    f"Configuration template requires variables: {', '.join(missing)}. "
+                    "Please provide them via CLI flags (e.g. --variable_name=value) "
+                    "or run in an interactive terminal."
+                )
+
+        content = render_template(content, context)
+        return cls._parse(content, target)
+
+    @classmethod
+    def _parse(cls, content: str, source: str = "unknown") -> "TemplateBlueprint":
+        try:
+            data = tomllib.loads(content)
+        except tomllib.TOMLDecodeError as e:
+            raise ConfigurationError(
+                f"Syntax error in configuration source '{source}'.\n"
+                f"Details: {e}\n"
+                "Please fix the syntax error to proceed."
+            ) from e
+        except Exception as e:
+            raise ConfigurationError(
+                f"Unexpected error while parsing configuration source '{source}'.\n"
+                f"Details: {e}"
+            ) from e
+
+        instance = cls()
+
+        if "env" in data:
+            env_data = data["env"]
+            if "active_presets" in env_data:
+                instance.active_presets = env_data["active_presets"]
 
         if "dev" in data:
             dev_data = data["dev"]
             if "extra_dependencies" in dev_data:
-                updates["global_dev_dependencies"] = dev_data["extra_dependencies"]
+                instance.dev_dependencies = dev_data["extra_dependencies"]
+            elif "dev_dependencies" in dev_data:
+                instance.dev_dependencies = dev_data["dev_dependencies"]
 
             if "pyproject" in dev_data:
-                updates["pyproject_injections"] = dev_data["pyproject"]
+                instance.pyproject_injections = dev_data["pyproject"]
 
         if "files" in data:
-            merged_files = dict(instance.files)
-            merged_files.update(data["files"])
-            updates["files"] = merged_files
+            instance.files = data["files"]
 
-        if "variables" in data:
-            merged_vars = dict(instance.variables)
-            merged_vars.update(data["variables"])
-            updates["variables"] = merged_vars
-
-        if "active_presets" in updates:
-            from .presets import PRESETS
-
-            valid_preset_keys = {p.config_key for p in PRESETS}
-            for p_name in updates["active_presets"]:
-                if p_name not in valid_preset_keys:
-                    raise ConfigurationError(
-                        f"Unknown preset requested in {source}: '{p_name}'.\n"
-                        f"Valid active_presets are: {', '.join(sorted(valid_preset_keys))}."
-                    )
-
-        return replace(instance, **updates)
+        return instance

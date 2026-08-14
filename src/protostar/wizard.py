@@ -7,7 +7,7 @@ from typing import Any
 
 from rich.console import Console
 
-from .config import ProtostarConfig
+from .config import UserConfig
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
@@ -50,6 +50,7 @@ def run_init_wizard() -> dict[str, Any] | None:
         pass
 
     answer = "None"
+    blueprint = None
     if len(templates) > 1:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
@@ -63,23 +64,20 @@ def run_init_wizard() -> dict[str, Any] | None:
             raise ExecutionAbortedError("Template selection cancelled by user.")
 
         if answer != "None":
-            target = importlib.resources.files("protostar.templates").joinpath(
-                f"{answer}.toml"
-            )
-            config = ProtostarConfig.load(
-                override_target=str(target), force_reload=True
-            )
+            config = UserConfig.load(force_reload=True)
         else:
-            config = ProtostarConfig.load()
+            config = UserConfig.load()
     else:
-        config = ProtostarConfig.load()
+        config = UserConfig.load()
 
     choices: list[Choice | Separator] = []
 
     # 1. Presets
     choices.append(Separator("--- Presets ---"))
     for preset in PRESETS:
-        is_checked = preset.config_key in config.active_presets
+        is_checked = False
+        if blueprint and preset.config_key in blueprint.active_presets:
+            is_checked = True
         choices.append(Choice(title=preset.name, value=preset, checked=is_checked))
 
     # 2. Context & Tooling
@@ -162,7 +160,7 @@ def prompt_metadata(
     """
     import questionary
 
-    config = ProtostarConfig.load()
+    config = UserConfig.load()
     resolved: dict[str, Any] = {}
     all_keys = required_keys | (optional_keys or set())
     to_prompt = []

@@ -3,7 +3,6 @@ from protostar.presets import (
     AstroPreset,
     CliPreset,
     DspPreset,
-    EmbeddedPreset,
     MLPreset,
     PresetModule,
     ScientificPreset,
@@ -134,45 +133,6 @@ def test_dsp_preset_build(manifest):
     assert "mutagen" in manifest.dependencies
     assert "data/raw_audio" in manifest.directories
     assert "*.wav" in manifest.vcs_ignores
-
-
-def test_embedded_preset_build(manifest):
-    """Test that the Embedded preset injects host-side hardware libraries."""
-    preset = EmbeddedPreset()
-    preset.build(manifest)
-
-    assert "pyserial" in manifest.dependencies
-    assert "esptool" in manifest.dependencies
-    # Embedded preset doesn't currently require specific directories or ignores
-    assert len(manifest.directories) == 0
-    assert len(manifest.vcs_ignores) == 0
-
-
-def test_preset_apply_overrides(manifest, mocker):
-    """Test that a preset dynamically drops its default payload if a configuration override exists."""
-    mock_config = mocker.patch("protostar.config.ProtostarConfig.load")
-
-    # Mock the global config to return an override for the ML preset
-    mock_config.return_value.presets = {
-        "ml": {
-            "dependencies": ["custom-torch"],
-            "dev_dependencies": ["pytest-ml"],
-            "directories": ["custom_models/"],
-        }
-    }
-
-    preset = MLPreset()
-    preset.build(manifest)
-
-    # Verify defaults were bypassed
-    assert "torch" not in manifest.dependencies
-    assert "models" not in manifest.directories
-    assert "*.pt" not in manifest.vcs_ignores
-
-    # Verify custom payload was injected
-    assert "custom-torch" in manifest.dependencies
-    assert "pytest-ml" in manifest.dev_dependencies
-    assert "custom_models/" in manifest.directories
 
 
 def test_preset_metadata_declarations():
