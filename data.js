@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786731580935,
+  "lastUpdate": 1786731761367,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5683,6 +5683,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 198.98,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "5bcc33a448848b2c8e4fc01aad94c3f9a1b763c9",
+          "message": "refactor(manifest): import dataclass directly from dataclasses module",
+          "timestamp": "2026-08-14T11:20:39-07:00",
+          "tree_id": "63fbd8c0e30700f74d43d5bf9eea5d4b39011384",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5bcc33a448848b2c8e4fc01aad94c3f9a1b763c9"
+        },
+        "date": 1786731760211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.66,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.95,
             "unit": "ms"
           }
         ]
