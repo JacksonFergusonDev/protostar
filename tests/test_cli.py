@@ -681,3 +681,23 @@ def test_handle_init_readthedocs_with_zensical(mocker):
     module_names = [m.__class__.__name__ for m in modules]
     assert "ReadTheDocsModule" in module_names
     assert "ZensicalModule" in module_names
+
+
+def test_handle_init_docker_flag(mocker):
+    """Test that handle_init passes docker=True to the Orchestrator when --docker is supplied."""
+    args = argparse.Namespace(
+        template_name=None,
+        from_path=None,
+        template_context={},
+        docker=True,
+    )
+    from protostar.cli import handle_init
+    from protostar.config import ProtostarConfig
+
+    mocker.patch("protostar.cli.ProtostarConfig.load", return_value=ProtostarConfig())
+    mocker.patch("protostar.metadata.resolve_metadata", return_value={})
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+
+    handle_init(args)
+
+    assert mock_orchestrator.call_args.kwargs["docker"] is True

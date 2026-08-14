@@ -24,7 +24,7 @@
 
 </div>
 
-Setting up a new python project often requires the same manual steps: configuring linters, writing `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
+Setting up a new python project often requires the same manual steps: configuring linters, writing `Dockerfile`, `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
 
 ---
 
@@ -89,7 +89,7 @@ Our CI pipeline enforces a strict performance budget using `hyperfine`, gating a
 
 ```bash
 brew install jacksonfergusondev/tap/protostar
-````
+```
 
 ### Universal (uv)
 
@@ -139,7 +139,7 @@ Or you can construct your own environment footprint from scratch using CLI flags
 protostar init --astro --docker --direnv -m --mypy --pytest --prek
 ```
 
-*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes optimized `.gitignore` and `.dockerignore` files, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with fast git hooks via `prek`.*
+*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes a multi-stage `Dockerfile` and optimized `.dockerignore`, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with fast git hooks via `prek`.*
 
 To bypass any interactive collision prompts when running in headless CI environments, use the `--force` (or `-f`) flag. You can also explicitly override the Python version specified in your global configuration by passing `--python-version` (e.g., `--python-version 3.12`).
 

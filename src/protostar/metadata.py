@@ -71,6 +71,14 @@ METADATA_FIELDS: dict[str, MetadataField] = {
         auto_resolver=lambda cfg: cfg.supported_os if cfg.supported_os else None,
         default=["MacOS", "Linux", "Windows"],
     ),
+    "docker_port": MetadataField(
+        key="docker_port",
+        label="Container exposed port:",
+        prompt_type="text",
+        choices=None,
+        auto_resolver=None,
+        default="8000",
+    ),
 }
 
 

@@ -4,6 +4,7 @@
 ├── .gitattributes
 ├── .gitignore
 ├── .python-version
+├── Dockerfile
 ├── data
 │   ├── catalogs
 │   └── fits

@@ -83,6 +83,9 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     --8<-- "ml_tree.md"
 
+    ??? abstract "See the generated `Dockerfile`"
+        --8<-- "ml_Dockerfile.md"
+
     ??? abstract "See the generated `.dockerignore`"
         --8<-- "ml_dockerignore.md"
 
@@ -94,7 +97,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     **The Intelligence:**
 
-    - **Context Generation:** Because `--docker` was flagged, Protostar read the computed VCS ignores from the ML environment and generated a highly optimized `.dockerignore`. It strips out `.venv`, `.git`, local caches, and test artifacts to keep your container build context incredibly lightweight.
+    - **Container Scaffolding:** Because `--docker` was flagged, Protostar scaffolded a hardened, multi-stage `Dockerfile` and an optimized `.dockerignore`. The `Dockerfile` leverages `uv` caching, non-root user execution (`appuser`), and stripped-down runtime stages, while `.dockerignore` strips out `.venv`, `.git`, local caches, and test artifacts to keep your container build context lightweight.
     - **Model Checkpoints:** The ML preset aggressively injects ignores for tensor artifacts (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`) to ensure massive model weights never pollute the git tree.
 
 !!! info "The Python Gravity Well"
@@ -139,6 +142,14 @@ If you select __Merge__, Protostar performs a surgical AST injection.
 
     === "Directory Structure After"
         --8<-- "ml_merged_tree.md"
+
+    <hr>
+
+    === "`Dockerfile` Before"
+        --8<-- "ml_Dockerfile.md"
+
+    === "`Dockerfile` After"
+        --8<-- "ml_merged_Dockerfile.md"
 
     <hr>
 

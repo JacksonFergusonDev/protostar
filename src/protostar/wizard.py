@@ -81,7 +81,7 @@ def run_init_wizard() -> dict[str, Any] | None:
 
     # 2. Context & Tooling
     choices.append(Separator("--- Context & Tooling ---"))
-    choices.append(Choice(title="Docker (.dockerignore)", value="docker"))
+    choices.append(Choice(title="Docker (Dockerfile & .dockerignore)", value="docker"))
 
     for tool_mod in TOOLING_MODULES:
         is_checked = getattr(config, tool_mod.config_key, False)
@@ -123,6 +123,8 @@ def run_init_wizard() -> dict[str, Any] | None:
             "minimum_python",
         )
     )
+    if docker and any(getattr(p, "config_key", "") == "api" for p in presets):
+        optional_keys.add("docker_port")
 
     console = Console()
     console.print("\n[bold cyan]--- Project Metadata ---[/bold cyan]")
