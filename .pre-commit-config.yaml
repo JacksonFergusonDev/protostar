@@ -1,5 +1,5 @@
 repos:
-  # 1. Generic hooks (configured to IGNORE Python)
+  # Generic hooks (configured to IGNORE Python)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -11,7 +11,7 @@ repos:
         args: [--unsafe]
       - id: check-added-large-files
 
-  # 2. Local Python Toolchain (Managed via uv.lock)
+  # Local Python Toolchain (Managed via uv.lock)
   - repo: local
     hooks:
       - id: ruff-check
@@ -35,14 +35,14 @@ repos:
         types: [python]
         pass_filenames: true
 
-  # 3. Markdown linting
+  # Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.2
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]
 
-  # 4. Renovate configuration validation
+  # Renovate config validation
   - repo: https://github.com/renovatebot/pre-commit-hooks
     rev: 44.24.3
     hooks:

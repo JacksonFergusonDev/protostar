@@ -1,5 +1,6 @@
 ```yaml
 repos:
+  # Generic hooks (configured to IGNORE Python)
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -11,6 +12,7 @@ repos:
         exclude: \.py$
       - id: check-added-large-files
 
+  # Local Python Toolchain (Managed via uv.lock)
   - repo: local
     hooks:
       - id: ruff-check
@@ -34,6 +36,7 @@ repos:
         types: [python]
         pass_filenames: true
 
+  # Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.0
     hooks:
