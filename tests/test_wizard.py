@@ -6,6 +6,7 @@ from protostar.config import ProtostarConfig
 from protostar.errors import ConfigurationError
 from protostar.wizard import (
     _should_run_wizard,
+    prompt_metadata,
     resolve_missing_variables,
     run_init_wizard,
 )
@@ -80,3 +81,55 @@ def test_resolve_missing_variables_interactive(mocker):
 
     assert context == {"project_name": "Orbit App"}
     mock_text.assert_called_once_with("project_name:")
+
+
+def test_prompt_metadata_success(mocker):
+    """Test that prompt_metadata successfully gathers text and checkbox input."""
+    mocker.patch(
+        "protostar.wizard.ProtostarConfig.load",
+        return_value=ProtostarConfig(author_name="Alice", supported_os=["Linux"]),
+    )
+
+    mock_text = mocker.patch("questionary.text")
+    mock_text.return_value.ask.return_value = "Alice"
+
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = ["Linux"]
+
+    result = prompt_metadata(
+        required_keys={"author_name"},
+        optional_keys={"supported_os"},
+    )
+
+    assert result == {
+        "author_name": "Alice",
+        "supported_os": ["Linux"],
+    }
+    mock_text.assert_called_once()
+    mock_checkbox.assert_called_once()
+
+
+def test_prompt_metadata_cancellation_text(mocker):
+    """Test that prompt_metadata raises KeyboardInterrupt when text prompt is cancelled."""
+    mocker.patch(
+        "protostar.wizard.ProtostarConfig.load",
+        return_value=ProtostarConfig(),
+    )
+    mock_text = mocker.patch("questionary.text")
+    mock_text.return_value.ask.return_value = None
+
+    with pytest.raises(KeyboardInterrupt):
+        prompt_metadata(required_keys={"description"})
+
+
+def test_prompt_metadata_cancellation_checkbox(mocker):
+    """Test that prompt_metadata raises KeyboardInterrupt when checkbox prompt is cancelled."""
+    mocker.patch(
+        "protostar.wizard.ProtostarConfig.load",
+        return_value=ProtostarConfig(),
+    )
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = None
+
+    with pytest.raises(KeyboardInterrupt):
+        prompt_metadata(required_keys={"supported_os"})

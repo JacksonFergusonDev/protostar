@@ -102,8 +102,6 @@ def run_init_wizard() -> dict[str, Any] | None:
     presets = [item for item in selected if item in PRESETS]
     docker = "docker" in selected
 
-    from .metadata import resolve_metadata
-
     required_keys = set()
     optional_keys = set()
     for mod in modules:
@@ -133,9 +131,7 @@ def run_init_wizard() -> dict[str, Any] | None:
     )
 
     try:
-        resolved_metadata = resolve_metadata(
-            required_keys, optional_keys, tui_mode=True
-        )
+        resolved_metadata = prompt_metadata(required_keys, optional_keys)
     except KeyboardInterrupt:
         return None
 
@@ -145,6 +141,67 @@ def run_init_wizard() -> dict[str, Any] | None:
         "docker": docker,
         "project_metadata": resolved_metadata,
     }
+
+
+def prompt_metadata(
+    required_keys: set[str],
+    optional_keys: set[str] | None = None,
+) -> dict[str, Any]:
+    """Interactively prompts the user for project metadata.
+
+    Args:
+        required_keys: Keys that must be explicitly confirmed by the user.
+        optional_keys: Optional metadata keys to prompt for with auto-resolved
+            defaults.
+
+    Returns:
+        A dictionary of resolved metadata keys to user-confirmed values.
+
+    Raises:
+        KeyboardInterrupt: If the user cancels any prompt.
+    """
+    import questionary
+
+    from .metadata import METADATA_FIELDS
+
+    config = ProtostarConfig.load()
+    resolved: dict[str, Any] = {}
+    all_keys = required_keys | (optional_keys or set())
+    to_prompt = []
+
+    for key in METADATA_FIELDS:
+        if key not in all_keys:
+            continue
+
+        field = METADATA_FIELDS[key]
+        candidate_val = None
+        if field.auto_resolver:
+            candidate_val = field.auto_resolver(config)
+
+        default_val = candidate_val if candidate_val is not None else field.default
+        to_prompt.append((key, field, default_val))
+
+    for key, field, default_val in to_prompt:
+        if field.prompt_type == "text":
+            answer = questionary.text(
+                field.label,
+                default=str(default_val) if default_val is not None else "",
+            ).ask()
+            if answer is None:
+                raise KeyboardInterrupt
+            resolved[key] = answer
+        elif field.prompt_type == "checkbox":
+            choices = []
+            for choice_str in field.choices or []:
+                checked = default_val is not None and choice_str in default_val
+                choices.append(questionary.Choice(choice_str, checked=checked))
+
+            answer = questionary.checkbox(field.label, choices=choices).ask()
+            if answer is None:
+                raise KeyboardInterrupt
+            resolved[key] = answer
+
+    return resolved
 
 
 def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
