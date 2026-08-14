@@ -89,7 +89,7 @@ class SystemExecutor:
         if not command:
             return
 
-        allowed_binaries = {"uv", "git", "npm", "yarn", "pnpm", "pre-commit"}
+        allowed_binaries = {"uv", "git", "npm", "yarn", "pnpm", "pre-commit", "direnv"}
         binary = Path(command[0]).name.lower()
 
         if binary not in allowed_binaries:
