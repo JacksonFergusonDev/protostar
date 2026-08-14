@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786684939190,
+  "lastUpdate": 1786730347957,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5615,6 +5615,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 157.32,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "91d26e1864ed713970dc43db7e5851d4a95000a8",
+          "message": "feat(docker): scaffold multi-stage Dockerfile and container runtime environment (#150)\n\n* feat(metadata): add docker metadata configuration and wizard options\n\n* feat(executor): scaffold multi-stage Dockerfile with dynamic preset awareness\n\n* test(cli): add unit test for --docker CLI option\n\n* docs: update documentation and fixtures for Dockerfile scaffolding",
+          "timestamp": "2026-08-14T10:58:07-07:00",
+          "tree_id": "5a1d73daca34b146e035675387c03c5ab76f5838",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/91d26e1864ed713970dc43db7e5851d4a95000a8"
+        },
+        "date": 1786730346166,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 123.7,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 183.96,
             "unit": "ms"
           }
         ]
