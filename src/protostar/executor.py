@@ -20,6 +20,7 @@ from .errors import (
 from .fs import atomic_write_text
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
+from .utils import resolve_package_name, resolve_project_name
 
 logger = logging.getLogger("protostar")
 console = Console()
@@ -207,21 +208,18 @@ class SystemExecutor:
         """Writes all queued boilerplate files to the local workspace."""
         if not self.manifest.file_injections:
             return
-        project_name = Path.cwd().name
-        pyproject_path = Path("pyproject.toml")
-        if pyproject_path.exists():
-            try:
-                with pyproject_path.open("rb") as f:
-                    pyproject_data = tomllib.load(f)
-                    project_name = pyproject_data.get("project", {}).get(
-                        "name", project_name
-                    )
-            except Exception:
-                pass
+
+        project_name = resolve_project_name(self.manifest.metadata)
+        package_name = resolve_package_name(self.manifest.metadata)
 
         for filepath, content in self.manifest.file_injections.items():
-            content = content.replace("{{PROJECT_NAME}}", project_name)
-            target = Path(filepath)
+            interpolated_filepath = filepath.replace(
+                "{{PROJECT_NAME}}", project_name
+            ).replace("{{PACKAGE_NAME}}", package_name)
+            content = content.replace("{{PROJECT_NAME}}", project_name).replace(
+                "{{PACKAGE_NAME}}", package_name
+            )
+            target = Path(interpolated_filepath)
             if (
                 not target.exists()
                 or self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
@@ -233,15 +231,21 @@ class SystemExecutor:
                     raise FileSystemError(
                         "inject boilerplate file", str(target), e
                     ) from e
-                logger.debug(f"Injected configuration file: {filepath}")
+                logger.debug(f"Injected configuration file: {interpolated_filepath}")
 
     def _create_directories(self) -> None:
         """Scaffolds all queued directories in the local workspace."""
         if not self.manifest.directories:
             return
 
+        project_name = resolve_project_name(self.manifest.metadata)
+        package_name = resolve_package_name(self.manifest.metadata)
+
         for dir_path in self.manifest.directories:
-            path = Path(dir_path)
+            interpolated_path = dir_path.replace(
+                "{{PROJECT_NAME}}", project_name
+            ).replace("{{PACKAGE_NAME}}", package_name)
+            path = Path(interpolated_path)
             try:
                 path.mkdir(parents=True, exist_ok=True)
             except OSError as e:
@@ -558,8 +562,13 @@ jobs:
         # 2. Protostar config or hardcoded default
         if not python_version:
             python_version = self.config.python_version or "3.13"
-        if not project_name:
-            project_name = "My Project"
+
+        project_name = resolve_project_name(
+            self.manifest.metadata, default="My Project"
+        )
+        package_name = resolve_package_name(
+            self.manifest.metadata, default="my_project"
+        )
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
@@ -584,9 +593,12 @@ jobs:
                 ast_mutated = False
 
                 for payload in contents:
-                    interpolated = payload.replace(
-                        "{{PYTHON_VERSION}}", python_version
-                    ).replace("{{PROJECT_NAME}}", project_name)
+                    interpolated = (
+                        payload.replace("{{PYTHON_VERSION}}", python_version)
+                        .replace("{{PROJECT_NAME}}", project_name)
+                        .replace("{{PACKAGE_NAME}}", package_name)
+                    )
+
                     try:
                         payload_doc = tomlkit.parse(interpolated)
                         ast_mutated = True
@@ -700,9 +712,11 @@ jobs:
             missing_payloads = []
 
             for payload in contents:
-                interpolated = payload.replace(
-                    "{{PYTHON_VERSION}}", python_version
-                ).replace("{{PROJECT_NAME}}", project_name)
+                interpolated = (
+                    payload.replace("{{PYTHON_VERSION}}", python_version)
+                    .replace("{{PROJECT_NAME}}", project_name)
+                    .replace("{{PACKAGE_NAME}}", package_name)
+                )
 
                 # Generate a deterministic boundary marker
                 payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]

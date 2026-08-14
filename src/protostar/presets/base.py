@@ -19,6 +19,12 @@ class PresetModule(abc.ABC):
     cli_help: ClassVar[str] = ""
     """The help description for the CLI flag."""
 
+    required_metadata: ClassVar[tuple[str, ...]] = ()
+    """The metadata keys that MUST be resolved for this preset to function."""
+
+    optional_metadata: ClassVar[tuple[str, ...]] = ()
+    """The metadata keys that are nice to have but not strictly required."""
+
     @property
     @abc.abstractmethod
     def name(self) -> str:

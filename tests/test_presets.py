@@ -5,6 +5,7 @@ from protostar.presets import (
     DspPreset,
     EmbeddedPreset,
     MLPreset,
+    PresetModule,
     ScientificPreset,
 )
 
@@ -69,14 +70,61 @@ def test_api_preset_build(manifest):
 
 
 def test_cli_preset_build(manifest):
-    """Test that the CLI preset injects terminal frameworks and source bounds."""
+    """Test that the CLI preset injects terminal frameworks, package directory, starter code, and entrypoints."""
+    manifest.metadata = {
+        "project_name": "my-cli-tool",
+        "description": "My awesome CLI tool.",
+    }
     preset = CliPreset()
     preset.build(manifest)
 
     assert "typer" in manifest.dependencies
     assert "rich" in manifest.dependencies
-    assert "src" in manifest.directories
+    assert "src/my_cli_tool" in manifest.directories
     assert "tests" in manifest.directories
+
+    # Verify injected boilerplate files
+    init_file = manifest.file_injections["src/my_cli_tool/__init__.py"]
+    assert '"""My awesome CLI tool."""' in init_file
+    assert "import contextlib" in init_file
+    assert "import importlib.metadata" in init_file
+    assert '__version__ = "unknown"' in init_file
+    assert 'importlib.metadata.version("my-cli-tool")' in init_file
+
+    assert "src/my_cli_tool/cli.py" in manifest.file_injections
+    cli_file = manifest.file_injections["src/my_cli_tool/cli.py"]
+    assert "from my_cli_tool import __version__" in cli_file
+    assert 'help="My awesome CLI tool."' in cli_file
+    assert "def version_callback(value: bool) -> None:" in cli_file
+    assert "@app.callback()" in cli_file
+
+    assert "tests/test_cli.py" in manifest.file_injections
+    test_file = manifest.file_injections["tests/test_cli.py"]
+    assert "from my_cli_tool.cli import app" in test_file
+    assert "def test_version() -> None:" in test_file
+    assert "def test_help() -> None:" in test_file
+
+    assert "README.md" in manifest.file_injections
+    assert "# my-cli-tool" in manifest.file_injections["README.md"]
+
+    # Verify [project.scripts] entry point
+    assert "pyproject.toml" in manifest.file_appends
+    pyproject_appends = manifest.file_appends["pyproject.toml"]
+    assert any(
+        'my-cli-tool = "my_cli_tool.cli:app"' in append for append in pyproject_appends
+    )
+
+
+def test_cli_preset_build_without_description(manifest):
+    """Test that __init__.py has no docstring if description metadata is omitted."""
+    manifest.metadata = {"project_name": "dark-matter"}
+    preset = CliPreset()
+    preset.build(manifest)
+
+    init_file = manifest.file_injections["src/dark_matter/__init__.py"]
+    assert not init_file.startswith('"""')
+    assert init_file.startswith("import contextlib")
+    assert 'importlib.metadata.version("dark-matter")' in init_file
 
 
 def test_dsp_preset_build(manifest):
@@ -127,3 +175,19 @@ def test_preset_apply_overrides(manifest, mocker):
     assert "custom-torch" in manifest.dependencies
     assert "pytest-ml" in manifest.dev_dependencies
     assert "custom_models/" in manifest.directories
+
+
+def test_preset_metadata_declarations():
+    """Test that PresetModule subclasses support required_metadata and optional_metadata."""
+
+    class CustomPreset(PresetModule):
+        required_metadata = ("required_field",)
+        optional_metadata = ("optional_field",)
+
+        @property
+        def name(self) -> str:
+            return "Custom"
+
+    preset = CustomPreset()
+    assert preset.required_metadata == ("required_field",)
+    assert preset.optional_metadata == ("optional_field",)

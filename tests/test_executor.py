@@ -1385,3 +1385,61 @@ new_key = 2
     assert "new_key" in nested
     assert "old_key" not in nested
     assert "__replace__" not in nested
+
+
+def test_executor_interpolates_package_name_in_injected_files(
+    tmp_path, mock_config, monkeypatch
+):
+    """Test that {{PACKAGE_NAME}} and {{PROJECT_NAME}} are interpolated into injected files and paths."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.metadata = {"project_name": "my-cool-tool"}
+    manifest.add_file_injection(
+        "src/{{PACKAGE_NAME}}/__init__.py",
+        '"""{{PROJECT_NAME}} package ({{PACKAGE_NAME}})."""\n',
+    )
+    executor = SystemExecutor(manifest, mock_config)
+    executor._write_injected_files()
+
+    target_file = tmp_path / "src" / "my_cool_tool" / "__init__.py"
+    assert target_file.exists()
+    assert target_file.read_text() == '"""my-cool-tool package (my_cool_tool)."""\n'
+
+
+def test_executor_interpolates_package_name_in_directories(
+    tmp_path, mock_config, monkeypatch
+):
+    """Test that {{PACKAGE_NAME}} and {{PROJECT_NAME}} are interpolated into created directories."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.metadata = {"project_name": "my-cool-tool"}
+    manifest.add_directory("src/{{PACKAGE_NAME}}")
+    executor = SystemExecutor(manifest, mock_config)
+    executor._create_directories()
+
+    assert (tmp_path / "src" / "my_cool_tool").is_dir()
+
+
+def test_executor_interpolates_package_name_in_file_appends(
+    tmp_path, mock_config, monkeypatch
+):
+    """Test that {{PACKAGE_NAME}} and {{PROJECT_NAME}} are interpolated into TOML and text file appends."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.metadata = {"project_name": "my-cool-tool"}
+    manifest.add_file_append(
+        "pyproject.toml",
+        '[project.scripts]\n{{PROJECT_NAME}} = "{{PACKAGE_NAME}}.cli:app"\n',
+    )
+    manifest.add_file_append(
+        "script.sh",
+        'echo "Running {{PROJECT_NAME}} from {{PACKAGE_NAME}}"\n',
+    )
+    executor = SystemExecutor(manifest, mock_config)
+    executor._append_files()
+
+    pyproject_content = (tmp_path / "pyproject.toml").read_text()
+    assert 'my-cool-tool = "my_cool_tool.cli:app"' in pyproject_content
+
+    script_content = (tmp_path / "script.sh").read_text()
+    assert 'echo "Running my-cool-tool from my_cool_tool"' in script_content

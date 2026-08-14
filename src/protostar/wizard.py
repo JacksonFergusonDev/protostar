@@ -110,6 +110,9 @@ def run_init_wizard() -> dict[str, Any] | None:
     for mod in modules:
         required_keys.update(mod.required_metadata)
         optional_keys.update(mod.optional_metadata)
+    for preset in presets:
+        required_keys.update(preset.required_metadata)
+        optional_keys.update(preset.optional_metadata)
 
     # Core project metadata always requested as optional
     optional_keys.update(
