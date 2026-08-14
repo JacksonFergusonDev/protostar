@@ -1,5 +1,5 @@
-import dataclasses
 import enum
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +12,7 @@ class Severity(enum.Enum):
     WARNING = "warning"
 
 
-@dataclasses.dataclass
+@dataclass
 class DiagnosticEvent:
     """A structured record of a non-fatal anomaly or skipped operation.
 
@@ -37,7 +37,7 @@ class CollisionStrategy(enum.Enum):
     ABORT = "abort"
 
 
-@dataclasses.dataclass
+@dataclass
 class SystemTask:
     """A shell command with an associated execution timeout limit.
 
@@ -52,7 +52,7 @@ class SystemTask:
     description: str | None = None
 
 
-@dataclasses.dataclass
+@dataclass
 class EnvironmentManifest:
     """Centralized state object holding the aggregate environment requirements.
 
@@ -85,33 +85,33 @@ class EnvironmentManifest:
         collision_strategy (CollisionStrategy): The execution route for intersecting files.
     """
 
-    vcs_ignores: set[str] = dataclasses.field(default_factory=set)
-    workspace_hides: set[str] = dataclasses.field(default_factory=set)
-    ide_settings: dict[str, Any] = dataclasses.field(default_factory=dict)
-    dependencies: list[str] = dataclasses.field(default_factory=list)
-    dev_dependencies: list[str] = dataclasses.field(default_factory=list)
-    docs_dependencies: list[str] = dataclasses.field(default_factory=list)
-    system_tasks: list[SystemTask] = dataclasses.field(default_factory=list)
-    post_install_tasks: list[SystemTask] = dataclasses.field(default_factory=list)
-    directories: set[str] = dataclasses.field(default_factory=set)
-    file_injections: dict[str, str] = dataclasses.field(default_factory=dict)
-    file_appends: dict[str, list[str]] = dataclasses.field(default_factory=dict)
+    vcs_ignores: set[str] = field(default_factory=set)
+    workspace_hides: set[str] = field(default_factory=set)
+    ide_settings: dict[str, Any] = field(default_factory=dict)
+    dependencies: list[str] = field(default_factory=list)
+    dev_dependencies: list[str] = field(default_factory=list)
+    docs_dependencies: list[str] = field(default_factory=list)
+    system_tasks: list[SystemTask] = field(default_factory=list)
+    post_install_tasks: list[SystemTask] = field(default_factory=list)
+    directories: set[str] = field(default_factory=set)
+    file_injections: dict[str, str] = field(default_factory=dict)
+    file_appends: dict[str, list[str]] = field(default_factory=dict)
     wants_pre_commit: bool = False
     wants_prek: bool = False
-    pre_commit_hooks: list[str] = dataclasses.field(default_factory=list)
-    metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
+    pre_commit_hooks: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     wants_ci: bool = False
     wants_release: bool = False
-    ci_flags: set[str] = dataclasses.field(default_factory=set)
-    ci_steps: list[str] = dataclasses.field(default_factory=list)
+    ci_flags: set[str] = field(default_factory=set)
+    ci_steps: list[str] = field(default_factory=list)
     wants_just: bool = False
-    just_format_commands: list[str] = dataclasses.field(default_factory=list)
-    just_lint_commands: list[str] = dataclasses.field(default_factory=list)
-    just_typecheck_commands: list[str] = dataclasses.field(default_factory=list)
-    just_clean_paths: list[str] = dataclasses.field(default_factory=list)
-    ide_extensions: set[str | tuple[str, ...]] = dataclasses.field(default_factory=set)
+    just_format_commands: list[str] = field(default_factory=list)
+    just_lint_commands: list[str] = field(default_factory=list)
+    just_typecheck_commands: list[str] = field(default_factory=list)
+    just_clean_paths: list[str] = field(default_factory=list)
+    ide_extensions: set[str | tuple[str, ...]] = field(default_factory=set)
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
-    diagnostics: list[DiagnosticEvent] = dataclasses.field(default_factory=list)
+    diagnostics: list[DiagnosticEvent] = field(default_factory=list)
 
     def add_ide_extension(self, extension_id: str | tuple[str, ...]) -> None:
         """Queues an IDE extension ID (or fallback tuple) for verification during the realization phase."""
