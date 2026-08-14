@@ -1015,8 +1015,8 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
 def test_executor_execute_post_install_tasks(mocker, mock_config):
     """Test that _execute_post_install_tasks iterates and calls execute_subprocess with boundaries."""
     manifest = EnvironmentManifest()
-    manifest.add_post_install_task(["echo", "first_task"])
-    manifest.add_post_install_task(["echo", "second_task"], timeout=45)
+    manifest.add_post_install_task(["uv", "first_task"])
+    manifest.add_post_install_task(["uv", "second_task"], timeout=45)
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -1025,8 +1025,8 @@ def test_executor_execute_post_install_tasks(mocker, mock_config):
     executor._execute_post_install_tasks()
 
     assert mock_execute.call_count == 2
-    mock_execute.assert_any_call(["echo", "first_task"], timeout=30)
-    mock_execute.assert_any_call(["echo", "second_task"], timeout=45)
+    mock_execute.assert_any_call(["uv", "first_task"], timeout=30)
+    mock_execute.assert_any_call(["uv", "second_task"], timeout=45)
 
 
 def test_executor_uses_custom_task_description(mocker):
