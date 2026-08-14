@@ -18,6 +18,7 @@ from .errors import (
     ExecutionAbortedError,
     FileSystemError,
     ProtostarError,
+    SecurityViolationError,
 )
 from .fs import atomic_write_text
 from .interpolation import render_template
@@ -73,6 +74,29 @@ class SystemExecutor:
     #   4. Dependency Resolution: `uv add` runs before post-install tasks so installed binaries
     #      are present in `.venv/bin`.
     #   5. IDE Diagnostics: Runs last as non-blocking telemetry warnings.
+    def _enforce_path_jail(self, target_path: Path) -> None:
+        """Ensures no file operations escape the current workspace."""
+        resolved_target = target_path.resolve()
+        resolved_cwd = Path.cwd().resolve()
+
+        if not resolved_target.is_relative_to(resolved_cwd):
+            raise SecurityViolationError(
+                f"SECURITY VIOLATION: Template attempted to write outside the workspace: {target_path}"
+            )
+
+    def _enforce_binary_safelist(self, command: list[str]) -> None:
+        """Prevents templates from invoking arbitrary shells or interpreters."""
+        if not command:
+            return
+
+        allowed_binaries = {"uv", "git", "npm", "yarn", "pnpm", "pre-commit"}
+        binary = Path(command[0]).name.lower()
+
+        if binary not in allowed_binaries:
+            raise SecurityViolationError(
+                f"SECURITY VIOLATION: Templates cannot directly invoke arbitrary binaries ({command[0]}). Allowed: {', '.join(sorted(allowed_binaries))}"
+            )
+
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
         self._validate_targets()
@@ -239,6 +263,7 @@ class SystemExecutor:
             )
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
+            self._enforce_path_jail(target)
             if not self.manifest.should_skip_file(target, phase="Executor"):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -257,6 +282,7 @@ class SystemExecutor:
         for dir_path in self.manifest.directories:
             interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
+            self._enforce_path_jail(path)
             try:
                 path.mkdir(parents=True, exist_ok=True)
             except OSError as e:
@@ -268,6 +294,7 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
+            self._enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
@@ -276,6 +303,7 @@ class SystemExecutor:
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
+            self._enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
@@ -764,6 +792,7 @@ jobs:
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
+            self._enforce_path_jail(target)
 
             try:
                 original_content = target.read_text() if target.exists() else ""
