@@ -8,6 +8,7 @@ from .tooling_layer import (
     CodecovModule,
     CommitizinModule,
     DirenvModule,
+    JustModule,
     MarkdownLintModule,
     MypyModule,
     PreCommitModule,
@@ -36,6 +37,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     ZensicalModule(),
     CIModule(),
     ReleaseModule(),
+    JustModule(),
 )
 
 __all__ = [
@@ -45,6 +47,7 @@ __all__ = [
     "CodecovModule",
     "CommitizinModule",
     "DirenvModule",
+    "JustModule",
     "MarkdownLintModule",
     "MypyModule",
     "PreCommitModule",

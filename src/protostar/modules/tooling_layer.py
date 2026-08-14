@@ -111,6 +111,17 @@ class MarkdownLintModule(BootstrapModule):
             "        uses: DavidAnson/markdownlint-cli2-action@v24"
         )
 
+        lint_cmd = (
+            "if command -v markdownlint-cli2 >/dev/null 2>&1; then \\\n"
+            '        markdownlint-cli2 "**/*.md"; \\\n'
+            "    elif command -v npx >/dev/null 2>&1; then \\\n"
+            '        npx --yes markdownlint-cli2 "**/*.md"; \\\n'
+            "    else \\\n"
+            '        printf "{{ yellow }}⚠ markdownlint-cli2 not found. Skipping markdown linting.{{ nc }}\\n"; \\\n'
+            "    fi"
+        )
+        manifest.just_lint_commands.append(lint_cmd)
+
         if Path(".markdownlint-cli2.yaml").exists():
             manifest.add_diagnostic(
                 phase=self.name,
@@ -214,6 +225,14 @@ class RuffModule(BootstrapModule):
             "        run: uv run ruff format --check --output-format=github ."
         )
 
+        manifest.just_format_commands.extend(
+            ["uv run ruff check --fix .", "uv run ruff format ."]
+        )
+        manifest.just_lint_commands.extend(
+            ["uv run ruff check .", "uv run ruff format --check ."]
+        )
+        manifest.just_clean_paths.append(".ruff_cache")
+
         # Ruff natively inherits its target Python version from project.requires-python
         config = """[tool.ruff]
 line-length = 88
@@ -267,6 +286,9 @@ class MypyModule(BootstrapModule):
 
         manifest.add_ci_step("      - name: Run Mypy\n        run: uv run mypy src/")
 
+        manifest.just_typecheck_commands.append("uv run mypy .")
+        manifest.just_clean_paths.append(".mypy_cache")
+
         config = """[tool.mypy]
 mypy_path = "src"
 python_version = "{{PYTHON_VERSION}}"
@@ -305,6 +327,8 @@ class TyModule(BootstrapModule):
       - id: ty"""
         manifest.add_pre_commit_hook(hook_payload)
 
+        manifest.just_typecheck_commands.append("uv run ty check")
+
         config = """[tool.ty.rules]
 missing-type-argument = "error"
 redundant-cast = "warn"
@@ -338,6 +362,8 @@ class PytestModule(BootstrapModule):
         artifacts = [".pytest_cache/"]
         for artifact in artifacts:
             manifest.add_environment_artifact(artifact)
+
+        manifest.just_clean_paths.append(".pytest_cache")
 
         config = """[tool.pytest.ini_options]
 addopts = "--strict-markers"
@@ -563,6 +589,9 @@ class PyreflyModule(BootstrapModule):
         pass_filenames: false
         language: system"""
         manifest.add_pre_commit_hook(hook_payload)
+
+        manifest.just_typecheck_commands.append("uv run pyrefly check")
+        manifest.just_clean_paths.append(".pyrefly/")
 
         config = """[tool.pyrefly]
 # "strict" enables the full suite of type error diagnostics
@@ -799,6 +828,10 @@ site_description: Add your project description here.
 
 nav:
   - Home: index.md
+  - Guide:
+      - Getting Started: getting-started.md
+  - Reference:
+      - API: api-reference.md
 
 theme:
   name: material
@@ -832,3 +865,26 @@ extra:
   generator: false
 """
             manifest.add_file_injection("mkdocs.yml", mkdocs_content)
+
+
+class JustModule(BootstrapModule):
+    """Configures the justfile for project commands."""
+
+    cli_flags = ("--just",)
+    cli_help = "Scaffold a justfile for command execution"
+    config_key = "just"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Just"
+
+    @property
+    def collision_markers(self) -> list[Path]:
+        """Returns the primary collision markers for just."""
+        return [Path("justfile")]
+
+    def build(self, manifest: "EnvironmentManifest") -> None:
+        """Flags justfile activation for execution."""
+        logger.debug("Building Just tooling layer.")
+        manifest.wants_just = True
