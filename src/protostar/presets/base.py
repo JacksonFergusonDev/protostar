@@ -49,9 +49,9 @@ class PresetModule(abc.ABC):
             True if overrides were applied (and defaults should be skipped), False otherwise.
         """
         # Late import to prevent circular dependency at module initialization
-        from protostar.config import ProtostarConfig
+        from protostar.config import UserConfig
 
-        config = ProtostarConfig.load()
+        config = UserConfig.load()
         overrides = config.presets.get(self.config_key)
 
         if not isinstance(overrides, dict):
