@@ -76,6 +76,19 @@
     "ci_steps": [
         "      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github ."
     ],
+    "wants_just": false,
+    "just_format_commands": [
+        "uv run ruff check --fix .",
+        "uv run ruff format ."
+    ],
+    "just_lint_commands": [
+        "uv run ruff check .",
+        "uv run ruff format --check ."
+    ],
+    "just_typecheck_commands": [],
+    "just_clean_paths": [
+        ".ruff_cache"
+    ],
     "ide_extensions": [
         "charliermarsh.ruff"
     ],

@@ -15,3 +15,4 @@
 | Zensical | `--zensical` | Scaffold Zensical documentation | `mkdocs.yml`, `docs` |
 | GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `ci.yml` |
 | GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `release.yml` |
+| Just | `--just` | Scaffold a justfile for command execution | `justfile` |
