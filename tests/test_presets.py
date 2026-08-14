@@ -70,14 +70,44 @@ def test_api_preset_build(manifest):
 
 
 def test_cli_preset_build(manifest):
-    """Test that the CLI preset injects terminal frameworks and source bounds."""
+    """Test that the CLI preset injects terminal frameworks, package directory, starter code, and entrypoints."""
+    manifest.metadata = {
+        "project_name": "my-cli-tool",
+        "description": "My awesome CLI tool.",
+    }
     preset = CliPreset()
     preset.build(manifest)
 
     assert "typer" in manifest.dependencies
     assert "rich" in manifest.dependencies
-    assert "src" in manifest.directories
+    assert "src/my_cli_tool" in manifest.directories
     assert "tests" in manifest.directories
+
+    # Verify injected boilerplate files
+    assert "src/my_cli_tool/__init__.py" in manifest.file_injections
+    assert (
+        '__version__ = "0.1.0"'
+        in manifest.file_injections["src/my_cli_tool/__init__.py"]
+    )
+
+    assert "src/my_cli_tool/cli.py" in manifest.file_injections
+    assert "app = typer.Typer(" in manifest.file_injections["src/my_cli_tool/cli.py"]
+
+    assert "tests/test_cli.py" in manifest.file_injections
+    assert (
+        "from my_cli_tool.cli import app"
+        in manifest.file_injections["tests/test_cli.py"]
+    )
+
+    assert "README.md" in manifest.file_injections
+    assert "# my-cli-tool" in manifest.file_injections["README.md"]
+
+    # Verify [project.scripts] entry point
+    assert "pyproject.toml" in manifest.file_appends
+    pyproject_appends = manifest.file_appends["pyproject.toml"]
+    assert any(
+        'my-cli-tool = "my_cli_tool.cli:app"' in append for append in pyproject_appends
+    )
 
 
 def test_dsp_preset_build(manifest):
