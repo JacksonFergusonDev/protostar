@@ -171,7 +171,11 @@ class ProtostarConfig:
 
             variables = extract_variables(content)
             context = dict(template_context) if template_context else {}
-            missing = [v for v in variables if v not in context]
+
+            late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
+            missing = [
+                v for v in variables if v not in context and v not in late_binding_vars
+            ]
 
             if missing:
                 if variable_resolver is not None:

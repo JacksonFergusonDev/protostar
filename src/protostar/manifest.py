@@ -1,5 +1,6 @@
 import dataclasses
 import enum
+from pathlib import Path
 from typing import Any
 
 
@@ -150,6 +151,8 @@ class EnvironmentManifest:
             timeout: The maximum allowed execution time in seconds. Defaults to 30.
             description: An optional human-readable description for the terminal UI.
         """
+        if any(task.command == command for task in self.system_tasks):
+            return
         self.system_tasks.append(
             SystemTask(command=command, timeout=timeout, description=description)
         )
@@ -167,6 +170,8 @@ class EnvironmentManifest:
             timeout: The maximum allowed execution time in seconds. Defaults to 30.
             description: An optional human-readable description for the terminal UI.
         """
+        if any(task.command == command for task in self.post_install_tasks):
+            return
         self.post_install_tasks.append(
             SystemTask(command=command, timeout=timeout, description=description)
         )
@@ -235,3 +240,14 @@ class EnvironmentManifest:
                 phase=phase, message=message, severity=severity, detail=detail
             )
         )
+
+    def should_skip_file(self, target: Path, phase: str) -> bool:
+        """Returns True if the file exists and collision strategy is not OVERWRITE, logging a SKIP event."""
+        if target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE:
+            self.add_diagnostic(
+                phase=phase,
+                message=f"Skipping {target.name} generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+            return True
+        return False

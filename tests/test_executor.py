@@ -64,7 +64,9 @@ def test_executor_install_dependencies_uv(mocker, mock_config):
 def test_executor_append_files_late_binding(mocker, mock_config):
     """Test that configuration payloads are interpolated with the active python version."""
     manifest = EnvironmentManifest()
-    manifest.add_file_append("pyproject.toml", 'python_version = "{{PYTHON_VERSION}}"')
+    manifest.add_file_append(
+        "pyproject.toml", 'python_version = "<% PYTHON_VERSION %>"'
+    )
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -98,7 +100,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
     hooks:
       - id: mypy
         additional_dependencies:
-{{MYPY_DEPENDENCIES}}"""
+<% MYPY_DEPENDENCIES %>"""
     manifest.add_pre_commit_hook(hook_payload)
 
     executor = SystemExecutor(manifest, mock_config)
@@ -112,7 +114,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
 
     assert "trailing-whitespace" in written_data
     assert "id: mypy" in written_data
-    assert "{{MYPY_DEPENDENCIES}}" not in written_data
+    assert "<% MYPY_DEPENDENCIES %>" not in written_data
     assert "- fastapi" in written_data
     # Verify dev dependencies are deliberately excluded from the mypy hook
     assert "- pytest" not in written_data
@@ -128,7 +130,7 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     hooks:
       - id: mypy
         additional_dependencies:
-{{MYPY_DEPENDENCIES}}"""
+<% MYPY_DEPENDENCIES %>"""
     manifest.add_pre_commit_hook(hook_payload)
 
     executor = SystemExecutor(manifest, mock_config)
@@ -142,7 +144,7 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     assert "id: mypy" in written_data
     # Verify the entire key and token block was stripped cleanly
     assert "additional_dependencies" not in written_data
-    assert "{{MYPY_DEPENDENCIES}}" not in written_data
+    assert "<% MYPY_DEPENDENCIES %>" not in written_data
     assert "[]" not in written_data
 
 
@@ -445,7 +447,7 @@ def test_executor_append_files_ast_merge(mocker, mock_config):
     assert parsed_toml["tool"]["ruff"]["line-length"] == 88
     assert parsed_toml["tool"]["ruff"]["target-version"] == "py310"  # Preserved!
 
-    # Verify the late-binding variable {{PYTHON_VERSION}} was interpolated correctly
+    # Verify the late-binding variable <% PYTHON_VERSION %> was interpolated correctly
     # based on the `requires-python = ">=3.11"` in base_complex.toml
     assert parsed_toml["tool"]["mypy"]["python_version"] == "3.11"
 
@@ -1367,13 +1369,13 @@ new_key = 2
 def test_executor_interpolates_package_name_in_injected_files(
     tmp_path, mock_config, monkeypatch
 ):
-    """Test that {{PACKAGE_NAME}} and {{PROJECT_NAME}} are interpolated into injected files and paths."""
+    """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into injected files and paths."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = {"project_name": "my-cool-tool"}
     manifest.add_file_injection(
-        "src/{{PACKAGE_NAME}}/__init__.py",
-        '"""{{PROJECT_NAME}} package ({{PACKAGE_NAME}})."""\n',
+        "src/<% PACKAGE_NAME %>/__init__.py",
+        '"""<% PROJECT_NAME %> package (<% PACKAGE_NAME %>)."""\n',
     )
     executor = SystemExecutor(manifest, mock_config)
     executor._write_injected_files()
@@ -1386,11 +1388,11 @@ def test_executor_interpolates_package_name_in_injected_files(
 def test_executor_interpolates_package_name_in_directories(
     tmp_path, mock_config, monkeypatch
 ):
-    """Test that {{PACKAGE_NAME}} and {{PROJECT_NAME}} are interpolated into created directories."""
+    """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into created directories."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = {"project_name": "my-cool-tool"}
-    manifest.add_directory("src/{{PACKAGE_NAME}}")
+    manifest.add_directory("src/<% PACKAGE_NAME %>")
     executor = SystemExecutor(manifest, mock_config)
     executor._create_directories()
 
@@ -1400,17 +1402,17 @@ def test_executor_interpolates_package_name_in_directories(
 def test_executor_interpolates_package_name_in_file_appends(
     tmp_path, mock_config, monkeypatch
 ):
-    """Test that {{PACKAGE_NAME}} and {{PROJECT_NAME}} are interpolated into TOML and text file appends."""
+    """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into TOML and text file appends."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = {"project_name": "my-cool-tool"}
     manifest.add_file_append(
         "pyproject.toml",
-        '[project.scripts]\n{{PROJECT_NAME}} = "{{PACKAGE_NAME}}.cli:app"\n',
+        '[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"\n',
     )
     manifest.add_file_append(
         "script.sh",
-        'echo "Running {{PROJECT_NAME}} from {{PACKAGE_NAME}}"\n',
+        'echo "Running <% PROJECT_NAME %> from <% PACKAGE_NAME %>"\n',
     )
     executor = SystemExecutor(manifest, mock_config)
     executor._append_files()

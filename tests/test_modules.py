@@ -248,7 +248,6 @@ def test_pre_commit_build_uv(manifest, mocker):
 
     assert manifest.wants_pre_commit is True
     assert "pre-commit" in manifest.dev_dependencies
-    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
     assert any(
         t.command
         == [
@@ -296,7 +295,6 @@ def test_prek_build_uv(manifest, mocker):
 
     assert manifest.wants_prek is True
     assert "prek" in manifest.dev_dependencies
-    assert any(t.command == ["git", "init"] for t in manifest.system_tasks)
     assert any(
         t.command
         == [

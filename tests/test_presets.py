@@ -23,8 +23,6 @@ def test_scientific_preset_build(manifest):
 
 def test_astro_preset_build(manifest, mocker):
     """Test that the Astro preset injects observational formats and uv nbdime."""
-    mocker.patch("protostar.presets.astro.Path.exists", return_value=True)
-
     preset = AstroPreset()
     preset.build(manifest)
 

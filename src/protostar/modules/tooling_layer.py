@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.errors import ConfigurationError, MissingDependencyError
-from protostar.manifest import Severity
 
 from .base import BootstrapModule
 
@@ -50,12 +49,7 @@ class DirenvModule(BootstrapModule):
         manifest.add_vcs_ignore(".envrc.local")
         manifest.add_vcs_ignore(".direnv/")
 
-        if Path(".envrc").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message="Skipping .envrc generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path(".envrc"), phase=self.name):
             return
 
         content = (
@@ -122,12 +116,7 @@ class MarkdownLintModule(BootstrapModule):
         )
         manifest.just_lint_commands.append(lint_cmd)
 
-        if Path(".markdownlint-cli2.yaml").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message="Skipping .markdownlint-cli2.yaml generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path(".markdownlint-cli2.yaml"), phase=self.name):
             return
 
         content = """gitignore: true
@@ -281,7 +270,7 @@ class MypyModule(BootstrapModule):
     hooks:
       - id: mypy
         additional_dependencies:
-{{MYPY_DEPENDENCIES}}"""
+<% MYPY_DEPENDENCIES %>"""
         manifest.add_pre_commit_hook(hook_payload)
 
         manifest.add_ci_step("      - name: Run Mypy\n        run: uv run mypy src/")
@@ -291,7 +280,7 @@ class MypyModule(BootstrapModule):
 
         config = """[tool.mypy]
 mypy_path = "src"
-python_version = "{{PYTHON_VERSION}}"
+python_version = "<% PYTHON_VERSION %>"
 pretty = true
 show_error_codes = true
 show_error_context = true
@@ -415,11 +404,6 @@ class PreCommitModule(BootstrapModule):
         manifest.wants_pre_commit = True
         manifest.add_dev_dependency("pre-commit")
 
-        # Git must be initialized before pre-commit can install its hooks.
-        # Check if we're already inside a repository to avoid redundant init calls.
-        if not Path(".git").exists():
-            manifest.add_system_task(["git", "init"])
-
         # `autoupdate` pulls remote git repositories to update hook definitions,
         # requiring a wider time window than a local install.
         manifest.add_post_install_task(
@@ -481,10 +465,6 @@ class PrekModule(BootstrapModule):
         # Trigger the orchestrator to assemble and write the YAML file
         manifest.wants_prek = True
         manifest.add_dev_dependency("prek")
-
-        # Git must be initialized before prek can install its hooks.
-        if not Path(".git").exists():
-            manifest.add_system_task(["git", "init"])
 
         manifest.add_post_install_task(
             [
@@ -632,14 +612,7 @@ class RenovateModule(BootstrapModule):
         files: '.github/renovate.json'"""
         manifest.add_pre_commit_hook(hook_payload)
 
-        if Path(".github/renovate.json").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message=(
-                    "Skipping .github/renovate.json generation; file already exists."
-                ),
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path(".github/renovate.json"), phase=self.name):
             return
 
         config = """{
@@ -721,14 +694,7 @@ class CodecovModule(BootstrapModule):
         logger.debug("Building Codecov tooling layer.")
         manifest.add_ci_flag("codecov")
 
-        if Path(".github/codecov.yml").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message=(
-                    "Skipping .github/codecov.yml generation; file already exists."
-                ),
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path(".github/codecov.yml"), phase=self.name):
             return
 
         config = """coverage:
@@ -800,14 +766,10 @@ dev = [
 """
         manifest.add_file_append("pyproject.toml", pyproject_wiring)
 
-        if Path("docs/index.md").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message="Skipping docs/index.md generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path("docs/index.md"), phase=self.name):
+            pass
         else:
-            index_content = """# Welcome to {{PROJECT_NAME}}
+            index_content = """# Welcome to <% PROJECT_NAME %>
 
 Add your project overview here.
 
@@ -817,14 +779,10 @@ Refer to the [installation guide](getting-started.md) or browse the [API Referen
 """
             manifest.add_file_injection("docs/index.md", index_content)
 
-        if Path("mkdocs.yml").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message="Skipping mkdocs.yml generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path("mkdocs.yml"), phase=self.name):
+            pass
         else:
-            mkdocs_content = """site_name: {{PROJECT_NAME}}
+            mkdocs_content = """site_name: <% PROJECT_NAME %>
 site_description: Add your project description here.
 
 nav:
@@ -901,12 +859,7 @@ class ReadTheDocsModule(BootstrapModule):
                 "Read the Docs scaffolding requires the Zensical module to be enabled."
             )
 
-        if Path(".readthedocs.yaml").exists():
-            manifest.add_diagnostic(
-                phase=self.name,
-                message="Skipping .readthedocs.yaml generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if manifest.should_skip_file(Path(".readthedocs.yaml"), phase=self.name):
             return
 
         config = """version: 2

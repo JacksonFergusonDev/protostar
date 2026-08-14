@@ -18,6 +18,7 @@ from .errors import (
     FileSystemError,
 )
 from .fs import atomic_write_text
+from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
 from .workspace import (
@@ -49,6 +50,17 @@ class SystemExecutor:
         self.manifest = manifest
         self.config = config
         self.docker = docker
+
+    @property
+    def interpolation_context(self) -> dict[str, str]:
+        """Dynamically generates the context for template interpolation."""
+        return {
+            "PROJECT_NAME": resolve_project_name(self.manifest.metadata),
+            "PACKAGE_NAME": resolve_package_name(self.manifest.metadata),
+            "PYTHON_VERSION": resolve_python_version(self.manifest.metadata)
+            or self.config.python_version
+            or "3.13",
+        }
 
     # --- Architecture Note: Deterministic Pipeline Sequencing ---
     # The execution phases in `execute()` follow a strict dependency order:
@@ -158,15 +170,7 @@ class SystemExecutor:
             return
 
         target = Path(".pre-commit-config.yaml")
-        if (
-            target.exists()
-            and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
-        ):
-            self.manifest.add_diagnostic(
-                phase="Executor",
-                message="Skipping .pre-commit-config.yaml generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if self.manifest.should_skip_file(target, phase="Pre-commit"):
             return
 
         base_yaml = """repos:
@@ -187,20 +191,16 @@ class SystemExecutor:
         # Enforce exactly one empty line between the base block and the dynamic payloads
         full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
 
-        if "{{MYPY_DEPENDENCIES}}" in full_yaml:
-            # We use manual string manipulation here instead of a YAML library (like PyYAML)
-            # to avoid adding a heavy third-party dependency for a very minor feature.
-            # If the schema of .pre-commit-config.yaml ever becomes significantly more
-            # complex, this should be refactored to use a dedicated YAML serialization library.
+        if "<% MYPY_DEPENDENCIES %>" in full_yaml:
             deps = self.manifest.dependencies
             if deps:
                 # Guarantee exactly 10 spaces of indentation for each list item
                 deps_formatted = "\n".join(f"{' ' * 10}- {d}" for d in deps)
-                full_yaml = full_yaml.replace("{{MYPY_DEPENDENCIES}}", deps_formatted)
+                full_yaml = full_yaml.replace("<% MYPY_DEPENDENCIES %>", deps_formatted)
             else:
                 # If no runtime dependencies, strip the key cleanly
                 full_yaml = full_yaml.replace(
-                    "        additional_dependencies:\n{{MYPY_DEPENDENCIES}}", ""
+                    "        additional_dependencies:\n<% MYPY_DEPENDENCIES %>", ""
                 )
 
         try:
@@ -214,21 +214,13 @@ class SystemExecutor:
         if not self.manifest.file_injections:
             return
 
-        project_name = resolve_project_name(self.manifest.metadata)
-        package_name = resolve_package_name(self.manifest.metadata)
-
         for filepath, content in self.manifest.file_injections.items():
-            interpolated_filepath = filepath.replace(
-                "{{PROJECT_NAME}}", project_name
-            ).replace("{{PACKAGE_NAME}}", package_name)
-            content = content.replace("{{PROJECT_NAME}}", project_name).replace(
-                "{{PACKAGE_NAME}}", package_name
+            interpolated_filepath = render_template(
+                filepath, self.interpolation_context
             )
+            content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
-            if (
-                not target.exists()
-                or self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
-            ):
+            if not self.manifest.should_skip_file(target, phase="Executor"):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     atomic_write_text(target, content)
@@ -243,13 +235,8 @@ class SystemExecutor:
         if not self.manifest.directories:
             return
 
-        project_name = resolve_project_name(self.manifest.metadata)
-        package_name = resolve_package_name(self.manifest.metadata)
-
         for dir_path in self.manifest.directories:
-            interpolated_path = dir_path.replace(
-                "{{PROJECT_NAME}}", project_name
-            ).replace("{{PACKAGE_NAME}}", package_name)
+            interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
             try:
                 path.mkdir(parents=True, exist_ok=True)
@@ -430,15 +417,7 @@ jobs:
             return
 
         target = Path("justfile")
-        if (
-            target.exists()
-            and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
-        ):
-            self.manifest.add_diagnostic(
-                phase="Executor",
-                message="Skipping justfile generation; file already exists.",
-                severity=Severity.SKIP,
-            )
+        if self.manifest.should_skip_file(target, phase="Just"):
             return
 
         # Base header
@@ -716,16 +695,6 @@ jobs:
         if not self.manifest.file_appends:
             return
 
-        python_version = resolve_python_version(
-            self.manifest.metadata, default=self.config.python_version or "3.13"
-        )
-        project_name = resolve_project_name(
-            self.manifest.metadata, default="My Project"
-        )
-        package_name = resolve_package_name(
-            self.manifest.metadata, default="my_project"
-        )
-
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
 
@@ -749,11 +718,7 @@ jobs:
                 ast_mutated = False
 
                 for payload in contents:
-                    interpolated = (
-                        payload.replace("{{PYTHON_VERSION}}", python_version)
-                        .replace("{{PROJECT_NAME}}", project_name)
-                        .replace("{{PACKAGE_NAME}}", package_name)
-                    )
+                    interpolated = render_template(payload, self.interpolation_context)
 
                     try:
                         payload_doc = tomlkit.parse(interpolated)
@@ -774,60 +739,26 @@ jobs:
                     new_content = tomlkit.dumps(doc)
 
                     # Apply visual separators safely using anchored regex to prevent substring collisions
-                    if not re.search(
-                        r"^# ---- Ruff ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.ruff\]\s*$",
-                            "# ---- Ruff ---- #\n\n[tool.ruff]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Mypy ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.mypy\]\s*$",
-                            "# ---- Mypy ---- #\n\n[tool.mypy]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Pytest ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.pytest\.ini_options\]\s*$",
-                            "# ---- Pytest ---- #\n\n[tool.pytest.ini_options]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Commitizen ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.commitizen\]\s*$",
-                            "# ---- Commitizen ---- #\n\n[tool.commitizen]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Ty ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.ty(?:[^\]]*|)\]\s*$",
-                            "# ---- Ty ---- #\n\n\\g<0>",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                    if not re.search(
-                        r"^# ---- Pyrefly ---- #", new_content, flags=re.MULTILINE
-                    ):
-                        new_content = re.sub(
-                            r"^\[tool\.pyrefly\]\s*$",
-                            "# ---- Pyrefly ---- #\n\n[tool.pyrefly]",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
+                    tool_headers = [
+                        ("Ruff", r"\[tool\.ruff\]"),
+                        ("Mypy", r"\[tool\.mypy\]"),
+                        ("Pytest", r"\[tool\.pytest\.ini_options\]"),
+                        ("Commitizen", r"\[tool\.commitizen\]"),
+                        ("Ty", r"\[tool\.ty(?:[^\]]*|)\]"),
+                        ("Pyrefly", r"\[tool\.pyrefly\]"),
+                    ]
+
+                    for title, table_regex in tool_headers:
+                        marker = f"# ---- {title} ---- #"
+                        if not re.search(
+                            rf"^{marker}", new_content, flags=re.MULTILINE
+                        ):
+                            new_content = re.sub(
+                                rf"^{table_regex}\s*$",
+                                f"{marker}\n\n\\g<0>",
+                                new_content,
+                                flags=re.MULTILINE,
+                            )
 
                     # Add main Tool Configuration header before the first tool header if not exists
                     if "# Tool Configuration" not in new_content:
@@ -868,11 +799,7 @@ jobs:
             missing_payloads = []
 
             for payload in contents:
-                interpolated = (
-                    payload.replace("{{PYTHON_VERSION}}", python_version)
-                    .replace("{{PROJECT_NAME}}", project_name)
-                    .replace("{{PACKAGE_NAME}}", package_name)
-                )
+                interpolated = render_template(payload, self.interpolation_context)
 
                 # Generate a deterministic boundary marker
                 payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
@@ -1011,6 +938,26 @@ jobs:
                 "synchronize IDE workspace preferences", str(settings_path), e
             ) from e
 
+    def _install_group(self, packages: list[str], args: list[str], label: str) -> None:
+        if not packages:
+            return
+
+        cmd = ["uv", "add", *args, *packages]
+        try:
+            with console.status(
+                f"Resolving and installing {len(packages)} {label} payloads"
+            ):
+                execute_subprocess(cmd, timeout=600)
+        except (CommandExecutionError, CommandTimeoutError) as e:
+            self.manifest.add_diagnostic(
+                phase="Executor",
+                message=f"{label.capitalize()} dependency resolution failed: {e}",
+                severity=Severity.WARNING,
+                detail=e.output_detail
+                if isinstance(e, CommandExecutionError)
+                else None,
+            )
+
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
         if (
@@ -1020,62 +967,8 @@ jobs:
         ):
             return
 
-        # Apply a generous 10-minute leash for heavy, network-bound payload resolutions
-        resolution_timeout = 600
-
-        if self.manifest.dependencies:
-            cmd = ["uv", "add", *self.manifest.dependencies]
-            try:
-                with console.status(
-                    f"Resolving and injecting {len(self.manifest.dependencies)} payloads"
-                ):
-                    execute_subprocess(cmd, timeout=resolution_timeout)
-            except (CommandExecutionError, CommandTimeoutError) as e:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message=f"Standard dependency resolution failed: {e}",
-                    severity=Severity.WARNING,
-                    detail=e.output_detail
-                    if isinstance(e, CommandExecutionError)
-                    else None,
-                )
-
-        if self.manifest.dev_dependencies:
-            dev_cmd = ["uv", "add", "--dev", *self.manifest.dev_dependencies]
-            try:
-                with console.status(
-                    f"Resolving and installing {len(self.manifest.dev_dependencies)} development dependencies"
-                ):
-                    execute_subprocess(dev_cmd, timeout=resolution_timeout)
-            except (CommandExecutionError, CommandTimeoutError) as e:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message=f"Development dependency resolution failed: {e}",
-                    severity=Severity.WARNING,
-                    detail=e.output_detail
-                    if isinstance(e, CommandExecutionError)
-                    else None,
-                )
-
-        if self.manifest.docs_dependencies:
-            docs_cmd = [
-                "uv",
-                "add",
-                "--group",
-                "docs",
-                *self.manifest.docs_dependencies,
-            ]
-            try:
-                with console.status(
-                    f"Resolving and installing {len(self.manifest.docs_dependencies)} documentation dependencies"
-                ):
-                    execute_subprocess(docs_cmd, timeout=resolution_timeout)
-            except (CommandExecutionError, CommandTimeoutError) as e:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message=f"Documentation dependency resolution failed: {e}",
-                    severity=Severity.WARNING,
-                    detail=e.output_detail
-                    if isinstance(e, CommandExecutionError)
-                    else None,
-                )
+        self._install_group(self.manifest.dependencies, [], "standard")
+        self._install_group(self.manifest.dev_dependencies, ["--dev"], "development")
+        self._install_group(
+            self.manifest.docs_dependencies, ["--group", "docs"], "documentation"
+        )
