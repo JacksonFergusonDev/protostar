@@ -11,24 +11,32 @@ repos:
         exclude: \.py$
       - id: check-added-large-files
 
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        require_serial: true
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: true
+
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.0
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.21
-    hooks:
-      - id: ruff-format
-      - id: ruff
-        args: [ --fix ]
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.2.0
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - typer
-          - rich
 ```

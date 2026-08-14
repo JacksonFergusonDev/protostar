@@ -66,8 +66,9 @@
     },
     "wants_pre_commit": false,
     "wants_prek": false,
-    "pre_commit_hooks": [
-        "  - repo: https://github.com/astral-sh/ruff-pre-commit\n    rev: v0.15.4\n    hooks:\n      - id: ruff-format\n      - id: ruff\n        args: [ --fix ]"
+    "pre_commit_hooks": [],
+    "pre_commit_local_hooks": [
+        "      - id: ruff-check\n        name: ruff check\n        entry: uv run ruff check --fix\n        language: system\n        types: [python]\n        require_serial: true\n\n      - id: ruff-format\n        name: ruff format\n        entry: uv run ruff format\n        language: system\n        types: [python]\n        require_serial: true"
     ],
     "metadata": {},
     "wants_ci": false,

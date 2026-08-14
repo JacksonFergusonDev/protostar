@@ -50,7 +50,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     - **Dependency Locking:** Protostar instantly locked `typer` and `rich` from the CLI preset.
     - **AST Configuration:** It didn't just dump strings into `pyproject.toml`. It constructed the TOML Abstract Syntax Tree (AST), gracefully configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside the dev-dependencies.
-    - **Dynamic Hooks:** In `.pre-commit-config.yaml`, Protostar didn't just add a generic `mypy` hook. It dynamically evaluated your environment footprint and injected your CLI dependencies directly into Mypy's `additional_dependencies` block. This guarantees your CI pipeline won't fail due to missing stubs.
+    - **Local Toolchain Hooks:** In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead, version discrepancies, and missing type stub dependencies.
     - **A Note on Speed:** Standard Protostar executions take fractions of a second. However, because `--pre-commit` was flagged, Protostar queued a `pre-commit autoupdate` subprocess at the end of the run to ensure your git hooks are pinned to the absolute latest network releases. This shifts the total execution time to roughly ~4-9 seconds.
 
 === "The Astrophysics Pipeline (Data Focus)"
