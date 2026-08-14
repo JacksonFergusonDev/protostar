@@ -26,7 +26,7 @@ from rich_argparse import RawTextRichHelpFormatter
 
 from protostar import __version__
 
-from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
+from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
 from .errors import (
     CommandExecutionError,
     ConfigurationError,
@@ -81,11 +81,15 @@ def handle_init(args: argparse.Namespace) -> None:
         # but if we wanted to be perfectly robust we could use as_file().
         override_target = str(target)
 
-    config = ProtostarConfig.load(
-        override_target=override_target,
-        template_context=template_context,
-        variable_resolver=resolve_missing_variables,
-    )
+    user_config = UserConfig.load()
+    blueprint = None
+
+    if override_target:
+        blueprint = TemplateBlueprint.load(
+            override_target,
+            template_context=template_context,
+            variable_resolver=resolve_missing_variables,
+        )
 
     modules: list[BootstrapModule] = []
     presets: list[PresetModule] = []
@@ -101,7 +105,9 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 3. Preset Layers
     for preset in PRESETS:
-        is_active = preset.config_key in config.active_presets
+        is_active = False
+        if blueprint and preset.config_key in blueprint.active_presets:
+            is_active = True
 
         if preset.cli_flags:
             cli_override = getattr(args, preset.__class__.__name__, None)
@@ -116,7 +122,7 @@ def handle_init(args: argparse.Namespace) -> None:
         is_active = False
 
         # Evaluate global configuration defaults
-        if getattr(config, mod.config_key, False):
+        if getattr(user_config, mod.config_key, False):
             is_active = True
 
         # Explicit CLI flags override local configuration omissions and defaults.
@@ -175,8 +181,9 @@ def handle_init(args: argparse.Namespace) -> None:
     # Execute
     engine = Orchestrator(
         modules,
-        config,
-        presets,
+        user_config,
+        blueprint=blueprint,
+        presets=presets,
         docker=args.docker,
         force_merge=getattr(args, "force_merge", False),
         force_replace=getattr(args, "force_replace", False),
@@ -505,7 +512,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             if not selections:
                 return
 
-            config = ProtostarConfig.load()
+            user_config = UserConfig.load()
             modules = selections["modules"]
             presets = selections["presets"]
 
@@ -515,8 +522,9 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
             engine = Orchestrator(
                 modules,
-                config,
-                presets,
+                user_config,
+                blueprint=None,
+                presets=presets,
                 docker=selections["docker"],
                 force_merge=False,
                 force_replace=False,
