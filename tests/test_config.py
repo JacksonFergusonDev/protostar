@@ -378,3 +378,78 @@ def test_config_readthedocs_parsed_from_env(tmp_path):
 
     config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
     assert config.readthedocs is True
+
+
+def test_config_prek_defaults_to_false():
+    """Test that prek defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.prek is False
+
+
+def test_config_prek_parsed_from_env(tmp_path):
+    """Test that prek = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\nprek = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.prek is True
+
+
+def test_config_ci_defaults_to_false():
+    """Test that ci defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.ci is False
+
+
+def test_config_ci_parsed_from_env(tmp_path):
+    """Test that ci = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\nci = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.ci is True
+
+
+def test_config_release_defaults_to_false():
+    """Test that release defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.release is False
+
+
+def test_config_release_parsed_from_env(tmp_path):
+    """Test that release = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\nrelease = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.release is True
+
+
+def test_config_ty_defaults_to_false():
+    """Test that ty defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.ty is False
+
+
+def test_config_ty_parsed_from_env(tmp_path):
+    """Test that ty = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\nty = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.ty is True
+
+
+def test_config_pyrefly_defaults_to_false():
+    """Test that pyrefly defaults to False when not set in config."""
+    config = ProtostarConfig()
+    assert config.pyrefly is False
+
+
+def test_config_pyrefly_parsed_from_env(tmp_path):
+    """Test that pyrefly = true in [env] is correctly parsed into ProtostarConfig."""
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\npyrefly = true\n")
+
+    config = ProtostarConfig.load(override_target=str(mock_config), force_reload=True)
+    assert config.pyrefly is True

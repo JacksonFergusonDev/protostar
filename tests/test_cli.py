@@ -628,6 +628,43 @@ def test_handle_init_template_resolution(mocker, tmp_path):
     assert mock_load.call_count >= 1
 
 
+def test_handle_init_cli_template_resolution(mocker):
+    """Test that passing --template cli resolves and loads the cli.toml template."""
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+
+    args = argparse.Namespace(
+        template_name="cli",
+        from_path=None,
+        template_context={},
+        python_version="3.12",
+        docker=False,
+    )
+
+    handle_init(args)
+
+    assert mock_orchestrator.call_count == 1
+    modules = mock_orchestrator.call_args[0][0]
+    presets = mock_orchestrator.call_args[0][2]
+    active_presets = [type(p).__name__ for p in presets]
+    active_modules = [type(m).__name__ for m in modules]
+
+    assert "CliPreset" in active_presets
+    assert "JustModule" in active_modules
+    assert "ZensicalModule" in active_modules
+    assert "CIModule" in active_modules
+    assert "ReleaseModule" in active_modules
+    assert "ReadTheDocsModule" in active_modules
+    assert "PrekModule" in active_modules
+    assert "MarkdownLintModule" in active_modules
+    assert "RuffModule" in active_modules
+    assert "MypyModule" in active_modules
+    assert "PytestModule" in active_modules
+    assert "CommitizinModule" in active_modules
+    assert "RenovateModule" in active_modules
+    assert "CodecovModule" in active_modules
+    assert "DirenvModule" in active_modules
+
+
 def test_handle_init_template_and_from_exclusive(mocker):
     """Test that --template and --from cannot be used together."""
     args = argparse.Namespace(

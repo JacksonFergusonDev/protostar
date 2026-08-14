@@ -38,13 +38,18 @@ python_version = "3.13"
 # markdownlint = true
 # ruff = false  # Disables the default Ruff scaffolding
 # mypy = true
+# ty = true          # Scaffold Astral ty type checker
+# pyrefly = true     # Scaffold Pyrefly type checker
 # pytest = true
 # pre_commit = true
+# prek = true        # Scaffold prek git hooks (faster Rust alternative to pre-commit)
 # commitizen = true  # Scaffold commitizen version bumping and changelog tooling
 # renovate = true    # Scaffold Renovate dependency update configuration
 # codecov = true     # Scaffold Codecov configuration
 # zensical = true    # Scaffold Zensical documentation
 # readthedocs = true # Scaffold Read the Docs configuration
+# ci = true          # Scaffold standard GitHub Actions CI workflows
+# release = true     # Scaffold GitHub Actions PyPI release workflows
 # just = true        # Scaffold a justfile for command execution
 # active_presets = []
 
@@ -81,13 +86,18 @@ class ProtostarConfig:
         markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
+        ty (bool): Whether to auto-scaffold Astral ty type checker.
+        pyrefly (bool): Whether to auto-scaffold Pyrefly type checker.
         pytest (bool): Whether to auto-scaffold Pytest dependencies and configs.
         pre_commit (bool): Whether to auto-scaffold pre-commit hooks.
+        prek (bool): Whether to auto-scaffold prek git hooks.
         commitizen (bool): Whether to auto-scaffold commitizen version bumping and changelog tooling.
         renovate (bool): Whether to auto-scaffold Renovate dependency update configuration.
         codecov (bool): Whether to auto-scaffold Codecov configuration.
         zensical (bool): Whether to auto-scaffold Zensical documentation.
         readthedocs (bool): Whether to auto-scaffold Read the Docs configuration.
+        ci (bool): Whether to auto-scaffold standard GitHub Actions CI workflows.
+        release (bool): Whether to auto-scaffold GitHub Actions PyPI release workflows.
         just (bool): Whether to auto-scaffold a justfile for command execution.
         presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
@@ -106,13 +116,18 @@ class ProtostarConfig:
     markdownlint: bool = False
     ruff: bool = True
     mypy: bool = False
+    ty: bool = False
+    pyrefly: bool = False
     pytest: bool = False
     pre_commit: bool = False
+    prek: bool = False
     commitizen: bool = False
     renovate: bool = False
     codecov: bool = False
     zensical: bool = False
     readthedocs: bool = False
+    ci: bool = False
+    release: bool = False
     just: bool = False
     active_presets: list[str] = field(default_factory=list)
     presets: dict[str, Any] = field(default_factory=dict)
