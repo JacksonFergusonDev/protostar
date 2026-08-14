@@ -4,8 +4,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-import questionary
-
 from .config import ProtostarConfig
 from .system import get_git_config
 
@@ -82,27 +80,28 @@ METADATA_FIELDS: dict[str, MetadataField] = {
 }
 
 
-def resolve_metadata(
-    required_keys: set[str], optional_keys: set[str], *, tui_mode: bool
+def resolve_auto_metadata(
+    keys: set[str] | None = None,
+    config: ProtostarConfig | None = None,
 ) -> dict[str, Any]:
-    """Resolves metadata either from config/git or by prompting the user.
+    """Deterministically resolves metadata values from configuration or defaults.
 
     Args:
-        required_keys: Keys that MUST be explicitly confirmed by the user.
-        optional_keys: Keys that can be silently auto-resolved in flags mode.
-        tui_mode: Whether running in the TUI (prompt for everything possible) vs flags.
+        keys: Optional subset of metadata keys to resolve. If None, resolves all
+            known fields.
+        config: Optional ProtostarConfig instance. If None, loads from global config.
 
     Returns:
-        A dictionary of resolved metadata keys to their values.
+        A dictionary mapping metadata keys to their resolved values.
     """
-    config = ProtostarConfig.load()
+    if config is None:
+        config = ProtostarConfig.load()
+
     resolved: dict[str, Any] = {}
+    target_keys = set(METADATA_FIELDS.keys()) if keys is None else keys
 
-    all_keys = required_keys | optional_keys
-    to_prompt = []
-
-    for key in METADATA_FIELDS:
-        if key not in all_keys:
+    for key in target_keys:
+        if key not in METADATA_FIELDS:
             continue
 
         field = METADATA_FIELDS[key]
@@ -110,38 +109,9 @@ def resolve_metadata(
         if field.auto_resolver:
             candidate_val = field.auto_resolver(config)
 
-        if key in required_keys:
-            # Required fields are always explicitly prompted.
-            # If we have a candidate value, pre-fill it as default.
-            to_prompt.append((key, field, candidate_val or field.default))
-        else:
-            # Optional fields
-            if tui_mode:
-                # Prompt with auto-resolved default
-                to_prompt.append((key, field, candidate_val or field.default))
-            else:
-                # Silently use auto-resolved value
-                if candidate_val is not None:
-                    resolved[key] = candidate_val
-                elif field.default is not None and field.default != "":
-                    resolved[key] = field.default
-
-    # Execute prompts
-    for key, field, default_val in to_prompt:
-        if field.prompt_type == "text":
-            resolved[key] = questionary.text(
-                field.label, default=str(default_val) if default_val is not None else ""
-            ).ask()
-            if resolved[key] is None:
-                raise KeyboardInterrupt
-        elif field.prompt_type == "checkbox":
-            choices = []
-            for choice_str in field.choices or []:
-                checked = default_val is not None and choice_str in default_val
-                choices.append(questionary.Choice(choice_str, checked=checked))
-
-            resolved[key] = questionary.checkbox(field.label, choices=choices).ask()
-            if resolved[key] is None:
-                raise KeyboardInterrupt
+        if candidate_val is not None:
+            resolved[key] = candidate_val
+        elif field.default is not None:
+            resolved[key] = field.default
 
     return resolved

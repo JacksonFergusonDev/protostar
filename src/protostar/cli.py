@@ -161,7 +161,7 @@ def handle_init(args: argparse.Namespace) -> None:
 
         modules.append(CrashModule())
 
-    from .metadata import resolve_metadata
+    from .metadata import resolve_auto_metadata
 
     required_keys: set[str] = set()
     for mod in modules:
@@ -169,9 +169,7 @@ def handle_init(args: argparse.Namespace) -> None:
     for preset in presets:
         required_keys.update(preset.required_metadata)
 
-    resolved_metadata = resolve_metadata(
-        required_keys, optional_keys=set(), tui_mode=False
-    )
+    resolved_metadata = resolve_auto_metadata(required_keys)
 
     # Execute
     engine = Orchestrator(
