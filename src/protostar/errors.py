@@ -70,3 +70,10 @@ class FileSystemError(ProtostarError):
         self.operation = operation
         self.path = path
         self.original = original
+
+
+class ExecutionAbortedError(ProtostarError):
+    """Raised when the user explicitly aborts the execution via an interactive prompt."""
+
+    def __init__(self, message: str = "Execution aborted by user.") -> None:
+        super().__init__(message)

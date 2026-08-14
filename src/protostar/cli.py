@@ -30,6 +30,7 @@ from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, ProtostarConfig
 from .errors import (
     CommandExecutionError,
     ConfigurationError,
+    ExecutionAbortedError,
     FileSystemError,
     MissingDependencyError,
     ProtostarError,
@@ -678,6 +679,8 @@ def main() -> None:
             )  # 69: Expected background tool executable missing
         if isinstance(e, FileSystemError):
             sys.exit(os.EX_IOERR)  # 74: Critical disk access or storage write faults
+        if isinstance(e, ExecutionAbortedError):
+            sys.exit(130)  # User aborted via interactive prompt
 
         sys.exit(1)  # Generic operational failure fallback
 
