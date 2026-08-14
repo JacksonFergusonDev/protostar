@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786738686961,
+  "lastUpdate": 1786739063498,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5921,6 +5921,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 162.36,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fa1c89ee55e6033d61c2af65fe53bbb4db933914",
+          "message": "feat(tooling): add category header comments to pre-commit configuration (#157)\n\n* feat(executor): add category header comments to base and local pre-commit hooks\n\n* feat(modules): add category header comments to tooling layer pre-commit hooks\n\n* chore: update repository pre-commit config and documentation snippet",
+          "timestamp": "2026-08-14T13:23:21-07:00",
+          "tree_id": "7e884a494f8a30d3df82c66117daaedec1902b9f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fa1c89ee55e6033d61c2af65fe53bbb4db933914"
+        },
+        "date": 1786739062280,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 129.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 190.53,
             "unit": "ms"
           }
         ]
