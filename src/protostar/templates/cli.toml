@@ -10,6 +10,13 @@ prek = true
 commitizen = true
 renovate = true
 codecov = true
+just = true
+zensical = true
+ci = true
+release = true
+readthedocs = true
+markdownlint = true
+
 
 [dev]
 extra_dependencies = ["pytest-cov"]
