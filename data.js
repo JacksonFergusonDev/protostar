@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786673650996,
+  "lastUpdate": 1786674360879,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5411,6 +5411,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 203.45,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "cdae094ba32c0df518958092796b1fca3235c437",
+          "message": "ci: use --only-group for dependency installation in workflows\n\nSwitch from `uv sync --group <group>` to `--only-group` in CI and\nReadTheDocs builds to prevent the default `dev` group from being\nincluded. This reduces unnecessary packages (e.g., mkdocs, prek) in\ntest and benchmark jobs, speeding up installation and keeping\nenvironments lean.",
+          "timestamp": "2026-08-13T19:24:58-07:00",
+          "tree_id": "3c13e8d69feff314ea3494edee57910135924bc9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cdae094ba32c0df518958092796b1fca3235c437"
+        },
+        "date": 1786674360314,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.09,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.05,
             "unit": "ms"
           }
         ]
