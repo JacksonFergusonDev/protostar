@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786674360879,
+  "lastUpdate": 1786680128849,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5445,6 +5445,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.05,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1b2f028be9785e578e3190c7aee4411b189a4650",
+          "message": "feat: scaffold justfile by default (#146)\n\n* feat: add justfile attributes to EnvironmentManifest\n\n* feat: assemble and write dynamic justfile in executor\n\n* feat: integrate justfile scaffolding into tooling modules\n\n* feat: simplify pytest recipes in scaffolded justfile\n\n* docs: update fixtures",
+          "timestamp": "2026-08-13T21:01:06-07:00",
+          "tree_id": "e17292e851b17ee11fb89d737586344e2f5c19e4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1b2f028be9785e578e3190c7aee4411b189a4650"
+        },
+        "date": 1786680127787,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 199.03,
             "unit": "ms"
           }
         ]
