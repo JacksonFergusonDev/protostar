@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786663006685,
+  "lastUpdate": 1786669199159,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5275,6 +5275,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 117.59,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cd72addfc3998d1ce7b90a4bcfe637ebb1925b31",
+          "message": "feat(presets): scaffold src/<package_name> and starter Typer boilerplate in CLI preset (#145)\n\n* feat(utils): add sanitize_package_name and resolve_package_name utilities\n\n* feat(executor): add PACKAGE_NAME template interpolation support\n\n* feat(preset): support metadata fields on PresetModule base class\n\n* feat(presets): scaffold src/<package_name> and starter Typer boilerplate in CliPreset\n\n* docs: update documentation fixtures for CLI package scaffolding\n\n* feat(presets): update cli __init__.py with metadata version resolution and optional description docstring\n\n* feat(presets): update starter cli.py with version callback and help metadata",
+          "timestamp": "2026-08-13T17:58:56-07:00",
+          "tree_id": "b3c8f017617ea6ab7f13383456b52a8a2637da34",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cd72addfc3998d1ce7b90a4bcfe637ebb1925b31"
+        },
+        "date": 1786669198253,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 137.61,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 208.22,
             "unit": "ms"
           }
         ]
