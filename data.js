@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786737787245,
+  "lastUpdate": 1786738686961,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -5887,6 +5887,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 167.06,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2f8a63b71e528a360bfca5b92833b12e690ec990",
+          "message": "feat(templates): enhance CLI template tooling and expand ProtostarConfig schema (#156)\n\n* feat(config): add missing tooling fields to ProtostarConfig schema\n\n* feat(templates): enable just, zensical, ci, release, readthedocs, and markdownlint in cli template\n\n* docs: update default config documentation fixture",
+          "timestamp": "2026-08-14T13:17:12-07:00",
+          "tree_id": "b209781dc315ac09e52361fb57a2a16fb1563440",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2f8a63b71e528a360bfca5b92833b12e690ec990"
+        },
+        "date": 1786738685763,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 105.77,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 162.36,
             "unit": "ms"
           }
         ]
