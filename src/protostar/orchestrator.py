@@ -1,12 +1,11 @@
 import logging
-import sys
 from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
 
 from .config import ProtostarConfig
-from .errors import ProtostarError
+from .errors import ExecutionAbortedError, ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
@@ -127,10 +126,7 @@ class Orchestrator:
         ).ask()
 
         if not choice or choice == CollisionStrategy.ABORT:
-            console.print(
-                "\n[bold red]ABORTED:[/bold red] Environment initialization cancelled by user."
-            )
-            sys.exit(1)
+            raise ExecutionAbortedError("Environment initialization cancelled by user.")
 
         self.manifest.collision_strategy = choice
 

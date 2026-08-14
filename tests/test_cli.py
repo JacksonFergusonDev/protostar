@@ -20,6 +20,8 @@ from protostar.config import DEFAULT_CONFIG_CONTENT
 from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
+    ExecutionAbortedError,
+    FileSystemError,
     MissingDependencyError,
 )
 
@@ -58,16 +60,29 @@ def test_dispatch_help(mocker):
 
 
 def test_intercept_interactive_wizards_cancellations(mocker):
-    """Test that cancelling wizards safely exits the process with code 130."""
+    """Test that cancelling wizards propagates ExecutionAbortedError."""
     parser = mocker.Mock()
 
     # Init Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
-    mocker.patch("protostar.cli.run_init_wizard", return_value=None)
-    with pytest.raises(SystemExit) as exc_info:
+    mocker.patch(
+        "protostar.cli.run_init_wizard",
+        side_effect=ExecutionAbortedError("Initialization wizard cancelled by user."),
+    )
+    with pytest.raises(ExecutionAbortedError):
         intercept_interactive_wizards(parser)
-    assert exc_info.value.code == 130
     parser.parse_args.assert_not_called()
+
+
+def test_intercept_interactive_wizards_non_interactive_fallback(mocker):
+    """Test that non-interactive execution returns cleanly without running orchestrator."""
+    parser = mocker.Mock()
+    mocker.patch.object(sys, "argv", ["protostar", "init"])
+    mocker.patch("protostar.cli.run_init_wizard", return_value=None)
+    mock_orch = mocker.patch("protostar.cli.Orchestrator")
+
+    intercept_interactive_wizards(parser)
+    mock_orch.assert_not_called()
 
 
 def test_configure_logging():
@@ -135,6 +150,19 @@ def test_handle_config_reset_cancelled(mocker, tmp_path):
     assert mock_config_file.exists()
     assert mock_config_file.read_text() == initial_content
     mock_run.assert_not_called()
+
+
+def test_handle_config_reset_aborted(mocker, tmp_path):
+    """Test that handle_config with --reset raises ExecutionAbortedError when cancelled via Esc/Ctrl+C."""
+    mock_config_file = tmp_path / "config.toml"
+    mock_config_file.write_text("custom_setting = true\n")
+    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mock_confirm = mocker.patch("questionary.confirm")
+    mock_confirm.return_value.ask.return_value = None
+
+    args = argparse.Namespace(reset=True, force_merge=False, force_replace=False)
+    with pytest.raises(ExecutionAbortedError, match=r"Configuration reset aborted\."):
+        handle_config(args)
 
 
 def test_handle_config_reset_force(mocker, tmp_path):
@@ -463,6 +491,34 @@ def test_main_routes_missing_dependency_to_posix_status(mocker):
         main()
 
     mock_exit.assert_called_once_with(os.EX_UNAVAILABLE)  # 69
+
+
+def test_main_routes_execution_aborted_to_posix_status(mocker):
+    """Verify that an ExecutionAbortedError returns code 130."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=ExecutionAbortedError("Interactive prompt aborted"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(130)
+
+
+def test_main_routes_filesystem_error_to_posix_status(mocker):
+    """Verify that a FileSystemError returns os.EX_IOERR (74)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=FileSystemError("write", "foo.txt", OSError("Permission denied")),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_IOERR)  # 74
 
 
 def test_main_routes_generic_crash_to_software_status(mocker):
