@@ -3,6 +3,7 @@
 ├── .dockerignore
 ├── .gitignore
 ├── .python-version
+├── Dockerfile
 ├── data
 ├── models
 ├── notebooks

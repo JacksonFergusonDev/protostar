@@ -47,6 +47,7 @@ TARGETS = [
     ".gitignore",
     ".pre-commit-config.yaml",
     ".dockerignore",
+    "Dockerfile",
     ".markdownlint-cli2.yaml",
     ".gitattributes",
 ]
@@ -137,6 +138,9 @@ def _resolve_markdown_language(filename: str) -> str:
     Returns:
         The syntax highlighting identifier for Markdown.
     """
+    if Path(filename).name.lower() == "dockerfile":
+        return "dockerfile"
+
     ext = Path(filename).suffix.lstrip(".").lower()
 
     language_map = {
