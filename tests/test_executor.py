@@ -629,29 +629,6 @@ def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_conf
     assert manifest.diagnostics[0].severity == Severity.WARNING
 
 
-def test_executor_append_files_pyproject_parse_exception(mocker, mock_config):
-    """Test that pyproject.toml parsing failures are caught and logged during late-binding."""
-    manifest = EnvironmentManifest()
-    manifest.add_file_append("dummy.txt", "content")
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-
-    mock_file = mocker.mock_open()
-    mocker.patch("protostar.executor.Path.open", mock_file)
-    mocker.patch(
-        "protostar.executor.tomllib.load",
-        side_effect=Exception("Mocked parse error"),
-    )
-
-    mock_logger = mocker.patch("protostar.executor.logger.debug")
-    mocker.patch("protostar.executor.atomic_write_text")
-
-    executor._append_files()
-
-    mock_logger.assert_any_call("Failed to parse pyproject.toml: Mocked parse error")
-
-
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
     """Test that the string fallback successfully appends missing payloads wrapped in hash markers."""
     manifest = EnvironmentManifest()

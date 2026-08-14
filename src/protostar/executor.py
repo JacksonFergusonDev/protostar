@@ -20,7 +20,11 @@ from .errors import (
 from .fs import atomic_write_text
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .system import execute_subprocess
-from .utils import resolve_package_name, resolve_project_name
+from .workspace import (
+    resolve_package_name,
+    resolve_project_name,
+    resolve_python_version,
+)
 
 logger = logging.getLogger("protostar")
 console = Console()
@@ -276,7 +280,7 @@ class SystemExecutor:
         if not self.manifest.wants_ci:
             return
 
-        from protostar.utils import generate_python_version_range
+        from protostar.workspace import generate_python_version_range
 
         # 1. Resolve matrix dimensions
         supported_os = self.manifest.metadata.get("supported_os", ["Linux"])
@@ -712,26 +716,9 @@ jobs:
         if not self.manifest.file_appends:
             return
 
-        python_version = None
-        project_name = None
-        pyproject_path = Path("pyproject.toml")
-        if pyproject_path.exists():
-            try:
-                with pyproject_path.open("rb") as f:
-                    pyproject_data = tomllib.load(f)
-                    project = pyproject_data.get("project", {})
-                    req_python = project.get("requires-python", "")
-                    match = re.search(r"(\d+\.\d+)", req_python)
-                    if match:
-                        python_version = match.group(1)
-                    project_name = project.get("name")
-            except Exception as e:
-                logger.debug(f"Failed to parse pyproject.toml: {e}")
-
-        # 2. Protostar config or hardcoded default
-        if not python_version:
-            python_version = self.config.python_version or "3.13"
-
+        python_version = resolve_python_version(
+            self.manifest.metadata, default=self.config.python_version or "3.13"
+        )
         project_name = resolve_project_name(
             self.manifest.metadata, default="My Project"
         )

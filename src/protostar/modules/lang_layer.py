@@ -9,7 +9,7 @@ from protostar.errors import MissingDependencyError
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
 
-from protostar.utils import generate_python_version_range
+from protostar.workspace import generate_python_version_range
 
 from .base import BootstrapModule
 
