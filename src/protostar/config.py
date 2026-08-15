@@ -282,73 +282,80 @@ class TemplateBlueprint:
         """Loads and parses a template blueprint."""
         temp_dir: tempfile.TemporaryDirectory[str] | None = None
 
-        if target.startswith("http://") or target.startswith("https://"):
-            temp_dir = tempfile.TemporaryDirectory()
-            temp_workspace = Path(temp_dir.name)
-            target_path = resolve_remote_template(target, temp_workspace)
-        else:
-            target_path = Path(target)
-            if not target_path.exists():
-                raise ConfigurationError(f"Configuration file not found: {target_path}")
-
-        if target_path.is_file():
-            toml_path = target_path
-            base_dir = target_path.parent
-        else:
-            toml_path = target_path / "protostar.toml"
-            if not toml_path.exists():
-                raise ConfigurationError(f"Configuration file not found: {toml_path}")
-            base_dir = target_path
-
-        toml_content = toml_path.read_text(encoding="utf-8")
-
-        raw_files: dict[str, str] = {}
-        template_dir = base_dir / "template"
-        if template_dir.exists() and template_dir.is_dir():
-            for file_path in template_dir.rglob("*"):
-                if file_path.is_dir():
-                    continue
-                if ".DS_Store" in file_path.parts or "__pycache__" in file_path.parts:
-                    continue
-                rel_path = str(file_path.relative_to(template_dir))
-                raw_files[rel_path] = file_path.read_text(encoding="utf-8")
-
-        all_text_sources = [toml_content, *raw_files.keys(), *raw_files.values()]
-        combined_text = "\n".join(all_text_sources)
-        variables = extract_variables(combined_text)
-
-        context = dict(template_context) if template_context else {}
-
-        late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
-        missing = [
-            v for v in variables if v not in context and v not in late_binding_vars
-        ]
-
-        if missing:
-            if variable_resolver is not None:
-                context.update(variable_resolver(missing))
+        try:
+            if target.startswith("http://") or target.startswith("https://"):
+                temp_dir = tempfile.TemporaryDirectory()
+                temp_workspace = Path(temp_dir.name)
+                target_path = resolve_remote_template(target, temp_workspace)
             else:
-                raise ConfigurationError(
-                    f"Configuration template requires variables: {', '.join(missing)}. "
-                    "Please provide them via CLI flags (e.g. --variable_name=value) "
-                    "or run in an interactive terminal."
-                )
+                target_path = Path(target)
+                if not target_path.exists():
+                    raise ConfigurationError(
+                        f"Configuration file not found: {target_path}"
+                    )
 
-        rendered_toml = render_template(toml_content, context, escape_toml=True)
-        blueprint = cls._parse(rendered_toml, target)
+            if target_path.is_file():
+                toml_path = target_path
+                base_dir = target_path.parent
+            else:
+                toml_path = target_path / "protostar.toml"
+                if not toml_path.exists():
+                    raise ConfigurationError(
+                        f"Configuration file not found: {toml_path}"
+                    )
+                base_dir = target_path
 
-        interpolated_files: dict[str, str] = {}
-        for rel_path, content in raw_files.items():
-            new_path = render_template(rel_path, context, escape_toml=False)
-            new_content = render_template(content, context, escape_toml=False)
-            interpolated_files[new_path] = new_content
+            toml_content = toml_path.read_text(encoding="utf-8")
 
-        blueprint.files.update(interpolated_files)
+            raw_files: dict[str, str] = {}
+            template_dir = base_dir / "template"
+            if template_dir.exists() and template_dir.is_dir():
+                for file_path in template_dir.rglob("*"):
+                    if file_path.is_dir():
+                        continue
+                    if (
+                        ".DS_Store" in file_path.parts
+                        or "__pycache__" in file_path.parts
+                    ):
+                        continue
+                    rel_path = str(file_path.relative_to(template_dir))
+                    raw_files[rel_path] = file_path.read_text(encoding="utf-8")
 
-        if temp_dir is not None:
-            temp_dir.cleanup()
+            all_text_sources = [toml_content, *raw_files.keys(), *raw_files.values()]
+            combined_text = "\n".join(all_text_sources)
+            variables = extract_variables(combined_text)
 
-        return blueprint
+            context = dict(template_context) if template_context else {}
+
+            late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
+            missing = [
+                v for v in variables if v not in context and v not in late_binding_vars
+            ]
+
+            if missing:
+                if variable_resolver is not None:
+                    context.update(variable_resolver(missing))
+                else:
+                    raise ConfigurationError(
+                        f"Configuration template requires variables: {', '.join(missing)}. "
+                        "Please provide them via CLI flags (e.g. --variable_name=value) "
+                        "or run in an interactive terminal."
+                    )
+
+            rendered_toml = render_template(toml_content, context, escape_toml=True)
+            blueprint = cls._parse(rendered_toml, target)
+
+            interpolated_files: dict[str, str] = {}
+            for rel_path, content in raw_files.items():
+                new_path = render_template(rel_path, context, escape_toml=False)
+                new_content = render_template(content, context, escape_toml=False)
+                interpolated_files[new_path] = new_content
+
+            blueprint.files.update(interpolated_files)
+            return blueprint
+        finally:
+            if temp_dir is not None:
+                temp_dir.cleanup()
 
     @classmethod
     def _parse(cls, content: str, source: str = "unknown") -> "TemplateBlueprint":

@@ -4,11 +4,11 @@ import re
 import tarfile
 import tempfile
 import urllib.request
-import zipfile
 from pathlib import Path
 from urllib.error import URLError
 
 from .errors import ConfigurationError
+from .fs import safe_extract_zip
 
 
 def fetch_remote_config(url: str, timeout: int = 10) -> str:
@@ -112,8 +112,7 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
 
     try:
         if url.endswith(".zip"):
-            with zipfile.ZipFile(tmp_path, "r") as zf:
-                zf.extractall(dest_dir)
+            safe_extract_zip(tmp_path, dest_dir)
         elif url.endswith(".tar.gz") or url.endswith(".tgz") or url.endswith(".tar"):
             with tarfile.open(tmp_path, "r:*") as tf:
                 # Python 3.12+ data filter to prevent Tar Slip
