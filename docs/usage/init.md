@@ -1,8 +1,8 @@
 # Environment Initialization
 
-The `init` command is the core engine of Protostar. It is not a glorified `mkdir` script; it is a deterministic state-machine designed to safely aggregate configurations, wire complex development tooling together, and construct robust directory architectures in seconds.
+The `init` command is the core engine of Protostar. It is a deterministic state-machine designed to safely aggregate configurations, wire development tooling together, and construct robust directory architectures in seconds.
 
-Protostar is designed to be run on Day 1 to build your repository's foundation, but it is perfectly safe to re-run on Day 50 to inject a forgotten dependency or adopt a new static analysis tool.
+Protostar is designed to be run on Day 1 to build your repository foundation, but it is safe to re-run on Day 50 to inject a forgotten dependency or adopt a new static analysis tool.
 
 <div class="spacer-2"></div>
 
@@ -10,22 +10,49 @@ Protostar is designed to be run on Day 1 to build your repository's foundation, 
 
 - :material-shield-check: __State-Aware Aggregation__
 
-    Protostar doesn't just blindly overwrite files. It parses ASTs, deduplicates `.gitignore` entries, and safely merges configurations. It is perfectly safe to execute on pre-existing codebases.
+    Protostar doesn't blindly overwrite files. It parses ASTs, deduplicates `.gitignore` entries, and safely deep-merges configurations. It is safe to execute on pre-existing codebases.
 
 - :material-clock-fast: __Deterministic Velocity__
 
-    Instead of manually copying boilerplate from old repositories or relying on fragile bash scripts, Protostar guarantees a consistent, idempotent environment. It resolves your exact requested state in a fraction of a second, eliminating configuration drift and forgotten dependencies.
+    Instead of manually copying boilerplate from old repositories or relying on fragile shell scripts, Protostar guarantees a consistent, idempotent environment in fractions of a second.
 
 </div>
 
 ---
 
+## Opinionated Templates
+
+While Protostar is modular, you often want a vetted, turnkey environment without selecting a dozen flags manually. Protostar ships with built-in __Opinionated Templates__ that bundle specific tools, directories, and AST overrides.
+
+You can select a template in the interactive wizard (`protostar init`), or trigger it headlessly:
+
+```bash
+# Scaffold from a built-in template
+protostar init --template astro
+
+# Scaffold from a remote team standard
+protostar init --from https://github.com/YourOrg/standards/blob/main/backend.toml
+```
+
+### Tri-State CLI Toggles
+
+Every tooling option in Protostar supports tri-state evaluation. Passing `--<tool>` forces it on, while passing `--no-<tool>` forces it off, overriding template opinions:
+
+```bash
+# Use the astro template but disable direnv and enable mypy
+protostar init --template astro --no-direnv --mypy
+```
+
+For custom authoring, variable interpolation, global aliases, and security mechanics, see the complete __[Templates & Portable Configurations Guide](./templates.md)__.
+
+---
+
 ## Execution Footprints
 
-To understand how Protostar interprets your flags, observe what happens when we execute different domain workflows in an empty directory. Notice how the orchestrator automatically routes tooling configurations, isolates data artifacts, and binds dependencies.
+To understand how Protostar interprets your flags, observe what happens when we execute different workflows in an empty directory.
 
 !!! note "IDE Configuration Footprints"
-    The following repository tree examples assume you have explicitly configured an IDE in your global settings (e.g., `ide = "vscode"`) in addition to globally enabling direnv. This represents the best practice configuration for vscode users scaffolding python environments. If your config remains set to the default `None`, the `.vscode/settings.json` file will not be generated, though the universal `.vscode/` exclusion will still be safely appended to your `.gitignore`.
+    The following repository tree examples assume you have configured an IDE in your global settings (e.g., `ide = "vscode"`) in addition to enabling direnv. If your config remains set to the default `None`, the `.vscode/settings.json` file will not be generated, though the universal `.vscode/` exclusion will still be safely appended to your `.gitignore`.
 
 === "The CLI Application (Tooling Focus)"
     __Command:__ `protostar init --template cli`
@@ -48,15 +75,14 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     **The Intelligence:**
 
-    - **Dependency Locking:** Protostar instantly locked `typer` and `rich` from the CLI template.
-    - **AST Configuration:** It didn't just dump strings into `pyproject.toml`. It constructed the TOML Abstract Syntax Tree (AST), gracefully configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside the dev-dependencies.
-    - **Local Toolchain Hooks:** In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead, version discrepancies, and missing type stub dependencies.
-    - **A Note on Speed:** Standard Protostar executions take fractions of a second. However, because `--pre-commit` was flagged, Protostar queued a `pre-commit autoupdate` subprocess at the end of the run to ensure your git hooks are pinned to the absolute latest network releases. This shifts the total execution time to roughly ~4-9 seconds.
+    - **Dependency Locking:** Protostar locks `typer` and `rich` from the CLI template.
+    - **AST Configuration:** It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside development dependency groups.
+    - **Local Toolchain Hooks:** In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead and version discrepancies.
 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`
 
-    This footprint focuses on managing heavy, serialized data assets and preventing repository bloat.
+    This footprint focuses on managing serialized data assets and preventing repository bloat.
 
     --8<-- "astro_tree.md"
 
@@ -71,13 +97,13 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     **The Intelligence:**
 
-    - **Directory Scaffolding:** It dynamically injected `data/catalogs` and `data/fits`, automatically isolating your telemetry and catalogs from the source code.
-    - **Binary Safety:** It generated a `.gitattributes` file explicitly marking `*.fits` files as binary, and configuring `*.ipynb` for better text diffing.
-    - **Notebook Diffing:** It automatically configured `nbdime` at the git level, saving you from parsing unreadable JSON diffs when tracking Jupyter Notebooks.
-    - **Artifact Exclusions:** The `.gitignore` was populated with `*.fits`, `*.csv`, and `*.parquet`, preventing you from accidentally committing massive telemetry cubes to version control.
+    - **Directory Scaffolding:** It injects `data/catalogs` and `data/fits`, isolating telemetry from source code.
+    - **Binary Safety:** It generates a `.gitattributes` file explicitly marking `*.fits` files as binary, and configuring `*.ipynb` for clean text diffing.
+    - **Notebook Diffing:** It automatically configures `nbdime` at the git level, avoiding unreadable JSON diffs when tracking Jupyter Notebooks.
+    - **Artifact Exclusions:** The `.gitignore` is populated with `*.fits`, `*.csv`, and `*.parquet`, preventing accidental commits of massive telemetry files.
 
 === "The Machine Learning Stack (Artifact Focus)"
-    __Command:__ `protostar init --template ml`
+    __Command:__ `protostar init --template ml --docker`
 
     This footprint focuses on containerization and strictly excluding model artifacts.
 
@@ -97,25 +123,14 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     **The Intelligence:**
 
-    - **Container Scaffolding:** Because `--docker` was flagged, Protostar scaffolded a hardened, multi-stage `Dockerfile` and an optimized `.dockerignore`. The `Dockerfile` leverages `uv` caching, non-root user execution (`appuser`), and stripped-down runtime stages, while `.dockerignore` strips out `.venv`, `.git`, local caches, and test artifacts to keep your container build context lightweight.
-    - **Model Checkpoints:** The ML template aggressively injects ignores for tensor artifacts (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`) to ensure massive model weights never pollute the git tree.
-
-!!! info "The Python Gravity Well"
-    Protostar is engineered specifically to accelerate Python development pipelines. Its Python scaffolding (specifically leveraging `uv`) is highly refined, deeply integrated, and serves as the exclusive focus of the engine.
+    - **Container Scaffolding:** Passing `--docker` generates a multi-stage `Dockerfile` and optimized `.dockerignore`. The `Dockerfile` leverages `uv` layer caching, non-root user execution (`appuser`), and minimal runtime images.
+    - **Model Checkpoints:** The ML template injects ignores for tensor weights (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`).
 
 ---
 
 ## Progressive Scaffolding & Collisions
 
-Developers are rightfully terrified of CLI tools that touch their existing configurations. Protostar is engineered specifically to alleviate this anxiety.
-
-Lets say you initialized a machine learning repo yesterday with `protostar init --ml --docker`
-
-But today you remembered you'll be doing quasar analysis, and you want to enforce strict typing with `mypy`
-
-You simply run `protostar init --astro --mypy --docker` in that existing directory.
-
-Because Protostar detects existing configuration markers (like `pyproject.toml`), it instantly halts the execution and triggers the __Gravitational Anomaly__ intercept prompt:
+When Protostar detects existing configuration markers (like `pyproject.toml`), it triggers the __Gravitational Anomaly__ intercept prompt:
 
 ```text
 Protostar Ignition Sequence Initiated
@@ -129,12 +144,12 @@ Gravitational Anomaly: Protostar detected existing configuration files in the wo
     Abort      (Safely exit without modifying the environment)
 ```
 
-If you select __Merge__, Protostar performs a surgical AST injection.
+Selecting __Merge__ executes an AST injection:
 
-- It leaves your existing `torch` and `huggingface-hub` dependencies completely untouched.
-- It alphabetically merges in `astropy`, `photutils`, and `specutils`.
-- It seamlessly drops the `[tool.mypy]` configuration block into the TOML file.
-- It appends `*.fits` and `.mypy_cache/` to your existing `.gitignore`.
+- Leaves your existing dependencies untouched.
+- Alphabetically inserts new template dependencies.
+- Merges tooling configuration tables into `pyproject.toml`.
+- Appends new file patterns to `.gitignore` without duplicating existing rules.
 
 ??? abstract "See the comparison"
     === "Directory Structure Before"
@@ -175,50 +190,16 @@ If you select __Merge__, Protostar performs a surgical AST injection.
     === "`pyproject.toml` After"
         --8<-- "ml_merged_pyprojecttoml.md"
 
-*Curious how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments? Read the [Mechanics: Executor](../mechanics/executor.md) deep dive.*
-
 !!! tip "Headless Operations"
-    If you are running Protostar in a CI/CD environment or automated script where interactive prompts are impossible, you can append the `--force` (or `-f`) flag. This automatically bypasses the collision prompt and defaults to a safe `Merge` strategy.
+    In CI/CD environments where interactive prompts are impossible, pass `--force-merge` or `--force-replace` to bypass collision prompts deterministically.
 
-!!! success "Strict Footprint Validation"
-    Protostar enforces explicit dependency boundaries for all tooling operations. If you pass an impossible or conflicting configuration matrix via the CLI, Protostar will not crash or dump inert configurations into your repository. It evaluates the topological constraints, drops the invalid tool, and prints a clean diagnostic warning before proceeding with the rest of the valid scaffolding sequence.
+## Advanced Flags
 
-## Opinionated Templates
-
-While Protostar is highly modular, sometimes you just want a vetted, turnkey environment without selecting a dozen checkboxes. Protostar ships with built-in __Opinionated Templates__ that bundle specific tools and overrides for popular workflows.
-
-You can select a template in the interactive wizard, or trigger it headlessly:
-
-```bash
-protostar init --template astro
-```
-
-### `--template` vs `--from`
-
-Protostar provides two different flags for template-driven configuration:
-
-- `--template`: Scaffolds from a __trusted, built-in template__ shipped natively with the Protostar package (e.g., `astro`, `cli`).
-- `--from`: Fetches an __external, portable configuration__ via a remote URL or local file path. Use this for organizational standards or custom setups.
-
-### Tri-State CLI Toggles
-
-When you load a template, it automatically evaluates its default tooling selections. However, Protostar's CLI uses __tri-state toggling__, meaning you can always manually override a template's default on the fly.
-
-For example, if the `astro` template enables `direnv` by default, but you explicitly don't want it for this specific project, you can negate it using the `--no-<flag>` syntax:
-
-```bash
-protostar init --template astro --no-direnv
-```
-
-This ensures templates remain helpful starting points rather than rigid constraints.
-
-## Advanced Operations
-
-- __Python Version Overrides__: By default, Protostar uses the Python version defined in your global configuration. You can dynamically override this for a single run using the `--python-version` flag (e.g., `protostar init --template cli --python-version 3.12`).
-- __Verbose Output__: If you encounter unexpected behavior and need to see exactly what the orchestrator is doing, append the global `--verbose` (or `-v`) flag to enable rich debug logs and full tracebacks.
+- __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.12`).
+- __Verbose Output__: Append `--verbose` (or `-v`) to enable debug logs and full tracebacks.
 
 ## The Capabilities Matrix
 
-You can mix and match these flags to generate exactly the environment you need. To view this matrix in your terminal at any time, run `protostar help init`.
+To view all supported subcommands and flags in your terminal, run `protostar help init`.
 
 ![Protostar Help Init](../includes/cli_init_help.svg)
