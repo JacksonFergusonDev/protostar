@@ -46,4 +46,8 @@ python_version = "3.13"
 # select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
 # ignore = ["E501", "D100", "D104", "D107"]
 # '''
+
+# [templates]
+# my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
+# data-science-base = "~/Developer/templates/ds_base.toml"
 ```

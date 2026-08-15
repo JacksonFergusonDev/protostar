@@ -1,7 +1,10 @@
 ```text
 *~
 .DS_Store
+.cz-cache/
+.direnv/
 .env
+.envrc.local
 .idea/
 .mypy_cache/
 .pytest_cache/
@@ -10,4 +13,5 @@
 .vscode/
 Thumbs.db
 __pycache__/
+site/
 ```

@@ -58,20 +58,35 @@ def handle_init(args: argparse.Namespace) -> None:
     template_name = getattr(args, "template_name", None)
     template_context = getattr(args, "template_context", {})
 
+    user_config = UserConfig.load()
+    is_external = False
+    is_user_aliased = False
+
     if override_target and template_name:
         raise ConfigurationError(
             "Cannot use both '--template' and '--from' simultaneously."
         )
 
+    if override_target:
+        is_external = True
+
     if template_name:
+        # 1. Check built-ins
         target = importlib.resources.files("protostar.templates").joinpath(
             f"{template_name}.toml"
         )
-        if not target.is_file():
-            raise ConfigurationError(f"Built-in template '{template_name}' not found.")
-        override_target = str(target)
+        if target.is_file():
+            override_target = str(target)
+        # 2. Check user aliases
+        elif template_name in user_config.templates:
+            override_target = user_config.templates[template_name]
+            is_external = True
+            is_user_aliased = True
+        else:
+            raise ConfigurationError(
+                f"Template '{template_name}' not found in built-ins or global configuration aliases."
+            )
 
-    user_config = UserConfig.load()
     blueprint = None
 
     if override_target:
@@ -94,13 +109,14 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 3. Tooling Layers
     for mod in TOOLING_MODULES:
-        is_active = False
+        # 3. Lowest priority: User's global defaults
+        is_active = getattr(user_config, mod.config_key, False)
 
-        # Evaluate global configuration defaults
-        if getattr(user_config, mod.config_key, False):
-            is_active = True
+        # 2. Medium priority: Template author's explicit overrides
+        if blueprint and mod.config_key in blueprint.tooling_overrides:
+            is_active = blueprint.tooling_overrides[mod.config_key]
 
-        # Explicit CLI flags override local configuration omissions and defaults.
+        # 1. Highest priority: User's CLI flags for this specific run
         if mod.cli_flags:
             cli_override = getattr(args, mod.__class__.__name__, None)
             if cli_override is not None:
@@ -160,6 +176,8 @@ def handle_init(args: argparse.Namespace) -> None:
         force_merge=getattr(args, "force_merge", False),
         force_replace=getattr(args, "force_replace", False),
         metadata=resolved_metadata,
+        is_external=is_external,
+        is_user_aliased=is_user_aliased,
     )
     engine.run()
 
@@ -483,11 +501,13 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             engine = Orchestrator(
                 modules,
                 user_config,
-                blueprint=None,
+                blueprint=selections.get("blueprint"),
                 docker=selections["docker"],
                 force_merge=False,
                 force_replace=False,
                 metadata=selections.get("project_metadata"),
+                is_external=selections.get("is_external", False),
+                is_user_aliased=selections.get("is_user_aliased", False),
             )
             engine.run()
             sys.exit(0)

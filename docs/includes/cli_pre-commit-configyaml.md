@@ -42,4 +42,18 @@ repos:
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]
+
+  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.17.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # Renovate config validation
+  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 44.30.3
+    hooks:
+      - id: renovate-config-validator
+        files: '.github/renovate.json'
 ```

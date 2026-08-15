@@ -4,7 +4,7 @@ import pytest
 
 from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import ExecutionAbortedError, ProtostarError
-from protostar.manifest import CollisionStrategy, Severity
+from protostar.manifest import CollisionStrategy, Severity, SystemTask
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
 
@@ -276,3 +276,61 @@ def test_orchestrator_injects_files_from_config(mocker):
     orchestrator.run()
 
     assert "src/main.py" in orchestrator.manifest.file_injections
+
+
+@pytest.fixture
+def base_orchestrator() -> Orchestrator:
+    """Provides a baseline orchestrator with no external flags."""
+    return Orchestrator(modules=[], user_config=UserConfig())
+
+
+def test_trust_dialog_bypassed_for_local_templates(base_orchestrator, mocker) -> None:
+    """Verifies that local templates bypass the trust dialog entirely."""
+    base_orchestrator.is_external = False
+    base_orchestrator.manifest.system_tasks.append(SystemTask(["echo", "danger"]))
+
+    mock_confirm = mocker.patch("questionary.confirm")
+    base_orchestrator._prompt_remote_trust()  # Should return immediately
+    mock_confirm.assert_not_called()
+
+
+def test_trust_dialog_bypassed_for_user_aliases(base_orchestrator, mocker) -> None:
+    """Verifies that external templates declared in the user config bypass the prompt."""
+    base_orchestrator.is_external = True
+    base_orchestrator.is_user_aliased = True
+    base_orchestrator.manifest.system_tasks.append(SystemTask(["echo", "danger"]))
+
+    mock_confirm = mocker.patch("questionary.confirm")
+    base_orchestrator._prompt_remote_trust()  # Should return immediately
+    mock_confirm.assert_not_called()
+
+
+def test_trust_dialog_fails_in_non_interactive_env(base_orchestrator, mocker) -> None:
+    """Verifies that untrusted remote templates with executable tasks abort in headless CI."""
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=False)
+
+    base_orchestrator.is_external = True
+    base_orchestrator.is_user_aliased = False
+    base_orchestrator.manifest.system_tasks.append(SystemTask(["echo", "danger"]))
+
+    with pytest.raises(
+        ProtostarError, match="Untrusted external template contains executable tasks"
+    ):
+        base_orchestrator._prompt_remote_trust()
+
+
+def test_trust_dialog_aborts_on_user_decline(base_orchestrator, mocker) -> None:
+    """Verifies that an interactive 'No' raises an ExecutionAbortedError."""
+    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
+    mock_confirm = mocker.patch("questionary.confirm")
+    # Simulate user answering 'False' (No) to the prompt
+    mock_confirm.return_value.ask.return_value = False
+
+    base_orchestrator.is_external = True
+    base_orchestrator.is_user_aliased = False
+    base_orchestrator.manifest.post_install_tasks.append(
+        SystemTask(["npm", "run", "sketchy"])
+    )
+
+    with pytest.raises(ExecutionAbortedError, match="Untrusted external source"):
+        base_orchestrator._prompt_remote_trust()

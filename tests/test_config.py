@@ -388,3 +388,52 @@ def test_template_blueprint_load_interpolation(mocker, tmp_path):
     )
 
     assert blueprint.files["test.txt"] == "hello world"
+
+
+def test_user_config_parses_template_aliases() -> None:
+    """Verifies that the [templates] block is correctly parsed into the dictionary."""
+    content = """
+    [templates]
+    corp-api = "https://raw.githubusercontent.com/org/repo/main/api.toml"
+    local-base = "/Users/dev/templates/base.toml"
+    """
+    config = UserConfig._parse_and_merge(content, source="test", instance=UserConfig())
+
+    assert "corp-api" in config.templates
+    assert (
+        config.templates["corp-api"]
+        == "https://raw.githubusercontent.com/org/repo/main/api.toml"
+    )
+    assert config.templates["local-base"] == "/Users/dev/templates/base.toml"
+
+
+def test_user_config_rejects_invalid_templates_type() -> None:
+    """Verifies that malformed [templates] blocks raise a ConfigurationError."""
+    content = """
+    [templates]
+    corp-api = ["invalid", "list"]
+    """
+    with pytest.raises(ConfigurationError, match="Type mismatch"):
+        UserConfig._parse_and_merge(content, source="test", instance=UserConfig())
+
+
+def test_blueprint_extracts_tooling_overrides() -> None:
+    """Verifies that root-level booleans are extracted while structural keys are ignored."""
+    content = """
+    dependencies = ["requests"]
+    directories = ["src"]
+    ruff = true
+    mypy = false
+    """
+    blueprint = TemplateBlueprint._parse(content, source="test")
+
+    # Structural keys should map to their respective fields
+    assert blueprint.dependencies == ["requests"]
+    assert blueprint.directories == ["src"]
+
+    # Booleans should map to tooling_overrides
+    assert blueprint.tooling_overrides.get("ruff") is True
+    assert blueprint.tooling_overrides.get("mypy") is False
+
+    # Structural keys must NOT bleed into tooling_overrides
+    assert "dependencies" not in blueprint.tooling_overrides

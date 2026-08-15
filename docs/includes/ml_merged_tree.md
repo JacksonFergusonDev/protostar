@@ -1,6 +1,7 @@
 ```text
 .
 ├── .dockerignore
+├── .envrc
 ├── .gitattributes
 ├── .gitignore
 ├── .python-version

@@ -27,6 +27,8 @@ class Orchestrator:
         force_merge: bool = False,
         force_replace: bool = False,
         metadata: dict[str, Any] | None = None,
+        is_external: bool = False,
+        is_user_aliased: bool = False,
     ) -> None:
         """Initializes the orchestrator with the requested modules and presets.
 
@@ -38,6 +40,8 @@ class Orchestrator:
             force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
             force_replace: If True, bypasses interactive prompts and forces replacement on collisions. Defaults to False.
             metadata: Pre-resolved metadata dictionary to inject into the manifest. Defaults to None.
+            is_external: If True, the template was loaded from an external source.
+            is_user_aliased: If True, the template was resolved via a trusted global configuration alias.
         """
         self.modules = modules
         self.user_config = user_config
@@ -46,6 +50,8 @@ class Orchestrator:
         self.force_merge = force_merge
         self.force_replace = force_replace
         self.metadata = metadata
+        self.is_external = is_external
+        self.is_user_aliased = is_user_aliased
         self.manifest = EnvironmentManifest(
             force_merge=force_merge, force_replace=force_replace
         )
@@ -129,6 +135,47 @@ class Orchestrator:
 
         self.manifest.collision_strategy = choice
 
+    def _prompt_remote_trust(self) -> None:
+        """Evaluates the trust boundary for external templates containing executable tasks.
+
+        Halts execution with a stark warning if an untrusted template attempts
+        to run shell commands. Templates mapped in the user's global configuration
+        aliases bypass this check.
+        """
+        if not self.is_external or self.is_user_aliased:
+            return
+
+        tasks = [*self.manifest.system_tasks, *self.manifest.post_install_tasks]
+        if not tasks:
+            return
+
+        import questionary
+
+        console.print(
+            "\n[bold red]⚠️  REMOTE TEMPLATE WARNING ⚠️[/bold red]\n\n"
+            "This template was loaded from an external source and will execute the following shell commands on your system:"
+        )
+
+        for task in tasks:
+            console.print(f"  - {' '.join(task.command)}")
+
+        console.print()
+
+        if not is_interactive():
+            raise ProtostarError(
+                "Execution aborted: Untrusted external template contains executable tasks.\n"
+                "To trust this template in non-interactive environments, add its URL to the [templates] block in your global configuration."
+            )
+
+        confirmed = questionary.confirm(
+            "Do you trust this source to modify your system?", default=False
+        ).ask()
+
+        if not confirmed or confirmed is None:
+            raise ExecutionAbortedError(
+                "Execution cancelled: Untrusted external source."
+            )
+
     def run(self) -> None:
         """Executes the pre-flight, build, and realization phases."""
         console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
@@ -181,6 +228,9 @@ class Orchestrator:
                 logger.debug("Injecting static files from configuration.")
                 for filepath, content in self.blueprint.files.items():
                     self.manifest.add_file_injection(filepath, content)
+
+        # Phase 3.5: Trust Evaluation Boundary
+        self._prompt_remote_trust()
 
         # Phase 4: System Execution
         executor = SystemExecutor(self.manifest, self.user_config, self.docker)
