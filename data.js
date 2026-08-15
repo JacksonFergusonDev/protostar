@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786770802773,
+  "lastUpdate": 1786830680404,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6091,6 +6091,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 219.04,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f5ac02e4fbdbc41905eae841000aebe3e533b7af",
+          "message": "feat: finalize template transition with alias registry, precedence cascade, and trust dialog (#162)\n\n* feat: expand config schema for template aliasing and tooling overrides\n\n* feat: implement template alias resolution and configuration cascade\n\n* feat: implement explicit trust dialog for external templates\n\n* refactor: modernize TUI wizard to support template blueprints\n\n* test: add coverage for template aliases, overrides, and trust verification\n\n- Add unit tests for UserConfig parsing and validation of the [templates] table\n- Add tests verifying TemplateBlueprint tooling overrides extraction\n- Add tests for Orchestrator remote trust dialog behavior across interactive,\n  non-interactive, and aliased scenarios\n- Add CLI routing tests for global template alias resolution and error handling\n\n* docs: update fixtures\n\n* ci: install direnv on runners to allow testing to pass",
+          "timestamp": "2026-08-15T14:50:21-07:00",
+          "tree_id": "6d9e85a557eef2322b8f94d59cb889fa5f678414",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f5ac02e4fbdbc41905eae841000aebe3e533b7af"
+        },
+        "date": 1786830679245,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 118.02,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 176.18,
             "unit": "ms"
           }
         ]
