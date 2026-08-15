@@ -1,64 +1,71 @@
-import itertools
-
 import pytest
 
 pytestmark = pytest.mark.exhaustive
 
-# Generate all unique pairs of presets to ensure no configuration collisions occur
-PRESET_COMBINATIONS = list(
-    itertools.combinations(
-        [
-            "--scientific",
-            "--astro",
-            "--dsp",
-            "--embedded",
-            "--ml",
-            "--api",
-            "--cli",
-        ],
-        2,
-    )
-)
+BUILTIN_TEMPLATES = [
+    "scientific",
+    "astro",
+    "dsp",
+    "embedded",
+    "ml",
+    "api",
+    "cli",
+]
+
+TEMPLATE_DEPENDENCY_MARKERS = {
+    "scientific": "numpy",
+    "astro": "photutils",
+    "dsp": "librosa",
+    "embedded": "pyserial",
+    "ml": "torch",
+    "api": "fastapi",
+    "cli": "typer",
+}
 
 
-@pytest.mark.parametrize("preset_pair", PRESET_COMBINATIONS)
-def test_preset_orthogonality(run_cli, preset_pair):
-    """Verifies that loading multiple domain-specific presets does not cause manifest collisions."""
+@pytest.mark.parametrize("template", BUILTIN_TEMPLATES)
+def test_individual_template_scaffolding(run_cli, template):
+    """Verifies that every built-in template scaffolds cleanly in isolation."""
+    # Pass --force-replace to allow opinionated templates with __replace__ directives (e.g. cli)
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python-version", "3.12", *preset_pair
+        "init",
+        "--python-version",
+        "3.12",
+        "--template",
+        template,
+        "--force-replace",
     )
 
-    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+    assert code == 0, (
+        f"CLI Failed for template {template}.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+    )
 
-    # Explicitly check existence before reading to preserve string telemetry
     pyproject_path = workspace / "pyproject.toml"
-    assert pyproject_path.exists(), (
-        f"Missing pyproject.toml\nSTDOUT: {stdout}\nSTDERR: {stderr}"
-    )
+    assert pyproject_path.exists(), f"Missing pyproject.toml for template {template}"
 
     pyproject_data = pyproject_path.read_text()
-
-    if "--scientific" in preset_pair:
-        assert "numpy" in pyproject_data
-    if "--astro" in preset_pair:
-        assert "photutils" in pyproject_data
-    if "--dsp" in preset_pair:
-        assert "librosa" in pyproject_data
-    if "--embedded" in preset_pair:
-        assert "pyserial" in pyproject_data
-    if "--ml" in preset_pair:
-        assert "torch" in pyproject_data
-    if "--api" in preset_pair:
-        assert "fastapi" in pyproject_data
-    if "--cli" in preset_pair:
-        assert "typer" in pyproject_data
+    expected_dep = TEMPLATE_DEPENDENCY_MARKERS[template]
+    assert expected_dep in pyproject_data, (
+        f"Expected dependency '{expected_dep}' missing from pyproject.toml for template '{template}'."
+    )
 
 
 def test_malformed_cli_arguments(run_cli):
     """Verifies the CLI parser intercepts invalid boundaries and returns non-zero codes."""
-    # Pass a genuinely unrecognized flag to guarantee argparse terminates with >0
+    # 1. Unrecognized CLI flag
     code, *_ = run_cli("init", "--this-flag-is-completely-invalid")
     assert code != 0
 
-    code_gen, *_ = run_cli("generate", "unknown_target", "TestName")
-    assert code_gen != 0
+    # 2. Mutually exclusive flags: --template and --from together
+    code, *_ = run_cli(
+        "init", "--template", "cli", "--from", "https://example.com/template.toml"
+    )
+    assert code != 0
+
+    # 3. Non-existent built-in template
+    code, *_ = run_cli("init", "--template", "non_existent_template_xyz")
+    assert code != 0
+
+    # 4. Unknown subcommand
+    code, *_ = run_cli("unknown_subcommand")
+    assert code != 0
