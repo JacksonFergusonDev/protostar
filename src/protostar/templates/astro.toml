@@ -1,3 +1,4 @@
+# --- Dependencies ---
 dependencies = [
     "numpy",
     "scipy",
@@ -10,8 +11,10 @@ dependencies = [
     "nbdime",
 ]
 
+# --- Directory Architecture ---
 directories = ["data/catalogs", "data/fits", "notebooks", "src"]
 
+# --- Version Control Ignores ---
 vcs_ignores = [
     "*.fits",
     "*.fit",
@@ -21,24 +24,24 @@ vcs_ignores = [
     ".ipynb_checkpoints/",
 ]
 
+# --- Post-Install Subprocesses ---
 post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
 
-# Tooling opinions for a Jupyter/Scientific workflow
+# --- Tooling Opinions ---
 ruff = true
 direnv = true
 mypy = false
 pytest = false
 pre_commit = false
 
+# --- pyproject.toml AST Injections ---
 [dev.pyproject]
-# Surgically append data-science specific linting rules to Ruff
-# without destroying the baseline configuration.
-#
 data_science_linting = '''
 [tool.ruff.lint]
 extend-select = ["PD", "NPY"]
 '''
 
+# --- Static File Injections ---
 [files]
 ".gitattributes" = '''
 # Astrophysics binary safety

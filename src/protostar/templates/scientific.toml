@@ -1,3 +1,4 @@
+# --- Dependencies ---
 dependencies = [
     "numpy",
     "matplotlib",
@@ -8,6 +9,8 @@ dependencies = [
     "scikit-learn",
 ]
 
+# --- Directory Architecture ---
 directories = ["data", "notebooks", "src"]
 
+# --- Version Control Ignores ---
 vcs_ignores = ["*.csv", "*.parquet", "*.nc", ".ipynb_checkpoints/"]

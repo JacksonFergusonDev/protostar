@@ -1,8 +1,10 @@
+# --- Dependencies ---
 dependencies = ["typer", "rich"]
 
+# --- Directory Architecture ---
 directories = ["src/<% PACKAGE_NAME %>", "tests"]
 
-# Tooling opinions for robust software engineering
+# --- Tooling Opinions ---
 ruff = true
 direnv = true
 mypy = true
@@ -18,9 +20,11 @@ release = true
 readthedocs = true
 markdownlint = true
 
+# --- Development Dependencies ---
 [dev]
 extra_dependencies = ["pytest-cov"]
 
+# --- pyproject.toml AST Injections ---
 [dev.pyproject]
 cli_ruff_config = '''
 [tool.ruff.lint]
@@ -90,6 +94,7 @@ cli_entrypoint = '''
 <% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"
 '''
 
+# --- Static File Injections ---
 [files]
 "src/<% PACKAGE_NAME %>/__init__.py" = '''
 """<% PROJECT_NAME %>"""

@@ -1,125 +1,71 @@
-Your global configuration file acts as the singular source of truth for environment initialization. Instead of hunting down the file path, you can open it directly in your system's default `$EDITOR` by running:
+# Global Configuration
+
+Your global configuration file acts as the singular source of truth for environment initialization. Open it in your system's default `$EDITOR` by running:
 
 ```bash
 protostar config
 ```
 
-If you need to restore your configuration to the factory defaults, use the `--reset` flag:
+To restore your configuration to the factory defaults:
 
 ```bash
 protostar config --reset
 ```
 
-This will prompt for confirmation. To bypass the prompt (useful in CI/CD or automated scripts), append the `--force` (or `-f`) flag:
+To bypass the confirmation prompt (e.g., in automated scripts), append `--force`:
 
 ```bash
 protostar config --reset --force
 ```
 
+---
+
 ## The Default Baseline
 
-If you just installed Protostar, this is your baseline configuration. It dictates base environment toggles, preferred developer tools, package managers, and domain-specific dependency overrides.
+When you first run `protostar config` a configuration file is created and opened at `~/.config/protostar/config.toml`:
 
 --8<-- "default_config.md"
 
-Because `protostar init` always reads from this global file, you maintain a consistent, reproducible development signature across every new project you scaffold.
+---
 
-## Deep Dive: The Configuration Matrix
+## Configuration Reference
 
-For power users, Protostar's configuration goes far beyond simple boolean toggles. You can define complete dependency footprints, map out directory structures, and inject raw multi-line strings directly into the Abstract Syntax Tree (AST) of target configuration files.
+### Environment Settings (`[env]`)
+
+Controls base environment toggles and global tool preferences applied whenever `protostar init` is executed:
+
+- `ide`: Preferred IDE (`"vscode"`, `"cursor"`, or `"none"`).
+- `python_version`: Default Python version to pin (e.g., `"3.13"`).
+- `supported_os`: Operating systems matrix for CI workflows (e.g., `["MacOS", "Linux", "Windows"]`).
+- `direnv`: Auto-scaffold `.envrc` shell bindings.
+- Tooling toggles (`ruff`, `mypy`, `ty`, `pyrefly`, `pytest`, `pre_commit`, `prek`, `commitizen`, `renovate`, `codecov`, `zensical`, `readthedocs`, `ci`, `release`, `just`, `markdownlint`).
 
 ### Development Overrides (`[dev]`)
 
-The `[dev]` block allows you to force configurations across *all* initialized environments, regardless of the flags provided at runtime.
-
-#### Extra Dependencies
-
-If you have a tool you use universally (like a version bumper or specific LSP extension), append it here to have it installed as a dev-dependency on every run.
+Force dependencies and AST injections across all initialized projects regardless of CLI flags:
 
 ```toml
 [dev]
-extra_dependencies = ["bump-my-version", "pyright"]
-```
+extra_dependencies = ["bump-my-version"]
 
-#### pyproject.toml Injections
-
-The `[dev.pyproject]` block is one of Protostar's most powerful features. You can define raw, multi-line TOML strings that the orchestrator will safely deep-merge into the target `pyproject.toml`'s Abstract Syntax Tree.
-
-This is highly effective for maintaining a universal static analysis or linting baseline.
-
-```toml
 [dev.pyproject]
 custom_ruff = '''
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
 ignore = ["E501", "D100", "D104", "D107"]
-
-[tool.ruff.lint.isort]
-section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 '''
 ```
 
-## Portable Configurations (`--from`)
+### Global Template Aliases (`[templates]`)
 
-The `--from` flag allows you to initialize or augment an environment using a portable TOML configuration template. This is incredibly useful for standardizing team workflows, sharing custom architectures across repositories, or maintaining a universal remote configuration.
-
-When using the `--from` flag, Protostar first reads your global configuration, then overlays the portable configuration on top.
-
-### Sourcing Portable Configurations
-
-You can source portable configurations either locally from your filesystem or remotely via HTTP/HTTPS. When fetching from remote URLs, Protostar automatically translates web UI URLs into raw file URLs for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut.
-
-**From a Local File:**
-
-```bash
-protostar init --from ./team-config.toml
-```
-
-**From a Remote URL:**
-
-```bash
-protostar init --from https://raw.githubusercontent.com/org/configs/main/protostar.toml
-```
-
-### Passing Template Variables
-
-Portable configurations can contain ERB-style placeholders (e.g., `<% project_name %>`). You can satisfy these variables by passing them as dynamic keyword arguments alongside the `--from` flag:
-
-```bash
-protostar init --from ./template.toml --project_name="MyApp" --author="Jane Doe"
-```
-
-If the template requires variables that you haven't provided via CLI flags, Protostar will interactively prompt you for the missing values.
-
-### Authoring Custom Templates
-
-Creating a portable template is functionally identical to modifying your own global configuration, but with the added ability to leverage `<% variable %>` templating and preset composition.
-
-A portable TOML template can contain any of the following standard sections:
-
-- `[env]`: Base environment settings (e.g., `python_version = "3.12"`, `ide = "vscode"`, `ruff = true`).
-- `[dev]`: Instructions for injecting `extra_dependencies` or raw `pyproject` string injections.
-- `[files]`: A powerful block mapping relative file paths to raw string content. This is perfect for scaffolding `README.md` files or custom scripts.
-- `[variables]`: Arbitrary key-value metadata for the configuration.
-
-#### Example: A Team Initialization Template
+Map friendly shorthand names to local files or remote URLs:
 
 ```toml
-[env]
-python_version = "3.12"
-ruff = true
-pytest = true
-ide = "vscode"
-
-[dev]
-extra_dependencies = ["pytest-cov", "httpx"]
-
-[files]
-"README.md" = '''
-# <% project_name %>
-
-Scaffolded by Protostar for team <% team_name %>.
-
-## Setup
-Run `uv sync` to install dependencies.
+[templates]
+my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
+data-science = "~/Developer/templates/ds_base.toml"
 ```
+
+Templates declared here can be invoked directly with `protostar init --template my-org-api`, appear automatically in the interactive wizard, and bypass the remote trust warning dialog.
+
+For complete documentation on creating and using templates, see **[Templates & Portable Configurations](./templates.md)**.
