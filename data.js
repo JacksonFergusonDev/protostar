@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786754389899,
+  "lastUpdate": 1786770802773,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6057,6 +6057,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.14,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2bb0920c6f04f61ef2b7e59837455aff5d6a9db8",
+          "message": "refactor(core): migrate from python presets to declarative TOML templates (#161)\n\n* feat(templates): migrate python preset logic to declarative TOML templates\n\n* feat(orchestrator): map TemplateBlueprint structural fields to EnvironmentManifest\n\n* refactor: purge python preset layer and pivot interfaces to template-first model\n\n* refactor(config): parse template blueprint fields and purge preset test remnants\n\n- Add root-level structural field parsing (dependencies, directories, ignores, tasks) to `TemplateBlueprint._parse`\n- Update CLI template resolution tests to assert blueprint payload dependencies\n- Remove `active_presets` and `DummyPreset` test fixtures across config and orchestrator suites\n\n* docs(fixtures): migrate documentation generator and fixtures to built-in templates\n\n- Update `generate_doc_fixtures.py` to use `--template <name>` flags instead of purged preset CLI flags\n- Replace the hardcoded presets capability matrix with a dynamic built-in templates table\n- Update `generate_manifest_state()` to load and apply `astro.toml` via `TemplateBlueprint`\n- Regenerate documentation fixtures, tables, SVGs, and pyproject.toml snippets\n\n* test(exhaustive): migrate preset orthogonality suite to isolated template checks\n\n- Replace combinatorial preset pair tests with parameterized single-template scaffolding checks\n- Assert runtime dependency presence across all built-in templates\n- Expand malformed argument tests to cover invalid templates and flag collisions\n\n* chore(templates): remove lingering preset terminology and update docs\n\n- Remove obsolete `active_presets` keys from `cli.toml` and `astro.toml`\n- Update `protostar init` CLI epilog to use `--template` instead of purged preset flags\n- Update `README.md` examples and documentation to reflect the new template-first architecture\n\n* docs(core): align architecture guides and tutorials with new template engine\n\n- Rename `presets.md` to `templates.md` and update navigation hierarchy\n- Replace legacy domain CLI flags (e.g., `--astro`) with `--template <name>` across all tutorials\n- Remove obsolete documentation for `PresetModule`, `active_presets`, and `[presets.xyz]` overrides\n- Update Mermaid architecture diagrams in `modules.md` and `api-reference.md` to remove the 4th layer preset abstraction\n- Update `testing.md` to reflect the new exhaustive template merge orthogonality checks",
+          "timestamp": "2026-08-14T22:12:21-07:00",
+          "tree_id": "eb4598bd5c338554b905d77ef592403d1b86a992",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2bb0920c6f04f61ef2b7e59837455aff5d6a9db8"
+        },
+        "date": 1786770802210,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 141.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 219.04,
             "unit": "ms"
           }
         ]
