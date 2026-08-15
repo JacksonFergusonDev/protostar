@@ -19,7 +19,6 @@ from .errors import (
 )
 from .manifest import EnvironmentManifest
 from .modules.base import BootstrapModule
-from .presets.base import PresetModule
 
 # Neutralize the logger before any runtime execution to prevent stderr leakage
 logging.getLogger("protostar").addHandler(logging.NullHandler())
@@ -32,7 +31,6 @@ __all__ = [
     "EnvironmentManifest",
     "FileSystemError",
     "MissingDependencyError",
-    "PresetModule",
     "ProtostarError",
     "SecurityViolationError",
 ]

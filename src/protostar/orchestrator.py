@@ -9,7 +9,6 @@ from .errors import ExecutionAbortedError, ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
-from .presets import PresetModule
 from .system import is_interactive
 
 logger = logging.getLogger("protostar")
@@ -24,7 +23,6 @@ class Orchestrator:
         modules: list[BootstrapModule],
         user_config: UserConfig,
         blueprint: TemplateBlueprint | None = None,
-        presets: list[PresetModule] | None = None,
         docker: bool = False,
         force_merge: bool = False,
         force_replace: bool = False,
@@ -36,7 +34,6 @@ class Orchestrator:
             modules: The ordered stack of bootstrap layers to execute.
             user_config: The active UserConfig instance.
             blueprint: The template blueprint.
-            presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
             force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
             force_replace: If True, bypasses interactive prompts and forces replacement on collisions. Defaults to False.
@@ -45,7 +42,6 @@ class Orchestrator:
         self.modules = modules
         self.user_config = user_config
         self.blueprint = blueprint
-        self.presets = presets or []
         self.docker = docker
         self.force_merge = force_merge
         self.force_replace = force_replace
@@ -150,10 +146,6 @@ class Orchestrator:
 
         for mod in self.modules:
             mod.build(self.manifest)
-
-        for preset in self.presets:
-            logger.debug(f"Building {preset.name} preset.")
-            preset.build(self.manifest)
 
         # Inject global configuration states using the injected config
         if self.blueprint:
