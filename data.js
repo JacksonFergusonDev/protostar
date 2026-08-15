@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786751924496,
+  "lastUpdate": 1786754389899,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6023,6 +6023,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.02,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b9cdc66403070d505f6c09b1a3b2148c24828a7",
+          "message": "feat: dual-mode template resolution and archive unpacker (#160)\n\n* feat: support raw rendering in render_template without TOML escaping\n\n* feat: add template archive fetching and URL translation to network utilities\n\n* feat: add template directory walking and variable scanning to config\n\n* test: add tests for blueprint loader and archive translation\n\n* fix: use safe_extract_zip and ensure tempdir cleanup in config",
+          "timestamp": "2026-08-14T17:38:47-07:00",
+          "tree_id": "466aee5ef826b1074eb7e93e18571d9644f24d00",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2b9cdc66403070d505f6c09b1a3b2148c24828a7"
+        },
+        "date": 1786754388721,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.14,
             "unit": "ms"
           }
         ]
