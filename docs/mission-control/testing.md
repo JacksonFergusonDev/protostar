@@ -81,7 +81,7 @@ We use the custom `run_cli` fixture in `conftest.py` to spawn the `uv` toolchain
 
 ### Exhaustive Tests (`@pytest.mark.exhaustive`)
 
-Found in `tests/test_exhaustive.py`, these tests leverage `itertools.combinations` to permute every domain-specific preset against each other. This guarantees that loading multiple presets (e.g., `--astro` alongside `--ml`) does not cause `KeyError` collisions or corrupted TOML AST injections.
+Found in `tests/test_exhaustive.py`, these tests validate the declarative template engine. They guarantee that every built-in template scaffolds cleanly in isolation, and that sequentially merging templates (e.g., scaffolding `--template astro` and merging `--template ml` with `--force-merge`) correctly deep-merges ASTs without corrupting previously injected dependencies.
 
 ### Telemetry Testing (`--crash-test`)
 

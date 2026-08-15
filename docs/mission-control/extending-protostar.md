@@ -13,14 +13,6 @@ Protostar's architecture strictly isolates state definition from execution. This
 
     [:octicons-arrow-right-24: Learn more](#building-a-custom-bootstrap-module)
 
--   :material-layers-triple: __Preset Modules__
-
-    <hr>
-
-    Lighter wrappers that inject domain-specific dependencies and directories onto a bootstrap foundation.
-
-    [:octicons-arrow-right-24: Learn more](#building-a-custom-domain-preset)
-
 </div>
 
 ---
@@ -89,53 +81,6 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 ??? abstract "Deep Dive: Pre-flight vs Build"
     - **`pre_flight()`**: Executes before *any* state changes occur. If `shutil.which("just")` fails here, the orchestrator immediately halts, guaranteeing the environment remains untouched.
     - **`build()`**: Only queues state changes. Notice how we use `manifest.add_file_injection()` instead of `Path("justfile").write_text()`.
-
----
-
-## Building a Custom Domain Preset
-
-Presets sit on top of the base language footprint. They inherit from `PresetModule` in `protostar.presets.base` and strictly define arrays of dependencies and directory structures.
-
-=== "Example Implementation"
-    ```python
-    from protostar.presets import PresetModule
-
-    class DataEngineeringPreset(PresetModule):
-        """Injects ETL and data pipeline dependencies."""
-
-        cli_flags = ("--data-eng",)
-        cli_help = "Inject data engineering dependencies"
-
-        @property
-        def name(self) -> str:
-            return "Data Engineering"
-
-        @property
-        def default_dependencies(self) -> list[str]:
-            return ["polars", "pyarrow", "duckdb", "dbt-core"]
-
-        @property
-        def default_directories(self) -> list[str]:
-            return ["pipelines", "data/raw", "data/processed", "tests/data"]
-
-        @property
-        def default_ignores(self) -> list[str]:
-            return ["*.parquet", "*.duckdb", "dbt_packages/"]
-
-    ```
-
-=== "Preset API"
-    !!! abstract "Domain-Specific Dependencies: `PresetModule`"
-        ::: protostar.presets.base.PresetModule
-            options:
-                show_source: true
-                show_bases: true
-                show_root_heading: true
-                show_root_toc_entry: true
-                separate_signature: true
-
-!!! info "Configuration Overrides"
-    Register your preset in `protostar/presets/__init__.py`. Protostar automatically handles merging any user-defined overrides for these defaults found in their global `config.toml`.
 
 ---
 
