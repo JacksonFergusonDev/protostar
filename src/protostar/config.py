@@ -1,6 +1,7 @@
 """Configuration management and schema definitions for Protostar."""
 
 import logging
+import tempfile
 import tomllib
 import types
 import typing
@@ -11,7 +12,7 @@ from typing import Any, ClassVar
 
 from .errors import ConfigurationError
 from .interpolation import extract_variables, render_template
-from .network import fetch_remote_config
+from .network import resolve_remote_template
 
 logger = logging.getLogger("protostar")
 
@@ -279,15 +280,43 @@ class TemplateBlueprint:
         variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
     ) -> "TemplateBlueprint":
         """Loads and parses a template blueprint."""
+        temp_dir: tempfile.TemporaryDirectory[str] | None = None
+
         if target.startswith("http://") or target.startswith("https://"):
-            content = fetch_remote_config(target)
+            temp_dir = tempfile.TemporaryDirectory()
+            temp_workspace = Path(temp_dir.name)
+            target_path = resolve_remote_template(target, temp_workspace)
         else:
             target_path = Path(target)
             if not target_path.exists():
                 raise ConfigurationError(f"Configuration file not found: {target_path}")
-            content = target_path.read_text(encoding="utf-8")
 
-        variables = extract_variables(content)
+        if target_path.is_file():
+            toml_path = target_path
+            base_dir = target_path.parent
+        else:
+            toml_path = target_path / "protostar.toml"
+            if not toml_path.exists():
+                raise ConfigurationError(f"Configuration file not found: {toml_path}")
+            base_dir = target_path
+
+        toml_content = toml_path.read_text(encoding="utf-8")
+
+        raw_files: dict[str, str] = {}
+        template_dir = base_dir / "template"
+        if template_dir.exists() and template_dir.is_dir():
+            for file_path in template_dir.rglob("*"):
+                if file_path.is_dir():
+                    continue
+                if ".DS_Store" in file_path.parts or "__pycache__" in file_path.parts:
+                    continue
+                rel_path = str(file_path.relative_to(template_dir))
+                raw_files[rel_path] = file_path.read_text(encoding="utf-8")
+
+        all_text_sources = [toml_content, *raw_files.keys(), *raw_files.values()]
+        combined_text = "\n".join(all_text_sources)
+        variables = extract_variables(combined_text)
+
         context = dict(template_context) if template_context else {}
 
         late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
@@ -305,8 +334,21 @@ class TemplateBlueprint:
                     "or run in an interactive terminal."
                 )
 
-        content = render_template(content, context)
-        return cls._parse(content, target)
+        rendered_toml = render_template(toml_content, context, escape_toml=True)
+        blueprint = cls._parse(rendered_toml, target)
+
+        interpolated_files: dict[str, str] = {}
+        for rel_path, content in raw_files.items():
+            new_path = render_template(rel_path, context, escape_toml=False)
+            new_content = render_template(content, context, escape_toml=False)
+            interpolated_files[new_path] = new_content
+
+        blueprint.files.update(interpolated_files)
+
+        if temp_dir is not None:
+            temp_dir.cleanup()
+
+        return blueprint
 
     @classmethod
     def _parse(cls, content: str, source: str = "unknown") -> "TemplateBlueprint":
