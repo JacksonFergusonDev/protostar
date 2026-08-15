@@ -1,9 +1,9 @@
-| Preset | CLI Flags | Description | Default Dependencies |
-| :--- | :--- | :--- | :--- |
-| Scientific | `-s`, `--scientific` | Inject scientific computing dependencies | `numpy`, `matplotlib`, `seaborn`, `pandas`, `scipy`, `ipykernel`, `scikit-learn` |
-| Astrophysics | `-a`, `--astro` | Inject astrophysics dependencies | `numpy`, `scipy`, `pandas`, `matplotlib`, `astropy`, `astroquery`, `photutils`, `specutils`, `nbdime` |
-| Digital Signal Processing | `-d`, `--dsp` | Inject digital signal processing dependencies | `librosa`, `soundfile`, `mido`, `mutagen`, `pydub` |
-| Embedded Hardware | `-e`, `--embedded` | Inject embedded hardware dependencies | `pyserial`, `esptool`, `adafruit-blinka` |
-| Machine Learning | `--ml` | Inject machine learning and deep learning dependencies | `torch`, `scikit-learn`, `huggingface_hub`, `tqdm` |
-| REST API | `--api` | Inject REST API backend dependencies | `fastapi`, `uvicorn`, `pydantic`, `httpx` |
-| CLI Application | `--cli` | Inject CLI application dependencies | `typer`, `rich` |
+| Template | Invocation | Dependencies |
+| :--- | :--- | :--- |
+| `api` | `protostar init --template api` | `fastapi`, `uvicorn`, `pydantic`, `httpx` |
+| `astro` | `protostar init --template astro` | `numpy`, `scipy`, `pandas`, `matplotlib`, `astropy`, `astroquery`, `photutils`, `specutils`, `nbdime` |
+| `cli` | `protostar init --template cli` | `typer`, `rich` |
+| `dsp` | `protostar init --template dsp` | `librosa`, `soundfile`, `mido`, `mutagen`, `pydub` |
+| `embedded` | `protostar init --template embedded` | `pyserial`, `esptool`, `adafruit-blinka` |
+| `ml` | `protostar init --template ml` | `torch`, `scikit-learn`, `huggingface_hub`, `tqdm` |
+| `scientific` | `protostar init --template scientific` | `numpy`, `matplotlib`, `seaborn`, `pandas`, `scipy`, `ipykernel`, `scikit-learn` |

@@ -32,16 +32,10 @@ python_version = "3.13"
 # ci = true          # Scaffold standard GitHub Actions CI workflows
 # release = true     # Scaffold GitHub Actions PyPI release workflows
 # just = true        # Scaffold a justfile for command execution
-# active_presets = []
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures
 # for specific pipelines, or inject tooling across all initialized environments.
-
-# [presets.astro]
-# dependencies = ["astropy", "astroquery", "photutils", "specutils"]
-# dev_dependencies = ["pytest-benchmark"]
-# directories = ["data/catalogs", "data/fits", "data/raw"]
 
 # [dev]
 # extra_dependencies = ["bump-my-version"]

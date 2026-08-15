@@ -46,5 +46,6 @@ select = [
 ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
+extend-select = ["PD", "NPY"]
 
 ```

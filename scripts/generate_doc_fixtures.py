@@ -1,4 +1,5 @@
 import argparse
+import importlib.resources
 import io
 import json
 import os
@@ -6,6 +7,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import tomllib
 from collections.abc import Sequence
 from dataclasses import asdict, is_dataclass
 from enum import Enum
@@ -17,7 +19,7 @@ from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
 
 import protostar.cli
-from protostar.config import DEFAULT_CONFIG_CONTENT
+from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint
 from protostar.fs import atomic_write_text
 from protostar.manifest import EnvironmentManifest
 from protostar.modules import (
@@ -26,18 +28,25 @@ from protostar.modules import (
     PythonCore,
     RuffModule,
 )
-from protostar.presets import PRESETS, AstroPreset, PresetModule
 
 # Define matrices for combinatorial CLI execution scenarios
 FIXTURES = {
     "cli": [
-        ["--cli", "--mypy", "--pytest", "--prek", "--markdownlint"],
+        [
+            "--template",
+            "cli",
+            "--mypy",
+            "--pytest",
+            "--prek",
+            "--markdownlint",
+            "--force-replace",
+        ],
     ],
-    "astro": [["--astro"]],
-    "ml": [["--ml", "--docker"]],
+    "astro": [["--template", "astro"]],
+    "ml": [["--template", "ml", "--docker"]],
     "ml_merged": [
-        ["--ml", "--docker"],
-        ["--astro", "--mypy", "--docker", "--force-merge"],
+        ["--template", "ml", "--docker"],
+        ["--template", "astro", "--mypy", "--docker", "--force-merge"],
     ],
 }
 
@@ -196,7 +205,7 @@ def generate_default_config() -> None:
 
 
 def generate_capability_tables() -> None:
-    """Generates Markdown tables detailing modules, presets, and their CLI footprints."""
+    """Generates Markdown tables detailing modules, templates, and their CLI footprints."""
 
     def _format_flags(flags: tuple[str, ...]) -> str:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
@@ -214,19 +223,30 @@ def generate_capability_tables() -> None:
     ]
     _write_fixture("table_tooling.md", _format_markdown_table(tool_headers, tool_rows))
 
-    # Dependency preset matrix
-    preset_headers = ["Preset", "CLI Flags", "Description", "Default Dependencies"]
-    preset_rows = [
-        [
-            preset.name,
-            _format_flags(preset.cli_flags),
-            preset.cli_help,
-            ", ".join(f"`{d}`" for d in preset.default_dependencies) or "*None*",
-        ]
-        for preset in PRESETS
-    ]
+    # Built-in Template matrix (scanned directly from protostar/templates)
+    template_headers = ["Template", "Invocation", "Dependencies"]
+    template_rows = []
+
+    try:
+        templates_dir = importlib.resources.files("protostar.templates")
+        for item in sorted(templates_dir.iterdir(), key=lambda p: p.name):
+            if item.is_file() and item.name.endswith(".toml"):
+                name = item.name[:-5]
+                content = tomllib.loads(item.read_text(encoding="utf-8"))
+                deps = content.get("dependencies", [])
+                deps_formatted = ", ".join(f"`{d}`" for d in deps) if deps else "*None*"
+                template_rows.append(
+                    [
+                        f"`{name}`",
+                        f"`protostar init --template {name}`",
+                        deps_formatted,
+                    ]
+                )
+    except Exception as e:
+        print(f"Warning: Failed to load built-in templates: {e}")
+
     _write_fixture(
-        "table_presets.md", _format_markdown_table(preset_headers, preset_rows)
+        "table_presets.md", _format_markdown_table(template_headers, template_rows)
     )
 
 
@@ -234,15 +254,33 @@ def generate_manifest_state() -> None:
     """Simulates an initialization sequence to compute a deterministic JSON manifest."""
     manifest = EnvironmentManifest()
 
-    # Simulate: `protostar init --astro --ruff`
+    # Simulate: `protostar init --template astro --ruff`
     bootstrap_mods: list[BootstrapModule] = [PythonCore(), RuffModule()]
-    preset_mods: list[PresetModule] = [AstroPreset()]
-
     for b_mod in bootstrap_mods:
         b_mod.build(manifest)
 
-    for p_mod in preset_mods:
-        p_mod.build(manifest)
+    # Load and apply the built-in astro template
+    target = importlib.resources.files("protostar.templates").joinpath("astro.toml")
+    if target.is_file():
+        blueprint = TemplateBlueprint.load(str(target))
+        for dep in blueprint.dependencies:
+            manifest.add_dependency(dep)
+        for dep in blueprint.dev_dependencies:
+            manifest.add_dev_dependency(dep)
+        for dep in blueprint.docs_dependencies:
+            manifest.add_docs_dependency(dep)
+        for d in blueprint.directories:
+            manifest.add_directory(d)
+        for ig in blueprint.vcs_ignores:
+            manifest.add_vcs_ignore(ig)
+        for cmd in blueprint.system_tasks:
+            manifest.add_system_task(cmd)
+        for cmd in blueprint.post_install_tasks:
+            manifest.add_post_install_task(cmd)
+        for filepath, content in blueprint.files.items():
+            manifest.add_file_injection(filepath, content)
+        for payload in blueprint.pyproject_injections.values():
+            manifest.add_file_append("pyproject.toml", payload)
 
     # Override machine-specific IDE paths to guarantee stable JSON diffs in CI
     manifest.ide_settings = {
