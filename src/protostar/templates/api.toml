@@ -1,0 +1,8 @@
+dependencies = ["fastapi", "uvicorn", "pydantic", "httpx"]
+
+directories = ["api/routers", "core", "schemas"]
+
+vcs_ignores = [".env", "*.pem", "*.key"]
+
+[files]
+"README.md" = ""

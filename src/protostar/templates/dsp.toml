@@ -1,0 +1,5 @@
+dependencies = ["librosa", "soundfile", "mido", "mutagen", "pydub"]
+
+directories = ["data/raw_audio", "data/processed"]
+
+vcs_ignores = ["*.wav", "*.mp3", "*.flac", "*.mid", "*.midi", "*.ogg"]

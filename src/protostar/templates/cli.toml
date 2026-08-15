@@ -1,3 +1,7 @@
+dependencies = ["typer", "rich"]
+
+directories = ["src/<% PACKAGE_NAME %>", "tests"]
+
 [env]
 active_presets = ["cli"]
 
@@ -16,7 +20,6 @@ ci = true
 release = true
 readthedocs = true
 markdownlint = true
-
 
 [dev]
 extra_dependencies = ["pytest-cov"]
@@ -83,4 +86,91 @@ omit = ["**/__init__.py"]
 show_missing = true
 skip_covered = true
 fail_under = 90
+'''
+
+cli_entrypoint = '''
+[project.scripts]
+<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"
+'''
+
+[files]
+"src/<% PACKAGE_NAME %>/__init__.py" = '''
+"""<% PROJECT_NAME %>"""
+
+import contextlib
+import importlib.metadata
+
+__version__ = "unknown"
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version("<% PROJECT_NAME %>")
+'''
+
+"src/<% PACKAGE_NAME %>/cli.py" = '''
+"""Command-line interface for <% PROJECT_NAME %>."""
+
+import typer
+from rich.console import Console
+
+from <% PACKAGE_NAME %> import __version__
+
+app = typer.Typer(
+    name="<% PROJECT_NAME %>",
+    help="Command-line interface for <% PROJECT_NAME %>.",
+    add_completion=False,
+)
+console = Console()
+
+
+def version_callback(value: bool) -> None:
+    """Print the version and exit eagerly."""
+    if value:
+        console.print(f"<% PROJECT_NAME %> version [bold cyan]{__version__}[/bold cyan]")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: bool = typer.Option(
+        None,
+        "--version",
+        help="Show the application version and exit.",
+        callback=version_callback,
+        is_eager=True,
+    ),
+) -> None:
+    """Configure global CLI state."""
+
+
+if __name__ == "__main__":
+    app()
+'''
+
+"tests/test_cli.py" = '''
+"""Tests for the <% PROJECT_NAME %> CLI."""
+
+from typer.testing import CliRunner
+
+from <% PACKAGE_NAME %>.cli import app
+
+runner = CliRunner()
+
+
+def test_version() -> None:
+    """Test the --version flag displays the version."""
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "<% PROJECT_NAME %> version" in result.stdout
+
+
+def test_help() -> None:
+    """Test the --help flag displays the help message."""
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "<% PROJECT_NAME %>" in result.stdout
+'''
+
+"README.md" = '''
+# <% PROJECT_NAME %>
+
+Command-line interface for <% PROJECT_NAME %>.
 '''
