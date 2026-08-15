@@ -66,6 +66,10 @@ python_version = "3.13"
 # select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
 # ignore = ["E501", "D100", "D104", "D107"]
 # '''
+
+# [templates]
+# my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
+# data-science-base = "~/Developer/templates/ds_base.toml"
 """
 
 
@@ -123,6 +127,7 @@ class UserConfig:
     ci: bool = False
     release: bool = False
     just: bool = False
+    templates: dict[str, str] = field(default_factory=dict)
 
     # In-memory cache to prevent repeated disk I/O
     _instance: ClassVar["UserConfig | None"] = None
@@ -181,7 +186,7 @@ class UserConfig:
                 f"Details: {e}"
             ) from e
 
-        allowed_keys = {"env"}
+        allowed_keys = {"env", "templates"}
         unknown_keys = set(data.keys()) - allowed_keys
         if unknown_keys:
             raise ConfigurationError(
@@ -236,6 +241,21 @@ class UserConfig:
                     )
 
                 updates[key] = value
+
+        if "templates" in data:
+            templates_data = data["templates"]
+            if not isinstance(templates_data, dict):
+                raise ConfigurationError(
+                    f"Type mismatch in {source} for '[templates]'.\n"
+                    f"Expected a table, but got {type(templates_data).__name__}."
+                )
+            for k, v in templates_data.items():
+                if not isinstance(v, str):
+                    raise ConfigurationError(
+                        f"Type mismatch in {source} for '[templates].{k}'.\n"
+                        f"Expected string, but got {type(v).__name__}."
+                    )
+            updates["templates"] = templates_data
 
         return replace(instance, **updates)
 
@@ -385,5 +405,20 @@ class TemplateBlueprint:
 
         if "files" in data:
             instance.files = data["files"]
+
+        # Extract tooling overrides dynamically (root-level boolean flags)
+        structural_keys = {
+            "dependencies",
+            "directories",
+            "vcs_ignores",
+            "system_tasks",
+            "post_install_tasks",
+            "docs_dependencies",
+            "dev",
+            "files",
+        }
+        for key, value in data.items():
+            if key not in structural_keys and isinstance(value, bool):
+                instance.tooling_overrides[key] = value
 
         return instance
