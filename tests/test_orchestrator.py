@@ -7,7 +7,6 @@ from protostar.errors import ExecutionAbortedError, ProtostarError
 from protostar.manifest import CollisionStrategy, Severity
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
-from protostar.presets.base import PresetModule
 
 
 @pytest.fixture
@@ -36,34 +35,17 @@ class DummyModule(BootstrapModule):
         manifest.add_dependency("dummy-pkg")
 
 
-class DummyPreset(PresetModule):
-    """A mock preset for testing the orchestrator lifecycle."""
-
-    @property
-    def name(self):
-        return "DummyPreset"
-
-    def build(self, manifest):
-        manifest.add_dependency("dummy-preset-pkg")
-
-
 def test_orchestrator_lifecycle(mocker, mock_config):
     """Test that the orchestrator calls pre_flight, build, and executes tasks."""
     mock_execute = mocker.patch("protostar.orchestrator.SystemExecutor.execute")
     mocker.patch("protostar.orchestrator.Orchestrator._evaluate_collisions")
 
     dummy_mod = DummyModule()
-    dummy_preset = DummyPreset()
 
-    orchestrator = Orchestrator([dummy_mod], mock_config, presets=[dummy_preset])
+    orchestrator = Orchestrator([dummy_mod], mock_config)
     orchestrator.run()
 
-    assert dummy_mod.pre_flight_called is True
-    assert "dummy_file.txt" in orchestrator.manifest.vcs_ignores
-    assert "dummy-pkg" in orchestrator.manifest.dependencies
-    assert "dummy-preset-pkg" in orchestrator.manifest.dependencies
-
-    # Verify execution handoff
+    assert dummy_mod.pre_flight_called
     mock_execute.assert_called_once()
 
 

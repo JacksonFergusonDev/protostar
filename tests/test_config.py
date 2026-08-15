@@ -360,9 +360,6 @@ def test_user_config_pyrefly_parsed_from_env(tmp_path):
 
 def test_template_blueprint_parse():
     content = """
-[env]
-active_presets = ["astro"]
-
 [dev]
 extra_dependencies = ["bump-my-version"]
 
@@ -373,7 +370,6 @@ custom_ruff = "[tool.ruff]\\nline-length = 100"
 "test.txt" = "hello"
 """
     blueprint = TemplateBlueprint._parse(content, source="test.toml")
-    assert blueprint.active_presets == ["astro"]
     assert blueprint.dev_dependencies == ["bump-my-version"]
     assert (
         blueprint.pyproject_injections["custom_ruff"]

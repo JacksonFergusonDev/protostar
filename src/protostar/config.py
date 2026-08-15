@@ -358,6 +358,21 @@ class TemplateBlueprint:
 
         instance = cls()
 
+        # Extract structural fields
+        if "dependencies" in data:
+            instance.dependencies = data["dependencies"]
+        if "directories" in data:
+            instance.directories = data["directories"]
+        if "vcs_ignores" in data:
+            instance.vcs_ignores = data["vcs_ignores"]
+        if "system_tasks" in data:
+            instance.system_tasks = data["system_tasks"]
+        if "post_install_tasks" in data:
+            instance.post_install_tasks = data["post_install_tasks"]
+        if "docs_dependencies" in data:
+            instance.docs_dependencies = data["docs_dependencies"]
+
+        # Extract environment fields
         if "dev" in data:
             dev_data = data["dev"]
             if "extra_dependencies" in dev_data:
