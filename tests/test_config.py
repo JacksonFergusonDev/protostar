@@ -149,14 +149,20 @@ def test_template_blueprint_load_remote_target(mocker, tmp_path):
     # Patch the global variable to point to a sandboxed path that doesn't exist
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
 
-    # Patch the source of the lazy import, not the config module
-    mock_fetch = mocker.patch(
-        "protostar.config.fetch_remote_config", return_value="[env]\nide = 'cursor'"
+    def mock_resolve(url, temp_workspace):
+        (temp_workspace / "protostar.toml").write_text(
+            "[env]\nide = 'cursor'", encoding="utf-8"
+        )
+        return temp_workspace
+
+    mock_resolve_patch = mocker.patch(
+        "protostar.config.resolve_remote_template", side_effect=mock_resolve
     )
 
     config = TemplateBlueprint.load(target="https://example.com/config.toml")
 
-    mock_fetch.assert_called_once_with("https://example.com/config.toml")
+    mock_resolve_patch.assert_called_once()
+    assert mock_resolve_patch.call_args[0][0] == "https://example.com/config.toml"
     assert isinstance(config, TemplateBlueprint)
 
 
