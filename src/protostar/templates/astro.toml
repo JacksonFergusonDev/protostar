@@ -23,9 +23,6 @@ vcs_ignores = [
 
 post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
 
-[env]
-active_presets = ["astro"]
-
 # Tooling opinions for a Jupyter/Scientific workflow
 ruff = true
 direnv = true

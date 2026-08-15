@@ -249,7 +249,7 @@
 </text><text class="cli_init_help-r4" x="0" y="1118" textLength="1220" clip-path="url(#cli_init_help-line-45)">╰───────────────────────────────────────┴──────────────────────────────────────────────────────────╯</text><text class="cli_init_help-r4" x="1220" y="1118" textLength="12.2" clip-path="url(#cli_init_help-line-45)">
 </text><text class="cli_init_help-r4" x="1220" y="1142.4" textLength="12.2" clip-path="url(#cli_init_help-line-46)">
 </text><text class="cli_init_help-r7" x="0" y="1166.8" textLength="97.6" clip-path="url(#cli_init_help-line-47)">Example:</text><text class="cli_init_help-r4" x="1220" y="1166.8" textLength="12.2" clip-path="url(#cli_init_help-line-47)">
-</text><text class="cli_init_help-r4" x="0" y="1191.2" textLength="378.2" clip-path="url(#cli_init_help-line-48)">&#160;&#160;protostar&#160;init&#160;--astro&#160;--mypy</text><text class="cli_init_help-r4" x="1220" y="1191.2" textLength="12.2" clip-path="url(#cli_init_help-line-48)">
+</text><text class="cli_init_help-r4" x="0" y="1191.2" textLength="488" clip-path="url(#cli_init_help-line-48)">&#160;&#160;protostar&#160;init&#160;--template&#160;astro&#160;--mypy</text><text class="cli_init_help-r4" x="1220" y="1191.2" textLength="12.2" clip-path="url(#cli_init_help-line-48)">
 </text>
     </g>
     </g>

@@ -2,9 +2,6 @@ dependencies = ["typer", "rich"]
 
 directories = ["src/<% PACKAGE_NAME %>", "tests"]
 
-[env]
-active_presets = ["cli"]
-
 # Tooling opinions for robust software engineering
 ruff = true
 direnv = true
