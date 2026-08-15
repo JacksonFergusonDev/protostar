@@ -11,7 +11,6 @@ from .config import UserConfig
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
-from .presets import PRESETS
 from .system import is_interactive
 
 
@@ -50,7 +49,6 @@ def run_init_wizard() -> dict[str, Any] | None:
         pass
 
     answer = "None"
-    blueprint = None
     if len(templates) > 1:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
@@ -72,15 +70,7 @@ def run_init_wizard() -> dict[str, Any] | None:
 
     choices: list[Choice | Separator] = []
 
-    # 1. Presets
-    choices.append(Separator("--- Presets ---"))
-    for preset in PRESETS:
-        is_checked = False
-        if blueprint and preset.config_key in blueprint.active_presets:
-            is_checked = True
-        choices.append(Choice(title=preset.name, value=preset, checked=is_checked))
-
-    # 2. Context & Tooling
+    # Context & Tooling
     choices.append(Separator("--- Context & Tooling ---"))
     choices.append(Choice(title="Docker (Dockerfile & .dockerignore)", value="docker"))
 
@@ -100,7 +90,6 @@ def run_init_wizard() -> dict[str, Any] | None:
         raise ExecutionAbortedError("Component selection cancelled by user.")
 
     modules = [item for item in selected if item in TOOLING_MODULES]
-    presets = [item for item in selected if item in PRESETS]
     docker = "docker" in selected
 
     required_keys = set()
@@ -108,9 +97,6 @@ def run_init_wizard() -> dict[str, Any] | None:
     for mod in modules:
         required_keys.update(mod.required_metadata)
         optional_keys.update(mod.optional_metadata)
-    for preset in presets:
-        required_keys.update(preset.required_metadata)
-        optional_keys.update(preset.optional_metadata)
 
     # Core project metadata always requested as optional
     optional_keys.update(
@@ -122,7 +108,8 @@ def run_init_wizard() -> dict[str, Any] | None:
             "minimum_python",
         )
     )
-    if docker and any(getattr(p, "config_key", "") == "api" for p in presets):
+
+    if docker:
         optional_keys.add("docker_port")
 
     console = Console()
@@ -135,7 +122,6 @@ def run_init_wizard() -> dict[str, Any] | None:
 
     return {
         "modules": modules,
-        "presets": presets,
         "docker": docker,
         "project_metadata": resolved_metadata,
     }

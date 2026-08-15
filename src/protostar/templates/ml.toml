@@ -1,0 +1,15 @@
+dependencies = ["torch", "scikit-learn", "huggingface_hub", "tqdm"]
+
+directories = ["models", "data", "notebooks", "src"]
+
+vcs_ignores = [
+    "*.pt",
+    "*.pth",
+    "*.safetensors",
+    "*.onnx",
+    "*.log",
+    "wandb/",
+    "mlruns/",
+    "runs/",
+    ".ipynb_checkpoints/",
+]

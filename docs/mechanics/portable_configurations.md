@@ -67,12 +67,6 @@ Protostar's `ProtostarConfig.load` uses a unified loading strategy:
 
 This guarantees that a user's local baseline defaults (like `ide = "vscode"`) remain intact unless explicitly overwritten by the portable configuration.
 
-### The `active_presets` Validation Trap
-
-Templates can define an `active_presets` list in their `[env]` block to automatically toggle domain pipelines. However, if a user accidentally places `active_presets` in their *global* `~/.protostar.toml` file, it would irreversibly force that preset onto every future repository they scaffold!
-
-To prevent this, `config.py` uses a validation trap. `active_presets` is strictly validated using Python's `typing.get_origin`. If the TOML parser encounters it during the **Base User Config** phase, the global loader intentionally drops the key or errors out, ensuring it can *only* be safely applied during the **Template Overlay** phase.
-
 ---
 
 ## 4. The CLI Precedence Chain

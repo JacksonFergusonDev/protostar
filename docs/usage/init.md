@@ -28,7 +28,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     The following repository tree examples assume you have explicitly configured an IDE in your global settings (e.g., `ide = "vscode"`) in addition to globally enabling direnv. This represents the best practice configuration for vscode users scaffolding python environments. If your config remains set to the default `None`, the `.vscode/settings.json` file will not be generated, though the universal `.vscode/` exclusion will still be safely appended to your `.gitignore`.
 
 === "The CLI Application (Tooling Focus)"
-    __Command:__ `protostar init --cli --mypy --pytest --pre-commit --markdownlint`
+    __Command:__ `protostar init --template cli`
 
     This footprint demonstrates Protostar's ability to wire complex tooling together automatically.
 
@@ -48,13 +48,13 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     **The Intelligence:**
 
-    - **Dependency Locking:** Protostar instantly locked `typer` and `rich` from the CLI preset.
+    - **Dependency Locking:** Protostar instantly locked `typer` and `rich` from the CLI template.
     - **AST Configuration:** It didn't just dump strings into `pyproject.toml`. It constructed the TOML Abstract Syntax Tree (AST), gracefully configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside the dev-dependencies.
     - **Local Toolchain Hooks:** In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead, version discrepancies, and missing type stub dependencies.
     - **A Note on Speed:** Standard Protostar executions take fractions of a second. However, because `--pre-commit` was flagged, Protostar queued a `pre-commit autoupdate` subprocess at the end of the run to ensure your git hooks are pinned to the absolute latest network releases. This shifts the total execution time to roughly ~4-9 seconds.
 
 === "The Astrophysics Pipeline (Data Focus)"
-    __Command:__ `protostar init --astro`
+    __Command:__ `protostar init --template astro`
 
     This footprint focuses on managing heavy, serialized data assets and preventing repository bloat.
 
@@ -77,7 +77,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - **Artifact Exclusions:** The `.gitignore` was populated with `*.fits`, `*.csv`, and `*.parquet`, preventing you from accidentally committing massive telemetry cubes to version control.
 
 === "The Machine Learning Stack (Artifact Focus)"
-    __Command:__ `protostar init --ml --docker`
+    __Command:__ `protostar init --template ml`
 
     This footprint focuses on containerization and strictly excluding model artifacts.
 
@@ -98,7 +98,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
     **The Intelligence:**
 
     - **Container Scaffolding:** Because `--docker` was flagged, Protostar scaffolded a hardened, multi-stage `Dockerfile` and an optimized `.dockerignore`. The `Dockerfile` leverages `uv` caching, non-root user execution (`appuser`), and stripped-down runtime stages, while `.dockerignore` strips out `.venv`, `.git`, local caches, and test artifacts to keep your container build context lightweight.
-    - **Model Checkpoints:** The ML preset aggressively injects ignores for tensor artifacts (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`) to ensure massive model weights never pollute the git tree.
+    - **Model Checkpoints:** The ML template aggressively injects ignores for tensor artifacts (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`) to ensure massive model weights never pollute the git tree.
 
 !!! info "The Python Gravity Well"
     Protostar is engineered specifically to accelerate Python development pipelines. Its Python scaffolding (specifically leveraging `uv`) is highly refined, deeply integrated, and serves as the exclusive focus of the engine.

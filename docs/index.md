@@ -40,7 +40,7 @@ It is designed to automate environment setup while staying out of your way.
 ```bash
 mkdir orbital-mechanics-sim
 cd orbital-mechanics-sim
-protostar init --scientific --pytest --markdownlint
+protostar init --template scientific --pytest --markdownlint
 ```
 
 </div>

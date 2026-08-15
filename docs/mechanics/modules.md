@@ -31,7 +31,6 @@ graph TD
     %% Styling
     classDef layer fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#fff,font-weight:bold;
     classDef base fill:#0f172a,stroke:#00e5ff,stroke-width:3px,color:#fff;
-    classDef top fill:#334155,stroke:#f43f5e,stroke-width:2px,color:#fff;
 
     subgraph Stack [ ]
         direction BT
@@ -39,15 +38,13 @@ graph TD
         L1[1. System Layer]:::base
         L2[2. Language Layer]:::layer
         L3[3. Tooling Layer]:::layer
-        L4[4. Presets]:::top
 
         %% Relationships showing precedence flow
-        L1 --> L2 --> L3 --> L4
+        L1 --> L2 --> L3
     end
 
     %% Annotations
     Note1[<b>Foundation</b><br/>Universal Hygiene] -- Initialized first --> L1
-    Note2[<b>Final Overrides</b><br/>Domain-specific wrappers] -- Loaded last --> L4
 
     style Stack fill:transparent,stroke:#475569,stroke-dasharray: 5 5
 ```
@@ -104,16 +101,6 @@ warn_return_any = true
 
 ??? abstract "Core Interface: `BootstrapModule`"
     ::: protostar.modules.base.BootstrapModule
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-            members_order: source
-
-??? abstract "Core Interface: `PresetModule`"
-    ::: protostar.presets.base.PresetModule
         options:
             show_source: true
             show_bases: true

@@ -52,16 +52,10 @@ python_version = "3.13"
 # ci = true          # Scaffold standard GitHub Actions CI workflows
 # release = true     # Scaffold GitHub Actions PyPI release workflows
 # just = true        # Scaffold a justfile for command execution
-# active_presets = []
 
 # --- Advanced Configuration Overrides ---
 # Protostar allows you to customize the dependencies and directory structures
 # for specific pipelines, or inject tooling across all initialized environments.
-
-# [presets.astro]
-# dependencies = ["astropy", "astroquery", "photutils", "specutils"]
-# dev_dependencies = ["pytest-benchmark"]
-# directories = ["data/catalogs", "data/fits", "data/raw"]
 
 # [dev]
 # extra_dependencies = ["bump-my-version"]
@@ -100,7 +94,6 @@ class UserConfig:
         ci (bool): Whether to auto-scaffold standard GitHub Actions CI workflows.
         release (bool): Whether to auto-scaffold GitHub Actions PyPI release workflows.
         just (bool): Whether to auto-scaffold a justfile for command execution.
-        presets (dict[str, Any]): Initialization presets, mapped to strings or nested dicts.
         global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
         pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
         files (dict[str, str]): Exact file paths mapped to their raw contents for injection.
@@ -200,15 +193,6 @@ class UserConfig:
 
         if "env" in data:
             env_data = data["env"]
-
-            if "active_presets" in env_data and source == str(CONFIG_FILE):
-                raise ConfigurationError(
-                    "The 'active_presets' key is not allowed in the global configuration file "
-                    f"({CONFIG_FILE}), as it would permanently inject those dependencies into every "
-                    "future project.\n\n"
-                    "Please use 'active_presets' exclusively within portable templates or --from targets."
-                )
-
             resolved_hints = typing.get_type_hints(cls)
 
             for key, value in env_data.items():
@@ -269,7 +253,6 @@ class TemplateBlueprint:
     post_install_tasks: list[list[str]] = field(default_factory=list)
     files: dict[str, str] = field(default_factory=dict)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
-    active_presets: list[str] = field(default_factory=list)
     tooling_overrides: dict[str, bool] = field(default_factory=dict)
 
     @classmethod
@@ -375,11 +358,21 @@ class TemplateBlueprint:
 
         instance = cls()
 
-        if "env" in data:
-            env_data = data["env"]
-            if "active_presets" in env_data:
-                instance.active_presets = env_data["active_presets"]
+        # Extract structural fields
+        if "dependencies" in data:
+            instance.dependencies = data["dependencies"]
+        if "directories" in data:
+            instance.directories = data["directories"]
+        if "vcs_ignores" in data:
+            instance.vcs_ignores = data["vcs_ignores"]
+        if "system_tasks" in data:
+            instance.system_tasks = data["system_tasks"]
+        if "post_install_tasks" in data:
+            instance.post_install_tasks = data["post_install_tasks"]
+        if "docs_dependencies" in data:
+            instance.docs_dependencies = data["docs_dependencies"]
 
+        # Extract environment fields
         if "dev" in data:
             dev_data = data["dev"]
             if "extra_dependencies" in dev_data:

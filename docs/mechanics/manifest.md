@@ -55,7 +55,7 @@ During the `build()` phase, modules utilize the manifest's unified API to regist
 
 ## State Serialization
 
-To understand the decoupling, it is helpful to visualize the manifest's internal state. Below is a dynamically generated JSON representation of the aggregate state just before execution, simulating a user running `protostar init --astro --ruff`.
+To understand the decoupling, it is helpful to visualize the manifest's internal state. Below is a dynamically generated JSON representation of the aggregate state just before execution, simulating a user running `protostar init --template astro`.
 
 --8<-- "manifest_state.md"
 

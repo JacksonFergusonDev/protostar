@@ -1,5 +1,27 @@
-[env]
-active_presets = ["astro"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "astropy",
+    "astroquery",
+    "photutils",
+    "specutils",
+    "nbdime",
+]
+
+directories = ["data/catalogs", "data/fits", "notebooks", "src"]
+
+vcs_ignores = [
+    "*.fits",
+    "*.fit",
+    "*.fts",
+    "*.csv",
+    "*.parquet",
+    ".ipynb_checkpoints/",
+]
+
+post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
 
 # Tooling opinions for a Jupyter/Scientific workflow
 ruff = true
@@ -15,4 +37,15 @@ pre_commit = false
 data_science_linting = '''
 [tool.ruff.lint]
 extend-select = ["PD", "NPY"]
+'''
+
+[files]
+".gitattributes" = '''
+# Astrophysics binary safety
+*.fits binary
+*.fit  binary
+*.fts  binary
+
+# Improve Jupyter Notebook diffs
+*.ipynb text eol=lf
 '''

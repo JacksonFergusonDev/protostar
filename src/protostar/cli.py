@@ -44,10 +44,6 @@ from .modules import (
     SystemWorkspaceModule,
 )
 from .orchestrator import Orchestrator
-from .presets import (
-    PRESETS,
-    PresetModule,
-)
 from .wizard import (
     resolve_missing_variables,
     run_init_wizard,
@@ -57,11 +53,7 @@ console = Console()
 
 
 def handle_init(args: argparse.Namespace) -> None:
-    """Handles the 'init' subcommand to scaffold environments.
-
-    Dynamically constructs the environment manifest by evaluating flags mapped
-    to the respective OS, IDE, and preset registries.
-    """
+    """Handles the 'init' subcommand to scaffold environments."""
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
     template_context = getattr(args, "template_context", {})
@@ -77,8 +69,6 @@ def handle_init(args: argparse.Namespace) -> None:
         )
         if not target.is_file():
             raise ConfigurationError(f"Built-in template '{template_name}' not found.")
-        # We can cast it to str because we know Protostar isn't typically zip-safe,
-        # but if we wanted to be perfectly robust we could use as_file().
         override_target = str(target)
 
     user_config = UserConfig.load()
@@ -92,7 +82,6 @@ def handle_init(args: argparse.Namespace) -> None:
         )
 
     modules: list[BootstrapModule] = []
-    presets: list[PresetModule] = []
 
     # 1. Universal System Layer
     modules.append(SystemWorkspaceModule())
@@ -103,21 +92,7 @@ def handle_init(args: argparse.Namespace) -> None:
     )
     modules.append(python_core)
 
-    # 3. Preset Layers
-    for preset in PRESETS:
-        is_active = False
-        if blueprint and preset.config_key in blueprint.active_presets:
-            is_active = True
-
-        if preset.cli_flags:
-            cli_override = getattr(args, preset.__class__.__name__, None)
-            if cli_override is not None:
-                is_active = cli_override
-
-        if is_active:
-            presets.append(preset)
-
-    # 4. Tooling Layers
+    # 3. Tooling Layers
     for mod in TOOLING_MODULES:
         is_active = False
 
@@ -154,7 +129,7 @@ def handle_init(args: argparse.Namespace) -> None:
             "Please enable '--zensical' or configure 'zensical = true'."
         )
 
-    # 5. Undocumented Crash Test Injection
+    # 4. Undocumented Crash Test Injection
     if getattr(args, "crash_test", False):
 
         class CrashModule(BootstrapModule):
@@ -173,8 +148,6 @@ def handle_init(args: argparse.Namespace) -> None:
     required_keys: set[str] = set()
     for mod in modules:
         required_keys.update(mod.required_metadata)
-    for preset in presets:
-        required_keys.update(preset.required_metadata)
 
     resolved_metadata = resolve_auto_metadata(required_keys)
 
@@ -183,7 +156,6 @@ def handle_init(args: argparse.Namespace) -> None:
         modules,
         user_config,
         blueprint=blueprint,
-        presets=presets,
         docker=args.docker,
         force_merge=getattr(args, "force_merge", False),
         force_replace=getattr(args, "force_replace", False),
@@ -355,7 +327,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Scaffolds base Python configurations, dependencies, and environment files.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
-        epilog="[bold]Example:[/bold]\n  protostar init --astro --mypy",
+        epilog="[bold]Example:[/bold]\n  protostar init --template astro --mypy",
         parents=[base_parser],
     )
 
@@ -388,17 +360,6 @@ def build_parser() -> argparse.ArgumentParser:
         dest="python_version",
         metavar="VERSION",
     )
-
-    # Dynamically mount Preset flags
-    preset_group = init_parser.add_argument_group("Python Dependency Presets")
-    for preset in PRESETS:
-        if preset.cli_flags:
-            preset_group.add_argument(
-                *preset.cli_flags,
-                action=argparse.BooleanOptionalAction,
-                help=preset.cli_help,
-                dest=preset.__class__.__name__,
-            )
 
     # Tooling Context
     tooling_group = init_parser.add_argument_group("Tooling & Context")
@@ -514,7 +475,6 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
             user_config = UserConfig.load()
             modules = selections["modules"]
-            presets = selections["presets"]
 
             # Inject mandatory universal layers implicitly
             modules.insert(0, SystemWorkspaceModule())
@@ -524,7 +484,6 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 modules,
                 user_config,
                 blueprint=None,
-                presets=presets,
                 docker=selections["docker"],
                 force_merge=False,
                 force_replace=False,

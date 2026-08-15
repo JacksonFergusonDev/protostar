@@ -1,0 +1,13 @@
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "pandas",
+    "scipy",
+    "ipykernel",
+    "scikit-learn",
+]
+
+directories = ["data", "notebooks", "src"]
+
+vcs_ignores = ["*.csv", "*.parquet", "*.nc", ".ipynb_checkpoints/"]

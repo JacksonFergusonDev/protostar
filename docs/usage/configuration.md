@@ -28,24 +28,6 @@ Because `protostar init` always reads from this global file, you maintain a cons
 
 For power users, Protostar's configuration goes far beyond simple boolean toggles. You can define complete dependency footprints, map out directory structures, and inject raw multi-line strings directly into the Abstract Syntax Tree (AST) of target configuration files.
 
-### Pipeline Overrides
-
-You can define explicit overrides for any of the domain presets (e.g., `astro`, `scientific`, `dsp`, `ml`).
-
-Suppose you frequently build data analysis pipelines to process raw radio telescope telemetry or analyze differential fungal growth rates. You can override the `[presets.astro]` or `[presets.scientific]` blocks to automatically generate your exact architecture:
-
-```toml
-[presets.astro]
-# The primary dependencies required for the pipeline
-dependencies = ["astropy", "astroquery", "photutils", "specutils"]
-# Development and testing libraries
-dev_dependencies = ["pytest-benchmark"]
-# The data structures required to hold the observations
-directories = ["data/catalogs", "data/fits", "data/raw"]
-```
-
-When you run `protostar init --astro`, the orchestrator reads this block, dynamically injects the packages using your configured package manager, and scaffolds the required directories.
-
 ### Development Overrides (`[dev]`)
 
 The `[dev]` block allows you to force configurations across *all* initialized environments, regardless of the flags provided at runtime.
@@ -116,8 +98,6 @@ Creating a portable template is functionally identical to modifying your own glo
 A portable TOML template can contain any of the following standard sections:
 
 - `[env]`: Base environment settings (e.g., `python_version = "3.12"`, `ide = "vscode"`, `ruff = true`).
-  - `active_presets`: A special list in the `[env]` block (e.g., `active_presets = ["astro"]`). This allows templates to declaratively activate domain presets without requiring the user to pass flags.
-- `[presets.preset_name]`: Overrides for specific preset dependencies and directories.
 - `[dev]`: Instructions for injecting `extra_dependencies` or raw `pyproject` string injections.
 - `[files]`: A powerful block mapping relative file paths to raw string content. This is perfect for scaffolding `README.md` files or custom scripts.
 - `[variables]`: Arbitrary key-value metadata for the configuration.

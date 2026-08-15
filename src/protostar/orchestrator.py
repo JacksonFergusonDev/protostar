@@ -9,7 +9,6 @@ from .errors import ExecutionAbortedError, ProtostarError
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
-from .presets import PresetModule
 from .system import is_interactive
 
 logger = logging.getLogger("protostar")
@@ -24,7 +23,6 @@ class Orchestrator:
         modules: list[BootstrapModule],
         user_config: UserConfig,
         blueprint: TemplateBlueprint | None = None,
-        presets: list[PresetModule] | None = None,
         docker: bool = False,
         force_merge: bool = False,
         force_replace: bool = False,
@@ -36,7 +34,6 @@ class Orchestrator:
             modules: The ordered stack of bootstrap layers to execute.
             user_config: The active UserConfig instance.
             blueprint: The template blueprint.
-            presets: Domain-specific dependency and directory presets. Defaults to an empty list.
             docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
             force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
             force_replace: If True, bypasses interactive prompts and forces replacement on collisions. Defaults to False.
@@ -45,7 +42,6 @@ class Orchestrator:
         self.modules = modules
         self.user_config = user_config
         self.blueprint = blueprint
-        self.presets = presets or []
         self.docker = docker
         self.force_merge = force_merge
         self.force_replace = force_replace
@@ -151,21 +147,33 @@ class Orchestrator:
         for mod in self.modules:
             mod.build(self.manifest)
 
-        for preset in self.presets:
-            logger.debug(f"Building {preset.name} preset.")
-            preset.build(self.manifest)
-
         # Inject global configuration states using the injected config
         if self.blueprint:
-            if self.blueprint.dev_dependencies:
-                logger.debug("Injecting global dev dependencies from configuration.")
-                for dep in self.blueprint.dev_dependencies:
-                    self.manifest.add_dev_dependency(dep)
+            logger.debug("Injecting blueprint structural fields into manifest.")
+
+            for dep in self.blueprint.dependencies:
+                self.manifest.add_dependency(dep)
+
+            for dep in self.blueprint.dev_dependencies:
+                self.manifest.add_dev_dependency(dep)
+
+            for dep in self.blueprint.docs_dependencies:
+                self.manifest.add_docs_dependency(dep)
+
+            for d in self.blueprint.directories:
+                self.manifest.add_directory(d)
+
+            for ig in self.blueprint.vcs_ignores:
+                self.manifest.add_vcs_ignore(ig)
+
+            for cmd in self.blueprint.system_tasks:
+                self.manifest.add_system_task(cmd)
+
+            for cmd in self.blueprint.post_install_tasks:
+                self.manifest.add_post_install_task(cmd)
 
             if self.blueprint.pyproject_injections:
-                logger.debug(
-                    "Injecting global pyproject.toml payloads from configuration."
-                )
+                logger.debug("Injecting pyproject.toml payloads from configuration.")
                 for payload in self.blueprint.pyproject_injections.values():
                     self.manifest.add_file_append("pyproject.toml", payload)
 

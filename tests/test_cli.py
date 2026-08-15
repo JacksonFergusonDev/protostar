@@ -687,11 +687,9 @@ def test_handle_init_cli_template_resolution(mocker):
     handle_init(args)
 
     assert mock_orchestrator.call_count == 1
-    modules = mock_orchestrator.call_args.args[0]
-    presets = mock_orchestrator.call_args.kwargs.get("presets", [])
-    active_presets = [type(p).__name__ for p in presets]
-    active_modules = [type(m).__name__ for m in modules]
 
-    assert "CliPreset" in active_presets
-    assert "JustModule" in active_modules
-    assert "ZensicalModule" in active_modules
+    # Verify the template blueprint was loaded and passed to the Orchestrator
+    blueprint = mock_orchestrator.call_args.kwargs.get("blueprint")
+    assert blueprint is not None
+    assert "typer" in blueprint.dependencies
+    assert "rich" in blueprint.dependencies

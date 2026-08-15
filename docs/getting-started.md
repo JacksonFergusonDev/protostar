@@ -28,7 +28,7 @@ Protostar is designed to be installed globally as a standalone CLI tool.
 
 ## The Interactive Wizard
 
-If you run `protostar init` without any arguments, it will launch an interactive Terminal User Interface (TUI). This wizard allows you to visually map out your languages, tools, and domain-specific presets using the spacebar—no CLI flag memorization required.
+If you run `protostar init` without any arguments, it will launch an interactive Terminal User Interface (TUI). This wizard allows you to visually map out your languages, tools, and built-in templates using the spacebar—no CLI flag memorization required.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -43,7 +43,7 @@ protostar init
 For rapid, repeatable initialization, you can bypass the TUI entirely by providing your desired environment matrix as CLI flags. Universal system workspace hygiene is automatically applied, and IDE settings are conditionally injected based on your global configuration and chosen language footprints.
 
 ```bash
-protostar init --scientific --pytest --markdownlint
+protostar init --template scientific --pytest --markdownlint
 ```
 
 **What just happened?**
@@ -120,5 +120,5 @@ alias proto="protostar"
 With your accretion disk stabilized, you can dive deeper into Protostar's mechanics:
 
 - **[Configuration](../usage/configuration.md):** Learn how to set up global defaults (like your preferred Python version, dev dependencies, or custom ruff configuration) so you don't have to specify them every time.
-- **[The Flags Matrix](../flags/tooling.md):** Explore the full list of supported languages, tools, and domain presets.
+- **[The Flags Matrix](../flags/tooling.md):** Explore the full list of supported languages, tools, and built-in templates.
 - **[Architecture](../mechanics/orchestrator.md):** Read how the Orchestrator guarantees idempotent disk operations without corrupting your existing files.

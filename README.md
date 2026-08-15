@@ -117,7 +117,7 @@ Protostar is designed to be run right after you `mkdir` a new project.
 
 If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI).
 
-The wizard will first ask if you want to scaffold using a vetted **Opinionated Template** (like the `astro` or `cli` templates), which automatically pre-configures a robust toolchain for you. Alternatively, you can opt to build a custom environment matrix by manually checking boxes for each individual preset and development tool.
+The wizard will first ask if you want to scaffold using a vetted **Opinionated Template** (like the `astro` or `cli` templates), which automatically pre-configures a robust toolchain for you. Alternatively, you can opt to build a custom environment matrix by manually checking boxes for each development tool.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -136,7 +136,7 @@ protostar init --template astro
 Or you can construct your own environment footprint from scratch using CLI flags:
 
 ```bash
-protostar init --astro --docker --direnv -m --mypy --pytest --prek
+protostar init --template astro --docker --direnv -m --mypy --pytest --prek
 ```
 
 *Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes a multi-stage `Dockerfile` and optimized `.dockerignore`, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with fast git hooks via `prek`.*

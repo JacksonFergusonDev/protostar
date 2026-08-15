@@ -107,17 +107,3 @@ classDiagram
             show_root_heading: true
             show_root_toc_entry: true
             separate_signature: true
-
-<div class="spacer-2"></div>
-
-!!! abstract "Domain-Specific Dependencies: `PresetModule`"
-
-    Lighter wrappers that inject domain-specific dependencies and directories onto a bootstrap foundation.
-
-    ::: protostar.presets.base.PresetModule
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
