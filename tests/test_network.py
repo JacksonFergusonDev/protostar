@@ -3,7 +3,11 @@ from urllib.error import URLError
 import pytest
 
 from protostar.errors import ConfigurationError
-from protostar.network import fetch_remote_config
+from protostar.network import (
+    fetch_remote_config,
+    fetch_template_archive,
+    resolve_remote_template,
+)
 
 
 def test_fetch_remote_config_https_success(mocker):
@@ -104,3 +108,66 @@ def test_fetch_remote_config_handles_url_error(mocker):
         ConfigurationError, match="Failed to fetch remote configuration"
     ):
         fetch_remote_config("https://example.com/missing.toml")
+
+
+def test_resolve_remote_template_github_archive_translation(mocker, tmp_path):
+    """Test that GitHub repo URLs are translated to zip endpoints."""
+    mock_fetch = mocker.patch("protostar.network.fetch_template_archive")
+    mock_fetch.return_value = tmp_path
+
+    result = resolve_remote_template("https://github.com/user/repo", tmp_path)
+
+    mock_fetch.assert_called_once_with(
+        "https://github.com/user/repo/archive/refs/heads/main.zip", tmp_path, timeout=10
+    )
+    assert result == tmp_path
+
+
+def test_resolve_remote_template_gitlab_archive_translation(mocker, tmp_path):
+    """Test that GitLab repo URLs are translated to zip endpoints."""
+    mock_fetch = mocker.patch("protostar.network.fetch_template_archive")
+    mock_fetch.return_value = tmp_path
+
+    resolve_remote_template("https://gitlab.com/user/repo", tmp_path)
+
+    mock_fetch.assert_called_once_with(
+        "https://gitlab.com/user/repo/-/archive/main/repo-main.zip",
+        tmp_path,
+        timeout=10,
+    )
+
+
+def test_resolve_remote_template_raw_fallback(mocker, tmp_path):
+    """Test that raw files are downloaded directly."""
+    mock_fetch = mocker.patch("protostar.network.fetch_remote_config")
+    mock_fetch.return_value = "[env]\nruff = true"
+
+    result = resolve_remote_template("https://example.com/raw.toml", tmp_path)
+
+    mock_fetch.assert_called_once_with("https://example.com/raw.toml", timeout=10)
+    assert result == tmp_path
+    assert (tmp_path / "protostar.toml").read_text() == "[env]\nruff = true"
+
+
+def test_fetch_template_archive_zip_extraction(mocker, tmp_path):
+    """Test downloading and extracting a zip archive."""
+    import zipfile
+
+    # Create a mock zip file in memory
+    zip_path = tmp_path / "mock.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("repo-main/protostar.toml", "[env]\nruff = true")
+
+    mock_response = mocker.Mock()
+    mock_response.read.return_value = zip_path.read_bytes()
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    dest_dir = tmp_path / "dest"
+    dest_dir.mkdir()
+
+    result = fetch_template_archive("https://example.com/archive.zip", dest_dir)
+
+    # Result should be the directory containing protostar.toml
+    assert result == dest_dir / "repo-main"
+    assert (result / "protostar.toml").exists()
