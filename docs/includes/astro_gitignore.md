@@ -6,7 +6,9 @@
 *.parquet
 *~
 .DS_Store
+.direnv/
 .env
+.envrc.local
 .idea/
 .ipynb_checkpoints/
 .ruff_cache/

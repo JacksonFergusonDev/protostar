@@ -27,5 +27,7 @@ wandb/
 *.fits
 *.fts
 *.parquet
+.direnv/
+.envrc.local
 .mypy_cache/
 ```

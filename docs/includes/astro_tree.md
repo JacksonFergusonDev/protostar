@@ -1,5 +1,6 @@
 ```text
 .
+├── .envrc
 ├── .gitattributes
 ├── .gitignore
 ├── .python-version

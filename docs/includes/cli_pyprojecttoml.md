@@ -10,18 +10,32 @@ dependencies = [
 description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+]
 
 [project.scripts]
 demo-project = "demo_project.cli:app"
 
 [dependency-groups]
 dev = [
+    "commitizen>=4.17.0",
     "mypy>=2.2.0",
     "prek>=0.4.13",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "pytest-mock>=3.15.1",
     "ruff>=0.15.21",
+    { include-group = "docs" },
+]
+docs = [
+    "mkdocstrings[python]>=1.0.6",
+    "zensical>=0.0.54",
 ]
 
 # ==================================================
@@ -73,6 +87,16 @@ testpaths = [
 pythonpath = [
     ".",
 ]
+
+# ---- Commitizen ---- #
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version_provider = "pep621"
+version_scheme = "semver2"
+tag_format = "v$version"
+update_changelog_on_bump = true
+changelog_incremental = true
 
 # ---- Mypy ---- #
 
