@@ -501,11 +501,13 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             engine = Orchestrator(
                 modules,
                 user_config,
-                blueprint=None,
+                blueprint=selections.get("blueprint"),
                 docker=selections["docker"],
                 force_merge=False,
                 force_replace=False,
                 metadata=selections.get("project_metadata"),
+                is_external=selections.get("is_external", False),
+                is_user_aliased=selections.get("is_user_aliased", False),
             )
             engine.run()
             sys.exit(0)

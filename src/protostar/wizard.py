@@ -7,7 +7,7 @@ from typing import Any
 
 from rich.console import Console
 
-from .config import UserConfig
+from .config import TemplateBlueprint, UserConfig
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
@@ -39,34 +39,60 @@ def run_init_wizard() -> dict[str, Any] | None:
     import questionary
     from questionary import Choice, Separator
 
-    templates = ["None"]
+    config = UserConfig.load()
+
+    template_choices: list[Any] = ["None"]
+    builtins = []
+
     try:
         template_dir = importlib.resources.files("protostar.templates")
         for item in template_dir.iterdir():
             if item.is_file() and item.name.endswith(".toml"):
-                templates.append(item.name[:-5])
+                builtins.append(item.name[:-5])
     except Exception:
         pass
 
+    if builtins:
+        template_choices.append(Separator("--- Built-in Templates ---"))
+        template_choices.extend(builtins)
+
+    if config.templates:
+        template_choices.append(Separator("--- External Aliases ---"))
+        template_choices.extend(config.templates.keys())
+
     answer = "None"
-    if len(templates) > 1:
+    if len(template_choices) > 1:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
         else:
             answer = questionary.select(
-                "Start from a built-in template?",
-                choices=templates,
+                "Start from a template?",
+                choices=template_choices,
             ).ask()
 
         if answer is None:
             raise ExecutionAbortedError("Template selection cancelled by user.")
 
-        if answer != "None":
-            config = UserConfig.load(force_reload=True)
+    blueprint = None
+    is_external = False
+    is_user_aliased = False
+
+    if answer != "None":
+        config = UserConfig.load(force_reload=True)
+        if answer in builtins:
+            target = str(
+                importlib.resources.files("protostar.templates").joinpath(
+                    f"{answer}.toml"
+                )
+            )
         else:
-            config = UserConfig.load()
-    else:
-        config = UserConfig.load()
+            target = config.templates[answer]
+            is_external = True
+            is_user_aliased = True
+
+        blueprint = TemplateBlueprint.load(
+            target, variable_resolver=resolve_missing_variables
+        )
 
     choices: list[Choice | Separator] = []
 
@@ -76,7 +102,21 @@ def run_init_wizard() -> dict[str, Any] | None:
 
     for tool_mod in TOOLING_MODULES:
         is_checked = getattr(config, tool_mod.config_key, False)
-        choices.append(Choice(title=tool_mod.name, value=tool_mod, checked=is_checked))
+        label_suffix = ""
+
+        if blueprint and tool_mod.config_key in blueprint.tooling_overrides:
+            blueprint_val = blueprint.tooling_overrides[tool_mod.config_key]
+            if blueprint_val != is_checked:
+                is_checked = blueprint_val
+                label_suffix = " (Enforced by template)"
+
+        choices.append(
+            Choice(
+                title=f"{tool_mod.name}{label_suffix}",
+                value=tool_mod,
+                checked=is_checked,
+            )
+        )
 
     if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
         sys.exit(0)
@@ -124,6 +164,9 @@ def run_init_wizard() -> dict[str, Any] | None:
         "modules": modules,
         "docker": docker,
         "project_metadata": resolved_metadata,
+        "blueprint": blueprint,
+        "is_external": is_external,
+        "is_user_aliased": is_user_aliased,
     }
 
 
