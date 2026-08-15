@@ -117,7 +117,7 @@ Protostar is designed to be run right after you `mkdir` a new project.
 
 If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI).
 
-The wizard will first ask if you want to scaffold using a vetted **Opinionated Template** (like the `astro` or `cli` templates), which automatically pre-configures a robust toolchain for you. Alternatively, you can opt to build a custom environment matrix by manually checking boxes for each development tool.
+The wizard will first ask if you want to scaffold using a **Template**. Templates are the gold standard of Protostar, instantly wiring together complex tools, dependencies, and directory structures. You can choose from built-in domain templates (like `astro` or `cli`), select your own custom global aliases, or build an environment from scratch.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -125,31 +125,42 @@ cd orbital-mechanics-sim
 protostar
 ```
 
-### Headless Scaffolding
+### Headless Scaffolding & Tri-State Toggles
 
-For rapid, repeatable initialization, bypass the TUI entirely. You can either scaffold directly from a built-in template:
-
-```bash
-protostar init --template astro
-```
-
-Or you can construct your own environment footprint from scratch using CLI flags:
+For rapid, repeatable initialization, bypass the TUI entirely. Templates are the primary way to drive Protostar headlessly:
 
 ```bash
-protostar init --template astro --docker --direnv -m --mypy --pytest --prek
+protostar init --template cli
 ```
 
-*Result: Scaffolds a Python environment alongside astrophysics dependencies, generates `data/catalogs` and `data/fits` directories, writes a multi-stage `Dockerfile` and optimized `.dockerignore`, configures a `.envrc` file, injects a pragmatic `.markdownlint-cli2.yaml` ruleset, and sets up your testing and static analysis tools with fast git hooks via `prek`.*
+Because Protostar uses **tri-state toggling**, you always remain in control. You can load a template but explicitly override its default opinions by passing `--<flag>` to force a tool on, or `--no-<flag>` to force it off:
 
-To bypass any interactive collision prompts when running in headless CI environments, use the `--force` (or `-f`) flag. You can also explicitly override the Python version specified in your global configuration by passing `--python-version` (e.g., `--python-version 3.12`).
+```bash
+protostar init --template cli --no-direnv --docker
+```
 
-### Portable Configurations
+*Result: Scaffolds the cli template, strips out the default direnv scaffolding, and generates container artifacts (`Dockerfile`, `.dockerignore`).*
 
-If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them during initialization. Protostar natively supports fetching raw files from standard URLs, and automatically translates web UI links into raw text links for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut:
+To bypass any interactive collision prompts when running in headless CI environments, use `--force-merge` or `--force-replace`. You can also explicitly override the target Python version by passing `--python-version 3.12`.
+
+### Portable Templates & Global Aliases
+
+If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them. Protostar automatically translates web UI links into raw text links for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut, and natively supports unpacking `.zip`/`.tar.gz` repository archives.
 
 ```bash
 protostar init --from https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml
 ```
+
+**Global Aliases:** Instead of typing long URLs, you can register templates in your global configuration (`~/.config/protostar/config.toml`):
+
+```toml
+[templates]
+backend = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
+```
+
+Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in your interactive wizard.
+
+*Note: To prevent unauthorized remote code execution, external templates containing shell tasks are secured behind an explicit Interactive Trust Dialog. Templates mapped as global aliases bypass this prompt automatically.*
 
 ---
 
@@ -158,7 +169,7 @@ protostar init --from https://raw.githubusercontent.com/YourOrg/standards/main/b
 This tool uses a highly decoupled, plugin-style architecture. The CLI parser dynamically evaluates module registries at runtime.
 
 - **To add support for a new core tool (e.g., a linter or formatter):** Subclass `BootstrapModule`.
-- **To add a new dependency pipeline:** Subclass `PresetModule`.
+- **To define a new domain workflow:** Author a declarative TOML Template.
 
 We maintain strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
 
