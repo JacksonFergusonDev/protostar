@@ -1,5 +1,2 @@
+# --- Dependencies ---
 dependencies = ["pyserial", "esptool", "adafruit-blinka"]
-
-directories = []
-
-vcs_ignores = []

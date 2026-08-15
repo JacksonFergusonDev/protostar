@@ -1,7 +1,10 @@
+# --- Dependencies ---
 dependencies = ["torch", "scikit-learn", "huggingface_hub", "tqdm"]
 
+# --- Directory Architecture ---
 directories = ["models", "data", "notebooks", "src"]
 
+# --- Version Control Ignores ---
 vcs_ignores = [
     "*.pt",
     "*.pth",

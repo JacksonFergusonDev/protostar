@@ -204,6 +204,96 @@ def generate_default_config() -> None:
     _write_fixture("default_config.md", DEFAULT_CONFIG_CONTENT, language="toml")
 
 
+def generate_template_schema_fixture() -> None:
+    """Dynamically generates an annotated TOML template schema fixture from internal definitions."""
+    # Collect tooling flag keys from the registered tooling modules
+    tooling_keys = sorted([mod.config_key for mod in TOOLING_MODULES if mod.config_key])
+
+    lines = [
+        "# ==============================================================================",
+        "# Protostar Template Specification Schema",
+        "# ==============================================================================",
+        "",
+        "# --- Dependencies ---",
+        "# Core runtime packages installed into the project environment (type: list[str])",
+        "dependencies = [",
+        '    "fastapi",',
+        '    "uvicorn",',
+        '    "pydantic",',
+        "]",
+        "",
+        "# Documentation toolchain dependencies (type: list[str])",
+        "docs_dependencies = [",
+        '    "mkdocstrings[python]",',
+        '    "zensical",',
+        "]",
+        "",
+        "# --- Directory Architecture ---",
+        "# Relative directory paths scaffolded in the workspace (type: list[str])",
+        "directories = [",
+        '    "src/<% PACKAGE_NAME %>",',
+        '    "tests",',
+        '    "data/raw",',
+        "]",
+        "",
+        "# --- Version Control Ignores ---",
+        "# Patterns appended and deduplicated in .gitignore (type: list[str])",
+        "vcs_ignores = [",
+        '    "*.log",',
+        '    ".env",',
+        '    "local_data/",',
+        "]",
+        "",
+        "# --- Subprocess Tasks ---",
+        "# Commands executed before dependency installation (type: list[list[str]])",
+        "system_tasks = [",
+        '    ["git", "init"],',
+        "]",
+        "",
+        "# Commands executed after dependencies are installed (type: list[list[str]])",
+        "post_install_tasks = [",
+        '    ["uv", "run", "nbdime", "config-git", "--enable"],',
+        "]",
+        "",
+        "# --- Tooling Opinions & Overrides ---",
+        "# Boolean toggles configuring baseline tooling opinions.",
+        "# Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig",
+    ]
+
+    for key in tooling_keys:
+        default_val = "true" if key in ("ruff", "pytest") else "false"
+        lines.append(f"{key} = {default_val}")
+
+    lines.extend(
+        [
+            "",
+            "# --- Static File Injections ---",
+            "# Exact file paths mapped to their raw template contents (type: dict[str, str])",
+            "[files]",
+            "\"README.md\" = '''",
+            "# <% PROJECT_NAME %>",
+            "",
+            "Auto-scaffolded using custom template.",
+            "'''",
+            "",
+            "\"src/<% PACKAGE_NAME %>/__init__.py\" = '''",
+            '"""<% PROJECT_NAME %> package."""',
+            '__version__ = "0.1.0"',
+            "'''",
+            "",
+            "# --- pyproject.toml AST Injections ---",
+            "# Arbitrary tables deep-merged into target pyproject.toml",
+            "[dev.pyproject]",
+            "custom_linting = '''",
+            "[tool.ruff.lint]",
+            'extend-select = ["I", "UP", "B"]',
+            "'''",
+        ]
+    )
+
+    _write_fixture("template_schema.md", "\n".join(lines), language="toml")
+
+
 def generate_capability_tables() -> None:
     """Generates Markdown tables detailing modules, templates, and their CLI footprints."""
 
@@ -513,6 +603,7 @@ def main() -> None:
         generate_default_config()
         generate_capability_tables()
         generate_manifest_state()
+        generate_template_schema_fixture()
 
         # Slow executions (disk I/O and subprocess isolation)
         if not args.fast:

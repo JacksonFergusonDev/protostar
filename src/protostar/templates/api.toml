@@ -1,8 +1,12 @@
+# --- Dependencies ---
 dependencies = ["fastapi", "uvicorn", "pydantic", "httpx"]
 
+# --- Directory Architecture ---
 directories = ["api/routers", "core", "schemas"]
 
+# --- Version Control Ignores ---
 vcs_ignores = [".env", "*.pem", "*.key"]
 
+# --- Static File Injections ---
 [files]
 "README.md" = ""

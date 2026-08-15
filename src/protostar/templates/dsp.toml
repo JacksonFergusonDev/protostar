@@ -1,5 +1,8 @@
+# --- Dependencies ---
 dependencies = ["librosa", "soundfile", "mido", "mutagen", "pydub"]
 
+# --- Directory Architecture ---
 directories = ["data/raw_audio", "data/processed"]
 
+# --- Version Control Ignores ---
 vcs_ignores = ["*.wav", "*.mp3", "*.flac", "*.mid", "*.midi", "*.ogg"]
