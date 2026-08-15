@@ -157,15 +157,31 @@ class Orchestrator:
 
         # Inject global configuration states using the injected config
         if self.blueprint:
-            if self.blueprint.dev_dependencies:
-                logger.debug("Injecting global dev dependencies from configuration.")
-                for dep in self.blueprint.dev_dependencies:
-                    self.manifest.add_dev_dependency(dep)
+            logger.debug("Injecting blueprint structural fields into manifest.")
+
+            for dep in self.blueprint.dependencies:
+                self.manifest.add_dependency(dep)
+
+            for dep in self.blueprint.dev_dependencies:
+                self.manifest.add_dev_dependency(dep)
+
+            for dep in self.blueprint.docs_dependencies:
+                self.manifest.add_docs_dependency(dep)
+
+            for d in self.blueprint.directories:
+                self.manifest.add_directory(d)
+
+            for ig in self.blueprint.vcs_ignores:
+                self.manifest.add_vcs_ignore(ig)
+
+            for cmd in self.blueprint.system_tasks:
+                self.manifest.add_system_task(cmd)
+
+            for cmd in self.blueprint.post_install_tasks:
+                self.manifest.add_post_install_task(cmd)
 
             if self.blueprint.pyproject_injections:
-                logger.debug(
-                    "Injecting global pyproject.toml payloads from configuration."
-                )
+                logger.debug("Injecting pyproject.toml payloads from configuration.")
                 for payload in self.blueprint.pyproject_injections.values():
                     self.manifest.add_file_append("pyproject.toml", payload)
 
