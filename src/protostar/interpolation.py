@@ -37,19 +37,22 @@ def toml_escape(value: str) -> str:
     return value.replace("\t", "\\t")
 
 
-def render_template(content: str, context: dict[str, str]) -> str:
-    """Replaces placeholders in the content with TOML-escaped context values.
+def render_template(
+    content: str, context: dict[str, str], escape_toml: bool = True
+) -> str:
+    """Replaces placeholders in the content with context values.
 
     Args:
-        content: The raw TOML specification content.
+        content: The raw text content.
         context: A mapping of variable names to their raw substitution values.
+        escape_toml: Whether to escape the values for safe TOML injection.
 
     Returns:
-        The interpolated, safely escaped TOML string.
+        The interpolated string.
     """
     rendered = content
     for key, value in context.items():
-        safe_value = toml_escape(value)
+        safe_value = toml_escape(value) if escape_toml else value
         pattern = r"<\%\s*" + re.escape(key) + r"\s*\%>"
 
         def replacement(_match: re.Match[str], sv: str = safe_value) -> str:
