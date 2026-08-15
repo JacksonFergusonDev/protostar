@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786830680404,
+  "lastUpdate": 1786835852502,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6125,6 +6125,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 176.18,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d018586264f8ba9c27ac975d370539c7ec28c9b",
+          "message": "docs: comprehensive overhaul for template architecture, alias registry, and security model (#163)\n\n* chore: standardize built-in templates and add dynamic schema generator\n\n- Format all built-in TOML templates with consistent visual comment headers\n- Add `generate_template_schema_fixture` to fixture generation script\n- Introspect `TemplateBlueprint` and `TOOLING_MODULES` to automatically\n  generate the `template_schema.md` documentation snippet\n\n* docs: introduce dedicated templates guide and update core usage docs\n\n- Create `docs/usage/templates.md` as the definitive masterclass for\n  built-in templates, external sources, global aliases, and the security model\n- Streamline `init.md` to highlight templates and tri-state CLI toggles\n- Update `configuration.md` to document the new `[templates]` alias registry\n- Update `mkdocs.yml` navigation structure to prominently feature the new guide\n\n* docs: purge legacy preset architecture references\n\n- Remove outdated `PresetModule` references from module architecture\n  and API reference documentation\n- Delete obsolete `portable_configurations.md` (superseded by `templates.md`)\n- Delete obsolete `presets.md`\n- Update Mermaid diagrams to accurately reflect the strict OS -> Language -> Tooling layer stack\n\n* docs: update README to highlight templates, tri-state toggles, and alias registry\n\n* fix(ci): use native package managers to install direnv",
+          "timestamp": "2026-08-15T16:16:30-07:00",
+          "tree_id": "89a37529568a6aaf90bb248d42af5cf1d2eb9cd9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1d018586264f8ba9c27ac975d370539c7ec28c9b"
+        },
+        "date": 1786835851380,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.59,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 199.61,
             "unit": "ms"
           }
         ]
