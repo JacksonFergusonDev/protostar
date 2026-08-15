@@ -693,3 +693,56 @@ def test_handle_init_cli_template_resolution(mocker):
     assert blueprint is not None
     assert "typer" in blueprint.dependencies
     assert "rich" in blueprint.dependencies
+
+
+def test_cli_resolves_user_template_aliases(mocker) -> None:
+    """Verifies that --template successfully resolves keys from the global config alias table."""
+
+    # Mock the global config to contain a custom alias
+    mock_config = UserConfig(
+        templates={"my-custom-org": "https://example.com/template.toml"}
+    )
+    mocker.patch("protostar.cli.UserConfig.load", return_value=mock_config)
+
+    # Mock the Orchestrator instantiation so we can inspect the flags passed to it
+    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mock_orchestrator.return_value.run = mocker.MagicMock()
+
+    # Mock TemplateBlueprint to prevent network calls during the test
+    mocker.patch("protostar.cli.TemplateBlueprint.load", return_value=None)
+
+    args = argparse.Namespace(
+        template_name="my-custom-org",
+        from_path=None,
+        template_context={},
+        docker=False,
+        force_merge=False,
+        force_replace=False,
+        python_version=None,
+        crash_test=False,
+    )
+
+    handle_init(args)
+
+    # Verify the orchestrator was initialized with the correct security flags
+    _, kwargs = mock_orchestrator.call_args
+    assert kwargs.get("is_external") is True
+    assert kwargs.get("is_user_aliased") is True
+
+
+def test_cli_rejects_unknown_templates(mocker) -> None:
+    """Verifies that a template not in built-ins or aliases raises a ConfigurationError."""
+    mock_config = UserConfig(templates={"valid-alias": "..."})
+    mocker.patch("protostar.cli.UserConfig.load", return_value=mock_config)
+
+    args = argparse.Namespace(
+        template_name="non-existent-template",
+        from_path=None,
+        template_context={},
+    )
+
+    with pytest.raises(
+        ConfigurationError,
+        match="not found in built-ins or global configuration aliases",
+    ):
+        handle_init(args)
