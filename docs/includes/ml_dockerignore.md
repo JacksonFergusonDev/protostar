@@ -1,4 +1,5 @@
 ```text
+!data/**/.gitkeep
 *.log
 *.onnx
 *.pt
@@ -6,10 +7,13 @@
 *.safetensors
 *~
 .DS_Store
+.direnv/
 .env
+.envrc.local
 .git/
 .idea/
 .ipynb_checkpoints/
+.pytest_cache/
 .python-version
 .ruff_cache/
 .venv/
@@ -17,6 +21,9 @@
 README*
 Thumbs.db
 __pycache__/
+data/01_raw/*
+data/02_processed/*
+data/03_features/*
 docs/
 mlruns/
 runs/

@@ -1,2 +1,48 @@
 # --- Dependencies ---
-dependencies = ["pyserial", "esptool", "adafruit-blinka"]
+dependencies = ["pyserial", "mpremote"]
+
+# --- Directory Architecture ---
+directories = ["src/board", "src/host", "tests/host_mocks"]
+
+# --- Version Control Ignores ---
+vcs_ignores = ["*.bin", "*.uf2", "build/"]
+
+# --- Tooling Opinions ---
+ruff = true
+direnv = true
+just = true
+markdownlint = true
+prek = false
+ci = false
+
+# --- Static File Injections ---
+[files]
+"src/board/main.py" = '''
+import time
+
+def main():
+    while True:
+        print("Running on hardware...")
+        time.sleep(1)
+
+if __name__ == "__main__":
+    main()
+'''
+
+"src/board/boot.py" = '''
+# This file is executed on every boot (including wake-up from deepsleep)
+'''
+
+# --- Append dynamic recipes to the bottom of the justfile ---
+[appends]
+"justfile" = '''
+port := "/dev/ttyACM0" # Default Linux port, update for macOS (/dev/tty.usbmodem*) or Windows (COM*)
+
+# Copy the board directory to the microcontroller
+flash:
+	mpremote connect {{ port }} fs cp -r src/board/* :
+
+# Open a REPL on the board
+repl:
+	mpremote connect {{ port }} repl
+'''

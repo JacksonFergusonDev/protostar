@@ -224,6 +224,13 @@ class Orchestrator:
                 for payload in self.blueprint.pyproject_injections.values():
                     self.manifest.add_file_append("pyproject.toml", payload)
 
+            # Inject generic file appends
+            if self.blueprint.appends:
+                logger.debug("Injecting generic file appends from configuration.")
+                for filepath, payloads in self.blueprint.appends.items():
+                    for payload in payloads:
+                        self.manifest.add_file_append(filepath, payload)
+
             if self.blueprint.files:
                 logger.debug("Injecting static files from configuration.")
                 for filepath, content in self.blueprint.files.items():

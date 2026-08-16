@@ -335,7 +335,7 @@ def generate_capability_tables() -> None:
         print(f"Warning: Failed to load built-in templates: {e}")
 
     _write_fixture(
-        "table_presets.md", _format_markdown_table(template_headers, template_rows)
+        "table_templates.md", _format_markdown_table(template_headers, template_rows)
     )
 
 

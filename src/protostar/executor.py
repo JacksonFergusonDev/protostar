@@ -95,6 +95,62 @@ class SystemExecutor:
                 f"SECURITY VIOLATION: Templates cannot directly invoke arbitrary binaries ({command[0]}). Allowed: {', '.join(sorted(allowed_binaries))}"
             )
 
+    def _get_comment_markers(self, filepath: Path) -> tuple[str, str]:
+        """Returns the appropriate comment syntax (start, end) for a given file extension."""
+        ext = filepath.suffix.lower()
+        name = filepath.name.lower()
+
+        # Files that use '#' comments
+        if ext in (
+            ".py",
+            ".toml",
+            ".yaml",
+            ".yml",
+            ".sh",
+            ".bash",
+            ".zsh",
+            ".rb",
+            ".pl",
+            ".gitignore",
+            ".dockerignore",
+        ) or name in ("justfile", "makefile", "dockerfile"):
+            return ("#", "")
+
+        # Files that use '//' comments
+        if ext in (
+            ".js",
+            ".ts",
+            ".jsx",
+            ".tsx",
+            ".c",
+            ".cpp",
+            ".h",
+            ".hpp",
+            ".java",
+            ".go",
+            ".rs",
+            ".cs",
+            ".swift",
+            ".kt",
+            ".scala",
+        ):
+            return ("//", "")
+
+        # HTML/XML/Markdown
+        if ext in (".html", ".htm", ".xml", ".svg", ".md"):
+            return ("<!--", "-->")
+
+        # CSS
+        if ext in (".css", ".scss", ".sass", ".less"):
+            return ("/*", "*/")
+
+        # SQL, Haskell, Lua
+        if ext in (".sql", ".hs", ".lua"):
+            return ("--", "")
+
+        # Fallback to standard hash
+        return ("#", "")
+
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
         self._validate_targets()
@@ -937,6 +993,9 @@ jobs:
                         logger.debug(f"Updated configuration AST in {filepath}")
                 continue
 
+            # Resolve the correct comment syntax for this specific file
+            c_start, c_end = self._get_comment_markers(target)
+
             existing_clean = original_content.rstrip()
             missing_payloads = []
 
@@ -945,15 +1004,18 @@ jobs:
 
                 # Generate a deterministic boundary marker
                 payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
-                marker = f"# --- Protostar Injection: {payload_hash} ---"
+                marker_begin = f"{c_start} --- Protostar Injection: {payload_hash} --- {c_end}".strip()
+                marker_end = (
+                    f"{c_start} --- End Protostar Injection --- {c_end}".strip()
+                )
 
                 if (
-                    marker in original_content
+                    marker_begin in original_content
                     and self.manifest.collision_strategy != CollisionStrategy.OVERWRITE
                 ):
                     continue
 
-                framed_payload = f"{marker}\n{interpolated.strip()}\n# --- End Protostar Injection ---"
+                framed_payload = f"{marker_begin}\n{interpolated.strip()}\n{marker_end}"
                 missing_payloads.append(framed_payload)
 
             if not missing_payloads:

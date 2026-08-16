@@ -1,4 +1,5 @@
 ```text
+!data/**/.gitkeep
 *.log
 *.onnx
 *.pt
@@ -6,14 +7,20 @@
 *.safetensors
 *~
 .DS_Store
+.direnv/
 .env
+.envrc.local
 .idea/
 .ipynb_checkpoints/
+.pytest_cache/
 .ruff_cache/
 .venv/
 .vscode/
 Thumbs.db
 __pycache__/
+data/01_raw/*
+data/02_processed/*
+data/03_features/*
 mlruns/
 runs/
 wandb/
@@ -22,7 +29,5 @@ wandb/
 *.fits
 *.fts
 *.parquet
-.direnv/
-.envrc.local
 .mypy_cache/
 ```

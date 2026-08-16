@@ -33,20 +33,6 @@ python_version = "3.13"
 # release = true     # Scaffold GitHub Actions PyPI release workflows
 # just = true        # Scaffold a justfile for command execution
 
-# --- Advanced Configuration Overrides ---
-# Protostar allows you to customize the dependencies and directory structures
-# for specific pipelines, or inject tooling across all initialized environments.
-
-# [dev]
-# extra_dependencies = ["bump-my-version"]
-
-# [dev.pyproject]
-# custom_ruff = '''
-# [tool.ruff.lint]
-# select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
-# ignore = ["E501", "D100", "D104", "D107"]
-# '''
-
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 # data-science-base = "~/Developer/templates/ds_base.toml"

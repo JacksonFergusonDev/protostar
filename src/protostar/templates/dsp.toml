@@ -1,8 +1,47 @@
 # --- Dependencies ---
-dependencies = ["librosa", "soundfile", "mido", "mutagen", "pydub"]
+dependencies = [
+    "librosa",
+    "soundfile",
+    "scipy",
+    "numpy",
+    "matplotlib",
+    "pedalboard",
+]
 
 # --- Directory Architecture ---
-directories = ["data/raw_audio", "data/processed"]
+directories = [
+    "data/samples/raw",
+    "data/samples/bounces",
+    "notebooks",
+    "src/<% PACKAGE_NAME %>/analysis",
+    "src/<% PACKAGE_NAME %>/effects",
+    "tests",
+]
 
 # --- Version Control Ignores ---
-vcs_ignores = ["*.wav", "*.mp3", "*.flac", "*.mid", "*.midi", "*.ogg"]
+vcs_ignores = [
+    "*.wav",
+    "*.aiff",
+    "*.flac",
+    "*.mp3",
+    "*.ogg",
+    "*.mid",
+    "*.midi",
+    "data/samples/**/*.wav",
+    "!data/samples/**/.gitkeep",
+    ".ipynb_checkpoints/",
+]
+
+# --- Tooling Opinions ---
+ruff = true
+direnv = true
+pytest = true
+just = true
+markdownlint = true
+prek = false
+ci = false
+
+# --- Static File Injections ---
+[files]
+"data/samples/raw/.gitkeep" = ""
+"data/samples/bounces/.gitkeep" = ""
