@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786877977687,
+  "lastUpdate": 1786918232429,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6261,6 +6261,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.05,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3aa56821c5737855889643e21a32b9311535aa4",
+          "message": "feat(cli): add template listing flag and contextual help for template selection (#166)\n\n* feat(cli): add template listing flag and contextual help for template selection\n\n- Add `--list-templates` flag to `protostar init` for template discovery\n- Configure `--template` with `nargs=\"?\"` to catch bare flag invocations\n- Render a Rich table of built-in templates and global aliases on demand\n- Preserve fast-path CLI startup latency by isolating I/O from parser generation\n- Add test coverage for `--list-templates` and empty `--template` error handling\n\n* docs: update fixtures",
+          "timestamp": "2026-08-16T15:09:29-07:00",
+          "tree_id": "cf06d788fa3e684fa6fb5493202137b33ebd328e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d3aa56821c5737855889643e21a32b9311535aa4"
+        },
+        "date": 1786918231345,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.87,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 210.18,
             "unit": "ms"
           }
         ]
