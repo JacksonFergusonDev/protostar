@@ -733,6 +733,7 @@ jobs:
     def _format_pyproject_toml(doc: Any) -> str:
         """Deterministically sorts tables and applies structured visual headers to pyproject.toml."""
         import tomlkit
+        from tomlkit.items import AoT, Table
 
         # 1. Deterministically sort top-level tables (scalar keys must precede all tables)
         root_order = ["project", "build-system", "dependency-groups"]
@@ -743,7 +744,7 @@ jobs:
                 return (999, "")
             k_str = k.key if hasattr(k, "key") else str(k)
             # Scalar/array keys at root level must precede table headers in TOML
-            if not isinstance(v, (tomlkit.items.Table, tomlkit.items.AoT)) and not (
+            if not isinstance(v, (Table, AoT)) and not (
                 hasattr(v, "is_table") and v.is_table()
             ):
                 return (0, k_str)
