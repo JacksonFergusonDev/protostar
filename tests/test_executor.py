@@ -1658,3 +1658,175 @@ convention = "google"
     assert lint["ignore"] == ["D100"]
     assert lint["pydocstyle"]["convention"] == "google"
     assert "__replace__" not in lint
+
+
+def test_format_pyproject_toml_canonical_ordering():
+    """Test that tool tables injected in reverse/random order are sorted canonically."""
+    raw = """
+[tool.commitizen]
+name = "cz"
+
+[tool.coverage.run]
+branch = true
+
+[tool.pytest.ini_options]
+addopts = "-v"
+
+[tool.pyrefly]
+type-checking-mode = "strict"
+
+[tool.ty.rules]
+redundant-cast = "warn"
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 88
+"""
+    doc = tomlkit.parse(raw)
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+
+    ruff_pos = formatted.find("# ---- Ruff ---- #")
+    mypy_pos = formatted.find("# ---- Mypy ---- #")
+    ty_pos = formatted.find("# ---- Ty ---- #")
+    pyrefly_pos = formatted.find("# ---- Pyrefly ---- #")
+    pytest_pos = formatted.find("# ---- Pytest ---- #")
+    cz_pos = formatted.find("# ---- Commitizen ---- #")
+
+    assert 0 < ruff_pos < mypy_pos < ty_pos < pyrefly_pos < pytest_pos < cz_pos
+
+
+def test_format_pyproject_toml_coverage_grouped_under_pytest():
+    """Test that coverage tables are placed directly under Pytest and before Commitizen."""
+    raw = """
+[project]
+name = "demo"
+
+[tool.commitizen]
+name = "cz"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+"""
+    doc = tomlkit.parse(raw)
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+
+    pytest_header_pos = formatted.find("# ---- Pytest ---- #")
+    pytest_ini_pos = formatted.find("[tool.pytest.ini_options]")
+    cov_run_pos = formatted.find("[tool.coverage.run]")
+    cov_rep_pos = formatted.find("[tool.coverage.report]")
+    cz_header_pos = formatted.find("# ---- Commitizen ---- #")
+    cz_pos = formatted.find("[tool.commitizen]")
+
+    assert (
+        pytest_header_pos
+        < pytest_ini_pos
+        < cov_run_pos
+        < cov_rep_pos
+        < cz_header_pos
+        < cz_pos
+    )
+
+
+def test_format_pyproject_toml_root_table_ordering():
+    """Test that root scalars, project, build-system, dependency-groups, and tool tables are ordered."""
+    raw = """
+[tool.ruff]
+line-length = 88
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+
+[project]
+name = "app"
+version = "0.1.0"
+"""
+    doc = tomlkit.parse(raw)
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+
+    project_pos = formatted.find("[project]")
+    build_pos = formatted.find("[build-system]")
+    dep_pos = formatted.find("[dependency-groups]")
+    tool_pos = formatted.find("# ==================================================")
+
+    assert 0 <= project_pos < build_pos < dep_pos < tool_pos
+
+
+def test_format_pyproject_toml_idempotency():
+    """Test that re-running _format_pyproject_toml on already formatted TOML produces identical output."""
+    raw = """
+[project]
+name = "app"
+version = "0.1.0"
+
+[project.scripts]
+app = "app.cli:app"
+
+[dependency-groups]
+dev = ["pytest", "pytest-cov", "ruff"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+branch = true
+
+[tool.commitizen]
+name = "cz"
+"""
+    doc1 = tomlkit.parse(raw)
+    pass1 = SystemExecutor._format_pyproject_toml(doc1)
+
+    doc2 = tomlkit.parse(pass1)
+    pass2 = SystemExecutor._format_pyproject_toml(doc2)
+
+    assert pass1 == pass2
+
+
+def test_format_pyproject_toml_preserves_comments():
+    """Test that non-managed user comments inside tables and inline comments survive."""
+    raw = """
+[project]
+name = "app" # inline project comment
+
+[tool.ruff]
+line-length = 88 # inline ruff comment
+
+# User custom lint comment
+[tool.ruff.lint]
+select = ["E", "F"]
+"""
+    doc = tomlkit.parse(raw)
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+
+    assert "# inline project comment" in formatted
+    assert "# inline ruff comment" in formatted
+    assert "# User custom lint comment" in formatted
+
+
+def test_format_pyproject_toml_parity_fallback(mocker):
+    """Test that formatting gracefully falls back to direct AST dump if validation encounters an error."""
+    raw = """
+[project]
+name = "app"
+
+[tool.ruff]
+line-length = 88
+"""
+    doc = tomlkit.parse(raw)
+    mocker.patch("tomllib.loads", side_effect=ValueError("Simulated corrupt parse"))
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+    assert "[tool.ruff]" in formatted
