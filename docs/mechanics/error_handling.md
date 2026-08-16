@@ -51,7 +51,10 @@ flowchart TD
         direction TB
         Config{Malformed TOML / Spec?}:::phase
         Config -- Yes --> E_Cfg[ConfigurationError]:::error
-        Config -- No --> Execution[3. Side-Effect Realization]:::phase
+        Config -- No --> Net{Remote Template / Network?}:::phase
+        Net -- Network Drop / Insecure --> E_Net[NetworkFetchError]:::error
+        Net -- Bad Zip / Missing Vars --> E_Tmpl[TemplateResolutionError]:::error
+        Net -- Success --> Execution[3. Side-Effect Realization]:::phase
     end
 
     subgraph SideEffects [3. Disk & Subprocess Execution]
@@ -64,14 +67,18 @@ flowchart TD
         Sub -- Success --> End([Environment Stabilized]):::success
     end
 
-    E_Dep & E_Cfg & E_FS & E_Exec & E_Time --> Handler[cli.py :: main Trap]:::core
+    E_Dep & E_Cfg & E_Net & E_Tmpl & E_FS & E_Exec & E_Time --> Handler[cli.py :: main Trap]:::core
 
     Handler --> Panel[Format Rich Error Panel & Output Detail]
     Panel --> POSIX{POSIX Exit Code Router}
 
     POSIX -- ConfigurationError --> EX78([os.EX_CONFIG: 78]):::error
+    POSIX -- NetworkFetchError --> EX75([os.EX_TEMPFAIL: 75]):::error
+    POSIX -- TemplateResolutionError --> EX65([os.EX_DATAERR: 65]):::error
     POSIX -- MissingDependencyError --> EX69([os.EX_UNAVAILABLE: 69]):::error
     POSIX -- FileSystemError --> EX74([os.EX_IOERR: 74]):::error
+    POSIX -- SecurityViolationError --> EX77([os.EX_NOPERM: 77]):::error
+    POSIX -- ExecutionAbortedError --> EX130([Exit Code 130]):::error
     POSIX -- Other ProtostarError --> EX1([Exit Code 1]):::error
 ```
 
@@ -84,10 +91,14 @@ All domain-modeled operational exceptions inherit from `ProtostarError` in `prot
 ```text
 ProtostarError (Exception)
  ├── ConfigurationError
+ ├── NetworkFetchError
+ ├── TemplateResolutionError
  ├── MissingDependencyError
  ├── CommandExecutionError
  ├── CommandTimeoutError
- └── FileSystemError
+ ├── FileSystemError
+ ├── SecurityViolationError
+ └── ExecutionAbortedError
 ```
 
 ### `ProtostarError`
@@ -101,7 +112,15 @@ class ProtostarError(Exception):
 
 ### `ConfigurationError`
 
-Raised when a configuration file (such as `protostar.toml` or `pyproject.toml`) is malformed, invalid, or missing required attributes. Also raised for invalid template names or dynamic parameter mismatches.
+Raised when a configuration file (such as `protostar.toml` or `pyproject.toml`) is malformed, invalid, or contains type/syntax mismatches. Also raised for invalid configuration flags or CLI parameter collisions.
+
+### `NetworkFetchError`
+
+Raised when remote configuration or template downloads fail due to network disconnection, SSL errors, or attempts to fetch resources across unencrypted `http://` protocols.
+
+### `TemplateResolutionError`
+
+Raised when a template target is found but cannot be parsed, extracted, or resolved. Triggers on corrupt archive structures, unsupported archive formats, missing `protostar.toml` files within archives, or unsatisfied template placeholder variables.
 
 ### `MissingDependencyError`
 
@@ -117,7 +136,15 @@ Raised when a subprocess exceeds its allotted execution window. Automatically at
 
 ### `FileSystemError`
 
-Raised when a local disk operation (read, write, directory creation, or JSON/TOML modification) fails due to an `OSError`. Preserves the operation name, target file path, and original `OSError`.
+Raised when a local disk operation (read, write, directory creation, or serialization) fails due to an `OSError` or encoding exception. Preserves the operation name, target file path, and original cause.
+
+### `SecurityViolationError`
+
+Raised when a template or archive attempts an unauthorized filesystem operation (such as Zip Slip path traversal).
+
+### `ExecutionAbortedError`
+
+Raised when the user explicitly aborts execution via an interactive prompt.
 
 ---
 
@@ -128,8 +155,12 @@ Protostar routes operational exceptions to standard UNIX exit codes (defined in 
 | Exception Class | POSIX Code Name | Integer Exit Code | Primary Trigger Condition |
 | :--- | :--- | :--- | :--- |
 | `ConfigurationError` | `os.EX_CONFIG` | `78` | Invalid TOML syntax, malformed preset key, missing config file |
+| `NetworkFetchError` | `os.EX_TEMPFAIL` | `75` | Transient network drop, DNS failure, HTTP connection error, insecure protocol |
+| `TemplateResolutionError` | `os.EX_DATAERR` | `65` | Corrupt archive, unsupported archive format, missing template variables |
 | `MissingDependencyError` | `os.EX_UNAVAILABLE` | `69` | Required system binary (e.g. `uv`, `git`) missing during `pre_flight()` |
 | `FileSystemError` | `os.EX_IOERR` | `74` | File write permission denied, disk full, invalid path I/O |
+| `SecurityViolationError` | `os.EX_NOPERM` | `77` | Path traversal (Zip Slip) security constraint violation |
+| `ExecutionAbortedError` | Shell Signal | `130` | User cancelled interactive wizard prompt via Ctrl+C / abort |
 | `CommandExecutionError` | Generic Exit | `1` | Subprocess (e.g. `uv sync`, `git init`) exited non-zero |
 | `CommandTimeoutError` | Generic Exit | `1` | Subprocess exceeded execution timeout threshold |
 | *Unhandled Internal Bug* | `os.EX_SOFTWARE` | `70` | Unexpected Python exception / AST parsing collapse |
