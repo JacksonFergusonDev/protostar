@@ -1,7 +1,7 @@
 import pytest
 
 from protostar.config import TemplateBlueprint
-from protostar.errors import ConfigurationError
+from protostar.errors import TemplateResolutionError
 
 
 def test_template_blueprint_load_local_directory(tmp_path):
@@ -64,5 +64,7 @@ def test_template_blueprint_missing_variables_error(tmp_path):
     deep_file = template_dir / "config.yaml"
     deep_file.write_text("db_url: <% DATABASE_URL %>\n", encoding="utf-8")
 
-    with pytest.raises(ConfigurationError, match="requires variables: DATABASE_URL"):
+    with pytest.raises(
+        TemplateResolutionError, match="requires variables: DATABASE_URL"
+    ):
         TemplateBlueprint.load(str(tmp_path))
