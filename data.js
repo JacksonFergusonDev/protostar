@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786875817353,
+  "lastUpdate": 1786876773240,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6193,6 +6193,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 200.76,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "fcd758c5c3c9c907c1b7dfaa59a730c406e1da70",
+          "message": "fix(cli): route SecurityViolationError to POSIX EX_NOPERM status code\n\nPreviously, when a template triggered a path traversal or binary safelist\nviolation, the CLI would gracefully print the error panel but fall through\nto a generic sys.exit(1) status code.\n\nThis explicitly maps SecurityViolationError to os.EX_NOPERM (77) in the\nmain CLI exception router. This ensures strict POSIX compliance and allows\nautomated shell scripts or CI/CD runners to programmatically differentiate\nbetween a generic operational failure and a hard security constraint block.",
+          "timestamp": "2026-08-16T03:38:26-07:00",
+          "tree_id": "7864b253260dd93bba1ae5d4a6c13f69f1808b4e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fcd758c5c3c9c907c1b7dfaa59a730c406e1da70"
+        },
+        "date": 1786876772176,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 128.54,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 192.79,
             "unit": "ms"
           }
         ]
