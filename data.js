@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786876773240,
+  "lastUpdate": 1786877977687,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6227,6 +6227,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 192.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2545e0a14f0a00cbb256c33d4f534dbfe079334d",
+          "message": "fix(executor): format pyproject.toml with deterministic table ordering and Pytest/Coverage grouping (#165)\n\n* fix(executor): format pyproject.toml with deterministic table ordering and Pytest/Coverage grouping\n\n* test(executor): add unit tests for deterministic pyproject.toml ordering and formatting\n\n* docs(includes): update cli pyproject.toml fixture with properly ordered coverage section\n\n* fix(executor): preserve trailing empty line at the end of formatted pyproject.toml\n\n* test(executor): add comprehensive e2e and edge-case tests for pyproject.toml formatting",
+          "timestamp": "2026-08-16T03:58:36-07:00",
+          "tree_id": "ab7f0dd2cd86a351e3227b889cba45647cf498d0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2545e0a14f0a00cbb256c33d4f534dbfe079334d"
+        },
+        "date": 1786877976512,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 128.57,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 195.05,
             "unit": "ms"
           }
         ]
