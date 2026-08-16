@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786918232429,
+  "lastUpdate": 1786918301558,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6295,6 +6295,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 210.18,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "14cf23af6f2ff76f9f91fd335027fedb3ebb5940",
+          "message": "fix(executor): import tomlkit Table and AoT items explicitly\n\nImport `Table` and `AoT` directly from `tomlkit.items` within\n`_format_pyproject_toml` to resolve static type analysis errors\nin Pyright/Pylance when referencing unexported module attributes.",
+          "timestamp": "2026-08-16T15:10:35-07:00",
+          "tree_id": "176215beb10cd0e24d010f8b92b90ae208076760",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/14cf23af6f2ff76f9f91fd335027fedb3ebb5940"
+        },
+        "date": 1786918300976,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.28,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.96,
             "unit": "ms"
           }
         ]
