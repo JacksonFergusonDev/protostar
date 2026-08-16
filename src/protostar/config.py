@@ -53,20 +53,6 @@ python_version = "3.13"
 # release = true     # Scaffold GitHub Actions PyPI release workflows
 # just = true        # Scaffold a justfile for command execution
 
-# --- Advanced Configuration Overrides ---
-# Protostar allows you to customize the dependencies and directory structures
-# for specific pipelines, or inject tooling across all initialized environments.
-
-# [dev]
-# extra_dependencies = ["bump-my-version"]
-
-# [dev.pyproject]
-# custom_ruff = '''
-# [tool.ruff.lint]
-# select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
-# ignore = ["E501", "D100", "D104", "D107"]
-# '''
-
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 # data-science-base = "~/Developer/templates/ds_base.toml"
@@ -98,10 +84,6 @@ class UserConfig:
         ci (bool): Whether to auto-scaffold standard GitHub Actions CI workflows.
         release (bool): Whether to auto-scaffold GitHub Actions PyPI release workflows.
         just (bool): Whether to auto-scaffold a justfile for command execution.
-        global_dev_dependencies (list[str]): Packages to inject into every initialized environment.
-        pyproject_injections (dict[str, str]): Raw, multi-line TOML strings to append to pyproject.toml.
-        files (dict[str, str]): Exact file paths mapped to their raw contents for injection.
-        variables (dict[str, Any]): Arbitrary key-value pairs for dynamic configuration.
     """
 
     ide: str | None = None
@@ -273,6 +255,7 @@ class TemplateBlueprint:
     post_install_tasks: list[list[str]] = field(default_factory=list)
     files: dict[str, str] = field(default_factory=dict)
     pyproject_injections: dict[str, str] = field(default_factory=dict)
+    appends: dict[str, list[str]] = field(default_factory=dict)
     tooling_overrides: dict[str, bool] = field(default_factory=dict)
 
     @classmethod
@@ -405,6 +388,17 @@ class TemplateBlueprint:
 
         if "files" in data:
             instance.files = data["files"]
+
+        # Extract generalized file appends
+        if "appends" in data:
+            appends_data = data["appends"]
+            for k, v in appends_data.items():
+                if isinstance(v, str):
+                    instance.appends.setdefault(k, []).append(v)
+                elif isinstance(v, list):
+                    for item in v:
+                        if isinstance(item, str):
+                            instance.appends.setdefault(k, []).append(item)
 
         # Extract tooling overrides dynamically (root-level boolean flags)
         structural_keys = {

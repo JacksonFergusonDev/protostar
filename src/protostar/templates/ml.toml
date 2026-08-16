@@ -1,8 +1,25 @@
 # --- Dependencies ---
-dependencies = ["torch", "scikit-learn", "huggingface_hub", "tqdm"]
+dependencies = [
+    "torch",
+    "scikit-learn",
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "tqdm",
+]
+docs_dependencies = ["jupyterlab", "nbdime", "ipywidgets"]
 
 # --- Directory Architecture ---
-directories = ["models", "data", "notebooks", "src"]
+directories = [
+    "data/01_raw",
+    "data/02_processed",
+    "data/03_features",
+    "models/weights",
+    "notebooks/exploratory",
+    "src/<% PACKAGE_NAME %>/data",
+    "src/<% PACKAGE_NAME %>/models",
+    "src/<% PACKAGE_NAME %>/training",
+]
 
 # --- Version Control Ignores ---
 vcs_ignores = [
@@ -14,5 +31,45 @@ vcs_ignores = [
     "wandb/",
     "mlruns/",
     "runs/",
+    "data/01_raw/*",
+    "data/02_processed/*",
+    "data/03_features/*",
+    "!data/**/.gitkeep",
     ".ipynb_checkpoints/",
 ]
+
+# --- Tooling Opinions ---
+ruff = true
+direnv = true
+pytest = true
+just = true
+markdownlint = true
+mypy = false
+prek = false
+ci = false
+
+# --- Post-Install Subprocesses ---
+post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
+
+# --- pyproject.toml AST Injections ---
+[dev.pyproject]
+# Configure Ruff to lint/format inside notebooks
+ml_ruff_config = '''
+[tool.ruff]
+extend-include = ["*.ipynb"]
+
+[tool.ruff.lint]
+extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
+'''
+
+# --- Static File Injections ---
+[files]
+"data/01_raw/.gitkeep" = ""
+"data/02_processed/.gitkeep" = ""
+"data/03_features/.gitkeep" = ""
+"models/weights/.gitkeep" = ""
+
+".gitattributes" = '''
+# Improve Jupyter Notebook diffs
+*.ipynb text eol=lf
+'''

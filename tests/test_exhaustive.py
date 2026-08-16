@@ -3,7 +3,6 @@ import pytest
 pytestmark = pytest.mark.exhaustive
 
 BUILTIN_TEMPLATES = [
-    "scientific",
     "astro",
     "dsp",
     "embedded",
@@ -13,7 +12,6 @@ BUILTIN_TEMPLATES = [
 ]
 
 TEMPLATE_DEPENDENCY_MARKERS = {
-    "scientific": "numpy",
     "astro": "photutils",
     "dsp": "librosa",
     "embedded": "pyserial",

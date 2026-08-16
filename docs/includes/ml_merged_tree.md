@@ -4,14 +4,30 @@
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
+├── .markdownlint-cli2.yaml
 ├── .python-version
 ├── Dockerfile
 ├── data
+│   ├── 01_raw
+│   │   └── .gitkeep
+│   ├── 02_processed
+│   │   └── .gitkeep
+│   ├── 03_features
+│   │   └── .gitkeep
 │   ├── catalogs
 │   └── fits
+├── justfile
 ├── models
+│   └── weights
+│       └── .gitkeep
 ├── notebooks
+│   └── exploratory
 ├── pyproject.toml
 ├── src
+│   └── demo_project
+│       ├── data
+│       ├── models
+│       └── training
+├── tests
 └── uv.lock
 ```

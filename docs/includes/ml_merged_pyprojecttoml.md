@@ -6,7 +6,6 @@ requires-python = ">=3.13"
 dependencies = [
     "astropy>=8.0.1",
     "astroquery>=0.4.11",
-    "huggingface-hub>=1.23.0",
     "matplotlib>=3.11.0",
     "nbdime>=4.0.4",
     "numpy>=2.5.1",
@@ -25,7 +24,14 @@ authors = [{ name = "your-name", email = "your-email" }]
 [dependency-groups]
 dev = [
     "mypy>=2.2.0",
+    "pytest>=9.1.1",
+    "pytest-mock>=3.15.1",
     "ruff>=0.15.21",
+]
+docs = [
+    "ipywidgets>=8.1.8",
+    "jupyterlab>=4.6.3",
+    "nbdime>=4.0.4",
 ]
 
 # ==================================================
@@ -36,6 +42,7 @@ dev = [
 
 [tool.ruff]
 line-length = 88
+extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = [
@@ -51,7 +58,7 @@ select = [
 ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
-extend-select = ["PD", "NPY"]
+extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
 
 # ---- Mypy ---- #
 
@@ -65,5 +72,16 @@ warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
 explicit_package_bases = true
+
+# ---- Pytest ---- #
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = [
+    "tests",
+]
+pythonpath = [
+    ".",
+]
 
 ```

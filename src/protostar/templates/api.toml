@@ -1,12 +1,66 @@
 # --- Dependencies ---
-dependencies = ["fastapi", "uvicorn", "pydantic", "httpx"]
+dependencies = ["fastapi", "uvicorn", "pydantic-settings"]
 
 # --- Directory Architecture ---
-directories = ["api/routers", "core", "schemas"]
+directories = [
+    "src/<% PACKAGE_NAME %>/api/routers",
+    "src/<% PACKAGE_NAME %>/core",
+    "src/<% PACKAGE_NAME %>/models",
+    "src/<% PACKAGE_NAME %>/schemas",
+    "src/<% PACKAGE_NAME %>/services",
+    "tests/api",
+]
 
 # --- Version Control Ignores ---
-vcs_ignores = [".env", "*.pem", "*.key"]
+vcs_ignores = [".env", "*.pem", "*.key", "sqlite.db"]
+
+# --- Tooling Opinions ---
+ruff = true
+direnv = true
+mypy = true
+pytest = true
+docker = true
+just = true
+markdownlint = true
+prek = true
+ci = true
+commitizen = true
+renovate = true
+
+# --- Development Dependencies ---
+[dev]
+extra_dependencies = ["httpx", "pytest-asyncio"]
 
 # --- Static File Injections ---
 [files]
-"README.md" = ""
+"src/<% PACKAGE_NAME %>/core/config.py" = '''
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    project_name: str = "<% PROJECT_NAME %>"
+    api_v1_str: str = "/api/v1"
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
+'''
+
+"src/<% PACKAGE_NAME %>/main.py" = '''
+from fastapi import FastAPI
+from .core.config import settings
+
+app = FastAPI(
+    title=settings.project_name,
+    openapi_url=f"{settings.api_v1_str}/openapi.json"
+)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+'''
+
+".env.example" = '''
+# API Configuration
+PROJECT_NAME="<% PROJECT_NAME %>"
+'''
