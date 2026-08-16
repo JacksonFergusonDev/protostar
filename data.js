@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786835852502,
+  "lastUpdate": 1786875817353,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6159,6 +6159,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 199.61,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8899e3686c3b3e008eec2352500f399fa2a75e2c",
+          "message": "fix(executor): make TOML AST table replacement deterministic (#164)\n\n* refactor(executor): make TOML AST table replacement deterministic\n\n* test(executor): update AST table replacement unit tests\n\n* docs: removed unnecessary flag and update fixtures",
+          "timestamp": "2026-08-16T03:22:33-07:00",
+          "tree_id": "f8de81e46e6cb40a7b442803560e93655337efc1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8899e3686c3b3e008eec2352500f399fa2a75e2c"
+        },
+        "date": 1786875816171,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 200.76,
             "unit": "ms"
           }
         ]
