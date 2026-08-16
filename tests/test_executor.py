@@ -1833,3 +1833,172 @@ line-length = 88
     formatted = SystemExecutor._format_pyproject_toml(doc)
     assert "[tool.ruff]" in formatted
     assert formatted.endswith("\n\n")
+
+
+def test_executor_append_files_cli_template_full_lifecycle(
+    tmp_path, monkeypatch, mock_config
+):
+    """Test end-to-end pyproject.toml append lifecycle for CLI template with coverage grouped under pytest."""
+    monkeypatch.chdir(tmp_path)
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        '[project]\nname = "demo-project"\nversion = "0.1.0"\nrequires-python = ">=3.13"\n'
+    )
+
+    manifest = EnvironmentManifest()
+    # Tooling modules append baseline configurations
+    manifest.add_file_append("pyproject.toml", "[tool.ruff]\nline-length = 88\n")
+    manifest.add_file_append("pyproject.toml", '[tool.mypy]\nmypy_path = "src"\n')
+    manifest.add_file_append(
+        "pyproject.toml",
+        '[tool.pytest.ini_options]\naddopts = "--strict-markers"\ntestpaths = ["tests"]\n',
+    )
+    manifest.add_file_append(
+        "pyproject.toml", '[tool.commitizen]\nname = "cz_conventional_commits"\n'
+    )
+    manifest.add_file_append(
+        "pyproject.toml", '[dependency-groups]\ndev = [{ include-group = "docs" }]\n'
+    )
+
+    # CLI Template appends late-binding injections
+    manifest.add_file_append(
+        "pyproject.toml", '[tool.ruff.lint]\nselect = ["A", "B"]\n'
+    )
+    manifest.add_file_append(
+        "pyproject.toml",
+        '[[tool.mypy.overrides]]\nmodule = ["tests.*"]\ndisallow_untyped_defs = false\n',
+    )
+    manifest.add_file_append(
+        "pyproject.toml",
+        "[tool.coverage.run]\nbranch = true\n\n[tool.coverage.report]\nshow_missing = true\n",
+    )
+    manifest.add_file_append(
+        "pyproject.toml", '[project.scripts]\ndemo-project = "demo_project.cli:app"\n'
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    executor._append_files()
+
+    result = pyproject.read_text()
+
+    assert result.endswith("\n\n")
+    assert tomllib.loads(result)
+
+    banner_pos = result.find("# Tool Configuration")
+    ruff_pos = result.find("# ---- Ruff ---- #")
+    mypy_pos = result.find("# ---- Mypy ---- #")
+    pytest_pos = result.find("# ---- Pytest ---- #")
+    cov_run_pos = result.find("[tool.coverage.run]")
+    cov_rep_pos = result.find("[tool.coverage.report]")
+    cz_pos = result.find("# ---- Commitizen ---- #")
+
+    assert (
+        0
+        < banner_pos
+        < ruff_pos
+        < mypy_pos
+        < pytest_pos
+        < cov_run_pos
+        < cov_rep_pos
+        < cz_pos
+    )
+
+
+def test_executor_append_files_recleans_existing_managed_headers(
+    tmp_path, monkeypatch, mock_config
+):
+    """Test that existing managed banners are stripped and cleanly regenerated without duplication."""
+    monkeypatch.chdir(tmp_path)
+    pyproject = tmp_path / "pyproject.toml"
+
+    # Pre-existing file with misordered banners and user comments
+    existing = """[project]
+name = "demo"
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- Commitizen ---- #
+
+[tool.commitizen]
+name = "cz"
+
+# Keep this user comment
+# ---- Ruff ---- #
+
+[tool.ruff]
+line-length = 88
+"""
+    pyproject.write_text(existing)
+
+    manifest = EnvironmentManifest()
+    manifest.add_file_append(
+        "pyproject.toml", '[tool.pytest.ini_options]\naddopts = "-v"\n'
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    executor._append_files()
+
+    result = pyproject.read_text()
+
+    # Banners should appear exactly once
+    assert result.count("# Tool Configuration") == 1
+    assert result.count("# ---- Ruff ---- #") == 1
+    assert result.count("# ---- Pytest ---- #") == 1
+    assert result.count("# ---- Commitizen ---- #") == 1
+
+    # User comment preserved
+    assert "# Keep this user comment" in result
+
+    # Order maintained
+    ruff_pos = result.find("# ---- Ruff ---- #")
+    pytest_pos = result.find("# ---- Pytest ---- #")
+    cz_pos = result.find("# ---- Commitizen ---- #")
+    assert ruff_pos < pytest_pos < cz_pos
+    assert result.endswith("\n\n")
+
+
+def test_format_pyproject_toml_aot_and_subtables_only():
+    """Test that subtables and array of tables without root tables are detected and formatted with headers."""
+    raw = """
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
+
+[tool.ty.rules]
+redundant-cast = "warn"
+
+[tool.coverage.report]
+fail_under = 80
+"""
+    doc = tomlkit.parse(raw)
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+
+    assert "# ---- Mypy ---- #\n\n[[tool.mypy.overrides]]" in formatted
+    assert "# ---- Ty ---- #\n\n[tool.ty.rules]" in formatted
+    assert "# ---- Pytest ---- #\n\n[tool.coverage.report]" in formatted
+    assert formatted.endswith("\n\n")
+
+
+def test_format_pyproject_toml_semantic_data_mismatch_fallback(mocker):
+    """Test that formatting safely falls back to raw dump if parsed check data differs from expected."""
+    raw = """
+[project]
+name = "app"
+
+[tool.ruff]
+line-length = 88
+"""
+    doc = tomlkit.parse(raw)
+
+    # Mock tomllib.loads: first call (raw_dump) returns dict A, second call (new_content) returns dict B
+    calls = [
+        {"project": {"name": "app"}, "tool": {"ruff": {"line-length": 88}}},
+        {"project": {"name": "corrupted"}},
+    ]
+    mocker.patch("tomllib.loads", side_effect=lambda _: calls.pop(0))
+
+    formatted = SystemExecutor._format_pyproject_toml(doc)
+    assert "[tool.ruff]" in formatted
+    assert formatted.endswith("\n\n")
