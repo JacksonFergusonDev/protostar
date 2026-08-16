@@ -34,6 +34,7 @@ from .errors import (
     FileSystemError,
     MissingDependencyError,
     ProtostarError,
+    SecurityViolationError,
 )
 from .fs import atomic_write_text
 from .metadata import resolve_auto_metadata
@@ -668,6 +669,8 @@ def main() -> None:
         )
 
         # Route specific domain exceptions to standard POSIX status codes
+        if isinstance(e, SecurityViolationError):
+            sys.exit(os.EX_NOPERM)  # 77: Permission denied / Security constraint
         if isinstance(e, ConfigurationError):
             sys.exit(os.EX_CONFIG)  # 78: Malformed configuration tables
         if isinstance(e, MissingDependencyError):
