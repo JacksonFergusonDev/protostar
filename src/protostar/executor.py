@@ -729,6 +729,136 @@ jobs:
 
                 base[key] = value
 
+    @staticmethod
+    def _format_pyproject_toml(doc: Any) -> str:
+        """Deterministically sorts tables and applies structured visual headers to pyproject.toml."""
+        import tomlkit
+
+        # 1. Deterministically sort top-level tables (scalar keys must precede all tables)
+        root_order = ["project", "build-system", "dependency-groups"]
+
+        def root_sort_key(item: tuple[Any, Any]) -> tuple[int, str]:
+            k, v = item
+            if k is None:
+                return (999, "")
+            k_str = k.key if hasattr(k, "key") else str(k)
+            # Scalar/array keys at root level must precede table headers in TOML
+            if not isinstance(v, (tomlkit.items.Table, tomlkit.items.AoT)) and not (
+                hasattr(v, "is_table") and v.is_table()
+            ):
+                return (0, k_str)
+            if k_str in root_order:
+                return (1 + root_order.index(k_str), k_str)
+            if k_str == "tool":
+                return (500, k_str)
+            return (100, k_str)
+
+        if hasattr(doc, "body") and isinstance(doc.body, list):
+            doc.body.sort(key=root_sort_key)
+            if hasattr(doc, "_map") and isinstance(doc._map, dict):
+                doc._map = {
+                    k: idx for idx, (k, _) in enumerate(doc.body) if k is not None
+                }
+
+        # 2. Deterministically sort tools within [tool]
+        if (
+            "tool" in doc
+            and hasattr(doc["tool"], "value")
+            and hasattr(doc["tool"].value, "body")
+        ):
+            tool_order = [
+                "ruff",
+                "mypy",
+                "ty",
+                "pyrefly",
+                "pytest",
+                "coverage",
+                "commitizen",
+            ]
+
+            def tool_sort_key(item: tuple[Any, Any]) -> tuple[int, str]:
+                k, _ = item
+                if k is None:
+                    return (999, "")
+                k_str = k.key if hasattr(k, "key") else str(k)
+                if k_str in tool_order:
+                    return (tool_order.index(k_str), k_str)
+                return (100, k_str)
+
+            doc["tool"].value.body.sort(key=tool_sort_key)
+            if hasattr(doc["tool"].value, "_map") and isinstance(
+                doc["tool"].value._map, dict
+            ):
+                doc["tool"].value._map = {
+                    k: idx
+                    for idx, (k, _) in enumerate(doc["tool"].value.body)
+                    if k is not None
+                }
+
+        new_content = tomlkit.dumps(doc)
+        raw_dump = new_content
+
+        # 3. Apply visual separators safely using anchored regex
+        tool_headers = [
+            ("Ruff", r"\[+tool\.ruff(?:\.[^\]]+)?\]+"),
+            ("Mypy", r"\[+tool\.mypy(?:\.[^\]]+)?\]+"),
+            ("Ty", r"\[+tool\.ty(?:\.[^\]]+)?\]+"),
+            ("Pyrefly", r"\[+tool\.pyrefly(?:\.[^\]]+)?\]+"),
+            ("Pytest", r"\[+tool\.(?:pytest|coverage)(?:\.[^\]]+)?\]+"),
+            ("Commitizen", r"\[+tool\.commitizen(?:\.[^\]]+)?\]+"),
+        ]
+
+        for title, table_regex in tool_headers:
+            marker = f"# ---- {title} ---- #"
+            if not re.search(rf"^{re.escape(marker)}", new_content, flags=re.MULTILINE):
+                new_content = re.sub(
+                    rf"^{table_regex}\s*$",
+                    rf"\n{marker}\n\n\g<0>",
+                    new_content,
+                    count=1,
+                    flags=re.MULTILINE,
+                )
+
+        # 4. Add main Tool Configuration banner before the first tool header if not exists
+        if "# Tool Configuration" not in new_content:
+            tool_match = re.search(
+                r"^# ---- (Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen) ---- #\s*$",
+                new_content,
+                flags=re.MULTILINE,
+            )
+            if tool_match:
+                header = (
+                    "# ==================================================\n"
+                    "# Tool Configuration\n"
+                    "# ==================================================\n\n"
+                )
+                new_content = (
+                    new_content[: tool_match.start()].rstrip()
+                    + "\n\n"
+                    + header
+                    + new_content[tool_match.start() :]
+                )
+
+        # 5. Normalize spacing (no more than one consecutive blank line)
+        new_content = re.sub(r"\n{3,}", "\n\n", new_content).strip() + "\n"
+
+        # 6. Safety Parity Guard: Guarantee data integrity
+        try:
+            expected_data = tomllib.loads(raw_dump)
+            parsed_check = tomllib.loads(new_content)
+            if parsed_check != expected_data:
+                logger.warning(
+                    "AST Parity mismatch during pyproject.toml formatting; falling back to direct AST dump."
+                )
+                return raw_dump
+        except Exception as e:
+            logger.warning(
+                f"Validation error during pyproject.toml formatting ({e}); falling back to direct AST dump."
+            )
+            return raw_dump
+
+        return new_content
+
     def _append_files(self) -> None:
         """Appends late-binding configuration payloads to their target files."""
         if not self.manifest.file_appends:
@@ -750,9 +880,24 @@ jobs:
             if target.suffix == ".toml":
                 import tomlkit
 
+                clean_content = original_content
+                if target.name == "pyproject.toml" and clean_content:
+                    clean_content = re.sub(
+                        r"^[ \t]*# =+\s*\n[ \t]*# Tool Configuration\s*\n[ \t]*# =+\s*\n*",
+                        "",
+                        clean_content,
+                        flags=re.MULTILINE,
+                    )
+                    clean_content = re.sub(
+                        r"^[ \t]*# ---- [A-Za-z0-9_-]+ ---- #[ \t]*\n*",
+                        "",
+                        clean_content,
+                        flags=re.MULTILINE,
+                    )
+
                 doc = (
-                    tomlkit.parse(original_content)
-                    if original_content
+                    tomlkit.parse(clean_content)
+                    if clean_content
                     else tomlkit.document()
                 )
                 ast_mutated = False
@@ -776,55 +921,11 @@ jobs:
                         ) from e
 
                 if ast_mutated:
-                    new_content = tomlkit.dumps(doc)
+                    if target.name == "pyproject.toml":
+                        new_content = self._format_pyproject_toml(doc)
+                    else:
+                        new_content = tomlkit.dumps(doc)
 
-                    # Apply visual separators safely using anchored regex to prevent substring collisions
-                    tool_headers = [
-                        ("Ruff", r"\[tool\.ruff\]"),
-                        ("Mypy", r"\[tool\.mypy\]"),
-                        ("Pytest", r"\[tool\.pytest\.ini_options\]"),
-                        ("Commitizen", r"\[tool\.commitizen\]"),
-                        ("Ty", r"\[tool\.ty(?:[^\]]*|)\]"),
-                        ("Pyrefly", r"\[tool\.pyrefly\]"),
-                    ]
-
-                    for title, table_regex in tool_headers:
-                        marker = f"# ---- {title} ---- #"
-                        if not re.search(
-                            rf"^{marker}", new_content, flags=re.MULTILINE
-                        ):
-                            new_content = re.sub(
-                                rf"^{table_regex}\s*$",
-                                f"{marker}\n\n\\g<0>",
-                                new_content,
-                                flags=re.MULTILINE,
-                            )
-
-                    # Add main Tool Configuration header before the first tool header if not exists
-                    if "# Tool Configuration" not in new_content:
-                        tool_match = re.search(
-                            r"^# ---- (Ruff|Mypy|Pytest|Commitizen|Ty|Pyrefly) ---- #\s*$",
-                            new_content,
-                            flags=re.MULTILINE,
-                        )
-                        if tool_match:
-                            header = "# ==================================================\n# Tool Configuration\n# ==================================================\n\n"
-                            # Ensure empty line before the header
-                            prefix = (
-                                "\n"
-                                if not new_content[: tool_match.start()].endswith(
-                                    "\n\n"
-                                )
-                                else ""
-                            )
-                            new_content = (
-                                new_content[: tool_match.start()]
-                                + prefix
-                                + header
-                                + new_content[tool_match.start() :]
-                            )
-
-                    new_content = re.sub(r"\n{3,}", "\n\n", new_content)
                     if new_content.strip() != original_content.strip():
                         try:
                             atomic_write_text(target, new_content)
