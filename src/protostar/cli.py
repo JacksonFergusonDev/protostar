@@ -33,8 +33,10 @@ from .errors import (
     ExecutionAbortedError,
     FileSystemError,
     MissingDependencyError,
+    NetworkFetchError,
     ProtostarError,
     SecurityViolationError,
+    TemplateResolutionError,
 )
 from .fs import atomic_write_text
 from .metadata import resolve_auto_metadata
@@ -734,6 +736,12 @@ def main() -> None:
             sys.exit(os.EX_NOPERM)  # 77: Permission denied / Security constraint
         if isinstance(e, ConfigurationError):
             sys.exit(os.EX_CONFIG)  # 78: Malformed configuration tables
+        if isinstance(e, TemplateResolutionError):
+            sys.exit(
+                os.EX_DATAERR
+            )  # 65: Data format error (e.g., bad zip, missing variables)
+        if isinstance(e, NetworkFetchError):
+            sys.exit(os.EX_TEMPFAIL)  # 75: Temporary failure (network drop)
         if isinstance(e, MissingDependencyError):
             sys.exit(
                 os.EX_UNAVAILABLE

@@ -1,8 +1,12 @@
+from pathlib import Path
 from urllib.error import URLError
 
 import pytest
 
-from protostar.errors import ConfigurationError
+from protostar.errors import (
+    NetworkFetchError,
+    TemplateResolutionError,
+)
 from protostar.network import (
     fetch_remote_config,
     fetch_template_archive,
@@ -26,7 +30,7 @@ def test_fetch_remote_config_https_success(mocker):
 
 def test_fetch_remote_config_rejects_http():
     """Test that insecure HTTP URLs are explicitly rejected."""
-    with pytest.raises(ConfigurationError, match="Insecure protocol detected"):
+    with pytest.raises(NetworkFetchError, match="Insecure protocol detected"):
         fetch_remote_config("http://example.com/config.toml")
 
 
@@ -101,12 +105,10 @@ def test_fetch_remote_config_sourcehut_translation(mocker):
 
 
 def test_fetch_remote_config_handles_url_error(mocker):
-    """Test that URLErrors are caught and wrapped in a ConfigurationError."""
+    """Test that URLErrors are caught and wrapped in a NetworkFetchError."""
     mocker.patch("urllib.request.urlopen", side_effect=URLError("Connection refused"))
 
-    with pytest.raises(
-        ConfigurationError, match="Failed to fetch remote configuration"
-    ):
+    with pytest.raises(NetworkFetchError, match="Failed to fetch remote configuration"):
         fetch_remote_config("https://example.com/missing.toml")
 
 
@@ -171,3 +173,49 @@ def test_fetch_template_archive_zip_extraction(mocker, tmp_path):
     # Result should be the directory containing protostar.toml
     assert result == dest_dir / "repo-main"
     assert (result / "protostar.toml").exists()
+
+
+def test_fetch_template_archive_rejects_http():
+    with pytest.raises(NetworkFetchError, match="Insecure protocol detected"):
+        fetch_template_archive("http://example.com/archive.zip", Path("/tmp"))
+
+
+def test_fetch_template_archive_handles_url_error(mocker, tmp_path):
+    mocker.patch("urllib.request.urlopen", side_effect=URLError("Network down"))
+    dest_dir = tmp_path / "dest"
+    dest_dir.mkdir()
+
+    with pytest.raises(NetworkFetchError, match="Failed to fetch archive"):
+        fetch_template_archive("https://example.com/archive.zip", dest_dir)
+
+
+def test_fetch_template_archive_unsupported_format(mocker, tmp_path):
+    mock_response = mocker.Mock()
+    mock_response.read.return_value = b"some data"
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    dest_dir = tmp_path / "dest"
+    dest_dir.mkdir()
+
+    with pytest.raises(TemplateResolutionError, match="Unsupported archive format"):
+        fetch_template_archive("https://example.com/archive.unknown", dest_dir)
+
+
+def test_fetch_template_archive_missing_protostar_toml(mocker, tmp_path):
+    import zipfile
+
+    zip_path = tmp_path / "empty.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("repo-main/readme.md", "# Hello")
+
+    mock_response = mocker.Mock()
+    mock_response.read.return_value = zip_path.read_bytes()
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    dest_dir = tmp_path / "dest"
+    dest_dir.mkdir()
+
+    with pytest.raises(TemplateResolutionError, match=r"No protostar\.toml found"):
+        fetch_template_archive("https://example.com/archive.zip", dest_dir)

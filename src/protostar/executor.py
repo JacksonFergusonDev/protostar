@@ -1196,9 +1196,14 @@ ENV PYTHONUNBUFFERED=1
                 if original_content.strip():
                     parsed_data = json.loads(original_content)
                     if not isinstance(parsed_data, dict):
-                        raise ValueError("Root JSON element is not an object.")
+                        self.manifest.add_diagnostic(
+                            phase="Executor",
+                            message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
+                            severity=Severity.WARNING,
+                        )
+                        return
                     settings = parsed_data
-            except (json.JSONDecodeError, ValueError):
+            except json.JSONDecodeError:
                 self.manifest.add_diagnostic(
                     phase="Executor",
                     message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",

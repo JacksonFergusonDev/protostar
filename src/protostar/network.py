@@ -7,7 +7,11 @@ import urllib.request
 from pathlib import Path
 from urllib.error import URLError
 
-from .errors import ConfigurationError
+from .errors import (
+    NetworkFetchError,
+    SecurityViolationError,
+    TemplateResolutionError,
+)
 from .fs import safe_extract_zip
 
 
@@ -24,15 +28,17 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
         The raw string content of the fetched configuration.
 
     Raises:
-        ConfigurationError: If the protocol is insecure or the network request fails.
+        NetworkFetchError: If the protocol is insecure or the network request fails.
     """
     if url.startswith("http://"):
-        raise ConfigurationError(
-            "Insecure protocol detected. Protostar requires HTTPS for remote configurations."
+        raise NetworkFetchError(
+            url,
+            message="Insecure protocol detected. Protostar requires HTTPS for remote configurations.",
         )
     if not url.startswith("https://"):
-        raise ConfigurationError(
-            "Remote configuration URLs must start with 'https://'."
+        raise NetworkFetchError(
+            url,
+            message="Remote configuration URLs must start with 'https://'.",
         )
 
     # Translate GitHub blob URLs
@@ -74,8 +80,10 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
         with urllib.request.urlopen(url, timeout=timeout) as response:
             return str(response.read(1024 * 1024).decode("utf-8"))
     except URLError as e:
-        raise ConfigurationError(
-            f"Failed to fetch remote configuration from {url}.\nDetails: {e}"
+        raise NetworkFetchError(
+            url,
+            original=e,
+            message=f"Failed to fetch remote configuration from '{url}'.\nDetails: {e}",
         ) from e
 
 
@@ -91,11 +99,13 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
         The path to the directory containing protostar.toml.
 
     Raises:
-        ConfigurationError: On network or extraction failure.
+        NetworkFetchError: On network connectivity or protocol failure.
+        TemplateResolutionError: On archive extraction or format failure.
     """
     if url.startswith("http://"):
-        raise ConfigurationError(
-            "Insecure protocol detected. Protostar requires HTTPS for remote configurations."
+        raise NetworkFetchError(
+            url,
+            message="Insecure protocol detected. Protostar requires HTTPS for remote configurations.",
         )
 
     try:
@@ -106,8 +116,10 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
             tmp_file.write(response.read())
             tmp_path = Path(tmp_file.name)
     except URLError as e:
-        raise ConfigurationError(
-            f"Failed to fetch archive from {url}.\nDetails: {e}"
+        raise NetworkFetchError(
+            url,
+            original=e,
+            message=f"Failed to fetch archive from '{url}'.\nDetails: {e}",
         ) from e
 
     try:
@@ -118,10 +130,16 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
                 # Python 3.12+ data filter to prevent Tar Slip
                 tf.extractall(dest_dir, filter="data")
         else:
-            raise ConfigurationError(f"Unsupported archive format for {url}")
+            raise TemplateResolutionError(
+                url,
+                f"Unsupported archive format for '{url}'. Expected .zip, .tar.gz, .tgz, or .tar.",
+            )
+    except (SecurityViolationError, TemplateResolutionError):
+        raise
     except Exception as e:
-        raise ConfigurationError(
-            f"Failed to extract archive from {url}.\nDetails: {e}"
+        raise TemplateResolutionError(
+            url,
+            f"Failed to extract archive from '{url}'.\nDetails: {e}",
         ) from e
     finally:
         tmp_path.unlink(missing_ok=True)
@@ -131,7 +149,9 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
         if path.is_file():
             return path.parent
 
-    raise ConfigurationError(f"No protostar.toml found in archive from {url}.")
+    raise TemplateResolutionError(
+        url, f"No protostar.toml found in archive extracted from '{url}'."
+    )
 
 
 def resolve_remote_template(url: str, temp_workspace: Path, timeout: int = 10) -> Path:

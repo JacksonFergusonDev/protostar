@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from pytest_mock import MockerFixture
 
+from protostar.errors import FileSystemError
 from protostar.fs import atomic_write_text
 
 
@@ -45,12 +46,24 @@ def test_atomic_write_text_cleans_up_temp_file_on_failure(
     # Induce a simulated filesystem fault right when os.replace attempts the atomic swap
     mocker.patch("os.replace", side_effect=OSError("Simulated IO fault: Disk Full"))
 
-    with pytest.raises(OSError, match="Simulated IO fault: Disk Full"):
+    with pytest.raises(FileSystemError, match="Failed to write file"):
         atomic_write_text(target_file, payload)
 
     # The target file shouldn't have been created
     assert not target_file.exists()
 
     # The directory should be completely empty (the .critical_config.txt.*.tmp file must be unlinked)
+    leftover_files = [f for f in tmp_path.iterdir() if f.name != "config.toml"]
+    assert len(leftover_files) == 0, f"Temporary files leaked: {leftover_files}"
+
+
+def test_atomic_write_text_handles_encoding_error(tmp_path: Path) -> None:
+    target_file = tmp_path / "bad_encoding.txt"
+    payload = "🚀 Unicode characters incompatible with ascii"
+
+    with pytest.raises(FileSystemError, match="Failed to write file"):
+        atomic_write_text(target_file, payload, encoding="ascii")
+
+    assert not target_file.exists()
     leftover_files = [f for f in tmp_path.iterdir() if f.name != "config.toml"]
     assert len(leftover_files) == 0, f"Temporary files leaked: {leftover_files}"

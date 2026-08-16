@@ -14,8 +14,10 @@ from .errors import (
     ConfigurationError,
     FileSystemError,
     MissingDependencyError,
+    NetworkFetchError,
     ProtostarError,
     SecurityViolationError,
+    TemplateResolutionError,
 )
 from .manifest import EnvironmentManifest
 from .modules.base import BootstrapModule
@@ -31,6 +33,8 @@ __all__ = [
     "EnvironmentManifest",
     "FileSystemError",
     "MissingDependencyError",
+    "NetworkFetchError",
     "ProtostarError",
     "SecurityViolationError",
+    "TemplateResolutionError",
 ]

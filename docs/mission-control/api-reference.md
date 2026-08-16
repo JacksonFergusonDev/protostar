@@ -56,6 +56,22 @@ classDiagram
             show_root_toc_entry: true
             separate_signature: true
 
+    ::: protostar.errors.NetworkFetchError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.TemplateResolutionError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
     ::: protostar.errors.MissingDependencyError
         options:
             show_source: true
@@ -81,6 +97,22 @@ classDiagram
             separate_signature: true
 
     ::: protostar.errors.FileSystemError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.SecurityViolationError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.ExecutionAbortedError
         options:
             show_source: true
             show_bases: true

@@ -11,6 +11,7 @@ from protostar.errors import (
     FileSystemError,
     MissingDependencyError,
     ProtostarError,
+    TemplateResolutionError,
 )
 
 
@@ -167,10 +168,10 @@ def test_template_blueprint_load_remote_target(mocker, tmp_path):
 
 
 def test_template_blueprint_load_local_target_missing(mocker, tmp_path):
-    """Test that a missing local override target raises a ConfigurationError."""
+    """Test that a missing local override target raises a TemplateResolutionError."""
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
 
-    with pytest.raises(ConfigurationError, match="Configuration file not found"):
+    with pytest.raises(TemplateResolutionError, match="Configuration file not found"):
         TemplateBlueprint.load(target="definitely_does_not_exist_12345.toml")
 
 
@@ -219,7 +220,7 @@ def test_template_blueprint_load_missing_vars_without_resolver_raises(mocker, tm
     target = tmp_path / "templated.toml"
     target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
-    with pytest.raises(ConfigurationError, match="requires variables"):
+    with pytest.raises(TemplateResolutionError, match="requires variables"):
         TemplateBlueprint.load(target=str(target))
 
 

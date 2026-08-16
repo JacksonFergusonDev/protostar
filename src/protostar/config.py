@@ -10,7 +10,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
-from .errors import ConfigurationError
+from .errors import ConfigurationError, TemplateResolutionError
 from .interpolation import extract_variables, render_template
 from .network import resolve_remote_template
 
@@ -276,8 +276,8 @@ class TemplateBlueprint:
             else:
                 target_path = Path(target)
                 if not target_path.exists():
-                    raise ConfigurationError(
-                        f"Configuration file not found: {target_path}"
+                    raise TemplateResolutionError(
+                        target, f"Configuration file not found: {target_path}"
                     )
 
             if target_path.is_file():
@@ -286,8 +286,8 @@ class TemplateBlueprint:
             else:
                 toml_path = target_path / "protostar.toml"
                 if not toml_path.exists():
-                    raise ConfigurationError(
-                        f"Configuration file not found: {toml_path}"
+                    raise TemplateResolutionError(
+                        target, f"Configuration file not found: {toml_path}"
                     )
                 base_dir = target_path
 
@@ -322,10 +322,10 @@ class TemplateBlueprint:
                 if variable_resolver is not None:
                     context.update(variable_resolver(missing))
                 else:
-                    raise ConfigurationError(
-                        f"Configuration template requires variables: {', '.join(missing)}. "
-                        "Please provide them via CLI flags (e.g. --variable_name=value) "
-                        "or run in an interactive terminal."
+                    raise TemplateResolutionError(
+                        target,
+                        f"Template requires variables: {', '.join(missing)}.",
+                        hint="Please provide them via CLI flags (e.g. --variable_name=value) or run in an interactive terminal.",
                     )
 
             rendered_toml = render_template(toml_content, context, escape_toml=True)

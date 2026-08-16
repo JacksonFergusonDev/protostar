@@ -15,6 +15,36 @@ class ConfigurationError(ProtostarError):
     pass
 
 
+class NetworkFetchError(ProtostarError):
+    """Raised when fetching a remote template or archive fails due to network or protocol issues."""
+
+    def __init__(
+        self,
+        url: str,
+        original: Exception | None = None,
+        *,
+        message: str | None = None,
+        hint: str | None = None,
+    ) -> None:
+        default_message = (
+            f"Network failure: Could not fetch remote configuration from '{url}'."
+        )
+        default_hint = "Ensure you have an active internet connection and that the URL requires HTTPS, not HTTP."
+        super().__init__(message or default_message, hint=hint or default_hint)
+        self.url = url
+        self.original = original
+
+
+class TemplateResolutionError(ProtostarError):
+    """Raised when a template is found but cannot be parsed, extracted, or resolved."""
+
+    def __init__(self, target: str, detail: str, *, hint: str | None = None) -> None:
+        message = f"Failed to resolve template '{target}': {detail}"
+        super().__init__(message, hint=hint)
+        self.target = target
+        self.detail = detail
+
+
 class MissingDependencyError(ProtostarError):
     """Raised during pre-flight checks when a system-level executable is absent."""
 
@@ -61,10 +91,10 @@ class CommandTimeoutError(ProtostarError):
 
 
 class FileSystemError(ProtostarError):
-    """Raised when a local disk mutation (write, read, mkdir) fails via an OSError."""
+    """Raised when a local disk mutation (write, read, mkdir) fails via an OSError or serialization fault."""
 
-    def __init__(self, operation: str, path: str, original: OSError) -> None:
-        err_msg = original.strerror or str(original)
+    def __init__(self, operation: str, path: str, original: Exception) -> None:
+        err_msg = getattr(original, "strerror", None) or str(original)
         message = f"Failed to {operation} '{path}': {err_msg}"
         super().__init__(message)
         self.operation = operation
