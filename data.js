@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786922438139,
+  "lastUpdate": 1786923429191,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6363,6 +6363,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "032f1595e71bfb45e284911825a9bf70f0797b3d",
+          "message": "refactor(errors): decompose ConfigurationError and harden error architecture (#168)\n\n* refactor(executor): eliminate bare ValueError in IDE settings writer\n\n* fix(fs): wrap atomic write serialization and disk errors in FileSystemError\n\n* feat(errors): add NetworkFetchError and TemplateResolutionError exception subclasses\n\n* refactor(network): decompose ConfigurationError into NetworkFetchError and TemplateResolutionError\n\n* feat(cli): map NetworkFetchError and TemplateResolutionError to POSIX exit codes\n\n* docs: document NetworkFetchError, TemplateResolutionError, and POSIX exit code matrix",
+          "timestamp": "2026-08-16T16:36:11-07:00",
+          "tree_id": "3c7da181e2e0d38eed6831d4c3ce036bffd84d52",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/032f1595e71bfb45e284911825a9bf70f0797b3d"
+        },
+        "date": 1786923428286,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 125.68,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 189.01,
             "unit": "ms"
           }
         ]
