@@ -106,6 +106,15 @@ pythonpath = [
     ".",
 ]
 
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+omit = ["**/__init__.py"]
+show_missing = true
+skip_covered = true
+fail_under = 90
+
 # ---- Commitizen ---- #
 
 [tool.commitizen]
@@ -115,14 +124,5 @@ version_scheme = "semver2"
 tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
-
-[tool.coverage.run]
-branch = true
-
-[tool.coverage.report]
-omit = ["**/__init__.py"]
-show_missing = true
-skip_covered = true
-fail_under = 90
 
 ```
