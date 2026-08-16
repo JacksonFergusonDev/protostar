@@ -26,14 +26,12 @@ TEMPLATE_DEPENDENCY_MARKERS = {
 @pytest.mark.parametrize("template", BUILTIN_TEMPLATES)
 def test_individual_template_scaffolding(run_cli, template):
     """Verifies that every built-in template scaffolds cleanly in isolation."""
-    # Pass --force-replace to allow opinionated templates with __replace__ directives (e.g. cli)
     code, stdout, stderr, workspace = run_cli(
         "init",
         "--python-version",
         "3.12",
         "--template",
         template,
-        "--force-replace",
     )
 
     assert code == 0, (

@@ -77,6 +77,24 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["T201", "D"]
 
+# ---- Mypy ---- #
+
+[tool.mypy]
+mypy_path = "src"
+python_version = "3.13"
+strict = true
+pretty = true
+show_error_codes = true
+show_error_context = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+warn_return_any = false
+
 # ---- Pytest ---- #
 
 [tool.pytest.ini_options]
@@ -97,24 +115,6 @@ version_scheme = "semver2"
 tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
-
-# ---- Mypy ---- #
-
-[tool.mypy]
-mypy_path = "src"
-python_version = "3.13"
-strict = true
-pretty = true
-show_error_codes = true
-show_error_context = true
-explicit_package_bases = true
-
-[[tool.mypy.overrides]]
-module = ["tests.*"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-disallow_untyped_calls = false
-warn_return_any = false
 
 [tool.coverage.run]
 branch = true

@@ -39,7 +39,6 @@ FIXTURES = {
             "--pytest",
             "--prek",
             "--markdownlint",
-            "--force-replace",
         ],
     ],
     "astro": [["--template", "astro"]],
