@@ -23,6 +23,8 @@ from protostar.errors import (
     ExecutionAbortedError,
     FileSystemError,
     MissingDependencyError,
+    NetworkFetchError,
+    TemplateResolutionError,
 )
 
 
@@ -507,6 +509,34 @@ def test_main_routes_configuration_error_to_posix_status(mocker):
         main()
 
     mock_exit.assert_called_once_with(os.EX_CONFIG)  # 78
+
+
+def test_main_routes_template_resolution_error_to_posix_status(mocker):
+    """Verify that a TemplateResolutionError returns os.EX_DATAERR (65)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=TemplateResolutionError("my-template", "Malformed archive"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_DATAERR)  # 65
+
+
+def test_main_routes_network_fetch_error_to_posix_status(mocker):
+    """Verify that a NetworkFetchError returns os.EX_TEMPFAIL (75)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=NetworkFetchError("https://example.com"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_TEMPFAIL)  # 75
 
 
 def test_main_routes_missing_dependency_to_posix_status(mocker):
