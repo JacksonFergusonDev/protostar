@@ -61,10 +61,10 @@ class CommandTimeoutError(ProtostarError):
 
 
 class FileSystemError(ProtostarError):
-    """Raised when a local disk mutation (write, read, mkdir) fails via an OSError."""
+    """Raised when a local disk mutation (write, read, mkdir) fails via an OSError or serialization fault."""
 
-    def __init__(self, operation: str, path: str, original: OSError) -> None:
-        err_msg = original.strerror or str(original)
+    def __init__(self, operation: str, path: str, original: Exception) -> None:
+        err_msg = getattr(original, "strerror", None) or str(original)
         message = f"Failed to {operation} '{path}': {err_msg}"
         super().__init__(message)
         self.operation = operation

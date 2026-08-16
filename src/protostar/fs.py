@@ -5,6 +5,8 @@ import tempfile
 from contextlib import suppress
 from pathlib import Path
 
+from .errors import FileSystemError
+
 
 def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None:
     """Atomically writes text content to a file.
@@ -16,6 +18,9 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
         path: Destination file path.
         content: Text payload to write.
         encoding: Text encoding used to serialize the content.
+
+    Raises:
+        FileSystemError: If file creation, encoding, writing, syncing, or renaming fails.
     """
     file_descriptor, temp_name = tempfile.mkstemp(
         dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
@@ -28,10 +33,12 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
             temp_file.flush()
             os.fsync(temp_file.fileno())
         os.replace(temp_path, path)
-    except Exception:
+    except Exception as e:
         with suppress(OSError):
             temp_path.unlink()
-        raise
+        if isinstance(e, FileSystemError):
+            raise
+        raise FileSystemError("write file", str(path), e) from e
 
 
 def safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
