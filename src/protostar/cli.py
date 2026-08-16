@@ -53,10 +53,62 @@ from .wizard import (
 console = Console()
 
 
+def _print_templates_and_exit(error_msg: str | None = None) -> None:
+    """Renders a rich table of all available templates and exits.
+
+    Args:
+        error_msg: If provided, prints a red error warning before the table
+            and exits with a status code of 1 instead of 0.
+    """
+    if error_msg:
+        console.print(f"[bold red]Error:[/bold red] {error_msg}\n")
+
+    table = Table(
+        title="Available Templates",
+        box=box.ROUNDED,
+        title_style="bold blue",
+        title_justify="left",
+        padding=(0, 1),
+    )
+    table.add_column("Name", style="cyan", no_wrap=True)
+    table.add_column("Type", style="magenta")
+    table.add_column("Source", style="dim")
+
+    # 1. Evaluate Built-ins
+    try:
+        template_dir = importlib.resources.files("protostar.templates")
+        for item in template_dir.iterdir():
+            if item.is_file() and item.name.endswith(".toml"):
+                table.add_row(item.name[:-5], "Built-in", "protostar.templates")
+    except Exception:
+        pass
+
+    # 2. Evaluate Global Aliases
+    user_config = UserConfig.load()
+    if user_config.templates:
+        for alias, source in user_config.templates.items():
+            table.add_row(alias, "Global Alias", source)
+
+    console.print(table)
+
+    # Exit with 1 if it was a failure, 0 if it was an intentional listing
+    sys.exit(1 if error_msg else 0)
+
+
 def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments."""
+    if getattr(args, "list_templates", False):
+        _print_templates_and_exit()
+
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
+
+    # Intercept a dangling --template flag
+    if template_name == "":
+        _print_templates_and_exit(
+            "The '--template' flag requires a name argument. Choose from the list below:"
+        )
+
     template_context = getattr(args, "template_context", {})
 
     user_config = UserConfig.load()
@@ -357,13 +409,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     base_group = init_parser.add_argument_group("Base Configuration")
+
     base_group.add_argument(
         "-t",
         "--template",
         type=str,
+        nargs="?",  # Allow 0 or 1 arguments
+        const="",  # Value if flag is present but no argument is provided
+        default=None,  # Value if flag is omitted entirely
         dest="template_name",
-        help="Name of a built-in template to apply (e.g., 'astro', 'cli').",
+        help="Name of a template to apply (run with --list-templates to view available).",
         metavar="NAME",
+    )
+    base_group.add_argument(
+        "--list-templates",
+        action="store_true",
+        help="List all available built-in and global alias templates.",
     )
     base_group.add_argument(
         "--from",
