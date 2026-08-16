@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786918301558,
+  "lastUpdate": 1786922438139,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6329,6 +6329,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.96,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "630e843e13ce0163d6021d762b4fa6e36d2a4a1a",
+          "message": "feat: upgrade domain templates and introduce generalized file append API (#167)\n\n- Introduced a generalized `[appends]` API to the template engine for injecting raw text into any file.\n- Upgraded the string execution engine to use extension-aware comment markers (e.g., `#`, `//`, `<!--`), guaranteeing idempotent, syntax-safe file injections.\n- Removed legacy global configuration overrides (`global_dev_dependencies`, `pyproject_injections`, etc.) in favor of strictly deterministic template boundaries.\n- Upgraded `api.toml` with a robust FastAPI router architecture, Pydantic settings, and Docker wiring.\n- Upgraded `ml.toml` with Cookiecutter Data Science structures, `nbdime`, and Jupyter notebook linting via Ruff.\n- Upgraded `dsp.toml` for audio processing pipelines and explicit uncompressed media `.gitignore` rules.\n- Upgraded `embedded.toml` for MicroPython development, leveraging the new `[appends]` API to inject `mpremote` deploy recipes into the justfile.\n- Deleted `scientific.toml` to eliminate overlap with `ml.toml` and `astro.toml`.\n- Standardized tooling opinions across all templates, explicitly enabling `just` and `markdownlint` while toggling `prek` and `ci` based on domain relevance.",
+          "timestamp": "2026-08-16T16:19:42-07:00",
+          "tree_id": "259de12c20297031abec861fff83df1f0b00dcf5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/630e843e13ce0163d6021d762b4fa6e36d2a4a1a"
+        },
+        "date": 1786922437622,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.14,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.5,
             "unit": "ms"
           }
         ]
