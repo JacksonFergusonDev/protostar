@@ -1794,6 +1794,7 @@ name = "cz"
     pass2 = SystemExecutor._format_pyproject_toml(doc2)
 
     assert pass1 == pass2
+    assert pass1.endswith("\n\n")
 
 
 def test_format_pyproject_toml_preserves_comments():
@@ -1815,6 +1816,7 @@ select = ["E", "F"]
     assert "# inline project comment" in formatted
     assert "# inline ruff comment" in formatted
     assert "# User custom lint comment" in formatted
+    assert formatted.endswith("\n\n")
 
 
 def test_format_pyproject_toml_parity_fallback(mocker):
@@ -1830,3 +1832,4 @@ line-length = 88
     mocker.patch("tomllib.loads", side_effect=ValueError("Simulated corrupt parse"))
     formatted = SystemExecutor._format_pyproject_toml(doc)
     assert "[tool.ruff]" in formatted
+    assert formatted.endswith("\n\n")
