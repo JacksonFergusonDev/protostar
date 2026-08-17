@@ -12,9 +12,8 @@ from typing import Any
 from rich.console import Console
 
 from .config import UserConfig
+from .dependencies import install_dependencies
 from .errors import (
-    CommandExecutionError,
-    CommandTimeoutError,
     ConfigurationError,
     FileSystemError,
 )
@@ -1224,37 +1223,16 @@ ENV PYTHONUNBUFFERED=1
                 "synchronize IDE workspace preferences", str(settings_path), e
             ) from e
 
-    def _install_group(self, packages: list[str], args: list[str], label: str) -> None:
-        if not packages:
-            return
-
-        cmd = ["uv", "add", *args, *packages]
-        try:
-            with console.status(
-                f"Resolving and installing {len(packages)} {label} payloads"
-            ):
-                execute_subprocess(cmd, timeout=600)
-        except (CommandExecutionError, CommandTimeoutError) as e:
-            self.manifest.add_diagnostic(
-                phase="Executor",
-                message=f"{label.capitalize()} dependency resolution failed: {e}",
-                severity=Severity.WARNING,
-                detail=e.output_detail
-                if isinstance(e, CommandExecutionError)
-                else None,
-            )
-
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
-        if (
-            not self.manifest.dependencies
-            and not self.manifest.dev_dependencies
-            and not self.manifest.docs_dependencies
-        ):
-            return
-
-        self._install_group(self.manifest.dependencies, [], "standard")
-        self._install_group(self.manifest.dev_dependencies, ["--dev"], "development")
-        self._install_group(
-            self.manifest.docs_dependencies, ["--group", "docs"], "documentation"
+        install_dependencies(
+            dependencies=self.manifest.dependencies,
+            dev_dependencies=self.manifest.dev_dependencies,
+            docs_dependencies=self.manifest.docs_dependencies,
+            on_diagnostic=lambda msg, sev, detail: self.manifest.add_diagnostic(
+                phase="Executor",
+                message=msg,
+                severity=sev,
+                detail=detail,
+            ),
         )

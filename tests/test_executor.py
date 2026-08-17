@@ -10,8 +10,6 @@ import tomlkit
 
 from protostar.config import UserConfig
 from protostar.errors import (
-    CommandExecutionError,
-    CommandTimeoutError,
     ConfigurationError,
     FileSystemError,
 )
@@ -41,24 +39,6 @@ def test_executor_writes_injected_files(mocker, mock_config):
 
     mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "mock content")
-
-
-def test_executor_install_dependencies_uv(mocker, mock_config):
-    """Test that the executor uses uv add --dev for dev dependencies and applies network timeouts."""
-    manifest = EnvironmentManifest()
-    manifest.add_dependency("fastapi")
-    manifest.add_dev_dependency("pytest")
-
-    mock_config.python_package_manager = "uv"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-
-    executor._install_dependencies()
-
-    mock_execute.assert_any_call(["uv", "add", "fastapi"], timeout=600)
-    mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"], timeout=600)
 
 
 def test_executor_append_files_late_binding(mocker, mock_config):
@@ -804,32 +784,6 @@ def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
     mock_exists.assert_not_called()
 
 
-def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_config):
-    """Test that uv resolution failures are appended to warnings without aborting."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["invalid-pkg"]
-    manifest.dev_dependencies = ["invalid-dev-pkg"]
-
-    executor = SystemExecutor(manifest, mock_config)
-
-    # Use the specific domain error the executor is now expecting
-    mocker.patch(
-        "protostar.executor.execute_subprocess",
-        side_effect=CommandExecutionError(
-            command=["uv", "add", "invalid-pkg"],
-            returncode=1,
-            stdout="Error: failed to resolve",
-            stderr="Package not found",
-        ),
-    )
-
-    executor._install_dependencies()
-
-    assert len(manifest.diagnostics) == 2
-    assert "Standard dependency resolution failed" in manifest.diagnostics[0].message
-    assert manifest.diagnostics[0].severity == Severity.WARNING
-
-
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
     """Test that the string fallback successfully appends missing payloads wrapped in hash markers."""
     manifest = EnvironmentManifest()
@@ -1383,87 +1337,6 @@ def test_write_ide_settings_handles_write_os_error(mocker):
 
     assert "synchronize IDE workspace preferences" in exc_info.value.operation
     assert "settings.json" in exc_info.value.path
-
-
-def test_executor_install_dependencies_timeout_degradation(mocker, mock_config):
-    """Test that dependency resolution timeouts append a diagnostic warning rather than crashing."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["massive-pkg"]
-
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch(
-        "protostar.executor.execute_subprocess",
-        side_effect=CommandTimeoutError(
-            command=["uv", "add", "massive-pkg"], timeout=600
-        ),
-    )
-
-    executor._install_dependencies()
-
-    assert len(manifest.diagnostics) == 1
-    assert "Command timed out" in manifest.diagnostics[0].message
-    assert manifest.diagnostics[0].severity == Severity.WARNING
-
-
-def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
-    manifest = EnvironmentManifest()
-    manifest.add_dependency("numpy")
-    config = UserConfig()
-    executor = SystemExecutor(manifest, config)
-
-    # Mock a subprocess failure with rich telemetry
-    error = CommandExecutionError(
-        command=["uv", "add", "numpy"],
-        returncode=1,
-        stdout="Resolving dependencies...",
-        stderr="error: package numpy not found",
-    )
-    mocker.patch("protostar.executor.execute_subprocess", side_effect=error)
-
-    # Execution should handle the error gracefully without raising
-    executor._install_dependencies()
-
-    assert len(executor.manifest.diagnostics) == 1
-    diagnostic = executor.manifest.diagnostics[0]
-
-    assert diagnostic.phase == "Executor"
-    assert diagnostic.severity == Severity.WARNING
-    assert "Standard dependency resolution failed" in diagnostic.message
-
-    # Verify the telemetry was extracted via the new output_detail property
-    assert diagnostic.detail is not None
-    assert "--- STDERR ---" in diagnostic.detail
-    assert "error: package numpy not found" in diagnostic.detail
-
-
-def test_install_dev_dependencies_adds_warning_with_telemetry_on_failure(mocker):
-    manifest = EnvironmentManifest()
-    manifest.add_dev_dependency("pytest")
-    config = UserConfig()
-    executor = SystemExecutor(manifest, config)
-
-    # Mock a subprocess failure with rich telemetry
-    error = CommandExecutionError(
-        command=["uv", "add", "--dev", "pytest"],
-        returncode=1,
-        stderr="error: network timeout",
-    )
-    mocker.patch("protostar.executor.execute_subprocess", side_effect=error)
-
-    # Execution should handle the error gracefully without raising
-    executor._install_dependencies()
-
-    assert len(executor.manifest.diagnostics) == 1
-    diagnostic = executor.manifest.diagnostics[0]
-
-    assert diagnostic.phase == "Executor"
-    assert diagnostic.severity == Severity.WARNING
-    assert "Development dependency resolution failed" in diagnostic.message
-
-    # Verify the telemetry was extracted via the new output_detail property
-    assert diagnostic.detail is not None
-    assert "error: network timeout" in diagnostic.detail
 
 
 def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
