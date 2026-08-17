@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786927877960,
+  "lastUpdate": 1786930176091,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6431,6 +6431,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 200.26,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cbf6a08205da8bd0605f1ab21c719492bea0582b",
+          "message": "feat(licenses): add license scaffolding with bundled templates and pyproject metadata (#172)\n\n* feat(executor): add CURRENT_YEAR and AUTHOR_NAME to interpolation context\n\n* feat(templates): add Protostar interpolation tokens to license templates\n\n* feat(config): add license configuration option\n\n* feat(cli): add license prompt with select support\n\n* feat(lang): scaffold LICENSE file and pyproject.toml classifiers\n\n* fix(cli): remove text highlighting from license select prompt",
+          "timestamp": "2026-08-16T18:28:36-07:00",
+          "tree_id": "dfccd515b8c42f58ac8777a7485cf52cf755cfb6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cbf6a08205da8bd0605f1ab21c719492bea0582b"
+        },
+        "date": 1786930175228,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.57,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.39,
             "unit": "ms"
           }
         ]
