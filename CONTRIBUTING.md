@@ -43,6 +43,7 @@ To guarantee that the workspace remains deterministic, error management follows 
   - `FileSystemError`: For local disk I/O, file writing, or directory creation failures.
   - `SecurityViolationError`: For unauthorized path traversal attempts (e.g. Zip Slip).
   - `ExecutionAbortedError`: For explicit cancellations during interactive wizard prompts.
+  - `PartialExecutionAbortedError`: For interruptions occurring mid-execution after disk mutations have begun.
 - **Respect POSIX Exit Code Mappings:** The top-level CLI main routine automatically routes domain exceptions to standardized POSIX return codes (`os.EX_CONFIG` / 78, `os.EX_TEMPFAIL` / 75, `os.EX_DATAERR` / 65, `os.EX_UNAVAILABLE` / 69, `os.EX_IOERR` / 74, `os.EX_NOPERM` / 77). Ensure your exception selection aligns with the expected POSIX category.
 - **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
 - **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
