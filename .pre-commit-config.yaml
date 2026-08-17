@@ -1,5 +1,3 @@
-exclude: ^docs/
-
 repos:
   # Generic hooks (configured to IGNORE Python)
   - repo: builtin
@@ -21,6 +19,7 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
+        exclude: ^docs/
         pass_filenames: false
 
       - id: ruff-format
@@ -28,6 +27,7 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
+        exclude: ^docs/
         pass_filenames: false
 
       - id: mypy
