@@ -1,10 +1,7 @@
 import datetime
 import hashlib
-import json
 import logging
 import re
-import shutil
-import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -18,6 +15,7 @@ from .errors import (
     FileSystemError,
 )
 from .fs import atomic_write_text
+from .ide import check_ide_extensions, write_ide_settings
 from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .security import enforce_binary_safelist, enforce_path_jail
@@ -154,51 +152,15 @@ class SystemExecutor:
         Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
         diagnostic only on a successful check that uncovers missing extensions.
         """
-        if not self.manifest.ide_extensions or self.config.ide not in (
-            "vscode",
-            "cursor",
-        ):
-            return
-
-        binary_map = {"vscode": "code", "cursor": "cursor"}
-        ide_binary = binary_map[self.config.ide]
-
-        if not shutil.which(ide_binary):
-            return
-
-        try:
-            result = subprocess.run(
-                [ide_binary, "--list-extensions"],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=5,
-            )
-            # Normalize to lowercase for safe diffing
-            installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
-            missing = []
-
-            for ext_req in self.manifest.ide_extensions:
-                if isinstance(ext_req, tuple):
-                    if not any(e.lower() in installed for e in ext_req):
-                        missing.append(f"{' or '.join(ext_req)}")
-                else:
-                    if ext_req.lower() not in installed:
-                        missing.append(ext_req)
-
-            if missing:
-                self.manifest.add_diagnostic(
-                    phase="IDE",
-                    message=f"Missing recommended {self.config.ide} extensions: {', '.join(missing)}",
-                    severity=Severity.WARNING,
-                )
-        except Exception as e:
-            # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
-            self.manifest.add_diagnostic(
+        check_ide_extensions(
+            ide=self.config.ide,
+            ide_extensions=self.manifest.ide_extensions,
+            on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
                 phase="IDE",
-                message=f"IDE extension verification skipped due to an unexpected error: {e}",
-                severity=Severity.SKIP,
-            )
+                message=msg,
+                severity=sev,
+            ),
+        )
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.
@@ -1175,53 +1137,15 @@ ENV PYTHONUNBUFFERED=1
 
     def _write_ide_settings(self) -> None:
         """Writes the aggregated IDE configuration to the appropriate local files."""
-        if not self.manifest.ide_settings:
-            return
-
-        vscode_dir = Path(".vscode")
-        settings_path = vscode_dir / "settings.json"
-        settings = {}
-
-        if settings_path.exists():
-            try:
-                original_content = settings_path.read_text()
-                if original_content.strip():
-                    parsed_data = json.loads(original_content)
-                    if not isinstance(parsed_data, dict):
-                        self.manifest.add_diagnostic(
-                            phase="Executor",
-                            message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                            severity=Severity.WARNING,
-                        )
-                        return
-                    settings = parsed_data
-            except json.JSONDecodeError:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                    severity=Severity.WARNING,
-                )
-                return
-            except OSError as e:
-                raise FileSystemError(
-                    "inspect active IDE settings files", str(settings_path), e
-                ) from e
-
-        # 1-level deep dictionary merge
-        for key, value in self.manifest.ide_settings.items():
-            if isinstance(value, dict) and isinstance(settings.get(key), dict):
-                settings[key].update(value)
-            else:
-                settings[key] = value
-
-        try:
-            vscode_dir.mkdir(exist_ok=True)
-            atomic_write_text(settings_path, json.dumps(settings, indent=4) + "\n")
-            self.manifest.record_touch(settings_path)
-        except OSError as e:
-            raise FileSystemError(
-                "synchronize IDE workspace preferences", str(settings_path), e
-            ) from e
+        write_ide_settings(
+            ide_settings=self.manifest.ide_settings,
+            on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
+                phase="Executor",
+                message=msg,
+                severity=sev,
+            ),
+            on_record_touch=self.manifest.record_touch,
+        )
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
