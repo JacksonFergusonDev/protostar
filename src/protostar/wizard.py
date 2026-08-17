@@ -146,6 +146,7 @@ def run_init_wizard() -> dict[str, Any] | None:
             "author_email",
             "github_username",
             "minimum_python",
+            "license",
         )
     )
 
@@ -222,6 +223,15 @@ def prompt_metadata(
                 choices.append(questionary.Choice(choice_str, checked=checked))
 
             answer = questionary.checkbox(field.label, choices=choices).ask()
+            if answer is None:
+                raise ExecutionAbortedError("Metadata configuration cancelled by user.")
+            resolved[key] = answer
+        elif field.prompt_type == "select":
+            answer = questionary.select(
+                field.label,
+                choices=field.choices or [],
+                default=str(default_val) if default_val is not None else None,
+            ).ask()
             if answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
             resolved[key] = answer
