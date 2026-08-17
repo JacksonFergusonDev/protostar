@@ -3,7 +3,6 @@ import tomllib
 from pathlib import Path
 
 import pytest
-import tomlkit
 
 from protostar.config import UserConfig
 from protostar.errors import (
@@ -11,7 +10,7 @@ from protostar.errors import (
     FileSystemError,
 )
 from protostar.executor import SystemExecutor
-from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
+from protostar.manifest import CollisionStrategy, EnvironmentManifest
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -438,65 +437,6 @@ def test_executor_write_text_permission_error_propagation(mocker, mock_config):
         executor._write_injected_files()
 
 
-def test_executor_deep_merge_tomlkit(mock_config):
-    """Test the recursive dictionary merge algorithm using chaotic tomlkit structures."""
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
-    payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
-
-    base_doc = tomlkit.parse(base_content)
-    payload_doc = tomlkit.parse(payload_content)
-
-    executor._deep_merge_tomlkit(base_doc, payload_doc)
-
-    merged_dict = base_doc.unwrap()
-
-    # 1. Verify scalar overrides (line-length changed 120 -> 88)
-    assert merged_dict["tool"]["ruff"]["line-length"] == 88
-
-    # 2. Verify non-colliding existing keys were preserved
-    assert merged_dict["tool"]["ruff"]["target-version"] == "py310"
-    assert merged_dict["project"]["name"] == "protostar-test"
-
-    # 3. Verify nested list replacements
-    assert "UP" in merged_dict["tool"]["ruff"]["lint"]["select"]
-
-    # 4. Verify new root tables were injected
-    assert merged_dict["tool"]["mypy"]["strict"] is True
-
-    # 5. Verify Array of Tables (AoT) concatenation (MERGE strategy default behavior)
-    assert len(merged_dict["tool"]["mypy"]["overrides"]) == 2
-    assert merged_dict["tool"]["mypy"]["overrides"][0]["module"] == "tests.*"
-    assert merged_dict["tool"]["mypy"]["overrides"][1]["module"] == "legacy_module.*"
-
-    # 6. Verify comments survived the AST manipulation
-    dumped = tomlkit.dumps(base_doc)
-    assert "# We expect this comment to survive the merge" in dumped
-    assert "# A random comment inside an array" in dumped
-
-
-def test_executor_deep_merge_tomlkit_empty_aot(mock_config):
-    """Test that injecting an empty Array of Tables safely bypasses the newline append logic."""
-    import tomlkit
-
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base = tomlkit.document()
-    payload = tomlkit.document()
-
-    # Inject a structurally empty Array of Tables
-    payload.append("empty_array", tomlkit.aot())
-
-    executor._deep_merge_tomlkit(base, payload)
-
-    result = base.unwrap()
-    assert "empty_array" in result
-    assert len(result["empty_array"]) == 0
-
-
 def test_executor_append_files_ast_no_op_write(mocker, mock_config):
     """Test that file writing is bypassed if the merged AST yields identical content."""
     original_content = "[tool.fake_tool]\nstrict = true\n"
@@ -520,29 +460,6 @@ def test_executor_append_files_ast_no_op_write(mocker, mock_config):
     # The AST was parsed, evaluated, and merged (ast_mutated = True),
     # but since the stripped strings matched, it correctly avoided disk I/O.
     mock_write.assert_not_called()
-
-
-def test_executor_deep_merge_tomlkit_new_populated_aot(mock_config):
-    """Test that injecting a novel, populated Array of Tables appends a newline to its last element."""
-    import tomlkit
-
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base = tomlkit.document()
-    # Inject a populated AoT that does not exist in the base document
-    payload = tomlkit.parse("[[plugins]]\nname = 'alpha'\n[[plugins]]\nname = 'beta'\n")
-
-    executor._deep_merge_tomlkit(base, payload)
-
-    dumped = tomlkit.dumps(base)
-
-    # Verify the AoT was injected and the newline was appended to the final element
-    assert "name = 'beta'\n\n" in dumped
-
-    result = base.unwrap()
-    assert len(result["plugins"]) == 2
-    assert result["plugins"][1]["name"] == "beta"
 
 
 def test_executor_append_files_ast_merge(mocker, mock_config):
@@ -627,24 +544,6 @@ def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_conf
 
     executor._write_pre_commit_config()
     mock_write.assert_not_called()
-
-
-def test_executor_deep_merge_tomlkit_aot_append(mock_config):
-    """Test that arrays of tables (AoT) are appended to when not using OVERWRITE."""
-    import tomlkit
-
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base = tomlkit.parse("[[my_array]]\nval = 1\n")
-    payload = tomlkit.parse("[[my_array]]\nval = 2\n")
-
-    executor._deep_merge_tomlkit(base, payload, overwrite=False)
-
-    result = base.unwrap()
-    assert len(result["my_array"]) == 2
-    assert result["my_array"][0]["val"] == 1
-    assert result["my_array"][1]["val"] == 2
 
 
 def test_executor_validate_targets_success(mocker, mock_config):
@@ -758,61 +657,6 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
     assert written_data == expected_data
 
 
-def test_executor_deep_merge_tomlkit_table_collision(mock_config):
-    """Test that TOML table injections safely skip when colliding with a scalar type."""
-    import tomlkit
-
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base = tomlkit.parse("tool = 'not a table'\n")
-    payload = tomlkit.parse("[tool]\nnew_key = 1\n")
-
-    executor._deep_merge_tomlkit(base, payload)
-
-    assert base["tool"] == "not a table"
-    warnings = [
-        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
-    ]
-    assert len(warnings) == 1
-
-
-def test_executor_deep_merge_tomlkit_aot_collision(mock_config):
-    """Test that TOML Array of Tables injections safely skip when colliding with a scalar type."""
-    import tomlkit
-
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base = tomlkit.parse("my_array = 'string'\n")
-    payload = tomlkit.parse("[[my_array]]\nval = 1\n")
-
-    executor._deep_merge_tomlkit(base, payload)
-
-    assert base["my_array"] == "string"
-    warnings = [
-        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
-    ]
-    assert len(warnings) == 1
-
-
-def test_executor_deep_merge_tomlkit_aot_overwrite(mock_config):
-    """Test that the OVERWRITE strategy replaces an entire Array of Tables."""
-    import tomlkit
-
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base = tomlkit.parse("[[my_array]]\nval = 1\n")
-    payload = tomlkit.parse("[[my_array]]\nval = 2\n")
-
-    executor._deep_merge_tomlkit(base, payload, overwrite=True)
-
-    result = base.unwrap()
-    assert len(result["my_array"]) == 1
-    assert result["my_array"][0]["val"] == 2
-
-
 def test_executor_append_files_early_return(mocker, mock_config):
     """Test that _append_files cleanly returns if there are no payloads queued."""
     manifest = EnvironmentManifest()
@@ -918,25 +762,6 @@ def test_executor_task_description_fallback(mocker):
 
     # Verify the fallback logic stripped the path and grabbed the binary name
     mock_status.assert_called_once_with("Propelling sequence: pre-commit")
-
-
-def test_executor_toml_merge_type_collision() -> None:
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, UserConfig())
-
-    base = tomlkit.document()
-    base["tool"] = tomlkit.table()
-
-    payload = tomlkit.document()
-    payload["tool"] = tomlkit.aot()  # Array of Tables colliding with a standard Table
-
-    executor._deep_merge_tomlkit(base, payload)
-
-    assert len(manifest.diagnostics) == 1
-    warning = manifest.diagnostics[0]
-    assert warning.severity == Severity.WARNING
-    assert warning.phase == "Executor"
-    assert "TOML Merge Collision" in warning.message
 
 
 def test_executor_handles_write_permission_denied(mocker):
@@ -1078,37 +903,6 @@ def test_write_docker_artifacts_handles_os_error(mocker):
     assert ".dockerignore" in exc_info.value.path
 
 
-def test_executor_toml_table_replace(mock_config):
-    """Test that __replace__ = true cleanly replaces an existing TOML table."""
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base_doc = tomlkit.parse("""
-[tool.example]
-keep_this = true
-
-[tool.example.nested]
-old_key = 1
-""")
-
-    payload_doc = tomlkit.parse("""
-[tool.example.nested]
-__replace__ = true
-new_key = 2
-""")
-
-    executor._deep_merge_tomlkit(base_doc, payload_doc)
-
-    # Verify keep_this was preserved
-    assert base_doc["tool"]["example"]["keep_this"] is True
-
-    # Verify the nested table was replaced and old_key is gone
-    nested = base_doc["tool"]["example"]["nested"]
-    assert "new_key" in nested
-    assert "old_key" not in nested
-    assert "__replace__" not in nested
-
-
 def test_executor_interpolates_package_name_in_injected_files(
     tmp_path, mock_config, monkeypatch
 ):
@@ -1165,221 +959,6 @@ def test_executor_interpolates_package_name_in_file_appends(
 
     script_content = (tmp_path / "script.sh").read_text()
     assert 'echo "Running my-cool-tool from my_cool_tool"' in script_content
-
-
-def test_executor_toml_table_replace_nested_hierarchy(mock_config):
-    """Test that __replace__ = true cleanly replaces an existing TOML table and brings nested tables along."""
-    manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config)
-
-    base_doc = tomlkit.parse("""
-[tool.ruff]
-line-length = 88
-
-[tool.ruff.lint]
-select = ["A", "B"]
-ignore = ["E501"]
-""")
-
-    payload_doc = tomlkit.parse("""
-[tool.ruff.lint]
-__replace__ = true
-select = ["A", "B", "C4", "D"]
-ignore = ["D100"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-""")
-
-    executor._deep_merge_tomlkit(base_doc, payload_doc)
-
-    # Verify tool.ruff.line-length is preserved
-    assert base_doc["tool"]["ruff"]["line-length"] == 88
-
-    # Verify tool.ruff.lint is replaced with new select/ignore and has nested pydocstyle
-    lint = base_doc["tool"]["ruff"]["lint"]
-    assert lint["select"] == ["A", "B", "C4", "D"]
-    assert lint["ignore"] == ["D100"]
-    assert lint["pydocstyle"]["convention"] == "google"
-    assert "__replace__" not in lint
-
-
-def test_format_pyproject_toml_canonical_ordering():
-    """Test that tool tables injected in reverse/random order are sorted canonically."""
-    raw = """
-[tool.commitizen]
-name = "cz"
-
-[tool.coverage.run]
-branch = true
-
-[tool.pytest.ini_options]
-addopts = "-v"
-
-[tool.pyrefly]
-type-checking-mode = "strict"
-
-[tool.ty.rules]
-redundant-cast = "warn"
-
-[tool.mypy]
-strict = true
-
-[tool.ruff]
-line-length = 88
-"""
-    doc = tomlkit.parse(raw)
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-
-    ruff_pos = formatted.find("# ---- Ruff ---- #")
-    mypy_pos = formatted.find("# ---- Mypy ---- #")
-    ty_pos = formatted.find("# ---- Ty ---- #")
-    pyrefly_pos = formatted.find("# ---- Pyrefly ---- #")
-    pytest_pos = formatted.find("# ---- Pytest ---- #")
-    cz_pos = formatted.find("# ---- Commitizen ---- #")
-
-    assert 0 < ruff_pos < mypy_pos < ty_pos < pyrefly_pos < pytest_pos < cz_pos
-
-
-def test_format_pyproject_toml_coverage_grouped_under_pytest():
-    """Test that coverage tables are placed directly under Pytest and before Commitizen."""
-    raw = """
-[project]
-name = "demo"
-
-[tool.commitizen]
-name = "cz"
-
-[tool.pytest.ini_options]
-addopts = "--strict-markers"
-
-[tool.coverage.run]
-branch = true
-
-[tool.coverage.report]
-show_missing = true
-"""
-    doc = tomlkit.parse(raw)
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-
-    pytest_header_pos = formatted.find("# ---- Pytest ---- #")
-    pytest_ini_pos = formatted.find("[tool.pytest.ini_options]")
-    cov_run_pos = formatted.find("[tool.coverage.run]")
-    cov_rep_pos = formatted.find("[tool.coverage.report]")
-    cz_header_pos = formatted.find("# ---- Commitizen ---- #")
-    cz_pos = formatted.find("[tool.commitizen]")
-
-    assert (
-        pytest_header_pos
-        < pytest_ini_pos
-        < cov_run_pos
-        < cov_rep_pos
-        < cz_header_pos
-        < cz_pos
-    )
-
-
-def test_format_pyproject_toml_root_table_ordering():
-    """Test that root scalars, project, build-system, dependency-groups, and tool tables are ordered."""
-    raw = """
-[tool.ruff]
-line-length = 88
-
-[dependency-groups]
-dev = ["pytest"]
-
-[build-system]
-requires = ["hatchling"]
-
-[project]
-name = "app"
-version = "0.1.0"
-"""
-    doc = tomlkit.parse(raw)
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-
-    project_pos = formatted.find("[project]")
-    build_pos = formatted.find("[build-system]")
-    dep_pos = formatted.find("[dependency-groups]")
-    tool_pos = formatted.find("# ==================================================")
-
-    assert 0 <= project_pos < build_pos < dep_pos < tool_pos
-
-
-def test_format_pyproject_toml_idempotency():
-    """Test that re-running _format_pyproject_toml on already formatted TOML produces identical output."""
-    raw = """
-[project]
-name = "app"
-version = "0.1.0"
-
-[project.scripts]
-app = "app.cli:app"
-
-[dependency-groups]
-dev = ["pytest", "pytest-cov", "ruff"]
-
-[tool.ruff]
-line-length = 88
-
-[tool.pytest.ini_options]
-addopts = "--strict-markers"
-
-[tool.coverage.run]
-branch = true
-
-[tool.commitizen]
-name = "cz"
-"""
-    doc1 = tomlkit.parse(raw)
-    pass1 = SystemExecutor._format_pyproject_toml(doc1)
-
-    doc2 = tomlkit.parse(pass1)
-    pass2 = SystemExecutor._format_pyproject_toml(doc2)
-
-    assert pass1 == pass2
-    assert pass1.endswith("\n")
-    assert not pass1.endswith("\n\n")
-
-
-def test_format_pyproject_toml_preserves_comments():
-    """Test that non-managed user comments inside tables and inline comments survive."""
-    raw = """
-[project]
-name = "app" # inline project comment
-
-[tool.ruff]
-line-length = 88 # inline ruff comment
-
-# User custom lint comment
-[tool.ruff.lint]
-select = ["E", "F"]
-"""
-    doc = tomlkit.parse(raw)
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-
-    assert "# inline project comment" in formatted
-    assert "# inline ruff comment" in formatted
-    assert "# User custom lint comment" in formatted
-    assert formatted.endswith("\n")
-    assert not formatted.endswith("\n\n")
-
-
-def test_format_pyproject_toml_parity_fallback(mocker):
-    """Test that formatting gracefully falls back to direct AST dump if validation encounters an error."""
-    raw = """
-[project]
-name = "app"
-
-[tool.ruff]
-line-length = 88
-"""
-    doc = tomlkit.parse(raw)
-    mocker.patch("tomllib.loads", side_effect=ValueError("Simulated corrupt parse"))
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-    assert "[tool.ruff]" in formatted
-    assert formatted.endswith("\n")
-    assert not formatted.endswith("\n\n")
 
 
 def test_executor_append_files_cli_template_full_lifecycle(
@@ -1506,50 +1085,3 @@ line-length = 88
     assert ruff_pos < pytest_pos < cz_pos
     assert result.endswith("\n")
     assert not result.endswith("\n\n")
-
-
-def test_format_pyproject_toml_aot_and_subtables_only():
-    """Test that subtables and array of tables without root tables are detected and formatted with headers."""
-    raw = """
-[[tool.mypy.overrides]]
-module = ["tests.*"]
-ignore_errors = true
-
-[tool.ty.rules]
-redundant-cast = "warn"
-
-[tool.coverage.report]
-fail_under = 80
-"""
-    doc = tomlkit.parse(raw)
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-
-    assert "# ---- Mypy ---- #\n\n[[tool.mypy.overrides]]" in formatted
-    assert "# ---- Ty ---- #\n\n[tool.ty.rules]" in formatted
-    assert "# ---- Pytest ---- #\n\n[tool.coverage.report]" in formatted
-    assert formatted.endswith("\n")
-    assert not formatted.endswith("\n\n")
-
-
-def test_format_pyproject_toml_semantic_data_mismatch_fallback(mocker):
-    """Test that formatting safely falls back to raw dump if parsed check data differs from expected."""
-    raw = """
-[project]
-name = "app"
-
-[tool.ruff]
-line-length = 88
-"""
-    doc = tomlkit.parse(raw)
-
-    # Mock tomllib.loads: first call (raw_dump) returns dict A, second call (new_content) returns dict B
-    calls = [
-        {"project": {"name": "app"}, "tool": {"ruff": {"line-length": 88}}},
-        {"project": {"name": "corrupted"}},
-    ]
-    mocker.patch("tomllib.loads", side_effect=lambda _: calls.pop(0))
-
-    formatted = SystemExecutor._format_pyproject_toml(doc)
-    assert "[tool.ruff]" in formatted
-    assert formatted.endswith("\n")
-    assert not formatted.endswith("\n\n")

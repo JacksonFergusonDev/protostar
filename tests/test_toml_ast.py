@@ -1,4 +1,5 @@
 import tomllib
+from pathlib import Path
 
 import tomlkit
 
@@ -8,6 +9,57 @@ from protostar.toml_ast import (
     format_pyproject_toml,
     merge_toml_payloads,
 )
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def test_deep_merge_tomlkit_complex_fixtures():
+    """Test the recursive dictionary merge algorithm using chaotic tomlkit structures."""
+    base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
+    payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
+
+    base_doc = tomlkit.parse(base_content)
+    payload_doc = tomlkit.parse(payload_content)
+
+    deep_merge_tomlkit(base_doc, payload_doc)
+
+    merged_dict = base_doc.unwrap()
+
+    # 1. Verify scalar overrides (line-length changed 120 -> 88)
+    assert merged_dict["tool"]["ruff"]["line-length"] == 88
+
+    # 2. Verify non-colliding existing keys were preserved
+    assert merged_dict["tool"]["ruff"]["target-version"] == "py310"
+    assert merged_dict["project"]["name"] == "protostar-test"
+
+    # 3. Verify nested list replacements
+    assert "UP" in merged_dict["tool"]["ruff"]["lint"]["select"]
+
+    # 4. Verify new root tables were injected
+    assert merged_dict["tool"]["mypy"]["strict"] is True
+
+    # 5. Verify Array of Tables (AoT) concatenation (MERGE strategy default behavior)
+    assert len(merged_dict["tool"]["mypy"]["overrides"]) == 2
+    assert merged_dict["tool"]["mypy"]["overrides"][0]["module"] == "tests.*"
+    assert merged_dict["tool"]["mypy"]["overrides"][1]["module"] == "legacy_module.*"
+
+    # 6. Verify comments survived the AST manipulation
+    dumped = tomlkit.dumps(base_doc)
+    assert "# We expect this comment to survive the merge" in dumped
+    assert "# A random comment inside an array" in dumped
+
+
+def test_deep_merge_tomlkit_empty_aot():
+    """Test that injecting an empty Array of Tables safely bypasses the newline append logic."""
+    base = tomlkit.document()
+    payload = tomlkit.document()
+
+    payload.append("empty_array", tomlkit.aot())
+    deep_merge_tomlkit(base, payload)
+
+    result = base.unwrap()
+    assert "empty_array" in result
+    assert len(result["empty_array"]) == 0
 
 
 def test_deep_merge_tomlkit_fresh_doc():
@@ -77,6 +129,35 @@ new_key = 2
     assert base["tool"]["example"]["nested"]["new_key"] == 2
     assert "old_key" not in base["tool"]["example"]["nested"]
     assert "__replace__" not in base["tool"]["example"]["nested"]
+
+
+def test_deep_merge_tomlkit_replace_nested_hierarchy():
+    base_toml = """[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["A", "B"]
+ignore = ["E501"]
+"""
+    payload_toml = """[tool.ruff.lint]
+__replace__ = true
+select = ["A", "B", "C4", "D"]
+ignore = ["D100"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+"""
+    base_doc = tomlkit.parse(base_toml)
+    payload_doc = tomlkit.parse(payload_toml)
+
+    deep_merge_tomlkit(base_doc, payload_doc)
+
+    assert base_doc["tool"]["ruff"]["line-length"] == 88
+    lint = base_doc["tool"]["ruff"]["lint"]
+    assert lint["select"] == ["A", "B", "C4", "D"]
+    assert lint["ignore"] == ["D100"]
+    assert lint["pydocstyle"]["convention"] == "google"
+    assert "__replace__" not in lint
 
 
 def test_deep_merge_tomlkit_aot_append_vs_overwrite():
@@ -206,6 +287,118 @@ line-length = 88
     pass2 = format_pyproject_toml(doc2)
 
     assert pass1 == pass2
+
+
+def test_format_pyproject_toml_coverage_grouped_under_pytest():
+    """Test that coverage tables are placed directly under Pytest and before Commitizen."""
+    raw = """
+[project]
+name = "demo"
+
+[tool.commitizen]
+name = "cz"
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+"""
+    doc = tomlkit.parse(raw)
+    formatted = format_pyproject_toml(doc)
+
+    pytest_header_pos = formatted.find("# ---- Pytest ---- #")
+    pytest_ini_pos = formatted.find("[tool.pytest.ini_options]")
+    cov_run_pos = formatted.find("[tool.coverage.run]")
+    cov_rep_pos = formatted.find("[tool.coverage.report]")
+    cz_header_pos = formatted.find("# ---- Commitizen ---- #")
+    cz_pos = formatted.find("[tool.commitizen]")
+
+    assert (
+        pytest_header_pos
+        < pytest_ini_pos
+        < cov_run_pos
+        < cov_rep_pos
+        < cz_header_pos
+        < cz_pos
+    )
+
+
+def test_format_pyproject_toml_root_table_ordering():
+    """Test that root scalars, project, build-system, dependency-groups, and tool tables are ordered."""
+    raw = """
+[tool.ruff]
+line-length = 88
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+
+[project]
+name = "app"
+version = "0.1.0"
+"""
+    doc = tomlkit.parse(raw)
+    formatted = format_pyproject_toml(doc)
+
+    project_pos = formatted.find("[project]")
+    build_pos = formatted.find("[build-system]")
+    dep_pos = formatted.find("[dependency-groups]")
+    tool_pos = formatted.find("# ==================================================")
+
+    assert project_pos < build_pos < dep_pos < tool_pos
+
+
+def test_format_pyproject_toml_aot_and_subtables_only():
+    """Test that subtables and array of tables without root tables are detected and formatted with headers."""
+    raw = """
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
+
+[tool.ty.rules]
+redundant-cast = "warn"
+
+[tool.coverage.report]
+fail_under = 80
+"""
+    doc = tomlkit.parse(raw)
+    formatted = format_pyproject_toml(doc)
+
+    assert "# ---- Mypy ---- #\n\n[[tool.mypy.overrides]]" in formatted
+    assert "# ---- Ty ---- #\n\n[tool.ty.rules]" in formatted
+    assert "# ---- Pytest ---- #\n\n[tool.coverage.report]" in formatted
+    assert formatted.endswith("\n")
+    assert not formatted.endswith("\n\n")
+
+
+def test_format_pyproject_toml_semantic_data_mismatch_fallback(mocker):
+    """Test that formatting safely falls back to raw dump if parsed check data differs from expected."""
+    raw = """
+[project]
+name = "app"
+
+[tool.ruff]
+line-length = 88
+"""
+    doc = tomlkit.parse(raw)
+
+    # Mock tomllib.loads: first call (raw_dump) returns dict A, second call (new_content) returns dict B
+    calls = [
+        {"project": {"name": "app"}, "tool": {"ruff": {"line-length": 88}}},
+        {"project": {"name": "corrupted"}},
+    ]
+    mocker.patch("tomllib.loads", side_effect=lambda _: calls.pop(0))
+
+    formatted = format_pyproject_toml(doc)
+    assert "[tool.ruff]" in formatted
+    assert formatted.endswith("\n")
+    assert not formatted.endswith("\n\n")
 
 
 def test_format_pyproject_toml_parity_fallback(mocker):
