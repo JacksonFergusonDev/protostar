@@ -17,11 +17,11 @@ from .errors import (
     CommandTimeoutError,
     ConfigurationError,
     FileSystemError,
-    SecurityViolationError,
 )
 from .fs import atomic_write_text
 from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
+from .security import enforce_binary_safelist, enforce_path_jail
 from .system import execute_subprocess
 from .workspace import (
     generate_python_version_range,
@@ -75,29 +75,6 @@ class SystemExecutor:
     #   4. Dependency Resolution: `uv add` runs before post-install tasks so installed binaries
     #      are present in `.venv/bin`.
     #   5. IDE Diagnostics: Runs last as non-blocking telemetry warnings.
-    def _enforce_path_jail(self, target_path: Path) -> None:
-        """Ensures no file operations escape the current workspace."""
-        resolved_target = target_path.resolve()
-        resolved_cwd = Path.cwd().resolve()
-
-        if not resolved_target.is_relative_to(resolved_cwd):
-            raise SecurityViolationError(
-                f"SECURITY VIOLATION: Template attempted to write outside the workspace: {target_path}"
-            )
-
-    def _enforce_binary_safelist(self, command: list[str]) -> None:
-        """Prevents templates from invoking arbitrary shells or interpreters."""
-        if not command:
-            return
-
-        allowed_binaries = {"uv", "git", "npm", "yarn", "pnpm", "pre-commit", "direnv"}
-        binary = Path(command[0]).name.lower()
-
-        if binary not in allowed_binaries:
-            raise SecurityViolationError(
-                f"SECURITY VIOLATION: Templates cannot directly invoke arbitrary binaries ({command[0]}). Allowed: {', '.join(sorted(allowed_binaries))}"
-            )
-
     def _get_comment_markers(self, filepath: Path) -> tuple[str, str]:
         """Returns the appropriate comment syntax (start, end) for a given file extension."""
         ext = filepath.suffix.lower()
@@ -321,7 +298,7 @@ class SystemExecutor:
             )
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
-            self._enforce_path_jail(target)
+            enforce_path_jail(target, Path.cwd())
             if not self.manifest.should_skip_file(target, phase="Executor"):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -341,7 +318,7 @@ class SystemExecutor:
         for dir_path in self.manifest.directories:
             interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
-            self._enforce_path_jail(path)
+            enforce_path_jail(path, Path.cwd())
             try:
                 path.mkdir(parents=True, exist_ok=True)
                 self.manifest.record_touch(path)
@@ -354,7 +331,7 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            self._enforce_binary_safelist(task.command)
+            enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
@@ -363,7 +340,7 @@ class SystemExecutor:
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
-            self._enforce_binary_safelist(task.command)
+            enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
@@ -934,7 +911,7 @@ jobs:
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
-            self._enforce_path_jail(target)
+            enforce_path_jail(target, Path.cwd())
 
             try:
                 original_content = target.read_text() if target.exists() else ""
