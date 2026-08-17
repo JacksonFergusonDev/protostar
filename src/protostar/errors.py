@@ -105,8 +105,37 @@ class FileSystemError(ProtostarError):
 class ExecutionAbortedError(ProtostarError):
     """Raised when the user explicitly aborts the execution via an interactive prompt."""
 
-    def __init__(self, message: str = "Execution aborted by user.") -> None:
-        super().__init__(message)
+    def __init__(
+        self, message: str = "Execution aborted by user.", *, hint: str | None = None
+    ) -> None:
+        super().__init__(message, hint=hint)
+
+
+class PartialExecutionAbortedError(ExecutionAbortedError):
+    """Raised when execution is interrupted after disk mutations have begun."""
+
+    def __init__(self, touched_paths: set[str]) -> None:
+        """Initializes the exception with the set of paths modified before the interrupt.
+
+        Args:
+            touched_paths: Set of file and directory paths touched on disk.
+        """
+        if touched_paths:
+            paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
+            message = (
+                "Execution was interrupted before Protostar could finish setting up the environment.\n\n"
+                "The following paths were modified or created before the abort:\n"
+                f"{paths_bulleted}\n\n"
+                "Note: External commands (e.g., uv, git) may have also modified workspace files."
+            )
+        else:
+            message = (
+                "Execution was interrupted before Protostar could finish setting up the environment.\n\n"
+                "Note: External commands (e.g., uv, git) may have also modified workspace files."
+            )
+        hint = "Inspect the modified paths or clean up the workspace before re-running Protostar."
+        super().__init__(message, hint=hint)
+        self.touched_paths = touched_paths
 
 
 class SecurityViolationError(ProtostarError):

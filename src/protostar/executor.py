@@ -305,6 +305,7 @@ class SystemExecutor:
 
         try:
             atomic_write_text(target, full_yaml)
+            self.manifest.record_touch(target)
         except OSError as e:
             raise FileSystemError("write configuration file", str(target), e) from e
         logger.debug("Scaffolded .pre-commit-config.yaml")
@@ -325,6 +326,7 @@ class SystemExecutor:
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     atomic_write_text(target, content)
+                    self.manifest.record_touch(target)
                 except OSError as e:
                     raise FileSystemError(
                         "inject boilerplate file", str(target), e
@@ -342,6 +344,7 @@ class SystemExecutor:
             self._enforce_path_jail(path)
             try:
                 path.mkdir(parents=True, exist_ok=True)
+                self.manifest.record_touch(path)
             except OSError as e:
                 raise FileSystemError(
                     "create scaffolding directory", str(path), e
@@ -476,7 +479,9 @@ jobs:
 
 {tool_steps}
 """
-        atomic_write_text(Path(".github/workflows/ci.yml"), workflow)
+        target = Path(".github/workflows/ci.yml")
+        atomic_write_text(target, workflow)
+        self.manifest.record_touch(target)
 
     def _write_release_workflow(self) -> None:
         """Assembles and writes the .github/workflows/release.yml file if requested."""
@@ -511,7 +516,9 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 """
-        atomic_write_text(Path(".github/workflows/release.yml"), workflow)
+        target = Path(".github/workflows/release.yml")
+        atomic_write_text(target, workflow)
+        self.manifest.record_touch(target)
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""
@@ -672,6 +679,7 @@ jobs:
 
         full_content = "\n".join(justfile_content) + "\n"
         atomic_write_text(target, full_content)
+        self.manifest.record_touch(target)
 
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
@@ -989,6 +997,7 @@ jobs:
                     if new_content.strip() != original_content.strip():
                         try:
                             atomic_write_text(target, new_content)
+                            self.manifest.record_touch(target)
                         except OSError as e:
                             raise FileSystemError(
                                 "mutate configuration AST", str(target), e
@@ -1031,6 +1040,7 @@ jobs:
                 atomic_write_text(
                     target, existing_clean + prefix + combined_content + "\n"
                 )
+                self.manifest.record_touch(target)
             except OSError as e:
                 raise FileSystemError(
                     "append configurations block", str(target), e
@@ -1058,6 +1068,7 @@ jobs:
                     gitignore,
                     existing_content + prefix + "\n".join(sorted(missing)) + "\n",
                 )
+                self.manifest.record_touch(gitignore)
                 logger.debug(f"Appended {len(missing)} items to .gitignore")
         except OSError as e:
             raise FileSystemError(
@@ -1102,6 +1113,7 @@ jobs:
                     dockerignore,
                     existing_content + prefix + "\n".join(sorted(missing)) + "\n",
                 )
+                self.manifest.record_touch(dockerignore)
                 logger.debug(f"Appended {len(missing)} items to .dockerignore")
         except OSError as e:
             raise FileSystemError(
@@ -1176,6 +1188,7 @@ ENV PYTHONUNBUFFERED=1
 {runtime_block}
 """
                 atomic_write_text(dockerfile, dockerfile_content)
+                self.manifest.record_touch(dockerfile)
                 logger.debug("Scaffolded Dockerfile")
             except OSError as e:
                 raise FileSystemError(
@@ -1228,6 +1241,7 @@ ENV PYTHONUNBUFFERED=1
         try:
             vscode_dir.mkdir(exist_ok=True)
             atomic_write_text(settings_path, json.dumps(settings, indent=4) + "\n")
+            self.manifest.record_touch(settings_path)
         except OSError as e:
             raise FileSystemError(
                 "synchronize IDE workspace preferences", str(settings_path), e

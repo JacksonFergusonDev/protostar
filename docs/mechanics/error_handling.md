@@ -99,6 +99,7 @@ ProtostarError (Exception)
  ├── FileSystemError
  ├── SecurityViolationError
  └── ExecutionAbortedError
+      └── PartialExecutionAbortedError
 ```
 
 ### `ProtostarError`
@@ -145,6 +146,10 @@ Raised when a template or archive attempts an unauthorized filesystem operation 
 ### `ExecutionAbortedError`
 
 Raised when the user explicitly aborts execution via an interactive prompt.
+
+### `PartialExecutionAbortedError`
+
+Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun, formatting and reporting all touched/scaffolded workspace paths.
 
 ---
 

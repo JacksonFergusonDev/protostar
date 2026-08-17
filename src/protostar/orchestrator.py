@@ -5,7 +5,11 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .config import TemplateBlueprint, UserConfig
-from .errors import ExecutionAbortedError, ProtostarError
+from .errors import (
+    ExecutionAbortedError,
+    PartialExecutionAbortedError,
+    ProtostarError,
+)
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .modules import BootstrapModule
@@ -241,7 +245,16 @@ class Orchestrator:
 
         # Phase 4: System Execution
         executor = SystemExecutor(self.manifest, self.user_config, self.docker)
-        executor.execute()
+        try:
+            executor.execute()
+        except KeyboardInterrupt:
+            if self.manifest.touched_paths:
+                raise PartialExecutionAbortedError(
+                    self.manifest.touched_paths
+                ) from None
+            raise ExecutionAbortedError(
+                "Environment initialization cancelled by user."
+            ) from None
 
         # Phase 5: Telemetry Evaluation
         if self.manifest.diagnostics:

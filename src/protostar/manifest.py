@@ -84,6 +84,7 @@ class EnvironmentManifest:
         just_typecheck_commands (list[str]): Shell commands for the typecheck recipe.
         just_clean_paths (list[str]): File/directory paths to remove in the clean recipe.
         collision_strategy (CollisionStrategy): The execution route for intersecting files.
+        touched_paths (set[str]): Unique file and directory paths modified or created on disk.
     """
 
     vcs_ignores: set[str] = field(default_factory=set)
@@ -116,6 +117,19 @@ class EnvironmentManifest:
     diagnostics: list[DiagnosticEvent] = field(default_factory=list)
     force_merge: bool = False
     force_replace: bool = False
+    touched_paths: set[str] = field(default_factory=set)
+
+    def record_touch(self, path: Path | str) -> None:
+        """Records a path as having been modified or created during execution.
+
+        Args:
+            path: Target file or directory path that was touched.
+        """
+        try:
+            rel_path = Path(path).resolve().relative_to(Path.cwd().resolve())
+            self.touched_paths.add(rel_path.as_posix())
+        except (ValueError, RuntimeError):
+            self.touched_paths.add(str(path))
 
     def add_ide_extension(self, extension_id: str | tuple[str, ...]) -> None:
         """Queues an IDE extension ID (or fallback tuple) for verification during the realization phase."""
