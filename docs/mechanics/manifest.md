@@ -57,7 +57,9 @@ During the `build()` phase, modules utilize the manifest's unified API to regist
 
 To understand the decoupling, it is helpful to visualize the manifest's internal state. Below is a dynamically generated JSON representation of the aggregate state just before execution, simulating a user running `protostar init --template astro`.
 
---8<-- "manifest_state.md"
+```json
+--8<-- "manifest_state.json"
+```
 
 !!! tip "Deduplication & Order"
     Notice how lists are utilized for task ordering (which must be executed sequentially), while sets are utilized internally for structural artifacts (like ignores and directories) to prevent redundant I/O requests.
