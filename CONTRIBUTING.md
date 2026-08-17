@@ -127,6 +127,26 @@ To execute the standard test matrix:
 just test
 ```
 
+### Isolated Manual Testing (Sandboxes)
+
+To manually test Protostar in an isolated workspace without modifying your global `~/.config/protostar` or host git configuration:
+
+- **macOS Sandbox:** Drops into an ephemeral sub-shell in `/tmp` where `protostar` is built fresh from the working tree and `$HOME` is sandboxed:
+
+    ```bash
+    just sandbox
+    # Or run single commands headlessly:
+    just sandbox init --template cli
+    ```
+
+- **Linux Sandbox (OrbStack / Docker):** Runs inside a clean, disposable Debian container pre-loaded with required system binaries (`direnv,` `markdownlint-cli2`) and inspection tools (`eza`, `bat`, `ripgrep`):
+
+    ```bash
+    just sandbox-linux
+    # Or run single commands headlessly:
+    just sandbox-linux init --template astro
+    ```
+
 ### Pull Requests
 
 1. **Create a Branch**
