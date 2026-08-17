@@ -187,3 +187,133 @@ bump part: lint typecheck test-unit
 
     echo "Shipping atomically to remote..."
     git push origin HEAD --tags
+
+# Drop into an isolated macOS sandbox shell with a freshly built local Protostar on $PATH
+sandbox *args: sync
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    REPO_ROOT="{{ invocation_directory() }}"
+    SANDBOX_DIR="$(mktemp -d /tmp/proto-macos-XXXXXX)"
+    MOCK_HOME="$SANDBOX_DIR/home"
+    WORKSPACE="$SANDBOX_DIR/workspace"
+    SANDBOX_VENV="$SANDBOX_DIR/venv"
+
+    mkdir -p "$MOCK_HOME" "$WORKSPACE"
+
+    cleanup() {
+        printf "\n{{ yellow }}Cleaning up macOS sandbox...{{ nc }}\n"
+        rm -rf "$SANDBOX_DIR"
+        printf "{{ green }}✔ Sandbox wiped.{{ nc }}\n"
+    }
+    trap cleanup EXIT INT TERM
+
+    printf "\n{{ blue }}=== Building Fresh Protostar Sandbox Environment ==={{ nc }}\n"
+
+    # 1. Force a clean venv build from the working tree (no cache, forced package reinstall)
+    uv venv "$SANDBOX_VENV" --quiet
+    VIRTUAL_ENV="$SANDBOX_VENV" uv pip install \
+        --no-cache \
+        --reinstall-package protostar \
+        -e "$REPO_ROOT" --quiet
+
+    printf "{{ green }}✔ Protostar built fresh from local source tree{{ nc }}\n"
+    printf "{{ yellow }}Mocked HOME:{{ nc }} %s\n" "$MOCK_HOME"
+    printf "{{ yellow }}Workspace:  {{ nc }} %s\n" "$WORKSPACE"
+    printf "{{ yellow }}Binary:     {{ nc }} %s\n\n" "$SANDBOX_VENV/bin/protostar"
+
+    cd "$WORKSPACE"
+
+    # Evaluate the expanded just parameter directly
+    RAW_ARGS="{{ args }}"
+
+    if [[ -n "$RAW_ARGS" ]]; then
+        # Single-command mode: run the specified arguments with mocked HOME and overridden PATH
+        HOME="$MOCK_HOME" PATH="$SANDBOX_VENV/bin:$PATH" protostar {{ args }}
+    else
+        # Interactive shell mode: drop into sub-shell where 'protostar' points to the sandbox build
+        printf "{{ blue }}Entering interactive sandbox shell (type 'exit' or Ctrl+D when done):{{ nc }}\n\n"
+        HOME="$MOCK_HOME" PATH="$SANDBOX_VENV/bin:$PATH" PROTOSANDBOX=1 $SHELL -i
+    fi
+
+# Build the local test container with inspection CLI tools, runtime dependencies, and shell aliases
+sandbox-linux-build:
+    #!/usr/bin/env bash
+    docker build -t protostar-test-harness - << 'EOF'
+    FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    ENV DEBIAN_FRONTEND=noninteractive
+    RUN apt-get update -qq && \
+        apt-get install -qq -y \
+            git \
+            direnv \
+            nodejs \
+            npm \
+            curl \
+            bat \
+            ripgrep \
+            fd-find \
+            nano && \
+        npm install -g markdownlint-cli2 && \
+        ln -s /usr/bin/batcat /usr/local/bin/bat && \
+        ln -s /usr/bin/fdfind /usr/local/bin/fd && \
+        # Install eza binary dynamically for current architecture
+        ARCH=$(uname -m) && \
+        curl -sL "https://github.com/eza-community/eza/releases/latest/download/eza_${ARCH}-unknown-linux-gnu.tar.gz" | tar xz -C /usr/local/bin && \
+        chmod +x /usr/local/bin/eza && \
+        apt-get clean && rm -rf /var/lib/apt/lists/*
+
+    # Bake native zshrc-style eza aliases into bashrc
+    RUN echo 'alias ls="eza --icons --git"' >> /root/.bashrc && \
+        echo 'alias ll="eza -l --icons --git"' >> /root/.bashrc && \
+        echo 'alias la="eza -la --icons"' >> /root/.bashrc && \
+        echo 'alias lt="eza --tree --git-ignore --all --icons"' >> /root/.bashrc && \
+        echo 'alias lt2="eza --tree --git-ignore --all --icons --level=2"' >> /root/.bashrc && \
+        echo 'alias lt3="eza --tree --git-ignore --all --icons --level=3"' >> /root/.bashrc && \
+        echo 'alias lts="eza --tree --git -l --no-permissions --no-user --git-ignore --all --icons"' >> /root/.bashrc && \
+        echo 'alias lts2="eza --tree --git -l --no-permissions --no-user --git-ignore --all --icons --level=2"' >> /root/.bashrc && \
+        echo 'alias lts3="eza --tree --git -l --no-permissions --no-user --git-ignore --all --icons --level=3"' >> /root/.bashrc
+
+    WORKDIR /workspace
+    EOF
+
+# Run Protostar inside an isolated Linux container with a clean build
+sandbox-linux *args: sync
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    REPO_ROOT="{{ invocation_directory() }}"
+
+    # Start OrbStack background daemon if it isn't running
+    if ! docker info >/dev/null 2>&1; then
+        printf "{{ yellow }}Starting OrbStack background engine...{{ nc }}\n"
+        open -a OrbStack --background
+        until docker info >/dev/null 2>&1; do sleep 0.2; done
+    fi
+
+    if ! docker image inspect protostar-test-harness >/dev/null 2>&1; then
+        printf "{{ yellow }}Building protostar-test-harness base image...{{ nc }}\n"
+        just sandbox-linux-build
+    fi
+
+    printf "\n{{ blue }}=== Running in Isolated Linux Sandbox ==={{ nc }}\n"
+
+    RAW_ARGS="{{ args }}"
+
+    docker run --rm -it \
+        -v "$REPO_ROOT:/protostar:ro" \
+        -w /workspace \
+        protostar-test-harness \
+        bash -c "
+            # 1. Create a dedicated container virtualenv and install local protostar
+            uv venv /tmp/venv --quiet
+            VIRTUAL_ENV=/tmp/venv uv pip install --no-cache -e /protostar --quiet
+            export PATH=\"/tmp/venv/bin:\$PATH\"
+
+            # 2. Single-command vs interactive shell
+            if [ -n \"$RAW_ARGS\" ]; then
+                protostar $RAW_ARGS
+            else
+                printf '{{ blue }}Entering interactive Linux sandbox shell (type \"exit\" or Ctrl+D when done):{{ nc }}\n\n'
+                PROTOSANDBOX=1 bash --rcfile /root/.bashrc -i
+            fi
+        "
