@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786923429191,
+  "lastUpdate": 1786927877960,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6397,6 +6397,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 189.01,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "551ae5b9129cbd2e69b88774d85ab28f6c5c1d2f",
+          "message": "feat: add isolated macOS and Linux sandbox test harnesses (#169)\n\n* feat: add isolated macOS and Linux sandbox test harnesses to justfile\n\n- Add `just sandbox` for ephemeral, local macOS testing with mocked $HOME, isolated $PATH, and forced wheel rebuilds.\n- Add `just sandbox-linux` and `just sandbox-linux-build` for zero-overhead containerized Linux testing via OrbStack/Docker.\n- Pre-bake inspection utilities (`eza`, `bat`, `ripgrep`, `fd`, `markdownlint-cli2`) and native shell aliases into the Linux test harness.\n\n* docs: document macOS and Linux sandbox test harnesses in contributing guide\n\nAdd guidance under Running Tests & Tooling for `just sandbox` and `just sandbox-linux` to facilitate isolated manual testing without host configuration bleed.",
+          "timestamp": "2026-08-16T17:50:19-07:00",
+          "tree_id": "052a4b68f62a8827c4ed3be776daea1870ba3b25",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/551ae5b9129cbd2e69b88774d85ab28f6c5c1d2f"
+        },
+        "date": 1786927877459,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.09,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 200.26,
             "unit": "ms"
           }
         ]
