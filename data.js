@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786930211155,
+  "lastUpdate": 1786931996085,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6499,6 +6499,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.54,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "31579cce9b9d8bed9ef44d3f8cc304213a0b4cfd",
+          "message": "feat(errors): add graceful interrupt handling and partial execution reporting (#173)\n\n* fix(fs): clean up temporary files on interrupt in atomic_write_text\n\n* feat(errors): introduce PartialExecutionAbortedError and manifest touch ledger\n\n* feat(executor): record touched paths across filesystem mutations\n\n* feat(orchestrator): catch execution interrupts and report modified paths\n\n* test: add unit tests for graceful interrupt handling and partial execution reporting\n\n* docs: update error handling guide with PartialExecutionAbortedError\n\n* docs: update fixtures",
+          "timestamp": "2026-08-16T18:58:53-07:00",
+          "tree_id": "d217a0440725981fe7c2c3c998a8b427464745f9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/31579cce9b9d8bed9ef44d3f8cc304213a0b4cfd"
+        },
+        "date": 1786931995264,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.76,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 222.85,
             "unit": "ms"
           }
         ]
