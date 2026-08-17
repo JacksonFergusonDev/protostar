@@ -1,7 +1,3 @@
-# Welcome to demo_project
+# Welcome to demo-project
 
-Add your project overview here.
-
-## Getting Started
-
-Refer to the [installation guide](getting-started.md) or browse the [API Reference](api-reference.md).
+Add your project overview and documentation here.

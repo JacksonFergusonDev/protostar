@@ -3,10 +3,6 @@ site_description: Add your project description here.
 
 nav:
   - Home: index.md
-  - Guide:
-      - Getting Started: getting-started.md
-  - Reference:
-      - API: api-reference.md
 
 theme:
   name: material

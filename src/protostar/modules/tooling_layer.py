@@ -780,11 +780,7 @@ dev = [
         else:
             index_content = """# Welcome to <% PROJECT_NAME %>
 
-Add your project overview here.
-
-## Getting Started
-
-Refer to the [installation guide](getting-started.md) or browse the [API Reference](api-reference.md).
+Add your project overview and documentation here.
 """
             manifest.add_file_injection("docs/index.md", index_content)
 
@@ -796,10 +792,6 @@ site_description: Add your project description here.
 
 nav:
   - Home: index.md
-  - Guide:
-      - Getting Started: getting-started.md
-  - Reference:
-      - API: api-reference.md
 
 theme:
   name: material
