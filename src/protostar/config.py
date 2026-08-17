@@ -92,6 +92,7 @@ class UserConfig:
     github_username: str | None = None
     direnv: bool = False
     python_version: str | None = "3.13"
+    license: str | None = None
     supported_os: list[str] = field(default_factory=list)
     markdownlint: bool = False
     ruff: bool = True

@@ -14,7 +14,7 @@ class MetadataField:
 
     key: str
     label: str
-    prompt_type: str  # "text" or "checkbox"
+    prompt_type: str  # "text", "checkbox", or "select"
     choices: list[str] | None
     auto_resolver: Callable[[UserConfig], Any | None] | None
     default: Any | None
@@ -28,6 +28,22 @@ METADATA_FIELDS: dict[str, MetadataField] = {
         choices=None,
         auto_resolver=None,
         default="",
+    ),
+    "license": MetadataField(
+        key="license",
+        label="Project license:",
+        prompt_type="select",
+        choices=[
+            "MIT",
+            "Apache-2.0",
+            "BSD-3-Clause",
+            "GPL-3.0",
+            "LGPL-3.0",
+            "AGPL-3.0",
+            "None",
+        ],
+        auto_resolver=lambda cfg: cfg.license,
+        default="MIT",
     ),
     "author_name": MetadataField(
         key="author_name",

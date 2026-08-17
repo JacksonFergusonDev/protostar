@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import json
 import logging
@@ -62,6 +63,8 @@ class SystemExecutor:
             "PYTHON_VERSION": resolve_python_version(self.manifest.metadata)
             or self.config.python_version
             or "3.13",
+            "CURRENT_YEAR": str(datetime.date.today().year),
+            "AUTHOR_NAME": self.manifest.metadata.get("author_name") or "your-name",
         }
 
     # --- Architecture Note: Deterministic Pipeline Sequencing ---
