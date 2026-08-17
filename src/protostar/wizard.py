@@ -227,10 +227,28 @@ def prompt_metadata(
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
             resolved[key] = answer
         elif field.prompt_type == "select":
+            select_choices = list(field.choices or [])
+            if default_val is not None and str(default_val) in select_choices:
+                select_choices.remove(str(default_val))
+                select_choices.insert(0, str(default_val))
+
             answer = questionary.select(
                 field.label,
-                choices=field.choices or [],
-                default=str(default_val) if default_val is not None else None,
+                choices=select_choices,
+                style=questionary.Style(
+                    [
+                        ("answer", "fg:cyan bold"),
+                        ("pointer", "fg:cyan bold"),
+                        (
+                            "highlighted",
+                            "nobold noitalic nounderline fg:default bg:default",
+                        ),
+                        (
+                            "selected",
+                            "nobold noitalic nounderline fg:default bg:default",
+                        ),
+                    ]
+                ),
             ).ask()
             if answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
