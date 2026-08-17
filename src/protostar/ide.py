@@ -11,6 +11,8 @@ from .errors import FileSystemError
 from .fs import atomic_write_text
 from .manifest import Severity
 
+__all__ = ["check_ide_extensions", "write_ide_settings"]
+
 
 def check_ide_extensions(
     ide: str | None,

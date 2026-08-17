@@ -14,6 +14,8 @@ from .manifest import Severity
 
 logger = logging.getLogger("protostar")
 
+__all__ = ["deep_merge_tomlkit", "format_pyproject_toml", "merge_toml_payloads"]
+
 
 def deep_merge_tomlkit(
     base: Any,

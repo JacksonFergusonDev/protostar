@@ -3,6 +3,8 @@
 import hashlib
 from pathlib import Path
 
+__all__ = ["append_marker_blocks", "get_comment_markers"]
+
 
 def get_comment_markers(filepath: Path) -> tuple[str, str]:
     """Returns the appropriate comment syntax (start, end) for a given file extension."""

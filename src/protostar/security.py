@@ -4,6 +4,8 @@ from pathlib import Path
 
 from .errors import SecurityViolationError
 
+__all__ = ["ALLOWED_BINARIES", "enforce_binary_safelist", "enforce_path_jail"]
+
 ALLOWED_BINARIES: frozenset[str] = frozenset(
     {"uv", "git", "npm", "yarn", "pnpm", "pre-commit", "direnv"}
 )
