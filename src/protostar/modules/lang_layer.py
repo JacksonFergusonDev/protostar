@@ -1,3 +1,4 @@
+import importlib.resources
 import logging
 import shutil
 from pathlib import Path
@@ -90,24 +91,59 @@ description = "{desc}"
 readme = "README.md"
 authors = [{{ name = "{name}", email = "{email}" }}]
 """
-        if min_python and supported_os:
-            classifiers = []
-            classifiers.append('"Programming Language :: Python :: 3"')
+        project_license = manifest.metadata.get("license")
+        license_classifier = None
+        if project_license and project_license != "None":
+            license_map = {
+                "MIT": ("mit.txt", "License :: OSI Approved :: MIT License"),
+                "Apache-2.0": (
+                    "apache_2_0.txt",
+                    "License :: OSI Approved :: Apache Software License",
+                ),
+                "BSD-3-Clause": ("bsd_3.txt", "License :: OSI Approved :: BSD License"),
+                "GPL-3.0": (
+                    "gpl_3.txt",
+                    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+                ),
+                "LGPL-3.0": (
+                    "lgpl_3.txt",
+                    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+                ),
+                "AGPL-3.0": (
+                    "agpl_3.txt",
+                    "License :: OSI Approved :: GNU Affero General Public License v3",
+                ),
+            }
+            if project_license in license_map:
+                filename, license_classifier = license_map[project_license]
+                license_content = (
+                    importlib.resources.files("protostar.licenses")
+                    .joinpath(filename)
+                    .read_text(encoding="utf-8")
+                )
+                manifest.add_file_injection("LICENSE", license_content)
+                project_metadata_payload += 'license = { file = "LICENSE" }\n'
 
+        classifiers = []
+        if min_python:
+            classifiers.append('"Programming Language :: Python :: 3"')
             for version in generate_python_version_range(min_python):
                 classifiers.append(f'"Programming Language :: Python :: {version}"')
 
-            for os_name in supported_os:
-                if os_name == "MacOS":
-                    classifiers.append('"Operating System :: MacOS"')
-                elif os_name == "Linux":
-                    classifiers.append('"Operating System :: POSIX :: Linux"')
-                elif os_name == "Windows":
-                    classifiers.append('"Operating System :: Microsoft :: Windows"')
+        for os_name in supported_os:
+            if os_name == "MacOS":
+                classifiers.append('"Operating System :: MacOS"')
+            elif os_name == "Linux":
+                classifiers.append('"Operating System :: POSIX :: Linux"')
+            elif os_name == "Windows":
+                classifiers.append('"Operating System :: Microsoft :: Windows"')
 
-            if classifiers:
-                classifier_str = ",\n    ".join(classifiers)
-                project_metadata_payload += f"""classifiers = [
+        if license_classifier:
+            classifiers.append(f'"{license_classifier}"')
+
+        if classifiers:
+            classifier_str = ",\n    ".join(classifiers)
+            project_metadata_payload += f"""classifiers = [
     {classifier_str},
 ]
 """
