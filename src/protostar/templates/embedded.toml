@@ -18,19 +18,24 @@ ci = false
 # --- Static File Injections ---
 [files]
 "src/board/main.py" = '''
+"""Microcontroller main loop."""
+
 import time
 
-def main():
+
+def main() -> None:
+    """Execute continuous hardware loop."""
     while True:
         print("Running on hardware...")
         time.sleep(1)
+
 
 if __name__ == "__main__":
     main()
 '''
 
 "src/board/boot.py" = '''
-# This file is executed on every boot (including wake-up from deepsleep)
+"""Microcontroller boot configuration (executed on power-on and wake from sleep)."""
 '''
 
 # --- Append dynamic recipes to the bottom of the justfile ---

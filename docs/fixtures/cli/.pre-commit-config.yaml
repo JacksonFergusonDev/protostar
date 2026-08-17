@@ -1,17 +1,15 @@
-exclude: ^docs/
-
 repos:
   # Generic hooks (configured to IGNORE Python)
-  - repo: builtin
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: \.py$
       - id: end-of-file-fixer
         exclude: \.py$
       - id: check-yaml
+        exclude: \.py$
       - id: check-added-large-files
-      - id: check-merge-conflict
-      - id: check-toml
 
   # Local Python Toolchain (Managed via uv.lock)
   - repo: local
@@ -21,21 +19,20 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
-        pass_filenames: false
+        require_serial: true
 
       - id: ruff-format
         name: ruff format
         entry: uv run ruff format
         language: system
         types: [python]
-        pass_filenames: false
+        require_serial: true
 
       - id: mypy
         name: mypy
         entry: uv run mypy
         language: system
         types: [python]
-        exclude: ^docs/
         pass_filenames: true
 
   # Markdown linting
@@ -45,9 +42,16 @@ repos:
       - id: markdownlint-cli2
         args: ["--fix"]
 
+  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.17.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
   # Renovate config validation
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.24.3
+    rev: 44.32.2
     hooks:
       - id: renovate-config-validator
         files: '.github/renovate.json'

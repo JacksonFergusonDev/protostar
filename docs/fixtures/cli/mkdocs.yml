@@ -1,0 +1,40 @@
+site_name: demo_project
+site_description: Add your project description here.
+
+nav:
+  - Home: index.md
+  - Guide:
+      - Getting Started: getting-started.md
+  - Reference:
+      - API: api-reference.md
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            show_source: true
+
+extra:
+  generator: false

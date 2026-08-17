@@ -1794,7 +1794,8 @@ name = "cz"
     pass2 = SystemExecutor._format_pyproject_toml(doc2)
 
     assert pass1 == pass2
-    assert pass1.endswith("\n\n")
+    assert pass1.endswith("\n")
+    assert not pass1.endswith("\n\n")
 
 
 def test_format_pyproject_toml_preserves_comments():
@@ -1816,7 +1817,8 @@ select = ["E", "F"]
     assert "# inline project comment" in formatted
     assert "# inline ruff comment" in formatted
     assert "# User custom lint comment" in formatted
-    assert formatted.endswith("\n\n")
+    assert formatted.endswith("\n")
+    assert not formatted.endswith("\n\n")
 
 
 def test_format_pyproject_toml_parity_fallback(mocker):
@@ -1832,7 +1834,8 @@ line-length = 88
     mocker.patch("tomllib.loads", side_effect=ValueError("Simulated corrupt parse"))
     formatted = SystemExecutor._format_pyproject_toml(doc)
     assert "[tool.ruff]" in formatted
-    assert formatted.endswith("\n\n")
+    assert formatted.endswith("\n")
+    assert not formatted.endswith("\n\n")
 
 
 def test_executor_append_files_cli_template_full_lifecycle(
@@ -1881,7 +1884,8 @@ def test_executor_append_files_cli_template_full_lifecycle(
 
     result = pyproject.read_text()
 
-    assert result.endswith("\n\n")
+    assert result.endswith("\n")
+    assert not result.endswith("\n\n")
     assert tomllib.loads(result)
 
     banner_pos = result.find("# Tool Configuration")
@@ -1956,7 +1960,8 @@ line-length = 88
     pytest_pos = result.find("# ---- Pytest ---- #")
     cz_pos = result.find("# ---- Commitizen ---- #")
     assert ruff_pos < pytest_pos < cz_pos
-    assert result.endswith("\n\n")
+    assert result.endswith("\n")
+    assert not result.endswith("\n\n")
 
 
 def test_format_pyproject_toml_aot_and_subtables_only():
@@ -1978,7 +1983,8 @@ fail_under = 80
     assert "# ---- Mypy ---- #\n\n[[tool.mypy.overrides]]" in formatted
     assert "# ---- Ty ---- #\n\n[tool.ty.rules]" in formatted
     assert "# ---- Pytest ---- #\n\n[tool.coverage.report]" in formatted
-    assert formatted.endswith("\n\n")
+    assert formatted.endswith("\n")
+    assert not formatted.endswith("\n\n")
 
 
 def test_format_pyproject_toml_semantic_data_mismatch_fallback(mocker):
@@ -2001,4 +2007,5 @@ line-length = 88
 
     formatted = SystemExecutor._format_pyproject_toml(doc)
     assert "[tool.ruff]" in formatted
-    assert formatted.endswith("\n\n")
+    assert formatted.endswith("\n")
+    assert not formatted.endswith("\n\n")
