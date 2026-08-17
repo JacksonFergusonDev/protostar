@@ -68,6 +68,7 @@ def _write_fixture(filepath: str | Path, content: str) -> None:
     if not content.endswith("\n"):
         content += "\n"
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(output_path, content)
     print(f"Generated: {output_path.name}")
 
