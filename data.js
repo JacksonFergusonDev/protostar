@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786994519205,
+  "lastUpdate": 1787000294380,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6601,6 +6601,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 195.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b7d837b06e0dd6f66922a2204060ff1139c3de2",
+          "message": "refactor(executor): extract self-contained security, dependencies, and IDE utilities (PR 1) (#175)\n\n* refactor(security): extract path jail and binary safelist to security module\n\n* refactor(dependencies): extract dependency installation logic\n\n* refactor(ide): extract ide extension check and settings writing",
+          "timestamp": "2026-08-17T13:57:15-07:00",
+          "tree_id": "cf740d76db7315835110d4d84468a0a8edb8da71",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8b7d837b06e0dd6f66922a2204060ff1139c3de2"
+        },
+        "date": 1787000293749,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 137.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 208.24,
             "unit": "ms"
           }
         ]
