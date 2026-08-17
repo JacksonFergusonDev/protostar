@@ -1,4 +1,3 @@
-```json
 {
     "vcs_ignores": [
         "*.csv",
@@ -100,4 +99,3 @@
     "force_replace": false,
     "touched_paths": []
 }
-```

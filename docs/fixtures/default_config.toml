@@ -1,4 +1,3 @@
-```toml
 [env]
 # Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
@@ -36,4 +35,3 @@ python_version = "3.13"
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 # data-science-base = "~/Developer/templates/ds_base.toml"
-```
