@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787002503202,
+  "lastUpdate": 1787003205746,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6669,6 +6669,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 198.01,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4a9814d10f10cac54120b6136f5be786cc868c1",
+          "message": "refactor(executor): extract workflow and boilerplate generators (PR 3) (#177)\n\n* refactor(workflows): create pure string generators for workflows and boilerplate files\n\n* refactor(executor): delegate workflow and boilerplate writing to workflows module",
+          "timestamp": "2026-08-17T14:45:40-07:00",
+          "tree_id": "1eecb1e78f3a65ceaa000740c52079b38c166766",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b4a9814d10f10cac54120b6136f5be786cc868c1"
+        },
+        "date": 1787003204834,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 150.17,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 222.55,
             "unit": "ms"
           }
         ]
