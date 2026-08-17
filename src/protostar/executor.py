@@ -907,8 +907,8 @@ jobs:
                     + new_content[tool_match.start() :]
                 )
 
-        # 5. Normalize spacing (no more than one consecutive blank line, ending with an empty line)
-        new_content = re.sub(r"\n{3,}", "\n\n", new_content).rstrip() + "\n\n"
+        # 5. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
+        new_content = re.sub(r"\n{3,}", "\n\n", new_content).rstrip() + "\n"
 
         # 6. Safety Parity Guard: Guarantee data integrity
         try:
@@ -918,12 +918,12 @@ jobs:
                 logger.warning(
                     "AST Parity mismatch during pyproject.toml formatting; falling back to direct AST dump."
                 )
-                return raw_dump.rstrip() + "\n\n"
+                return raw_dump.rstrip() + "\n"
         except Exception as e:
             logger.warning(
                 f"Validation error during pyproject.toml formatting ({e}); falling back to direct AST dump."
             )
-            return raw_dump.rstrip() + "\n\n"
+            return raw_dump.rstrip() + "\n"
 
         return new_content
 

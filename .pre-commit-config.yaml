@@ -19,6 +19,7 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
+        exclude: ^docs/
         pass_filenames: false
 
       - id: ruff-format
@@ -26,6 +27,7 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
+        exclude: ^docs/
         pass_filenames: false
 
       - id: mypy
@@ -33,6 +35,7 @@ repos:
         entry: uv run mypy
         language: system
         types: [python]
+        exclude: ^docs/
         pass_filenames: true
 
   # Markdown linting

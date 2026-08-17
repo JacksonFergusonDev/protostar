@@ -1,0 +1,14 @@
+*.bin
+*.uf2
+*~
+.DS_Store
+.direnv/
+.env
+.envrc.local
+.idea/
+.ruff_cache/
+.venv/
+.vscode/
+Thumbs.db
+__pycache__/
+build/

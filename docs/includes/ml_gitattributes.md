@@ -1,8 +1,0 @@
-```text
-# Improve Jupyter Notebook diffs
-*.ipynb text eol=lf
-
-*.ipynb	diff=jupyternotebook
-
-*.ipynb	merge=jupyternotebook
-```

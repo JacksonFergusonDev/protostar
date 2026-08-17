@@ -97,7 +97,7 @@ cli_entrypoint = '''
 # --- Static File Injections ---
 [files]
 "src/<% PACKAGE_NAME %>/__init__.py" = '''
-"""<% PROJECT_NAME %>"""
+"""<% PROJECT_NAME %>."""
 
 import contextlib
 import importlib.metadata

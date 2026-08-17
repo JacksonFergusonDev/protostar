@@ -1,0 +1,27 @@
+.
+├── .env.example
+├── .envrc
+├── .github
+│   ├── renovate.json
+│   └── workflows
+│       └── ci.yml
+├── .gitignore
+├── .markdownlint-cli2.yaml
+├── .pre-commit-config.yaml
+├── .python-version
+├── CHANGELOG.md
+├── justfile
+├── pyproject.toml
+├── src
+│   └── demo_project
+│       ├── api
+│       │   └── routers
+│       ├── core
+│       │   └── config.py
+│       ├── main.py
+│       ├── models
+│       ├── schemas
+│       └── services
+├── tests
+│   └── api
+└── uv.lock

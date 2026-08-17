@@ -47,40 +47,28 @@ FIXTURES = {
         ["--template", "ml", "--docker"],
         ["--template", "astro", "--mypy", "--docker", "--force-merge"],
     ],
+    "api": [["--template", "api"]],
+    "dsp": [["--template", "dsp"]],
+    "embedded": [["--template", "embedded"]],
 }
 
-# Define target files to extract from the generated environments
-TARGETS = [
-    "pyproject.toml",
-    ".gitignore",
-    ".pre-commit-config.yaml",
-    ".dockerignore",
-    "Dockerfile",
-    ".markdownlint-cli2.yaml",
-    ".gitattributes",
-]
-
 # Resolve absolute path to prevent os.chdir() related pathing errors
-INCLUDES_DIR = Path("docs/includes").resolve()
+FIXTURES_DIR = Path("docs/fixtures").resolve()
 
 
-def _write_fixture(filename: str, content: str, language: str | None = None) -> None:
-    """Writes formatted content to a fixture file in the documentation includes directory.
+def _write_fixture(filepath: str | Path, content: str) -> None:
+    """Writes raw unformatted content to a fixture file in the documentation fixtures directory.
 
     Args:
-        filename: Target filename for the output payload.
+        filepath: Target filename or Path relative to fixtures or absolute.
         content: Raw string data to write to disk.
-        language: Optional identifier for a Markdown fenced code block. If provided,
-            the content is wrapped in the specified syntax highlighting.
     """
-    output_path = INCLUDES_DIR / filename
+    output_path = FIXTURES_DIR / filepath if isinstance(filepath, str) else filepath
 
-    if not content.endswith("\n"):
-        content += "\n"
+    content = content.rstrip() + "\n"
 
-    formatted_content = f"```{language}\n{content}```\n" if language else content
-
-    atomic_write_text(output_path, formatted_content)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_text(output_path, content)
     print(f"Generated: {output_path.name}")
 
 
@@ -137,29 +125,6 @@ def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
     return re.sub(r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)", repl_hooks, new_content)
 
 
-def _resolve_markdown_language(filename: str) -> str:
-    """Maps a file extension to its corresponding Markdown syntax identifier.
-
-    Args:
-        filename: The filename to evaluate.
-
-    Returns:
-        The syntax highlighting identifier for Markdown.
-    """
-    if Path(filename).name.lower() == "dockerfile":
-        return "dockerfile"
-
-    ext = Path(filename).suffix.lstrip(".").lower()
-
-    language_map = {
-        "py": "python",
-        "hpp": "cpp",
-        "txt": "text",
-    }
-
-    return language_map.get(ext, ext or "text")
-
-
 def _format_markdown_table(
     headers: Sequence[str], rows: Sequence[Sequence[str]]
 ) -> str:
@@ -200,7 +165,7 @@ class ManifestEncoder(json.JSONEncoder):
 
 def generate_default_config() -> None:
     """Writes the default global TOML configuration to a documentation fixture."""
-    _write_fixture("default_config.md", DEFAULT_CONFIG_CONTENT, language="toml")
+    _write_fixture("default_config.toml", DEFAULT_CONFIG_CONTENT)
 
 
 def generate_template_schema_fixture() -> None:
@@ -290,7 +255,7 @@ def generate_template_schema_fixture() -> None:
         ]
     )
 
-    _write_fixture("template_schema.md", "\n".join(lines), language="toml")
+    _write_fixture("template_schema.toml", "\n".join(lines))
 
 
 def generate_capability_tables() -> None:
@@ -378,7 +343,7 @@ def generate_manifest_state() -> None:
     }
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
-    _write_fixture("manifest_state.md", state_json, language="json")
+    _write_fixture("manifest_state.json", state_json)
 
 
 def generate_tree(dir_path: Path) -> str:
@@ -434,28 +399,41 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         fixture_name: Prefix assigned to the output documentation fixtures.
     """
     tree_output = generate_tree(source_dir)
-    _write_fixture(f"{fixture_name}_tree.md", tree_output, language="text")
+    _write_fixture(f"tree_{fixture_name}.txt", tree_output)
 
-    for target in TARGETS:
-        target_file = source_dir / target
-        if not target_file.exists():
+    for file_path in sorted(source_dir.rglob("*")):
+        if not file_path.is_file():
             continue
 
-        lang = _resolve_markdown_language(target)
-        content = target_file.read_text()
-        snippet_filename = f"{fixture_name}_{target.replace('.', '')}.md"
-        snippet_path = INCLUDES_DIR / snippet_filename
+        rel_path = file_path.relative_to(source_dir)
+        # Exclude VCS internal databases and ephemeral cache artifacts
+        if any(
+            part == ".git"
+            or part
+            in (
+                ".venv",
+                "__pycache__",
+                ".pytest_cache",
+                ".ruff_cache",
+                ".mypy_cache",
+            )
+            for part in rel_path.parts
+        ):
+            continue
+
+        target_path = FIXTURES_DIR / fixture_name / rel_path
+        content = file_path.read_text(encoding="utf-8")
 
         # Freeze mutable dependencies and VCS revisions if updating an existing file
-        if snippet_path.exists():
-            old_content = snippet_path.read_text()
+        if target_path.exists():
+            old_content = target_path.read_text(encoding="utf-8")
 
-            if target == "pyproject.toml":
+            if rel_path.name == "pyproject.toml":
                 content = _freeze_pyproject_deps(old_content, content)
-            elif target == ".pre-commit-config.yaml":
+            elif rel_path.name == ".pre-commit-config.yaml":
                 content = _freeze_pre_commit_hooks(old_content, content)
 
-        _write_fixture(snippet_filename, content, language=lang)
+        _write_fixture(target_path, content)
 
 
 def build_fixtures() -> None:
@@ -593,7 +571,7 @@ def main() -> None:
     protostar.config.UserConfig._instance = None
 
     try:
-        INCLUDES_DIR.mkdir(parents=True, exist_ok=True)
+        FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
 
         print("Generating documentation fixtures...")
 

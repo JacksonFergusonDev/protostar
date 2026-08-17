@@ -109,7 +109,7 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
     ```
 
 === "Documentation Generation"
-    Generates all Markdown fixtures for the documentation. Use the `--fast` variant (`just docs-fixtures-fast`) to skip slower subprocess executions during rapid iteration.
+    Generates all fixtures for the documentation in `docs/fixtures/`. Use the `--fast` variant (`just docs-fixtures-fast`) to skip slower subprocess executions during rapid iteration.
     ```bash
     just docs-fixtures
     ```

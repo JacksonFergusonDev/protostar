@@ -24,7 +24,9 @@ protostar config --reset --force
 
 When you first run `protostar config` a configuration file is created and opened at `~/.config/protostar/config.toml`:
 
---8<-- "default_config.md"
+```toml
+--8<-- "default_config.toml"
+```
 
 ---
 

@@ -59,19 +59,29 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     This footprint demonstrates Protostar's ability to wire complex tooling together automatically.
 
-    --8<-- "cli_tree.md"
+    ```text
+    --8<-- "tree_cli.txt"
+    ```
 
     ??? abstract "See the generated `.gitignore`"
-        --8<-- "cli_gitignore.md"
+        ```gitignore
+        --8<-- "cli/.gitignore"
+        ```
 
     ??? abstract "See the generated `.markdownlint-cli2.yaml`"
-        --8<-- "cli_markdownlint-cli2yaml.md"
+        ```yaml
+        --8<-- "cli/.markdownlint-cli2.yaml"
+        ```
 
     ??? abstract "See the generated `.pre-commit-config.yaml`"
-        --8<-- "cli_pre-commit-configyaml.md"
+        ```yaml
+        --8<-- "cli/.pre-commit-config.yaml"
+        ```
 
     ??? abstract "See the generated `pyproject.toml`"
-        --8<-- "cli_pyprojecttoml.md"
+        ```toml
+        --8<-- "cli/pyproject.toml"
+        ```
 
     **The Intelligence:**
 
@@ -84,16 +94,24 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     This footprint focuses on managing serialized data assets and preventing repository bloat.
 
-    --8<-- "astro_tree.md"
+    ```text
+    --8<-- "tree_astro.txt"
+    ```
 
     ??? abstract "See the generated `.gitattributes`"
-        --8<-- "astro_gitattributes.md"
+        ```gitattributes
+        --8<-- "astro/.gitattributes"
+        ```
 
     ??? abstract "See the generated `.gitignore`"
-        --8<-- "astro_gitignore.md"
+        ```gitignore
+        --8<-- "astro/.gitignore"
+        ```
 
     ??? abstract "See the generated `pyproject.toml`"
-        --8<-- "astro_pyprojecttoml.md"
+        ```toml
+        --8<-- "astro/pyproject.toml"
+        ```
 
     **The Intelligence:**
 
@@ -107,19 +125,29 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     This footprint focuses on containerization and strictly excluding model artifacts.
 
-    --8<-- "ml_tree.md"
+    ```text
+    --8<-- "tree_ml.txt"
+    ```
 
     ??? abstract "See the generated `Dockerfile`"
-        --8<-- "ml_Dockerfile.md"
+        ```dockerfile
+        --8<-- "ml/Dockerfile"
+        ```
 
     ??? abstract "See the generated `.dockerignore`"
-        --8<-- "ml_dockerignore.md"
+        ```dockerignore
+        --8<-- "ml/.dockerignore"
+        ```
 
     ??? abstract "See the generated `.gitignore`"
-        --8<-- "ml_gitignore.md"
+        ```gitignore
+        --8<-- "ml/.gitignore"
+        ```
 
     ??? abstract "See the generated `pyproject.toml`"
-        --8<-- "ml_pyprojecttoml.md"
+        ```toml
+        --8<-- "ml/pyproject.toml"
+        ```
 
     **The Intelligence:**
 
@@ -153,42 +181,62 @@ Selecting __Merge__ executes an AST injection:
 
 ??? abstract "See the comparison"
     === "Directory Structure Before"
-        --8<-- "ml_tree.md"
+        ```text
+        --8<-- "tree_ml.txt"
+        ```
 
     === "Directory Structure After"
-        --8<-- "ml_merged_tree.md"
+        ```text
+        --8<-- "tree_ml_merged.txt"
+        ```
 
     <hr>
 
     === "`Dockerfile` Before"
-        --8<-- "ml_Dockerfile.md"
+        ```dockerfile
+        --8<-- "ml/Dockerfile"
+        ```
 
     === "`Dockerfile` After"
-        --8<-- "ml_merged_Dockerfile.md"
+        ```dockerfile
+        --8<-- "ml_merged/Dockerfile"
+        ```
 
     <hr>
 
     === "`.dockerignore` Before"
-        --8<-- "ml_dockerignore.md"
+        ```dockerignore
+        --8<-- "ml/.dockerignore"
+        ```
 
     === "`.dockerignore` After"
-        --8<-- "ml_merged_dockerignore.md"
+        ```dockerignore
+        --8<-- "ml_merged/.dockerignore"
+        ```
 
     <hr>
 
     === "`.gitignore` Before"
-        --8<-- "ml_gitignore.md"
+        ```gitignore
+        --8<-- "ml/.gitignore"
+        ```
 
     === "`.gitignore` After"
-        --8<-- "ml_merged_gitignore.md"
+        ```gitignore
+        --8<-- "ml_merged/.gitignore"
+        ```
 
     <hr>
 
     === "`pyproject.toml` Before"
-        --8<-- "ml_pyprojecttoml.md"
+        ```toml
+        --8<-- "ml/pyproject.toml"
+        ```
 
     === "`pyproject.toml` After"
-        --8<-- "ml_merged_pyprojecttoml.md"
+        ```toml
+        --8<-- "ml_merged/pyproject.toml"
+        ```
 
 !!! tip "Headless Operations"
     In CI/CD environments where interactive prompts are impossible, pass `--force-merge` or `--force-replace` to bypass collision prompts deterministically.
@@ -202,4 +250,4 @@ Selecting __Merge__ executes an AST injection:
 
 To view all supported subcommands and flags in your terminal, run `protostar help init`.
 
-![Protostar Help Init](../includes/cli_init_help.svg)
+![Protostar Help Init](../fixtures/cli_init_help.svg)

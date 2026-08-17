@@ -84,7 +84,7 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.snippets:
-      base_path: ["docs/includes", "."]
+      base_path: ["docs/fixtures", "."]
       check_paths: true
   - pymdownx.inlinehilite
   - pymdownx.tabbed:

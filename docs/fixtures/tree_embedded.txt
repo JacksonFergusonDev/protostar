@@ -1,0 +1,15 @@
+.
+├── .envrc
+├── .gitignore
+├── .markdownlint-cli2.yaml
+├── .python-version
+├── justfile
+├── pyproject.toml
+├── src
+│   ├── board
+│   │   ├── boot.py
+│   │   └── main.py
+│   └── host
+├── tests
+│   └── host_mocks
+└── uv.lock

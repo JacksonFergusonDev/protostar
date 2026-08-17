@@ -1,0 +1,57 @@
+[project]
+name = "demo-project"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "librosa>=1.0.0",
+    "matplotlib>=3.11.1",
+    "numpy>=2.5.2",
+    "pedalboard>=0.9.24",
+    "scipy>=1.18.0",
+    "soundfile>=0.14.0",
+]
+description = "Add your description here."
+readme = "README.md"
+authors = [{ name = "your-name", email = "your-email" }]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.16.3",
+]
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- Ruff ---- #
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "A",   # flake8-builtins
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "E",   # pycodestyle errors
+    "F",   # Pyflakes
+    "I",   # isort
+    "RUF", # Ruff-specific
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501", # Line too long - handled automatically by `ruff format`
+]
+
+# ---- Pytest ---- #
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = [
+    "tests",
+]
+pythonpath = [
+    ".",
+]

@@ -114,7 +114,9 @@ A template is a declarative TOML document specifying dependencies, directories, 
 
 ### Template Schema Reference
 
---8<-- "template_schema.md"
+```toml
+--8<-- "template_schema.toml"
+```
 
 ---
 
