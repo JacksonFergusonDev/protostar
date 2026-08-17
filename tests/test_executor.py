@@ -676,12 +676,9 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
     # Use a parent mock to track chronological execution sequence across methods
     manager = mocker.Mock()
 
-    manager.attach_mock(mocker.patch.object(executor, "_execute_tasks"), "sys_tasks")
+    manager.attach_mock(mocker.patch.object(executor, "_run_tasks"), "run_tasks")
     manager.attach_mock(
         mocker.patch.object(executor, "_install_dependencies"), "install"
-    )
-    manager.attach_mock(
-        mocker.patch.object(executor, "_execute_post_install_tasks"), "post_install"
     )
 
     # Silence all other disk I/O mutations
@@ -698,22 +695,20 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
 
     # Filter calls to isolate our specific topological phases
     actual_calls = [
-        call
-        for call in manager.mock_calls
-        if call[0] in ("sys_tasks", "install", "post_install")
+        call for call in manager.mock_calls if call[0] in ("run_tasks", "install")
     ]
 
     expected_call_order = [
-        mocker.call.sys_tasks(),
+        mocker.call.run_tasks(manifest.system_tasks),
         mocker.call.install(),
-        mocker.call.post_install(),
+        mocker.call.run_tasks(manifest.post_install_tasks),
     ]
 
     assert actual_calls == expected_call_order
 
 
-def test_executor_execute_post_install_tasks(mocker, mock_config):
-    """Test that _execute_post_install_tasks iterates and calls execute_subprocess with boundaries."""
+def test_executor_run_tasks(mocker, mock_config):
+    """Test that _run_tasks iterates and calls execute_subprocess with boundaries."""
     manifest = EnvironmentManifest()
     manifest.add_post_install_task(["uv", "first_task"])
     manifest.add_post_install_task(["uv", "second_task"], timeout=45)
@@ -722,7 +717,7 @@ def test_executor_execute_post_install_tasks(mocker, mock_config):
 
     mock_execute = mocker.patch("protostar.executor.execute_subprocess")
 
-    executor._execute_post_install_tasks()
+    executor._run_tasks(manifest.post_install_tasks)
 
     assert mock_execute.call_count == 2
     mock_execute.assert_any_call(["uv", "first_task"], timeout=30)
@@ -741,10 +736,9 @@ def test_executor_uses_custom_task_description(mocker):
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
-    executor._execute_tasks()
+    executor._run_tasks(manifest.system_tasks)
 
-    # Verify the exact string was passed to the rich console status
-    mock_status.assert_called_once_with("Initializing git repo")
+    mock_status.assert_called_with("Initializing git repo")
 
 
 def test_executor_task_description_fallback(mocker):
@@ -758,7 +752,7 @@ def test_executor_task_description_fallback(mocker):
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
-    executor._execute_tasks()
+    executor._run_tasks(manifest.system_tasks)
 
     # Verify the fallback logic stripped the path and grabbed the binary name
     mock_status.assert_called_once_with("Propelling sequence: pre-commit")

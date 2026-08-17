@@ -1,81 +1,72 @@
-# The System Executor
+# The System Executor & Modular Execution Engine
 
-If the Orchestrator is the state machine, the `SystemExecutor` is the engine that physically mutates the host. It is responsible for translating the declarative `EnvironmentManifest` into imperative disk operations and shell commands.
+If the Orchestrator is the state machine, the execution engine is the physical actuator that mutates the host. It is responsible for translating the declarative `EnvironmentManifest` into imperative disk operations and shell commands.
 
-By strictly confining all physical mutations to this single class, Protostar ensures that partial failures (such as a missing dependency or a syntax error in an existing file) do not leave the workspace in a fragmented, irrecoverable state.
-
-<div class="grid cards" markdown>
-
-- :material-file-tree: __Abstract Syntax Tree (AST) Preservation__
-
-    Configuration files (like `pyproject.toml`) are not blindly overwritten or manipulated via fragile regex. They are parsed into ASTs, deeply merged, and serialized back to disk, preserving all user comments and structural formatting.
-
-- :material-shield-check: __Pre-Execution Validation__
-
-    Before a single directory is created, the Executor validates the syntax of all target files. If a user has a malformed TOML file, execution halts immediately rather than failing halfway through the sequence.
-
-- :material-console: __Subprocess Isolation__
-
-    All shell executions (e.g., `uv add`, `git init`) are routed through a sandboxed wrapper. Standard output and error streams are captured, preventing silent failures and ensuring critical telemetry is preserved for debugging.
-
-</div>
+To ensure robustness, security, and testability, Protostar's execution logic is decomposed into seven strictly focused, single-responsibility modules. This architecture prevents the "god module" anti-pattern by explicitly separating **pure content generation** and **policy enforcement** from **stateful orchestration**.
 
 ---
 
-## The Execution Topology
-
-The `SystemExecutor` processes the manifest sequentially. This exact chronological ordering is critical to prevent race conditions (e.g., attempting to append configurations to a `pyproject.toml` before `uv init` has generated it).
+## The 7-Module Architecture
 
 ```mermaid
 flowchart TD
-    classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef io_file fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef io_shell fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+    classDef pure fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+    classDef stateful fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef orchestrator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
 
-    Start([Execute Manifest]) --> Prep
+    M[(Environment\nManifest)] --> E(executor.py):::orchestrator
 
-    subgraph Prep [Initialization & Base Scaffolding]
-        direction LR
-        V[1. Validate AST Targets]:::io_file --> D[2. Scaffold Directories]:::io_file
-        D --> I[3. Write Injected Files]:::io_file
-        I --> PC[4. Write pre-commit Config]:::io_file
+    subgraph Execution Engine
+        E --> S(security.py):::pure
+        E --> T(toml_ast.py):::pure
+        E --> A(appends.py):::pure
+        E --> W(workflows.py):::pure
+
+        E --> D(dependencies.py):::stateful
+        E --> I(ide.py):::stateful
     end
-
-    Prep --> ST[5. Execute System Tasks]:::io_shell
-
-    ST --> Synthesis
-
-    subgraph Synthesis [Late-Binding Configurations]
-        direction LR
-        AF[6. AST Merge & File Appends]:::io_file --> IG[7. Deduplicate Ignores]:::io_file
-        IG --> DOCK[8. Write Docker Artifacts]:::io_file
-        DOCK --> IDE[9. Write IDE Settings]:::io_file
-    end
-
-    Synthesis --> Runtime
-
-    subgraph Runtime [Dependency Resolution]
-        direction LR
-        DEP[10. Resolve Dependencies]:::io_shell --> PT[11. Execute Post-Install Tasks]:::io_shell
-    end
-
-    Runtime --> End([Execution Complete]):::core
 ```
+
+### 1. The Thin Orchestrator (`executor.py`)
+
+**Role:** Stateful execution sequencing and disk I/O.
+The `SystemExecutor` class acts as a thin coordinator. It iterates over the manifest, gathers necessary parameters, invokes the pure content generators, and writes the output to disk using atomic operations. It strictly enforces the chronological order of execution to prevent race conditions (e.g., ensuring `uv init` completes before attempting to merge `pyproject.toml` payloads).
+
+### 2. Pure Content Generation
+
+These modules are mathematically pure functions: given the same inputs, they consistently return the same string or AST object without ever touching the disk or network.
+
+- **`workflows.py`**: Handles string templating for CI/CD workflows, Justfiles, Dockerfiles, pre-commit configurations, and VCS ignores.
+- **`appends.py`**: Resolves language-specific comment syntax and injects hash-delimited marker blocks into existing file strings.
+- **`toml_ast.py`**: Parses TOML strings using `tomlkit` to manipulate the Abstract Syntax Tree (AST), performing deep merges, header formatting, and array-of-tables (AoT) conflict resolution while preserving user comments.
+
+### 3. Policy & System Integration
+
+These modules interact with external boundaries, but do so predictably.
+
+- **`security.py`**: Enforces strict boundaries (Pure). Validates that no filesystem operations escape the workspace root (`enforce_path_jail`) and that no unauthorized shell commands are executed (`enforce_binary_safelist`).
+- **`dependencies.py`**: Orchestrates `uv add` commands to resolve and install Python packages into their appropriate dependency groups (main, dev, docs).
+- **`ide.py`**: Verifies the presence of recommended extensions via the IDE's CLI (e.g., `code --list-extensions`) and deep-merges telemetry diagnostics and settings into `.vscode/settings.json`.
 
 ---
 
-## AST Deep Merging
+## Security & Path Isolation
 
-When merging arrays or configuration tables into existing TOML files, Protostar utilizes `tomlkit` to manipulate the Abstract Syntax Tree. This is handled by the recursive `_deep_merge_tomlkit()` method.
+All disk writing and subprocess execution strictly pass through `security.py`'s invariants:
 
-The merge behavior is governed by the orchestrator's resolved `CollisionStrategy`:
+- **Path Jailing**: Before the executor writes any artifact, it asserts that the `target` path is physically bounded within `Path.cwd()`. This structurally prevents malicious blueprint templates from triggering directory traversal attacks (e.g., writing to `/etc/passwd`).
+- **Binary Safelisting**: Before any shell task is executed (whether pre-install or post-install), the first segment of the command vector is verified against `ALLOWED_BINARIES` (e.g., `uv`, `git`, `npm`).
 
-- __Merge (Default):__ The executor walks the AST, appending missing keys and extending `Array of Tables` (AoT). Existing scalar values or sibling tables that are not explicitly targeted by the payload are safely ignored and preserved.
+---
 
-- __Overwrite:__ The executor aggressively prunes the target. If the payload defines a specific table (e.g., `[tool.ruff]`), any existing scalar keys within that table on the host that *do not* exist in the payload are purged, forcing strict parity with Protostar's baseline.
+## AST Deep Merging & Collision Strategies
 
-!!! tip "Dynamic Python Version Resolution"
-    During the file append phase, the executor dynamically resolves the target environment's Python version (scanning `pyproject.toml`, `.venv/pyvenv.cfg`, or the configuration fallback). Any `{{PYTHON_VERSION}}` tokens within the injected payloads are interpolated before the AST is evaluated.
+When merging configuration payloads into existing TOML files, Protostar utilizes `tomlkit` AST parsing rather than standard dictionary updates or destructive regular expressions.
+
+The merge behavior is governed by the resolved `CollisionStrategy`:
+
+- **Merge (Default):** The engine walks the AST, appending missing keys and extending tables. Existing scalar values or sibling tables that are not explicitly targeted by the payload are safely ignored and preserved.
+- **Overwrite:** The engine aggressively prunes the target. If the payload defines a specific table (e.g., `[tool.ruff]`), any existing scalar keys within that table on the host that *do not* exist in the payload are purged, forcing strict parity with Protostar's baseline.
 
 ---
 
@@ -83,7 +74,7 @@ The merge behavior is governed by the orchestrator's resolved `CollisionStrategy
 
 Directly calling `subprocess.run` in a CLI tool often leads to silent failures or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `protostar.system.execute_subprocess`.
 
-This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts to prevent the orchestrator from blocking indefinitely on stalled network requests. If the process returns a non-zero exit code or exceeds its execution timeout, the executor raises a strictly typed `CommandExecutionError` or `CommandTimeoutError`. These exceptions structurally preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to the user without destructively flattening the context into a generic string blob.
+This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts. If the process returns a non-zero exit code, the executor raises a strictly typed `CommandExecutionError`. These exceptions preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to the user without destructively flattening the context.
 
 !!! example "Simulated Subprocess Telemetry Output"
     When a shell execution fails, the captured streams are formatted to pinpoint the exact failure mechanism:
