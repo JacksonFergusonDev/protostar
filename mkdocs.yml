@@ -5,9 +5,11 @@ repo_url: https://github.com/jacksonfergusondev/protostar
 repo_name: jacksonfergusondev/protostar
 edit_uri: edit/main/docs/
 copyright: "&copy; 2026 Jackson Ferguson. <a href=\"https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE\">License</a>"
-exclude_docs: |
-  fixtures/
-  fixtures/**
+validation:
+  links:
+    not_found: ignore
+    absolute_links: ignore
+    unrecognized_links: ignore
 
 nav:
   - Home: index.md
