@@ -2,6 +2,16 @@
 
 from .workspace import generate_python_version_range
 
+__all__ = [
+    "generate_ci_workflow",
+    "generate_dockerfile",
+    "generate_dockerignore",
+    "generate_gitignore",
+    "generate_justfile",
+    "generate_pre_commit_config",
+    "generate_release_workflow",
+]
+
 
 def generate_pre_commit_config(
     local_hooks: list[str],

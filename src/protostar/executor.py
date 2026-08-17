@@ -37,6 +37,8 @@ from .workspace import (
 logger = logging.getLogger("protostar")
 console = Console()
 
+__all__ = ["SystemExecutor"]
+
 
 class SystemExecutor:
     """Executes the materialized environment manifest by mutating the local disk and shell."""
@@ -143,6 +145,7 @@ class SystemExecutor:
             return
 
         target = Path(".pre-commit-config.yaml")
+        enforce_path_jail(target, Path.cwd())
         if self.manifest.should_skip_file(target, phase="Pre-commit"):
             return
 
@@ -230,6 +233,7 @@ class SystemExecutor:
             ci_steps=self.manifest.ci_steps,
         )
         target = Path(".github/workflows/ci.yml")
+        enforce_path_jail(target, Path.cwd())
         atomic_write_text(target, workflow)
         self.manifest.record_touch(target)
 
@@ -240,6 +244,7 @@ class SystemExecutor:
 
         workflow = generate_release_workflow()
         target = Path(".github/workflows/release.yml")
+        enforce_path_jail(target, Path.cwd())
         atomic_write_text(target, workflow)
         self.manifest.record_touch(target)
 
@@ -249,6 +254,7 @@ class SystemExecutor:
             return
 
         target = Path("justfile")
+        enforce_path_jail(target, Path.cwd())
         if self.manifest.should_skip_file(target, phase="Just"):
             return
 
@@ -340,6 +346,7 @@ class SystemExecutor:
             return
 
         gitignore = Path(".gitignore")
+        enforce_path_jail(gitignore, Path.cwd())
         try:
             existing_content = gitignore.read_text() if gitignore.exists() else ""
             new_content = generate_gitignore(
@@ -365,6 +372,7 @@ class SystemExecutor:
             return
 
         dockerignore = Path(".dockerignore")
+        enforce_path_jail(dockerignore, Path.cwd())
         try:
             existing_content = dockerignore.read_text() if dockerignore.exists() else ""
             has_uv_init = any(
@@ -390,6 +398,7 @@ class SystemExecutor:
             ) from e
 
         dockerfile = Path("Dockerfile")
+        enforce_path_jail(dockerfile, Path.cwd())
         if not self.manifest.should_skip_file(dockerfile, phase="Docker"):
             try:
                 context = self.interpolation_context

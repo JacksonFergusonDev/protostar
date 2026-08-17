@@ -10,6 +10,8 @@ from .system import execute_subprocess
 
 console = Console()
 
+__all__ = ["install_dependencies"]
+
 
 def _install_group(
     packages: list[str],
