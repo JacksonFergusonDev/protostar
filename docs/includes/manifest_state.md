@@ -97,6 +97,7 @@
     "collision_strategy": "merge",
     "diagnostics": [],
     "force_merge": false,
-    "force_replace": false
+    "force_replace": false,
+    "touched_paths": []
 }
 ```
