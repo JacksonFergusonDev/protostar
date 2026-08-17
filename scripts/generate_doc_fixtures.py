@@ -408,7 +408,15 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         rel_path = file_path.relative_to(source_dir)
         # Exclude VCS internal databases and ephemeral cache artifacts
         if any(
-            part.startswith(".git") or part in (".venv", "__pycache__", ".pytest_cache")
+            part == ".git"
+            or part
+            in (
+                ".venv",
+                "__pycache__",
+                ".pytest_cache",
+                ".ruff_cache",
+                ".mypy_cache",
+            )
             for part in rel_path.parts
         ):
             continue

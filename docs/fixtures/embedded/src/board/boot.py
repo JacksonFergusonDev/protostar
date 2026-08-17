@@ -1,1 +1,1 @@
-# This file is executed on every boot (including wake-up from deepsleep)
+"""Microcontroller boot configuration (executed on power-on and wake from sleep)."""

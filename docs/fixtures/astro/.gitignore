@@ -1,0 +1,17 @@
+*.csv
+*.fit
+*.fits
+*.fts
+*.parquet
+*~
+.DS_Store
+.direnv/
+.env
+.envrc.local
+.idea/
+.ipynb_checkpoints/
+.ruff_cache/
+.venv/
+.vscode/
+Thumbs.db
+__pycache__/
