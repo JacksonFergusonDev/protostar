@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787000294380,
+  "lastUpdate": 1787002503202,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6635,6 +6635,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 208.24,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b33a9c7d9896bdc33c7dfa1d618dafda41e10fbd",
+          "message": "refactor(executor): extract TOML AST engine and marker-block file appends (PR 2) (#176)\n\n* refactor(toml): extract TOML AST merging and formatting to toml_ast module\n\n* refactor(appends): extract comment markers and generic marker-block appending to appends module\n\n* refactor(executor): delegate _append_files to toml_ast and appends modules",
+          "timestamp": "2026-08-17T14:34:06-07:00",
+          "tree_id": "6dc6a340845864a4be1ddd874ed3a5eb30d7e891",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b33a9c7d9896bdc33c7dfa1d618dafda41e10fbd"
+        },
+        "date": 1787002502579,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.56,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 198.01,
             "unit": "ms"
           }
         ]
