@@ -3,6 +3,9 @@
 from .workspace import generate_python_version_range
 
 __all__ = [
+    "CIWorkflowSpec",
+    "DockerfileSpec",
+    "JustfileSpec",
     "generate_ci_workflow",
     "generate_dockerfile",
     "generate_dockerignore",
@@ -11,6 +14,42 @@ __all__ = [
     "generate_pre_commit_config",
     "generate_release_workflow",
 ]
+
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class CIWorkflowSpec:
+    """CI Workflow specification."""
+
+    supported_os: list[str]
+    min_python: str
+    ci_flags: set[str]
+    ci_steps: list[str]
+
+
+@dataclass(frozen=True)
+class JustfileSpec:
+    """Justfile specification."""
+
+    format_commands: list[str]
+    lint_commands: list[str]
+    typecheck_commands: list[str]
+    ci_flags: set[str]
+    clean_paths: list[str]
+
+
+@dataclass(frozen=True)
+class DockerfileSpec:
+    """Dockerfile specification."""
+
+    python_version: str
+    project_name: str
+    package_name: str
+    dependencies: list[str]
+    is_script_or_typer: bool
+    docker_port: str | None = None
 
 
 def generate_pre_commit_config(
@@ -68,33 +107,30 @@ def generate_pre_commit_config(
     return full_yaml
 
 
-def generate_ci_workflow(
-    supported_os: list[str],
-    min_python: str,
-    ci_flags: set[str],
-    ci_steps: list[str],
-) -> str:
+def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     """Assembles and formats the .github/workflows/ci.yml content."""
     runner_map = {
         "MacOS": "macos-latest",
         "Linux": "ubuntu-latest",
         "Windows": "windows-latest",
     }
-    os_matrix = [runner_map.get(os_name, "ubuntu-latest") for os_name in supported_os]
+    os_matrix = [
+        runner_map.get(os_name, "ubuntu-latest") for os_name in spec.supported_os
+    ]
     if not os_matrix:
         os_matrix = ["ubuntu-latest"]
 
-    python_matrix = generate_python_version_range(min_python)
+    python_matrix = generate_python_version_range(spec.min_python)
     if not python_matrix:
-        python_matrix = [min_python]
+        python_matrix = [spec.min_python]
 
     # Determine the primary runner for coverage
     primary_os = "ubuntu-latest" if "ubuntu-latest" in os_matrix else os_matrix[0]
     primary_python = python_matrix[-1]
 
     # Build the pytest/codecov logic
-    has_pytest = "pytest" in ci_flags
-    has_codecov = "codecov" in ci_flags
+    has_pytest = "pytest" in spec.ci_flags
+    has_codecov = "codecov" in spec.ci_flags
 
     pytest_step = ""
     if has_pytest:
@@ -131,7 +167,7 @@ def generate_ci_workflow(
         run: uv run pytest"""
 
     # Assemble the rest of the steps
-    tool_steps = "\n\n".join(ci_steps)
+    tool_steps = "\n\n".join(spec.ci_steps)
     if pytest_step:
         if tool_steps:
             tool_steps += "\n\n" + pytest_step
@@ -209,13 +245,7 @@ jobs:
 """
 
 
-def generate_justfile(
-    format_commands: list[str],
-    lint_commands: list[str],
-    typecheck_commands: list[str],
-    ci_flags: set[str],
-    clean_paths: list[str],
-) -> str:
+def generate_justfile(spec: JustfileSpec) -> str:
     """Assembles and returns the justfile content."""
     justfile_content = [
         'set shell := ["bash", "-euc", "-o", "pipefail"]',
@@ -239,7 +269,7 @@ def generate_justfile(
     ]
 
     # Format recipe
-    if format_commands:
+    if spec.format_commands:
         justfile_content.extend(
             [
                 "",
@@ -248,14 +278,14 @@ def generate_justfile(
                 '    @printf "\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n"',
             ]
         )
-        for cmd in format_commands:
+        for cmd in spec.format_commands:
             justfile_content.append(f"    {cmd}")
         justfile_content.append(
             '    @printf "{{ green }}✔ Formatting complete{{ nc }}\\n"'
         )
 
     # Lint recipe
-    if lint_commands:
+    if spec.lint_commands:
         justfile_content.extend(
             [
                 "",
@@ -264,12 +294,12 @@ def generate_justfile(
                 '    @printf "\\n{{ blue }}=== Running Linters ==={{ nc }}\\n"',
             ]
         )
-        for cmd in lint_commands:
+        for cmd in spec.lint_commands:
             justfile_content.append(f"    {cmd}")
         justfile_content.append('    @printf "{{ green }}✔ Linting passed{{ nc }}\\n"')
 
     # Typecheck recipe
-    if typecheck_commands:
+    if spec.typecheck_commands:
         justfile_content.extend(
             [
                 "",
@@ -278,14 +308,14 @@ def generate_justfile(
                 '    @printf "\\n{{ blue }}=== Running Type Checks ==={{ nc }}\\n"',
             ]
         )
-        for cmd in typecheck_commands:
+        for cmd in spec.typecheck_commands:
             justfile_content.append(f"    {cmd}")
         justfile_content.append(
             '    @printf "{{ green }}✔ Type checking passed{{ nc }}\\n"'
         )
 
     # Pytest recipes
-    if "pytest" in ci_flags:
+    if "pytest" in spec.ci_flags:
         justfile_content.extend(
             [
                 "",
@@ -305,11 +335,11 @@ def generate_justfile(
 
     # CI recipe
     ci_deps = []
-    if lint_commands:
+    if spec.lint_commands:
         ci_deps.append("lint")
-    if typecheck_commands:
+    if spec.typecheck_commands:
         ci_deps.append("typecheck")
-    if "pytest" in ci_flags:
+    if "pytest" in spec.ci_flags:
         ci_deps.append("test")
 
     if ci_deps:
@@ -333,8 +363,8 @@ def generate_justfile(
         ]
     )
 
-    all_clean_paths = list(clean_paths)
-    if "pytest" in ci_flags:
+    all_clean_paths = list(spec.clean_paths)
+    if "pytest" in spec.ci_flags:
         all_clean_paths.extend(["htmlcov", ".coverage", "coverage.xml"])
 
     if all_clean_paths:
@@ -351,7 +381,7 @@ def generate_justfile(
     )
 
     # Serve recipe (Zensical)
-    if "zensical" in ci_flags:
+    if "zensical" in spec.ci_flags:
         justfile_content.extend(
             [
                 "",
@@ -392,30 +422,23 @@ def generate_dockerignore(
     return existing_content + prefix + "\n".join(sorted(missing)) + "\n"
 
 
-def generate_dockerfile(
-    python_version: str,
-    project_name: str,
-    package_name: str,
-    dependencies: list[str],
-    docker_port: str | None = None,
-    is_script_or_typer: bool = False,
-) -> str:
+def generate_dockerfile(spec: DockerfileSpec) -> str:
     """Generates the multi-stage Dockerfile content."""
-    if "fastapi" in dependencies or "uvicorn" in dependencies:
-        port = str(docker_port or "8000")
+    if "fastapi" in spec.dependencies or "uvicorn" in spec.dependencies:
+        port = str(spec.docker_port or "8000")
         runtime_block = (
             f"EXPOSE {port}\n\n"
             f'CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "{port}"]'
         )
-    elif is_script_or_typer:
-        runtime_block = f'ENTRYPOINT ["{project_name}"]'
+    elif spec.is_script_or_typer:
+        runtime_block = f'ENTRYPOINT ["{spec.project_name}"]'
     else:
-        runtime_block = f'CMD ["python", "-m", "{package_name}"]'
+        runtime_block = f'CMD ["python", "-m", "{spec.package_name}"]'
 
     return f"""# syntax=docker/dockerfile:1
 
 # --- Builder Stage ---
-FROM ghcr.io/astral-sh/uv:python{python_version}-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python{spec.python_version}-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -435,7 +458,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \\
     uv sync --frozen --no-dev
 
 # --- Runtime Stage ---
-FROM python:{python_version}-slim-bookworm AS runtime
+FROM python:{spec.python_version}-slim-bookworm AS runtime
 
 WORKDIR /app
 

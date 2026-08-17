@@ -1,6 +1,7 @@
 import hashlib
 import tomllib
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -10,7 +11,7 @@ from protostar.errors import (
     FileSystemError,
 )
 from protostar.executor import SystemExecutor
-from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -283,7 +284,7 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
 def test_executor_writes_dockerfile_default(mocker, mock_config):
     """Test that the executor writes a multi-stage Dockerfile with default configuration."""
     manifest = EnvironmentManifest()
-    manifest.metadata = {"python_version": "3.12"}
+    manifest.metadata = cast(ProjectMetadata, {"python_version": "3.12"})
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
@@ -310,7 +311,9 @@ def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
     """Test that the executor writes an API-tailored Dockerfile when FastAPI/uvicorn is present."""
     manifest = EnvironmentManifest()
     manifest.dependencies = ["fastapi", "uvicorn"]
-    manifest.metadata = {"docker_port": "8080", "python_version": "3.13"}
+    manifest.metadata = cast(
+        ProjectMetadata, {"docker_port": "8080", "python_version": "3.13"}
+    )
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
@@ -676,12 +679,9 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
     # Use a parent mock to track chronological execution sequence across methods
     manager = mocker.Mock()
 
-    manager.attach_mock(mocker.patch.object(executor, "_execute_tasks"), "sys_tasks")
+    manager.attach_mock(mocker.patch.object(executor, "_run_tasks"), "run_tasks")
     manager.attach_mock(
         mocker.patch.object(executor, "_install_dependencies"), "install"
-    )
-    manager.attach_mock(
-        mocker.patch.object(executor, "_execute_post_install_tasks"), "post_install"
     )
 
     # Silence all other disk I/O mutations
@@ -698,22 +698,20 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
 
     # Filter calls to isolate our specific topological phases
     actual_calls = [
-        call
-        for call in manager.mock_calls
-        if call[0] in ("sys_tasks", "install", "post_install")
+        call for call in manager.mock_calls if call[0] in ("run_tasks", "install")
     ]
 
     expected_call_order = [
-        mocker.call.sys_tasks(),
+        mocker.call.run_tasks(manifest.system_tasks),
         mocker.call.install(),
-        mocker.call.post_install(),
+        mocker.call.run_tasks(manifest.post_install_tasks),
     ]
 
     assert actual_calls == expected_call_order
 
 
-def test_executor_execute_post_install_tasks(mocker, mock_config):
-    """Test that _execute_post_install_tasks iterates and calls execute_subprocess with boundaries."""
+def test_executor_run_tasks(mocker, mock_config):
+    """Test that _run_tasks iterates and calls execute_subprocess with boundaries."""
     manifest = EnvironmentManifest()
     manifest.add_post_install_task(["uv", "first_task"])
     manifest.add_post_install_task(["uv", "second_task"], timeout=45)
@@ -722,7 +720,7 @@ def test_executor_execute_post_install_tasks(mocker, mock_config):
 
     mock_execute = mocker.patch("protostar.executor.execute_subprocess")
 
-    executor._execute_post_install_tasks()
+    executor._run_tasks(manifest.post_install_tasks)
 
     assert mock_execute.call_count == 2
     mock_execute.assert_any_call(["uv", "first_task"], timeout=30)
@@ -741,10 +739,9 @@ def test_executor_uses_custom_task_description(mocker):
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
-    executor._execute_tasks()
+    executor._run_tasks(manifest.system_tasks)
 
-    # Verify the exact string was passed to the rich console status
-    mock_status.assert_called_once_with("Initializing git repo")
+    mock_status.assert_called_with("Initializing git repo")
 
 
 def test_executor_task_description_fallback(mocker):
@@ -758,7 +755,7 @@ def test_executor_task_description_fallback(mocker):
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
-    executor._execute_tasks()
+    executor._run_tasks(manifest.system_tasks)
 
     # Verify the fallback logic stripped the path and grabbed the binary name
     mock_status.assert_called_once_with("Propelling sequence: pre-commit")
@@ -909,7 +906,7 @@ def test_executor_interpolates_package_name_in_injected_files(
     """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into injected files and paths."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
-    manifest.metadata = {"project_name": "my-cool-tool"}
+    manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
     manifest.add_file_injection(
         "src/<% PACKAGE_NAME %>/__init__.py",
         '"""<% PROJECT_NAME %> package (<% PACKAGE_NAME %>)."""\n',
@@ -928,7 +925,7 @@ def test_executor_interpolates_package_name_in_directories(
     """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into created directories."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
-    manifest.metadata = {"project_name": "my-cool-tool"}
+    manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
     manifest.add_directory("src/<% PACKAGE_NAME %>")
     executor = SystemExecutor(manifest, mock_config)
     executor._create_directories()
@@ -942,7 +939,7 @@ def test_executor_interpolates_package_name_in_file_appends(
     """Test that <% PACKAGE_NAME %> and <% PROJECT_NAME %> are interpolated into TOML and text file appends."""
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
-    manifest.metadata = {"project_name": "my-cool-tool"}
+    manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
     manifest.add_file_append(
         "pyproject.toml",
         '[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"\n',

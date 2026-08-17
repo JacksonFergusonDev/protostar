@@ -15,11 +15,14 @@ from .errors import (
 from .fs import atomic_write_text
 from .ide import check_ide_extensions, write_ide_settings
 from .interpolation import render_template
-from .manifest import CollisionStrategy, EnvironmentManifest
+from .manifest import CollisionStrategy, EnvironmentManifest, SystemTask
 from .security import enforce_binary_safelist, enforce_path_jail
 from .system import execute_subprocess
 from .toml_ast import merge_toml_payloads
 from .workflows import (
+    CIWorkflowSpec,
+    DockerfileSpec,
+    JustfileSpec,
     generate_ci_workflow,
     generate_dockerfile,
     generate_dockerignore,
@@ -90,13 +93,13 @@ class SystemExecutor:
         self._write_ci_workflow()
         self._write_release_workflow()
         self._write_justfile()
-        self._execute_tasks()
+        self._run_tasks(self.manifest.system_tasks)
         self._install_dependencies()
         self._append_files()
         self._write_ignores()
         self._write_docker_artifacts()
         self._write_ide_settings()
-        self._execute_post_install_tasks()
+        self._run_tasks(self.manifest.post_install_tasks)
         self._check_ide_extensions()
 
     def _check_ide_extensions(self) -> None:
@@ -203,18 +206,9 @@ class SystemExecutor:
                 ) from e
             logger.debug(f"Scaffolded directory: {path}")
 
-    def _execute_tasks(self) -> None:
-        """Runs the accumulated system tasks (e.g., initialization commands)."""
-        for task in self.manifest.system_tasks:
-            enforce_binary_safelist(task.command)
-            binary_name = Path(task.command[0]).name
-            msg = task.description or f"Propelling sequence: {binary_name}"
-            with console.status(msg):
-                execute_subprocess(task.command, timeout=task.timeout)
-
-    def _execute_post_install_tasks(self) -> None:
-        """Runs accumulated tasks that require dependencies to be installed first."""
-        for task in self.manifest.post_install_tasks:
+    def _run_tasks(self, tasks: list[SystemTask]) -> None:
+        """Runs a sequence of system tasks (e.g., initialization or post-install commands)."""
+        for task in tasks:
             enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
@@ -227,10 +221,12 @@ class SystemExecutor:
             return
 
         workflow = generate_ci_workflow(
-            supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
-            min_python=self.manifest.metadata.get("minimum_python", "3.13"),
-            ci_flags=self.manifest.ci_flags,
-            ci_steps=self.manifest.ci_steps,
+            CIWorkflowSpec(
+                supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
+                min_python=self.manifest.metadata.get("minimum_python", "3.13"),
+                ci_flags=self.manifest.ci_flags,
+                ci_steps=self.manifest.ci_steps,
+            )
         )
         target = Path(".github/workflows/ci.yml")
         enforce_path_jail(target, Path.cwd())
@@ -259,11 +255,13 @@ class SystemExecutor:
             return
 
         full_content = generate_justfile(
-            format_commands=self.manifest.just_format_commands,
-            lint_commands=self.manifest.just_lint_commands,
-            typecheck_commands=self.manifest.just_typecheck_commands,
-            ci_flags=self.manifest.ci_flags,
-            clean_paths=self.manifest.just_clean_paths,
+            JustfileSpec(
+                format_commands=self.manifest.just_format_commands,
+                lint_commands=self.manifest.just_lint_commands,
+                typecheck_commands=self.manifest.just_typecheck_commands,
+                ci_flags=self.manifest.ci_flags,
+                clean_paths=self.manifest.just_clean_paths,
+            )
         )
         atomic_write_text(target, full_content)
         self.manifest.record_touch(target)
@@ -412,12 +410,14 @@ class SystemExecutor:
                     else None
                 )
                 dockerfile_content = generate_dockerfile(
-                    python_version=context["PYTHON_VERSION"],
-                    project_name=context["PROJECT_NAME"],
-                    package_name=context["PACKAGE_NAME"],
-                    dependencies=self.manifest.dependencies,
-                    docker_port=docker_port,
-                    is_script_or_typer=is_script_or_typer,
+                    DockerfileSpec(
+                        python_version=context["PYTHON_VERSION"],
+                        project_name=context["PROJECT_NAME"],
+                        package_name=context["PACKAGE_NAME"],
+                        dependencies=self.manifest.dependencies,
+                        docker_port=docker_port,
+                        is_script_or_typer=is_script_or_typer,
+                    )
                 )
                 atomic_write_text(dockerfile, dockerfile_content)
                 self.manifest.record_touch(dockerfile)

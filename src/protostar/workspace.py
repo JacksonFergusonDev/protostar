@@ -2,12 +2,13 @@
 
 import re
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 
 def resolve_python_version(
-    metadata: dict[str, Any] | None = None,
+    metadata: Mapping[str, Any] | None = None,
     pyproject_path: Path | None = None,
     default: str | None = None,
 ) -> str:
@@ -85,7 +86,7 @@ def sanitize_package_name(name: str) -> str:
 
 
 def resolve_project_name(
-    metadata: dict[str, Any] | None = None,
+    metadata: Mapping[str, Any] | None = None,
     pyproject_path: Path | None = None,
     default: str | None = None,
 ) -> str:
@@ -122,7 +123,7 @@ def resolve_project_name(
 
 
 def resolve_package_name(
-    metadata: dict[str, Any] | None = None,
+    metadata: Mapping[str, Any] | None = None,
     pyproject_path: Path | None = None,
     default: str | None = None,
 ) -> str:

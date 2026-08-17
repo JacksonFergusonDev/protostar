@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 from rich.console import Console
 from rich.panel import Panel
@@ -11,7 +11,7 @@ from .errors import (
     ProtostarError,
 )
 from .executor import SystemExecutor
-from .manifest import CollisionStrategy, EnvironmentManifest, Severity
+from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata, Severity
 from .modules import BootstrapModule
 from .system import is_interactive
 
@@ -193,7 +193,7 @@ class Orchestrator:
 
         # Phase 3: Manifest Aggregation
         if self.metadata:
-            self.manifest.metadata.update(self.metadata)
+            self.manifest.metadata.update(cast(ProjectMetadata, self.metadata))
 
         for mod in self.modules:
             mod.build(self.manifest)

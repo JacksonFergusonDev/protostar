@@ -1,4 +1,7 @@
 from protostar.workflows import (
+    CIWorkflowSpec,
+    DockerfileSpec,
+    JustfileSpec,
     generate_ci_workflow,
     generate_dockerfile,
     generate_dockerignore,
@@ -71,10 +74,12 @@ def test_generate_pre_commit_config_mypy_dependencies_interpolation():
 
 def test_generate_ci_workflow_default():
     content = generate_ci_workflow(
-        supported_os=["Linux"],
-        min_python="3.13",
-        ci_flags=set(),
-        ci_steps=[],
+        CIWorkflowSpec(
+            supported_os=["Linux"],
+            min_python="3.13",
+            ci_flags=set(),
+            ci_steps=[],
+        )
     )
     assert 'os: ["ubuntu-latest"]' in content
     assert '"3.13"' in content
@@ -84,10 +89,12 @@ def test_generate_ci_workflow_default():
 
 def test_generate_ci_workflow_matrix():
     content = generate_ci_workflow(
-        supported_os=["Linux", "MacOS", "Windows"],
-        min_python="3.11",
-        ci_flags=set(),
-        ci_steps=[],
+        CIWorkflowSpec(
+            supported_os=["Linux", "MacOS", "Windows"],
+            min_python="3.11",
+            ci_flags=set(),
+            ci_steps=[],
+        )
     )
     assert '"ubuntu-latest"' in content
     assert '"macos-latest"' in content
@@ -100,20 +107,24 @@ def test_generate_ci_workflow_matrix():
 def test_generate_ci_workflow_pytest_and_codecov():
     # Pytest alone
     content_pytest = generate_ci_workflow(
-        supported_os=["Linux"],
-        min_python="3.13",
-        ci_flags={"pytest"},
-        ci_steps=[],
+        CIWorkflowSpec(
+            supported_os=["Linux"],
+            min_python="3.13",
+            ci_flags={"pytest"},
+            ci_steps=[],
+        )
     )
     assert "Run Tests" in content_pytest
     assert "Upload coverage to Codecov" not in content_pytest
 
     # Pytest with Codecov
     content_codecov = generate_ci_workflow(
-        supported_os=["Linux", "MacOS"],
-        min_python="3.12",
-        ci_flags={"pytest", "codecov"},
-        ci_steps=["      - name: Lint\n        run: uv run ruff check"],
+        CIWorkflowSpec(
+            supported_os=["Linux", "MacOS"],
+            min_python="3.12",
+            ci_flags={"pytest", "codecov"},
+            ci_steps=["      - name: Lint\n        run: uv run ruff check"],
+        )
     )
     assert "Run tests with coverage # (for Codecov)" in content_codecov
     assert "Upload coverage to Codecov" in content_codecov
@@ -134,11 +145,13 @@ def test_generate_release_workflow():
 
 def test_generate_justfile():
     content = generate_justfile(
-        format_commands=["uv run ruff format src tests"],
-        lint_commands=["uv run ruff check src tests"],
-        typecheck_commands=["uv run mypy ."],
-        ci_flags={"pytest", "zensical"},
-        clean_paths=["dist", "build"],
+        JustfileSpec(
+            format_commands=["uv run ruff format src tests"],
+            lint_commands=["uv run ruff check src tests"],
+            typecheck_commands=["uv run mypy ."],
+            ci_flags={"pytest", "zensical"},
+            clean_paths=["dist", "build"],
+        )
     )
     assert "format: sync" in content
     assert "uv run ruff format src tests" in content
@@ -176,21 +189,27 @@ def test_generate_dockerignore_fresh_and_existing():
 def test_generate_dockerfile_variants():
     # Default variant
     df_default = generate_dockerfile(
-        python_version="3.13",
-        project_name="my-app",
-        package_name="my_app",
-        dependencies=["rich"],
+        DockerfileSpec(
+            python_version="3.13",
+            project_name="my-app",
+            package_name="my_app",
+            dependencies=["rich"],
+            is_script_or_typer=False,
+        )
     )
     assert 'CMD ["python", "-m", "my_app"]' in df_default
     assert "FROM python:3.13-slim-bookworm AS runtime" in df_default
 
     # FastAPI variant
     df_fastapi = generate_dockerfile(
-        python_version="3.13",
-        project_name="api-server",
-        package_name="api_server",
-        dependencies=["fastapi", "uvicorn"],
-        docker_port="8080",
+        DockerfileSpec(
+            python_version="3.13",
+            project_name="api-server",
+            package_name="api_server",
+            dependencies=["fastapi", "uvicorn"],
+            docker_port="8080",
+            is_script_or_typer=False,
+        )
     )
     assert "EXPOSE 8080" in df_fastapi
     assert (
@@ -200,11 +219,13 @@ def test_generate_dockerfile_variants():
 
     # Typer / script variant
     df_cli = generate_dockerfile(
-        python_version="3.13",
-        project_name="my-cli",
-        package_name="my_cli",
-        dependencies=["typer"],
-        is_script_or_typer=True,
+        DockerfileSpec(
+            python_version="3.13",
+            project_name="my-cli",
+            package_name="my_cli",
+            dependencies=["typer"],
+            is_script_or_typer=True,
+        )
     )
     assert 'ENTRYPOINT ["my-cli"]' in df_cli
 

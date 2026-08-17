@@ -44,8 +44,8 @@
                 "config-git",
                 "--enable"
             ],
-            "timeout": 30,
-            "description": null
+            "description": null,
+            "timeout": 30
         }
     ],
     "directories": [
