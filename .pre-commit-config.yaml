@@ -1,15 +1,15 @@
 repos:
   # Generic hooks (configured to IGNORE Python)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+  - repo: builtin
     hooks:
       - id: trailing-whitespace
         exclude: \.py$
       - id: end-of-file-fixer
         exclude: \.py$
       - id: check-yaml
-        args: [--unsafe]
       - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-toml
 
   # Local Python Toolchain (Managed via uv.lock)
   - repo: local
@@ -19,14 +19,14 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
-        require_serial: true
+        pass_filenames: false
 
       - id: ruff-format
         name: ruff format
         entry: uv run ruff format
         language: system
         types: [python]
-        require_serial: true
+        pass_filenames: false
 
       - id: mypy
         name: mypy
