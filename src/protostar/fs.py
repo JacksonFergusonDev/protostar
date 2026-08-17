@@ -34,11 +34,13 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
             os.fsync(temp_file.fileno())
         os.replace(temp_path, path)
     except Exception as e:
-        with suppress(OSError):
-            temp_path.unlink()
         if isinstance(e, FileSystemError):
             raise
         raise FileSystemError("write file", str(path), e) from e
+    finally:
+        if temp_path.exists():
+            with suppress(OSError):
+                temp_path.unlink()
 
 
 def safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
