@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787004136241,
+  "lastUpdate": 1787005803396,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6737,6 +6737,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 207.25,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0c0ed875447b7408c53a51d5edda14d5ceb87ee6",
+          "message": "refactor: executor cleanup and boundary type hardening (PR 5) (#179)\n\n* refactor(executor): consolidate task execution logic and update documentation\n\n* refactor(typing): harden type boundaries in codegen and manifest\n\n* chore: accept fixture drift due to SystemTask attribute ordering",
+          "timestamp": "2026-08-17T15:28:59-07:00",
+          "tree_id": "725fc5c254f7d955f742321dee657ed6ddd0aede",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0c0ed875447b7408c53a51d5edda14d5ceb87ee6"
+        },
+        "date": 1787005802338,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 145.2,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 211.96,
             "unit": "ms"
           }
         ]
