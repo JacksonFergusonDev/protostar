@@ -194,7 +194,7 @@ def test_write_ide_settings_merge(tmp_path: Path, monkeypatch):
     touched = []
 
     write_ide_settings(
-        ide_settings={
+        ide_settings={  # type: ignore
             "files.exclude": {"**/.venv": True},
             "new.key": "new_value",
         },
@@ -223,7 +223,7 @@ def test_write_ide_settings_empty_file(tmp_path: Path, monkeypatch):
     touched = []
 
     write_ide_settings(
-        ide_settings={"files.exclude": {"**/.venv": True}},
+        ide_settings={"files.exclude": {"**/.venv": True}},  # type: ignore
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
         on_record_touch=lambda p: touched.append(p),
     )
@@ -285,7 +285,7 @@ def test_write_ide_settings_handles_read_os_error(mocker):
 
     with pytest.raises(FileSystemError) as exc_info:
         write_ide_settings(
-            ide_settings={"foo": "bar"},
+            ide_settings={"foo": "bar"},  # type: ignore
             on_diagnostic=lambda msg, sev: None,
             on_record_touch=lambda p: None,
         )
@@ -304,7 +304,7 @@ def test_write_ide_settings_handles_write_os_error(mocker):
 
     with pytest.raises(FileSystemError) as exc_info:
         write_ide_settings(
-            ide_settings={"foo": "bar"},
+            ide_settings={"foo": "bar"},  # type: ignore
             on_diagnostic=lambda msg, sev: None,
             on_record_touch=lambda p: None,
         )

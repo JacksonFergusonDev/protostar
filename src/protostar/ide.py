@@ -9,7 +9,7 @@ from typing import Any
 
 from .errors import FileSystemError
 from .fs import atomic_write_text
-from .manifest import Severity
+from .manifest import IDESettings, Severity
 
 __all__ = ["check_ide_extensions", "write_ide_settings"]
 
@@ -73,7 +73,7 @@ def check_ide_extensions(
 
 
 def write_ide_settings(
-    ide_settings: dict[str, Any],
+    ide_settings: IDESettings,
     on_diagnostic: Callable[[str, Severity], None],
     on_record_touch: Callable[[Path], None],
 ) -> None:

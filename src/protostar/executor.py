@@ -20,6 +20,9 @@ from .security import enforce_binary_safelist, enforce_path_jail
 from .system import execute_subprocess
 from .toml_ast import merge_toml_payloads
 from .workflows import (
+    CIWorkflowSpec,
+    DockerfileSpec,
+    JustfileSpec,
     generate_ci_workflow,
     generate_dockerfile,
     generate_dockerignore,
@@ -218,10 +221,12 @@ class SystemExecutor:
             return
 
         workflow = generate_ci_workflow(
-            supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
-            min_python=self.manifest.metadata.get("minimum_python", "3.13"),
-            ci_flags=self.manifest.ci_flags,
-            ci_steps=self.manifest.ci_steps,
+            CIWorkflowSpec(
+                supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
+                min_python=self.manifest.metadata.get("minimum_python", "3.13"),
+                ci_flags=self.manifest.ci_flags,
+                ci_steps=self.manifest.ci_steps,
+            )
         )
         target = Path(".github/workflows/ci.yml")
         enforce_path_jail(target, Path.cwd())
@@ -250,11 +255,13 @@ class SystemExecutor:
             return
 
         full_content = generate_justfile(
-            format_commands=self.manifest.just_format_commands,
-            lint_commands=self.manifest.just_lint_commands,
-            typecheck_commands=self.manifest.just_typecheck_commands,
-            ci_flags=self.manifest.ci_flags,
-            clean_paths=self.manifest.just_clean_paths,
+            JustfileSpec(
+                format_commands=self.manifest.just_format_commands,
+                lint_commands=self.manifest.just_lint_commands,
+                typecheck_commands=self.manifest.just_typecheck_commands,
+                ci_flags=self.manifest.ci_flags,
+                clean_paths=self.manifest.just_clean_paths,
+            )
         )
         atomic_write_text(target, full_content)
         self.manifest.record_touch(target)
@@ -403,12 +410,14 @@ class SystemExecutor:
                     else None
                 )
                 dockerfile_content = generate_dockerfile(
-                    python_version=context["PYTHON_VERSION"],
-                    project_name=context["PROJECT_NAME"],
-                    package_name=context["PACKAGE_NAME"],
-                    dependencies=self.manifest.dependencies,
-                    docker_port=docker_port,
-                    is_script_or_typer=is_script_or_typer,
+                    DockerfileSpec(
+                        python_version=context["PYTHON_VERSION"],
+                        project_name=context["PROJECT_NAME"],
+                        package_name=context["PACKAGE_NAME"],
+                        dependencies=self.manifest.dependencies,
+                        docker_port=docker_port,
+                        is_script_or_typer=is_script_or_typer,
+                    )
                 )
                 atomic_write_text(dockerfile, dockerfile_content)
                 self.manifest.record_touch(dockerfile)

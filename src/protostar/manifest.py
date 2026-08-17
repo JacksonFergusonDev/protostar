@@ -1,7 +1,7 @@
 import enum
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, TypedDict, cast
 
 
 class Severity(enum.Enum):
@@ -25,38 +25,71 @@ class DiagnosticEvent:
 
     phase: str
     message: str
-    severity: Severity = Severity.INFO
+    severity: Severity
     detail: str | None = None
 
 
+class SystemTask:
+    """A deferred shell command execution directive.
+
+    Attributes:
+        command: A list of strings representing the command and its arguments.
+        description: An optional human-readable message to display during execution.
+        timeout: An optional maximum execution time in seconds.
+    """
+
+    def __init__(
+        self,
+        command: list[str],
+        description: str | None = None,
+        timeout: int | None = None,
+    ) -> None:
+        self.command = command
+        self.description = description
+        self.timeout = timeout
+
+
 class CollisionStrategy(enum.Enum):
-    """Enumeration of strategies for resolving state collisions during realization."""
+    """Enumeration of execution routes for intersecting files."""
 
     MERGE = "merge"
     OVERWRITE = "overwrite"
     ABORT = "abort"
 
 
-@dataclass
-class SystemTask:
-    """A shell command with an associated execution timeout limit.
+class ProjectMetadata(TypedDict, total=False):
+    """Strict typing for project metadata fields."""
 
-    Attributes:
-        command: The command and its arguments as a list of strings.
-        timeout: The maximum execution time in seconds, or None for no limit.
-        description: An optional human-readable description for the terminal UI.
-    """
+    description: str
+    license: str
+    author_name: str
+    author_email: str
+    github_username: str
+    minimum_python: str
+    supported_os: list[str]
+    docker_port: int | str
 
-    command: list[str]
-    timeout: int | None = None
-    description: str | None = None
+
+IDESettings = TypedDict(
+    "IDESettings",
+    {
+        "python.defaultInterpreterPath": str,
+        "python.terminal.activateEnvironment": bool,
+    },
+    total=False,
+)
+
+IDESettingKey = Literal[
+    "python.defaultInterpreterPath",
+    "python.terminal.activateEnvironment",
+]
 
 
 @dataclass
 class EnvironmentManifest:
-    """Centralized state object holding the aggregate environment requirements.
+    """The materialized build state of the target environment.
 
-    Modules append to this manifest during the build phase. The orchestrator
+    Modules mutate this declarative object rather than the host system directly. The Executor
     subsequently reads this object to execute the unified system changes.
 
     Attributes:
@@ -89,7 +122,7 @@ class EnvironmentManifest:
 
     vcs_ignores: set[str] = field(default_factory=set)
     workspace_hides: set[str] = field(default_factory=set)
-    ide_settings: dict[str, Any] = field(default_factory=dict)
+    ide_settings: IDESettings = field(default_factory=lambda: cast(IDESettings, {}))
     dependencies: list[str] = field(default_factory=list)
     dev_dependencies: list[str] = field(default_factory=list)
     docs_dependencies: list[str] = field(default_factory=list)
@@ -102,7 +135,7 @@ class EnvironmentManifest:
     wants_prek: bool = False
     pre_commit_hooks: list[str] = field(default_factory=list)
     pre_commit_local_hooks: list[str] = field(default_factory=list)
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: ProjectMetadata = field(default_factory=lambda: cast(ProjectMetadata, {}))
     wants_ci: bool = False
     wants_release: bool = False
     ci_flags: set[str] = field(default_factory=set)
@@ -152,7 +185,7 @@ class EnvironmentManifest:
         self.add_vcs_ignore(path)
         self.add_workspace_hide(path)
 
-    def add_ide_setting(self, key: str, value: Any) -> None:
+    def add_ide_setting(self, key: IDESettingKey, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
 
