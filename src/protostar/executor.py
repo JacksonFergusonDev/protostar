@@ -1,10 +1,7 @@
 import datetime
 import hashlib
-import json
 import logging
 import re
-import shutil
-import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -12,16 +9,16 @@ from typing import Any
 from rich.console import Console
 
 from .config import UserConfig
+from .dependencies import install_dependencies
 from .errors import (
-    CommandExecutionError,
-    CommandTimeoutError,
     ConfigurationError,
     FileSystemError,
-    SecurityViolationError,
 )
 from .fs import atomic_write_text
+from .ide import check_ide_extensions, write_ide_settings
 from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, Severity
+from .security import enforce_binary_safelist, enforce_path_jail
 from .system import execute_subprocess
 from .workspace import (
     generate_python_version_range,
@@ -75,29 +72,6 @@ class SystemExecutor:
     #   4. Dependency Resolution: `uv add` runs before post-install tasks so installed binaries
     #      are present in `.venv/bin`.
     #   5. IDE Diagnostics: Runs last as non-blocking telemetry warnings.
-    def _enforce_path_jail(self, target_path: Path) -> None:
-        """Ensures no file operations escape the current workspace."""
-        resolved_target = target_path.resolve()
-        resolved_cwd = Path.cwd().resolve()
-
-        if not resolved_target.is_relative_to(resolved_cwd):
-            raise SecurityViolationError(
-                f"SECURITY VIOLATION: Template attempted to write outside the workspace: {target_path}"
-            )
-
-    def _enforce_binary_safelist(self, command: list[str]) -> None:
-        """Prevents templates from invoking arbitrary shells or interpreters."""
-        if not command:
-            return
-
-        allowed_binaries = {"uv", "git", "npm", "yarn", "pnpm", "pre-commit", "direnv"}
-        binary = Path(command[0]).name.lower()
-
-        if binary not in allowed_binaries:
-            raise SecurityViolationError(
-                f"SECURITY VIOLATION: Templates cannot directly invoke arbitrary binaries ({command[0]}). Allowed: {', '.join(sorted(allowed_binaries))}"
-            )
-
     def _get_comment_markers(self, filepath: Path) -> tuple[str, str]:
         """Returns the appropriate comment syntax (start, end) for a given file extension."""
         ext = filepath.suffix.lower()
@@ -178,51 +152,15 @@ class SystemExecutor:
         Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
         diagnostic only on a successful check that uncovers missing extensions.
         """
-        if not self.manifest.ide_extensions or self.config.ide not in (
-            "vscode",
-            "cursor",
-        ):
-            return
-
-        binary_map = {"vscode": "code", "cursor": "cursor"}
-        ide_binary = binary_map[self.config.ide]
-
-        if not shutil.which(ide_binary):
-            return
-
-        try:
-            result = subprocess.run(
-                [ide_binary, "--list-extensions"],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=5,
-            )
-            # Normalize to lowercase for safe diffing
-            installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
-            missing = []
-
-            for ext_req in self.manifest.ide_extensions:
-                if isinstance(ext_req, tuple):
-                    if not any(e.lower() in installed for e in ext_req):
-                        missing.append(f"{' or '.join(ext_req)}")
-                else:
-                    if ext_req.lower() not in installed:
-                        missing.append(ext_req)
-
-            if missing:
-                self.manifest.add_diagnostic(
-                    phase="IDE",
-                    message=f"Missing recommended {self.config.ide} extensions: {', '.join(missing)}",
-                    severity=Severity.WARNING,
-                )
-        except Exception as e:
-            # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
-            self.manifest.add_diagnostic(
+        check_ide_extensions(
+            ide=self.config.ide,
+            ide_extensions=self.manifest.ide_extensions,
+            on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
                 phase="IDE",
-                message=f"IDE extension verification skipped due to an unexpected error: {e}",
-                severity=Severity.SKIP,
-            )
+                message=msg,
+                severity=sev,
+            ),
+        )
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.
@@ -321,7 +259,7 @@ class SystemExecutor:
             )
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
-            self._enforce_path_jail(target)
+            enforce_path_jail(target, Path.cwd())
             if not self.manifest.should_skip_file(target, phase="Executor"):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -341,7 +279,7 @@ class SystemExecutor:
         for dir_path in self.manifest.directories:
             interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
-            self._enforce_path_jail(path)
+            enforce_path_jail(path, Path.cwd())
             try:
                 path.mkdir(parents=True, exist_ok=True)
                 self.manifest.record_touch(path)
@@ -354,7 +292,7 @@ class SystemExecutor:
     def _execute_tasks(self) -> None:
         """Runs the accumulated system tasks (e.g., initialization commands)."""
         for task in self.manifest.system_tasks:
-            self._enforce_binary_safelist(task.command)
+            enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
@@ -363,7 +301,7 @@ class SystemExecutor:
     def _execute_post_install_tasks(self) -> None:
         """Runs accumulated tasks that require dependencies to be installed first."""
         for task in self.manifest.post_install_tasks:
-            self._enforce_binary_safelist(task.command)
+            enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
             with console.status(msg):
@@ -934,7 +872,7 @@ jobs:
 
         for filepath, contents in self.manifest.file_appends.items():
             target = Path(filepath)
-            self._enforce_path_jail(target)
+            enforce_path_jail(target, Path.cwd())
 
             try:
                 original_content = target.read_text() if target.exists() else ""
@@ -1199,85 +1137,26 @@ ENV PYTHONUNBUFFERED=1
 
     def _write_ide_settings(self) -> None:
         """Writes the aggregated IDE configuration to the appropriate local files."""
-        if not self.manifest.ide_settings:
-            return
-
-        vscode_dir = Path(".vscode")
-        settings_path = vscode_dir / "settings.json"
-        settings = {}
-
-        if settings_path.exists():
-            try:
-                original_content = settings_path.read_text()
-                if original_content.strip():
-                    parsed_data = json.loads(original_content)
-                    if not isinstance(parsed_data, dict):
-                        self.manifest.add_diagnostic(
-                            phase="Executor",
-                            message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                            severity=Severity.WARNING,
-                        )
-                        return
-                    settings = parsed_data
-            except json.JSONDecodeError:
-                self.manifest.add_diagnostic(
-                    phase="Executor",
-                    message="Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                    severity=Severity.WARNING,
-                )
-                return
-            except OSError as e:
-                raise FileSystemError(
-                    "inspect active IDE settings files", str(settings_path), e
-                ) from e
-
-        # 1-level deep dictionary merge
-        for key, value in self.manifest.ide_settings.items():
-            if isinstance(value, dict) and isinstance(settings.get(key), dict):
-                settings[key].update(value)
-            else:
-                settings[key] = value
-
-        try:
-            vscode_dir.mkdir(exist_ok=True)
-            atomic_write_text(settings_path, json.dumps(settings, indent=4) + "\n")
-            self.manifest.record_touch(settings_path)
-        except OSError as e:
-            raise FileSystemError(
-                "synchronize IDE workspace preferences", str(settings_path), e
-            ) from e
-
-    def _install_group(self, packages: list[str], args: list[str], label: str) -> None:
-        if not packages:
-            return
-
-        cmd = ["uv", "add", *args, *packages]
-        try:
-            with console.status(
-                f"Resolving and installing {len(packages)} {label} payloads"
-            ):
-                execute_subprocess(cmd, timeout=600)
-        except (CommandExecutionError, CommandTimeoutError) as e:
-            self.manifest.add_diagnostic(
+        write_ide_settings(
+            ide_settings=self.manifest.ide_settings,
+            on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
                 phase="Executor",
-                message=f"{label.capitalize()} dependency resolution failed: {e}",
-                severity=Severity.WARNING,
-                detail=e.output_detail
-                if isinstance(e, CommandExecutionError)
-                else None,
-            )
+                message=msg,
+                severity=sev,
+            ),
+            on_record_touch=self.manifest.record_touch,
+        )
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
-        if (
-            not self.manifest.dependencies
-            and not self.manifest.dev_dependencies
-            and not self.manifest.docs_dependencies
-        ):
-            return
-
-        self._install_group(self.manifest.dependencies, [], "standard")
-        self._install_group(self.manifest.dev_dependencies, ["--dev"], "development")
-        self._install_group(
-            self.manifest.docs_dependencies, ["--group", "docs"], "documentation"
+        install_dependencies(
+            dependencies=self.manifest.dependencies,
+            dev_dependencies=self.manifest.dev_dependencies,
+            docs_dependencies=self.manifest.docs_dependencies,
+            on_diagnostic=lambda msg, sev, detail: self.manifest.add_diagnostic(
+                phase="Executor",
+                message=msg,
+                severity=sev,
+                detail=detail,
+            ),
         )

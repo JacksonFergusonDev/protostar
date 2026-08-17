@@ -1,17 +1,12 @@
 import hashlib
-import json
-import subprocess
 import tomllib
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 import tomlkit
 
 from protostar.config import UserConfig
 from protostar.errors import (
-    CommandExecutionError,
-    CommandTimeoutError,
     ConfigurationError,
     FileSystemError,
 )
@@ -41,24 +36,6 @@ def test_executor_writes_injected_files(mocker, mock_config):
 
     mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "mock content")
-
-
-def test_executor_install_dependencies_uv(mocker, mock_config):
-    """Test that the executor uses uv add --dev for dev dependencies and applies network timeouts."""
-    manifest = EnvironmentManifest()
-    manifest.add_dependency("fastapi")
-    manifest.add_dev_dependency("pytest")
-
-    mock_config.python_package_manager = "uv"
-    executor = SystemExecutor(manifest, mock_config)
-
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-
-    executor._install_dependencies()
-
-    mock_execute.assert_any_call(["uv", "add", "fastapi"], timeout=600)
-    mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"], timeout=600)
 
 
 def test_executor_append_files_late_binding(mocker, mock_config):
@@ -273,31 +250,6 @@ def test_executor_writes_gitignore(mocker, mock_config):
     )
 
 
-def test_executor_writes_vscode_settings(mocker, mock_config):
-    """Test that IDE settings merge correctly with existing JSON."""
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-    executor = SystemExecutor(manifest, mock_config)
-
-    existing_settings = {"files.exclude": {"**/node_modules": True}}
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch(
-        "protostar.executor.Path.read_text",
-        return_value=json.dumps(existing_settings),
-    )
-    mock_write_text = mocker.patch("protostar.executor.atomic_write_text")
-    mocker.patch("protostar.executor.Path.mkdir")
-
-    executor._write_ide_settings()
-
-    written_data = mock_write_text.call_args[0][1]
-    parsed_write = json.loads(written_data)
-
-    assert "**/.venv" in parsed_write["files.exclude"]
-    assert "**/node_modules" in parsed_write["files.exclude"]
-
-
 def test_executor_creates_directories(mocker, mock_config):
     """Test that the executor generates all requested workspace directories."""
     manifest = EnvironmentManifest()
@@ -438,30 +390,6 @@ def test_write_dockerfile_handles_os_error(mocker, mock_config):
         in exc_info.value.operation
     )
     assert "Dockerfile" in exc_info.value.path
-
-
-def test_executor_writes_vscode_settings_jsonc_abort(
-    monkeypatch, mocker, tmp_path, mock_config
-):
-    """Test that IDE settings injection safely aborts if existing JSON has comments."""
-    monkeypatch.chdir(tmp_path)
-
-    vscode_dir = tmp_path / ".vscode"
-    vscode_dir.mkdir()
-    settings_file = vscode_dir / "settings.json"
-    settings_file.write_text("// My custom comment\n{}")
-
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-    executor = SystemExecutor(manifest, mock_config)
-
-    executor._write_ide_settings()
-
-    assert any(
-        "is malformed" in d.message
-        for d in executor.manifest.diagnostics
-        if d.severity == Severity.WARNING
-    )
 
 
 def test_executor_writes_injected_files_overwrite(mocker, mock_config):
@@ -804,32 +732,6 @@ def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
     mock_exists.assert_not_called()
 
 
-def test_executor_install_dependencies_graceful_degradation_uv(mocker, mock_config):
-    """Test that uv resolution failures are appended to warnings without aborting."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["invalid-pkg"]
-    manifest.dev_dependencies = ["invalid-dev-pkg"]
-
-    executor = SystemExecutor(manifest, mock_config)
-
-    # Use the specific domain error the executor is now expecting
-    mocker.patch(
-        "protostar.executor.execute_subprocess",
-        side_effect=CommandExecutionError(
-            command=["uv", "add", "invalid-pkg"],
-            returncode=1,
-            stdout="Error: failed to resolve",
-            stderr="Package not found",
-        ),
-    )
-
-    executor._install_dependencies()
-
-    assert len(manifest.diagnostics) == 2
-    assert "Standard dependency resolution failed" in manifest.diagnostics[0].message
-    assert manifest.diagnostics[0].severity == Severity.WARNING
-
-
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
     """Test that the string fallback successfully appends missing payloads wrapped in hash markers."""
     manifest = EnvironmentManifest()
@@ -920,51 +822,6 @@ def test_executor_append_files_early_return(mocker, mock_config):
     executor._append_files()
 
     mock_exists.assert_not_called()
-
-
-def test_executor_writes_vscode_settings_empty_file(monkeypatch, tmp_path, mock_config):
-    """Test that an entirely empty settings.json file is safely initialized as a dictionary."""
-    import json
-
-    monkeypatch.chdir(tmp_path)
-
-    vscode_dir = tmp_path / ".vscode"
-    vscode_dir.mkdir()
-    settings_file = vscode_dir / "settings.json"
-    settings_file.write_text("   \n  \t")  # Empty except for whitespace
-
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-    executor = SystemExecutor(manifest, mock_config)
-
-    executor._write_ide_settings()
-
-    written_data = json.loads(settings_file.read_text())
-    assert "**/.venv" in written_data["files.exclude"]
-
-
-def test_executor_writes_vscode_settings_root_not_dict(
-    monkeypatch, mocker, tmp_path, mock_config
-):
-    """Test that a settings.json file containing a non-dict primitive triggers the abort sequence."""
-    monkeypatch.chdir(tmp_path)
-
-    vscode_dir = tmp_path / ".vscode"
-    vscode_dir.mkdir()
-    settings_file = vscode_dir / "settings.json"
-    settings_file.write_text('["I am an array, not a dictionary"]')
-
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("files.exclude", {"**/.venv": True})
-    executor = SystemExecutor(manifest, mock_config)
-
-    executor._write_ide_settings()
-
-    warnings = [
-        d for d in executor.manifest.diagnostics if d.severity == Severity.WARNING
-    ]
-    assert len(warnings) == 1
-    assert "is malformed" in warnings[0].message
 
 
 def test_executor_lifecycle_ordering(mocker, mock_config):
@@ -1080,134 +937,6 @@ def test_executor_toml_merge_type_collision() -> None:
     assert warning.severity == Severity.WARNING
     assert warning.phase == "Executor"
     assert "TOML Merge Collision" in warning.message
-
-
-def test_executor_skips_malformed_ide_settings(tmp_path, monkeypatch) -> None:
-    monkeypatch.chdir(tmp_path)
-
-    # Queue up an IDE setting injection
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("python.defaultInterpreterPath", "/fake/path")
-
-    # Create a malformed JSON file
-    vscode_dir = tmp_path / ".vscode"
-    vscode_dir.mkdir()
-    settings_file = vscode_dir / "settings.json"
-    settings_file.write_text("{ broken_json: true, }")
-
-    executor = SystemExecutor(manifest, UserConfig())
-    executor._write_ide_settings()
-
-    assert len(manifest.diagnostics) == 1
-    warning = manifest.diagnostics[0]
-    assert warning.severity == Severity.WARNING
-    assert "is malformed" in warning.message
-    assert "Skipping IDE settings injection" in warning.message
-
-
-@pytest.fixture
-def ide_manifest():
-    """Fixture providing a manifest seeded with extension IDs."""
-    manifest = EnvironmentManifest()
-    manifest.ide_extensions = {"charliermarsh.ruff", "ms-python.mypy-type-checker"}
-    return manifest
-
-
-def test_ide_extension_check_bypassed_if_wrong_ide(ide_manifest, mocker):
-    config = UserConfig(ide="none")
-    executor = SystemExecutor(ide_manifest, config)
-    mock_which = mocker.patch("protostar.executor.shutil.which")
-
-    executor._check_ide_extensions()
-
-    # It shouldn't even search for the binary
-    mock_which.assert_not_called()
-
-
-def test_ide_extension_check_bypassed_if_binary_missing(ide_manifest, mocker):
-    config = UserConfig(ide="vscode")
-    executor = SystemExecutor(ide_manifest, config)
-    mock_which = mocker.patch("protostar.executor.shutil.which", return_value=None)
-    mock_run = mocker.patch("protostar.executor.subprocess.run")
-
-    executor._check_ide_extensions()
-
-    mock_which.assert_called_once_with("code")
-    mock_run.assert_not_called()
-
-
-def test_ide_extension_check_succeeds_without_warnings(ide_manifest, mocker):
-    config = UserConfig(ide="cursor")
-    executor = SystemExecutor(ide_manifest, config)
-
-    mocker.patch(
-        "protostar.executor.shutil.which", return_value="/usr/local/bin/cursor"
-    )
-
-    mock_result = MagicMock()
-    mock_result.stdout = (
-        "charliermarsh.ruff\nms-python.mypy-type-checker\nsome-other-ext\n"
-    )
-    mock_run = mocker.patch(
-        "protostar.executor.subprocess.run", return_value=mock_result
-    )
-
-    executor._check_ide_extensions()
-
-    mock_run.assert_called_once_with(
-        ["cursor", "--list-extensions"],
-        capture_output=True,
-        text=True,
-        check=True,
-        timeout=5,
-    )
-    assert not executor.manifest.diagnostics
-
-
-def test_ide_extension_check_flags_missing_extensions(ide_manifest, mocker):
-    config = UserConfig(ide="vscode")
-    executor = SystemExecutor(ide_manifest, config)
-
-    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
-
-    # Simulate a system where Mypy is missing
-    mock_result = MagicMock()
-    mock_result.stdout = "charliermarsh.ruff\n"
-    mocker.patch("protostar.executor.subprocess.run", return_value=mock_result)
-
-    executor._check_ide_extensions()
-
-    assert len(executor.manifest.diagnostics) == 1
-    diagnostic = executor.manifest.diagnostics[0]
-
-    assert diagnostic.phase == "IDE"
-    assert diagnostic.severity == Severity.WARNING
-    assert "ms-python.mypy-type-checker" in diagnostic.message
-
-
-def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(
-    ide_manifest, mocker
-):
-    config = UserConfig(ide="vscode")
-    executor = SystemExecutor(ide_manifest, config)
-
-    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
-
-    # Simulate a timeout or CLI crash
-    mocker.patch(
-        "protostar.executor.subprocess.run",
-        side_effect=subprocess.TimeoutExpired(cmd="code", timeout=5),
-    )
-
-    executor._check_ide_extensions()
-
-    # It should no longer fail silently, but append a SKIP diagnostic
-    assert len(executor.manifest.diagnostics) == 1
-    diagnostic = executor.manifest.diagnostics[0]
-
-    assert diagnostic.phase == "IDE"
-    assert diagnostic.severity.value == "skip"
-    assert "skipped due to an unexpected error" in diagnostic.message
 
 
 def test_executor_handles_write_permission_denied(mocker):
@@ -1347,191 +1076,6 @@ def test_write_docker_artifacts_handles_os_error(mocker):
         "scaffold container runtime ignore configurations" in exc_info.value.operation
     )
     assert ".dockerignore" in exc_info.value.path
-
-
-def test_write_ide_settings_handles_read_os_error(mocker):
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("foo", "bar")
-    executor = SystemExecutor(manifest, UserConfig())
-
-    # Force .vscode/settings.json to exist but crash out when read
-    mocker.patch.object(Path, "exists", return_value=True)
-    mocker.patch.object(Path, "read_text", side_effect=OSError(5, "Input/output error"))
-
-    with pytest.raises(FileSystemError) as exc_info:
-        executor._write_ide_settings()
-
-    assert "inspect active IDE settings files" in exc_info.value.operation
-    assert "settings.json" in exc_info.value.path
-
-
-def test_write_ide_settings_handles_write_os_error(mocker):
-    manifest = EnvironmentManifest()
-    manifest.add_ide_setting("foo", "bar")
-    executor = SystemExecutor(manifest, UserConfig())
-
-    # Let reading work smoothly (or assume no file exists)
-    mocker.patch.object(Path, "exists", return_value=False)
-    mocker.patch.object(Path, "mkdir")  # swallow directory creation
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
-        side_effect=OSError(13, "Permission denied"),
-    )
-
-    with pytest.raises(FileSystemError) as exc_info:
-        executor._write_ide_settings()
-
-    assert "synchronize IDE workspace preferences" in exc_info.value.operation
-    assert "settings.json" in exc_info.value.path
-
-
-def test_executor_install_dependencies_timeout_degradation(mocker, mock_config):
-    """Test that dependency resolution timeouts append a diagnostic warning rather than crashing."""
-    manifest = EnvironmentManifest()
-    manifest.dependencies = ["massive-pkg"]
-
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch(
-        "protostar.executor.execute_subprocess",
-        side_effect=CommandTimeoutError(
-            command=["uv", "add", "massive-pkg"], timeout=600
-        ),
-    )
-
-    executor._install_dependencies()
-
-    assert len(manifest.diagnostics) == 1
-    assert "Command timed out" in manifest.diagnostics[0].message
-    assert manifest.diagnostics[0].severity == Severity.WARNING
-
-
-def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
-    manifest = EnvironmentManifest()
-    manifest.add_dependency("numpy")
-    config = UserConfig()
-    executor = SystemExecutor(manifest, config)
-
-    # Mock a subprocess failure with rich telemetry
-    error = CommandExecutionError(
-        command=["uv", "add", "numpy"],
-        returncode=1,
-        stdout="Resolving dependencies...",
-        stderr="error: package numpy not found",
-    )
-    mocker.patch("protostar.executor.execute_subprocess", side_effect=error)
-
-    # Execution should handle the error gracefully without raising
-    executor._install_dependencies()
-
-    assert len(executor.manifest.diagnostics) == 1
-    diagnostic = executor.manifest.diagnostics[0]
-
-    assert diagnostic.phase == "Executor"
-    assert diagnostic.severity == Severity.WARNING
-    assert "Standard dependency resolution failed" in diagnostic.message
-
-    # Verify the telemetry was extracted via the new output_detail property
-    assert diagnostic.detail is not None
-    assert "--- STDERR ---" in diagnostic.detail
-    assert "error: package numpy not found" in diagnostic.detail
-
-
-def test_install_dev_dependencies_adds_warning_with_telemetry_on_failure(mocker):
-    manifest = EnvironmentManifest()
-    manifest.add_dev_dependency("pytest")
-    config = UserConfig()
-    executor = SystemExecutor(manifest, config)
-
-    # Mock a subprocess failure with rich telemetry
-    error = CommandExecutionError(
-        command=["uv", "add", "--dev", "pytest"],
-        returncode=1,
-        stderr="error: network timeout",
-    )
-    mocker.patch("protostar.executor.execute_subprocess", side_effect=error)
-
-    # Execution should handle the error gracefully without raising
-    executor._install_dependencies()
-
-    assert len(executor.manifest.diagnostics) == 1
-    diagnostic = executor.manifest.diagnostics[0]
-
-    assert diagnostic.phase == "Executor"
-    assert diagnostic.severity == Severity.WARNING
-    assert "Development dependency resolution failed" in diagnostic.message
-
-    # Verify the telemetry was extracted via the new output_detail property
-    assert diagnostic.detail is not None
-    assert "error: network timeout" in diagnostic.detail
-
-
-def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
-    """Verifies that the first element in an extension tuple satisfies the requirement."""
-    manifest = EnvironmentManifest()
-    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
-
-    config = UserConfig(ide="vscode")
-    executor = SystemExecutor(manifest, config)
-
-    # Mock shutil.which to pretend 'code' is installed
-    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
-
-    # Mock subprocess to return the primary extension
-    mock_run = mocker.patch("protostar.executor.subprocess.run")
-    mock_run.return_value = MagicMock(
-        stdout="ms-python.mypy-type-checker\nother.extension\n"
-    )
-
-    executor._check_ide_extensions()
-
-    # No diagnostic warnings should be generated
-    assert not any(d.severity == Severity.WARNING for d in manifest.diagnostics)
-
-
-def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
-    """Verifies that the secondary element in an extension tuple satisfies the requirement."""
-    manifest = EnvironmentManifest()
-    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
-
-    config = UserConfig(ide="vscode")
-    executor = SystemExecutor(manifest, config)
-
-    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
-
-    # Mock subprocess to return the fallback extension instead
-    mock_run = mocker.patch("protostar.executor.subprocess.run")
-    mock_run.return_value = MagicMock(stdout="matangover.mypy\nother.extension\n")
-
-    executor._check_ide_extensions()
-
-    # No diagnostic warnings should be generated
-    assert not any(d.severity == Severity.WARNING for d in manifest.diagnostics)
-
-
-def test_ide_extension_check_fails_missing_tuple(mocker):
-    """Verifies that an unfulfilled tuple generates a properly formatted diagnostic."""
-    manifest = EnvironmentManifest()
-    manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
-    manifest.add_ide_extension("charliermarsh.ruff")
-
-    config = UserConfig(ide="vscode")
-    executor = SystemExecutor(manifest, config)
-
-    mocker.patch("protostar.executor.shutil.which", return_value="/usr/local/bin/code")
-
-    # Mock subprocess to return neither mypy extension, but return ruff
-    mock_run = mocker.patch("protostar.executor.subprocess.run")
-    mock_run.return_value = MagicMock(stdout="charliermarsh.ruff\nother.extension\n")
-
-    executor._check_ide_extensions()
-
-    warnings = [d for d in manifest.diagnostics if d.severity == Severity.WARNING]
-    assert len(warnings) == 1
-
-    # Ensure the diagnostic cleanly formats the unfulfilled tuple with 'or'
-    assert "ms-python.mypy-type-checker or matangover.mypy" in warnings[0].message
-    assert "charliermarsh.ruff" not in warnings[0].message
 
 
 def test_executor_toml_table_replace(mock_config):

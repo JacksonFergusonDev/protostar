@@ -3,85 +3,58 @@ from pathlib import Path
 
 import pytest
 
-from protostar.config import UserConfig
 from protostar.errors import SecurityViolationError
-from protostar.executor import SystemExecutor
 from protostar.fs import safe_extract_zip
-from protostar.manifest import EnvironmentManifest, SystemTask
+from protostar.security import enforce_binary_safelist, enforce_path_jail
 
 
-@pytest.fixture
-def mock_executor(tmp_path: Path, monkeypatch) -> SystemExecutor:
-    monkeypatch.chdir(tmp_path)
-    manifest = EnvironmentManifest()
-    config = UserConfig(python_version="3.13")
-    return SystemExecutor(manifest=manifest, config=config)
-
-
-def test_path_traversal_file_injection(mock_executor: SystemExecutor, tmp_path: Path):
-    mock_executor.manifest.file_injections = {"../../../../etc/passwd": "hacked"}
+def test_enforce_path_jail_outside_traversal(tmp_path: Path):
+    target = tmp_path / "../../../../etc/passwd"
     with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
-        mock_executor._write_injected_files()
+        enforce_path_jail(target, tmp_path)
 
 
-def test_path_traversal_directory_scaffolding(
-    mock_executor: SystemExecutor, tmp_path: Path
-):
-    mock_executor.manifest.directories = {"../outside_dir"}
+def test_enforce_path_jail_relative_escape(tmp_path: Path):
+    target = tmp_path / "../outside_dir"
     with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
-        mock_executor._create_directories()
+        enforce_path_jail(target, tmp_path)
 
 
-def test_path_traversal_symlink_bypass(mock_executor: SystemExecutor, tmp_path: Path):
+def test_enforce_path_jail_symlink_bypass(tmp_path: Path):
     # Create a symlink in the temp dir that points outside (e.g. to /tmp)
     symlink_path = tmp_path / "logs"
     outside_dir = Path("/tmp")
     os.symlink(outside_dir, symlink_path)
 
     # Attempt to write into the symlink
-    mock_executor.manifest.file_injections = {"logs/passwd": "hacked"}
+    target = symlink_path / "passwd"
     with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
-        mock_executor._write_injected_files()
+        enforce_path_jail(target, tmp_path)
 
 
-def test_binary_safelist_deny(mock_executor: SystemExecutor):
-    mock_executor.manifest.system_tasks = [
-        SystemTask(command=["bash", "-c", "echo hacked"])
-    ]
-    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
-        mock_executor._execute_tasks()
-
-    mock_executor.manifest.system_tasks = [SystemTask(command=["env", "bash"])]
-    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
-        mock_executor._execute_tasks()
-
-
-def test_binary_safelist_allow(mock_executor: SystemExecutor, monkeypatch):
-    # Mock execute_subprocess to prevent actual execution
-    from protostar import executor
-
-    monkeypatch.setattr(executor, "execute_subprocess", lambda *args, **kwargs: None)
-
-    # Also mock rich.console.Console to prevent test output pollution
-    monkeypatch.setattr(
-        executor,
-        "console",
-        type(
-            "MockConsole",
-            (),
-            {
-                "status": lambda self, msg: type(
-                    "MockStatus",
-                    (),
-                    {"__enter__": lambda s: None, "__exit__": lambda s, *a: None},
-                )()
-            },
-        )(),
-    )
-
-    mock_executor.manifest.system_tasks = [SystemTask(command=["uv", "run", "pytest"])]
+def test_enforce_path_jail_valid_path(tmp_path: Path):
+    target = tmp_path / "sub" / "file.txt"
     # Should not raise
-    mock_executor._execute_tasks()
+    enforce_path_jail(target, tmp_path)
+
+
+def test_enforce_binary_safelist_deny():
+    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
+        enforce_binary_safelist(["bash", "-c", "echo hacked"])
+
+    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
+        enforce_binary_safelist(["env", "bash"])
+
+
+def test_enforce_binary_safelist_allow():
+    # Empty command should not raise
+    enforce_binary_safelist([])
+
+    # Allowed binaries should not raise
+    enforce_binary_safelist(["uv", "run", "pytest"])
+    enforce_binary_safelist(["git", "init"])
+    enforce_binary_safelist(["npm", "test"])
+    enforce_binary_safelist(["/usr/local/bin/direnv", "allow"])
 
 
 def test_safe_extract_zip_denies_traversal(tmp_path: Path):
