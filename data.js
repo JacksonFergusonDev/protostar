@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1786935123052,
+  "lastUpdate": 1786994519205,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6567,6 +6567,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 154.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "15a262e7bcd1358cd568579a79b05504c31c63c0",
+          "message": "refactor(docs): migrate documentation fixtures into an IDE-native snapshot harness (#174)\n\n* refactor(scripts): output ide-native raw fixtures in scenario partitions\n\n* build(tooling): update justfile and ci workflows for docs fixtures directory\n\n* docs: update snippet includes and configuration for raw fixtures\n\n* chore(fixtures): migrate documentation fixtures to ide-native snapshot directory\n\n* fix(scripts): ensure target parent directories exist before atomic writes in fixtures\n\n* fix: normalize trailing newlines in pyproject formatting and templates and exclude docs from pre-commit hooks\n\n* build(pre-commit): scope docs exclusion strictly to local python tooling hooks\n\n* fix(scripts): include .gitignore and .gitattributes in doc fixture generation\n\n* docs(config): configure link validation ignore rules in mkdocs.yml for raw fixture doc previews\n\n* fix(tooling): clean up scaffolded readthedocs starter docs and restore strict link validation\n\n* docs: update fixtures",
+          "timestamp": "2026-08-17T12:21:03-07:00",
+          "tree_id": "00f21047e296ad09d374559350b275716cba6900",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/15a262e7bcd1358cd568579a79b05504c31c63c0"
+        },
+        "date": 1786994518677,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.12,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 195.93,
             "unit": "ms"
           }
         ]
