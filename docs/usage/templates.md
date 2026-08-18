@@ -126,13 +126,7 @@ Protostar automatically reserves and computes the following variables during exe
 
 ## Authoring Custom Templates
 
-A template is a declarative TOML document specifying dependencies, directories, files, and tooling opinions.
-
-### Template Schema Reference
-
-```toml
---8<-- "template_schema.toml"
-```
+See [Authoring Templates](authoring-templates.md) for information on how to create your own templates.
 
 ---
 
