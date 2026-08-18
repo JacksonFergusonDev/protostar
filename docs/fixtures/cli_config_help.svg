@@ -1,0 +1,103 @@
+<svg class="rich-terminal" viewBox="0 0 1238 318.4" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .cli_config_help-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .cli_config_help-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .cli_config_help-r1 { fill: #800080;font-weight: bold }
+.cli_config_help-r2 { fill: #22d3ee;font-weight: bold }
+.cli_config_help-r3 { fill: #c0c0c0 }
+.cli_config_help-r4 { fill: #dce1eb }
+.cli_config_help-r5 { fill: #61afef;font-weight: bold }
+.cli_config_help-r6 { fill: #22d3ee }
+    </style>
+
+    <defs>
+    <clipPath id="cli_config_help-clip-terminal">
+      <rect x="0" y="0" width="1219.0" height="267.4" />
+    </clipPath>
+    <clipPath id="cli_config_help-line-0">
+    <rect x="0" y="1.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-1">
+    <rect x="0" y="25.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-2">
+    <rect x="0" y="50.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-3">
+    <rect x="0" y="74.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-4">
+    <rect x="0" y="99.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-5">
+    <rect x="0" y="123.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-6">
+    <rect x="0" y="147.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-7">
+    <rect x="0" y="172.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-8">
+    <rect x="0" y="196.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_config_help-line-9">
+    <rect x="0" y="221.1" width="1220" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#0a0f1f" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="316.4" rx="8"/><text class="cli_config_help-title" fill="#dce1eb" text-anchor="middle" x="618" y="27">zsh</text>
+            <g transform="translate(26,22)">
+            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
+            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
+            <circle cx="44" cy="0" r="7" fill="#28c840"/>
+            </g>
+
+    <g transform="translate(9, 41)" clip-path="url(#cli_config_help-clip-terminal)">
+
+    <g class="cli_config_help-matrix">
+    <text class="cli_config_help-r1" x="0" y="20" textLength="24.4" clip-path="url(#cli_config_help-line-0)">❯&#160;</text><text class="cli_config_help-r2" x="24.4" y="20" textLength="122" clip-path="url(#cli_config_help-line-0)">protostar&#160;</text><text class="cli_config_help-r3" x="146.4" y="20" textLength="134.2" clip-path="url(#cli_config_help-line-0)">help&#160;config</text><text class="cli_config_help-r4" x="1220" y="20" textLength="12.2" clip-path="url(#cli_config_help-line-0)">
+</text><text class="cli_config_help-r4" x="1220" y="44.4" textLength="12.2" clip-path="url(#cli_config_help-line-1)">
+</text><text class="cli_config_help-r4" x="0" y="68.8" textLength="841.8" clip-path="url(#cli_config_help-line-2)">Opens&#160;the&#160;global&#160;configuration&#160;file&#160;in&#160;your&#160;system&#x27;s&#160;default&#160;$EDITOR.</text><text class="cli_config_help-r4" x="1220" y="68.8" textLength="12.2" clip-path="url(#cli_config_help-line-2)">
+</text><text class="cli_config_help-r4" x="1220" y="93.2" textLength="12.2" clip-path="url(#cli_config_help-line-3)">
+</text><text class="cli_config_help-r5" x="0" y="117.6" textLength="97.6" clip-path="url(#cli_config_help-line-4)">Options:</text><text class="cli_config_help-r4" x="1220" y="117.6" textLength="12.2" clip-path="url(#cli_config_help-line-4)">
+</text><text class="cli_config_help-r6" x="24.4" y="142" textLength="24.4" clip-path="url(#cli_config_help-line-5)">-h</text><text class="cli_config_help-r4" x="48.8" y="142" textLength="24.4" clip-path="url(#cli_config_help-line-5)">,&#160;</text><text class="cli_config_help-r6" x="73.2" y="142" textLength="73.2" clip-path="url(#cli_config_help-line-5)">--help</text><text class="cli_config_help-r4" x="231.8" y="142" textLength="378.2" clip-path="url(#cli_config_help-line-5)">show&#160;this&#160;help&#160;message&#160;and&#160;exit</text><text class="cli_config_help-r4" x="1220" y="142" textLength="12.2" clip-path="url(#cli_config_help-line-5)">
+</text><text class="cli_config_help-r6" x="24.4" y="166.4" textLength="109.8" clip-path="url(#cli_config_help-line-6)">--version</text><text class="cli_config_help-r4" x="231.8" y="166.4" textLength="488" clip-path="url(#cli_config_help-line-6)">Show&#160;the&#160;application&#x27;s&#160;version&#160;and&#160;exit.</text><text class="cli_config_help-r4" x="1220" y="166.4" textLength="12.2" clip-path="url(#cli_config_help-line-6)">
+</text><text class="cli_config_help-r6" x="24.4" y="190.8" textLength="24.4" clip-path="url(#cli_config_help-line-7)">-v</text><text class="cli_config_help-r4" x="48.8" y="190.8" textLength="24.4" clip-path="url(#cli_config_help-line-7)">,&#160;</text><text class="cli_config_help-r6" x="73.2" y="190.8" textLength="109.8" clip-path="url(#cli_config_help-line-7)">--verbose</text><text class="cli_config_help-r4" x="231.8" y="190.8" textLength="585.6" clip-path="url(#cli_config_help-line-7)">Enable&#160;verbose&#160;debug&#160;output&#160;and&#160;rich&#160;tracebacks.</text><text class="cli_config_help-r4" x="1220" y="190.8" textLength="12.2" clip-path="url(#cli_config_help-line-7)">
+</text><text class="cli_config_help-r6" x="24.4" y="215.2" textLength="183" clip-path="url(#cli_config_help-line-8)">--force-replace</text><text class="cli_config_help-r4" x="231.8" y="215.2" textLength="683.2" clip-path="url(#cli_config_help-line-8)">Bypass&#160;confirmation&#160;prompt&#160;when&#160;resetting&#160;configuration.</text><text class="cli_config_help-r4" x="1220" y="215.2" textLength="12.2" clip-path="url(#cli_config_help-line-8)">
+</text><text class="cli_config_help-r6" x="24.4" y="239.6" textLength="85.4" clip-path="url(#cli_config_help-line-9)">--reset</text><text class="cli_config_help-r4" x="231.8" y="239.6" textLength="695.4" clip-path="url(#cli_config_help-line-9)">Reset&#160;the&#160;global&#160;configuration&#160;file&#160;to&#160;its&#160;default&#160;state.</text><text class="cli_config_help-r4" x="1220" y="239.6" textLength="12.2" clip-path="url(#cli_config_help-line-9)">
+</text><text class="cli_config_help-r4" x="1220" y="264" textLength="12.2" clip-path="url(#cli_config_help-line-10)">
+</text>
+    </g>
+    </g>
+</svg>
