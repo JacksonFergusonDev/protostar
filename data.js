@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787025338807,
+  "lastUpdate": 1787026323462,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6907,6 +6907,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 207.07,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "869339082964c28f2c5d09b8b297ad17c247bdb9",
+          "message": "chore(docs): exclude uv.lock from documentation fixtures\n\nExclude uv.lock files during doc fixture extraction to eliminate\narbitrary diff churn caused by upstream PyPI dependency updates during\nCI fixture drift checks.",
+          "timestamp": "2026-08-17T21:10:38-07:00",
+          "tree_id": "aa7d6571373f6000429aa9db87f5db0e616e85f4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/869339082964c28f2c5d09b8b297ad17c247bdb9"
+        },
+        "date": 1787026322314,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 161.1,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 238.21,
             "unit": "ms"
           }
         ]
