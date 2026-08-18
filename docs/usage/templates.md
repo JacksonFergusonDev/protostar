@@ -147,6 +147,35 @@ In the interactive TUI wizard, your aliases are automatically discovered and dis
 
 Protostar enforces a strict security boundary for external templates to prevent untrusted remote code execution.
 
+```mermaid
+flowchart TD
+    classDef terminal fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef process fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef security fill:#7f1d1d,stroke:#f87171,stroke-width:2px,color:#fff;
+    classDef decision fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+
+    Start([Template Requested]):::terminal --> ResolveTarget{Target Source}:::decision
+
+    ResolveTarget -- Built-in Template --> ParseBuiltin[Parse Local TOML]:::process
+    ResolveTarget -- Global Alias --> FetchAlias[Fetch Trusted URL]:::process
+    ResolveTarget -- Remote URL / Archive --> FetchRemote[Fetch Untrusted Target]:::process
+
+    FetchAlias --> ParseRemote[Parse Extracted TOML Blueprint]:::process
+    FetchRemote --> ParseRemote
+
+    ParseBuiltin --> HasTasks
+    ParseRemote --> HasTasks{Blueprint Contains\nExecutable Tasks?}:::decision
+
+    HasTasks -- No --> Execute([Proceed to Execution]):::terminal
+    HasTasks -- Yes --> TrustCheck{Trust Boundary Eval}:::decision
+
+    TrustCheck -- "Source == Built-in\nOR Source == Global Alias" --> Execute
+    TrustCheck -- "Source == Remote URL" --> Dialog[Remote Trust Intercept]:::security
+
+    Dialog -- User Accepts --> Execute
+    Dialog -- User Rejects OR Headless CI --> Abort([Execution Aborted]):::security
+```
+
 ### Sandboxing vs. Informed Consent
 
 While Protostar enforces filesystem path jailing (preventing templates from writing outside your workspace) and binary safelisting (disallowing direct calls to shells like `/bin/sh`), developer tools like `uv run`, `git`, and `npm` can still execute scripts provided within the repository.
