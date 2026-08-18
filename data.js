@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787027257922,
+  "lastUpdate": 1787028178155,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6975,6 +6975,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 208.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "676df000e31643c1ef7e367e785094069a5843a6",
+          "message": "docs: expand documentation fixtures and integrate missing footprints (#182)\n\n* refactor(lang): extract LICENSE_MAP to module level\n\n* feat(docs): add generators for config help SVG, metadata and license tables, and diagnostic panel SVG\n\n* docs(init): add api, dsp, and embedded footprints, task runner orchestration, and metadata reference\n\n* docs(config): embed config help SVG and add supported licenses table\n\n* docs(orchestrator): add diagnostic telemetry summary section and panel SVG",
+          "timestamp": "2026-08-17T21:41:50-07:00",
+          "tree_id": "9640b209f2092b03d9026584d09321f54de483fa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/676df000e31643c1ef7e367e785094069a5843a6"
+        },
+        "date": 1787028176989,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 151.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 220.61,
             "unit": "ms"
           }
         ]
