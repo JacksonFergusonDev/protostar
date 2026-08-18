@@ -25,7 +25,7 @@ def mock_config() -> UserConfig:
 def test_executor_writes_injected_files(mocker, mock_config):
     """Test that the executor flushes queued file injections to disk."""
     manifest = EnvironmentManifest()
-    manifest.add_file_injection(".test_config.yaml", "mock content")
+    manifest.filesystem.add_file_injection(".test_config.yaml", "mock content")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
@@ -41,7 +41,7 @@ def test_executor_writes_injected_files(mocker, mock_config):
 def test_executor_append_files_late_binding(mocker, mock_config):
     """Test that configuration payloads are interpolated with the active python version."""
     manifest = EnvironmentManifest()
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml", 'python_version = "<% PYTHON_VERSION %>"'
     )
     executor = SystemExecutor(manifest, mock_config)
@@ -68,9 +68,9 @@ def test_executor_append_files_late_binding(mocker, mock_config):
 def test_executor_writes_pre_commit_config(mocker, mock_config):
     """Test that the executor concatenates hooks and interpolates only production Mypy dependencies."""
     manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
-    manifest.add_dependency("fastapi")
-    manifest.add_dev_dependency("pytest")
+    manifest.tooling.wants_pre_commit = True
+    manifest.dependencies.add("fastapi")
+    manifest.dependencies.add_dev("pytest")
 
     hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
@@ -78,7 +78,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
       - id: mypy
         additional_dependencies:
 <% MYPY_DEPENDENCIES %>"""
-    manifest.add_pre_commit_hook(hook_payload)
+    manifest.tooling.add_pre_commit_hook(hook_payload)
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -101,7 +101,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
 def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
     """Test that the executor aggregates local pre-commit hooks under a single repo: local block."""
     manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
+    manifest.tooling.wants_pre_commit = True
 
     ruff_payload = """      - id: ruff-check
         name: ruff check
@@ -116,7 +116,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
         language: system
         types: [python]
         require_serial: true"""
-    manifest.add_pre_commit_local_hook(ruff_payload)
+    manifest.tooling.add_pre_commit_local_hook(ruff_payload)
 
     mypy_payload = """      - id: mypy
         name: mypy
@@ -124,7 +124,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
         language: system
         types: [python]
         pass_filenames: true"""
-    manifest.add_pre_commit_local_hook(mypy_payload)
+    manifest.tooling.add_pre_commit_local_hook(mypy_payload)
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -150,7 +150,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
 def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_config):
     """Test that the executor formats both local and remote repository hooks."""
     manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
+    manifest.tooling.wants_pre_commit = True
 
     ruff_payload = """      - id: ruff-check
         name: ruff check
@@ -158,14 +158,14 @@ def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_c
         language: system
         types: [python]
         require_serial: true"""
-    manifest.add_pre_commit_local_hook(ruff_payload)
+    manifest.tooling.add_pre_commit_local_hook(ruff_payload)
 
     remote_payload = """  - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.0
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]"""
-    manifest.add_pre_commit_hook(remote_payload)
+    manifest.tooling.add_pre_commit_hook(remote_payload)
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -187,7 +187,7 @@ def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_c
 def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     """Test that mypy late-binding cleanly strips additional_dependencies if no production dependencies exist."""
     manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
+    manifest.tooling.wants_pre_commit = True
 
     hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
@@ -195,7 +195,7 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
       - id: mypy
         additional_dependencies:
 <% MYPY_DEPENDENCIES %>"""
-    manifest.add_pre_commit_hook(hook_payload)
+    manifest.tooling.add_pre_commit_hook(hook_payload)
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -215,7 +215,7 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
 def test_executor_writes_dockerignore(mocker, mock_config):
     """Test that the executor aggregates base ignores and vcs ignores for docker."""
     manifest = EnvironmentManifest()
-    manifest.add_vcs_ignore("custom_build_artifact/")
+    manifest.filesystem.add_vcs_ignore("custom_build_artifact/")
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -234,7 +234,7 @@ def test_executor_writes_dockerignore(mocker, mock_config):
 def test_executor_writes_gitignore(mocker, mock_config):
     """Test that .gitignore is safely updated without duplicating existing lines."""
     manifest = EnvironmentManifest()
-    manifest.add_vcs_ignore("new_ignore.txt")
+    manifest.filesystem.add_vcs_ignore("new_ignore.txt")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -253,8 +253,8 @@ def test_executor_writes_gitignore(mocker, mock_config):
 def test_executor_creates_directories(mocker, mock_config):
     """Test that the executor generates all requested workspace directories."""
     manifest = EnvironmentManifest()
-    manifest.add_directory("data")
-    manifest.add_directory("src/core")
+    manifest.filesystem.add_directory("data")
+    manifest.filesystem.add_directory("src/core")
     executor = SystemExecutor(manifest, mock_config)
 
     mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
@@ -268,7 +268,9 @@ def test_executor_creates_directories(mocker, mock_config):
 def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     """Test that the executor appends .python-version to .dockerignore when uv is used."""
     manifest = EnvironmentManifest()
-    manifest.add_system_task(["uv", "init", "--no-workspace", "--bare", "--pin-python"])
+    manifest.tasks.add_system_task(
+        ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
+    )
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
@@ -310,7 +312,7 @@ def test_executor_writes_dockerfile_default(mocker, mock_config):
 def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
     """Test that the executor writes an API-tailored Dockerfile when FastAPI/uvicorn is present."""
     manifest = EnvironmentManifest()
-    manifest.dependencies = ["fastapi", "uvicorn"]
+    manifest.dependencies.dependencies = ["fastapi", "uvicorn"]
     manifest.metadata = cast(
         ProjectMetadata, {"docker_port": "8080", "python_version": "3.13"}
     )
@@ -334,8 +336,8 @@ def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
 def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
     """Test that the executor writes a CLI-tailored Dockerfile when typer/project.scripts is present."""
     manifest = EnvironmentManifest()
-    manifest.dependencies = ["typer"]
-    manifest.add_file_append(
+    manifest.dependencies.dependencies = ["typer"]
+    manifest.filesystem.add_file_append(
         "pyproject.toml", "[project.scripts]\nmy-cli = 'my_cli.cli:app'\n"
     )
     executor = SystemExecutor(manifest, mock_config, docker=True)
@@ -398,7 +400,7 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     """Test that file injections bypass the exists() guard if OVERWRITE is active."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    manifest.add_file_injection(".test_config.yaml", "new content")
+    manifest.filesystem.add_file_injection(".test_config.yaml", "new content")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -411,7 +413,7 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
 def test_executor_mkdir_os_error_propagation(mocker, mock_config):
     """Test that the executor correctly propagates OSErrors during directory creation."""
     manifest = EnvironmentManifest()
-    manifest.add_directory("protected_dir")
+    manifest.filesystem.add_directory("protected_dir")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
@@ -425,7 +427,7 @@ def test_executor_mkdir_os_error_propagation(mocker, mock_config):
 def test_executor_write_text_permission_error_propagation(mocker, mock_config):
     """Test that the executor propagates PermissionErrors during file injections."""
     manifest = EnvironmentManifest()
-    manifest.add_file_injection("system_config.yaml", "secret")
+    manifest.filesystem.add_file_injection("system_config.yaml", "secret")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
@@ -446,7 +448,7 @@ def test_executor_append_files_ast_no_op_write(mocker, mock_config):
 
     manifest = EnvironmentManifest()
     # Queue a payload that is perfectly identical to the existing base document
-    manifest.add_file_append("pyproject.toml", original_content)
+    manifest.filesystem.add_file_append("pyproject.toml", original_content)
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -472,7 +474,7 @@ def test_executor_append_files_ast_merge(mocker, mock_config):
 
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
-    manifest.add_file_append("pyproject.toml", payload_content)
+    manifest.filesystem.add_file_append("pyproject.toml", payload_content)
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -506,7 +508,7 @@ def test_executor_append_files_ast_overwrite(mocker, mock_config):
 
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    manifest.add_file_append("pyproject.toml", payload_content)
+    manifest.filesystem.add_file_append("pyproject.toml", payload_content)
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -538,7 +540,7 @@ def test_executor_append_files_ast_overwrite(mocker, mock_config):
 def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_config):
     """Test that pre-commit generation aborts if file exists and strategy is not OVERWRITE."""
     manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
+    manifest.tooling.wants_pre_commit = True
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -553,7 +555,7 @@ def test_executor_validate_targets_success(mocker, mock_config):
     """Test that pre-execution validation passes silently on valid TOML files."""
 
     manifest = EnvironmentManifest()
-    manifest.add_file_append("pyproject.toml", "[tool.ruff]")
+    manifest.filesystem.add_file_append("pyproject.toml", "[tool.ruff]")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -568,7 +570,7 @@ def test_executor_validate_targets_success(mocker, mock_config):
 def test_executor_validate_targets_malformed_toml(mocker, mock_config):
     """Test that malformed existing TOML triggers a ConfigurationError during pre-execution."""
     manifest = EnvironmentManifest()
-    manifest.add_file_append("test.toml", "[section]\nkey = 'val'\n")
+    manifest.filesystem.add_file_append("test.toml", "[section]\nkey = 'val'\n")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -585,7 +587,7 @@ def test_executor_validate_targets_malformed_toml(mocker, mock_config):
 def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
     """Test that malformed payload TOML triggers a ConfigurationError during execution."""
     manifest = EnvironmentManifest()
-    manifest.add_file_append("test.toml", "[invalid payload == \n")
+    manifest.filesystem.add_file_append("test.toml", "[invalid payload == \n")
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -609,7 +611,7 @@ def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
     existing_content = f"existing\n# --- Protostar Injection: {payload_hash} ---\n{payload}\n# --- End Protostar Injection ---"
 
     manifest = EnvironmentManifest()
-    manifest.add_file_append("test.txt", payload)
+    manifest.filesystem.add_file_append("test.txt", payload)
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -637,8 +639,8 @@ def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
     """Test that the string fallback successfully appends missing payloads wrapped in hash markers."""
     manifest = EnvironmentManifest()
-    manifest.add_file_append("config.ini", "new_payload_1")
-    manifest.add_file_append("config.ini", "new_payload_2")
+    manifest.filesystem.add_file_append("config.ini", "new_payload_1")
+    manifest.filesystem.add_file_append("config.ini", "new_payload_2")
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -702,9 +704,9 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
     ]
 
     expected_call_order = [
-        mocker.call.run_tasks(manifest.system_tasks),
+        mocker.call.run_tasks(manifest.tasks.system_tasks),
         mocker.call.install(),
-        mocker.call.run_tasks(manifest.post_install_tasks),
+        mocker.call.run_tasks(manifest.tasks.post_install_tasks),
     ]
 
     assert actual_calls == expected_call_order
@@ -713,14 +715,14 @@ def test_executor_lifecycle_ordering(mocker, mock_config):
 def test_executor_run_tasks(mocker, mock_config):
     """Test that _run_tasks iterates and calls execute_subprocess with boundaries."""
     manifest = EnvironmentManifest()
-    manifest.add_post_install_task(["uv", "first_task"])
-    manifest.add_post_install_task(["uv", "second_task"], timeout=45)
+    manifest.tasks.add_post_install_task(["uv", "first_task"])
+    manifest.tasks.add_post_install_task(["uv", "second_task"], timeout=45)
 
     executor = SystemExecutor(manifest, mock_config)
 
     mock_execute = mocker.patch("protostar.executor.execute_subprocess")
 
-    executor._run_tasks(manifest.post_install_tasks)
+    executor._run_tasks(manifest.tasks.post_install_tasks)
 
     assert mock_execute.call_count == 2
     mock_execute.assert_any_call(["uv", "first_task"], timeout=30)
@@ -733,13 +735,13 @@ def test_executor_uses_custom_task_description(mocker):
     mocker.patch("protostar.executor.execute_subprocess")
 
     manifest = EnvironmentManifest()
-    manifest.add_system_task(["git", "init"], description="Initializing git repo")
+    manifest.tasks.add_system_task(["git", "init"], description="Initializing git repo")
 
     # We only need a dummy config to init the executor
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
-    executor._run_tasks(manifest.system_tasks)
+    executor._run_tasks(manifest.tasks.system_tasks)
 
     mock_status.assert_called_with("Initializing git repo")
 
@@ -750,12 +752,12 @@ def test_executor_task_description_fallback(mocker):
 
     manifest = EnvironmentManifest()
     # Provide a command with a path, but NO description
-    manifest.add_system_task([".venv/bin/pre-commit", "install"])
+    manifest.tasks.add_system_task([".venv/bin/pre-commit", "install"])
 
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
 
-    executor._run_tasks(manifest.system_tasks)
+    executor._run_tasks(manifest.tasks.system_tasks)
 
     # Verify the fallback logic stripped the path and grabbed the binary name
     mock_status.assert_called_once_with("Propelling sequence: pre-commit")
@@ -763,8 +765,8 @@ def test_executor_task_description_fallback(mocker):
 
 def test_executor_handles_write_permission_denied(mocker):
     manifest = EnvironmentManifest()
-    manifest.wants_pre_commit = True
-    manifest.pre_commit_hooks.append("  - repo: local")
+    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.pre_commit_hooks.append("  - repo: local")
 
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
@@ -788,7 +790,7 @@ def test_executor_handles_write_permission_denied(mocker):
 
 def test_executor_handles_mkdir_io_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.add_directory("src/core")
+    manifest.filesystem.add_directory("src/core")
 
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
@@ -806,7 +808,7 @@ def test_executor_handles_mkdir_io_failure(mocker):
 
 def test_append_files_handles_read_or_mkdir_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
+    manifest.filesystem.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
     executor = SystemExecutor(manifest, UserConfig())
 
     # Mock target.exists to return False so it hits the parent directory creation path
@@ -822,7 +824,7 @@ def test_append_files_handles_read_or_mkdir_failure(mocker):
 
 def test_append_files_handles_toml_write_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
+    manifest.filesystem.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
     executor = SystemExecutor(manifest, UserConfig())
 
     # Simulate an existing valid pyproject.toml on disk
@@ -842,7 +844,7 @@ def test_append_files_handles_toml_write_failure(mocker):
 
 def test_append_files_handles_string_block_write_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.add_file_append(".envrc", "export FOO=bar")
+    manifest.filesystem.add_file_append(".envrc", "export FOO=bar")
     executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
@@ -861,7 +863,7 @@ def test_append_files_handles_string_block_write_failure(mocker):
 
 def test_write_ignores_handles_os_error(mocker):
     manifest = EnvironmentManifest()
-    manifest.add_vcs_ignore(".venv/")
+    manifest.filesystem.add_vcs_ignore(".venv/")
     executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
@@ -880,7 +882,7 @@ def test_write_ignores_handles_os_error(mocker):
 
 def test_write_docker_artifacts_handles_os_error(mocker):
     manifest = EnvironmentManifest()
-    manifest.add_vcs_ignore(".venv/")
+    manifest.filesystem.add_vcs_ignore(".venv/")
     # Force docker attribute to true to enter the block
     executor = SystemExecutor(manifest, UserConfig(), docker=True)
 
@@ -907,7 +909,7 @@ def test_executor_interpolates_package_name_in_injected_files(
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
-    manifest.add_file_injection(
+    manifest.filesystem.add_file_injection(
         "src/<% PACKAGE_NAME %>/__init__.py",
         '"""<% PROJECT_NAME %> package (<% PACKAGE_NAME %>)."""\n',
     )
@@ -926,7 +928,7 @@ def test_executor_interpolates_package_name_in_directories(
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
-    manifest.add_directory("src/<% PACKAGE_NAME %>")
+    manifest.filesystem.add_directory("src/<% PACKAGE_NAME %>")
     executor = SystemExecutor(manifest, mock_config)
     executor._create_directories()
 
@@ -940,11 +942,11 @@ def test_executor_interpolates_package_name_in_file_appends(
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml",
         '[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"\n',
     )
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "script.sh",
         'echo "Running <% PROJECT_NAME %> from <% PACKAGE_NAME %>"\n',
     )
@@ -970,32 +972,36 @@ def test_executor_append_files_cli_template_full_lifecycle(
 
     manifest = EnvironmentManifest()
     # Tooling modules append baseline configurations
-    manifest.add_file_append("pyproject.toml", "[tool.ruff]\nline-length = 88\n")
-    manifest.add_file_append("pyproject.toml", '[tool.mypy]\nmypy_path = "src"\n')
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
+    )
+    manifest.filesystem.add_file_append(
+        "pyproject.toml", '[tool.mypy]\nmypy_path = "src"\n'
+    )
+    manifest.filesystem.add_file_append(
         "pyproject.toml",
         '[tool.pytest.ini_options]\naddopts = "--strict-markers"\ntestpaths = ["tests"]\n',
     )
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml", '[tool.commitizen]\nname = "cz_conventional_commits"\n'
     )
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml", '[dependency-groups]\ndev = [{ include-group = "docs" }]\n'
     )
 
     # CLI Template appends late-binding injections
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml", '[tool.ruff.lint]\nselect = ["A", "B"]\n'
     )
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml",
         '[[tool.mypy.overrides]]\nmodule = ["tests.*"]\ndisallow_untyped_defs = false\n',
     )
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml",
         "[tool.coverage.run]\nbranch = true\n\n[tool.coverage.report]\nshow_missing = true\n",
     )
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml", '[project.scripts]\ndemo-project = "demo_project.cli:app"\n'
     )
 
@@ -1057,7 +1063,7 @@ line-length = 88
     pyproject.write_text(existing)
 
     manifest = EnvironmentManifest()
-    manifest.add_file_append(
+    manifest.filesystem.add_file_append(
         "pyproject.toml", '[tool.pytest.ini_options]\naddopts = "-v"\n'
     )
 

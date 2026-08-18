@@ -1,6 +1,6 @@
 from protostar.dependencies import install_dependencies
 from protostar.errors import CommandExecutionError, CommandTimeoutError
-from protostar.manifest import Severity
+from protostar.manifest import DependencyManifest, Severity
 
 
 def test_install_dependencies_uv(mocker):
@@ -13,9 +13,11 @@ def test_install_dependencies_uv(mocker):
         diagnostics.append((msg, sev, detail))
 
     install_dependencies(
-        dependencies=["fastapi"],
-        dev_dependencies=["pytest"],
-        docs_dependencies=["mkdocs"],
+        dependencies_manifest=DependencyManifest(
+            dependencies=["fastapi"],
+            dev_dependencies=["pytest"],
+            docs_dependencies=["mkdocs"],
+        ),
         on_diagnostic=on_diagnostic,
     )
 
@@ -33,9 +35,7 @@ def test_install_dependencies_empty(mocker):
     diagnostics = []
 
     install_dependencies(
-        dependencies=[],
-        dev_dependencies=[],
-        docs_dependencies=[],
+        dependencies_manifest=DependencyManifest(),
         on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
     )
 
@@ -58,9 +58,9 @@ def test_install_dependencies_graceful_degradation_uv(mocker):
     )
 
     install_dependencies(
-        dependencies=["invalid-pkg"],
-        dev_dependencies=["invalid-dev-pkg"],
-        docs_dependencies=[],
+        dependencies_manifest=DependencyManifest(
+            dependencies=["invalid-pkg"], dev_dependencies=["invalid-dev-pkg"]
+        ),
         on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
     )
 
@@ -83,9 +83,7 @@ def test_install_dependencies_timeout_degradation(mocker):
     )
 
     install_dependencies(
-        dependencies=["massive-pkg"],
-        dev_dependencies=[],
-        docs_dependencies=[],
+        dependencies_manifest=DependencyManifest(dependencies=["massive-pkg"]),
         on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
     )
 
@@ -107,9 +105,7 @@ def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
     mocker.patch("protostar.dependencies.execute_subprocess", side_effect=error)
 
     install_dependencies(
-        dependencies=["numpy"],
-        dev_dependencies=[],
-        docs_dependencies=[],
+        dependencies_manifest=DependencyManifest(dependencies=["numpy"]),
         on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
     )
 

@@ -318,23 +318,23 @@ def generate_manifest_state() -> None:
     if target.is_file():
         blueprint = TemplateBlueprint.load(str(target))
         for dep in blueprint.dependencies:
-            manifest.add_dependency(dep)
+            manifest.dependencies.add(dep)
         for dep in blueprint.dev_dependencies:
-            manifest.add_dev_dependency(dep)
+            manifest.dependencies.add_dev(dep)
         for dep in blueprint.docs_dependencies:
-            manifest.add_docs_dependency(dep)
+            manifest.dependencies.add_docs(dep)
         for d in blueprint.directories:
-            manifest.add_directory(d)
+            manifest.filesystem.add_directory(d)
         for ig in blueprint.vcs_ignores:
-            manifest.add_vcs_ignore(ig)
+            manifest.filesystem.add_vcs_ignore(ig)
         for cmd in blueprint.system_tasks:
-            manifest.add_system_task(cmd)
+            manifest.tasks.add_system_task(cmd)
         for cmd in blueprint.post_install_tasks:
-            manifest.add_post_install_task(cmd)
+            manifest.tasks.add_post_install_task(cmd)
         for filepath, content in blueprint.files.items():
-            manifest.add_file_injection(filepath, content)
+            manifest.filesystem.add_file_injection(filepath, content)
         for payload in blueprint.pyproject_injections.values():
-            manifest.add_file_append("pyproject.toml", payload)
+            manifest.filesystem.add_file_append("pyproject.toml", payload)
 
     # Override machine-specific IDE paths to guarantee stable JSON diffs in CI
     manifest.ide_settings = {

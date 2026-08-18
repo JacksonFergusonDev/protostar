@@ -7,25 +7,27 @@ from protostar.modules.ci_layer import CIModule, ReleaseModule
 def test_cimodule_build(manifest: EnvironmentManifest) -> None:
     mod = CIModule()
     mod.build(manifest)
-    assert manifest.wants_ci is True
-    assert any("workflows" in str(d) for d in manifest.directories)
+    assert manifest.tooling.wants_ci is True
+    assert any("workflows" in str(d) for d in manifest.filesystem.directories)
 
 
 def test_releasemodule_build(manifest: EnvironmentManifest) -> None:
     mod = ReleaseModule()
     mod.build(manifest)
-    assert manifest.wants_release is True
-    assert any("workflows" in str(d) for d in manifest.directories)
+    assert manifest.tooling.wants_release is True
+    assert any("workflows" in str(d) for d in manifest.filesystem.directories)
 
 
 def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
-    manifest.wants_ci = True
+    manifest.tooling.wants_ci = True
     manifest.metadata = {
         "supported_os": ["Linux", "MacOS"],
         "minimum_python": "3.11",
     }
-    manifest.ci_flags = {"pytest", "codecov"}
-    manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
+    manifest.tooling.ci_flags = {"pytest", "codecov"}
+    manifest.tooling.ci_steps = [
+        "      - name: Run Ruff\\n        run: uv run ruff check"
+    ]
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
@@ -47,13 +49,15 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
 
 
 def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) -> None:
-    manifest.wants_ci = True
+    manifest.tooling.wants_ci = True
     manifest.metadata = {
         "supported_os": ["Linux"],
         "minimum_python": "3.11",
     }
-    manifest.ci_flags = {"pytest"}
-    manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
+    manifest.tooling.ci_flags = {"pytest"}
+    manifest.tooling.ci_steps = [
+        "      - name: Run Ruff\\n        run: uv run ruff check"
+    ]
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
@@ -68,13 +72,15 @@ def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) 
 
 
 def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -> None:
-    manifest.wants_ci = True
+    manifest.tooling.wants_ci = True
     manifest.metadata = {
         "supported_os": ["Linux"],
         "minimum_python": "3.11",
     }
-    manifest.ci_flags = set()
-    manifest.ci_steps = ["      - name: Run Ruff\\n        run: uv run ruff check"]
+    manifest.tooling.ci_flags = set()
+    manifest.tooling.ci_steps = [
+        "      - name: Run Ruff\\n        run: uv run ruff check"
+    ]
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
@@ -87,7 +93,7 @@ def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -
 
 
 def test_executor_release_assembly(manifest: EnvironmentManifest, mocker) -> None:
-    manifest.wants_release = True
+    manifest.tooling.wants_release = True
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
     executor._write_release_workflow()

@@ -29,7 +29,7 @@ class SystemWorkspaceModule(BootstrapModule):
         logger.debug("Building universal system workspace layer.")
 
         if shutil.which("git") and not Path(".git").exists():
-            manifest.add_system_task(
+            manifest.tasks.add_system_task(
                 ["git", "init"], description="Initializing git repository"
             )
 
@@ -43,4 +43,4 @@ class SystemWorkspaceModule(BootstrapModule):
         ]
 
         for artifact in universal_artifacts:
-            manifest.add_environment_artifact(artifact)
+            manifest.filesystem.add_environment_artifact(artifact)

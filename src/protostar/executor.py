@@ -93,13 +93,13 @@ class SystemExecutor:
         self._write_ci_workflow()
         self._write_release_workflow()
         self._write_justfile()
-        self._run_tasks(self.manifest.system_tasks)
+        self._run_tasks(self.manifest.tasks.system_tasks)
         self._install_dependencies()
         self._append_files()
         self._write_ignores()
         self._write_docker_artifacts()
         self._write_ide_settings()
-        self._run_tasks(self.manifest.post_install_tasks)
+        self._run_tasks(self.manifest.tasks.post_install_tasks)
         self._check_ide_extensions()
 
     def _check_ide_extensions(self) -> None:
@@ -110,7 +110,7 @@ class SystemExecutor:
         """
         check_ide_extensions(
             ide=self.config.ide,
-            ide_extensions=self.manifest.ide_extensions,
+            ide_extensions=self.manifest.tooling.ide_extensions,
             on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
                 phase="IDE",
                 message=msg,
@@ -128,7 +128,7 @@ class SystemExecutor:
         Raises:
             SystemExit: If an existing target TOML file contains syntax errors.
         """
-        for filepath in self.manifest.file_appends:
+        for filepath in self.manifest.filesystem.file_appends:
             target = Path(filepath)
             if target.suffix == ".toml" and target.exists():
                 try:
@@ -144,7 +144,10 @@ class SystemExecutor:
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and writes the pre-commit configuration."""
-        if not self.manifest.wants_pre_commit and not self.manifest.wants_prek:
+        if (
+            not self.manifest.tooling.wants_pre_commit
+            and not self.manifest.tooling.wants_prek
+        ):
             return
 
         target = Path(".pre-commit-config.yaml")
@@ -153,24 +156,24 @@ class SystemExecutor:
             return
 
         full_yaml = generate_pre_commit_config(
-            local_hooks=self.manifest.pre_commit_local_hooks,
-            remote_hooks=self.manifest.pre_commit_hooks,
-            dependencies=self.manifest.dependencies,
+            local_hooks=self.manifest.tooling.pre_commit_local_hooks,
+            remote_hooks=self.manifest.tooling.pre_commit_hooks,
+            dependencies=self.manifest.dependencies.dependencies,
         )
 
         try:
             atomic_write_text(target, full_yaml)
-            self.manifest.record_touch(target)
+            self.manifest.filesystem.record_touch(target)
         except OSError as e:
             raise FileSystemError("write configuration file", str(target), e) from e
         logger.debug("Scaffolded .pre-commit-config.yaml")
 
     def _write_injected_files(self) -> None:
         """Writes all queued boilerplate files to the local workspace."""
-        if not self.manifest.file_injections:
+        if not self.manifest.filesystem.file_injections:
             return
 
-        for filepath, content in self.manifest.file_injections.items():
+        for filepath, content in self.manifest.filesystem.file_injections.items():
             interpolated_filepath = render_template(
                 filepath, self.interpolation_context
             )
@@ -181,7 +184,7 @@ class SystemExecutor:
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     atomic_write_text(target, content)
-                    self.manifest.record_touch(target)
+                    self.manifest.filesystem.record_touch(target)
                 except OSError as e:
                     raise FileSystemError(
                         "inject boilerplate file", str(target), e
@@ -190,16 +193,16 @@ class SystemExecutor:
 
     def _create_directories(self) -> None:
         """Scaffolds all queued directories in the local workspace."""
-        if not self.manifest.directories:
+        if not self.manifest.filesystem.directories:
             return
 
-        for dir_path in self.manifest.directories:
+        for dir_path in self.manifest.filesystem.directories:
             interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
             enforce_path_jail(path, Path.cwd())
             try:
                 path.mkdir(parents=True, exist_ok=True)
-                self.manifest.record_touch(path)
+                self.manifest.filesystem.record_touch(path)
             except OSError as e:
                 raise FileSystemError(
                     "create scaffolding directory", str(path), e
@@ -217,36 +220,36 @@ class SystemExecutor:
 
     def _write_ci_workflow(self) -> None:
         """Assembles and writes the .github/workflows/ci.yml file if requested."""
-        if not self.manifest.wants_ci:
+        if not self.manifest.tooling.wants_ci:
             return
 
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
                 min_python=self.manifest.metadata.get("minimum_python", "3.13"),
-                ci_flags=self.manifest.ci_flags,
-                ci_steps=self.manifest.ci_steps,
+                ci_flags=self.manifest.tooling.ci_flags,
+                ci_steps=self.manifest.tooling.ci_steps,
             )
         )
         target = Path(".github/workflows/ci.yml")
         enforce_path_jail(target, Path.cwd())
         atomic_write_text(target, workflow)
-        self.manifest.record_touch(target)
+        self.manifest.filesystem.record_touch(target)
 
     def _write_release_workflow(self) -> None:
         """Assembles and writes the .github/workflows/release.yml file if requested."""
-        if not self.manifest.wants_release:
+        if not self.manifest.tooling.wants_release:
             return
 
         workflow = generate_release_workflow()
         target = Path(".github/workflows/release.yml")
         enforce_path_jail(target, Path.cwd())
         atomic_write_text(target, workflow)
-        self.manifest.record_touch(target)
+        self.manifest.filesystem.record_touch(target)
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""
-        if not self.manifest.wants_just:
+        if not self.manifest.tooling.wants_just:
             return
 
         target = Path("justfile")
@@ -256,15 +259,15 @@ class SystemExecutor:
 
         full_content = generate_justfile(
             JustfileSpec(
-                format_commands=self.manifest.just_format_commands,
-                lint_commands=self.manifest.just_lint_commands,
-                typecheck_commands=self.manifest.just_typecheck_commands,
-                ci_flags=self.manifest.ci_flags,
-                clean_paths=self.manifest.just_clean_paths,
+                format_commands=self.manifest.tooling.just_format_commands,
+                lint_commands=self.manifest.tooling.just_lint_commands,
+                typecheck_commands=self.manifest.tooling.just_typecheck_commands,
+                ci_flags=self.manifest.tooling.ci_flags,
+                clean_paths=self.manifest.tooling.just_clean_paths,
             )
         )
         atomic_write_text(target, full_content)
-        self.manifest.record_touch(target)
+        self.manifest.filesystem.record_touch(target)
 
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
@@ -272,12 +275,12 @@ class SystemExecutor:
     # Rationale:
     def _append_files(self) -> None:
         """Appends late-binding configuration payloads to their target files."""
-        if not self.manifest.file_appends:
+        if not self.manifest.filesystem.file_appends:
             return
 
         is_overwrite = self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
 
-        for filepath, contents in self.manifest.file_appends.items():
+        for filepath, contents in self.manifest.filesystem.file_appends.items():
             target = Path(filepath)
             enforce_path_jail(target, Path.cwd())
 
@@ -315,7 +318,7 @@ class SystemExecutor:
                 if new_content.strip() != original_content.strip():
                     try:
                         atomic_write_text(target, new_content)
-                        self.manifest.record_touch(target)
+                        self.manifest.filesystem.record_touch(target)
                     except OSError as e:
                         raise FileSystemError(
                             "mutate configuration AST", str(target), e
@@ -331,7 +334,7 @@ class SystemExecutor:
                 if appended_content is not None:
                     try:
                         atomic_write_text(target, appended_content)
-                        self.manifest.record_touch(target)
+                        self.manifest.filesystem.record_touch(target)
                     except OSError as e:
                         raise FileSystemError(
                             "append configurations block", str(target), e
@@ -340,7 +343,7 @@ class SystemExecutor:
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
-        if not self.manifest.vcs_ignores:
+        if not self.manifest.filesystem.vcs_ignores:
             return
 
         gitignore = Path(".gitignore")
@@ -348,14 +351,14 @@ class SystemExecutor:
         try:
             existing_content = gitignore.read_text() if gitignore.exists() else ""
             new_content = generate_gitignore(
-                vcs_ignores=self.manifest.vcs_ignores,
+                vcs_ignores=self.manifest.filesystem.vcs_ignores,
                 existing_content=existing_content,
             )
             if new_content is not None:
                 atomic_write_text(gitignore, new_content)
-                self.manifest.record_touch(gitignore)
+                self.manifest.filesystem.record_touch(gitignore)
                 missing_count = len(
-                    self.manifest.vcs_ignores
+                    self.manifest.filesystem.vcs_ignores
                     - {line.strip() for line in existing_content.splitlines()}
                 )
                 logger.debug(f"Appended {missing_count} items to .gitignore")
@@ -375,16 +378,16 @@ class SystemExecutor:
             existing_content = dockerignore.read_text() if dockerignore.exists() else ""
             has_uv_init = any(
                 task.command[:2] == ["uv", "init"]
-                for task in self.manifest.system_tasks
+                for task in self.manifest.tasks.system_tasks
             )
             new_dockerignore = generate_dockerignore(
-                vcs_ignores=self.manifest.vcs_ignores,
+                vcs_ignores=self.manifest.filesystem.vcs_ignores,
                 has_uv_init=has_uv_init,
                 existing_content=existing_content,
             )
             if new_dockerignore is not None:
                 atomic_write_text(dockerignore, new_dockerignore)
-                self.manifest.record_touch(dockerignore)
+                self.manifest.filesystem.record_touch(dockerignore)
                 logger.debug(
                     "Scaffolded container runtime ignore configurations (.dockerignore)"
                 )
@@ -400,9 +403,14 @@ class SystemExecutor:
         if not self.manifest.should_skip_file(dockerfile, phase="Docker"):
             try:
                 context = self.interpolation_context
-                is_script_or_typer = "typer" in self.manifest.dependencies or any(
-                    "project.scripts" in app
-                    for app in self.manifest.file_appends.get("pyproject.toml", [])
+                is_script_or_typer = (
+                    "typer" in self.manifest.dependencies.dependencies
+                    or any(
+                        "project.scripts" in app
+                        for app in self.manifest.filesystem.file_appends.get(
+                            "pyproject.toml", []
+                        )
+                    )
                 )
                 docker_port = (
                     str(self.manifest.metadata.get("docker_port"))
@@ -414,13 +422,13 @@ class SystemExecutor:
                         python_version=context["PYTHON_VERSION"],
                         project_name=context["PROJECT_NAME"],
                         package_name=context["PACKAGE_NAME"],
-                        dependencies=self.manifest.dependencies,
+                        dependencies=self.manifest.dependencies.dependencies,
                         docker_port=docker_port,
                         is_script_or_typer=is_script_or_typer,
                     )
                 )
                 atomic_write_text(dockerfile, dockerfile_content)
-                self.manifest.record_touch(dockerfile)
+                self.manifest.filesystem.record_touch(dockerfile)
                 logger.debug("Scaffolded Dockerfile")
             except OSError as e:
                 raise FileSystemError(
@@ -438,15 +446,13 @@ class SystemExecutor:
                 message=msg,
                 severity=sev,
             ),
-            on_record_touch=self.manifest.record_touch,
+            on_record_touch=self.manifest.filesystem.record_touch,
         )
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
         install_dependencies(
-            dependencies=self.manifest.dependencies,
-            dev_dependencies=self.manifest.dev_dependencies,
-            docs_dependencies=self.manifest.docs_dependencies,
+            dependencies_manifest=self.manifest.dependencies,
             on_diagnostic=lambda msg, sev, detail: self.manifest.add_diagnostic(
                 phase="Executor",
                 message=msg,

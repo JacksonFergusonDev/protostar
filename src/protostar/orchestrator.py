@@ -149,7 +149,10 @@ class Orchestrator:
         if not self.is_external or self.is_user_aliased:
             return
 
-        tasks = [*self.manifest.system_tasks, *self.manifest.post_install_tasks]
+        tasks = [
+            *self.manifest.tasks.system_tasks,
+            *self.manifest.tasks.post_install_tasks,
+        ]
         if not tasks:
             return
 
@@ -203,42 +206,42 @@ class Orchestrator:
             logger.debug("Injecting blueprint structural fields into manifest.")
 
             for dep in self.blueprint.dependencies:
-                self.manifest.add_dependency(dep)
+                self.manifest.dependencies.add(dep)
 
             for dep in self.blueprint.dev_dependencies:
-                self.manifest.add_dev_dependency(dep)
+                self.manifest.dependencies.add_dev(dep)
 
             for dep in self.blueprint.docs_dependencies:
-                self.manifest.add_docs_dependency(dep)
+                self.manifest.dependencies.add_docs(dep)
 
             for d in self.blueprint.directories:
-                self.manifest.add_directory(d)
+                self.manifest.filesystem.add_directory(d)
 
             for ig in self.blueprint.vcs_ignores:
-                self.manifest.add_vcs_ignore(ig)
+                self.manifest.filesystem.add_vcs_ignore(ig)
 
             for cmd in self.blueprint.system_tasks:
-                self.manifest.add_system_task(cmd)
+                self.manifest.tasks.add_system_task(cmd)
 
             for cmd in self.blueprint.post_install_tasks:
-                self.manifest.add_post_install_task(cmd)
+                self.manifest.tasks.add_post_install_task(cmd)
 
             if self.blueprint.pyproject_injections:
                 logger.debug("Injecting pyproject.toml payloads from configuration.")
                 for payload in self.blueprint.pyproject_injections.values():
-                    self.manifest.add_file_append("pyproject.toml", payload)
+                    self.manifest.filesystem.add_file_append("pyproject.toml", payload)
 
             # Inject generic file appends
             if self.blueprint.appends:
                 logger.debug("Injecting generic file appends from configuration.")
                 for filepath, payloads in self.blueprint.appends.items():
                     for payload in payloads:
-                        self.manifest.add_file_append(filepath, payload)
+                        self.manifest.filesystem.add_file_append(filepath, payload)
 
             if self.blueprint.files:
                 logger.debug("Injecting static files from configuration.")
                 for filepath, content in self.blueprint.files.items():
-                    self.manifest.add_file_injection(filepath, content)
+                    self.manifest.filesystem.add_file_injection(filepath, content)
 
         # Phase 3.5: Trust Evaluation Boundary
         self._prompt_remote_trust()
@@ -248,9 +251,9 @@ class Orchestrator:
         try:
             executor.execute()
         except KeyboardInterrupt:
-            if self.manifest.touched_paths:
+            if self.manifest.filesystem.touched_paths:
                 raise PartialExecutionAbortedError(
-                    self.manifest.touched_paths
+                    self.manifest.filesystem.touched_paths
                 ) from None
             raise ExecutionAbortedError(
                 "Environment initialization cancelled by user."
