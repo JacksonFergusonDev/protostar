@@ -166,6 +166,14 @@ def test_direnv_build_file_exists(manifest, mocker):
 # --- MarkdownLintModule Tests ---
 
 
+def test_markdownlint_module_properties():
+    module = MarkdownLintModule()
+    assert module.name == "MarkdownLint"
+    assert module.cli_flags == ("--markdownlint",)
+    assert module.config_key == "markdownlint"
+    assert module.collision_markers == [Path(".markdownlint-cli2.yaml")]
+
+
 def test_markdownlint_collision_markers():
     assert MarkdownLintModule().collision_markers == [Path(".markdownlint-cli2.yaml")]
 

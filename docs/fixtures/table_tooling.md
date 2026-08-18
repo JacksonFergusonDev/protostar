@@ -1,7 +1,7 @@
 | Tooling Module | CLI Flags | Description | Collision Markers |
 | :--- | :--- | :--- | :--- |
 | direnv | `--direnv` | Scaffold a .envrc and evaluate the virtual environment | `.envrc` |
-| MarkdownLint | `-m`, `--markdownlint` | Scaffold a relaxed .markdownlint-cli2.yaml configuration | `.markdownlint-cli2.yaml` |
+| MarkdownLint | `--markdownlint` | Scaffold a relaxed .markdownlint-cli2.yaml configuration | `.markdownlint-cli2.yaml` |
 | Ruff | `--ruff` | Scaffold Ruff linter and formatter | *None* |
 | Mypy | `--mypy` | Scaffold Mypy static type checker | *None* |
 | Ty | `--ty` | Scaffold Ty static type checker | *None* |

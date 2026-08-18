@@ -82,7 +82,7 @@ To understand the decoupling, it is helpful to visualize the manifest's internal
 
 ## Collision Strategies
 
-When the Orchestrator detects that a collision marker (e.g., an existing `pyproject.toml`) is present in the target workspace, it alters the manifest's `collision_strategy` attribute based on user input or `--force` flags.
+When the Orchestrator detects that a collision marker (e.g., an existing `pyproject.toml`) is present in the target workspace, it alters the manifest's `collision_strategy` attribute based on user input or `--force-merge` / `--force-replace` flags.
 
 The `SystemExecutor` reads this enum to govern its AST mutation logic:
 

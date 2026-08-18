@@ -438,7 +438,7 @@ def build_parser() -> argparse.ArgumentParser:
     base_group.add_argument(
         "--python-version",
         type=str,
-        help="Specify the Python version to scaffold (e.g., 3.12). Overrides global configuration.",
+        help="Specify the Python version to scaffold (e.g., 3.13). Overrides global configuration.",
         dest="python_version",
         metavar="VERSION",
     )

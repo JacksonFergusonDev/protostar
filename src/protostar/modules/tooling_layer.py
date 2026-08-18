@@ -73,7 +73,7 @@ class DirenvModule(BootstrapModule):
 class MarkdownLintModule(BootstrapModule):
     """Configures a relaxed, pragmatic .markdownlint-cli2.yaml ruleset."""
 
-    cli_flags = ("-m", "--markdownlint")
+    cli_flags = ("--markdownlint",)
     cli_help = "Scaffold a relaxed .markdownlint-cli2.yaml configuration"
     config_key = "markdownlint"
 

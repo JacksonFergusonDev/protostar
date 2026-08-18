@@ -24,11 +24,14 @@ Protostar is designed to be run on Day 1 to build your repository foundation, bu
 
 While Protostar is modular, you often want a vetted, turnkey environment without selecting a dozen flags manually. Protostar ships with built-in __Opinionated Templates__ that bundle specific tools, directories, and AST overrides.
 
-You can select a template in the interactive wizard (`protostar init`), or trigger it headlessly:
+You can select a template in the interactive wizard (`protostar init`), list all available templates with `protostar init --list-templates`, or trigger one headlessly using `--template` (or `-t`):
 
 ```bash
-# Scaffold from a built-in template
+# Scaffold from a built-in template (shorthand: protostar init -t astro)
 protostar init --template astro
+
+# List all available built-in templates and global aliases
+protostar init --list-templates
 
 # Scaffold from a remote team standard
 protostar init --from https://github.com/YourOrg/standards/blob/main/backend.toml
@@ -40,7 +43,7 @@ Every tooling option in Protostar supports tri-state evaluation. Passing `--<too
 
 ```bash
 # Use the astro template but disable direnv and enable mypy
-protostar init --template astro --no-direnv --mypy
+protostar init -t astro --no-direnv --mypy
 ```
 
 For custom authoring, variable interpolation, global aliases, and security mechanics, see the complete __[Templates & Portable Configurations Guide](./templates.md)__.
@@ -351,6 +354,8 @@ Selecting __Merge__ executes an AST injection:
 
 ## Advanced Flags
 
+- __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).
+- __List Available Templates__: Run `protostar init --list-templates` to view all built-in templates and registered global aliases.
 - __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.13`).
 - __Verbose Output__: Append `--verbose` (or `-v`) to enable debug logs and full tracebacks.
 

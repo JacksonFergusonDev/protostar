@@ -28,15 +28,29 @@ Protostar's template engine allows you to define declarative, reusable environme
 
 ## Using Templates
 
-Protostar provides two primary flags for loading templates during `init`:
+Protostar provides flags for discovering and loading templates during `init`:
 
 ```bash
-# 1. Using a built-in template or a global alias
+# 1. Using a built-in template or a global alias (shorthand: -t)
 protostar init --template astro
+protostar init -t astro
 
-# 2. Using a portable configuration directly from a file or URL
+# 2. Listing all available built-in templates and global aliases
+protostar init --list-templates
+
+# 3. Using a portable configuration directly from a file or URL
 protostar init --from https://github.com/YourOrg/standards/blob/main/backend.toml
 ```
+
+### Listing Available Templates
+
+To inspect all available built-in templates alongside any global aliases registered in your configuration:
+
+```bash
+protostar init --list-templates
+```
+
+This displays a structured overview in the terminal outlining template names, types (Built-in or Global Alias), and origin sources.
 
 ### Dynamic Tri-State CLI Toggles
 
@@ -44,7 +58,7 @@ Templates declare opinions about which tools to enable (e.g., `ruff = true`, `my
 
 ```bash
 # Load the astro template, but disable direnv and enable mypy
-protostar init --template astro --no-direnv --mypy
+protostar init -t astro --no-direnv --mypy
 ```
 
 !!! tip "Precedence Cascade (Highest to Lowest)"
@@ -112,13 +126,7 @@ Protostar automatically reserves and computes the following variables during exe
 
 ## Authoring Custom Templates
 
-A template is a declarative TOML document specifying dependencies, directories, files, and tooling opinions.
-
-### Template Schema Reference
-
-```toml
---8<-- "template_schema.toml"
-```
+See [Authoring Templates](authoring-templates.md) for information on how to create your own templates.
 
 ---
 
@@ -135,13 +143,15 @@ microservice = "https://github.com/YourOrg/microservice-template"
 local-ds = "~/Developer/templates/data-science.toml"
 ```
 
-Once registered, you can reference them directly with `--template`:
+Once registered, you can reference them directly with `--template` (or `-t`):
 
 ```bash
 protostar init --template backend
+# Or using shorthand:
+protostar init -t backend
 ```
 
-In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category.
+In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
 
 ---
 
