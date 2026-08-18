@@ -82,7 +82,7 @@ flowchart TD
 
     * **Interactive Environments:** Protostar halts and launches a TUI prompting the developer to `Merge`, `Overwrite`, or `Abort`.
 
-    * **Headless Environments (CI/CD):** Protostar safely aborts with a non-zero exit code to prevent destructive mutations, unless the `-f / --force` flag is explicitly provided (which defaults to a safe `MERGE` strategy).
+    * **Headless Environments (CI/CD):** Protostar safely aborts with a non-zero exit code to prevent destructive mutations, unless the `--force-merge` or `--force-replace` flag is explicitly provided (with `--force-merge` selecting a safe `MERGE` strategy and `--force-replace` selecting `OVERWRITE`).
 
 === "2. Pre-Flight Verification"
     Every loaded module executes its `pre_flight()` method. This step guarantees that all required system binaries (like `uv`, `cargo`, `git`, or `direnv`) are installed and accessible in the system `$PATH`. If a dependency is missing, execution halts immediately before any disk I/O occurs.
