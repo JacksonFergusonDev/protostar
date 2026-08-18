@@ -12,6 +12,7 @@ nav:
   - Usage:
     - Initialization: usage/init.md
     - Templates & Portable Configs: usage/templates.md
+    - Authoring Templates: usage/authoring-templates.md
     - Configuration: usage/configuration.md
   - Flags & Tooling:
     - Built-in Templates: flags/templates.md
