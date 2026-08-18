@@ -59,7 +59,7 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
     mod.build(manifest)
 
     # Assert declarative intent rather than evaluating the shell execution
-    assert ["git", "init"] in manifest.system_tasks
+    assert any(t.command == ["git", "init"] for t in manifest.tasks.system_tasks)
 
 ```
 
