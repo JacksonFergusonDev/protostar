@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787012341564,
+  "lastUpdate": 1787015677585,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6805,6 +6805,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 209.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "66e106a10686a7e9cd1dc32f460e0b492afa5a33",
+          "message": "docs(manifest): align documentation with domain slice architecture, add security flowcharts, and fix late-binding variable resolution (#181)\n\n* docs(manifest): update documentation to reflect domain slice architecture and namespaces\n\n* docs(diagrams): add visual scaffolding for remote trust boundary and AST deep merging\n\n* fix: resolve CLI flags, late-binding parsing, Commitizen typo, and docs drift",
+          "timestamp": "2026-08-17T18:13:32-07:00",
+          "tree_id": "29e012ab057ab67d7035381156d720dc69bbb33b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/66e106a10686a7e9cd1dc32f460e0b492afa5a33"
+        },
+        "date": 1787015676442,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 148.37,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 218.45,
             "unit": "ms"
           }
         ]
