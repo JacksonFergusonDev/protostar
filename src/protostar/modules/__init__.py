@@ -2,7 +2,7 @@
 
 from .base import BootstrapModule
 from .ci_layer import CIModule, ReleaseModule
-from .lang_layer import PythonCore
+from .lang_layer import LICENSE_MAP, PythonCore
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
     CodecovModule,
@@ -43,6 +43,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
 )
 
 __all__ = [
+    "LICENSE_MAP",
     "TOOLING_MODULES",
     "BootstrapModule",
     "CIModule",
