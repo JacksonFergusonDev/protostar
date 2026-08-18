@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787028178155,
+  "lastUpdate": 1787029217771,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7009,6 +7009,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 220.61,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a8883b21272824f8270c3f026a5eeaf9bbc7e1c5",
+          "message": "docs: audit CLI flags, document aliases, and standardize tooling options (#183)\n\n* refactor(modules): remove short flag from MarkdownLintModule\n\n* docs(mechanics): align collision bypass flag references\n\n* docs(init): document -t alias and --list-templates flag\n\n* docs(cli): sync python version example to 3.13 in cli help\n\n* chore(docs): regenerate doc fixtures with updated flags and help output\n\n* docs: link to authoring-templates.md",
+          "timestamp": "2026-08-17T21:59:15-07:00",
+          "tree_id": "3bf421ba4cf39f71c63b4af8e6265dba1d614980",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a8883b21272824f8270c3f026a5eeaf9bbc7e1c5"
+        },
+        "date": 1787029216830,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 210.22,
             "unit": "ms"
           }
         ]
