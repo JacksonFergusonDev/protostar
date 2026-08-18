@@ -105,6 +105,8 @@ Protostar automatically reserves and computes the following variables during exe
 - `<% PROJECT_NAME %>`: The human-readable project name (derived from directory name or metadata).
 - `<% PACKAGE_NAME %>`: The PEP 8 sanitized Python package identifier (e.g., `my-cool-app` becomes `my_cool_app`).
 - `<% PYTHON_VERSION %>`: The resolved target Python version (e.g., `3.13`).
+- `<% CURRENT_YEAR %>`: The current calendar year (e.g., `2026`).
+- `<% AUTHOR_NAME %>`: The resolved author name (from project metadata or fallback default).
 
 ---
 

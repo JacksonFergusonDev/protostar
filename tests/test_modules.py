@@ -7,7 +7,7 @@ from protostar.errors import ConfigurationError, MissingDependencyError
 from protostar.manifest import EnvironmentManifest, Severity
 from protostar.modules import (
     CodecovModule,
-    CommitizinModule,
+    CommitizenModule,
     DirenvModule,
     MarkdownLintModule,
     MypyModule,
@@ -470,7 +470,7 @@ def test_pre_commit_module_pre_flight_missing_git(mocker):
 
 def test_commitizen_module_injects_dev_dependency():
     manifest = EnvironmentManifest()
-    module = CommitizinModule()
+    module = CommitizenModule()
     module.build(manifest)
 
     assert "commitizen" in manifest.dependencies.dev_dependencies
@@ -478,7 +478,7 @@ def test_commitizen_module_injects_dev_dependency():
 
 def test_commitizen_module_appends_pyproject_config():
     manifest = EnvironmentManifest()
-    module = CommitizinModule()
+    module = CommitizenModule()
     module.build(manifest)
 
     appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
@@ -487,7 +487,7 @@ def test_commitizen_module_appends_pyproject_config():
 
 def test_commitizen_module_appends_pyproject_version_provider():
     manifest = EnvironmentManifest()
-    module = CommitizinModule()
+    module = CommitizenModule()
     module.build(manifest)
 
     appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
@@ -499,7 +499,7 @@ def test_commitizen_module_appends_pyproject_version_provider():
 
 def test_commitizen_module_adds_pre_commit_hook():
     manifest = EnvironmentManifest()
-    module = CommitizinModule()
+    module = CommitizenModule()
     module.build(manifest)
 
     assert any(
@@ -510,7 +510,7 @@ def test_commitizen_module_adds_pre_commit_hook():
 
 def test_commitizen_module_adds_gitignore_entry():
     manifest = EnvironmentManifest()
-    module = CommitizinModule()
+    module = CommitizenModule()
     module.build(manifest)
 
     assert ".cz-cache/" in manifest.filesystem.vcs_ignores

@@ -167,18 +167,18 @@ Because Protostar is designed for high-velocity initialization, we enforce a str
 
 To bypass the `questionary` interactive TUI blockage during benchmark or headless CI environments, we expose a hidden environment variable constraint (`PROTOSTAR_BENCHMARK_WIZARD=1`).
 
-The `Makefile` includes predefined targets leveraging [hyperfine](https://github.com/sharkdp/hyperfine) to track regression thresholds. Ensure you test your changes against the fast-path (e.g., `protostar help`) to verify dynamic module imports haven't bloated the instantiation tree.
+The `justfile` includes predefined recipes leveraging [hyperfine](https://github.com/sharkdp/hyperfine) to track regression thresholds. Ensure you test your changes against the fast-path (e.g., `protostar help`) to verify dynamic module imports haven't bloated the instantiation tree.
 
 === "Quick Benchmark"
     Runs a 5-iteration warmup and 30 statistical runs.
 
     ```bash
-    make test-benchmark
+    just test-benchmark
     ```
 
 === "Rigorous Benchmark"
     Runs a 30-iteration warmup and 90 statistical runs, exporting results to `benchmark.json`.
 
     ```bash
-    make test-benchmark-slower
+    just test-benchmark-slower
     ```

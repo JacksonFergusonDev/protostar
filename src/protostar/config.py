@@ -314,7 +314,13 @@ class TemplateBlueprint:
 
             context = dict(template_context) if template_context else {}
 
-            late_binding_vars = {"PYTHON_VERSION", "PROJECT_NAME", "PACKAGE_NAME"}
+            late_binding_vars = {
+                "PYTHON_VERSION",
+                "PROJECT_NAME",
+                "PACKAGE_NAME",
+                "CURRENT_YEAR",
+                "AUTHOR_NAME",
+            }
             missing = [
                 v for v in variables if v not in context and v not in late_binding_vars
             ]
