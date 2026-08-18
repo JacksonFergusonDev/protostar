@@ -1,18 +1,44 @@
 """Domain-specific exceptions for Protostar."""
 
+DOCS_BASE_URL = "https://protostar.readthedocs.io/en/stable/"
+
 
 class ProtostarError(Exception):
     """Base class for all expected operational errors in Protostar."""
 
-    def __init__(self, message: str, *, hint: str | None = None) -> None:
+    def __init__(
+        self, message: str, *, hint: str | None = None, docs_path: str | None = None
+    ) -> None:
         super().__init__(message)
         self.hint = hint
+        self.docs_path = docs_path
+
+    @property
+    def docs_url(self) -> str | None:
+        """Returns the full URL to the documentation page, or None if not set."""
+        if self.docs_path is None:
+            return None
+        return f"{DOCS_BASE_URL}{self.docs_path.lstrip('/')}"
 
 
 class ConfigurationError(ProtostarError):
     """Raised when a configuration file is malformed, invalid, or missing requirements."""
 
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        docs_path: str | None = "usage/configuration/",
+    ) -> None:
+        super().__init__(message, hint=hint, docs_path=docs_path)
+
+
+class InvalidUsageError(ProtostarError):
+    """Raised when the user provides unrecognized or invalid CLI arguments."""
+
+    def __init__(self, message: str, *, docs_path: str | None = None) -> None:
+        super().__init__(message, docs_path=docs_path)
 
 
 class NetworkFetchError(ProtostarError):
@@ -25,12 +51,15 @@ class NetworkFetchError(ProtostarError):
         *,
         message: str | None = None,
         hint: str | None = None,
+        docs_path: str | None = "usage/templates/",
     ) -> None:
         default_message = (
             f"Network failure: Could not fetch remote configuration from '{url}'."
         )
         default_hint = "Ensure you have an active internet connection and that the URL requires HTTPS, not HTTP."
-        super().__init__(message or default_message, hint=hint or default_hint)
+        super().__init__(
+            message or default_message, hint=hint or default_hint, docs_path=docs_path
+        )
         self.url = url
         self.original = original
 
@@ -38,9 +67,16 @@ class NetworkFetchError(ProtostarError):
 class TemplateResolutionError(ProtostarError):
     """Raised when a template is found but cannot be parsed, extracted, or resolved."""
 
-    def __init__(self, target: str, detail: str, *, hint: str | None = None) -> None:
+    def __init__(
+        self,
+        target: str,
+        detail: str,
+        *,
+        hint: str | None = None,
+        docs_path: str | None = "usage/authoring-templates/",
+    ) -> None:
         message = f"Failed to resolve template '{target}': {detail}"
-        super().__init__(message, hint=hint)
+        super().__init__(message, hint=hint, docs_path=docs_path)
         self.target = target
         self.detail = detail
 
@@ -48,9 +84,16 @@ class TemplateResolutionError(ProtostarError):
 class MissingDependencyError(ProtostarError):
     """Raised during pre-flight checks when a system-level executable is absent."""
 
-    def __init__(self, dependency: str, purpose: str, install_hint: str) -> None:
+    def __init__(
+        self,
+        dependency: str,
+        purpose: str,
+        install_hint: str,
+        *,
+        docs_path: str | None = "getting-started/",
+    ) -> None:
         message = f"Missing dependency: '{dependency}' is required for {purpose}."
-        super().__init__(message, hint=install_hint)
+        super().__init__(message, hint=install_hint, docs_path=docs_path)
         self.dependency = dependency
         self.purpose = purpose
 
@@ -59,10 +102,16 @@ class CommandExecutionError(ProtostarError):
     """Raised when a managed subprocess exits with a non-zero status code."""
 
     def __init__(
-        self, command: list[str], returncode: int, stdout: str = "", stderr: str = ""
+        self,
+        command: list[str],
+        returncode: int,
+        stdout: str = "",
+        stderr: str = "",
+        *,
+        docs_path: str | None = None,
     ) -> None:
         message = f"Protostar failed to execute command: {' '.join(command)}"
-        super().__init__(message)
+        super().__init__(message, docs_path=docs_path)
         self.command = command
         self.returncode = returncode
         self.stdout = stdout
@@ -82,10 +131,16 @@ class CommandExecutionError(ProtostarError):
 class CommandTimeoutError(ProtostarError):
     """Raised when a managed subprocess exceeds its allocated runtime window."""
 
-    def __init__(self, command: list[str], timeout: int) -> None:
+    def __init__(
+        self,
+        command: list[str],
+        timeout: int,
+        *,
+        docs_path: str | None = "usage/templates/",
+    ) -> None:
         message = f"Command timed out after {timeout} seconds: {' '.join(command)}"
         hint = "This is often caused by a stalled network request or an unresponsive registry."
-        super().__init__(message, hint=hint)
+        super().__init__(message, hint=hint, docs_path=docs_path)
         self.command = command
         self.timeout = timeout
 
@@ -93,10 +148,17 @@ class CommandTimeoutError(ProtostarError):
 class FileSystemError(ProtostarError):
     """Raised when a local disk mutation (write, read, mkdir) fails via an OSError or serialization fault."""
 
-    def __init__(self, operation: str, path: str, original: Exception) -> None:
+    def __init__(
+        self,
+        operation: str,
+        path: str,
+        original: Exception,
+        *,
+        docs_path: str | None = None,
+    ) -> None:
         err_msg = getattr(original, "strerror", None) or str(original)
         message = f"Failed to {operation} '{path}': {err_msg}"
-        super().__init__(message)
+        super().__init__(message, docs_path=docs_path)
         self.operation = operation
         self.path = path
         self.original = original
@@ -106,19 +168,26 @@ class ExecutionAbortedError(ProtostarError):
     """Raised when the user explicitly aborts the execution via an interactive prompt."""
 
     def __init__(
-        self, message: str = "Execution aborted by user.", *, hint: str | None = None
+        self,
+        message: str = "Execution aborted by user.",
+        *,
+        hint: str | None = None,
+        docs_path: str | None = None,
     ) -> None:
-        super().__init__(message, hint=hint)
+        super().__init__(message, hint=hint, docs_path=docs_path)
 
 
 class PartialExecutionAbortedError(ExecutionAbortedError):
     """Raised when execution is interrupted after disk mutations have begun."""
 
-    def __init__(self, touched_paths: set[str]) -> None:
+    def __init__(
+        self, touched_paths: set[str], *, docs_path: str | None = None
+    ) -> None:
         """Initializes the exception with the set of paths modified before the interrupt.
 
         Args:
             touched_paths: Set of file and directory paths touched on disk.
+            docs_path: Optional path to relevant documentation.
         """
         if touched_paths:
             paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
@@ -134,12 +203,14 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
                 "Note: External commands (e.g., uv, git) may have also modified workspace files."
             )
         hint = "Inspect the modified paths or clean up the workspace before re-running Protostar."
-        super().__init__(message, hint=hint)
+        super().__init__(message, hint=hint, docs_path=docs_path)
         self.touched_paths = touched_paths
 
 
 class SecurityViolationError(ProtostarError):
     """Raised when a template attempts an unauthorized system or filesystem operation."""
 
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
+    def __init__(
+        self, message: str, *, docs_path: str | None = "usage/templates/"
+    ) -> None:
+        super().__init__(message, docs_path=docs_path)
