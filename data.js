@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787026323462,
+  "lastUpdate": 1787027257922,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -6941,6 +6941,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 238.21,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "0ca0dcaea2b6a7c008074d27c4fd05e53481daa4",
+          "message": "docs: add dedicated guide for authoring custom templates\n\n- Add `docs/usage/authoring-templates.md` detailing single-file TOML specifications, multi-file repository archives, variable interpolation, local testing, and security boundaries.\n- Register the new page under the Usage section in `mkdocs.yml`.",
+          "timestamp": "2026-08-17T21:26:32-07:00",
+          "tree_id": "1c39847e7aa2eee056626a66765aa32f4fadc41d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0ca0dcaea2b6a7c008074d27c4fd05e53481daa4"
+        },
+        "date": 1787027257364,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.86,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 208.79,
             "unit": "ms"
           }
         ]
