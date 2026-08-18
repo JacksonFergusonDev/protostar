@@ -80,10 +80,10 @@ The aggregation phase. Modules receive the mutable manifest object and register 
 class MyPyModule(BootstrapModule):
     def build(self, manifest: EnvironmentManifest) -> None:
         # Register the dependency
-        manifest.add_dev_dependency("mypy")
+        manifest.dependencies.add_dev("mypy")
 
         # Inject the AST payload for pyproject.toml
-        manifest.add_file_append("pyproject.toml", """
+        manifest.filesystem.add_file_append("pyproject.toml", """
 [tool.mypy]
 strict = true
 warn_return_any = true

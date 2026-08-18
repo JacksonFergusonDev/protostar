@@ -224,6 +224,24 @@ def test_template_blueprint_load_missing_vars_without_resolver_raises(mocker, tm
         TemplateBlueprint.load(target=str(target))
 
 
+def test_template_blueprint_load_late_binding_vars_do_not_prompt(mocker, tmp_path):
+    """Verify that built-in late-binding variables (e.g. CURRENT_YEAR, AUTHOR_NAME) do not prompt."""
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "nonexistent.toml")
+
+    target = tmp_path / "late_binding.toml"
+    target.write_text(
+        "[env]\n"
+        'python_version = "<%PYTHON_VERSION%>"\n'
+        'project_name = "<%PROJECT_NAME%>"\n'
+        'package_name = "<%PACKAGE_NAME%>"\n'
+        'current_year = "<%CURRENT_YEAR%>"\n'
+        'author = "<%AUTHOR_NAME%>"\n'
+    )
+
+    blueprint = TemplateBlueprint.load(target=str(target))
+    assert isinstance(blueprint, TemplateBlueprint)
+
+
 def test_user_config_commitizen_defaults_to_false():
     """Test that commitizen defaults to False when not set in config."""
     config = UserConfig()

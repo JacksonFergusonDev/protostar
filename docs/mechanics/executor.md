@@ -63,6 +63,30 @@ All disk writing and subprocess execution strictly pass through `security.py`'s 
 
 When merging configuration payloads into existing TOML files, Protostar utilizes `tomlkit` AST parsing rather than standard dictionary updates or destructive regular expressions.
 
+```mermaid
+flowchart TD
+    classDef artifact fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+    classDef process fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef decision fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef format fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
+
+    Base[(Host pyproject.toml)]:::artifact --> ParseHost[Parse AST via tomlkit]:::process
+    Payload[(Manifest Payload)]:::artifact --> ParsePayload[Parse AST via tomlkit]:::process
+
+    ParseHost --> Strategy{Collision\nStrategy}:::decision
+    ParsePayload --> Strategy
+
+    Strategy -- ABORT --> Exit([Halt Operations])
+
+    Strategy -- MERGE --> MergeLogic[Union Nodes\nPreserve host scalars]:::process
+    Strategy -- OVERWRITE --> OverwriteLogic[Union Nodes\nPurge orphaned host scalars]:::process
+
+    MergeLogic --> Formatter
+    OverwriteLogic --> Formatter[Deterministic Formatter\nApply Headers & Sorting]:::format
+
+    Formatter --> Write[(Atomic Disk Write)]:::artifact
+```
+
 The merge behavior is governed by the resolved `CollisionStrategy`:
 
 - **Merge (Default):** The engine walks the AST, appending missing keys and extending tables. Existing scalar values or sibling tables that are not explicitly targeted by the payload are safely ignored and preserved.

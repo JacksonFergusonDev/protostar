@@ -65,7 +65,7 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
     test:
     \tuv run pytest
     """
-            manifest.add_file_injection("justfile", content)
+            manifest.filesystem.add_file_injection("justfile", content)
     ```
 
 === "Base API"
@@ -80,7 +80,7 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 
 ??? abstract "Deep Dive: Pre-flight vs Build"
     - **`pre_flight()`**: Executes before *any* state changes occur. If `shutil.which("just")` fails here, the orchestrator immediately halts, guaranteeing the environment remains untouched.
-    - **`build()`**: Only queues state changes. Notice how we use `manifest.add_file_injection()` instead of `Path("justfile").write_text()`.
+    - **`build()`**: Only queues state changes. Notice how we use `manifest.filesystem.add_file_injection()` instead of `Path("justfile").write_text()`.
 
 ---
 
@@ -89,14 +89,16 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 !!! danger "No Direct Disk I/O"
     Never call `subprocess.run` or write to disk inside a module's `build()` method. Modules must strictly communicate via the `EnvironmentManifest` to ensure the Orchestrator maintains atomicity.
 
-The manifest exposes the following methods to queue state changes:
+The manifest exposes the following methods across its domain slices to queue state changes:
 
 | Method Signature | Execution Behavior |
 | --- | --- |
-| `add_dependency(package: str)` | Queues a standard package for resolution. |
-| `add_dev_dependency(package: str)` | Queues a development or tooling package. |
-| `add_file_injection(path: str, content: str)` | Queues a complete file write. Fails if the file exists unless explicitly marked for overwrite. |
-| `add_file_append(path: str, content: str)` | Queues a string payload for late-binding concatenation or TOML AST deep-merging. |
-| `add_system_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout and UI description. |
-| `add_post_install_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout and UI description. |
-| `add_vcs_ignore(path: str)` | Appends a tracking exclusion entry to the version control ignore manifest (e.g., `.gitignore`). |
+| `manifest.dependencies.add(package: str)` | Queues a standard package for resolution. |
+| `manifest.dependencies.add_dev(package: str)` | Queues a development or tooling package. |
+| `manifest.dependencies.add_docs(package: str)` | Queues a documentation dependency for installation. |
+| `manifest.filesystem.add_directory(path: str)` | Queues a relative directory path to be scaffolded. |
+| `manifest.filesystem.add_file_injection(path: str, content: str)` | Queues a complete file write. Fails if the file exists unless explicitly marked for overwrite. |
+| `manifest.filesystem.add_file_append(path: str, content: str)` | Queues a string payload for late-binding concatenation or TOML AST deep-merging. |
+| `manifest.filesystem.add_vcs_ignore(path: str)` | Appends a tracking exclusion entry to the version control ignore manifest (e.g., `.gitignore`). |
+| `manifest.tasks.add_system_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout and UI description. |
+| `manifest.tasks.add_post_install_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout and UI description. |

@@ -243,7 +243,7 @@ Selecting __Merge__ executes an AST injection:
 
 ## Advanced Flags
 
-- __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.12`).
+- __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.13`).
 - __Verbose Output__: Append `--verbose` (or `-v`) to enable debug logs and full tracebacks.
 
 ## The Capabilities Matrix

@@ -141,7 +141,7 @@ protostar init --template cli --no-direnv --docker
 
 *Result: Scaffolds the cli template, strips out the default direnv scaffolding, and generates container artifacts (`Dockerfile`, `.dockerignore`).*
 
-To bypass any interactive collision prompts when running in headless CI environments, use `--force-merge` or `--force-replace`. You can also explicitly override the target Python version by passing `--python-version 3.12`.
+To bypass any interactive collision prompts when running in headless CI environments, use `--force-merge` or `--force-replace`. You can also explicitly override the target Python version by passing `--python-version 3.13`.
 
 ### Portable Templates & Global Aliases
 

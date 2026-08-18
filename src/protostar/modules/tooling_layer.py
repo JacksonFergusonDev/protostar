@@ -498,7 +498,7 @@ class PrekModule(BootstrapModule):
         )
 
 
-class CommitizinModule(BootstrapModule):
+class CommitizenModule(BootstrapModule):
     """Configures commitizen for semantic version bumping and changelog generation."""
 
     cli_flags = ("--commitizen",)

@@ -24,32 +24,46 @@ By strictly prohibiting modules from mutating the host operating system directly
 
 ## State Architecture
 
-During the `build()` phase, modules utilize the manifest's unified API to register their requirements. The state is structurally categorized to allow the `SystemExecutor` to apply topological sorting to the disk writes.
+Rather than storing all state in a monolithic structure, `EnvironmentManifest` delegates state management to specialized domain classes: `DependencyManifest`, `FilesystemManifest`, `ToolingManifest`, and `TaskManifest`.
 
-=== "Dependency Resolution"
-    Holds the required packages for the active footprint. These are routed to the configured package manager (e.g., `uv`, `pip`, `npm`) at the very end of the execution lifecycle to maximize network concurrency and prevent fragmented lockfiles.
+During the `build()` phase, modules route their state declarations through these explicit domain namespaces (e.g., `manifest.dependencies`, `manifest.filesystem`, `manifest.tooling`, `manifest.tasks`). This composition allows the `SystemExecutor` to cleanly apply topological sorting to disk writes and execution tasks.
 
-    * `dependencies`: Core application or scientific libraries.
-    * `dev_dependencies`: Tooling, linters, and testing frameworks.
+=== "Dependency Resolution (`manifest.dependencies`)"
+    Managed by `DependencyManifest`. Holds the required packages for the active footprint. These are routed to the configured package manager (e.g., `uv`, `pip`, `npm`) at the very end of the execution lifecycle to maximize network concurrency and prevent fragmented lockfiles.
 
-=== "File Operations"
-    Manages physical file scaffolding.
+    * `dependencies`: Core application or scientific libraries (`manifest.dependencies.add()`).
+    * `dev_dependencies`: Tooling, linters, and testing frameworks (`manifest.dependencies.add_dev()`).
+    * `docs_dependencies`: Documentation toolchains and themes (`manifest.dependencies.add_docs()`).
 
-    * `directories`: A mathematical set of directories to be scaffolded via `mkdir -p`.
-    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping a `.markdownlint-cli2.yaml` file).
-    * `file_appends`: A mapping of file paths to lists of configuration blocks. Used primarily for late-binding AST deep-merges into files like `pyproject.toml`.
+=== "Filesystem Operations (`manifest.filesystem`)"
+    Managed by `FilesystemManifest`. Manages physical directory scaffolding, file injections, AST appends, and ignore configurations.
 
-=== "Exclusions & IDE Context"
-    Manages visibility across different sub-systems.
+    * `directories`: A mathematical set of directories to be scaffolded via `mkdir -p` (`manifest.filesystem.add_directory()`).
+    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping a `.markdownlint-cli2.yaml` file via `manifest.filesystem.add_file_injection()`).
+    * `file_appends`: A mapping of file paths to lists of configuration blocks used primarily for late-binding AST deep-merges into files like `pyproject.toml` (`manifest.filesystem.add_file_append()`).
+    * `vcs_ignores`: Deduplicated patterns for `.gitignore` and `.dockerignore` (`manifest.filesystem.add_vcs_ignore()`).
+    * `workspace_hides`: Patterns hidden from IDE workspace file explorers (`manifest.filesystem.add_workspace_hide()`).
 
-    * `vcs_ignores`: Deduplicated patterns for `.gitignore` and `.dockerignore`.
-    * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs (e.g., Python interpreter paths).
+=== "Tooling & CI Configuration (`manifest.tooling`)"
+    Managed by `ToolingManifest`. Configures development tools, CI/CD pipeline steps, pre-commit hooks, and IDE extension recommendations.
 
-=== "System Execution"
-    Ordered queues of `SystemTask` objects for imperative shell execution, combining commands with explicit timeout boundaries.
+    * `pre_commit_hooks` / `pre_commit_local_hooks`: Hook configurations registered via `manifest.tooling.add_pre_commit_hook()` and `manifest.tooling.add_pre_commit_local_hook()`.
+    * `ci_steps` / `ci_flags`: Continuous integration steps and workflow flags (`manifest.tooling.add_ci_step()`, `manifest.tooling.add_ci_flag()`).
+    * `ide_extensions`: Recommended IDE extensions queued for workspace configuration (`manifest.tooling.add_ide_extension()`).
 
-    * `system_tasks`: Pre-installation shell commands (e.g., `git init`, `uv init`).
-    * `post_install_tasks`: Commands that strictly require the virtual environment or node modules to be present (e.g., `pre-commit install`).
+=== "System Execution (`manifest.tasks`)"
+    Managed by `TaskManifest`. Maintains ordered queues of `SystemTask` objects for imperative shell execution, combining commands with explicit timeout boundaries.
+
+    * `system_tasks`: Pre-installation shell commands executed after filesystem scaffolding (e.g., `git init`, `uv init` queued via `manifest.tasks.add_system_task()`).
+    * `post_install_tasks`: Commands that strictly require the virtual environment or installed dependencies to be present (e.g., `pre-commit install` queued via `manifest.tasks.add_post_install_task()`).
+
+=== "Root Settings & Diagnostics"
+    Attributes directly bound to the root `EnvironmentManifest` instance.
+
+    * `metadata`: Structured `ProjectMetadata` dictionary defining author, licensing, and package specs.
+    * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs via `manifest.add_ide_setting()`.
+    * `collision_strategy`: Active `CollisionStrategy` (`MERGE`, `OVERWRITE`, `ABORT`).
+    * `diagnostics`: List of `DiagnosticEvent` objects recorded via `manifest.add_diagnostic()` for post-execution reporting.
 
 ---
 
