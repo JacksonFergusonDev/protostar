@@ -35,8 +35,8 @@ def test_python_module_uv_build(manifest, mocker):
     mod = PythonCore()
     mod.build(manifest)
 
-    assert ".venv/" in manifest.vcs_ignores
-    assert ".ruff_cache/" not in manifest.vcs_ignores
+    assert ".venv/" in manifest.filesystem.vcs_ignores
+    assert ".ruff_cache/" not in manifest.filesystem.vcs_ignores
     assert any(
         t.command
         == [
@@ -48,11 +48,11 @@ def test_python_module_uv_build(manifest, mocker):
             "--python",
             "3.13",
         ]
-        for t in manifest.system_tasks
+        for t in manifest.tasks.system_tasks
     )
 
     # Find the uv init task and verify its description
-    task = next(t for t in manifest.system_tasks if t.command[0] == "uv")
+    task = next(t for t in manifest.tasks.system_tasks if t.command[0] == "uv")
     assert task.description == "Scaffolding uv virtual environment"
 
 
@@ -76,7 +76,7 @@ def test_python_module_uv_with_version(manifest, mocker):
             "--python",
             "3.12",
         ]
-        for t in manifest.system_tasks
+        for t in manifest.tasks.system_tasks
     )
 
 
@@ -147,10 +147,12 @@ def test_direnv_build(manifest, mocker):
     mod = DirenvModule()
     mod.build(manifest)
 
-    assert ".envrc.local" in manifest.vcs_ignores
-    assert ".direnv/" in manifest.vcs_ignores
-    assert ".envrc" in manifest.file_injections
-    assert any(t.command == ["direnv", "allow"] for t in manifest.post_install_tasks)
+    assert ".envrc.local" in manifest.filesystem.vcs_ignores
+    assert ".direnv/" in manifest.filesystem.vcs_ignores
+    assert ".envrc" in manifest.filesystem.file_injections
+    assert any(
+        t.command == ["direnv", "allow"] for t in manifest.tasks.post_install_tasks
+    )
 
 
 def test_direnv_build_file_exists(manifest, mocker):
@@ -158,7 +160,7 @@ def test_direnv_build_file_exists(manifest, mocker):
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
     mod = DirenvModule()
     mod.build(manifest)
-    assert ".envrc" not in manifest.file_injections
+    assert ".envrc" not in manifest.filesystem.file_injections
 
 
 # --- MarkdownLintModule Tests ---
@@ -173,15 +175,17 @@ def test_markdownlint_build(manifest, mocker):
     mod = MarkdownLintModule()
     mod.build(manifest)
 
-    assert ".markdownlint-cli2.yaml" in manifest.file_injections
-    assert any("markdownlint-cli2" in hook for hook in manifest.pre_commit_hooks)
+    assert ".markdownlint-cli2.yaml" in manifest.filesystem.file_injections
+    assert any(
+        "markdownlint-cli2" in hook for hook in manifest.tooling.pre_commit_hooks
+    )
 
 
 def test_markdownlint_build_file_exists(manifest, mocker):
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
     mod = MarkdownLintModule()
     mod.build(manifest)
-    assert ".markdownlint-cli2.yaml" not in manifest.file_injections
+    assert ".markdownlint-cli2.yaml" not in manifest.filesystem.file_injections
 
 
 # --- PytestModule Tests ---
@@ -191,11 +195,11 @@ def test_pytest_build(manifest):
     mod = PytestModule()
     mod.build(manifest)
 
-    assert "pytest" in manifest.dev_dependencies
-    assert "pytest-mock" in manifest.dev_dependencies
-    assert "pytest-cov" not in manifest.dev_dependencies
-    assert "tests" in manifest.directories
-    assert "pyproject.toml" in manifest.file_appends
+    assert "pytest" in manifest.dependencies.dev_dependencies
+    assert "pytest-mock" in manifest.dependencies.dev_dependencies
+    assert "pytest-cov" not in manifest.dependencies.dev_dependencies
+    assert "tests" in manifest.filesystem.directories
+    assert "pyproject.toml" in manifest.filesystem.file_appends
 
 
 def test_ruff_module_base_config():
@@ -203,7 +207,7 @@ def test_ruff_module_base_config():
     mod = RuffModule()
     mod.build(manifest)
 
-    appends = manifest.file_appends.get("pyproject.toml", [])
+    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
     combined = "\n".join(appends)
     assert '"A",' in combined
     assert '"C4",' in combined
@@ -216,8 +220,8 @@ def test_ruff_module_adds_pre_commit_hook():
     mod = RuffModule()
     mod.build(manifest)
 
-    assert len(manifest.pre_commit_local_hooks) == 1
-    hook = manifest.pre_commit_local_hooks[0]
+    assert len(manifest.tooling.pre_commit_local_hooks) == 1
+    hook = manifest.tooling.pre_commit_local_hooks[0]
     assert "id: ruff-check" in hook
     assert "id: ruff-format" in hook
     assert "entry: uv run ruff check --fix" in hook
@@ -230,7 +234,7 @@ def test_mypy_module_base_config():
     mod = MypyModule()
     mod.build(manifest)
 
-    appends = manifest.file_appends.get("pyproject.toml", [])
+    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
     combined = "\n".join(appends)
     assert "pretty = true" in combined
     assert "check_untyped_defs = true" in combined
@@ -242,8 +246,8 @@ def test_mypy_module_adds_pre_commit_hook():
     mod = MypyModule()
     mod.build(manifest)
 
-    assert len(manifest.pre_commit_local_hooks) == 1
-    hook = manifest.pre_commit_local_hooks[0]
+    assert len(manifest.tooling.pre_commit_local_hooks) == 1
+    hook = manifest.tooling.pre_commit_local_hooks[0]
     assert "id: mypy" in hook
     assert "entry: uv run mypy" in hook
     assert "language: system" in hook
@@ -255,15 +259,15 @@ def test_ty_module_build():
     mod = TyModule()
     mod.build(manifest)
 
-    assert "ty" in manifest.dev_dependencies
-    assert "astral-sh.ty" in manifest.ide_extensions
-    assert len(manifest.pre_commit_local_hooks) == 1
-    hook = manifest.pre_commit_local_hooks[0]
+    assert "ty" in manifest.dependencies.dev_dependencies
+    assert "astral-sh.ty" in manifest.tooling.ide_extensions
+    assert len(manifest.tooling.pre_commit_local_hooks) == 1
+    hook = manifest.tooling.pre_commit_local_hooks[0]
     assert "id: ty" in hook
     assert "entry: uv run ty check" in hook
     assert "language: system" in hook
     assert "pass_filenames: false" in hook
-    assert "uv run ty check" in manifest.just_typecheck_commands
+    assert "uv run ty check" in manifest.tooling.just_typecheck_commands
 
 
 def test_pyrefly_module_build():
@@ -271,16 +275,16 @@ def test_pyrefly_module_build():
     mod = PyreflyModule()
     mod.build(manifest)
 
-    assert "pyrefly" in manifest.dev_dependencies
-    assert ".pyrefly/" in manifest.vcs_ignores
-    assert "meta.pyrefly" in manifest.ide_extensions
-    assert len(manifest.pre_commit_local_hooks) == 1
-    hook = manifest.pre_commit_local_hooks[0]
+    assert "pyrefly" in manifest.dependencies.dev_dependencies
+    assert ".pyrefly/" in manifest.filesystem.vcs_ignores
+    assert "meta.pyrefly" in manifest.tooling.ide_extensions
+    assert len(manifest.tooling.pre_commit_local_hooks) == 1
+    hook = manifest.tooling.pre_commit_local_hooks[0]
     assert "id: pyrefly-check" in hook
     assert "entry: uv run pyrefly check" in hook
     assert "language: system" in hook
     assert "pass_filenames: false" in hook
-    assert "uv run pyrefly check" in manifest.just_typecheck_commands
+    assert "uv run pyrefly check" in manifest.tooling.just_typecheck_commands
 
 
 # --- PreCommitModule Tests ---
@@ -308,8 +312,8 @@ def test_pre_commit_build_uv(manifest, mocker):
     mod = PreCommitModule()
     mod.build(manifest)
 
-    assert manifest.wants_pre_commit is True
-    assert "pre-commit" in manifest.dev_dependencies
+    assert manifest.tooling.wants_pre_commit is True
+    assert "pre-commit" in manifest.dependencies.dev_dependencies
     assert any(
         t.command
         == [
@@ -322,11 +326,11 @@ def test_pre_commit_build_uv(manifest, mocker):
             "--hook-type",
             "commit-msg",
         ]
-        for t in manifest.post_install_tasks
+        for t in manifest.tasks.post_install_tasks
     )
     assert any(
         t.command == ["uv", "run", "pre-commit", "autoupdate"]
-        for t in manifest.post_install_tasks
+        for t in manifest.tasks.post_install_tasks
     )
 
 
@@ -355,8 +359,8 @@ def test_prek_build_uv(manifest, mocker):
     mod = PrekModule()
     mod.build(manifest)
 
-    assert manifest.wants_prek is True
-    assert "prek" in manifest.dev_dependencies
+    assert manifest.tooling.wants_prek is True
+    assert "prek" in manifest.dependencies.dev_dependencies
     assert any(
         t.command
         == [
@@ -369,11 +373,11 @@ def test_prek_build_uv(manifest, mocker):
             "--hook-type",
             "commit-msg",
         ]
-        for t in manifest.post_install_tasks
+        for t in manifest.tasks.post_install_tasks
     )
     assert any(
         t.command == ["uv", "run", "prek", "update"]
-        for t in manifest.post_install_tasks
+        for t in manifest.tasks.post_install_tasks
     )
 
 
@@ -389,7 +393,7 @@ def test_direnv_skips_when_file_exists(tmp_path, monkeypatch) -> None:
     assert len(skip_events) == 1
     assert skip_events[0].phase == mod.name
     assert "already exists" in skip_events[0].message
-    assert ".envrc" not in manifest.file_injections
+    assert ".envrc" not in manifest.filesystem.file_injections
 
 
 def test_markdownlint_skips_when_file_exists(tmp_path, monkeypatch) -> None:
@@ -404,21 +408,21 @@ def test_markdownlint_skips_when_file_exists(tmp_path, monkeypatch) -> None:
     assert len(skip_events) == 1
     assert skip_events[0].phase == mod.name
     assert "already exists" in skip_events[0].message
-    assert ".markdownlint-cli2.yaml" not in manifest.file_injections
+    assert ".markdownlint-cli2.yaml" not in manifest.filesystem.file_injections
 
 
 def test_markdownlint_module_injects_ide_extension():
     manifest = EnvironmentManifest()
     module = MarkdownLintModule()
     module.build(manifest)
-    assert "DavidAnson.vscode-markdownlint" in manifest.ide_extensions
+    assert "DavidAnson.vscode-markdownlint" in manifest.tooling.ide_extensions
 
 
 def test_ruff_module_injects_ide_extension():
     manifest = EnvironmentManifest()
     module = RuffModule()
     module.build(manifest)
-    assert "charliermarsh.ruff" in manifest.ide_extensions
+    assert "charliermarsh.ruff" in manifest.tooling.ide_extensions
 
 
 def test_mypy_module_injects_ide_extension():
@@ -427,7 +431,10 @@ def test_mypy_module_injects_ide_extension():
     module.build(manifest)
 
     # Assert the fallback tuple is injected rather than a single string
-    assert ("ms-python.mypy-type-checker", "matangover.mypy") in manifest.ide_extensions
+    assert (
+        "ms-python.mypy-type-checker",
+        "matangover.mypy",
+    ) in manifest.tooling.ide_extensions
 
 
 def test_python_core_pre_flight_missing_uv(mocker):
@@ -466,7 +473,7 @@ def test_commitizen_module_injects_dev_dependency():
     module = CommitizinModule()
     module.build(manifest)
 
-    assert "commitizen" in manifest.dev_dependencies
+    assert "commitizen" in manifest.dependencies.dev_dependencies
 
 
 def test_commitizen_module_appends_pyproject_config():
@@ -474,7 +481,7 @@ def test_commitizen_module_appends_pyproject_config():
     module = CommitizinModule()
     module.build(manifest)
 
-    appends = manifest.file_appends.get("pyproject.toml", [])
+    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
     assert any("[tool.commitizen]" in block for block in appends)
 
 
@@ -483,7 +490,7 @@ def test_commitizen_module_appends_pyproject_version_provider():
     module = CommitizinModule()
     module.build(manifest)
 
-    appends = manifest.file_appends.get("pyproject.toml", [])
+    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
     combined = "\n".join(appends)
     assert 'version_provider = "pep621"' in combined
     assert 'version_scheme = "semver2"' in combined
@@ -496,7 +503,8 @@ def test_commitizen_module_adds_pre_commit_hook():
     module.build(manifest)
 
     assert any(
-        "commitizen-tools/commitizen" in hook for hook in manifest.pre_commit_hooks
+        "commitizen-tools/commitizen" in hook
+        for hook in manifest.tooling.pre_commit_hooks
     )
 
 
@@ -505,8 +513,8 @@ def test_commitizen_module_adds_gitignore_entry():
     module = CommitizinModule()
     module.build(manifest)
 
-    assert ".cz-cache/" in manifest.vcs_ignores
-    assert ".cz-cache/" in manifest.workspace_hides
+    assert ".cz-cache/" in manifest.filesystem.vcs_ignores
+    assert ".cz-cache/" in manifest.filesystem.workspace_hides
 
 
 def test_renovate_module_properties():
@@ -523,8 +531,8 @@ def test_renovate_module_injects_file(mocker):
     module = RenovateModule()
     module.build(manifest)
 
-    assert ".github/renovate.json" in manifest.file_injections
-    content = manifest.file_injections[".github/renovate.json"]
+    assert ".github/renovate.json" in manifest.filesystem.file_injections
+    content = manifest.filesystem.file_injections[".github/renovate.json"]
     assert "renovate-schema.json" in content
     assert "config:best-practices" in content
     assert "before 4am on monday" in content
@@ -539,7 +547,7 @@ def test_renovate_module_adds_pre_commit_hook():
 
     assert any(
         "renovatebot/pre-commit-hooks" in hook and "renovate-config-validator" in hook
-        for hook in manifest.pre_commit_hooks
+        for hook in manifest.tooling.pre_commit_hooks
     )
 
 
@@ -549,7 +557,7 @@ def test_renovate_module_skips_when_file_exists(mocker):
     module = RenovateModule()
     module.build(manifest)
 
-    assert ".github/renovate.json" not in manifest.file_injections
+    assert ".github/renovate.json" not in manifest.filesystem.file_injections
     assert any(
         d.phase == "Renovate" and d.severity == Severity.SKIP
         for d in manifest.diagnostics
@@ -570,8 +578,8 @@ def test_codecov_module_injects_file(mocker):
     module = CodecovModule()
     module.build(manifest)
 
-    assert ".github/codecov.yml" in manifest.file_injections
-    content = manifest.file_injections[".github/codecov.yml"]
+    assert ".github/codecov.yml" in manifest.filesystem.file_injections
+    content = manifest.filesystem.file_injections[".github/codecov.yml"]
     assert 'range: "80...100"' in content
     assert "target: 80%" in content
     assert "require_changes: true" in content
@@ -584,7 +592,7 @@ def test_codecov_module_skips_when_file_exists(mocker):
     module = CodecovModule()
     module.build(manifest)
 
-    assert ".github/codecov.yml" not in manifest.file_injections
+    assert ".github/codecov.yml" not in manifest.filesystem.file_injections
     assert any(
         d.phase == "Codecov" and d.severity == Severity.SKIP
         for d in manifest.diagnostics
@@ -605,13 +613,13 @@ def test_zensical_module_build(mocker):
     module = ZensicalModule()
     module.build(manifest)
 
-    assert "mkdocstrings[python]" in manifest.docs_dependencies
-    assert "zensical" in manifest.docs_dependencies
-    assert "site/" in manifest.vcs_ignores
-    assert "docs" in manifest.directories
-    assert "docs/index.md" in manifest.file_injections
-    assert "mkdocs.yml" in manifest.file_injections
-    assert "pyproject.toml" in manifest.file_appends
+    assert "mkdocstrings[python]" in manifest.dependencies.docs_dependencies
+    assert "zensical" in manifest.dependencies.docs_dependencies
+    assert "site/" in manifest.filesystem.vcs_ignores
+    assert "docs" in manifest.filesystem.directories
+    assert "docs/index.md" in manifest.filesystem.file_injections
+    assert "mkdocs.yml" in manifest.filesystem.file_injections
+    assert "pyproject.toml" in manifest.filesystem.file_appends
 
 
 def test_readthedocs_module_properties():
@@ -640,8 +648,8 @@ def test_readthedocs_module_injects_file(mocker):
     module = ReadTheDocsModule()
     module.build(manifest)
 
-    assert ".readthedocs.yaml" in manifest.file_injections
-    content = manifest.file_injections[".readthedocs.yaml"]
+    assert ".readthedocs.yaml" in manifest.filesystem.file_injections
+    content = manifest.filesystem.file_injections[".readthedocs.yaml"]
     assert "version: 2" in content
     assert "os: ubuntu-24.04" in content
     assert 'python: "3.12"' in content
@@ -662,11 +670,11 @@ def test_readthedocs_module_injects_file(mocker):
 def test_readthedocs_module_skips_when_file_exists(mocker):
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
     manifest = EnvironmentManifest()
-    manifest.add_docs_dependency("zensical")
+    manifest.dependencies.add_docs("zensical")
     module = ReadTheDocsModule()
     module.build(manifest)
 
-    assert ".readthedocs.yaml" not in manifest.file_injections
+    assert ".readthedocs.yaml" not in manifest.filesystem.file_injections
     assert any(
         d.phase == "Read the Docs" and d.severity == Severity.SKIP
         for d in manifest.diagnostics

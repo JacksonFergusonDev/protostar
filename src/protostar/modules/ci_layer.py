@@ -31,8 +31,8 @@ class CIModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Flags the manifest to trigger CI generation in the orchestrator/executor."""
         logger.debug("Building CI tooling layer.")
-        manifest.wants_ci = True
-        manifest.add_directory(".github/workflows")
+        manifest.tooling.wants_ci = True
+        manifest.filesystem.add_directory(".github/workflows")
 
 
 class ReleaseModule(BootstrapModule):
@@ -55,5 +55,5 @@ class ReleaseModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Flags the manifest to trigger release generation in the orchestrator/executor."""
         logger.debug("Building Release tooling layer.")
-        manifest.wants_release = True
-        manifest.add_directory(".github/workflows")
+        manifest.tooling.wants_release = True
+        manifest.filesystem.add_directory(".github/workflows")

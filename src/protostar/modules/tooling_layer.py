@@ -46,8 +46,8 @@ class DirenvModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Appends direnv context ignores, injects the .envrc, and queues evaluation."""
         logger.debug("Building direnv tooling layer.")
-        manifest.add_vcs_ignore(".envrc.local")
-        manifest.add_vcs_ignore(".direnv/")
+        manifest.filesystem.add_vcs_ignore(".envrc.local")
+        manifest.filesystem.add_vcs_ignore(".direnv/")
 
         if manifest.should_skip_file(Path(".envrc"), phase=self.name):
             return
@@ -64,8 +64,8 @@ class DirenvModule(BootstrapModule):
             "source_env_if_exists .envrc.local\n"
         )
 
-        manifest.add_file_injection(".envrc", content)
-        manifest.add_post_install_task(
+        manifest.filesystem.add_file_injection(".envrc", content)
+        manifest.tasks.add_post_install_task(
             ["direnv", "allow"], description="Authorizing direnv workspace"
         )
 
@@ -91,7 +91,7 @@ class MarkdownLintModule(BootstrapModule):
         """Injects the .markdownlint-cli2.yaml boilerplate file and pre-commit hook."""
         logger.debug("Building MarkdownLint tooling layer.")
 
-        manifest.add_ide_extension("DavidAnson.vscode-markdownlint")
+        manifest.tooling.add_ide_extension("DavidAnson.vscode-markdownlint")
 
         hook_payload = """  # Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
@@ -99,9 +99,9 @@ class MarkdownLintModule(BootstrapModule):
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]"""
-        manifest.add_pre_commit_hook(hook_payload)
+        manifest.tooling.add_pre_commit_hook(hook_payload)
 
-        manifest.add_ci_step(
+        manifest.tooling.add_ci_step(
             "      - name: Run MarkdownLint\n"
             "        uses: DavidAnson/markdownlint-cli2-action@v24"
         )
@@ -115,7 +115,7 @@ class MarkdownLintModule(BootstrapModule):
             '        printf "{{ yellow }}⚠ markdownlint-cli2 not found. Skipping markdown linting.{{ nc }}\\n"; \\\n'
             "    fi"
         )
-        manifest.just_lint_commands.append(lint_cmd)
+        manifest.tooling.just_lint_commands.append(lint_cmd)
 
         if manifest.should_skip_file(Path(".markdownlint-cli2.yaml"), phase=self.name):
             return
@@ -177,7 +177,7 @@ config:
   MD029:
     style: "one"
 """
-        manifest.add_file_injection(".markdownlint-cli2.yaml", content)
+        manifest.filesystem.add_file_injection(".markdownlint-cli2.yaml", content)
 
 
 class RuffModule(BootstrapModule):
@@ -195,9 +195,9 @@ class RuffModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues Ruff dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Ruff tooling layer.")
-        manifest.add_dev_dependency("ruff")
-        manifest.add_environment_artifact(".ruff_cache/")
-        manifest.add_ide_extension("charliermarsh.ruff")
+        manifest.dependencies.add_dev("ruff")
+        manifest.filesystem.add_environment_artifact(".ruff_cache/")
+        manifest.tooling.add_ide_extension("charliermarsh.ruff")
 
         hook_payload = """      - id: ruff-check
         name: ruff check
@@ -212,9 +212,9 @@ class RuffModule(BootstrapModule):
         language: system
         types: [python]
         require_serial: true"""
-        manifest.add_pre_commit_local_hook(hook_payload)
+        manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
-        manifest.add_ci_step(
+        manifest.tooling.add_ci_step(
             "      - name: Run Ruff Linter\n"
             "        run: uv run ruff check --output-format=github .\n"
             "\n"
@@ -222,13 +222,13 @@ class RuffModule(BootstrapModule):
             "        run: uv run ruff format --check --output-format=github ."
         )
 
-        manifest.just_format_commands.extend(
+        manifest.tooling.just_format_commands.extend(
             ["uv run ruff check --fix .", "uv run ruff format ."]
         )
-        manifest.just_lint_commands.extend(
+        manifest.tooling.just_lint_commands.extend(
             ["uv run ruff check .", "uv run ruff format --check ."]
         )
-        manifest.just_clean_paths.append(".ruff_cache")
+        manifest.tooling.just_clean_paths.append(".ruff_cache")
 
         # Ruff natively inherits its target Python version from project.requires-python
         config = """[tool.ruff]
@@ -249,7 +249,7 @@ ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
 """
-        manifest.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_file_append("pyproject.toml", config)
 
 
 class MypyModule(BootstrapModule):
@@ -267,9 +267,11 @@ class MypyModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues Mypy dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Mypy tooling layer.")
-        manifest.add_dev_dependency("mypy")
-        manifest.add_environment_artifact(".mypy_cache/")
-        manifest.add_ide_extension(("ms-python.mypy-type-checker", "matangover.mypy"))
+        manifest.dependencies.add_dev("mypy")
+        manifest.filesystem.add_environment_artifact(".mypy_cache/")
+        manifest.tooling.add_ide_extension(
+            ("ms-python.mypy-type-checker", "matangover.mypy")
+        )
 
         hook_payload = """      - id: mypy
         name: mypy
@@ -277,12 +279,14 @@ class MypyModule(BootstrapModule):
         language: system
         types: [python]
         pass_filenames: true"""
-        manifest.add_pre_commit_local_hook(hook_payload)
+        manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
-        manifest.add_ci_step("      - name: Run Mypy\n        run: uv run mypy src/")
+        manifest.tooling.add_ci_step(
+            "      - name: Run Mypy\n        run: uv run mypy src/"
+        )
 
-        manifest.just_typecheck_commands.append("uv run mypy .")
-        manifest.just_clean_paths.append(".mypy_cache")
+        manifest.tooling.just_typecheck_commands.append("uv run mypy .")
+        manifest.tooling.just_clean_paths.append(".mypy_cache")
 
         config = """[tool.mypy]
 mypy_path = "src"
@@ -295,7 +299,7 @@ warn_unused_configs = true
 check_untyped_defs = true
 explicit_package_bases = true
 """
-        manifest.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_file_append("pyproject.toml", config)
 
 
 class TyModule(BootstrapModule):
@@ -313,8 +317,8 @@ class TyModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues Ty dev dependency, hooks, and pyproject.toml config."""
         logger.debug("Building Ty tooling layer.")
-        manifest.add_dev_dependency("ty")
-        manifest.add_ide_extension("astral-sh.ty")
+        manifest.dependencies.add_dev("ty")
+        manifest.tooling.add_ide_extension("astral-sh.ty")
 
         hook_payload = """      - id: ty
         name: ty check
@@ -322,16 +326,16 @@ class TyModule(BootstrapModule):
         language: system
         types: [python]
         pass_filenames: false"""
-        manifest.add_pre_commit_local_hook(hook_payload)
+        manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
-        manifest.just_typecheck_commands.append("uv run ty check")
+        manifest.tooling.just_typecheck_commands.append("uv run ty check")
 
         config = """[tool.ty.rules]
 missing-type-argument = "error"
 redundant-cast = "warn"
 unused-ignore-comment = "warn"
 """
-        manifest.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_file_append("pyproject.toml", config)
 
 
 class PytestModule(BootstrapModule):
@@ -349,18 +353,18 @@ class PytestModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues Pytest dev dependencies, ignores, and pyproject.toml configuration."""
         logger.debug("Building Pytest tooling layer.")
-        manifest.add_dev_dependency("pytest")
-        manifest.add_dev_dependency("pytest-mock")
-        manifest.add_ci_flag("pytest")
+        manifest.dependencies.add_dev("pytest")
+        manifest.dependencies.add_dev("pytest-mock")
+        manifest.tooling.add_ci_flag("pytest")
 
         # Deterministically scaffold the testing directory
-        manifest.add_directory("tests")
+        manifest.filesystem.add_directory("tests")
 
         artifacts = [".pytest_cache/"]
         for artifact in artifacts:
-            manifest.add_environment_artifact(artifact)
+            manifest.filesystem.add_environment_artifact(artifact)
 
-        manifest.just_clean_paths.append(".pytest_cache")
+        manifest.tooling.just_clean_paths.append(".pytest_cache")
 
         config = """[tool.pytest.ini_options]
 addopts = "--strict-markers"
@@ -371,7 +375,7 @@ pythonpath = [
     ".",
 ]
 """
-        manifest.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_file_append("pyproject.toml", config)
 
 
 class PreCommitModule(BootstrapModule):
@@ -409,12 +413,12 @@ class PreCommitModule(BootstrapModule):
         logger.debug("Building Pre-Commit tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
-        manifest.wants_pre_commit = True
-        manifest.add_dev_dependency("pre-commit")
+        manifest.tooling.wants_pre_commit = True
+        manifest.dependencies.add_dev("pre-commit")
 
         # `autoupdate` pulls remote git repositories to update hook definitions,
         # requiring a wider time window than a local install.
-        manifest.add_post_install_task(
+        manifest.tasks.add_post_install_task(
             [
                 "uv",
                 "run",
@@ -427,7 +431,7 @@ class PreCommitModule(BootstrapModule):
             ],
             description="Installing pre-commit git hooks",
         )
-        manifest.add_post_install_task(
+        manifest.tasks.add_post_install_task(
             ["uv", "run", "pre-commit", "autoupdate"],
             timeout=300,
             description="Updating pre-commit hooks to latest versions...",
@@ -471,10 +475,10 @@ class PrekModule(BootstrapModule):
         logger.debug("Building Prek tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
-        manifest.wants_prek = True
-        manifest.add_dev_dependency("prek")
+        manifest.tooling.wants_prek = True
+        manifest.dependencies.add_dev("prek")
 
-        manifest.add_post_install_task(
+        manifest.tasks.add_post_install_task(
             [
                 "uv",
                 "run",
@@ -487,7 +491,7 @@ class PrekModule(BootstrapModule):
             ],
             description="Installing prek git hooks",
         )
-        manifest.add_post_install_task(
+        manifest.tasks.add_post_install_task(
             ["uv", "run", "prek", "update"],
             timeout=300,
             description="Updating prek hooks to latest versions...",
@@ -519,9 +523,9 @@ class CommitizinModule(BootstrapModule):
         """
         logger.debug("Building Commitizen tooling layer.")
 
-        manifest.add_dev_dependency("commitizen")
-        manifest.add_environment_artifact(".cz-cache/")
-        manifest.add_file_injection(
+        manifest.dependencies.add_dev("commitizen")
+        manifest.filesystem.add_environment_artifact(".cz-cache/")
+        manifest.filesystem.add_file_injection(
             "CHANGELOG.md",
             "# Changelog\n\nAll notable changes to this project will be documented in this file.\n",
         )
@@ -535,7 +539,7 @@ class CommitizinModule(BootstrapModule):
     hooks:
       - id: commitizen
         stages: [commit-msg]"""
-        manifest.add_pre_commit_hook(hook_payload)
+        manifest.tooling.add_pre_commit_hook(hook_payload)
 
         # version_provider = "pep621" reads/writes [project].version in pyproject.toml
         # directly — no duplication, no separate version file. This is the correct
@@ -548,7 +552,7 @@ tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
 """
-        manifest.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_file_append("pyproject.toml", config)
 
 
 class PyreflyModule(BootstrapModule):
@@ -566,9 +570,9 @@ class PyreflyModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Queues Pyrefly dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Pyrefly tooling layer.")
-        manifest.add_dev_dependency("pyrefly")
-        manifest.add_environment_artifact(".pyrefly/")
-        manifest.add_ide_extension("meta.pyrefly")
+        manifest.dependencies.add_dev("pyrefly")
+        manifest.filesystem.add_environment_artifact(".pyrefly/")
+        manifest.tooling.add_ide_extension("meta.pyrefly")
 
         hook_payload = """      - id: pyrefly-check
         name: pyrefly check
@@ -576,16 +580,16 @@ class PyreflyModule(BootstrapModule):
         language: system
         types: [python]
         pass_filenames: false"""
-        manifest.add_pre_commit_local_hook(hook_payload)
+        manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
-        manifest.just_typecheck_commands.append("uv run pyrefly check")
-        manifest.just_clean_paths.append(".pyrefly/")
+        manifest.tooling.just_typecheck_commands.append("uv run pyrefly check")
+        manifest.tooling.just_clean_paths.append(".pyrefly/")
 
         config = """[tool.pyrefly]
 # "strict" enables the full suite of type error diagnostics
 type-checking-mode = "strict"
 """
-        manifest.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_file_append("pyproject.toml", config)
 
 
 class RenovateModule(BootstrapModule):
@@ -619,7 +623,7 @@ class RenovateModule(BootstrapModule):
     hooks:
       - id: renovate-config-validator
         files: '.github/renovate.json'"""
-        manifest.add_pre_commit_hook(hook_payload)
+        manifest.tooling.add_pre_commit_hook(hook_payload)
 
         if manifest.should_skip_file(Path(".github/renovate.json"), phase=self.name):
             return
@@ -674,7 +678,7 @@ class RenovateModule(BootstrapModule):
   ]
 }
 """
-        manifest.add_file_injection(".github/renovate.json", config)
+        manifest.filesystem.add_file_injection(".github/renovate.json", config)
 
 
 class CodecovModule(BootstrapModule):
@@ -701,7 +705,7 @@ class CodecovModule(BootstrapModule):
             manifest: The centralized state object.
         """
         logger.debug("Building Codecov tooling layer.")
-        manifest.add_ci_flag("codecov")
+        manifest.tooling.add_ci_flag("codecov")
 
         if manifest.should_skip_file(Path(".github/codecov.yml"), phase=self.name):
             return
@@ -737,7 +741,7 @@ ignore:
   - "scripts/**"
   - "**/__init__.py"
 """
-        manifest.add_file_injection(".github/codecov.yml", config)
+        manifest.filesystem.add_file_injection(".github/codecov.yml", config)
 
 
 class ZensicalModule(BootstrapModule):
@@ -761,19 +765,19 @@ class ZensicalModule(BootstrapModule):
         """Queues Zensical dependencies, scaffolding, and ignore rules."""
         logger.debug("Building Zensical tooling layer.")
 
-        manifest.add_docs_dependency("mkdocstrings[python]")
-        manifest.add_docs_dependency("zensical")
-        manifest.add_ci_flag("zensical")
+        manifest.dependencies.add_docs("mkdocstrings[python]")
+        manifest.dependencies.add_docs("zensical")
+        manifest.tooling.add_ci_flag("zensical")
 
-        manifest.add_environment_artifact("site/")
-        manifest.add_directory("docs")
+        manifest.filesystem.add_environment_artifact("site/")
+        manifest.filesystem.add_directory("docs")
 
         pyproject_wiring = """[dependency-groups]
 dev = [
     { include-group = "docs" },
 ]
 """
-        manifest.add_file_append("pyproject.toml", pyproject_wiring)
+        manifest.filesystem.add_file_append("pyproject.toml", pyproject_wiring)
 
         if manifest.should_skip_file(Path("docs/index.md"), phase=self.name):
             pass
@@ -782,7 +786,7 @@ dev = [
 
 Add your project overview and documentation here.
 """
-            manifest.add_file_injection("docs/index.md", index_content)
+            manifest.filesystem.add_file_injection("docs/index.md", index_content)
 
         if manifest.should_skip_file(Path("mkdocs.yml"), phase=self.name):
             pass
@@ -824,7 +828,7 @@ plugins:
 extra:
   generator: false
 """
-            manifest.add_file_injection("mkdocs.yml", mkdocs_content)
+            manifest.filesystem.add_file_injection("mkdocs.yml", mkdocs_content)
 
 
 class ReadTheDocsModule(BootstrapModule):
@@ -855,7 +859,9 @@ class ReadTheDocsModule(BootstrapModule):
         """
         logger.debug("Building Read the Docs tooling layer.")
 
-        if not any("zensical" in dep for dep in manifest.docs_dependencies):
+        if not any(
+            "zensical" in dep for dep in manifest.dependencies.docs_dependencies
+        ):
             raise ConfigurationError(
                 "Read the Docs scaffolding requires the Zensical module to be enabled."
             )
@@ -882,7 +888,7 @@ build:
         - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv run zensical build
         - cp -r site/* "$READTHEDOCS_OUTPUT/html/"
 """
-        manifest.add_file_injection(".readthedocs.yaml", config)
+        manifest.filesystem.add_file_injection(".readthedocs.yaml", config)
 
 
 class JustModule(BootstrapModule):
@@ -905,4 +911,4 @@ class JustModule(BootstrapModule):
     def build(self, manifest: "EnvironmentManifest") -> None:
         """Flags justfile activation for execution."""
         logger.debug("Building Just tooling layer.")
-        manifest.wants_just = True
+        manifest.tooling.wants_just = True

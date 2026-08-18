@@ -69,13 +69,13 @@ class PythonCore(BootstrapModule):
             "__pycache__/",
         ]
         for artifact in artifacts:
-            manifest.add_environment_artifact(artifact)
+            manifest.filesystem.add_environment_artifact(artifact)
 
         if not Path("pyproject.toml").exists():
             cmd = ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
             if self.python_version:
                 cmd.extend(["--python", self.python_version])
-            manifest.add_system_task(
+            manifest.tasks.add_system_task(
                 cmd, description="Scaffolding uv virtual environment"
             )
 
@@ -121,7 +121,7 @@ authors = [{{ name = "{name}", email = "{email}" }}]
                     .joinpath(filename)
                     .read_text(encoding="utf-8")
                 )
-                manifest.add_file_injection("LICENSE", license_content)
+                manifest.filesystem.add_file_injection("LICENSE", license_content)
                 project_metadata_payload += 'license = { file = "LICENSE" }\n'
 
         classifiers = []
@@ -156,7 +156,7 @@ Repository = "https://github.com/{github}/{repo_name}"
 Issues = "https://github.com/{github}/{repo_name}/issues"
 """
 
-        manifest.add_file_append("pyproject.toml", project_metadata_payload)
+        manifest.filesystem.add_file_append("pyproject.toml", project_metadata_payload)
 
         # --- IDE Injection ---
         config = UserConfig.load()

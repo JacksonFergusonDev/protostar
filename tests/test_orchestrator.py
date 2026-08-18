@@ -30,9 +30,9 @@ class DummyModule(BootstrapModule):
         self.pre_flight_called = True
 
     def build(self, manifest):
-        manifest.add_vcs_ignore("dummy_file.txt")
-        manifest.add_system_task(["echo", "dummy"])
-        manifest.add_dependency("dummy-pkg")
+        manifest.filesystem.add_vcs_ignore("dummy_file.txt")
+        manifest.tasks.add_system_task(["echo", "dummy"])
+        manifest.dependencies.add("dummy-pkg")
 
 
 def test_orchestrator_lifecycle(mocker, mock_config):
@@ -188,7 +188,7 @@ def test_orchestrator_run_global_injections(mocker, mock_config):
 
     orchestrator.run()
 
-    assert "test-global-dep" in orchestrator.manifest.dev_dependencies
+    assert "test-global-dep" in orchestrator.manifest.dependencies.dev_dependencies
 
 
 def test_orchestrator_run_partial_success(mocker, mock_config):
@@ -275,7 +275,7 @@ def test_orchestrator_injects_files_from_config(mocker):
     )
     orchestrator.run()
 
-    assert "src/main.py" in orchestrator.manifest.file_injections
+    assert "src/main.py" in orchestrator.manifest.filesystem.file_injections
 
 
 @pytest.fixture
@@ -287,7 +287,7 @@ def base_orchestrator() -> Orchestrator:
 def test_trust_dialog_bypassed_for_local_templates(base_orchestrator, mocker) -> None:
     """Verifies that local templates bypass the trust dialog entirely."""
     base_orchestrator.is_external = False
-    base_orchestrator.manifest.system_tasks.append(SystemTask(["echo", "danger"]))
+    base_orchestrator.manifest.tasks.system_tasks.append(SystemTask(["echo", "danger"]))
 
     mock_confirm = mocker.patch("questionary.confirm")
     base_orchestrator._prompt_remote_trust()  # Should return immediately
@@ -298,7 +298,7 @@ def test_trust_dialog_bypassed_for_user_aliases(base_orchestrator, mocker) -> No
     """Verifies that external templates declared in the user config bypass the prompt."""
     base_orchestrator.is_external = True
     base_orchestrator.is_user_aliased = True
-    base_orchestrator.manifest.system_tasks.append(SystemTask(["echo", "danger"]))
+    base_orchestrator.manifest.tasks.system_tasks.append(SystemTask(["echo", "danger"]))
 
     mock_confirm = mocker.patch("questionary.confirm")
     base_orchestrator._prompt_remote_trust()  # Should return immediately
@@ -311,7 +311,7 @@ def test_trust_dialog_fails_in_non_interactive_env(base_orchestrator, mocker) ->
 
     base_orchestrator.is_external = True
     base_orchestrator.is_user_aliased = False
-    base_orchestrator.manifest.system_tasks.append(SystemTask(["echo", "danger"]))
+    base_orchestrator.manifest.tasks.system_tasks.append(SystemTask(["echo", "danger"]))
 
     with pytest.raises(
         ProtostarError, match="Untrusted external template contains executable tasks"
@@ -328,7 +328,7 @@ def test_trust_dialog_aborts_on_user_decline(base_orchestrator, mocker) -> None:
 
     base_orchestrator.is_external = True
     base_orchestrator.is_user_aliased = False
-    base_orchestrator.manifest.post_install_tasks.append(
+    base_orchestrator.manifest.tasks.post_install_tasks.append(
         SystemTask(["npm", "run", "sketchy"])
     )
 

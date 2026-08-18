@@ -5,7 +5,7 @@ from collections.abc import Callable
 from rich.console import Console
 
 from .errors import CommandExecutionError, CommandTimeoutError
-from .manifest import Severity
+from .manifest import DependencyManifest, Severity
 from .system import execute_subprocess
 
 console = Console()
@@ -39,24 +39,29 @@ def _install_group(
 
 
 def install_dependencies(
-    dependencies: list[str],
-    dev_dependencies: list[str],
-    docs_dependencies: list[str],
+    dependencies_manifest: DependencyManifest,
     on_diagnostic: Callable[[str, Severity, str | None], None],
 ) -> None:
     """Installs queued dependencies using uv.
 
     Args:
-        dependencies: Standard runtime dependencies.
-        dev_dependencies: Development dependencies.
-        docs_dependencies: Documentation group dependencies.
+        dependencies_manifest: Domain slice containing standard, dev, and docs dependencies.
         on_diagnostic: Callback invoked with (message, severity, detail) on error.
     """
-    if not dependencies and not dev_dependencies and not docs_dependencies:
+    if (
+        not dependencies_manifest.dependencies
+        and not dependencies_manifest.dev_dependencies
+        and not dependencies_manifest.docs_dependencies
+    ):
         return
 
-    _install_group(dependencies, [], "standard", on_diagnostic)
-    _install_group(dev_dependencies, ["--dev"], "development", on_diagnostic)
+    _install_group(dependencies_manifest.dependencies, [], "standard", on_diagnostic)
     _install_group(
-        docs_dependencies, ["--group", "docs"], "documentation", on_diagnostic
+        dependencies_manifest.dev_dependencies, ["--dev"], "development", on_diagnostic
+    )
+    _install_group(
+        dependencies_manifest.docs_dependencies,
+        ["--group", "docs"],
+        "documentation",
+        on_diagnostic,
     )

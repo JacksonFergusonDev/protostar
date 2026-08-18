@@ -57,13 +57,13 @@ def test_manifest_record_touch_relative_resolution(
     manifest = EnvironmentManifest()
 
     # Relative path
-    manifest.record_touch(Path("src/main.py"))
+    manifest.filesystem.record_touch(Path("src/main.py"))
     # Absolute path inside cwd
-    manifest.record_touch(tmp_path / "pyproject.toml")
+    manifest.filesystem.record_touch(tmp_path / "pyproject.toml")
     # String path
-    manifest.record_touch(".github/workflows/ci.yml")
+    manifest.filesystem.record_touch(".github/workflows/ci.yml")
 
-    assert manifest.touched_paths == {
+    assert manifest.filesystem.touched_paths == {
         "src/main.py",
         "pyproject.toml",
         ".github/workflows/ci.yml",
@@ -95,8 +95,8 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
     orchestrator = Orchestrator(modules=[], user_config=user_config)
 
     def fake_execute(self_executor: SystemExecutor) -> None:
-        self_executor.manifest.record_touch("src")
-        self_executor.manifest.record_touch("pyproject.toml")
+        self_executor.manifest.filesystem.record_touch("src")
+        self_executor.manifest.filesystem.record_touch("pyproject.toml")
         raise KeyboardInterrupt
 
     mocker.patch.object(SystemExecutor, "execute", fake_execute)
@@ -144,16 +144,16 @@ def test_system_executor_records_touches_during_scaffolding(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
-    manifest.add_directory("src")
-    manifest.add_file_injection("src/hello.py", "print('hello')")
-    manifest.add_vcs_ignore(".venv")
-    manifest.wants_just = True
+    manifest.filesystem.add_directory("src")
+    manifest.filesystem.add_file_injection("src/hello.py", "print('hello')")
+    manifest.filesystem.add_vcs_ignore(".venv")
+    manifest.tooling.wants_just = True
 
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
     executor.execute()
 
-    assert "src" in manifest.touched_paths
-    assert "src/hello.py" in manifest.touched_paths
-    assert ".gitignore" in manifest.touched_paths
-    assert "justfile" in manifest.touched_paths
+    assert "src" in manifest.filesystem.touched_paths
+    assert "src/hello.py" in manifest.filesystem.touched_paths
+    assert ".gitignore" in manifest.filesystem.touched_paths
+    assert "justfile" in manifest.filesystem.touched_paths
