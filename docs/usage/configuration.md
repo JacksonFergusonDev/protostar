@@ -42,22 +42,6 @@ Controls base environment toggles and global tool preferences applied whenever `
 - `direnv`: Auto-scaffold `.envrc` shell bindings.
 - Tooling toggles (`ruff`, `mypy`, `ty`, `pyrefly`, `pytest`, `pre_commit`, `prek`, `commitizen`, `renovate`, `codecov`, `zensical`, `readthedocs`, `ci`, `release`, `just`, `markdownlint`).
 
-### Development Overrides (`[dev]`)
-
-Force dependencies and AST injections across all initialized projects regardless of CLI flags:
-
-```toml
-[dev]
-extra_dependencies = ["bump-my-version"]
-
-[dev.pyproject]
-custom_ruff = '''
-[tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "T20", "PT", "C4", "D"]
-ignore = ["E501", "D100", "D104", "D107"]
-'''
-```
-
 ### Global Template Aliases (`[templates]`)
 
 Map friendly shorthand names to local files or remote URLs:
