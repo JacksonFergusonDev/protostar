@@ -83,11 +83,11 @@ To understand how Protostar interprets your flags, observe what happens when we 
         --8<-- "cli/pyproject.toml"
         ```
 
-    **The Intelligence:**
+    __The Intelligence:__
 
-    - **Dependency Locking:** Protostar locks `typer` and `rich` from the CLI template.
-    - **AST Configuration:** It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside development dependency groups.
-    - **Local Toolchain Hooks:** In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead and version discrepancies.
+    - __Dependency Locking:__ Protostar locks `typer` and `rich` from the CLI template.
+    - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside development dependency groups.
+    - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead and version discrepancies.
 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`
@@ -113,12 +113,12 @@ To understand how Protostar interprets your flags, observe what happens when we 
         --8<-- "astro/pyproject.toml"
         ```
 
-    **The Intelligence:**
+    __The Intelligence:__
 
-    - **Directory Scaffolding:** It injects `data/catalogs` and `data/fits`, isolating telemetry from source code.
-    - **Binary Safety:** It generates a `.gitattributes` file explicitly marking `*.fits` files as binary, and configuring `*.ipynb` for clean text diffing.
-    - **Notebook Diffing:** It automatically configures `nbdime` at the git level, avoiding unreadable JSON diffs when tracking Jupyter Notebooks.
-    - **Artifact Exclusions:** The `.gitignore` is populated with `*.fits`, `*.csv`, and `*.parquet`, preventing accidental commits of massive telemetry files.
+    - __Directory Scaffolding:__ It injects `data/catalogs` and `data/fits`, isolating telemetry from source code.
+    - __Binary Safety:__ It generates a `.gitattributes` file explicitly marking `*.fits` files as binary, and configuring `*.ipynb` for clean text diffing.
+    - __Notebook Diffing:__ It automatically configures `nbdime` at the git level, avoiding unreadable JSON diffs when tracking Jupyter Notebooks.
+    - __Artifact Exclusions:__ The `.gitignore` is populated with `*.fits`, `*.csv`, and `*.parquet`, preventing accidental commits of massive telemetry files.
 
 === "The Machine Learning Stack (Artifact Focus)"
     __Command:__ `protostar init --template ml --docker`
@@ -149,10 +149,118 @@ To understand how Protostar interprets your flags, observe what happens when we 
         --8<-- "ml/pyproject.toml"
         ```
 
-    **The Intelligence:**
+    __The Intelligence:__
 
-    - **Container Scaffolding:** Passing `--docker` generates a multi-stage `Dockerfile` and optimized `.dockerignore`. The `Dockerfile` leverages `uv` layer caching, non-root user execution (`appuser`), and minimal runtime images.
-    - **Model Checkpoints:** The ML template injects ignores for tensor weights (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`).
+    - __Container Scaffolding:__ Passing `--docker` generates a multi-stage `Dockerfile` and optimized `.dockerignore`. The `Dockerfile` leverages `uv` layer caching, non-root user execution (`appuser`), and minimal runtime images.
+    - __Model Checkpoints:__ The ML template injects ignores for tensor weights (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`).
+
+=== "The API Service (FastAPI Focus)"
+    __Command:__ `protostar init --template api`
+
+    This footprint scaffolds a modern asynchronous web API service using FastAPI and Pydantic.
+
+    ```text
+    --8<-- "tree_api.txt"
+    ```
+
+    ??? abstract "See the generated `CHANGELOG.md`"
+        ```markdown
+        --8<-- "api/CHANGELOG.md"
+        ```
+
+    ??? abstract "See the generated `justfile`"
+        ```just
+        --8<-- "api/justfile"
+        ```
+
+    ??? abstract "See the generated `pyproject.toml`"
+        ```toml
+        --8<-- "api/pyproject.toml"
+        ```
+
+    __The Intelligence:__
+
+    - __Modular API Architecture:__ Establishes a clean directory layout separating routers (`src/demo_project/api/routers`), core application settings (`src/demo_project/core/config.py`), database models, and schemas.
+    - __Async Toolchain:__ Pre-configures `fastapi`, `uvicorn`, `pydantic-settings`, and asynchronous test infrastructure powered by `pytest-asyncio` and `httpx`.
+    - __Semantic Versioning & Changelogs:__ Integrates Commitizen changelog tooling and automated release tracking out of the box.
+
+=== "The DSP Pipeline (Audio Focus)"
+    __Command:__ `protostar init --template dsp`
+
+    This footprint focuses on audio signal processing, feature extraction, and exploratory analysis.
+
+    ```text
+    --8<-- "tree_dsp.txt"
+    ```
+
+    ??? abstract "See the generated `justfile`"
+        ```just
+        --8<-- "dsp/justfile"
+        ```
+
+    ??? abstract "See the generated `pyproject.toml`"
+        ```toml
+        --8<-- "dsp/pyproject.toml"
+        ```
+
+    __The Intelligence:__
+
+    - __Audio Pipeline Layout:__ Scaffolds dedicated sample directories (`data/samples/raw`, `data/samples/bounces`) alongside modular analysis and effects packages (`src/demo_project/analysis`, `src/demo_project/effects`).
+    - __Scientific Signal Stack:__ Locks in core numerical and audio processing libraries: `librosa`, `soundfile`, `pedalboard`, `scipy`, `numpy`, and `matplotlib`.
+    - __Notebook Prototyping:__ Prepares a `notebooks/` directory for visual spectrum inspection and rapid experimentation.
+
+=== "The Embedded System (MicroPython Focus)"
+    __Command:__ `protostar init --template embedded`
+
+    This footprint scaffolds an embedded hardware development environment optimized for MicroPython and circuit prototyping.
+
+    ```text
+    --8<-- "tree_embedded.txt"
+    ```
+
+    ??? abstract "See the generated `justfile`"
+        ```just
+        --8<-- "embedded/justfile"
+        ```
+
+    ??? abstract "See the generated `pyproject.toml`"
+        ```toml
+        --8<-- "embedded/pyproject.toml"
+        ```
+
+    __The Intelligence:__
+
+    - __Board & Host Decoupling:__ Separates on-device firmware code (`src/board/boot.py`, `src/board/main.py`) from host workstation tools (`src/host/`).
+    - __Host Mock Testing:__ Scaffolds a `tests/host_mocks/` harness to validate hardware interaction logic locally without physical microcontrollers connected.
+    - __MicroPython Device Tooling:__ Bundles `mpremote` and `pyserial` for device communication, flashing, and interactive REPL sessions.
+
+---
+
+## Task Runner Orchestration (`justfile`)
+
+Every initialized repository includes a turnkey `justfile` generated from your active tooling configuration. Recipes dynamically adapt to your selected linters, test frameworks, and documentation engines:
+
+```just
+--8<-- "cli/justfile"
+```
+
+Running `just` in your project root provides standard developer workflows immediately:
+
+- __`just format`__: Runs automated code formatting with Ruff.
+- __`just lint`__: Executes static analysis with Ruff and markdownlint.
+- __`just typecheck`__: Runs static type checking across the project source tree.
+- __`just test` / `just test-cov`__: Executes the test suite with coverage reporting.
+- __`just ci`__: Emulates the GitHub Actions CI pipeline locally.
+
+---
+
+## Interactive Wizard & Metadata
+
+When running `protostar init` without a `--template` flag, Protostar launches an interactive prompt wizard to configure your environment.
+
+The following metadata fields are prompted during initialization or automatically resolved from your global configuration and git environment:
+
+--8<-- "table_metadata.md"
 
 ---
 
