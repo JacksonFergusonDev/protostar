@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787029217771,
+  "lastUpdate": 1787031185709,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7043,6 +7043,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 210.22,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed077a122536c9077b5a9186af7e0ab747fbd91b",
+          "message": "feat(cli): Add documentation deep-linking to error outputs (#184)\n\n* test(ci): Add docs link validation script and CI step\n\n* feat(errors): Extend ProtostarError with docs deep-linking\n\n* feat(cli): Add InvalidUsageError and subcommand-aware doc routing\n\n* test(cli): Update tests for InvalidUsageError and doc links",
+          "timestamp": "2026-08-17T22:32:13-07:00",
+          "tree_id": "2eea5137478e80303cf15b282c52a2bac7d7ffee",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ed077a122536c9077b5a9186af7e0ab747fbd91b"
+        },
+        "date": 1787031184862,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 120.9,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 182.48,
             "unit": "ms"
           }
         ]
