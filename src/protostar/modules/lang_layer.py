@@ -17,6 +17,28 @@ from .base import BootstrapModule
 logger = logging.getLogger("protostar")
 
 
+LICENSE_MAP: dict[str, tuple[str, str]] = {
+    "MIT": ("mit.txt", "License :: OSI Approved :: MIT License"),
+    "Apache-2.0": (
+        "apache_2_0.txt",
+        "License :: OSI Approved :: Apache Software License",
+    ),
+    "BSD-3-Clause": ("bsd_3.txt", "License :: OSI Approved :: BSD License"),
+    "GPL-3.0": (
+        "gpl_3.txt",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    ),
+    "LGPL-3.0": (
+        "lgpl_3.txt",
+        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    ),
+    "AGPL-3.0": (
+        "agpl_3.txt",
+        "License :: OSI Approved :: GNU Affero General Public License v3",
+    ),
+}
+
+
 class PythonCore(BootstrapModule):
     """Configures a modern Python environment using uv as the fundamental baseline."""
 
@@ -93,36 +115,19 @@ authors = [{{ name = "{name}", email = "{email}" }}]
 """
         project_license = manifest.metadata.get("license")
         license_classifier = None
-        if project_license and project_license != "None":
-            license_map = {
-                "MIT": ("mit.txt", "License :: OSI Approved :: MIT License"),
-                "Apache-2.0": (
-                    "apache_2_0.txt",
-                    "License :: OSI Approved :: Apache Software License",
-                ),
-                "BSD-3-Clause": ("bsd_3.txt", "License :: OSI Approved :: BSD License"),
-                "GPL-3.0": (
-                    "gpl_3.txt",
-                    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-                ),
-                "LGPL-3.0": (
-                    "lgpl_3.txt",
-                    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-                ),
-                "AGPL-3.0": (
-                    "agpl_3.txt",
-                    "License :: OSI Approved :: GNU Affero General Public License v3",
-                ),
-            }
-            if project_license in license_map:
-                filename, license_classifier = license_map[project_license]
-                license_content = (
-                    importlib.resources.files("protostar.licenses")
-                    .joinpath(filename)
-                    .read_text(encoding="utf-8")
-                )
-                manifest.filesystem.add_file_injection("LICENSE", license_content)
-                project_metadata_payload += 'license = { file = "LICENSE" }\n'
+        if (
+            project_license
+            and project_license != "None"
+            and project_license in LICENSE_MAP
+        ):
+            filename, license_classifier = LICENSE_MAP[project_license]
+            license_content = (
+                importlib.resources.files("protostar.licenses")
+                .joinpath(filename)
+                .read_text(encoding="utf-8")
+            )
+            manifest.filesystem.add_file_injection("LICENSE", license_content)
+            project_metadata_payload += 'license = { file = "LICENSE" }\n'
 
         classifiers = []
         if min_python:

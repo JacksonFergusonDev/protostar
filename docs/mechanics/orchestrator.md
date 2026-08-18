@@ -104,7 +104,17 @@ flowchart TD
 
 ## Telemetry & Crash Reporting
 
-The Orchestrator serves as the absolute boundary for exception propagation. By trapping errors at the highest level, it guarantees that users are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
+The Orchestrator serves as the absolute boundary for exception propagation and non-fatal operational telemetry.
+
+### Diagnostic Telemetry
+
+During initialization, non-fatal skips, warnings, and environmental adjustments (such as missing optional binaries like `direnv` or `markdownlint-cli2`) are recorded into the `EnvironmentManifest` as `DiagnosticEvent` objects. At the end of execution, the Orchestrator aggregates these events and renders a structured terminal panel:
+
+![Protostar Diagnostic Summary](../fixtures/diagnostic_panel.svg)
+
+### Exception Handling & Triage
+
+By trapping errors at the highest level, Protostar guarantees that users are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
 
 - __Expected Anomalies:__ Domain-specific exceptions inheriting from `ProtostarError` (such as `FileSystemError` for I/O constraints, or `MissingDependencyError` for absent binaries) are caught and gracefully presented as a clean abort message in the terminal, alongside a decoupled remediation hint. The Orchestrator routes these expected operational failures to their appropriate UNIX standard exit codes (e.g., `os.EX_IOERR`, `os.EX_UNAVAILABLE`).
 

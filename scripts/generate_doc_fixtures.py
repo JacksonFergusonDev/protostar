@@ -15,14 +15,17 @@ from pathlib import Path
 from typing import Any
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
 
 import protostar.cli
 from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint
 from protostar.fs import atomic_write_text
-from protostar.manifest import EnvironmentManifest
+from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
+from protostar.metadata import METADATA_FIELDS
 from protostar.modules import (
+    LICENSE_MAP,
     TOOLING_MODULES,
     BootstrapModule,
     PythonCore,
@@ -303,6 +306,45 @@ def generate_capability_tables() -> None:
         "table_templates.md", _format_markdown_table(template_headers, template_rows)
     )
 
+    # Interactive wizard project metadata fields matrix
+    metadata_headers = ["Key", "Label", "Prompt Type", "Default"]
+    metadata_rows = []
+    for key, field in METADATA_FIELDS.items():
+        if field.default is None or field.default == "":
+            default_str = "*None*"
+        elif isinstance(field.default, list):
+            default_str = f"`{', '.join(field.default)}`"
+        else:
+            default_str = f"`{field.default}`"
+
+        metadata_rows.append(
+            [
+                f"`{key}`",
+                field.label.replace(" (optional, press Enter to skip):", "").replace(
+                    ":", ""
+                ),
+                f"`{field.prompt_type}`",
+                default_str,
+            ]
+        )
+    _write_fixture(
+        "table_metadata.md", _format_markdown_table(metadata_headers, metadata_rows)
+    )
+
+    # License mappings matrix
+    license_headers = ["License Identifier", "License File", "PyPI Trove Classifier"]
+    license_rows = [
+        [
+            f"`{license_key}`",
+            f"`{filename}`",
+            f"`{classifier}`",
+        ]
+        for license_key, (filename, classifier) in LICENSE_MAP.items()
+    ]
+    _write_fixture(
+        "table_licenses.md", _format_markdown_table(license_headers, license_rows)
+    )
+
 
 def generate_manifest_state() -> None:
     """Simulates an initialization sequence to compute a deterministic JSON manifest."""
@@ -542,6 +584,10 @@ def generate_cli_help_svgs() -> None:
             init_parser = subparsers.choices["init"]
             _render_svg(init_parser, "help init", "cli_init_help.svg")
 
+        if subparsers and "config" in subparsers.choices:
+            config_parser = subparsers.choices["config"]
+            _render_svg(config_parser, "help config", "cli_config_help.svg")
+
     finally:
         # Restore the native consoles
         protostar.cli.console = original_global_console
@@ -549,6 +595,90 @@ def generate_cli_help_svgs() -> None:
             protostar.cli.ProtoHelpFormatter.console = None  # type: ignore[assignment]
         else:
             protostar.cli.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign]
+
+
+def generate_diagnostic_panel_svg() -> None:
+    """Captures an SVG snapshot of a styled Rich Diagnostic Summary panel."""
+    record_console = Console(
+        record=True,
+        width=90,
+        force_terminal=True,
+        color_system="truecolor",
+        legacy_windows=False,
+        file=io.StringIO(),
+    )
+
+    events = [
+        DiagnosticEvent(
+            phase="Git",
+            message="Initialized fresh git repository in workspace.",
+            severity=Severity.INFO,
+        ),
+        DiagnosticEvent(
+            phase="Direnv",
+            message="Auto-activation hook skipped; binary not found in PATH.",
+            severity=Severity.SKIP,
+            detail="Install direnv to enable seamless directory traversal activation.",
+        ),
+        DiagnosticEvent(
+            phase="MarkdownLint",
+            message="Linter configuration scaffolded with relaxed schema rules.",
+            severity=Severity.WARNING,
+            detail="Install markdownlint-cli2 to enable git hook verification.",
+        ),
+    ]
+
+    lines = []
+    has_warnings = False
+
+    for event in events:
+        if event.severity == Severity.WARNING:
+            has_warnings = True
+            lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
+        elif event.severity == Severity.SKIP:
+            lines.append(
+                rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
+            )
+        else:
+            lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
+
+        if event.detail:
+            lines.append(f"  [dim]{event.detail}[/dim]")
+
+    panel = Panel(
+        "\n".join(lines),
+        title="[bold]Diagnostic Summary",
+        border_style="yellow" if has_warnings else "blue",
+        expand=False,
+        padding=(1, 2),
+    )
+
+    record_console.print(panel)
+
+    ansi_colors = [
+        (color.red, color.green, color.blue)
+        for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
+    ]
+    ansi_colors[4] = (97, 175, 239)
+    ansi_colors[12] = (97, 175, 239)
+    ansi_colors[6] = (34, 211, 238)
+    ansi_colors[14] = (34, 211, 238)
+
+    protostar_theme = TerminalTheme(
+        background=(10, 15, 31),
+        foreground=(220, 225, 235),
+        normal=ansi_colors[:8],
+        bright=ansi_colors[8:16],
+    )
+
+    svg_content = record_console.export_svg(
+        title="Diagnostic Telemetry",
+        theme=protostar_theme,
+        unique_id="diagnostic_panel",
+    )
+
+    clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+    _write_fixture("diagnostic_panel.svg", clean_svg)
 
 
 def main() -> None:
@@ -582,6 +712,7 @@ def main() -> None:
         generate_capability_tables()
         generate_manifest_state()
         generate_template_schema_fixture()
+        generate_diagnostic_panel_svg()
 
         # Slow executions (disk I/O and subprocess isolation)
         if not args.fast:
