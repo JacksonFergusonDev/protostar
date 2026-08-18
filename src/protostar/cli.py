@@ -32,6 +32,7 @@ from .errors import (
     ConfigurationError,
     ExecutionAbortedError,
     FileSystemError,
+    InvalidUsageError,
     MissingDependencyError,
     NetworkFetchError,
     ProtostarError,
@@ -686,6 +687,31 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
     return kwargs
 
 
+# Maps known subcommands to their documentation page.
+# Only include subcommands that have a dedicated reference page.
+# Unmapped subcommands fall back to the docs root.
+_SUBCOMMAND_DOC_PATHS: dict[str, str] = {
+    "init": "usage/init/",
+    "config": "usage/configuration/",
+}
+
+
+def _resolve_usage_doc_path() -> str:
+    """Returns the docs_path for the active subcommand, or '' for the root page.
+
+    Reads sys.argv[1] to identify the subcommand. Returns a mapped docs_path
+    if the subcommand is known, otherwise returns '' which resolves to the
+    documentation root. This is intentionally conservative: an incorrect link
+    is worse than the root page.
+
+    Returns:
+        A docs_path string suitable for passing to InvalidUsageError.
+    """
+    if len(sys.argv) >= 2:
+        return _SUBCOMMAND_DOC_PATHS.get(sys.argv[1], "")
+    return ""
+
+
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
     parser = build_parser()
@@ -698,7 +724,10 @@ def main() -> None:
             getattr(args, "command", None) != "init"
             or not getattr(args, "from_path", None)
         ):
-            parser.error(f"unrecognized arguments: {' '.join(unknown)}")
+            raise InvalidUsageError(
+                f"Unrecognized arguments: {' '.join(unknown)}",
+                docs_path=_resolve_usage_doc_path(),
+            )
 
         args.template_context = _parse_dynamic_kwargs(unknown)
 
@@ -718,8 +747,10 @@ def main() -> None:
         body = str(e)
         if isinstance(e, CommandExecutionError) and e.output_detail:
             body += f"\n\n[dim]{e.output_detail}[/dim]"
-        if getattr(e, "hint", None):
+        if e.hint:
             body += f"\n\n[dim]Hint: {e.hint}[/dim]"
+        if e.docs_url:
+            body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
 
         console.print(
             Panel(
@@ -732,6 +763,8 @@ def main() -> None:
         )
 
         # Route specific domain exceptions to standard POSIX status codes
+        if isinstance(e, InvalidUsageError):
+            sys.exit(os.EX_USAGE)  # 64: Command line usage error
         if isinstance(e, SecurityViolationError):
             sys.exit(os.EX_NOPERM)  # 77: Permission denied / Security constraint
         if isinstance(e, ConfigurationError):
