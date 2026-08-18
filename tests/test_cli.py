@@ -9,6 +9,7 @@ import pytest
 from protostar.cli import (
     ProtoHelpFormatter,
     _parse_dynamic_kwargs,
+    _resolve_usage_doc_path,
     build_parser,
     configure_logging,
     handle_config,
@@ -22,6 +23,7 @@ from protostar.errors import (
     ConfigurationError,
     ExecutionAbortedError,
     FileSystemError,
+    InvalidUsageError,
     MissingDependencyError,
     NetworkFetchError,
     TemplateResolutionError,
@@ -494,6 +496,35 @@ def test_main_handles_keyboard_interrupt(mocker):
         str(call.args[0]) for call in mock_print.call_args_list if call.args
     )
     assert "Aborted by user" in printed
+
+
+def test_main_routes_invalid_usage_error_to_posix_status(mocker):
+    """Verify that an InvalidUsageError returns os.EX_USAGE (64)."""
+    mocker.patch(
+        "protostar.cli.intercept_interactive_wizards",
+        side_effect=InvalidUsageError("bad flag"),
+    )
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_USAGE)
+
+
+def test_resolve_usage_doc_path_known_subcommand(mocker):
+    mocker.patch.object(sys, "argv", ["protostar", "init", "--bad"])
+    assert _resolve_usage_doc_path() == "usage/init/"
+
+
+def test_resolve_usage_doc_path_unknown_subcommand_falls_back_to_root(mocker):
+    mocker.patch.object(sys, "argv", ["protostar", "deploy", "--bad"])
+    assert _resolve_usage_doc_path() == ""
+
+
+def test_resolve_usage_doc_path_no_subcommand_falls_back_to_root(mocker):
+    mocker.patch.object(sys, "argv", ["protostar"])
+    assert _resolve_usage_doc_path() == ""
 
 
 def test_main_routes_configuration_error_to_posix_status(mocker):
