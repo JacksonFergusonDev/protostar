@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787031185709,
+  "lastUpdate": 1787189701395,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7077,6 +7077,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 182.48,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "1134473e912e90ffeac78622339a5b06d2b280aa",
+          "message": "meta: add MIT license classifier to pyproject.toml",
+          "timestamp": "2026-08-19T18:33:42-07:00",
+          "tree_id": "bf7ccfaeff092095eddcdcff56c7fb25c6caddcc",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1134473e912e90ffeac78622339a5b06d2b280aa"
+        },
+        "date": 1787189700587,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.52,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 206.37,
             "unit": "ms"
           }
         ]
