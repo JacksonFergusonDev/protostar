@@ -560,20 +560,20 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 return
 
             user_config = UserConfig.load()
-            modules = selections["modules"]
+            modules = selections.modules
 
             # Inject mandatory universal layers implicitly
             modules.insert(0, SystemWorkspaceModule())
             modules.insert(1, PythonCore())
 
             options = OrchestratorOptions(
-                blueprint=selections.get("blueprint"),
-                docker=selections["docker"],
+                blueprint=selections.blueprint,
+                docker=selections.docker,
                 force_merge=False,
                 force_replace=False,
-                metadata=selections.get("project_metadata"),
-                is_external=selections.get("is_external", False),
-                is_user_aliased=selections.get("is_user_aliased", False),
+                metadata=selections.project_metadata,
+                is_external=selections.is_external,
+                is_user_aliased=selections.is_user_aliased,
             )
             engine = Orchestrator(
                 modules,
