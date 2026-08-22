@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787430609415,
+  "lastUpdate": 1787431006458,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7247,6 +7247,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 219.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb04d1c047cb26e1ef6bd0a8d7c025d1fd0d7766",
+          "message": "refactor(workspace): introduce PythonVersion, PackageName, and ProjectName value objects (#188)\n\n* feat(workspace): introduce PythonVersion, PackageName, and ProjectName domain value objects\n\n- Implement PythonVersion with parsing, semantic ordering, Trove classifiers, and range generation\n- Implement PackageName and ProjectName with validation and PEP 8 sanitization\n- Refactor workspace resolution functions to leverage the new value objects\n\n* refactor(workflows): adopt PythonVersion and naming value objects in workflow specifications\n\n- Type CIWorkflowSpec with PythonVersion | str\n- Type DockerfileSpec with PythonVersion, ProjectName, and PackageName\n- Update matrix fallback to preserve string serialization of version objects\n\n* refactor(lang_layer): use PythonVersion trove classifiers in PythonCore module\n\n- Resolve Python Trove classifiers directly from PythonVersion.trove_classifier\n- Generate version range using PythonVersion.range_to()\n\n* test(workspace): add test suite for PythonVersion, PackageName, and ProjectName value objects\n\n- Test PythonVersion parsing, ordering, Trove classifiers, and range generation\n- Test PackageName PEP 8 validation and sanitization\n- Test ProjectName empty validation and package derivation",
+          "timestamp": "2026-08-22T13:35:40-07:00",
+          "tree_id": "5f39e168107c7d50f79c71c35a3e3e4f0b09b595",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/bb04d1c047cb26e1ef6bd0a8d7c025d1fd0d7766"
+        },
+        "date": 1787431005481,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 156.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 226.88,
             "unit": "ms"
           }
         ]
