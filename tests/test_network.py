@@ -222,7 +222,7 @@ def test_fetch_template_archive_missing_protostar_toml(mocker, tmp_path):
 
 
 def test_archive_format_enum():
-    from protostar.enums import ArchiveFormat
+    from protostar.fs import ArchiveFormat
 
     assert ArchiveFormat.from_path("https://example.com/file.zip") == ArchiveFormat.ZIP
     assert (
@@ -256,7 +256,7 @@ def test_archive_format_enum():
 
 
 def test_git_host_enum():
-    from protostar.enums import GitHost
+    from protostar.network import GitHost
 
     assert GitHost.from_url("https://github.com/user/repo") == GitHost.GITHUB
     assert (

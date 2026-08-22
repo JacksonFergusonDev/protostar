@@ -72,9 +72,8 @@ def test_atomic_write_text_handles_encoding_error(tmp_path: Path) -> None:
 def test_safe_extract_tar_and_archive(tmp_path: Path) -> None:
     import tarfile
 
-    from protostar.enums import ArchiveFormat
     from protostar.errors import SecurityViolationError, TemplateResolutionError
-    from protostar.fs import safe_extract_archive, safe_extract_tar
+    from protostar.fs import ArchiveFormat, safe_extract_archive, safe_extract_tar
 
     # Create a valid tar.gz file
     tar_path = tmp_path / "valid.tar.gz"
