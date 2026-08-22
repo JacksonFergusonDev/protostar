@@ -69,3 +69,37 @@ def test_metadata_layer_has_no_questionary_dependency():
         "questionary" not in sys.modules
         or "questionary" not in protostar.metadata.__dict__
     )
+
+
+def test_resolve_auto_metadata_with_enum_keys():
+    """Test resolving auto metadata using MetadataKey enum members."""
+    from protostar.enums import MetadataKey
+
+    config = UserConfig(author_name="Alice", license="MIT")
+    metadata = resolve_auto_metadata(
+        {MetadataKey.AUTHOR_NAME, MetadataKey.LICENSE}, config=config
+    )
+
+    assert metadata["author_name"] == "Alice"
+    assert metadata["license"] == "MIT"
+    assert "docker_port" not in metadata
+
+
+def test_enums_properties():
+    """Test properties on TargetOS and LicenseType."""
+    from protostar.enums import LicenseType, TargetOS
+
+    assert TargetOS.MACOS.runner_name == "macos-latest"
+    assert TargetOS.LINUX.runner_name == "ubuntu-latest"
+    assert TargetOS.WINDOWS.runner_name == "windows-latest"
+
+    assert TargetOS.MACOS.trove_classifier == "Operating System :: MacOS"
+    assert TargetOS.LINUX.trove_classifier == "Operating System :: POSIX :: Linux"
+    assert (
+        TargetOS.WINDOWS.trove_classifier == "Operating System :: Microsoft :: Windows"
+    )
+
+    assert LicenseType.MIT.resource_filename == "mit.txt"
+    assert LicenseType.MIT.trove_classifier == "License :: OSI Approved :: MIT License"
+    assert LicenseType.NONE.resource_filename is None
+    assert LicenseType.NONE.trove_classifier is None

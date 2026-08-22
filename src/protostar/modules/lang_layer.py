@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
+from protostar.enums import LicenseType, TargetOS
 from protostar.errors import MissingDependencyError
 
 if TYPE_CHECKING:
@@ -18,24 +19,9 @@ logger = logging.getLogger("protostar")
 
 
 LICENSE_MAP: dict[str, tuple[str, str]] = {
-    "MIT": ("mit.txt", "License :: OSI Approved :: MIT License"),
-    "Apache-2.0": (
-        "apache_2_0.txt",
-        "License :: OSI Approved :: Apache Software License",
-    ),
-    "BSD-3-Clause": ("bsd_3.txt", "License :: OSI Approved :: BSD License"),
-    "GPL-3.0": (
-        "gpl_3.txt",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-    ),
-    "LGPL-3.0": (
-        "lgpl_3.txt",
-        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-    ),
-    "AGPL-3.0": (
-        "agpl_3.txt",
-        "License :: OSI Approved :: GNU Affero General Public License v3",
-    ),
+    lic.value: (lic.resource_filename, lic.trove_classifier)
+    for lic in LicenseType
+    if lic.resource_filename is not None and lic.trove_classifier is not None
 }
 
 
@@ -106,7 +92,7 @@ class PythonCore(BootstrapModule):
         email = manifest.metadata.get("author_email") or "your-email"
         github = manifest.metadata.get("github_username")
         min_python = manifest.metadata.get("minimum_python")
-        supported_os: list[str] = manifest.metadata.get("supported_os", [])
+        supported_os: list[TargetOS | str] = manifest.metadata.get("supported_os", [])
 
         project_metadata_payload = f"""[project]
 description = "{desc}"
@@ -136,12 +122,18 @@ authors = [{{ name = "{name}", email = "{email}" }}]
                 classifiers.append(f'"Programming Language :: Python :: {version}"')
 
         for os_name in supported_os:
-            if os_name == "MacOS":
-                classifiers.append('"Operating System :: MacOS"')
-            elif os_name == "Linux":
-                classifiers.append('"Operating System :: POSIX :: Linux"')
-            elif os_name == "Windows":
-                classifiers.append('"Operating System :: Microsoft :: Windows"')
+            try:
+                target_os = (
+                    os_name if isinstance(os_name, TargetOS) else TargetOS(str(os_name))
+                )
+                classifiers.append(f'"{target_os.trove_classifier}"')
+            except ValueError:
+                if os_name == "MacOS":
+                    classifiers.append('"Operating System :: MacOS"')
+                elif os_name == "Linux":
+                    classifiers.append('"Operating System :: POSIX :: Linux"')
+                elif os_name == "Windows":
+                    classifiers.append('"Operating System :: Microsoft :: Windows"')
 
         if license_classifier:
             classifiers.append(f'"{license_classifier}"')

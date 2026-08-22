@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
+from protostar.enums import MetadataKey
+
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
 
@@ -21,10 +23,10 @@ class BootstrapModule(abc.ABC):
     config_key: ClassVar[str] = ""
     """The global configuration key used to evaluate if this module is active."""
 
-    required_metadata: ClassVar[tuple[str, ...]] = ()
+    required_metadata: ClassVar[tuple[MetadataKey | str, ...]] = ()
     """The metadata keys that MUST be resolved for this module to function."""
 
-    optional_metadata: ClassVar[tuple[str, ...]] = ()
+    optional_metadata: ClassVar[tuple[MetadataKey | str, ...]] = ()
     """The metadata keys that are nice to have but not strictly required."""
 
     @property
