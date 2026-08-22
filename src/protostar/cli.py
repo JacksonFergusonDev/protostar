@@ -47,7 +47,7 @@ from .modules import (
     PythonCore,
     SystemWorkspaceModule,
 )
-from .orchestrator import Orchestrator
+from .orchestrator import Orchestrator, OrchestratorOptions
 from .wizard import (
     resolve_missing_variables,
     run_init_wizard,
@@ -224,9 +224,7 @@ def handle_init(args: argparse.Namespace) -> None:
     resolved_metadata = resolve_auto_metadata(required_keys)
 
     # Execute
-    engine = Orchestrator(
-        modules,
-        user_config,
+    options = OrchestratorOptions(
         blueprint=blueprint,
         docker=args.docker,
         force_merge=getattr(args, "force_merge", False),
@@ -234,6 +232,11 @@ def handle_init(args: argparse.Namespace) -> None:
         metadata=resolved_metadata,
         is_external=is_external,
         is_user_aliased=is_user_aliased,
+    )
+    engine = Orchestrator(
+        modules,
+        user_config,
+        options=options,
     )
     engine.run()
 
@@ -563,9 +566,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             modules.insert(0, SystemWorkspaceModule())
             modules.insert(1, PythonCore())
 
-            engine = Orchestrator(
-                modules,
-                user_config,
+            options = OrchestratorOptions(
                 blueprint=selections.get("blueprint"),
                 docker=selections["docker"],
                 force_merge=False,
@@ -573,6 +574,11 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 metadata=selections.get("project_metadata"),
                 is_external=selections.get("is_external", False),
                 is_user_aliased=selections.get("is_user_aliased", False),
+            )
+            engine = Orchestrator(
+                modules,
+                user_config,
+                options=options,
             )
             engine.run()
             sys.exit(0)

@@ -6,7 +6,7 @@ from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import ExecutionAbortedError, ProtostarError
 from protostar.manifest import CollisionStrategy, Severity, SystemTask
 from protostar.modules import BootstrapModule
-from protostar.orchestrator import Orchestrator
+from protostar.orchestrator import Orchestrator, OrchestratorOptions
 
 
 @pytest.fixture
@@ -81,7 +81,9 @@ def test_orchestrator_evaluate_collisions_headless_with_force_merges(
     dummy_mod = DummyModule()
 
     # Initialize with the force flag enabled
-    orchestrator = Orchestrator([dummy_mod], mock_config, force_merge=True)
+    orchestrator = Orchestrator(
+        [dummy_mod], mock_config, options=OrchestratorOptions(force_merge=True)
+    )
 
     marker = mocker.MagicMock()
     marker.exists.return_value = True
@@ -180,7 +182,9 @@ def test_orchestrator_run_global_injections(mocker, mock_config):
     mock_bp = TemplateBlueprint(dev_dependencies=["test-global-dep"])
     mock_bp.pyproject_injections = {"custom_key": "custom_payload"}
 
-    orchestrator = Orchestrator([], mock_config, blueprint=mock_bp)
+    orchestrator = Orchestrator(
+        [], mock_config, options=OrchestratorOptions(blueprint=mock_bp)
+    )
 
     # Mock evaluation to prevent aborts and SystemExecutor to prevent execution
     mocker.patch.object(orchestrator, "_evaluate_collisions")
@@ -271,7 +275,9 @@ def test_orchestrator_injects_files_from_config(mocker):
     mocker.patch("protostar.executor.SystemExecutor.execute")
 
     orchestrator = Orchestrator(
-        modules=[], user_config=UserConfig(), blueprint=blueprint
+        modules=[],
+        user_config=UserConfig(),
+        options=OrchestratorOptions(blueprint=blueprint),
     )
     orchestrator.run()
 
@@ -334,3 +340,36 @@ def test_trust_dialog_aborts_on_user_decline(base_orchestrator, mocker) -> None:
 
     with pytest.raises(ExecutionAbortedError, match="Untrusted external source"):
         base_orchestrator._prompt_remote_trust()
+
+
+def test_orchestrator_options_defaults():
+    """Verifies that Orchestrator initializes with clean default options."""
+    orchestrator = Orchestrator(modules=[], user_config=UserConfig())
+    assert isinstance(orchestrator.options, OrchestratorOptions)
+    assert orchestrator.blueprint is None
+    assert orchestrator.docker is False
+    assert orchestrator.force_merge is False
+    assert orchestrator.force_replace is False
+    assert orchestrator.metadata is None
+    assert orchestrator.is_external is False
+    assert orchestrator.is_user_aliased is False
+
+
+def test_orchestrator_with_custom_options():
+    """Verifies that Orchestrator correctly unpacks custom OrchestratorOptions."""
+    options = OrchestratorOptions(
+        docker=True,
+        force_merge=True,
+        metadata={"project_name": "cosmo"},
+        is_external=True,
+        is_user_aliased=True,
+    )
+    orchestrator = Orchestrator(modules=[], user_config=UserConfig(), options=options)
+    assert orchestrator.options is options
+    assert orchestrator.docker is True
+    assert orchestrator.force_merge is True
+    assert orchestrator.force_replace is False
+    assert orchestrator.metadata == {"project_name": "cosmo"}
+    assert orchestrator.is_external is True
+    assert orchestrator.is_user_aliased is True
+    assert orchestrator.manifest.collision_strategy == CollisionStrategy.MERGE

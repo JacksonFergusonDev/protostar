@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from typing import Any, cast
 
 from rich.console import Console
@@ -19,6 +20,29 @@ logger = logging.getLogger("protostar")
 console = Console()
 
 
+@dataclass
+class OrchestratorOptions:
+    """Configurable options and behavioral flags for the environment Orchestrator.
+
+    Attributes:
+        blueprint: The template blueprint to apply. Defaults to None.
+        docker: If True, scaffolds container artifacts (.dockerignore). Defaults to False.
+        force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
+        force_replace: If True, bypasses interactive prompts and forces replacement on collisions. Defaults to False.
+        metadata: Pre-resolved metadata dictionary to inject into the manifest. Defaults to None.
+        is_external: If True, the template was loaded from an external source. Defaults to False.
+        is_user_aliased: If True, the template was resolved via a trusted global configuration alias. Defaults to False.
+    """
+
+    blueprint: TemplateBlueprint | None = None
+    docker: bool = False
+    force_merge: bool = False
+    force_replace: bool = False
+    metadata: dict[str, Any] | None = None
+    is_external: bool = False
+    is_user_aliased: bool = False
+
+
 class Orchestrator:
     """Manages the lifecycle of the Python environment scaffolding process."""
 
@@ -26,38 +50,29 @@ class Orchestrator:
         self,
         modules: list[BootstrapModule],
         user_config: UserConfig,
-        blueprint: TemplateBlueprint | None = None,
-        docker: bool = False,
-        force_merge: bool = False,
-        force_replace: bool = False,
-        metadata: dict[str, Any] | None = None,
-        is_external: bool = False,
-        is_user_aliased: bool = False,
+        options: OrchestratorOptions | None = None,
     ) -> None:
-        """Initializes the orchestrator with the requested modules and presets.
+        """Initializes the orchestrator with the requested modules and options.
 
         Args:
             modules: The ordered stack of bootstrap layers to execute.
             user_config: The active UserConfig instance.
-            blueprint: The template blueprint.
-            docker: If True, scaffolds a .dockerignore from the manifest ignores. Defaults to False.
-            force_merge: If True, bypasses interactive prompts and forces a merge on collisions. Defaults to False.
-            force_replace: If True, bypasses interactive prompts and forces replacement on collisions. Defaults to False.
-            metadata: Pre-resolved metadata dictionary to inject into the manifest. Defaults to None.
-            is_external: If True, the template was loaded from an external source.
-            is_user_aliased: If True, the template was resolved via a trusted global configuration alias.
+            options: Optional OrchestratorOptions instance controlling flags and blueprints.
         """
         self.modules = modules
         self.user_config = user_config
-        self.blueprint = blueprint
-        self.docker = docker
-        self.force_merge = force_merge
-        self.force_replace = force_replace
-        self.metadata = metadata
-        self.is_external = is_external
-        self.is_user_aliased = is_user_aliased
+        self.options = options or OrchestratorOptions()
+
+        self.blueprint = self.options.blueprint
+        self.docker = self.options.docker
+        self.force_merge = self.options.force_merge
+        self.force_replace = self.options.force_replace
+        self.metadata = self.options.metadata
+        self.is_external = self.options.is_external
+        self.is_user_aliased = self.options.is_user_aliased
+
         self.manifest = EnvironmentManifest(
-            force_merge=force_merge, force_replace=force_replace
+            force_merge=self.force_merge, force_replace=self.force_replace
         )
 
     def _evaluate_collisions(self) -> None:

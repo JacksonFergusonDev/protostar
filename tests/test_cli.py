@@ -750,7 +750,9 @@ def test_handle_init_cli_template_resolution(mocker):
     assert mock_orchestrator.call_count == 1
 
     # Verify the template blueprint was loaded and passed to the Orchestrator
-    blueprint = mock_orchestrator.call_args.kwargs.get("blueprint")
+    options = mock_orchestrator.call_args.kwargs.get("options")
+    assert options is not None
+    blueprint = options.blueprint
     assert blueprint is not None
     assert "typer" in blueprint.dependencies
     assert "rich" in blueprint.dependencies
@@ -787,8 +789,10 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
 
     # Verify the orchestrator was initialized with the correct security flags
     _, kwargs = mock_orchestrator.call_args
-    assert kwargs.get("is_external") is True
-    assert kwargs.get("is_user_aliased") is True
+    options = kwargs.get("options")
+    assert options is not None
+    assert options.is_external is True
+    assert options.is_user_aliased is True
 
 
 def test_cli_rejects_unknown_templates(mocker) -> None:
