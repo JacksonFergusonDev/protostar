@@ -3,11 +3,13 @@
 import enum
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .config import UserConfig
 from .system import get_git_config
 from .workflows import TargetOS
+
+if TYPE_CHECKING:
+    from .config import UserConfig
 
 __all__ = [
     "METADATA_FIELDS",
@@ -175,6 +177,8 @@ def resolve_auto_metadata(
         A dictionary mapping metadata keys to their resolved values.
     """
     if config is None:
+        from .config import UserConfig
+
         config = UserConfig.load()
 
     resolved: dict[str, Any] = {}
