@@ -11,7 +11,10 @@ from protostar.errors import MissingDependencyError
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
 
-from protostar.workspace import generate_python_version_range
+from protostar.workspace import (
+    PythonVersion,
+    generate_python_version_range,
+)
 
 from .base import BootstrapModule
 
@@ -118,8 +121,17 @@ authors = [{{ name = "{name}", email = "{email}" }}]
         classifiers = []
         if min_python:
             classifiers.append('"Programming Language :: Python :: 3"')
-            for version in generate_python_version_range(min_python):
-                classifiers.append(f'"Programming Language :: Python :: {version}"')
+            try:
+                pv = (
+                    min_python
+                    if isinstance(min_python, PythonVersion)
+                    else PythonVersion.from_string(str(min_python))
+                )
+                for ver in pv.range_to():
+                    classifiers.append(f'"{ver.trove_classifier}"')
+            except ValueError:
+                for version in generate_python_version_range(min_python):
+                    classifiers.append(f'"Programming Language :: Python :: {version}"')
 
         for os_name in supported_os:
             try:
