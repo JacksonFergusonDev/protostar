@@ -1,6 +1,8 @@
 """Pure string and template generators for CI/CD workflows and workspace boilerplate."""
 
-from .enums import CIFlag, TargetOS
+import enum
+from dataclasses import dataclass
+
 from .workspace import (
     PackageName,
     ProjectName,
@@ -9,9 +11,11 @@ from .workspace import (
 )
 
 __all__ = [
+    "CIFlag",
     "CIWorkflowSpec",
     "DockerfileSpec",
     "JustfileSpec",
+    "TargetOS",
     "generate_ci_workflow",
     "generate_dockerfile",
     "generate_dockerignore",
@@ -22,7 +26,40 @@ __all__ = [
 ]
 
 
-from dataclasses import dataclass
+class TargetOS(enum.StrEnum):
+    """Enumeration of supported target operating systems."""
+
+    MACOS = "MacOS"
+    LINUX = "Linux"
+    WINDOWS = "Windows"
+
+    @property
+    def runner_name(self) -> str:
+        """Returns the default GitHub Actions runner tag for this OS."""
+        mapping = {
+            TargetOS.MACOS: "macos-latest",
+            TargetOS.LINUX: "ubuntu-latest",
+            TargetOS.WINDOWS: "windows-latest",
+        }
+        return mapping[self]
+
+    @property
+    def trove_classifier(self) -> str:
+        """Returns the PEP 621 PyPI trove classifier for this OS."""
+        mapping = {
+            TargetOS.MACOS: "Operating System :: MacOS",
+            TargetOS.LINUX: "Operating System :: POSIX :: Linux",
+            TargetOS.WINDOWS: "Operating System :: Microsoft :: Windows",
+        }
+        return mapping[self]
+
+
+class CIFlag(enum.StrEnum):
+    """Enumeration of feature flags for CI workflow and justfile generators."""
+
+    PYTEST = "pytest"
+    CODECOV = "codecov"
+    ZENSICAL = "zensical"
 
 
 @dataclass(frozen=True)

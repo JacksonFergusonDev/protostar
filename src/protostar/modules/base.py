@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from protostar.enums import MetadataKey
+from protostar.metadata import MetadataKey
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest

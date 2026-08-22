@@ -8,7 +8,6 @@ from rich.console import Console
 from .appends import append_marker_blocks
 from .config import UserConfig
 from .dependencies import install_dependencies
-from .enums import DiagnosticPhase
 from .errors import (
     ConfigurationError,
     FileSystemError,
@@ -16,7 +15,12 @@ from .errors import (
 from .fs import atomic_write_text
 from .ide import check_ide_extensions, write_ide_settings
 from .interpolation import render_template
-from .manifest import CollisionStrategy, EnvironmentManifest, SystemTask
+from .manifest import (
+    CollisionStrategy,
+    DiagnosticPhase,
+    EnvironmentManifest,
+    SystemTask,
+)
 from .security import enforce_binary_safelist, enforce_path_jail
 from .system import execute_subprocess
 from .toml_ast import merge_toml_payloads

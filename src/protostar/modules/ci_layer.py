@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.enums import MetadataKey
+from protostar.metadata import MetadataKey
 
 from .base import BootstrapModule
 

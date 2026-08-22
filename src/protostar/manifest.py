@@ -3,10 +3,23 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
-from .enums import CIFlag, DiagnosticPhase, LicenseType, TargetOS
+from .metadata import LicenseType
+from .workflows import CIFlag, TargetOS
 
 
-class Severity(enum.Enum):
+class DiagnosticPhase(enum.StrEnum):
+    """Enumeration of execution phases for diagnostic telemetry events."""
+
+    CONFIG = "Config"
+    DIRENV = "Direnv"
+    IDE = "IDE"
+    PRE_COMMIT = "Pre-commit"
+    JUST = "Just"
+    EXECUTOR = "Executor"
+    DOCKER = "Docker"
+
+
+class Severity(enum.StrEnum):
     """Enumeration of severity levels for diagnostic events."""
 
     INFO = "info"

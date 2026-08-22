@@ -5,8 +5,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
-from protostar.enums import IDEType, LicenseType, TargetOS
 from protostar.errors import MissingDependencyError
+from protostar.ide import IDEType
+from protostar.metadata import LicenseType
+from protostar.workflows import TargetOS
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest

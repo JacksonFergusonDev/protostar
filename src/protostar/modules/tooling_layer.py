@@ -3,8 +3,8 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.enums import CIFlag
 from protostar.errors import ConfigurationError, MissingDependencyError
+from protostar.workflows import CIFlag
 
 from .base import BootstrapModule
 
