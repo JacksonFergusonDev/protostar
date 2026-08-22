@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787189701395,
+  "lastUpdate": 1787429023642,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7111,6 +7111,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 206.37,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bba6a9df7d40e37a043e376821de62cc68bc98bd",
+          "message": "refactor(metadata): introduce strong typing for metadata, licensing, and target OS (#185)\n\n- Add domain enums PromptType, MetadataKey, TargetOS, and LicenseType in enums.py\n- Type MetadataField and METADATA_FIELDS with PromptType and MetadataKey\n- Replace static LICENSE_MAP and OS string mappings with enum properties\n- Update BootstrapModule metadata annotations and CIWorkflowSpec supported_os typing\n- Add unit tests for enum resolution and metadata properties",
+          "timestamp": "2026-08-22T13:02:34-07:00",
+          "tree_id": "5e8cb675eddaf058c59d4dafbd580fa7b91180f3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/bba6a9df7d40e37a043e376821de62cc68bc98bd"
+        },
+        "date": 1787429022477,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 153.01,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 226.95,
             "unit": "ms"
           }
         ]
