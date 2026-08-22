@@ -90,3 +90,33 @@ class LicenseType(enum.StrEnum):
             LicenseType.NONE: None,
         }
         return mapping[self]
+
+
+class IDEType(enum.StrEnum):
+    """Enumeration of supported integrated development environments."""
+
+    VSCODE = "vscode"
+    CURSOR = "cursor"
+    NONE = "none"
+
+    @property
+    def binary_name(self) -> str | None:
+        """Returns the CLI executable name for this IDE, or None if disabled."""
+        mapping = {
+            IDEType.VSCODE: "code",
+            IDEType.CURSOR: "cursor",
+            IDEType.NONE: None,
+        }
+        return mapping[self]
+
+
+class DiagnosticPhase(enum.StrEnum):
+    """Enumeration of execution phases for diagnostic telemetry events."""
+
+    CONFIG = "Config"
+    DIRENV = "Direnv"
+    IDE = "IDE"
+    PRE_COMMIT = "Pre-commit"
+    JUST = "Just"
+    EXECUTOR = "Executor"
+    DOCKER = "Docker"

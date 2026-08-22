@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
-from .enums import LicenseType, TargetOS
+from .enums import DiagnosticPhase, LicenseType, TargetOS
 
 
 class Severity(enum.Enum):
@@ -25,7 +25,7 @@ class DiagnosticEvent:
         detail: Optional extended diagnostic information.
     """
 
-    phase: str
+    phase: DiagnosticPhase | str
     message: str
     severity: Severity
     detail: str | None = None
@@ -262,7 +262,7 @@ class EnvironmentManifest:
 
     def add_diagnostic(
         self,
-        phase: str,
+        phase: DiagnosticPhase | str,
         message: str,
         severity: Severity = Severity.INFO,
         detail: str | None = None,
@@ -274,7 +274,7 @@ class EnvironmentManifest:
             )
         )
 
-    def should_skip_file(self, target: Path, phase: str) -> bool:
+    def should_skip_file(self, target: Path, phase: DiagnosticPhase | str) -> bool:
         """Returns True if the file exists and collision strategy is not OVERWRITE, logging a SKIP event."""
         if target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE:
             self.add_diagnostic(

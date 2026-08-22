@@ -5,9 +5,35 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from protostar.enums import IDEType
 from protostar.errors import FileSystemError
 from protostar.ide import check_ide_extensions, write_ide_settings
 from protostar.manifest import Severity
+
+
+def test_ide_type_enum_properties():
+    assert IDEType.VSCODE.binary_name == "code"
+    assert IDEType.CURSOR.binary_name == "cursor"
+    assert IDEType.NONE.binary_name is None
+
+
+def test_ide_extension_check_with_enum(mocker):
+    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mock_result = MagicMock()
+    mock_result.stdout = "charliermarsh.ruff\n"
+    mocker.patch("protostar.ide.subprocess.run", return_value=mock_result)
+    diagnostics = []
+
+    check_ide_extensions(
+        ide=IDEType.VSCODE,
+        ide_extensions={"charliermarsh.ruff", "ms-python.mypy-type-checker"},
+        on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
+    )
+
+    assert len(diagnostics) == 1
+    msg, sev = diagnostics[0]
+    assert sev == Severity.WARNING
+    assert "Missing recommended vscode extensions" in msg
 
 
 def test_ide_extension_check_bypassed_if_wrong_ide(mocker):
@@ -16,6 +42,20 @@ def test_ide_extension_check_bypassed_if_wrong_ide(mocker):
 
     check_ide_extensions(
         ide="none",
+        ide_extensions={"charliermarsh.ruff"},
+        on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
+    )
+
+    mock_which.assert_not_called()
+    assert diagnostics == []
+
+
+def test_ide_extension_check_bypassed_if_none_enum(mocker):
+    mock_which = mocker.patch("protostar.ide.shutil.which")
+    diagnostics = []
+
+    check_ide_extensions(
+        ide=IDEType.NONE,
         ide_extensions={"charliermarsh.ruff"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
     )

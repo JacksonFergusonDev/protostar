@@ -7,6 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .enums import IDEType
 from .errors import FileSystemError
 from .fs import atomic_write_text
 from .manifest import IDESettings, Severity
@@ -15,7 +16,7 @@ __all__ = ["check_ide_extensions", "write_ide_settings"]
 
 
 def check_ide_extensions(
-    ide: str | None,
+    ide: IDEType | str | None,
     ide_extensions: set[str | tuple[str, ...]],
     on_diagnostic: Callable[[str, Severity], None],
 ) -> None:
@@ -25,18 +26,24 @@ def check_ide_extensions(
     diagnostic only on a successful check that uncovers missing extensions.
 
     Args:
-        ide: Configured IDE identifier (e.g. "vscode", "cursor").
+        ide: Configured IDE identifier (e.g. IDEType.VSCODE, "cursor").
         ide_extensions: Set of required extension IDs or alternatives tuple.
         on_diagnostic: Callback invoked with (message, severity) when extensions are missing
             or check fails.
     """
-    if not ide_extensions or ide not in ("vscode", "cursor"):
+    if not ide_extensions or ide is None:
         return
 
-    binary_map = {"vscode": "code", "cursor": "cursor"}
-    ide_binary = binary_map[ide]
+    try:
+        ide_type = ide if isinstance(ide, IDEType) else IDEType(str(ide))
+    except ValueError:
+        return
 
-    if not shutil.which(ide_binary):
+    if ide_type not in (IDEType.VSCODE, IDEType.CURSOR):
+        return
+
+    ide_binary = ide_type.binary_name
+    if not ide_binary or not shutil.which(ide_binary):
         return
 
     try:
@@ -61,7 +68,7 @@ def check_ide_extensions(
 
         if missing:
             on_diagnostic(
-                f"Missing recommended {ide} extensions: {', '.join(missing)}",
+                f"Missing recommended {ide_type.value} extensions: {', '.join(missing)}",
                 Severity.WARNING,
             )
     except Exception as e:
