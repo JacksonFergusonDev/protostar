@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
-from protostar.enums import LicenseType, TargetOS
+from protostar.enums import IDEType, LicenseType, TargetOS
 from protostar.errors import MissingDependencyError
 
 if TYPE_CHECKING:
@@ -157,7 +157,7 @@ Issues = "https://github.com/{github}/{repo_name}/issues"
 
         # --- IDE Injection ---
         config = UserConfig.load()
-        if config.ide in ("vscode", "cursor"):
+        if config.ide in (IDEType.VSCODE, IDEType.CURSOR):
             interpreter_path = Path.cwd() / ".venv" / "bin" / "python"
             manifest.add_ide_setting(
                 "python.defaultInterpreterPath", str(interpreter_path)

@@ -10,6 +10,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
+from .enums import IDEType
 from .errors import ConfigurationError, TemplateResolutionError
 from .interpolation import extract_variables, render_template
 from .network import resolve_remote_template
@@ -62,7 +63,7 @@ class UserConfig:
     """Global configuration settings for the Protostar CLI.
 
     Attributes:
-        ide (str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
+        ide (IDEType | str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_version (str | None): The specific Python version to scaffold.
         supported_os (list[str]): The supported operating systems to scaffold CI for.
@@ -84,7 +85,7 @@ class UserConfig:
         just (bool): Whether to auto-scaffold a justfile for command execution.
     """
 
-    ide: str | None = None
+    ide: IDEType | str | None = None
     author_name: str | None = None
     author_email: str | None = None
     github_username: str | None = None

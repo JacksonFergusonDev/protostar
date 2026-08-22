@@ -8,6 +8,7 @@ from rich.console import Console
 from .appends import append_marker_blocks
 from .config import UserConfig
 from .dependencies import install_dependencies
+from .enums import DiagnosticPhase
 from .errors import (
     ConfigurationError,
     FileSystemError,
@@ -112,7 +113,7 @@ class SystemExecutor:
             ide=self.config.ide,
             ide_extensions=self.manifest.tooling.ide_extensions,
             on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
-                phase="IDE",
+                phase=DiagnosticPhase.IDE,
                 message=msg,
                 severity=sev,
             ),
@@ -152,7 +153,7 @@ class SystemExecutor:
 
         target = Path(".pre-commit-config.yaml")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target, phase="Pre-commit"):
+        if self.manifest.should_skip_file(target, phase=DiagnosticPhase.PRE_COMMIT):
             return
 
         full_yaml = generate_pre_commit_config(
@@ -180,7 +181,9 @@ class SystemExecutor:
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
             enforce_path_jail(target, Path.cwd())
-            if not self.manifest.should_skip_file(target, phase="Executor"):
+            if not self.manifest.should_skip_file(
+                target, phase=DiagnosticPhase.EXECUTOR
+            ):
                 try:
                     target.parent.mkdir(parents=True, exist_ok=True)
                     atomic_write_text(target, content)
@@ -254,7 +257,7 @@ class SystemExecutor:
 
         target = Path("justfile")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target, phase="Just"):
+        if self.manifest.should_skip_file(target, phase=DiagnosticPhase.JUST):
             return
 
         full_content = generate_justfile(
@@ -305,7 +308,7 @@ class SystemExecutor:
                         is_pyproject=(target.name == "pyproject.toml"),
                         overwrite=is_overwrite,
                         on_conflict=lambda msg, sev: self.manifest.add_diagnostic(
-                            phase="Executor",
+                            phase=DiagnosticPhase.EXECUTOR,
                             message=msg,
                             severity=sev,
                         ),
@@ -400,7 +403,7 @@ class SystemExecutor:
 
         dockerfile = Path("Dockerfile")
         enforce_path_jail(dockerfile, Path.cwd())
-        if not self.manifest.should_skip_file(dockerfile, phase="Docker"):
+        if not self.manifest.should_skip_file(dockerfile, phase=DiagnosticPhase.DOCKER):
             try:
                 context = self.interpolation_context
                 is_script_or_typer = (
@@ -442,7 +445,7 @@ class SystemExecutor:
         write_ide_settings(
             ide_settings=self.manifest.ide_settings,
             on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
-                phase="Executor",
+                phase=DiagnosticPhase.EXECUTOR,
                 message=msg,
                 severity=sev,
             ),
@@ -454,7 +457,7 @@ class SystemExecutor:
         install_dependencies(
             dependencies_manifest=self.manifest.dependencies,
             on_diagnostic=lambda msg, sev, detail: self.manifest.add_diagnostic(
-                phase="Executor",
+                phase=DiagnosticPhase.EXECUTOR,
                 message=msg,
                 severity=sev,
                 detail=detail,

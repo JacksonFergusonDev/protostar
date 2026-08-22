@@ -202,6 +202,22 @@ def test_manifest_diagnostic_collection() -> None:
     assert event.detail == "Some traceback or detail"
 
 
+def test_manifest_diagnostic_collection_with_enum() -> None:
+    from protostar.enums import DiagnosticPhase
+
+    manifest = EnvironmentManifest()
+    manifest.add_diagnostic(
+        phase=DiagnosticPhase.EXECUTOR,
+        message="Execution warning",
+        severity=Severity.WARNING,
+    )
+
+    assert len(manifest.diagnostics) == 1
+    event = manifest.diagnostics[0]
+    assert event.phase == DiagnosticPhase.EXECUTOR
+    assert event.phase == "Executor"
+
+
 def test_add_ide_extension_aggregates_uniquely():
     manifest = EnvironmentManifest()
     manifest.tooling.add_ide_extension("charliermarsh.ruff")
