@@ -1,17 +1,45 @@
 """Dependency resolution and package installation via uv."""
 
+import enum
 from collections.abc import Callable
 
 from rich.console import Console
 
-from .enums import DependencyGroup
 from .errors import CommandExecutionError, CommandTimeoutError
 from .manifest import DependencyManifest, Severity
 from .system import execute_subprocess
 
 console = Console()
 
-__all__ = ["install_dependencies"]
+__all__ = ["DependencyGroup", "install_dependencies"]
+
+
+class DependencyGroup(enum.StrEnum):
+    """Enumeration of dependency groups and uv installation targets."""
+
+    MAIN = "main"
+    DEV = "dev"
+    DOCS = "docs"
+
+    @property
+    def cli_args(self) -> list[str]:
+        """Returns the CLI arguments for uv add."""
+        mapping = {
+            DependencyGroup.MAIN: [],
+            DependencyGroup.DEV: ["--dev"],
+            DependencyGroup.DOCS: ["--group", "docs"],
+        }
+        return mapping[self]
+
+    @property
+    def label(self) -> str:
+        """Returns the human-readable description for progress messages."""
+        mapping = {
+            DependencyGroup.MAIN: "standard",
+            DependencyGroup.DEV: "development",
+            DependencyGroup.DOCS: "documentation",
+        }
+        return mapping[self]
 
 
 def _install_group(

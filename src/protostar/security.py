@@ -1,11 +1,30 @@
 """Security policies and enforcement boundaries."""
 
+import enum
 from pathlib import Path
 
-from .enums import SafelistBinary
 from .errors import SecurityViolationError
 
-__all__ = ["ALLOWED_BINARIES", "enforce_binary_safelist", "enforce_path_jail"]
+__all__ = [
+    "ALLOWED_BINARIES",
+    "SafelistBinary",
+    "enforce_binary_safelist",
+    "enforce_path_jail",
+]
+
+
+class SafelistBinary(enum.StrEnum):
+    """Enumeration of authorized binaries allowed to execute in sandboxed environments."""
+
+    UV = "uv"
+    GIT = "git"
+    NPM = "npm"
+    YARN = "yarn"
+    PNPM = "pnpm"
+    PRE_COMMIT = "pre-commit"
+    PREK = "prek"
+    DIRENV = "direnv"
+
 
 ALLOWED_BINARIES: frozenset[SafelistBinary | str] = frozenset(SafelistBinary)
 
