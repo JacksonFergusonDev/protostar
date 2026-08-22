@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787433757516,
+  "lastUpdate": 1787435312506,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7315,6 +7315,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.6,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "99f70e43409371bb9f40d49947c7d8bc88824a06",
+          "message": "refactor(architecture): colocate domain enums with feature modules and remove enums.py (#190)\n\n* refactor(ide, security, dependencies): colocate IDEType, SafelistBinary, and DependencyGroup enums\n\n- Move IDEType to ide.py\n- Move SafelistBinary to security.py\n- Move DependencyGroup to dependencies.py\n\n* refactor(fs, network): colocate ArchiveFormat and GitHost enums\n\n- Move ArchiveFormat to fs.py\n- Move GitHost to network.py and import ArchiveFormat from fs.py\n\n* refactor(architecture): colocate remaining domain enums and eliminate enums.py\n\n- Move TargetOS and CIFlag to workflows.py\n- Move DiagnosticPhase and modernize Severity in manifest.py\n- Move MetadataKey, PromptType, and LicenseType to metadata.py\n- Update internal module imports to source from respective domain modules\n- Re-export all domain types through top-level protostar facade\n- Remove enums.py module\n\n* test(refactor): update test suite imports for domain enum colocation\n\n- Update test imports to source enums from feature domain modules\n- Update mock patch targets in test_metadata.py\n\n* refactor(metadata): resolve circular dependency by deferring UserConfig loading\n\n- Place UserConfig under TYPE_CHECKING in metadata.py\n- Lazily import UserConfig in resolve_auto_metadata\n\n* fix(typing): add future annotations to avoid runtime NameError on Python <3.14\n\n- Add from __future__ import annotations to metadata.py and module layer files\n- Remove quoted string annotations to satisfy ruff UP037",
+          "timestamp": "2026-08-22T14:47:28-07:00",
+          "tree_id": "562b3f8d312f73715fb8175e3b24bee510eed25d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/99f70e43409371bb9f40d49947c7d8bc88824a06"
+        },
+        "date": 1787435311438,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 141.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 203.44,
             "unit": "ms"
           }
         ]
