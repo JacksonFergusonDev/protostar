@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787431006458,
+  "lastUpdate": 1787433757516,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7281,6 +7281,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 226.88,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4a016695735bb3ef4a33d7cd25f49657c3e15fde",
+          "message": "refactor(network, fs): introduce ArchiveFormat and GitHost enums with unified archive extraction (#189)\n\n* feat(enums): add ArchiveFormat and GitHost domain enums\n\n- Introduce ArchiveFormat enum for ZIP, TAR, TAR_GZ, TAR_BZ2, and TAR_XZ\n- Provide path/URL detection and extension resolution on ArchiveFormat\n- Introduce GitHost enum for GitHub, GitLab, Bitbucket, Codeberg, and SourceHut\n- Export ArchiveFormat and GitHost in __init__.py\n\n* feat(fs): add safe_extract_tar and safe_extract_archive utilities\n\n- Implement safe_extract_tar with Tar Slip protection\n- Implement safe_extract_archive with ArchiveFormat dispatching\n- Export new safe extraction functions in fs.py\n\n* refactor(network): use ArchiveFormat and safe_extract_archive for remote template fetching\n\n- Utilize ArchiveFormat.from_path for archive format detection and validation\n- Delegate extraction to safe_extract_archive\n- Refactor remote template resolution to use ArchiveFormat\n\n* test(network, fs): add test coverage for ArchiveFormat, GitHost, and safe archive extraction\n\n- Add test coverage for ArchiveFormat detection and is_tar property\n- Add test coverage for GitHost URL pattern identification\n- Test safe_extract_tar and safe_extract_archive with valid archives and Zip/Tar Slip security enforcement",
+          "timestamp": "2026-08-22T14:21:30-07:00",
+          "tree_id": "8fa9aea028657b82435a3d15f92bff022cbf6e87",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4a016695735bb3ef4a33d7cd25f49657c3e15fde"
+        },
+        "date": 1787433756287,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.27,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.6,
             "unit": "ms"
           }
         ]
