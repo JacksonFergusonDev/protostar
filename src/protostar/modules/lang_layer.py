@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib.resources
 import logging
 import shutil
@@ -69,7 +71,7 @@ class PythonCore(BootstrapModule):
         """Returns the primary collision markers for a Python environment."""
         return [Path("pyproject.toml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues initialization, ignores artifacts, and handles IDE telemetry bindings.
 
         Args:

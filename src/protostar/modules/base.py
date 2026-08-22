@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import logging
 from pathlib import Path
@@ -62,7 +64,7 @@ class BootstrapModule(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Appends module-specific requirements to the environment manifest.
 
         Args:
