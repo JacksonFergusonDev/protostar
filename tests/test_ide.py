@@ -5,9 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from protostar.enums import IDEType
 from protostar.errors import FileSystemError
-from protostar.ide import check_ide_extensions, write_ide_settings
+from protostar.ide import IDEType, check_ide_extensions, write_ide_settings
 from protostar.manifest import Severity
 
 

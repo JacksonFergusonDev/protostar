@@ -8,9 +8,8 @@ from typing import Any
 from rich.console import Console
 
 from .config import TemplateBlueprint, UserConfig
-from .enums import MetadataKey, PromptType
 from .errors import ConfigurationError, ExecutionAbortedError
-from .metadata import METADATA_FIELDS
+from .metadata import METADATA_FIELDS, MetadataKey, PromptType
 from .modules import TOOLING_MODULES
 from .system import is_interactive
 

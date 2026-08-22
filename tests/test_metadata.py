@@ -6,7 +6,7 @@ from protostar.metadata import resolve_auto_metadata
 
 def test_resolve_auto_metadata_from_config(mocker):
     """Test that resolve_auto_metadata extracts values from UserConfig."""
-    mock_config = mocker.patch("protostar.metadata.UserConfig.load")
+    mock_config = mocker.patch("protostar.config.UserConfig.load")
     mock_config.return_value = UserConfig(
         author_name="Alice",
         author_email="alice@example.com",
@@ -27,7 +27,7 @@ def test_resolve_auto_metadata_from_config(mocker):
 
 def test_resolve_auto_metadata_from_git(mocker):
     """Test that git config auto-resolver works when config values are absent."""
-    mocker.patch("protostar.metadata.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.config.UserConfig.load", return_value=UserConfig())
     mocker.patch(
         "protostar.metadata.get_git_config",
         side_effect=lambda key: "Git User" if key == "user.name" else "git@user.com",
@@ -73,7 +73,7 @@ def test_metadata_layer_has_no_questionary_dependency():
 
 def test_resolve_auto_metadata_with_enum_keys():
     """Test resolving auto metadata using MetadataKey enum members."""
-    from protostar.enums import MetadataKey
+    from protostar.metadata import MetadataKey
 
     config = UserConfig(author_name="Alice", license="MIT")
     metadata = resolve_auto_metadata(
@@ -87,7 +87,8 @@ def test_resolve_auto_metadata_with_enum_keys():
 
 def test_enums_properties():
     """Test properties on TargetOS and LicenseType."""
-    from protostar.enums import LicenseType, TargetOS
+    from protostar.metadata import LicenseType
+    from protostar.workflows import TargetOS
 
     assert TargetOS.MACOS.runner_name == "macos-latest"
     assert TargetOS.LINUX.runner_name == "ubuntu-latest"

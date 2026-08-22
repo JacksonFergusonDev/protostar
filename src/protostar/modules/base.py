@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import abc
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from protostar.enums import MetadataKey
+from protostar.metadata import MetadataKey
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -62,7 +64,7 @@ class BootstrapModule(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Appends module-specific requirements to the environment manifest.
 
         Args:

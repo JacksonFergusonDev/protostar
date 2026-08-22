@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib.resources
 import logging
 import shutil
@@ -5,8 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
-from protostar.enums import IDEType, LicenseType, TargetOS
 from protostar.errors import MissingDependencyError
+from protostar.ide import IDEType
+from protostar.metadata import LicenseType
+from protostar.workflows import TargetOS
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -67,7 +71,7 @@ class PythonCore(BootstrapModule):
         """Returns the primary collision markers for a Python environment."""
         return [Path("pyproject.toml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues initialization, ignores artifacts, and handles IDE telemetry bindings.
 
         Args:

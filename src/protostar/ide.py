@@ -1,5 +1,6 @@
 """IDE extension verification and settings synchronization."""
 
+import enum
 import json
 import shutil
 import subprocess
@@ -7,12 +8,29 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .enums import IDEType
 from .errors import FileSystemError
 from .fs import atomic_write_text
 from .manifest import IDESettings, Severity
 
-__all__ = ["check_ide_extensions", "write_ide_settings"]
+__all__ = ["IDEType", "check_ide_extensions", "write_ide_settings"]
+
+
+class IDEType(enum.StrEnum):
+    """Enumeration of supported integrated development environments."""
+
+    VSCODE = "vscode"
+    CURSOR = "cursor"
+    NONE = "none"
+
+    @property
+    def binary_name(self) -> str | None:
+        """Returns the CLI executable name for this IDE, or None if disabled."""
+        mapping = {
+            IDEType.VSCODE: "code",
+            IDEType.CURSOR: "cursor",
+            IDEType.NONE: None,
+        }
+        return mapping[self]
 
 
 def check_ide_extensions(

@@ -1,12 +1,87 @@
 """Project metadata definitions and resolution mechanisms for Protostar."""
 
+from __future__ import annotations
+
+import enum
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .config import UserConfig
-from .enums import LicenseType, MetadataKey, PromptType, TargetOS
 from .system import get_git_config
+from .workflows import TargetOS
+
+if TYPE_CHECKING:
+    from .config import UserConfig
+
+__all__ = [
+    "METADATA_FIELDS",
+    "LicenseType",
+    "MetadataField",
+    "MetadataKey",
+    "PromptType",
+    "resolve_auto_metadata",
+]
+
+
+class PromptType(enum.StrEnum):
+    """Enumeration of interactive prompt widget types."""
+
+    TEXT = "text"
+    CHECKBOX = "checkbox"
+    SELECT = "select"
+
+
+class MetadataKey(enum.StrEnum):
+    """Enumeration of recognized project metadata keys."""
+
+    DESCRIPTION = "description"
+    LICENSE = "license"
+    AUTHOR_NAME = "author_name"
+    AUTHOR_EMAIL = "author_email"
+    GITHUB_USERNAME = "github_username"
+    MINIMUM_PYTHON = "minimum_python"
+    SUPPORTED_OS = "supported_os"
+    DOCKER_PORT = "docker_port"
+
+
+class LicenseType(enum.StrEnum):
+    """Enumeration of supported open source project licenses."""
+
+    MIT = "MIT"
+    APACHE_2_0 = "Apache-2.0"
+    BSD_3_CLAUSE = "BSD-3-Clause"
+    GPL_3_0 = "GPL-3.0"
+    LGPL_3_0 = "LGPL-3.0"
+    AGPL_3_0 = "AGPL-3.0"
+    NONE = "None"
+
+    @property
+    def resource_filename(self) -> str | None:
+        """Returns the bundled license template filename, or None if no license."""
+        mapping = {
+            LicenseType.MIT: "mit.txt",
+            LicenseType.APACHE_2_0: "apache_2_0.txt",
+            LicenseType.BSD_3_CLAUSE: "bsd_3.txt",
+            LicenseType.GPL_3_0: "gpl_3.txt",
+            LicenseType.LGPL_3_0: "lgpl_3.txt",
+            LicenseType.AGPL_3_0: "agpl_3.txt",
+            LicenseType.NONE: None,
+        }
+        return mapping[self]
+
+    @property
+    def trove_classifier(self) -> str | None:
+        """Returns the PEP 621 PyPI trove classifier for this license, or None."""
+        mapping = {
+            LicenseType.MIT: "License :: OSI Approved :: MIT License",
+            LicenseType.APACHE_2_0: "License :: OSI Approved :: Apache Software License",
+            LicenseType.BSD_3_CLAUSE: "License :: OSI Approved :: BSD License",
+            LicenseType.GPL_3_0: "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+            LicenseType.LGPL_3_0: "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+            LicenseType.AGPL_3_0: "License :: OSI Approved :: GNU Affero General Public License v3",
+            LicenseType.NONE: None,
+        }
+        return mapping[self]
 
 
 @dataclass
@@ -104,6 +179,8 @@ def resolve_auto_metadata(
         A dictionary mapping metadata keys to their resolved values.
     """
     if config is None:
+        from .config import UserConfig
+
         config = UserConfig.load()
 
     resolved: dict[str, Any] = {}

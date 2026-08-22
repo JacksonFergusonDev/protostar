@@ -169,7 +169,7 @@ def test_generate_justfile():
 
 
 def test_generate_workflows_with_ciflag_enum():
-    from protostar.enums import CIFlag, TargetOS
+    from protostar.workflows import CIFlag, TargetOS
 
     content_ci = generate_ci_workflow(
         CIWorkflowSpec(

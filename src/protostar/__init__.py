@@ -8,19 +8,7 @@ __version__ = "unknown"
 with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("protostar")
 
-from .enums import (
-    ArchiveFormat,
-    CIFlag,
-    DependencyGroup,
-    DiagnosticPhase,
-    GitHost,
-    IDEType,
-    LicenseType,
-    MetadataKey,
-    PromptType,
-    SafelistBinary,
-    TargetOS,
-)
+from .dependencies import DependencyGroup
 from .errors import (
     CommandExecutionError,
     CommandTimeoutError,
@@ -32,8 +20,14 @@ from .errors import (
     SecurityViolationError,
     TemplateResolutionError,
 )
-from .manifest import EnvironmentManifest
+from .fs import ArchiveFormat
+from .ide import IDEType
+from .manifest import DiagnosticPhase, EnvironmentManifest, Severity
+from .metadata import LicenseType, MetadataKey, PromptType
 from .modules.base import BootstrapModule
+from .network import GitHost
+from .security import SafelistBinary
+from .workflows import CIFlag, TargetOS
 from .workspace import PackageName, ProjectName, PythonVersion
 
 # Neutralize the logger before any runtime execution to prevent stderr leakage
@@ -63,6 +57,7 @@ __all__ = [
     "PythonVersion",
     "SafelistBinary",
     "SecurityViolationError",
+    "Severity",
     "TargetOS",
     "TemplateResolutionError",
 ]

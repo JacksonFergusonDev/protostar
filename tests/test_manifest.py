@@ -203,7 +203,7 @@ def test_manifest_diagnostic_collection() -> None:
 
 
 def test_manifest_diagnostic_collection_with_enum() -> None:
-    from protostar.enums import DiagnosticPhase
+    from protostar.manifest import DiagnosticPhase
 
     manifest = EnvironmentManifest()
     manifest.add_diagnostic(

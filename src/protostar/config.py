@@ -10,8 +10,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
-from .enums import IDEType
 from .errors import ConfigurationError, TemplateResolutionError
+from .ide import IDEType
 from .interpolation import extract_variables, render_template
 from .network import resolve_remote_template
 

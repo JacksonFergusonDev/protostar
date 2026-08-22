@@ -119,7 +119,7 @@ def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
 
 
 def test_dependency_group_properties():
-    from protostar.enums import DependencyGroup
+    from protostar.dependencies import DependencyGroup
 
     assert DependencyGroup.MAIN.cli_args == []
     assert DependencyGroup.MAIN.label == "standard"

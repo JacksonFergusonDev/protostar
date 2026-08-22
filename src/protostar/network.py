@@ -1,24 +1,51 @@
 """Network utilities for fetching remote configurations."""
 
+import enum
 import re
 import tempfile
 import urllib.request
 from pathlib import Path
 from urllib.error import URLError
 
-from .enums import ArchiveFormat
 from .errors import (
     NetworkFetchError,
     SecurityViolationError,
     TemplateResolutionError,
 )
-from .fs import safe_extract_archive
+from .fs import ArchiveFormat, safe_extract_archive
 
 __all__ = [
+    "GitHost",
     "fetch_remote_config",
     "fetch_template_archive",
     "resolve_remote_template",
 ]
+
+
+class GitHost(enum.StrEnum):
+    """Enumeration of supported remote Git hosting platforms."""
+
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
+    CODEBERG = "codeberg"
+    SOURCEHUT = "sourcehut"
+
+    @classmethod
+    def from_url(cls, url: str) -> "GitHost | None":
+        """Identifies the Git host from a repository or file URL."""
+        lower = url.lower()
+        if "github.com" in lower or "raw.githubusercontent.com" in lower:
+            return cls.GITHUB
+        if "gitlab.com" in lower:
+            return cls.GITLAB
+        if "bitbucket.org" in lower:
+            return cls.BITBUCKET
+        if "codeberg.org" in lower:
+            return cls.CODEBERG
+        if "git.sr.ht" in lower:
+            return cls.SOURCEHUT
+        return None
 
 
 def fetch_remote_config(url: str, timeout: int = 10) -> str:

@@ -60,8 +60,7 @@ def test_enforce_binary_safelist_allow():
 
 
 def test_safelist_binary_enum():
-    from protostar.enums import SafelistBinary
-    from protostar.security import ALLOWED_BINARIES
+    from protostar.security import ALLOWED_BINARIES, SafelistBinary
 
     assert SafelistBinary.UV.value == "uv"
     assert SafelistBinary.GIT.value == "git"

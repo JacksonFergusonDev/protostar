@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import shutil
 from pathlib import Path
@@ -24,7 +26,7 @@ class SystemWorkspaceModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "System Workspace"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Appends universal artifacts to the ignore and workspace hide lists."""
         logger.debug("Building universal system workspace layer.")
 

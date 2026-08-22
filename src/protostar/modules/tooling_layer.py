@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.enums import CIFlag
 from protostar.errors import ConfigurationError, MissingDependencyError
+from protostar.workflows import CIFlag
 
 from .base import BootstrapModule
 
@@ -44,7 +46,7 @@ class DirenvModule(BootstrapModule):
         """Returns the primary collision markers for direnv tooling."""
         return [Path(".envrc")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Appends direnv context ignores, injects the .envrc, and queues evaluation."""
         logger.debug("Building direnv tooling layer.")
         manifest.filesystem.add_vcs_ignore(".envrc.local")
@@ -88,7 +90,7 @@ class MarkdownLintModule(BootstrapModule):
         """Returns the primary collision markers for markdownlint."""
         return [Path(".markdownlint-cli2.yaml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Injects the .markdownlint-cli2.yaml boilerplate file and pre-commit hook."""
         logger.debug("Building MarkdownLint tooling layer.")
 
@@ -193,7 +195,7 @@ class RuffModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Ruff"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Ruff dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Ruff tooling layer.")
         manifest.dependencies.add_dev("ruff")
@@ -265,7 +267,7 @@ class MypyModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Mypy"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Mypy dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Mypy tooling layer.")
         manifest.dependencies.add_dev("mypy")
@@ -315,7 +317,7 @@ class TyModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Ty"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Ty dev dependency, hooks, and pyproject.toml config."""
         logger.debug("Building Ty tooling layer.")
         manifest.dependencies.add_dev("ty")
@@ -351,7 +353,7 @@ class PytestModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Pytest"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Pytest dev dependencies, ignores, and pyproject.toml configuration."""
         logger.debug("Building Pytest tooling layer.")
         manifest.dependencies.add_dev("pytest")
@@ -405,7 +407,7 @@ class PreCommitModule(BootstrapModule):
         """Returns the primary collision markers for pre-commit."""
         return [Path(".pre-commit-config.yaml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Flags pre-commit activation, queues dependencies, and sets up git hooks.
 
         Evaluates the local workspace for an existing Git repository before
@@ -467,7 +469,7 @@ class PrekModule(BootstrapModule):
         """Returns the primary collision markers for prek."""
         return [Path(".pre-commit-config.yaml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Flags prek activation, queues dependencies, and sets up git hooks.
 
         Evaluates the local workspace for an existing Git repository before
@@ -516,7 +518,7 @@ class CommitizenModule(BootstrapModule):
         """Returns the primary collision markers for commitizen."""
         return []
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues commitizen dev dependency, gitignore entry, pre-commit hook, and pyproject config.
 
         Args:
@@ -568,7 +570,7 @@ class PyreflyModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Pyrefly"
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Pyrefly dev dependency, ignores, hooks, and pyproject.toml config."""
         logger.debug("Building Pyrefly tooling layer.")
         manifest.dependencies.add_dev("pyrefly")
@@ -610,7 +612,7 @@ class RenovateModule(BootstrapModule):
         """Returns the primary collision markers for Renovate."""
         return [Path(".github/renovate.json")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Renovate configuration file and pre-commit validator hook.
 
         Args:
@@ -699,7 +701,7 @@ class CodecovModule(BootstrapModule):
         """Returns the primary collision markers for Codecov."""
         return [Path(".github/codecov.yml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Codecov configuration file injection.
 
         Args:
@@ -762,7 +764,7 @@ class ZensicalModule(BootstrapModule):
         """Returns the primary collision markers for Zensical."""
         return [Path("mkdocs.yml"), Path("docs/")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Zensical dependencies, scaffolding, and ignore rules."""
         logger.debug("Building Zensical tooling layer.")
 
@@ -849,7 +851,7 @@ class ReadTheDocsModule(BootstrapModule):
         """Returns the primary collision markers for Read the Docs."""
         return [Path(".readthedocs.yaml")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Queues .readthedocs.yaml file injection.
 
         Args:
@@ -909,7 +911,7 @@ class JustModule(BootstrapModule):
         """Returns the primary collision markers for just."""
         return [Path("justfile")]
 
-    def build(self, manifest: "EnvironmentManifest") -> None:
+    def build(self, manifest: EnvironmentManifest) -> None:
         """Flags justfile activation for execution."""
         logger.debug("Building Just tooling layer.")
         manifest.tooling.wants_just = True
