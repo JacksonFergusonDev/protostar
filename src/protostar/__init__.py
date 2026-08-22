@@ -32,6 +32,7 @@ from .errors import (
 )
 from .manifest import EnvironmentManifest
 from .modules.base import BootstrapModule
+from .workspace import PackageName, ProjectName, PythonVersion
 
 # Neutralize the logger before any runtime execution to prevent stderr leakage
 logging.getLogger("protostar").addHandler(logging.NullHandler())
@@ -51,8 +52,11 @@ __all__ = [
     "MetadataKey",
     "MissingDependencyError",
     "NetworkFetchError",
+    "PackageName",
+    "ProjectName",
     "PromptType",
     "ProtostarError",
+    "PythonVersion",
     "SafelistBinary",
     "SecurityViolationError",
     "TargetOS",

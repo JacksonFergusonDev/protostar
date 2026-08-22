@@ -3,8 +3,112 @@
 import re
 import tomllib
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+__all__ = [
+    "PackageName",
+    "ProjectName",
+    "PythonVersion",
+    "generate_python_version_range",
+    "resolve_package_name",
+    "resolve_project_name",
+    "resolve_python_version",
+    "sanitize_package_name",
+]
+
+
+@dataclass(frozen=True, order=True)
+class PythonVersion:
+    """Domain value object representing a Python semantic language version (e.g. 3.12)."""
+
+    major: int
+    minor: int
+
+    def __post_init__(self) -> None:
+        """Validates that major and minor version components are non-negative."""
+        if self.major < 0 or self.minor < 0:
+            raise ValueError(
+                f"Invalid Python version numbers: {self.major}.{self.minor}"
+            )
+
+    @classmethod
+    def from_string(cls, version_str: str) -> "PythonVersion":
+        """Parses a version string (e.g. '3.13', '3.13.1', or '>=3.12') into a PythonVersion."""
+        clean = re.sub(r"^[>=<^~=\s]+", "", version_str.strip())
+        parts = clean.split(".")
+        if len(parts) < 2:
+            raise ValueError(f"Invalid Python version string: {version_str!r}")
+        try:
+            return cls(major=int(parts[0]), minor=int(parts[1]))
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid Python version components in {version_str!r}"
+            ) from e
+
+    @property
+    def trove_classifier(self) -> str:
+        """Returns the PEP 621 PyPI trove classifier for this Python version."""
+        return f"Programming Language :: Python :: {self.major}.{self.minor}"
+
+    def range_to(self, max_minor: int = 15) -> list["PythonVersion"]:
+        """Generates a sequence of minor versions from this version up to max_minor."""
+        if self.major == 3:
+            return [
+                PythonVersion(major=3, minor=m) for m in range(self.minor, max_minor)
+            ]
+        return [self]
+
+    def __str__(self) -> str:
+        """Returns the major.minor string representation."""
+        return f"{self.major}.{self.minor}"
+
+
+@dataclass(frozen=True)
+class PackageName:
+    """Domain value object representing a valid PEP 8 Python package identifier."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        """Validates that the package name is a valid Python identifier."""
+        if not self.value or not self.value.isidentifier():
+            raise ValueError(f"Invalid Python package name identifier: {self.value!r}")
+
+    @classmethod
+    def from_raw(cls, raw: str) -> "PackageName":
+        """Sanitizes raw text into a valid PEP 8 Python package identifier."""
+        sanitized = re.sub(r"[^a-zA-Z0-9]+", "_", raw).strip("_").lower()
+        if not sanitized:
+            sanitized = "app"
+        elif sanitized[0].isdigit():
+            sanitized = f"pkg_{sanitized}"
+        return cls(value=sanitized)
+
+    def __str__(self) -> str:
+        """Returns the sanitized package name string."""
+        return self.value
+
+
+@dataclass(frozen=True)
+class ProjectName:
+    """Domain value object representing a repository or workspace project name."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        """Validates that the project name is non-empty."""
+        if not self.value.strip():
+            raise ValueError("Project name cannot be empty.")
+
+    def to_package_name(self) -> PackageName:
+        """Derives a normalized Python package name from this project name."""
+        return PackageName.from_raw(self.value)
+
+    def __str__(self) -> str:
+        """Returns the project name string."""
+        return self.value
 
 
 def resolve_python_version(
@@ -23,7 +127,11 @@ def resolve_python_version(
         The resolved python version string.
     """
     if metadata and metadata.get("python_version"):
-        return str(metadata["python_version"])
+        raw = str(metadata["python_version"])
+        try:
+            return str(PythonVersion.from_string(raw))
+        except ValueError:
+            return raw
 
     target_pyproject = pyproject_path or Path("pyproject.toml")
     if target_pyproject.exists():
@@ -33,7 +141,7 @@ def resolve_python_version(
                 req_python = data.get("project", {}).get("requires-python", "")
                 match = re.search(r"(\d+\.\d+)", req_python)
                 if match:
-                    return match.group(1)
+                    return str(PythonVersion.from_string(match.group(1)))
         except Exception:
             pass
 
@@ -43,25 +151,27 @@ def resolve_python_version(
     return "3.13"
 
 
-def generate_python_version_range(min_version: str, max_minor: int = 15) -> list[str]:
+def generate_python_version_range(
+    min_version: PythonVersion | str, max_minor: int = 15
+) -> list[str]:
     """Generates a list of Python version strings from the minimum up to a maximum minor version.
 
     Args:
-        min_version: The minimum Python version (e.g. "3.9").
+        min_version: The minimum Python version (e.g. "3.9" or PythonVersion(3, 9)).
         max_minor: The maximum minor version to generate up to. Defaults to 15.
 
     Returns:
         A list of version strings (e.g. ["3.9", "3.10", ...]).
     """
-    versions = []
     try:
-        major, minor = map(int, min_version.split("."))
-        if major == 3:
-            for v in range(minor, max_minor):
-                versions.append(f"3.{v}")
+        pv = (
+            min_version
+            if isinstance(min_version, PythonVersion)
+            else PythonVersion.from_string(str(min_version))
+        )
+        return [str(v) for v in pv.range_to(max_minor=max_minor)]
     except Exception:
-        pass
-    return versions
+        return []
 
 
 def sanitize_package_name(name: str) -> str:
@@ -77,12 +187,7 @@ def sanitize_package_name(name: str) -> str:
     Returns:
         A valid Python package identifier string.
     """
-    sanitized = re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-    if not sanitized:
-        return "app"
-    if sanitized[0].isdigit():
-        return f"pkg_{sanitized}"
-    return sanitized
+    return str(PackageName.from_raw(name))
 
 
 def resolve_project_name(
@@ -101,9 +206,9 @@ def resolve_project_name(
         The resolved project name string.
     """
     if metadata and metadata.get("project_name"):
-        return str(metadata["project_name"])
+        return str(ProjectName(str(metadata["project_name"])))
     if metadata and metadata.get("name"):
-        return str(metadata["name"])
+        return str(ProjectName(str(metadata["name"])))
 
     target_pyproject = pyproject_path or Path("pyproject.toml")
     if target_pyproject.exists():
@@ -112,7 +217,7 @@ def resolve_project_name(
                 data = tomllib.load(f)
                 name = data.get("project", {}).get("name")
                 if name:
-                    return str(name)
+                    return str(ProjectName(str(name)))
         except Exception:
             pass
 
