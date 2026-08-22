@@ -27,6 +27,7 @@ from .metadata import LicenseType, MetadataKey, PromptType
 from .modules.base import BootstrapModule
 from .network import GitHost
 from .security import SafelistBinary
+from .wizard import WizardSelections
 from .workflows import CIFlag, TargetOS
 from .workspace import PackageName, ProjectName, PythonVersion
 
@@ -60,4 +61,5 @@ __all__ = [
     "Severity",
     "TargetOS",
     "TemplateResolutionError",
+    "WizardSelections",
 ]
