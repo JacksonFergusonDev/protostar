@@ -219,3 +219,52 @@ def test_fetch_template_archive_missing_protostar_toml(mocker, tmp_path):
 
     with pytest.raises(TemplateResolutionError, match=r"No protostar\.toml found"):
         fetch_template_archive("https://example.com/archive.zip", dest_dir)
+
+
+def test_archive_format_enum():
+    from protostar.enums import ArchiveFormat
+
+    assert ArchiveFormat.from_path("https://example.com/file.zip") == ArchiveFormat.ZIP
+    assert (
+        ArchiveFormat.from_path("https://example.com/file.tar.gz")
+        == ArchiveFormat.TAR_GZ
+    )
+    assert (
+        ArchiveFormat.from_path("https://example.com/file.tgz") == ArchiveFormat.TAR_GZ
+    )
+    assert (
+        ArchiveFormat.from_path("https://example.com/file.tar.bz2")
+        == ArchiveFormat.TAR_BZ2
+    )
+    assert (
+        ArchiveFormat.from_path("https://example.com/file.tbz2")
+        == ArchiveFormat.TAR_BZ2
+    )
+    assert (
+        ArchiveFormat.from_path("https://example.com/file.tar.xz")
+        == ArchiveFormat.TAR_XZ
+    )
+    assert (
+        ArchiveFormat.from_path("https://example.com/file.txz") == ArchiveFormat.TAR_XZ
+    )
+    assert ArchiveFormat.from_path("https://example.com/file.tar") == ArchiveFormat.TAR
+    assert ArchiveFormat.from_path("https://example.com/file.unknown") is None
+
+    assert ArchiveFormat.ZIP.is_tar is False
+    assert ArchiveFormat.TAR_GZ.is_tar is True
+    assert ArchiveFormat.TAR.is_tar is True
+
+
+def test_git_host_enum():
+    from protostar.enums import GitHost
+
+    assert GitHost.from_url("https://github.com/user/repo") == GitHost.GITHUB
+    assert (
+        GitHost.from_url("https://raw.githubusercontent.com/user/repo/main/file.toml")
+        == GitHost.GITHUB
+    )
+    assert GitHost.from_url("https://gitlab.com/user/repo") == GitHost.GITLAB
+    assert GitHost.from_url("https://bitbucket.org/user/repo") == GitHost.BITBUCKET
+    assert GitHost.from_url("https://codeberg.org/user/repo") == GitHost.CODEBERG
+    assert GitHost.from_url("https://git.sr.ht/~user/repo") == GitHost.SOURCEHUT
+    assert GitHost.from_url("https://custom-git.example.com/repo") is None
