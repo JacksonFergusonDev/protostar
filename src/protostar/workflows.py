@@ -1,7 +1,12 @@
 """Pure string and template generators for CI/CD workflows and workspace boilerplate."""
 
 from .enums import CIFlag, TargetOS
-from .workspace import generate_python_version_range
+from .workspace import (
+    PackageName,
+    ProjectName,
+    PythonVersion,
+    generate_python_version_range,
+)
 
 __all__ = [
     "CIWorkflowSpec",
@@ -25,7 +30,7 @@ class CIWorkflowSpec:
     """CI Workflow specification."""
 
     supported_os: list[TargetOS | str]
-    min_python: str
+    min_python: PythonVersion | str
     ci_flags: set[CIFlag | str]
     ci_steps: list[str]
 
@@ -45,9 +50,9 @@ class JustfileSpec:
 class DockerfileSpec:
     """Dockerfile specification."""
 
-    python_version: str
-    project_name: str
-    package_name: str
+    python_version: PythonVersion | str
+    project_name: ProjectName | str
+    package_name: PackageName | str
     dependencies: list[str]
     is_script_or_typer: bool
     docker_port: str | None = None
@@ -130,7 +135,7 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
     python_matrix = generate_python_version_range(spec.min_python)
     if not python_matrix:
-        python_matrix = [spec.min_python]
+        python_matrix = [str(spec.min_python)]
 
     # Determine the primary runner for coverage
     primary_os = "ubuntu-latest" if "ubuntu-latest" in os_matrix else os_matrix[0]
