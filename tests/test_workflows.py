@@ -168,6 +168,34 @@ def test_generate_justfile():
     assert "uv run zensical serve -o" in content
 
 
+def test_generate_workflows_with_ciflag_enum():
+    from protostar.enums import CIFlag, TargetOS
+
+    content_ci = generate_ci_workflow(
+        CIWorkflowSpec(
+            supported_os=[TargetOS.LINUX, TargetOS.MACOS],
+            min_python="3.12",
+            ci_flags={CIFlag.PYTEST, CIFlag.CODECOV},
+            ci_steps=[],
+        )
+    )
+    assert "Run tests with coverage # (for Codecov)" in content_ci
+    assert "Upload coverage to Codecov" in content_ci
+
+    content_just = generate_justfile(
+        JustfileSpec(
+            format_commands=[],
+            lint_commands=[],
+            typecheck_commands=[],
+            ci_flags={CIFlag.PYTEST, CIFlag.ZENSICAL},
+            clean_paths=[],
+        )
+    )
+    assert "test: sync" in content_just
+    assert "serve: sync" in content_just
+    assert "htmlcov" in content_just
+
+
 def test_generate_dockerignore_fresh_and_existing():
     # Fresh
     res = generate_dockerignore(vcs_ignores={"*.log", ".env"}, has_uv_init=True)

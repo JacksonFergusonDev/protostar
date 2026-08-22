@@ -116,3 +116,16 @@ def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
     assert detail is not None
     assert "--- STDERR ---" in detail
     assert "error: package numpy not found" in detail
+
+
+def test_dependency_group_properties():
+    from protostar.enums import DependencyGroup
+
+    assert DependencyGroup.MAIN.cli_args == []
+    assert DependencyGroup.MAIN.label == "standard"
+
+    assert DependencyGroup.DEV.cli_args == ["--dev"]
+    assert DependencyGroup.DEV.label == "development"
+
+    assert DependencyGroup.DOCS.cli_args == ["--group", "docs"]
+    assert DependencyGroup.DOCS.label == "documentation"

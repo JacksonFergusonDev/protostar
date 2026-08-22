@@ -9,11 +9,14 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("protostar")
 
 from .enums import (
+    CIFlag,
+    DependencyGroup,
     DiagnosticPhase,
     IDEType,
     LicenseType,
     MetadataKey,
     PromptType,
+    SafelistBinary,
     TargetOS,
 )
 from .errors import (
@@ -35,9 +38,11 @@ logging.getLogger("protostar").addHandler(logging.NullHandler())
 
 __all__ = [
     "BootstrapModule",
+    "CIFlag",
     "CommandExecutionError",
     "CommandTimeoutError",
     "ConfigurationError",
+    "DependencyGroup",
     "DiagnosticPhase",
     "EnvironmentManifest",
     "FileSystemError",
@@ -48,6 +53,7 @@ __all__ = [
     "NetworkFetchError",
     "PromptType",
     "ProtostarError",
+    "SafelistBinary",
     "SecurityViolationError",
     "TargetOS",
     "TemplateResolutionError",
