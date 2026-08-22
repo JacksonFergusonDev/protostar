@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787429023642,
+  "lastUpdate": 1787430035604,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7145,6 +7145,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 226.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac4b81c1c96aa4161afeae07df32f6a1c87c46f6",
+          "message": "refactor(ide): introduce strong typing for IDE choices and diagnostic phases (#186)\n\n- Add IDEType and DiagnosticPhase enums to enums.py\n- Use IDEType.binary_name property in check_ide_extensions\n- Type UserConfig.ide and DiagnosticEvent.phase with domain enums\n- Update SystemExecutor diagnostic event dispatches to use DiagnosticPhase\n- Add unit test coverage for IDEType and DiagnosticPhase enums",
+          "timestamp": "2026-08-22T13:19:32-07:00",
+          "tree_id": "f9aefa050372054867ea02cdfaed5fe2524f6271",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ac4b81c1c96aa4161afeae07df32f6a1c87c46f6"
+        },
+        "date": 1787430035031,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 156.06,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 228.41,
             "unit": "ms"
           }
         ]
