@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
+from .enums import LicenseType, TargetOS
+
 
 class Severity(enum.Enum):
     """Enumeration of severity levels for diagnostic events."""
@@ -61,12 +63,12 @@ class ProjectMetadata(TypedDict, total=False):
     """Strict typing for project metadata fields."""
 
     description: str
-    license: str
+    license: LicenseType | str
     author_name: str
     author_email: str
     github_username: str
     minimum_python: str
-    supported_os: list[str]
+    supported_os: list[TargetOS | str]
     docker_port: int | str
 
 

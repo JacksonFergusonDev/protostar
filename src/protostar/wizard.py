@@ -8,6 +8,7 @@ from typing import Any
 from rich.console import Console
 
 from .config import TemplateBlueprint, UserConfig
+from .enums import MetadataKey, PromptType
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS
 from .modules import TOOLING_MODULES
@@ -132,8 +133,8 @@ def run_init_wizard() -> dict[str, Any] | None:
     modules = [item for item in selected if item in TOOLING_MODULES]
     docker = "docker" in selected
 
-    required_keys = set()
-    optional_keys = set()
+    required_keys: set[MetadataKey | str] = set()
+    optional_keys: set[MetadataKey | str] = set()
     for mod in modules:
         required_keys.update(mod.required_metadata)
         optional_keys.update(mod.optional_metadata)
@@ -141,17 +142,17 @@ def run_init_wizard() -> dict[str, Any] | None:
     # Core project metadata always requested as optional
     optional_keys.update(
         (
-            "description",
-            "author_name",
-            "author_email",
-            "github_username",
-            "minimum_python",
-            "license",
+            MetadataKey.DESCRIPTION,
+            MetadataKey.AUTHOR_NAME,
+            MetadataKey.AUTHOR_EMAIL,
+            MetadataKey.GITHUB_USERNAME,
+            MetadataKey.MINIMUM_PYTHON,
+            MetadataKey.LICENSE,
         )
     )
 
     if docker:
-        optional_keys.add("docker_port")
+        optional_keys.add(MetadataKey.DOCKER_PORT)
 
     console = Console()
     console.print("\n[bold cyan]--- Project Metadata ---[/bold cyan]")
@@ -172,8 +173,8 @@ def run_init_wizard() -> dict[str, Any] | None:
 
 
 def prompt_metadata(
-    required_keys: set[str],
-    optional_keys: set[str] | None = None,
+    required_keys: set[MetadataKey | str],
+    optional_keys: set[MetadataKey | str] | None = None,
 ) -> dict[str, Any]:
     """Interactively prompts the user for project metadata.
 
@@ -196,7 +197,7 @@ def prompt_metadata(
     to_prompt = []
 
     for key in METADATA_FIELDS:
-        if key not in all_keys:
+        if key not in all_keys and key.value not in all_keys:
             continue
 
         field = METADATA_FIELDS[key]
@@ -208,15 +209,16 @@ def prompt_metadata(
         to_prompt.append((key, field, default_val))
 
     for key, field, default_val in to_prompt:
-        if field.prompt_type == "text":
+        key_str = key.value if isinstance(key, MetadataKey) else str(key)
+        if field.prompt_type == PromptType.TEXT:
             answer = questionary.text(
                 field.label,
                 default=str(default_val) if default_val is not None else "",
             ).ask()
             if answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
-            resolved[key] = answer
-        elif field.prompt_type == "checkbox":
+            resolved[key_str] = answer
+        elif field.prompt_type == PromptType.CHECKBOX:
             choices = []
             for choice_str in field.choices or []:
                 checked = default_val is not None and choice_str in default_val
@@ -225,8 +227,8 @@ def prompt_metadata(
             answer = questionary.checkbox(field.label, choices=choices).ask()
             if answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
-            resolved[key] = answer
-        elif field.prompt_type == "select":
+            resolved[key_str] = answer
+        elif field.prompt_type == PromptType.SELECT:
             select_choices = list(field.choices or [])
             if default_val is not None and str(default_val) in select_choices:
                 select_choices.remove(str(default_val))
@@ -252,7 +254,7 @@ def prompt_metadata(
             ).ask()
             if answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
-            resolved[key] = answer
+            resolved[key_str] = answer
 
     return resolved
 

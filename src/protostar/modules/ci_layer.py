@@ -2,6 +2,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from protostar.enums import MetadataKey
+
 from .base import BootstrapModule
 
 if TYPE_CHECKING:
@@ -16,7 +18,7 @@ class CIModule(BootstrapModule):
     cli_flags = ("--ci",)
     cli_help = "Scaffold standard GitHub Actions CI workflows"
     config_key = "ci"
-    required_metadata = ("supported_os", "minimum_python")
+    required_metadata = (MetadataKey.SUPPORTED_OS, MetadataKey.MINIMUM_PYTHON)
 
     @property
     def name(self) -> str:

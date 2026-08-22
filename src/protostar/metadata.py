@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .config import UserConfig
+from .enums import LicenseType, MetadataKey, PromptType, TargetOS
 from .system import get_git_config
 
 
@@ -12,83 +13,75 @@ from .system import get_git_config
 class MetadataField:
     """Definition of a metadata field for project scaffolding."""
 
-    key: str
+    key: MetadataKey
     label: str
-    prompt_type: str  # "text", "checkbox", or "select"
+    prompt_type: PromptType
     choices: list[str] | None
     auto_resolver: Callable[[UserConfig], Any | None] | None
     default: Any | None
 
 
-METADATA_FIELDS: dict[str, MetadataField] = {
-    "description": MetadataField(
-        key="description",
+METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
+    MetadataKey.DESCRIPTION: MetadataField(
+        key=MetadataKey.DESCRIPTION,
         label="Project description (optional, press Enter to skip):",
-        prompt_type="text",
+        prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=None,
         default="",
     ),
-    "license": MetadataField(
-        key="license",
+    MetadataKey.LICENSE: MetadataField(
+        key=MetadataKey.LICENSE,
         label="Project license:",
-        prompt_type="select",
-        choices=[
-            "MIT",
-            "Apache-2.0",
-            "BSD-3-Clause",
-            "GPL-3.0",
-            "LGPL-3.0",
-            "AGPL-3.0",
-            "None",
-        ],
+        prompt_type=PromptType.SELECT,
+        choices=[lic.value for lic in LicenseType],
         auto_resolver=lambda cfg: cfg.license,
-        default="MIT",
+        default=LicenseType.MIT.value,
     ),
-    "author_name": MetadataField(
-        key="author_name",
+    MetadataKey.AUTHOR_NAME: MetadataField(
+        key=MetadataKey.AUTHOR_NAME,
         label="Author name (optional, press Enter to skip):",
-        prompt_type="text",
+        prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.author_name or get_git_config("user.name"),
         default="",
     ),
-    "author_email": MetadataField(
-        key="author_email",
+    MetadataKey.AUTHOR_EMAIL: MetadataField(
+        key=MetadataKey.AUTHOR_EMAIL,
         label="Author email (optional, press Enter to skip):",
-        prompt_type="text",
+        prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.author_email or get_git_config("user.email"),
         default="",
     ),
-    "github_username": MetadataField(
-        key="github_username",
+    MetadataKey.GITHUB_USERNAME: MetadataField(
+        key=MetadataKey.GITHUB_USERNAME,
         label="GitHub username (optional, press Enter to skip):",
-        prompt_type="text",
+        prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.github_username,
         default="",
     ),
-    "minimum_python": MetadataField(
-        key="minimum_python",
+    MetadataKey.MINIMUM_PYTHON: MetadataField(
+        key=MetadataKey.MINIMUM_PYTHON,
         label="Minimum supported Python version:",
-        prompt_type="text",
+        prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.python_version,
         default="3.13",
     ),
-    "supported_os": MetadataField(
-        key="supported_os",
+    MetadataKey.SUPPORTED_OS: MetadataField(
+        key=MetadataKey.SUPPORTED_OS,
         label="Supported Operating Systems:",
-        prompt_type="checkbox",
-        choices=["MacOS", "Linux", "Windows"],
+        prompt_type=PromptType.CHECKBOX,
+        choices=[target_os.value for target_os in TargetOS],
         auto_resolver=lambda cfg: cfg.supported_os if cfg.supported_os else None,
-        default=["MacOS", "Linux", "Windows"],
+        default=[target_os.value for target_os in TargetOS],
     ),
-    "docker_port": MetadataField(
-        key="docker_port",
+    MetadataKey.DOCKER_PORT: MetadataField(
+        key=MetadataKey.DOCKER_PORT,
         label="Container exposed port:",
-        prompt_type="text",
+        prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=None,
         default="8000",
@@ -97,7 +90,7 @@ METADATA_FIELDS: dict[str, MetadataField] = {
 
 
 def resolve_auto_metadata(
-    keys: set[str] | None = None,
+    keys: set[MetadataKey | str] | None = None,
     config: UserConfig | None = None,
 ) -> dict[str, Any]:
     """Deterministically resolves metadata values from configuration or defaults.
@@ -116,18 +109,19 @@ def resolve_auto_metadata(
     resolved: dict[str, Any] = {}
     target_keys = set(METADATA_FIELDS.keys()) if keys is None else keys
 
-    for key in target_keys:
-        if key not in METADATA_FIELDS:
+    for raw_key in target_keys:
+        if raw_key not in METADATA_FIELDS:
             continue
 
-        field = METADATA_FIELDS[key]
+        field = METADATA_FIELDS[raw_key]  # type: ignore[index]
         candidate_val = None
         if field.auto_resolver:
             candidate_val = field.auto_resolver(config)
 
+        key_str = str(raw_key.value if isinstance(raw_key, MetadataKey) else raw_key)
         if candidate_val is not None:
-            resolved[key] = candidate_val
+            resolved[key_str] = candidate_val
         elif field.default is not None:
-            resolved[key] = field.default
+            resolved[key_str] = field.default
 
     return resolved

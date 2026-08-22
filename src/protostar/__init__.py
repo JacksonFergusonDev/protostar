@@ -8,6 +8,7 @@ __version__ = "unknown"
 with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("protostar")
 
+from .enums import LicenseType, MetadataKey, PromptType, TargetOS
 from .errors import (
     CommandExecutionError,
     CommandTimeoutError,
@@ -32,9 +33,13 @@ __all__ = [
     "ConfigurationError",
     "EnvironmentManifest",
     "FileSystemError",
+    "LicenseType",
+    "MetadataKey",
     "MissingDependencyError",
     "NetworkFetchError",
+    "PromptType",
     "ProtostarError",
     "SecurityViolationError",
+    "TargetOS",
     "TemplateResolutionError",
 ]

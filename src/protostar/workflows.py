@@ -1,5 +1,6 @@
 """Pure string and template generators for CI/CD workflows and workspace boilerplate."""
 
+from .enums import TargetOS
 from .workspace import generate_python_version_range
 
 __all__ = [
@@ -23,7 +24,7 @@ from dataclasses import dataclass
 class CIWorkflowSpec:
     """CI Workflow specification."""
 
-    supported_os: list[str]
+    supported_os: list[TargetOS | str]
     min_python: str
     ci_flags: set[str]
     ci_steps: list[str]
@@ -114,9 +115,16 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         "Linux": "ubuntu-latest",
         "Windows": "windows-latest",
     }
-    os_matrix = [
-        runner_map.get(os_name, "ubuntu-latest") for os_name in spec.supported_os
-    ]
+    os_matrix = []
+    for os_name in spec.supported_os:
+        try:
+            target_os = (
+                os_name if isinstance(os_name, TargetOS) else TargetOS(str(os_name))
+            )
+            os_matrix.append(target_os.runner_name)
+        except ValueError:
+            os_matrix.append(runner_map.get(str(os_name), "ubuntu-latest"))
+
     if not os_matrix:
         os_matrix = ["ubuntu-latest"]
 
