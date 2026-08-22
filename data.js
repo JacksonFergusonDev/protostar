@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787430139430,
+  "lastUpdate": 1787430609415,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7213,6 +7213,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 222.74,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cfd7964b85d2fa5515ca48ded80fb018722d7915",
+          "message": "refactor(cicd): introduce strong typing for CI feature flags, dependency groups, and security safelist (#187)\n\n- Add CIFlag, DependencyGroup, and SafelistBinary enums in enums.py\n- Use DependencyGroup properties in dependency installation logic\n- Use CIFlag in CI workflow generation and Justfile assembly\n- Initialize ALLOWED_BINARIES security safelist from SafelistBinary\n- Add test coverage for new domain enums",
+          "timestamp": "2026-08-22T13:29:06-07:00",
+          "tree_id": "db42eb2934ed48537fcab364746041c305a60630",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cfd7964b85d2fa5515ca48ded80fb018722d7915"
+        },
+        "date": 1787430608596,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 151.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 219.64,
             "unit": "ms"
           }
         ]
