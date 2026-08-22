@@ -1,19 +1,62 @@
 """Filesystem helpers for safe disk mutation operations."""
 
+import enum
 import os
 import tempfile
 from contextlib import suppress
 from pathlib import Path
 
-from .enums import ArchiveFormat
 from .errors import FileSystemError
 
 __all__ = [
+    "ArchiveFormat",
     "atomic_write_text",
     "safe_extract_archive",
     "safe_extract_tar",
     "safe_extract_zip",
 ]
+
+
+class ArchiveFormat(enum.StrEnum):
+    """Enumeration of supported template archive formats."""
+
+    ZIP = "zip"
+    TAR = "tar"
+    TAR_GZ = "tar.gz"
+    TAR_BZ2 = "tar.bz2"
+    TAR_XZ = "tar.xz"
+
+    @property
+    def is_tar(self) -> bool:
+        """Returns True if the format is a tarball variation."""
+        return self in (
+            ArchiveFormat.TAR,
+            ArchiveFormat.TAR_GZ,
+            ArchiveFormat.TAR_BZ2,
+            ArchiveFormat.TAR_XZ,
+        )
+
+    @property
+    def extensions(self) -> tuple[str, ...]:
+        """Returns the recognized file extensions for this archive format."""
+        mapping = {
+            ArchiveFormat.ZIP: (".zip",),
+            ArchiveFormat.TAR: (".tar",),
+            ArchiveFormat.TAR_GZ: (".tar.gz", ".tgz"),
+            ArchiveFormat.TAR_BZ2: (".tar.bz2", ".tbz2"),
+            ArchiveFormat.TAR_XZ: (".tar.xz", ".txz"),
+        }
+        return mapping[self]
+
+    @classmethod
+    def from_path(cls, path: Path | str) -> "ArchiveFormat | None":
+        """Detects the archive format from a file path or URL string."""
+        lower = str(path).lower()
+        for fmt in cls:
+            for ext in fmt.extensions:
+                if lower.endswith(ext):
+                    return fmt
+        return None
 
 
 def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None:
