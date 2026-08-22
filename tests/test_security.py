@@ -54,7 +54,26 @@ def test_enforce_binary_safelist_allow():
     enforce_binary_safelist(["uv", "run", "pytest"])
     enforce_binary_safelist(["git", "init"])
     enforce_binary_safelist(["npm", "test"])
+    enforce_binary_safelist(["prek", "run"])
+    enforce_binary_safelist(["pre-commit", "run"])
     enforce_binary_safelist(["/usr/local/bin/direnv", "allow"])
+
+
+def test_safelist_binary_enum():
+    from protostar.enums import SafelistBinary
+    from protostar.security import ALLOWED_BINARIES
+
+    assert SafelistBinary.UV.value == "uv"
+    assert SafelistBinary.GIT.value == "git"
+    assert SafelistBinary.NPM.value == "npm"
+    assert SafelistBinary.YARN.value == "yarn"
+    assert SafelistBinary.PNPM.value == "pnpm"
+    assert SafelistBinary.PRE_COMMIT.value == "pre-commit"
+    assert SafelistBinary.PREK.value == "prek"
+    assert SafelistBinary.DIRENV.value == "direnv"
+
+    for binary in SafelistBinary:
+        assert binary in ALLOWED_BINARIES
 
 
 def test_safe_extract_zip_denies_traversal(tmp_path: Path):

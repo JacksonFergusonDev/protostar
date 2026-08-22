@@ -2,13 +2,12 @@
 
 from pathlib import Path
 
+from .enums import SafelistBinary
 from .errors import SecurityViolationError
 
 __all__ = ["ALLOWED_BINARIES", "enforce_binary_safelist", "enforce_path_jail"]
 
-ALLOWED_BINARIES: frozenset[str] = frozenset(
-    {"uv", "git", "npm", "yarn", "pnpm", "pre-commit", "direnv"}
-)
+ALLOWED_BINARIES: frozenset[SafelistBinary | str] = frozenset(SafelistBinary)
 
 
 def enforce_path_jail(target_path: Path, workspace_root: Path) -> None:

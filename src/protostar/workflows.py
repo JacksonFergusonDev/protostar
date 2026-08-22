@@ -1,6 +1,6 @@
 """Pure string and template generators for CI/CD workflows and workspace boilerplate."""
 
-from .enums import TargetOS
+from .enums import CIFlag, TargetOS
 from .workspace import generate_python_version_range
 
 __all__ = [
@@ -26,7 +26,7 @@ class CIWorkflowSpec:
 
     supported_os: list[TargetOS | str]
     min_python: str
-    ci_flags: set[str]
+    ci_flags: set[CIFlag | str]
     ci_steps: list[str]
 
 
@@ -37,7 +37,7 @@ class JustfileSpec:
     format_commands: list[str]
     lint_commands: list[str]
     typecheck_commands: list[str]
-    ci_flags: set[str]
+    ci_flags: set[CIFlag | str]
     clean_paths: list[str]
 
 
@@ -137,8 +137,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     primary_python = python_matrix[-1]
 
     # Build the pytest/codecov logic
-    has_pytest = "pytest" in spec.ci_flags
-    has_codecov = "codecov" in spec.ci_flags
+    has_pytest = CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags
+    has_codecov = CIFlag.CODECOV in spec.ci_flags or "codecov" in spec.ci_flags
 
     pytest_step = ""
     if has_pytest:
@@ -347,7 +347,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
         ci_deps.append("lint")
     if spec.typecheck_commands:
         ci_deps.append("typecheck")
-    if "pytest" in spec.ci_flags:
+    if CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags:
         ci_deps.append("test")
 
     if ci_deps:
@@ -372,7 +372,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
     )
 
     all_clean_paths = list(spec.clean_paths)
-    if "pytest" in spec.ci_flags:
+    if CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags:
         all_clean_paths.extend(["htmlcov", ".coverage", "coverage.xml"])
 
     if all_clean_paths:
@@ -389,7 +389,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
     )
 
     # Serve recipe (Zensical)
-    if "zensical" in spec.ci_flags:
+    if CIFlag.ZENSICAL in spec.ci_flags or "zensical" in spec.ci_flags:
         justfile_content.extend(
             [
                 "",

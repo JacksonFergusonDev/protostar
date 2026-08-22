@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
-from .enums import DiagnosticPhase, LicenseType, TargetOS
+from .enums import CIFlag, DiagnosticPhase, LicenseType, TargetOS
 
 
 class Severity(enum.Enum):
@@ -169,7 +169,7 @@ class ToolingManifest:
     pre_commit_local_hooks: list[str] = field(default_factory=list)
     wants_ci: bool = False
     wants_release: bool = False
-    ci_flags: set[str] = field(default_factory=set)
+    ci_flags: set[CIFlag | str] = field(default_factory=set)
     ci_steps: list[str] = field(default_factory=list)
     wants_just: bool = False
     just_format_commands: list[str] = field(default_factory=list)
@@ -188,7 +188,7 @@ class ToolingManifest:
         if payload not in self.pre_commit_local_hooks:
             self.pre_commit_local_hooks.append(payload)
 
-    def add_ci_flag(self, key: str) -> None:
+    def add_ci_flag(self, key: CIFlag | str) -> None:
         """Adds a CI flag to trigger specialized executor generation logic."""
         self.ci_flags.add(key)
 

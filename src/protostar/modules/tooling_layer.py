@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from protostar.enums import CIFlag
 from protostar.errors import ConfigurationError, MissingDependencyError
 
 from .base import BootstrapModule
@@ -355,7 +356,7 @@ class PytestModule(BootstrapModule):
         logger.debug("Building Pytest tooling layer.")
         manifest.dependencies.add_dev("pytest")
         manifest.dependencies.add_dev("pytest-mock")
-        manifest.tooling.add_ci_flag("pytest")
+        manifest.tooling.add_ci_flag(CIFlag.PYTEST)
 
         # Deterministically scaffold the testing directory
         manifest.filesystem.add_directory("tests")
@@ -705,7 +706,7 @@ class CodecovModule(BootstrapModule):
             manifest: The centralized state object.
         """
         logger.debug("Building Codecov tooling layer.")
-        manifest.tooling.add_ci_flag("codecov")
+        manifest.tooling.add_ci_flag(CIFlag.CODECOV)
 
         if manifest.should_skip_file(Path(".github/codecov.yml"), phase=self.name):
             return
@@ -767,7 +768,7 @@ class ZensicalModule(BootstrapModule):
 
         manifest.dependencies.add_docs("mkdocstrings[python]")
         manifest.dependencies.add_docs("zensical")
-        manifest.tooling.add_ci_flag("zensical")
+        manifest.tooling.add_ci_flag(CIFlag.ZENSICAL)
 
         manifest.filesystem.add_environment_artifact("site/")
         manifest.filesystem.add_directory("docs")

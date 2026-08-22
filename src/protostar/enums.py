@@ -120,3 +120,52 @@ class DiagnosticPhase(enum.StrEnum):
     JUST = "Just"
     EXECUTOR = "Executor"
     DOCKER = "Docker"
+
+
+class CIFlag(enum.StrEnum):
+    """Enumeration of feature flags for CI workflow and justfile generators."""
+
+    PYTEST = "pytest"
+    CODECOV = "codecov"
+    ZENSICAL = "zensical"
+
+
+class DependencyGroup(enum.StrEnum):
+    """Enumeration of dependency groups and uv installation targets."""
+
+    MAIN = "main"
+    DEV = "dev"
+    DOCS = "docs"
+
+    @property
+    def cli_args(self) -> list[str]:
+        """Returns the CLI arguments for uv add."""
+        mapping = {
+            DependencyGroup.MAIN: [],
+            DependencyGroup.DEV: ["--dev"],
+            DependencyGroup.DOCS: ["--group", "docs"],
+        }
+        return mapping[self]
+
+    @property
+    def label(self) -> str:
+        """Returns the human-readable description for progress messages."""
+        mapping = {
+            DependencyGroup.MAIN: "standard",
+            DependencyGroup.DEV: "development",
+            DependencyGroup.DOCS: "documentation",
+        }
+        return mapping[self]
+
+
+class SafelistBinary(enum.StrEnum):
+    """Enumeration of authorized binaries allowed to execute in sandboxed environments."""
+
+    UV = "uv"
+    GIT = "git"
+    NPM = "npm"
+    YARN = "yarn"
+    PNPM = "pnpm"
+    PRE_COMMIT = "pre-commit"
+    PREK = "prek"
+    DIRENV = "direnv"
