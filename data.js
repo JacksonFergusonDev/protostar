@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787435775720,
+  "lastUpdate": 1787436371186,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7383,6 +7383,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 219.26,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fb0a45657af4c231a0114a276a0b815f73e0c096",
+          "message": "refactor(orchestrator): encapsulate orchestrator flags into OrchestratorOptions dataclass (#191)\n\n* refactor(orchestrator): extract data clump into OrchestratorOptions dataclass\n\n- Define OrchestratorOptions dataclass to encapsulate blueprint, docker, force flags, metadata, and trust flags\n- Update Orchestrator.__init__ signature to accept options parameter instead of data clump arguments\n\n* refactor(cli): pass OrchestratorOptions when instantiating Orchestrator\n\n- Instantiate OrchestratorOptions in handle_init and interactive wizard execution flows\n- Pass typed options instance to Orchestrator\n\n* docs(orchestrator): add OrchestratorOptions to API reference\n\n- Include mkdocstrings block for OrchestratorOptions in architecture documentation\n\n* test(orchestrator): update orchestrator tests for OrchestratorOptions\n\n- Update CLI mocking assertions to verify OrchestratorOptions\n- Update test cases to construct OrchestratorOptions where options are specified\n- Add unit tests for default and customized OrchestratorOptions instantiation",
+          "timestamp": "2026-08-22T15:05:06-07:00",
+          "tree_id": "89bcaec05e9f2f6d12a4d9504dbf8fb636842946",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fb0a45657af4c231a0114a276a0b815f73e0c096"
+        },
+        "date": 1787436370523,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 154.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 226.55,
             "unit": "ms"
           }
         ]
