@@ -69,3 +69,53 @@ def test_resolve_package_name() -> None:
         )
         == "my_cool_app"
     )
+
+
+def test_python_version_value_object() -> None:
+    from protostar.workspace import PythonVersion
+
+    pv = PythonVersion.from_string("3.13")
+    assert pv.major == 3
+    assert pv.minor == 13
+    assert str(pv) == "3.13"
+    assert pv.trove_classifier == "Programming Language :: Python :: 3.13"
+
+    pv_spec = PythonVersion.from_string(">=3.12")
+    assert pv_spec.major == 3
+    assert pv_spec.minor == 12
+
+    assert PythonVersion(3, 12) < PythonVersion(3, 13)
+    assert PythonVersion(3, 13) == PythonVersion(3, 13)
+
+    range_versions = pv_spec.range_to(max_minor=15)
+    assert [str(v) for v in range_versions] == ["3.12", "3.13", "3.14"]
+
+    with pytest.raises(ValueError, match="Invalid Python version string"):
+        PythonVersion.from_string("invalid")
+
+    with pytest.raises(ValueError, match="Invalid Python version numbers"):
+        PythonVersion(major=-1, minor=12)
+
+
+def test_package_name_value_object() -> None:
+    from protostar.workspace import PackageName
+
+    pkg = PackageName("valid_package")
+    assert str(pkg) == "valid_package"
+
+    with pytest.raises(ValueError, match="Invalid Python package name identifier"):
+        PackageName("invalid-package-name")
+
+    pkg_sanitized = PackageName.from_raw("123-my-app!")
+    assert str(pkg_sanitized) == "pkg_123_my_app"
+
+
+def test_project_name_value_object() -> None:
+    from protostar.workspace import ProjectName
+
+    proj = ProjectName("my-awesome-repo")
+    assert str(proj) == "my-awesome-repo"
+    assert str(proj.to_package_name()) == "my_awesome_repo"
+
+    with pytest.raises(ValueError, match="Project name cannot be empty"):
+        ProjectName("   ")
