@@ -3,6 +3,7 @@
 import importlib.resources
 import os
 import sys
+from dataclasses import dataclass, field
 from typing import Any
 
 from rich.console import Console
@@ -10,8 +11,29 @@ from rich.console import Console
 from .config import TemplateBlueprint, UserConfig
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS, MetadataKey, PromptType
-from .modules import TOOLING_MODULES
+from .modules import TOOLING_MODULES, BootstrapModule
 from .system import is_interactive
+
+
+@dataclass
+class WizardSelections:
+    """Selections captured from the interactive initialization wizard.
+
+    Attributes:
+        modules: Selected tooling modules.
+        docker: If True, scaffolds container artifacts (.dockerignore).
+        project_metadata: Resolved project metadata key-value mappings.
+        blueprint: The loaded template blueprint, if any.
+        is_external: If True, the template was loaded from an external source.
+        is_user_aliased: If True, the template was resolved via a trusted global alias.
+    """
+
+    modules: list[BootstrapModule] = field(default_factory=list)
+    docker: bool = False
+    project_metadata: dict[str, Any] = field(default_factory=dict)
+    blueprint: TemplateBlueprint | None = None
+    is_external: bool = False
+    is_user_aliased: bool = False
 
 
 def _should_run_wizard() -> bool:
@@ -19,7 +41,7 @@ def _should_run_wizard() -> bool:
     return is_interactive()
 
 
-def run_init_wizard() -> dict[str, Any] | None:
+def run_init_wizard() -> WizardSelections | None:
     """Runs the environment initialization checklist.
 
     Dynamically constructs a spacebar-toggleable checklist from the module
@@ -27,8 +49,8 @@ def run_init_wizard() -> dict[str, Any] | None:
     user's global Protostar configuration.
 
     Returns:
-        A dictionary containing the selected 'modules' (list), 'presets' (list),
-        and 'docker' (bool) flag. Returns None if non-interactive.
+        A WizardSelections instance containing the user's interactive choices,
+        or None if in a non-interactive environment.
 
     Raises:
         ExecutionAbortedError: If the user cancels the wizard during interactive prompts.
@@ -161,14 +183,14 @@ def run_init_wizard() -> dict[str, Any] | None:
 
     resolved_metadata = prompt_metadata(required_keys, optional_keys)
 
-    return {
-        "modules": modules,
-        "docker": docker,
-        "project_metadata": resolved_metadata,
-        "blueprint": blueprint,
-        "is_external": is_external,
-        "is_user_aliased": is_user_aliased,
-    }
+    return WizardSelections(
+        modules=modules,
+        docker=docker,
+        project_metadata=resolved_metadata,
+        blueprint=blueprint,
+        is_external=is_external,
+        is_user_aliased=is_user_aliased,
+    )
 
 
 def prompt_metadata(
