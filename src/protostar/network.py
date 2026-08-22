@@ -1,18 +1,24 @@
 """Network utilities for fetching remote configurations."""
 
 import re
-import tarfile
 import tempfile
 import urllib.request
 from pathlib import Path
 from urllib.error import URLError
 
+from .enums import ArchiveFormat
 from .errors import (
     NetworkFetchError,
     SecurityViolationError,
     TemplateResolutionError,
 )
-from .fs import safe_extract_zip
+from .fs import safe_extract_archive
+
+__all__ = [
+    "fetch_remote_config",
+    "fetch_template_archive",
+    "resolve_remote_template",
+]
 
 
 def fetch_remote_config(url: str, timeout: int = 10) -> str:
@@ -88,7 +94,7 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
 
 
 def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
-    """Fetches and extracts a remote template archive (.zip or .tar.gz).
+    """Fetches and extracts a remote template archive (.zip, .tar.gz, .tgz, .tar).
 
     Args:
         url: The URL to the archive.
@@ -108,6 +114,13 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
             message="Insecure protocol detected. Protostar requires HTTPS for remote configurations.",
         )
 
+    archive_format = ArchiveFormat.from_path(url)
+    if archive_format is None:
+        raise TemplateResolutionError(
+            url,
+            f"Unsupported archive format for '{url}'. Expected .zip, .tar.gz, .tgz, or .tar.",
+        )
+
     try:
         with (
             urllib.request.urlopen(url, timeout=timeout) as response,
@@ -123,17 +136,7 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
         ) from e
 
     try:
-        if url.endswith(".zip"):
-            safe_extract_zip(tmp_path, dest_dir)
-        elif url.endswith(".tar.gz") or url.endswith(".tgz") or url.endswith(".tar"):
-            with tarfile.open(tmp_path, "r:*") as tf:
-                # Python 3.12+ data filter to prevent Tar Slip
-                tf.extractall(dest_dir, filter="data")
-        else:
-            raise TemplateResolutionError(
-                url,
-                f"Unsupported archive format for '{url}'. Expected .zip, .tar.gz, .tgz, or .tar.",
-            )
+        safe_extract_archive(tmp_path, dest_dir, archive_format=archive_format)
     except (SecurityViolationError, TemplateResolutionError):
         raise
     except Exception as e:
@@ -192,14 +195,7 @@ def resolve_remote_template(url: str, temp_workspace: Path, timeout: int = 10) -
         archive_url,
     )
 
-    is_archive = (
-        archive_url.endswith(".zip")
-        or archive_url.endswith(".tar.gz")
-        or archive_url.endswith(".tgz")
-        or archive_url.endswith(".tar")
-    )
-
-    if is_archive:
+    if ArchiveFormat.from_path(archive_url) is not None:
         return fetch_template_archive(archive_url, temp_workspace, timeout=timeout)
 
     # Otherwise it's treated as a raw file URL.

@@ -1,6 +1,7 @@
 """Domain enumerations for Protostar."""
 
 import enum
+from pathlib import Path
 
 
 class PromptType(enum.StrEnum):
@@ -169,3 +170,71 @@ class SafelistBinary(enum.StrEnum):
     PRE_COMMIT = "pre-commit"
     PREK = "prek"
     DIRENV = "direnv"
+
+
+class ArchiveFormat(enum.StrEnum):
+    """Enumeration of supported template archive formats."""
+
+    ZIP = "zip"
+    TAR = "tar"
+    TAR_GZ = "tar.gz"
+    TAR_BZ2 = "tar.bz2"
+    TAR_XZ = "tar.xz"
+
+    @property
+    def is_tar(self) -> bool:
+        """Returns True if the format is a tarball variation."""
+        return self in (
+            ArchiveFormat.TAR,
+            ArchiveFormat.TAR_GZ,
+            ArchiveFormat.TAR_BZ2,
+            ArchiveFormat.TAR_XZ,
+        )
+
+    @property
+    def extensions(self) -> tuple[str, ...]:
+        """Returns the recognized file extensions for this archive format."""
+        mapping = {
+            ArchiveFormat.ZIP: (".zip",),
+            ArchiveFormat.TAR: (".tar",),
+            ArchiveFormat.TAR_GZ: (".tar.gz", ".tgz"),
+            ArchiveFormat.TAR_BZ2: (".tar.bz2", ".tbz2"),
+            ArchiveFormat.TAR_XZ: (".tar.xz", ".txz"),
+        }
+        return mapping[self]
+
+    @classmethod
+    def from_path(cls, path: Path | str) -> "ArchiveFormat | None":
+        """Detects the archive format from a file path or URL string."""
+        lower = str(path).lower()
+        for fmt in cls:
+            for ext in fmt.extensions:
+                if lower.endswith(ext):
+                    return fmt
+        return None
+
+
+class GitHost(enum.StrEnum):
+    """Enumeration of supported remote Git hosting platforms."""
+
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
+    CODEBERG = "codeberg"
+    SOURCEHUT = "sourcehut"
+
+    @classmethod
+    def from_url(cls, url: str) -> "GitHost | None":
+        """Identifies the Git host from a repository or file URL."""
+        lower = url.lower()
+        if "github.com" in lower or "raw.githubusercontent.com" in lower:
+            return cls.GITHUB
+        if "gitlab.com" in lower:
+            return cls.GITLAB
+        if "bitbucket.org" in lower:
+            return cls.BITBUCKET
+        if "codeberg.org" in lower:
+            return cls.CODEBERG
+        if "git.sr.ht" in lower:
+            return cls.SOURCEHUT
+        return None

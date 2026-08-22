@@ -67,3 +67,51 @@ def test_atomic_write_text_handles_encoding_error(tmp_path: Path) -> None:
     assert not target_file.exists()
     leftover_files = [f for f in tmp_path.iterdir() if f.name != "config.toml"]
     assert len(leftover_files) == 0, f"Temporary files leaked: {leftover_files}"
+
+
+def test_safe_extract_tar_and_archive(tmp_path: Path) -> None:
+    import tarfile
+
+    from protostar.enums import ArchiveFormat
+    from protostar.errors import SecurityViolationError, TemplateResolutionError
+    from protostar.fs import safe_extract_archive, safe_extract_tar
+
+    # Create a valid tar.gz file
+    tar_path = tmp_path / "valid.tar.gz"
+    with tarfile.open(tar_path, "w:gz") as tf:
+        info = tarfile.TarInfo(name="template/protostar.toml")
+        data = b"[env]\nruff = true\n"
+        info.size = len(data)
+        import io
+
+        tf.addfile(info, io.BytesIO(data))
+
+    dest_dir = tmp_path / "extracted_tar"
+    dest_dir.mkdir()
+    safe_extract_tar(tar_path, dest_dir)
+    assert (dest_dir / "template" / "protostar.toml").exists()
+
+    # Test via safe_extract_archive dispatch
+    dest_dir2 = tmp_path / "extracted_archive"
+    dest_dir2.mkdir()
+    safe_extract_archive(tar_path, dest_dir2, archive_format=ArchiveFormat.TAR_GZ)
+    assert (dest_dir2 / "template" / "protostar.toml").exists()
+
+    # Create a malicious tar attempting path traversal
+    bad_tar = tmp_path / "malicious.tar.gz"
+    with tarfile.open(bad_tar, "w:gz") as tf:
+        bad_info = tarfile.TarInfo(name="../../outside.txt")
+        bad_data = b"malicious payload"
+        bad_info.size = len(bad_data)
+        tf.addfile(bad_info, io.BytesIO(bad_data))
+
+    bad_dest = tmp_path / "bad_extract"
+    bad_dest.mkdir()
+    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
+        safe_extract_tar(bad_tar, bad_dest)
+
+    # Test unsupported archive format
+    with pytest.raises(
+        TemplateResolutionError, match="Unsupported or unrecognized archive format"
+    ):
+        safe_extract_archive(tmp_path / "unknown.rar", dest_dir2)
