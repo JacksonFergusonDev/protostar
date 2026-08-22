@@ -5,6 +5,7 @@ import pytest
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, ExecutionAbortedError
 from protostar.wizard import (
+    WizardSelections,
     _should_run_wizard,
     prompt_metadata,
     resolve_missing_variables,
@@ -101,8 +102,9 @@ def test_run_init_wizard_success(mocker):
     result = run_init_wizard()
 
     assert result is not None
-    assert result["docker"] is True
-    assert result["project_metadata"] == {"description": "Test App"}
+    assert isinstance(result, WizardSelections)
+    assert result.docker is True
+    assert result.project_metadata == {"description": "Test App"}
     mock_metadata.assert_called_once()
 
 

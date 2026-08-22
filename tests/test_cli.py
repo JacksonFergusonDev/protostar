@@ -28,6 +28,7 @@ from protostar.errors import (
     NetworkFetchError,
     TemplateResolutionError,
 )
+from protostar.wizard import WizardSelections
 
 
 def test_proto_help_formatter_usage(mocker):
@@ -346,7 +347,7 @@ def test_intercept_interactive_wizards_success(mocker):
     # Emulate running `protostar` with no arguments
     mocker.patch.object(sys, "argv", ["protostar"])
 
-    selections = {"modules": [], "presets": [], "docker": True}
+    selections = WizardSelections(modules=[], docker=True)
     mocker.patch("protostar.cli.run_init_wizard", return_value=selections)
     mocker.patch("protostar.cli.UserConfig.load")
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
