@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787436371186,
+  "lastUpdate": 1787436708868,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7417,6 +7417,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 226.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23e18d7d7ccd070699e482e74ff81041a4dce04a",
+          "message": "refactor(wizard): replace untyped dictionary return with WizardSelections dataclass (#192)\n\n* refactor(wizard): introduce WizardSelections dataclass for interactive initialization results\n\n- Define WizardSelections dataclass encapsulating modules, docker, project metadata, blueprint, and trust flags\n- Update run_init_wizard return type and implementation to return WizardSelections\n- Re-export WizardSelections from top-level protostar package\n\n* refactor(cli): consume WizardSelections dataclass in interactive wizard handler\n\n- Replace dictionary key lookups and get defaults with typed attribute accesses on WizardSelections\n- Pass typed attributes directly when constructing OrchestratorOptions\n\n* test(wizard, cli): update test suite for WizardSelections dataclass\n\n- Assert WizardSelections instance type and attribute values in test_run_init_wizard_success\n- Mock WizardSelections instance in test_intercept_interactive_wizards_success",
+          "timestamp": "2026-08-22T15:10:46-07:00",
+          "tree_id": "b714686dbff1f53f2a1c8ca0b9f901d1494c0a53",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/23e18d7d7ccd070699e482e74ff81041a4dce04a"
+        },
+        "date": 1787436708301,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 153.05,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 223.16,
             "unit": "ms"
           }
         ]
