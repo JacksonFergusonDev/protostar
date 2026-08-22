@@ -9,9 +9,11 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
     __version__ = importlib.metadata.version("protostar")
 
 from .enums import (
+    ArchiveFormat,
     CIFlag,
     DependencyGroup,
     DiagnosticPhase,
+    GitHost,
     IDEType,
     LicenseType,
     MetadataKey,
@@ -38,6 +40,7 @@ from .workspace import PackageName, ProjectName, PythonVersion
 logging.getLogger("protostar").addHandler(logging.NullHandler())
 
 __all__ = [
+    "ArchiveFormat",
     "BootstrapModule",
     "CIFlag",
     "CommandExecutionError",
@@ -47,6 +50,7 @@ __all__ = [
     "DiagnosticPhase",
     "EnvironmentManifest",
     "FileSystemError",
+    "GitHost",
     "IDEType",
     "LicenseType",
     "MetadataKey",
