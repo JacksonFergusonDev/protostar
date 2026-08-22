@@ -1,6 +1,7 @@
 """Domain enumerations for Protostar."""
 
 import enum
+from pathlib import Path
 
 
 class PromptType(enum.StrEnum):
@@ -203,7 +204,7 @@ class ArchiveFormat(enum.StrEnum):
         return mapping[self]
 
     @classmethod
-    def from_path(cls, path: str) -> "ArchiveFormat | None":
+    def from_path(cls, path: Path | str) -> "ArchiveFormat | None":
         """Detects the archive format from a file path or URL string."""
         lower = str(path).lower()
         for fmt in cls:

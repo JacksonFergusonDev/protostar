@@ -5,7 +5,15 @@ import tempfile
 from contextlib import suppress
 from pathlib import Path
 
+from .enums import ArchiveFormat
 from .errors import FileSystemError
+
+__all__ = [
+    "atomic_write_text",
+    "safe_extract_archive",
+    "safe_extract_tar",
+    "safe_extract_zip",
+]
 
 
 def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None:
@@ -75,3 +83,59 @@ def safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
 
         # If all members are safe, extract all
         archive.extractall(path=target_dir)
+
+
+def safe_extract_tar(tar_path: Path, target_dir: Path) -> None:
+    """Safely extracts a tar archive, preventing path traversal vulnerabilities (Tar Slip).
+
+    Args:
+        tar_path: Path to the .tar, .tar.gz, .tar.bz2, or .tar.xz archive.
+        target_dir: The directory where the archive should be extracted.
+
+    Raises:
+        SecurityViolationError: If any archive member attempts path traversal.
+    """
+    import tarfile
+
+    from .errors import SecurityViolationError
+
+    resolved_target_dir = target_dir.resolve()
+
+    with tarfile.open(tar_path, "r:*") as archive:
+        for member in archive.getmembers():
+            member_path = (target_dir / member.name).resolve()
+            if not member_path.is_relative_to(resolved_target_dir):
+                raise SecurityViolationError(
+                    f"SECURITY VIOLATION: Tar archive member attempted path traversal outside target directory: {member.name}"
+                )
+        archive.extractall(path=target_dir, filter="data")
+
+
+def safe_extract_archive(
+    archive_path: Path,
+    target_dir: Path,
+    archive_format: ArchiveFormat | None = None,
+) -> None:
+    """Safely extracts an archive file based on format detection or explicit specification.
+
+    Args:
+        archive_path: Path to the archive on disk.
+        target_dir: The directory where the archive should be extracted.
+        archive_format: Optional explicit ArchiveFormat.
+
+    Raises:
+        SecurityViolationError: If any member attempts path traversal.
+        TemplateResolutionError: If format cannot be determined or is unsupported.
+    """
+    from .errors import TemplateResolutionError
+
+    fmt = archive_format or ArchiveFormat.from_path(archive_path)
+    if fmt == ArchiveFormat.ZIP:
+        safe_extract_zip(archive_path, target_dir)
+    elif fmt is not None and fmt.is_tar:
+        safe_extract_tar(archive_path, target_dir)
+    else:
+        raise TemplateResolutionError(
+            str(archive_path),
+            f"Unsupported or unrecognized archive format for '{archive_path.name}'.",
+        )
