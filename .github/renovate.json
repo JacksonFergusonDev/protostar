@@ -5,6 +5,12 @@
         ":semanticCommits",
         ":prHourlyLimit2"
     ],
+    "ignorePaths": [
+        "docs/**",
+        "scripts/**",
+        "src/**",
+        "tests/**"
+    ],
     "schedule": [
         "before 4am on monday"
     ],
