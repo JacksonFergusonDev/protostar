@@ -368,10 +368,18 @@ def test_intercept_interactive_wizards_success(mocker):
     )
     mock_exit = mocker.patch("sys.exit", side_effect=SystemExit)
 
+    mock_orchestrator.return_value.plan.return_value = mocker.MagicMock(
+        diagnostics=[], tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[])
+    )
+    mock_orchestrator.return_value.execute.return_value = mocker.MagicMock(
+        diagnostics=(), touched_paths=frozenset()
+    )
+
     with pytest.raises(SystemExit):
         intercept_interactive_wizards(parser)
 
-    mock_orchestrator.return_value.run.assert_called_once()
+    mock_orchestrator.return_value.plan.assert_called_once()
+    mock_orchestrator.return_value.execute.assert_called_once()
     mock_exit.assert_called_once_with(0)
 
 
@@ -633,9 +641,9 @@ def test_cli_handles_command_execution_error_output(mocker):
     # Mock CLI arguments to bypass the TUI wizard
     mocker.patch("sys.argv", ["protostar", "init", "--force-merge"])
 
-    # Force the orchestrator to throw the specific error we want to format
+    # Force _run_engine to throw the specific error we want to format
     mocker.patch(
-        "protostar.cli.Orchestrator.run",
+        "protostar.cli._run_engine",
         side_effect=CommandExecutionError(
             command=["uv", "init"],
             returncode=1,
@@ -687,8 +695,8 @@ def test_handle_init_template_resolution(mocker, tmp_path):
     """Test that passing --template resolves the internal template."""
     import importlib.resources
 
-    # We will mock Orchestrator.run so it doesn't actually scaffold
-    mocker.patch("protostar.cli.Orchestrator.run")
+    # We will mock _run_engine so it doesn't actually scaffold
+    mocker.patch("protostar.cli._run_engine")
 
     args = argparse.Namespace(
         template_name="astro",
@@ -750,10 +758,10 @@ def test_handle_init_cli_template_resolution(mocker):
 
     assert mock_orchestrator.call_count == 1
 
-    # Verify the template blueprint was loaded and passed to the Orchestrator
-    options = mock_orchestrator.call_args.kwargs.get("options")
-    assert options is not None
-    blueprint = options.blueprint
+    # Verify the template blueprint was loaded and passed to the Orchestrator via InitRequest
+    request = mock_orchestrator.call_args.kwargs.get("request")
+    assert request is not None
+    blueprint = request.template_blueprint
     assert blueprint is not None
     assert "typer" in blueprint.dependencies
     assert "rich" in blueprint.dependencies
@@ -770,7 +778,13 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
 
     # Mock the Orchestrator instantiation so we can inspect the flags passed to it
     mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
-    mock_orchestrator.return_value.run = mocker.MagicMock()
+    # _run_engine will call plan/execute on the mock — set up safe returns
+    mock_orchestrator.return_value.plan.return_value = mocker.MagicMock(
+        diagnostics=[], tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[])
+    )
+    mock_orchestrator.return_value.execute.return_value = mocker.MagicMock(
+        diagnostics=(), touched_paths=frozenset()
+    )
 
     # Mock TemplateBlueprint to prevent network calls during the test
     mocker.patch("protostar.cli.TemplateBlueprint.load", return_value=None)
@@ -788,12 +802,12 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
 
     handle_init(args)
 
-    # Verify the orchestrator was initialized with the correct security flags
+    # Verify the orchestrator was initialized with the correct security flags via InitRequest
     _, kwargs = mock_orchestrator.call_args
-    options = kwargs.get("options")
-    assert options is not None
-    assert options.is_external is True
-    assert options.is_user_aliased is True
+    request = kwargs.get("request")
+    assert request is not None
+    assert request.is_external is True
+    assert request.is_user_aliased is True
 
 
 def test_cli_rejects_unknown_templates(mocker) -> None:
