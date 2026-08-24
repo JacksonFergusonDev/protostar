@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787436708868,
+  "lastUpdate": 1787611710150,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7451,6 +7451,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 223.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "99b05b8ccac132b197e48f82e58a505a7576c905",
+          "message": "refactor(engine): establish headless engine bulkhead with plan and execute lifecycle (#194)\n\n* feat(errors): add WorkspaceCollisionError; tighten PartialExecutionAbortedError\n\n- Introduce WorkspaceCollisionError(paths: frozenset[Path]) as a structured\n  domain exception raised by plan() when collision markers exist without a\n  force flag. The paths field allows callers to present or handle collisions\n  programmatically.\n- Update PartialExecutionAbortedError.touched_paths from set[str] to\n  frozenset[str] to match the immutable ExecutionResult.touched_paths type\n  introduced in the next commit.\n\n* feat: introduce models.py with InitRequest and ExecutionResult\n\nAdd a dedicated models.py to define the two public boundary types that\ncross the engine/CLI interface:\n\n- InitRequest: dataclass representing caller intent (template, flags,\n  metadata). python_version is included as a documentation field for\n  future MCP callers; the modules list is already resolved before the\n  orchestrator is constructed.\n- ExecutionResult: frozen dataclass representing the observed outcome of\n  a successful or partial execution (touched_paths, diagnostics).\n\n* refactor(orchestrator,cli): replace run() with plan() and execute(); wire CLI boundary\n\nSplit Orchestrator.run() into two pure phases:\n- plan(request) -> EnvironmentManifest: evaluates collision markers, runs\n  pre_flight/build, injects the blueprint. Raises WorkspaceCollisionError\n  when markers exist without a force flag. Never touches the filesystem.\n- execute(manifest) -> ExecutionResult: realizes the pre-built manifest via\n  SystemExecutor. Wraps KeyboardInterrupt as PartialExecutionAbortedError.\n\nRemove OrchestratorOptions (replaced by InitRequest from models.py).\nRemove _evaluate_collisions() and _prompt_remote_trust() — all questionary,\nrich rendering, and is_interactive() logic moves to cli.py.\n\nCLI changes:\n- Add _run_engine(engine, request) helper that owns the full plan → collision\n  prompt loop → trust boundary → execute → diagnostic rendering pipeline.\n- handle_init() and intercept_interactive_wizards() both delegate to\n  _run_engine() instead of engine.run().\n- Add is_interactive() guard before questionary in the collision handler to\n  abort cleanly in headless environments.\n\nTest changes:\n- test_orchestrator.py fully rewritten against plan()/execute() API.\n- test_cli.py: replace Orchestrator.run mocks with _run_engine / plan+execute.\n- test_interrupts.py: use frozenset for PartialExecutionAbortedError; update\n  interrupt tests to use plan()/execute().\n\n* refactor(engine): purge rich from executor.py and dependencies.py\n\n- Remove Console from executor.py, replace console.status() with logger.info()\n- Remove Console from dependencies.py, replace console.status() with logger.info()\n- Update tests to assert on logger.info() instead of console.status()\n\n* feat(__init__): export InitRequest, ExecutionResult, WorkspaceCollisionError\n\n* feat(cli): wire engine logs to rich spinner\n\nAdd SpinnerHandler to route engine INFO logs back to the CLI presentation layer,\nrestoring the execution spinner that was removed during the engine bulkhead refactoring.\n\n* test(integration): patch is_interactive on cli module instead of orchestrator\n\n* docs(api): update API reference to document InitRequest, ExecutionResult, and WorkspaceCollisionError\n\n* docs: document engine bulkhead architecture in CONTRIBUTING.md and docs",
+          "timestamp": "2026-08-24T15:47:23-07:00",
+          "tree_id": "17f2305edd6ea66f4812443f5f6df248a47deffa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/99b05b8ccac132b197e48f82e58a505a7576c905"
+        },
+        "date": 1787611708917,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 149.21,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212,
             "unit": "ms"
           }
         ]
