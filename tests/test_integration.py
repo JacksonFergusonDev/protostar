@@ -150,7 +150,7 @@ def test_collision_overwrite_e2e(
     mocker.patch("subprocess.run", return_value=MagicMock(returncode=0))
 
     # 2. Mock the interactive environment
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
+    mocker.patch("protostar.cli.is_interactive", return_value=True)
     mock_questionary = mocker.patch("questionary.select")
     mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
 
