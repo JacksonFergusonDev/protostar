@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787611726069,
+  "lastUpdate": 1787612380100,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7519,6 +7519,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 217.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "67a8c14bbfd0625ef026ccfa2dcb1bb17b984d32",
+          "message": "refactor(engine): enforce read-only blueprint invariants by purifying manifest (#195)\n\n- Remove touched_paths and record_touch() from FilesystemManifest\n- Remove diagnostics and add_diagnostic() from EnvironmentManifest\n- Simplify EnvironmentManifest.should_skip_file() to a pure boolean evaluation\n- Shift execution tracking (touched_paths, diagnostics) to SystemExecutor\n- Update Orchestrator.execute() to scrape execution state directly from SystemExecutor\n- Update callers and documentation to align with read-only manifest invariants",
+          "timestamp": "2026-08-24T15:58:35-07:00",
+          "tree_id": "986819fc099261628d8098ed243a9c21f4c1d838",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/67a8c14bbfd0625ef026ccfa2dcb1bb17b984d32"
+        },
+        "date": 1787612378994,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 150.53,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 216.77,
             "unit": "ms"
           }
         ]
