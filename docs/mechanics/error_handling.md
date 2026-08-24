@@ -93,6 +93,7 @@ ProtostarError (Exception)
  ├── ConfigurationError
  ├── NetworkFetchError
  ├── TemplateResolutionError
+ ├── WorkspaceCollisionError
  ├── MissingDependencyError
  ├── CommandExecutionError
  ├── CommandTimeoutError
@@ -123,6 +124,10 @@ Raised when remote configuration or template downloads fail due to network disco
 
 Raised when a template target is found but cannot be parsed, extracted, or resolved. Triggers on corrupt archive structures, unsupported archive formats, missing `protostar.toml` files within archives, or unsatisfied template placeholder variables.
 
+### `WorkspaceCollisionError`
+
+Raised during the engine's `plan()` phase when existing workspace configuration markers (such as `pyproject.toml`) are detected and no explicit `--force-merge` or `--force-replace` flag is active. Exposes structured collision data via its `paths: frozenset[Path]` attribute.
+
 ### `MissingDependencyError`
 
 Raised during pre-flight checks when a system-level binary (such as `uv`, `cargo`, `git`, `direnv`, or `just`) is missing from `$PATH`. Stores the missing dependency name, its operational purpose, and an installation hint.
@@ -149,7 +154,7 @@ Raised when the user explicitly aborts execution via an interactive prompt.
 
 ### `PartialExecutionAbortedError`
 
-Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun, formatting and reporting all touched/scaffolded workspace paths.
+Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun, formatting and reporting all touched/scaffolded workspace paths via an immutable `frozenset[str]`.
 
 ---
 

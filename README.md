@@ -58,7 +58,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, locking in your dependency managers and directory structures.
 
-1. **Manifest-First, Side-Effects-Last:** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar separates state definition from execution. Modules declare their requirements into a centralized `EnvironmentManifest`. Disk I/O and subprocesses only execute in a single, deterministic phase at the very end.
+1. **Manifest-First, Side-Effects-Last (Headless Engine Bulkhead):** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar strictly decouples state calculation from execution. The engine core is headless: modules declare requirements into a centralized `EnvironmentManifest` during the read-only `plan()` phase, while disk mutations and subprocesses only execute during `execute()`. This guarantees side-effect-free dry-running and pure determinism.
 
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
 
