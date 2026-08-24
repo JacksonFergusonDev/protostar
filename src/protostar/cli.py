@@ -20,6 +20,7 @@ from rich import box
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
+from rich.status import Status
 from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
@@ -58,6 +59,20 @@ from .wizard import (
 )
 
 console = Console()
+
+
+class SpinnerHandler(logging.Handler):
+    """Routes INFO-level logs to update a rich Status spinner."""
+
+    def __init__(self, status_obj: Status) -> None:
+        super().__init__(level=logging.INFO)
+        self.status_obj = status_obj
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Processes the log record and updates the status spinner if level is INFO."""
+        # Only update the spinner for INFO logs (ignore DEBUG)
+        if record.levelno == logging.INFO:
+            self.status_obj.update(record.getMessage())
 
 
 def _print_templates_and_exit(error_msg: str | None = None) -> None:
@@ -221,7 +236,21 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
 
     # --- Execute ---
     console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
-    result = engine.execute(manifest)
+
+    logger = logging.getLogger("protostar")
+    # Temporarily drop the log level to INFO so the spinner receives the events
+    previous_level = logger.level
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.setLevel(logging.INFO)
+
+    with console.status("Initializing...") as status:
+        spinner_handler = SpinnerHandler(status)
+        logger.addHandler(spinner_handler)
+        try:
+            result = engine.execute(manifest)
+        finally:
+            logger.removeHandler(spinner_handler)
+            logger.setLevel(previous_level)
 
     # --- Render Diagnostics ---
     has_warnings = False
