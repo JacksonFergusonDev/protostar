@@ -146,8 +146,18 @@ By trapping errors at the highest level, Protostar guarantees that users are nev
 
 ## API Reference
 
-??? abstract "Configuration: `OrchestratorOptions`"
-    ::: protostar.orchestrator.OrchestratorOptions
+??? abstract "Caller Intent: `InitRequest`"
+    ::: protostar.models.InitRequest
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+            members_order: source
+
+??? abstract "Execution Outcome: `ExecutionResult`"
+    ::: protostar.models.ExecutionResult
         options:
             show_source: true
             show_bases: true
