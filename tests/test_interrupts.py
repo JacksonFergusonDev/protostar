@@ -50,20 +50,22 @@ def test_partial_execution_aborted_error_formatting_without_paths() -> None:
     assert err.hint is not None
 
 
-def test_manifest_record_touch_relative_resolution(
+def test_executor_record_touch_relative_resolution(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
+    config = UserConfig()
+    executor = SystemExecutor(manifest, config)
 
     # Relative path
-    manifest.filesystem.record_touch(Path("src/main.py"))
+    executor.record_touch(Path("src/main.py"))
     # Absolute path inside cwd
-    manifest.filesystem.record_touch(tmp_path / "pyproject.toml")
+    executor.record_touch(tmp_path / "pyproject.toml")
     # String path
-    manifest.filesystem.record_touch(".github/workflows/ci.yml")
+    executor.record_touch(".github/workflows/ci.yml")
 
-    assert manifest.filesystem.touched_paths == {
+    assert executor.touched_paths == {
         "src/main.py",
         "pyproject.toml",
         ".github/workflows/ci.yml",
@@ -95,8 +97,8 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
     orchestrator = Orchestrator(modules=[], user_config=user_config)
 
     def fake_execute(self_executor: SystemExecutor) -> None:
-        self_executor.manifest.filesystem.record_touch("src")
-        self_executor.manifest.filesystem.record_touch("pyproject.toml")
+        self_executor.record_touch("src")
+        self_executor.record_touch("pyproject.toml")
         raise KeyboardInterrupt
 
     mocker.patch.object(SystemExecutor, "execute", fake_execute)
@@ -157,7 +159,7 @@ def test_system_executor_records_touches_during_scaffolding(
     executor = SystemExecutor(manifest, config)
     executor.execute()
 
-    assert "src" in manifest.filesystem.touched_paths
-    assert "src/hello.py" in manifest.filesystem.touched_paths
-    assert ".gitignore" in manifest.filesystem.touched_paths
-    assert "justfile" in manifest.filesystem.touched_paths
+    assert "src" in executor.touched_paths
+    assert "src/hello.py" in executor.touched_paths
+    assert ".gitignore" in executor.touched_paths
+    assert "justfile" in executor.touched_paths

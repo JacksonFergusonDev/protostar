@@ -57,13 +57,12 @@ During the `build()` phase, modules route their state declarations through these
     * `system_tasks`: Pre-installation shell commands executed after filesystem scaffolding (e.g., `git init`, `uv init` queued via `manifest.tasks.add_system_task()`).
     * `post_install_tasks`: Commands that strictly require the virtual environment or installed dependencies to be present (e.g., `pre-commit install` queued via `manifest.tasks.add_post_install_task()`).
 
-=== "Root Settings & Diagnostics"
+=== "Root Settings"
     Attributes directly bound to the root `EnvironmentManifest` instance.
 
     * `metadata`: Structured `ProjectMetadata` dictionary defining author, licensing, and package specs.
     * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs via `manifest.add_ide_setting()`.
     * `collision_strategy`: Active `CollisionStrategy` (`MERGE`, `OVERWRITE`, `ABORT`).
-    * `diagnostics`: List of `DiagnosticEvent` objects recorded via `manifest.add_diagnostic()` for post-execution reporting.
 
 ---
 

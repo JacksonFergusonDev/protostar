@@ -11,7 +11,14 @@ from protostar.errors import (
     FileSystemError,
 )
 from protostar.executor import SystemExecutor
-from protostar.manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
+from protostar.manifest import (
+    CollisionStrategy,
+    DiagnosticEvent,
+    DiagnosticPhase,
+    EnvironmentManifest,
+    ProjectMetadata,
+    Severity,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -369,7 +376,7 @@ def test_executor_skips_dockerfile_on_collision(mocker, mock_config):
     assert Path(".dockerignore") in written_paths
     assert Path("Dockerfile") not in written_paths
     assert any(
-        "Skipping Dockerfile generation" in d.message for d in manifest.diagnostics
+        "Skipping Dockerfile generation" in d.message for d in executor.diagnostics
     )
 
 
@@ -1088,3 +1095,100 @@ line-length = 88
     assert ruff_pos < pytest_pos < cz_pos
     assert result.endswith("\n")
     assert not result.endswith("\n\n")
+
+
+def test_executor_diagnostic_collection(mock_config):
+    """Test that SystemExecutor collects diagnostics correctly."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+    assert len(executor.diagnostics) == 0
+
+    executor.add_diagnostic(
+        phase="TestPhase",
+        message="A test warning occurred.",
+        severity=Severity.WARNING,
+        detail="Some traceback or detail",
+    )
+
+    assert len(executor.diagnostics) == 1
+    event = executor.diagnostics[0]
+    assert isinstance(event, DiagnosticEvent)
+    assert event.phase == "TestPhase"
+    assert event.message == "A test warning occurred."
+    assert event.severity == Severity.WARNING
+    assert event.detail == "Some traceback or detail"
+
+
+def test_executor_diagnostic_collection_with_enum(mock_config):
+    """Test that SystemExecutor handles DiagnosticPhase enum in diagnostics."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+    executor.add_diagnostic(
+        phase=DiagnosticPhase.EXECUTOR,
+        message="Execution warning",
+        severity=Severity.WARNING,
+    )
+
+    assert len(executor.diagnostics) == 1
+    event = executor.diagnostics[0]
+    assert event.phase == DiagnosticPhase.EXECUTOR
+    assert event.phase == "Executor"
+
+
+def test_executor_skips_pre_commit_when_file_exists(mocker, mock_config):
+    """Test that existing .pre-commit-config.yaml is skipped and logs a diagnostic."""
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_pre_commit = True
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_pre_commit_config()
+
+    mock_write.assert_not_called()
+    assert len(executor.diagnostics) == 1
+    assert executor.diagnostics[0].phase == DiagnosticPhase.PRE_COMMIT
+    assert executor.diagnostics[0].severity == Severity.SKIP
+    assert (
+        "Skipping .pre-commit-config.yaml generation" in executor.diagnostics[0].message
+    )
+
+
+def test_executor_skips_injected_files_when_file_exists(mocker, mock_config):
+    """Test that existing injected files are skipped and log a diagnostic."""
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_file_injection(".envrc", "export FOO=bar")
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_injected_files()
+
+    mock_write.assert_not_called()
+    assert len(executor.diagnostics) == 1
+    assert executor.diagnostics[0].phase == DiagnosticPhase.EXECUTOR
+    assert executor.diagnostics[0].severity == Severity.SKIP
+    assert "Skipping .envrc generation" in executor.diagnostics[0].message
+
+
+def test_executor_skips_justfile_when_file_exists(mocker, mock_config):
+    """Test that existing justfile is skipped and logs a diagnostic."""
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_just = True
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_justfile()
+
+    mock_write.assert_not_called()
+    assert len(executor.diagnostics) == 1
+    assert executor.diagnostics[0].phase == DiagnosticPhase.JUST
+    assert executor.diagnostics[0].severity == Severity.SKIP
+    assert "Skipping justfile generation" in executor.diagnostics[0].message

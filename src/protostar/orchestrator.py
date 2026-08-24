@@ -172,10 +172,10 @@ class Orchestrator:
             executor.execute()
         except KeyboardInterrupt:
             raise PartialExecutionAbortedError(
-                frozenset(manifest.filesystem.touched_paths)
+                frozenset(executor.touched_paths)
             ) from None
 
         return ExecutionResult(
-            touched_paths=frozenset(manifest.filesystem.touched_paths),
-            diagnostics=tuple(manifest.diagnostics),
+            touched_paths=frozenset(executor.touched_paths),
+            diagnostics=tuple(executor.diagnostics),
         )

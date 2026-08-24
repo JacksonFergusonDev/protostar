@@ -4,7 +4,7 @@ import pytest
 
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, MissingDependencyError
-from protostar.manifest import EnvironmentManifest, Severity
+from protostar.manifest import EnvironmentManifest
 from protostar.modules import (
     CodecovModule,
     CommitizenModule,
@@ -397,10 +397,6 @@ def test_direnv_skips_when_file_exists(tmp_path, monkeypatch) -> None:
     mod = DirenvModule()
     mod.build(manifest)
 
-    skip_events = [d for d in manifest.diagnostics if d.severity == Severity.SKIP]
-    assert len(skip_events) == 1
-    assert skip_events[0].phase == mod.name
-    assert "already exists" in skip_events[0].message
     assert ".envrc" not in manifest.filesystem.file_injections
 
 
@@ -412,10 +408,6 @@ def test_markdownlint_skips_when_file_exists(tmp_path, monkeypatch) -> None:
     mod = MarkdownLintModule()
     mod.build(manifest)
 
-    skip_events = [d for d in manifest.diagnostics if d.severity == Severity.SKIP]
-    assert len(skip_events) == 1
-    assert skip_events[0].phase == mod.name
-    assert "already exists" in skip_events[0].message
     assert ".markdownlint-cli2.yaml" not in manifest.filesystem.file_injections
 
 
@@ -566,10 +558,6 @@ def test_renovate_module_skips_when_file_exists(mocker):
     module.build(manifest)
 
     assert ".github/renovate.json" not in manifest.filesystem.file_injections
-    assert any(
-        d.phase == "Renovate" and d.severity == Severity.SKIP
-        for d in manifest.diagnostics
-    )
 
 
 def test_codecov_module_properties():
@@ -601,10 +589,6 @@ def test_codecov_module_skips_when_file_exists(mocker):
     module.build(manifest)
 
     assert ".github/codecov.yml" not in manifest.filesystem.file_injections
-    assert any(
-        d.phase == "Codecov" and d.severity == Severity.SKIP
-        for d in manifest.diagnostics
-    )
 
 
 def test_zensical_module_properties():
@@ -683,7 +667,3 @@ def test_readthedocs_module_skips_when_file_exists(mocker):
     module.build(manifest)
 
     assert ".readthedocs.yaml" not in manifest.filesystem.file_injections
-    assert any(
-        d.phase == "Read the Docs" and d.severity == Severity.SKIP
-        for d in manifest.diagnostics
-    )

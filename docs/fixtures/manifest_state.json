@@ -48,8 +48,7 @@
             ".ruff_cache/",
             ".venv/",
             "__pycache__/"
-        ],
-        "touched_paths": []
+        ]
     },
     "tooling": {
         "wants_pre_commit": false,
@@ -104,6 +103,5 @@
     },
     "collision_strategy": "merge",
     "force_merge": false,
-    "force_replace": false,
-    "diagnostics": []
+    "force_replace": false
 }
