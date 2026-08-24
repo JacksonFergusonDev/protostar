@@ -4,7 +4,12 @@ import pytest
 
 from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import PartialExecutionAbortedError, WorkspaceCollisionError
-from protostar.manifest import CollisionStrategy, Severity
+from protostar.manifest import (
+    CollisionStrategy,
+    DiagnosticEvent,
+    EnvironmentManifest,
+    Severity,
+)
 from protostar.models import ExecutionResult, InitRequest
 from protostar.modules import BootstrapModule
 from protostar.orchestrator import Orchestrator
@@ -160,14 +165,14 @@ def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
     )
 
 
-def test_plan_produces_no_diagnostics_for_clean_config(mocker, mock_config):
-    """plan() on a clean workspace produces zero diagnostic events."""
+def test_plan_produces_clean_blueprint(mocker, mock_config):
+    """plan() produces a pure declarative blueprint with no runtime diagnostic state."""
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)
 
     manifest = engine.plan()
 
-    assert len(manifest.diagnostics) == 0
+    assert not hasattr(manifest, "diagnostics")
 
 
 # ---------------------------------------------------------------------------
@@ -191,15 +196,16 @@ def test_execute_calls_system_executor(mocker, mock_config):
 
 def test_execute_returns_touched_paths_and_diagnostics(mocker, mock_config):
     """execute() wraps touched_paths and diagnostics into an ExecutionResult."""
-    mocker.patch("protostar.orchestrator.SystemExecutor")
+    mock_executor_cls = mocker.patch("protostar.orchestrator.SystemExecutor")
+    mock_executor_instance = mock_executor_cls.return_value
+    mock_executor_instance.touched_paths = {"pyproject.toml"}
+    mock_executor_instance.diagnostics = [
+        DiagnosticEvent(phase="Test", message="something", severity=Severity.INFO)
+    ]
 
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)
     manifest = engine.plan()
-
-    # Manually simulate executor touching a path and emitting a diagnostic
-    manifest.filesystem.touched_paths.add("pyproject.toml")
-    manifest.add_diagnostic(phase="Test", message="something", severity=Severity.INFO)
 
     result = engine.execute(manifest)
 
@@ -210,12 +216,13 @@ def test_execute_returns_touched_paths_and_diagnostics(mocker, mock_config):
 def test_execute_raises_partial_abort_on_keyboard_interrupt(mocker, mock_config):
     """execute() converts KeyboardInterrupt to PartialExecutionAbortedError."""
     mock_executor_cls = mocker.patch("protostar.orchestrator.SystemExecutor")
-    mock_executor_cls.return_value.execute.side_effect = KeyboardInterrupt
+    mock_executor_instance = mock_executor_cls.return_value
+    mock_executor_instance.execute.side_effect = KeyboardInterrupt
+    mock_executor_instance.touched_paths = {"some_file.py"}
 
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)
     manifest = engine.plan()
-    manifest.filesystem.touched_paths.add("some_file.py")
 
     with pytest.raises(PartialExecutionAbortedError) as exc_info:
         engine.execute(manifest)
@@ -305,11 +312,13 @@ def test_plan_metadata_injected_into_manifest(mocker, mock_config):
 
 
 def test_plan_does_not_mutate_filesystem(mocker, tmp_path, mock_config):
-    """plan() must not record any touched_paths — all disk writes happen in execute()."""
+    """plan() must produce a purely declarative blueprint without disk writes."""
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)
 
     manifest = engine.plan()
 
-    # plan() must not record any touched paths — all disk I/O is deferred to execute()
-    assert len(manifest.filesystem.touched_paths) == 0
+    # plan() generates declarative structures without execution tracking or side effects
+    assert isinstance(manifest, EnvironmentManifest)
+    assert not hasattr(manifest.filesystem, "touched_paths")
+    assert not hasattr(manifest, "diagnostics")

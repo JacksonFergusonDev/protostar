@@ -18,7 +18,6 @@ classDiagram
         +ProjectMetadata metadata
         +CollisionStrategy collision_strategy
         +add_ide_setting(key: IDESettingKey, value: Any)
-        +add_diagnostic(phase: str, message: str)
     }
 
     class DependencyManifest {

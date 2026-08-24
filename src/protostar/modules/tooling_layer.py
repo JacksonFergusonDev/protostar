@@ -52,7 +52,7 @@ class DirenvModule(BootstrapModule):
         manifest.filesystem.add_vcs_ignore(".envrc.local")
         manifest.filesystem.add_vcs_ignore(".direnv/")
 
-        if manifest.should_skip_file(Path(".envrc"), phase=self.name):
+        if manifest.should_skip_file(Path(".envrc")):
             return
 
         content = (
@@ -120,7 +120,7 @@ class MarkdownLintModule(BootstrapModule):
         )
         manifest.tooling.just_lint_commands.append(lint_cmd)
 
-        if manifest.should_skip_file(Path(".markdownlint-cli2.yaml"), phase=self.name):
+        if manifest.should_skip_file(Path(".markdownlint-cli2.yaml")):
             return
 
         content = """gitignore: true
@@ -628,7 +628,7 @@ class RenovateModule(BootstrapModule):
         files: '.github/renovate.json'"""
         manifest.tooling.add_pre_commit_hook(hook_payload)
 
-        if manifest.should_skip_file(Path(".github/renovate.json"), phase=self.name):
+        if manifest.should_skip_file(Path(".github/renovate.json")):
             return
 
         config = """{
@@ -710,7 +710,7 @@ class CodecovModule(BootstrapModule):
         logger.debug("Building Codecov tooling layer.")
         manifest.tooling.add_ci_flag(CIFlag.CODECOV)
 
-        if manifest.should_skip_file(Path(".github/codecov.yml"), phase=self.name):
+        if manifest.should_skip_file(Path(".github/codecov.yml")):
             return
 
         config = """coverage:
@@ -782,7 +782,7 @@ dev = [
 """
         manifest.filesystem.add_file_append("pyproject.toml", pyproject_wiring)
 
-        if manifest.should_skip_file(Path("docs/index.md"), phase=self.name):
+        if manifest.should_skip_file(Path("docs/index.md")):
             pass
         else:
             index_content = """# Welcome to <% PROJECT_NAME %>
@@ -791,7 +791,7 @@ Add your project overview and documentation here.
 """
             manifest.filesystem.add_file_injection("docs/index.md", index_content)
 
-        if manifest.should_skip_file(Path("mkdocs.yml"), phase=self.name):
+        if manifest.should_skip_file(Path("mkdocs.yml")):
             pass
         else:
             mkdocs_content = """site_name: <% PROJECT_NAME %>
@@ -869,7 +869,7 @@ class ReadTheDocsModule(BootstrapModule):
                 "Read the Docs scaffolding requires the Zensical module to be enabled."
             )
 
-        if manifest.should_skip_file(Path(".readthedocs.yaml"), phase=self.name):
+        if manifest.should_skip_file(Path(".readthedocs.yaml")):
             return
 
         config = """version: 2

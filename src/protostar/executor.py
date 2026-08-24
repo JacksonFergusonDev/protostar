@@ -15,8 +15,10 @@ from .ide import check_ide_extensions, write_ide_settings
 from .interpolation import render_template
 from .manifest import (
     CollisionStrategy,
+    DiagnosticEvent,
     DiagnosticPhase,
     EnvironmentManifest,
+    Severity,
     SystemTask,
 )
 from .security import enforce_binary_safelist, enforce_path_jail
@@ -64,6 +66,30 @@ class SystemExecutor:
         self.manifest = manifest
         self.config = config
         self.docker = docker
+        self.touched_paths: set[str] = set()
+        self.diagnostics: list[DiagnosticEvent] = []
+
+    def record_touch(self, path: Path | str) -> None:
+        """Records a path as having been modified or created during execution."""
+        try:
+            rel_path = Path(path).resolve().relative_to(Path.cwd().resolve())
+            self.touched_paths.add(rel_path.as_posix())
+        except (ValueError, RuntimeError):
+            self.touched_paths.add(str(path))
+
+    def add_diagnostic(
+        self,
+        phase: DiagnosticPhase | str,
+        message: str,
+        severity: Severity = Severity.INFO,
+        detail: str | None = None,
+    ) -> None:
+        """Queues a diagnostic event for the post-execution summary panel."""
+        self.diagnostics.append(
+            DiagnosticEvent(
+                phase=phase, message=message, severity=severity, detail=detail
+            )
+        )
 
     @property
     def interpolation_context(self) -> dict[str, str]:
@@ -113,7 +139,7 @@ class SystemExecutor:
         check_ide_extensions(
             ide=self.config.ide,
             ide_extensions=self.manifest.tooling.ide_extensions,
-            on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
+            on_diagnostic=lambda msg, sev: self.add_diagnostic(
                 phase=DiagnosticPhase.IDE,
                 message=msg,
                 severity=sev,
@@ -154,7 +180,12 @@ class SystemExecutor:
 
         target = Path(".pre-commit-config.yaml")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target, phase=DiagnosticPhase.PRE_COMMIT):
+        if self.manifest.should_skip_file(target):
+            self.add_diagnostic(
+                phase=DiagnosticPhase.PRE_COMMIT,
+                message=f"Skipping {target.name} generation; file already exists.",
+                severity=Severity.SKIP,
+            )
             return
 
         full_yaml = generate_pre_commit_config(
@@ -165,7 +196,7 @@ class SystemExecutor:
 
         try:
             atomic_write_text(target, full_yaml)
-            self.manifest.filesystem.record_touch(target)
+            self.record_touch(target)
         except OSError as e:
             raise FileSystemError("write configuration file", str(target), e) from e
         logger.debug("Scaffolded .pre-commit-config.yaml")
@@ -182,18 +213,21 @@ class SystemExecutor:
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
             enforce_path_jail(target, Path.cwd())
-            if not self.manifest.should_skip_file(
-                target, phase=DiagnosticPhase.EXECUTOR
-            ):
-                try:
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    atomic_write_text(target, content)
-                    self.manifest.filesystem.record_touch(target)
-                except OSError as e:
-                    raise FileSystemError(
-                        "inject boilerplate file", str(target), e
-                    ) from e
-                logger.debug(f"Injected configuration file: {interpolated_filepath}")
+            if self.manifest.should_skip_file(target):
+                self.add_diagnostic(
+                    phase=DiagnosticPhase.EXECUTOR,
+                    message=f"Skipping {target.name} generation; file already exists.",
+                    severity=Severity.SKIP,
+                )
+                continue
+
+            try:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                atomic_write_text(target, content)
+                self.record_touch(target)
+            except OSError as e:
+                raise FileSystemError("inject boilerplate file", str(target), e) from e
+            logger.debug(f"Injected configuration file: {interpolated_filepath}")
 
     def _create_directories(self) -> None:
         """Scaffolds all queued directories in the local workspace."""
@@ -206,7 +240,7 @@ class SystemExecutor:
             enforce_path_jail(path, Path.cwd())
             try:
                 path.mkdir(parents=True, exist_ok=True)
-                self.manifest.filesystem.record_touch(path)
+                self.record_touch(path)
             except OSError as e:
                 raise FileSystemError(
                     "create scaffolding directory", str(path), e
@@ -238,7 +272,7 @@ class SystemExecutor:
         target = Path(".github/workflows/ci.yml")
         enforce_path_jail(target, Path.cwd())
         atomic_write_text(target, workflow)
-        self.manifest.filesystem.record_touch(target)
+        self.record_touch(target)
 
     def _write_release_workflow(self) -> None:
         """Assembles and writes the .github/workflows/release.yml file if requested."""
@@ -249,7 +283,7 @@ class SystemExecutor:
         target = Path(".github/workflows/release.yml")
         enforce_path_jail(target, Path.cwd())
         atomic_write_text(target, workflow)
-        self.manifest.filesystem.record_touch(target)
+        self.record_touch(target)
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""
@@ -258,7 +292,12 @@ class SystemExecutor:
 
         target = Path("justfile")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target, phase=DiagnosticPhase.JUST):
+        if self.manifest.should_skip_file(target):
+            self.add_diagnostic(
+                phase=DiagnosticPhase.JUST,
+                message=f"Skipping {target.name} generation; file already exists.",
+                severity=Severity.SKIP,
+            )
             return
 
         full_content = generate_justfile(
@@ -271,7 +310,7 @@ class SystemExecutor:
             )
         )
         atomic_write_text(target, full_content)
-        self.manifest.filesystem.record_touch(target)
+        self.record_touch(target)
 
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
@@ -308,7 +347,7 @@ class SystemExecutor:
                         payloads=interpolated_payloads,
                         is_pyproject=(target.name == "pyproject.toml"),
                         overwrite=is_overwrite,
-                        on_conflict=lambda msg, sev: self.manifest.add_diagnostic(
+                        on_conflict=lambda msg, sev: self.add_diagnostic(
                             phase=DiagnosticPhase.EXECUTOR,
                             message=msg,
                             severity=sev,
@@ -322,7 +361,7 @@ class SystemExecutor:
                 if new_content.strip() != original_content.strip():
                     try:
                         atomic_write_text(target, new_content)
-                        self.manifest.filesystem.record_touch(target)
+                        self.record_touch(target)
                     except OSError as e:
                         raise FileSystemError(
                             "mutate configuration AST", str(target), e
@@ -338,7 +377,7 @@ class SystemExecutor:
                 if appended_content is not None:
                     try:
                         atomic_write_text(target, appended_content)
-                        self.manifest.filesystem.record_touch(target)
+                        self.record_touch(target)
                     except OSError as e:
                         raise FileSystemError(
                             "append configurations block", str(target), e
@@ -360,7 +399,7 @@ class SystemExecutor:
             )
             if new_content is not None:
                 atomic_write_text(gitignore, new_content)
-                self.manifest.filesystem.record_touch(gitignore)
+                self.record_touch(gitignore)
                 missing_count = len(
                     self.manifest.filesystem.vcs_ignores
                     - {line.strip() for line in existing_content.splitlines()}
@@ -391,7 +430,7 @@ class SystemExecutor:
             )
             if new_dockerignore is not None:
                 atomic_write_text(dockerignore, new_dockerignore)
-                self.manifest.filesystem.record_touch(dockerignore)
+                self.record_touch(dockerignore)
                 logger.debug(
                     "Scaffolded container runtime ignore configurations (.dockerignore)"
                 )
@@ -404,60 +443,67 @@ class SystemExecutor:
 
         dockerfile = Path("Dockerfile")
         enforce_path_jail(dockerfile, Path.cwd())
-        if not self.manifest.should_skip_file(dockerfile, phase=DiagnosticPhase.DOCKER):
-            try:
-                context = self.interpolation_context
-                is_script_or_typer = (
-                    "typer" in self.manifest.dependencies.dependencies
-                    or any(
-                        "project.scripts" in app
-                        for app in self.manifest.filesystem.file_appends.get(
-                            "pyproject.toml", []
-                        )
+        if self.manifest.should_skip_file(dockerfile):
+            self.add_diagnostic(
+                phase=DiagnosticPhase.DOCKER,
+                message=f"Skipping {dockerfile.name} generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+            return
+
+        try:
+            context = self.interpolation_context
+            is_script_or_typer = (
+                "typer" in self.manifest.dependencies.dependencies
+                or any(
+                    "project.scripts" in app
+                    for app in self.manifest.filesystem.file_appends.get(
+                        "pyproject.toml", []
                     )
                 )
-                docker_port = (
-                    str(self.manifest.metadata.get("docker_port"))
-                    if self.manifest.metadata.get("docker_port")
-                    else None
+            )
+            docker_port = (
+                str(self.manifest.metadata.get("docker_port"))
+                if self.manifest.metadata.get("docker_port")
+                else None
+            )
+            dockerfile_content = generate_dockerfile(
+                DockerfileSpec(
+                    python_version=context["PYTHON_VERSION"],
+                    project_name=context["PROJECT_NAME"],
+                    package_name=context["PACKAGE_NAME"],
+                    dependencies=self.manifest.dependencies.dependencies,
+                    docker_port=docker_port,
+                    is_script_or_typer=is_script_or_typer,
                 )
-                dockerfile_content = generate_dockerfile(
-                    DockerfileSpec(
-                        python_version=context["PYTHON_VERSION"],
-                        project_name=context["PROJECT_NAME"],
-                        package_name=context["PACKAGE_NAME"],
-                        dependencies=self.manifest.dependencies.dependencies,
-                        docker_port=docker_port,
-                        is_script_or_typer=is_script_or_typer,
-                    )
-                )
-                atomic_write_text(dockerfile, dockerfile_content)
-                self.manifest.filesystem.record_touch(dockerfile)
-                logger.debug("Scaffolded Dockerfile")
-            except OSError as e:
-                raise FileSystemError(
-                    "scaffold container runtime configurations (Dockerfile)",
-                    str(dockerfile),
-                    e,
-                ) from e
+            )
+            atomic_write_text(dockerfile, dockerfile_content)
+            self.record_touch(dockerfile)
+            logger.debug("Scaffolded Dockerfile")
+        except OSError as e:
+            raise FileSystemError(
+                "scaffold container runtime configurations (Dockerfile)",
+                str(dockerfile),
+                e,
+            ) from e
 
     def _write_ide_settings(self) -> None:
         """Writes the aggregated IDE configuration to the appropriate local files."""
         write_ide_settings(
             ide_settings=self.manifest.ide_settings,
-            on_diagnostic=lambda msg, sev: self.manifest.add_diagnostic(
+            on_diagnostic=lambda msg, sev: self.add_diagnostic(
                 phase=DiagnosticPhase.EXECUTOR,
                 message=msg,
                 severity=sev,
             ),
-            on_record_touch=self.manifest.filesystem.record_touch,
+            on_record_touch=self.record_touch,
         )
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
         install_dependencies(
             dependencies_manifest=self.manifest.dependencies,
-            on_diagnostic=lambda msg, sev, detail: self.manifest.add_diagnostic(
+            on_diagnostic=lambda msg, sev, detail: self.add_diagnostic(
                 phase=DiagnosticPhase.EXECUTOR,
                 message=msg,
                 severity=sev,

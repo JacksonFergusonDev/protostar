@@ -1,8 +1,6 @@
 from protostar.manifest import (
     CollisionStrategy,
-    DiagnosticEvent,
     EnvironmentManifest,
-    Severity,
 )
 
 
@@ -182,40 +180,22 @@ def test_add_pre_commit_local_hook(manifest):
     assert "- id: mypy" in manifest.tooling.pre_commit_local_hooks
 
 
-def test_manifest_diagnostic_collection() -> None:
-    manifest = EnvironmentManifest()
-    assert len(manifest.diagnostics) == 0
-
-    manifest.add_diagnostic(
-        phase="TestPhase",
-        message="A test warning occurred.",
-        severity=Severity.WARNING,
-        detail="Some traceback or detail",
-    )
-
-    assert len(manifest.diagnostics) == 1
-    event = manifest.diagnostics[0]
-    assert isinstance(event, DiagnosticEvent)
-    assert event.phase == "TestPhase"
-    assert event.message == "A test warning occurred."
-    assert event.severity == Severity.WARNING
-    assert event.detail == "Some traceback or detail"
-
-
-def test_manifest_diagnostic_collection_with_enum() -> None:
-    from protostar.manifest import DiagnosticPhase
+def test_should_skip_file_pure(tmp_path):
+    """Test that should_skip_file is a pure boolean check based on existence and collision strategy."""
 
     manifest = EnvironmentManifest()
-    manifest.add_diagnostic(
-        phase=DiagnosticPhase.EXECUTOR,
-        message="Execution warning",
-        severity=Severity.WARNING,
-    )
+    existing_file = tmp_path / "exists.txt"
+    existing_file.touch()
+    non_existing_file = tmp_path / "missing.txt"
 
-    assert len(manifest.diagnostics) == 1
-    event = manifest.diagnostics[0]
-    assert event.phase == DiagnosticPhase.EXECUTOR
-    assert event.phase == "Executor"
+    # Default collision strategy is MERGE: existing file returns True, missing returns False
+    assert manifest.should_skip_file(existing_file) is True
+    assert manifest.should_skip_file(non_existing_file) is False
+
+    # OVERWRITE collision strategy: existing file returns False
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    assert manifest.should_skip_file(existing_file) is False
+    assert manifest.should_skip_file(non_existing_file) is False
 
 
 def test_add_ide_extension_aggregates_uniquely():

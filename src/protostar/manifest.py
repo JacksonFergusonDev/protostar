@@ -133,7 +133,6 @@ class FilesystemManifest:
     file_appends: dict[str, list[str]] = field(default_factory=dict)
     vcs_ignores: set[str] = field(default_factory=set)
     workspace_hides: set[str] = field(default_factory=set)
-    touched_paths: set[str] = field(default_factory=set)
 
     def add_directory(self, path: str) -> None:
         """Queues a relative directory path to be scaffolded."""
@@ -162,14 +161,6 @@ class FilesystemManifest:
         """Appends a file or directory pattern to both the VCS ignore and IDE exclusion lists."""
         self.add_vcs_ignore(path)
         self.add_workspace_hide(path)
-
-    def record_touch(self, path: Path | str) -> None:
-        """Records a path as having been modified or created during execution."""
-        try:
-            rel_path = Path(path).resolve().relative_to(Path.cwd().resolve())
-            self.touched_paths.add(rel_path.as_posix())
-        except (ValueError, RuntimeError):
-            self.touched_paths.add(str(path))
 
 
 @dataclass
@@ -267,33 +258,13 @@ class EnvironmentManifest:
     collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
     force_merge: bool = False
     force_replace: bool = False
-    diagnostics: list[DiagnosticEvent] = field(default_factory=list)
 
     def add_ide_setting(self, key: IDESettingKey, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
 
-    def add_diagnostic(
-        self,
-        phase: DiagnosticPhase | str,
-        message: str,
-        severity: Severity = Severity.INFO,
-        detail: str | None = None,
-    ) -> None:
-        """Queues a diagnostic event for the post-execution summary panel."""
-        self.diagnostics.append(
-            DiagnosticEvent(
-                phase=phase, message=message, severity=severity, detail=detail
-            )
+    def should_skip_file(self, target: Path) -> bool:
+        """Returns True if the file exists and collision strategy is not OVERWRITE."""
+        return (
+            target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE
         )
-
-    def should_skip_file(self, target: Path, phase: DiagnosticPhase | str) -> bool:
-        """Returns True if the file exists and collision strategy is not OVERWRITE, logging a SKIP event."""
-        if target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE:
-            self.add_diagnostic(
-                phase=phase,
-                message=f"Skipping {target.name} generation; file already exists.",
-                severity=Severity.SKIP,
-            )
-            return True
-        return False
