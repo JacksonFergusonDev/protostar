@@ -13,23 +13,32 @@ If the answer to either of the first two is "maybe not", the feature probably do
 
 Modules declare intent into the manifest during `build()`. The orchestrator executes all side effects afterward in a single, ordered phase. Never call `subprocess.run` or write to disk inside a module's `build()` method.
 
-### 2. Fail loud, fail early
+### 2. The Engine Bulkhead (State vs. Execution)
+
+Protostar's core engine (`Orchestrator`, `SystemExecutor`, `BootstrapModule`) is strictly headless and deterministic:
+
+- **Decoupled Lifecycle (`plan` vs. `execute`):** The orchestrator separates state calculation (`plan() -> EnvironmentManifest`) from disk mutation (`execute(manifest) -> ExecutionResult`). `plan()` must remain mathematically pure and side-effect free—never mutating disk state or executing subprocesses.
+- **Strict UI Separation:** Engine modules must **never** import or instantiate terminal UI libraries (`rich.console.Console`, `questionary`), invoke interactive prompts, or make terminal-interactive decisions. All interactive wizards, collision strategy prompts (`Merge`, `Overwrite`, `Abort`), remote template trust dialogs, and progress spinners belong exclusively in the CLI layer (`cli.py`).
+- **Structured Boundary Communication:** The CLI passes caller intent into the engine via immutable `InitRequest` objects and receives execution outcomes via `ExecutionResult`. Collision states are signaled by raising `WorkspaceCollisionError(paths=...)`, allowing caller interfaces to decide how to handle conflicts (e.g., interactive prompt vs. CI failure).
+- **Headless Logging:** Engine components emit progress updates via `logging.getLogger("protostar").info(...)`. The CLI layer captures these messages via custom handlers (such as `SpinnerHandler`) to render rich terminal spinners.
+
+### 3. Fail loud, fail early
 
 All system dependency checks happen in `pre_flight()`, before the manifest is built and before anything is written. If a preflight check fails, the environment is untouched. This is a guarantee, not a coincidence.
 
-### 3. Non-destructive by default
+### 4. Non-destructive by default
 
 Protostar never overwrites existing work. `.gitignore` entries are appended and deduplicated. IDE settings are merged. It must be safe to run against a repo that is already partially configured.
 
-### 4. Modules are composable, not coupled
+### 5. Modules are composable, not coupled
 
 A module only interacts with the manifest interface. It must not inspect what other modules are loaded, assume a particular run order, or conditionally change behaviour based on the presence of sibling modules.
 
-### 5. Presets are Independent Pipeline Injections
+### 6. Presets are Independent Pipeline Injections
 
 Presets inherit from the `PresetModule` abstract base class and evaluate independently during the manifest aggregation phase. They do not override language modules; they strictly append domain-specific dependencies and directory scaffolding to the `EnvironmentManifest`.
 
-### 6. Structural Error Handling Paradigm
+### 7. Structural Error Handling Paradigm
 
 To guarantee that the workspace remains deterministic, error management follows a strict type verification structure:
 
@@ -37,13 +46,14 @@ To guarantee that the workspace remains deterministic, error management follows 
   - `ConfigurationError`: For invalid/malformed configuration files or invalid CLI configuration options.
   - `NetworkFetchError`: For remote template downloads, network timeouts, or insecure protocol violations.
   - `TemplateResolutionError`: For template archive extraction failures, unsupported formats, or missing template variables.
+  - `WorkspaceCollisionError`: For detected collisions with existing workspace configuration markers during `plan()`.
   - `MissingDependencyError`: For pre-flight binary checks when required system tools are absent.
   - `CommandExecutionError`: For non-zero return codes from managed subprocesses.
   - `CommandTimeoutError`: For subprocesses exceeding allocated runtime limits.
   - `FileSystemError`: For local disk I/O, file writing, or directory creation failures.
   - `SecurityViolationError`: For unauthorized path traversal attempts (e.g. Zip Slip).
   - `ExecutionAbortedError`: For explicit cancellations during interactive wizard prompts.
-  - `PartialExecutionAbortedError`: For interruptions occurring mid-execution after disk mutations have begun.
+  - `PartialExecutionAbortedError`: For interruptions occurring mid-execution after disk mutations have begun (stores immutable `frozenset[str]` of touched paths).
 - **Respect POSIX Exit Code Mappings:** The top-level CLI main routine automatically routes domain exceptions to standardized POSIX return codes (`os.EX_CONFIG` / 78, `os.EX_TEMPFAIL` / 75, `os.EX_DATAERR` / 65, `os.EX_UNAVAILABLE` / 69, `os.EX_IOERR` / 74, `os.EX_NOPERM` / 77). Ensure your exception selection aligns with the expected POSIX category.
 - **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
 - **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.

@@ -1,15 +1,14 @@
 """Dependency resolution and package installation via uv."""
 
 import enum
+import logging
 from collections.abc import Callable
-
-from rich.console import Console
 
 from .errors import CommandExecutionError, CommandTimeoutError
 from .manifest import DependencyManifest, Severity
 from .system import execute_subprocess
 
-console = Console()
+logger = logging.getLogger("protostar")
 
 __all__ = ["DependencyGroup", "install_dependencies"]
 
@@ -53,10 +52,8 @@ def _install_group(
 
     cmd = ["uv", "add", *group.cli_args, *packages]
     try:
-        with console.status(
-            f"Resolving and installing {len(packages)} {group.label} payloads"
-        ):
-            execute_subprocess(cmd, timeout=600)
+        logger.info(f"Resolving and installing {len(packages)} {group.label} payloads")
+        execute_subprocess(cmd, timeout=600)
     except (CommandExecutionError, CommandTimeoutError) as e:
         detail = e.output_detail if isinstance(e, CommandExecutionError) else None
         on_diagnostic(

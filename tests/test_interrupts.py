@@ -5,7 +5,7 @@ from pytest_mock import MockerFixture
 
 from protostar.cli import main
 from protostar.config import UserConfig
-from protostar.errors import ExecutionAbortedError, PartialExecutionAbortedError
+from protostar.errors import PartialExecutionAbortedError
 from protostar.executor import SystemExecutor
 from protostar.fs import atomic_write_text
 from protostar.manifest import EnvironmentManifest
@@ -13,7 +13,7 @@ from protostar.orchestrator import Orchestrator
 
 
 def test_partial_execution_aborted_error_formatting_with_paths() -> None:
-    touched = {"src/app.py", "pyproject.toml", ".github/workflows/ci.yml"}
+    touched = frozenset({"src/app.py", "pyproject.toml", ".github/workflows/ci.yml"})
     err = PartialExecutionAbortedError(touched)
 
     assert err.touched_paths == touched
@@ -34,9 +34,9 @@ def test_partial_execution_aborted_error_formatting_with_paths() -> None:
 
 
 def test_partial_execution_aborted_error_formatting_without_paths() -> None:
-    err = PartialExecutionAbortedError(set())
+    err = PartialExecutionAbortedError(frozenset())
 
-    assert err.touched_paths == set()
+    assert err.touched_paths == frozenset()
     err_str = str(err)
     assert (
         "Execution was interrupted before Protostar could finish setting up the"
@@ -100,11 +100,14 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
         raise KeyboardInterrupt
 
     mocker.patch.object(SystemExecutor, "execute", fake_execute)
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = orchestrator.plan()
 
     with pytest.raises(PartialExecutionAbortedError) as exc_info:
-        orchestrator.run()
+        orchestrator.execute(manifest)
 
-    assert exc_info.value.touched_paths == {"src", "pyproject.toml"}
+    assert exc_info.value.touched_paths == frozenset({"src", "pyproject.toml"})
 
 
 def test_orchestrator_raises_execution_aborted_error_when_no_files_touched(
@@ -117,11 +120,12 @@ def test_orchestrator_raises_execution_aborted_error_when_no_files_touched(
         raise KeyboardInterrupt
 
     mocker.patch.object(SystemExecutor, "execute", fake_execute)
+    mocker.patch.object(Path, "exists", return_value=False)
 
-    with pytest.raises(
-        ExecutionAbortedError, match=r"Environment initialization cancelled by user\."
-    ):
-        orchestrator.run()
+    manifest = orchestrator.plan()
+
+    with pytest.raises(PartialExecutionAbortedError):
+        orchestrator.execute(manifest)
 
 
 def test_cli_routes_partial_execution_aborted_to_exit_130(
@@ -129,7 +133,7 @@ def test_cli_routes_partial_execution_aborted_to_exit_130(
 ) -> None:
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
-        side_effect=PartialExecutionAbortedError({"pyproject.toml"}),
+        side_effect=PartialExecutionAbortedError(frozenset({"pyproject.toml"})),
     )
     mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
 

@@ -19,11 +19,13 @@ from .errors import (
     ProtostarError,
     SecurityViolationError,
     TemplateResolutionError,
+    WorkspaceCollisionError,
 )
 from .fs import ArchiveFormat
 from .ide import IDEType
 from .manifest import DiagnosticPhase, EnvironmentManifest, Severity
 from .metadata import LicenseType, MetadataKey, PromptType
+from .models import ExecutionResult, InitRequest
 from .modules.base import BootstrapModule
 from .network import GitHost
 from .security import SafelistBinary
@@ -44,9 +46,11 @@ __all__ = [
     "DependencyGroup",
     "DiagnosticPhase",
     "EnvironmentManifest",
+    "ExecutionResult",
     "FileSystemError",
     "GitHost",
     "IDEType",
+    "InitRequest",
     "LicenseType",
     "MetadataKey",
     "MissingDependencyError",
@@ -62,4 +66,5 @@ __all__ = [
     "TargetOS",
     "TemplateResolutionError",
     "WizardSelections",
+    "WorkspaceCollisionError",
 ]

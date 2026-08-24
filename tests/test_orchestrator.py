@@ -3,21 +3,19 @@ from pathlib import Path
 import pytest
 
 from protostar.config import TemplateBlueprint, UserConfig
-from protostar.errors import ExecutionAbortedError, ProtostarError
-from protostar.manifest import CollisionStrategy, Severity, SystemTask
+from protostar.errors import PartialExecutionAbortedError, WorkspaceCollisionError
+from protostar.manifest import CollisionStrategy, Severity
+from protostar.models import ExecutionResult, InitRequest
 from protostar.modules import BootstrapModule
-from protostar.orchestrator import Orchestrator, OrchestratorOptions
+from protostar.orchestrator import Orchestrator
 
 
 @pytest.fixture
 def mock_config() -> UserConfig:
-    """Provides a fresh baseline configuration for DI injections."""
     return UserConfig()
 
 
 class DummyModule(BootstrapModule):
-    """A mock module for testing the orchestrator lifecycle."""
-
     @property
     def name(self):
         return "Dummy"
@@ -35,341 +33,283 @@ class DummyModule(BootstrapModule):
         manifest.dependencies.add("dummy-pkg")
 
 
-def test_orchestrator_lifecycle(mocker, mock_config):
-    """Test that the orchestrator calls pre_flight, build, and executes tasks."""
-    mock_execute = mocker.patch("protostar.orchestrator.SystemExecutor.execute")
-    mocker.patch("protostar.orchestrator.Orchestrator._evaluate_collisions")
+# ---------------------------------------------------------------------------
+# plan() tests
+# ---------------------------------------------------------------------------
 
+
+def test_plan_calls_pre_flight_and_build(mocker, mock_config):
+    """plan() should invoke pre_flight and build on each module."""
     dummy_mod = DummyModule()
+    engine = Orchestrator([dummy_mod], mock_config)
 
-    orchestrator = Orchestrator([dummy_mod], mock_config)
-    orchestrator.run()
+    # No collision markers exist — plan should succeed
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
 
     assert dummy_mod.pre_flight_called
-    mock_execute.assert_called_once()
+    assert "dummy-pkg" in manifest.dependencies.dependencies
 
 
-def test_orchestrator_evaluate_collisions_headless_aborts_by_default(
-    mocker, mock_config
-):
-    """Test that a headless environment safely aborts on collision without the force flag."""
-    # Assuming DummyModule is defined in your test file
+def test_plan_raises_on_collision_without_force_flag(mocker, mock_config):
+    """plan() raises WorkspaceCollisionError when markers exist and no force flag is set."""
     dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod], mock_config)
+    engine = Orchestrator([dummy_mod], mock_config)
 
-    # Simulate the marker existing and a headless environment by mocking the property
-    marker = mocker.MagicMock()
+    marker = mocker.MagicMock(spec=Path)
     marker.exists.return_value = True
-    marker.__str__.return_value = "dummy_marker.txt"
     mocker.patch.object(
         DummyModule,
         "collision_markers",
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=False)
 
-    # The orchestrator should raise a ProtostarError directly instead of printing/exiting
-    with pytest.raises(ProtostarError, match="--force"):
-        orchestrator._evaluate_collisions()
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert marker in exc_info.value.paths
 
 
-def test_orchestrator_evaluate_collisions_headless_with_force_merges(
-    mocker, mock_config
-):
-    """Test that a headless environment respects the --force flag and defaults to MERGE."""
+def test_plan_force_replace_sets_overwrite_strategy(mocker, mock_config):
+    """plan() resolves collisions to OVERWRITE when force_replace=True."""
     dummy_mod = DummyModule()
-
-    # Initialize with the force flag enabled
-    orchestrator = Orchestrator(
-        [dummy_mod], mock_config, options=OrchestratorOptions(force_merge=True)
+    engine = Orchestrator(
+        [dummy_mod], mock_config, request=InitRequest(force_replace=True)
     )
 
-    marker = mocker.MagicMock()
+    marker = mocker.MagicMock(spec=Path)
     marker.exists.return_value = True
-    marker.__str__.return_value = "dummy_marker.txt"
     mocker.patch.object(
         DummyModule,
         "collision_markers",
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=False)
 
-    orchestrator._evaluate_collisions()
-
-    assert orchestrator.manifest.collision_strategy == CollisionStrategy.MERGE
+    manifest = engine.plan()
+    assert manifest.collision_strategy == CollisionStrategy.OVERWRITE
 
 
-def test_orchestrator_evaluate_collisions_interactive_abort(mocker, mock_config):
-    """Test that selecting ABORT in the collision TUI triggers a safe exit."""
+def test_plan_force_merge_sets_merge_strategy(mocker, mock_config):
+    """plan() resolves collisions to MERGE when force_merge=True."""
     dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod], mock_config)
+    engine = Orchestrator(
+        [dummy_mod], mock_config, request=InitRequest(force_merge=True)
+    )
 
-    marker = mocker.MagicMock()
+    marker = mocker.MagicMock(spec=Path)
     marker.exists.return_value = True
-    marker.__str__.return_value = "dummy_marker.txt"
     mocker.patch.object(
         DummyModule,
         "collision_markers",
         new_callable=mocker.PropertyMock,
         return_value=[marker],
     )
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
-    mocker.patch.dict("os.environ", clear=True)
 
-    # Mock questionary to return ABORT
-    mock_questionary = mocker.patch("questionary.select")
-    mock_questionary.return_value.ask.return_value = CollisionStrategy.ABORT
-
-    with pytest.raises(
-        ExecutionAbortedError, match=r"Environment initialization cancelled by user\."
-    ):
-        orchestrator._evaluate_collisions()
+    manifest = engine.plan()
+    assert manifest.collision_strategy == CollisionStrategy.MERGE
 
 
-def test_orchestrator_evaluate_collisions_interactive_cancellation(mocker, mock_config):
-    """Test that cancelling the collision prompt (Ctrl+C / Esc) raises ExecutionAbortedError."""
-    dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod], mock_config)
+def test_plan_returns_fresh_manifest_on_each_call(mocker, mock_config):
+    """Calling plan() twice must return independent EnvironmentManifest instances."""
+    engine = Orchestrator([], mock_config)
+    mocker.patch.object(Path, "exists", return_value=False)
 
-    marker = mocker.MagicMock()
-    marker.exists.return_value = True
-    marker.__str__.return_value = "dummy_marker.txt"
-    mocker.patch.object(
-        DummyModule,
-        "collision_markers",
-        new_callable=mocker.PropertyMock,
-        return_value=[marker],
+    m1 = engine.plan()
+    m2 = engine.plan()
+
+    assert m1 is not m2
+
+
+def test_plan_injects_blueprint_fields(mocker, mock_config):
+    """plan() injects dependencies, directories, and file injections from the blueprint."""
+    blueprint = TemplateBlueprint(
+        dependencies=["fastapi"],
+        dev_dependencies=["pytest"],
+        files={"src/main.py": "print('hello')"},
     )
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
-    mocker.patch.dict("os.environ", clear=True)
-
-    mock_questionary = mocker.patch("questionary.select")
-    mock_questionary.return_value.ask.return_value = None
-
-    with pytest.raises(
-        ExecutionAbortedError, match=r"Environment initialization cancelled by user\."
-    ):
-        orchestrator._evaluate_collisions()
-
-
-def test_orchestrator_evaluate_collisions_interactive_overwrite(mocker, mock_config):
-    """Test that selecting OVERWRITE correctly updates the manifest strategy."""
-    dummy_mod = DummyModule()
-    orchestrator = Orchestrator([dummy_mod], mock_config)
-
-    marker = mocker.MagicMock()
-    marker.exists.return_value = True
-    marker.__str__.return_value = "dummy_marker.txt"
-    mocker.patch.object(
-        DummyModule,
-        "collision_markers",
-        new_callable=mocker.PropertyMock,
-        return_value=[marker],
+    engine = Orchestrator(
+        [], mock_config, request=InitRequest(template_blueprint=blueprint)
     )
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
-    mocker.patch.dict("os.environ", clear=True)
+    mocker.patch.object(Path, "exists", return_value=False)
 
-    mock_questionary = mocker.patch("questionary.select")
-    mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
+    manifest = engine.plan()
 
-    orchestrator._evaluate_collisions()
-    assert orchestrator.manifest.collision_strategy == CollisionStrategy.OVERWRITE
+    assert "fastapi" in manifest.dependencies.dependencies
+    assert "pytest" in manifest.dependencies.dev_dependencies
+    assert "src/main.py" in manifest.filesystem.file_injections
 
 
-def test_orchestrator_run_global_injections(mocker, mock_config):
-    mock_bp = TemplateBlueprint(dev_dependencies=["test-global-dep"])
-    mock_bp.pyproject_injections = {"custom_key": "custom_payload"}
+def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
+    """plan() injects pyproject.toml payloads from blueprint.pyproject_injections."""
+    blueprint = TemplateBlueprint(dev_dependencies=["test-global-dep"])
+    blueprint.pyproject_injections = {"custom_key": "custom_payload"}
 
-    orchestrator = Orchestrator(
-        [], mock_config, options=OrchestratorOptions(blueprint=mock_bp)
+    engine = Orchestrator(
+        [], mock_config, request=InitRequest(template_blueprint=blueprint)
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    assert "test-global-dep" in manifest.dependencies.dev_dependencies
+    assert "custom_payload" in manifest.filesystem.file_appends.get(
+        "pyproject.toml", []
     )
 
-    # Mock evaluation to prevent aborts and SystemExecutor to prevent execution
-    mocker.patch.object(orchestrator, "_evaluate_collisions")
-    mocker.patch("protostar.orchestrator.SystemExecutor.execute")
 
-    orchestrator.run()
+def test_plan_produces_no_diagnostics_for_clean_config(mocker, mock_config):
+    """plan() on a clean workspace produces zero diagnostic events."""
+    engine = Orchestrator([], mock_config)
+    mocker.patch.object(Path, "exists", return_value=False)
 
-    assert "test-global-dep" in orchestrator.manifest.dependencies.dev_dependencies
+    manifest = engine.plan()
+
+    assert len(manifest.diagnostics) == 0
 
 
-def test_orchestrator_run_partial_success(mocker, mock_config):
-    """Test that populated warnings trigger the PARTIAL SUCCESS terminal output."""
-    orchestrator = Orchestrator([], mock_config)
-    mocker.patch.object(orchestrator, "_evaluate_collisions")
+# ---------------------------------------------------------------------------
+# execute() tests
+# ---------------------------------------------------------------------------
+
+
+def test_execute_calls_system_executor(mocker, mock_config):
+    """execute() invokes SystemExecutor.execute() exactly once."""
+    mock_executor = mocker.patch("protostar.orchestrator.SystemExecutor")
+
+    engine = Orchestrator([], mock_config)
+    mocker.patch.object(Path, "exists", return_value=False)
+    manifest = engine.plan()
+
+    result = engine.execute(manifest)
+
+    mock_executor.return_value.execute.assert_called_once()
+    assert isinstance(result, ExecutionResult)
+
+
+def test_execute_returns_touched_paths_and_diagnostics(mocker, mock_config):
+    """execute() wraps touched_paths and diagnostics into an ExecutionResult."""
     mocker.patch("protostar.orchestrator.SystemExecutor")
 
-    # Inject a warning directly into the manifest
-    orchestrator.manifest.add_diagnostic(
-        phase="Executor",
-        message="Mocked resolution failure",
-        severity=Severity.WARNING,
-    )
+    engine = Orchestrator([], mock_config)
+    mocker.patch.object(Path, "exists", return_value=False)
+    manifest = engine.plan()
 
-    mock_print = mocker.patch("protostar.orchestrator.console.print")
+    # Manually simulate executor touching a path and emitting a diagnostic
+    manifest.filesystem.touched_paths.add("pyproject.toml")
+    manifest.add_diagnostic(phase="Test", message="something", severity=Severity.INFO)
 
-    orchestrator.run()
+    result = engine.execute(manifest)
 
-    # Safely extract text only from print calls that actually contained arguments
-    printed_text = " ".join(
-        str(call.args[0]) for call in mock_print.call_args_list if call.args
-    )
-    assert "PARTIAL SUCCESS" in printed_text
+    assert "pyproject.toml" in result.touched_paths
+    assert result.diagnostics[0].message == "something"
 
 
-def test_orchestrator_runs_cleanly_without_warnings(mocker) -> None:
-    """Test that the orchestrator evaluates a valid configuration without raising diagnostics."""
-    # 1. Create a pristine config instance
-    config = UserConfig()
+def test_execute_raises_partial_abort_on_keyboard_interrupt(mocker, mock_config):
+    """execute() converts KeyboardInterrupt to PartialExecutionAbortedError."""
+    mock_executor_cls = mocker.patch("protostar.orchestrator.SystemExecutor")
+    mock_executor_cls.return_value.execute.side_effect = KeyboardInterrupt
 
-    # 2. Mock execution boundaries to isolate the test
+    engine = Orchestrator([], mock_config)
+    mocker.patch.object(Path, "exists", return_value=False)
+    manifest = engine.plan()
+    manifest.filesystem.touched_paths.add("some_file.py")
+
+    with pytest.raises(PartialExecutionAbortedError) as exc_info:
+        engine.execute(manifest)
+
+    assert "some_file.py" in exc_info.value.touched_paths
+
+
+def test_execute_does_not_rebuild_manifest(mocker, mock_config):
+    """execute() must not call pre_flight or build — it takes the manifest as-is."""
+    dummy_mod = DummyModule()
     mocker.patch("protostar.orchestrator.SystemExecutor")
+    mocker.patch.object(Path, "exists", return_value=False)
 
-    orchestrator = Orchestrator(modules=[], user_config=config)
+    engine = Orchestrator([dummy_mod], mock_config)
+    manifest = engine.plan()
 
-    # Mock collision evaluation so it doesn't try to prompt or abort in the sandbox
-    mocker.patch.object(orchestrator, "_evaluate_collisions")
+    # Remove the task that plan() added, then verify execute doesn't re-add it
+    manifest.tasks.system_tasks.clear()
 
-    # 3. Run the orchestrator
-    orchestrator.run()
+    engine.execute(manifest)
 
-    # 4. Verify no diagnostic events were generated, confirming strict evaluation passed
-    assert len(orchestrator.manifest.diagnostics) == 0
+    assert len(manifest.tasks.system_tasks) == 0
 
 
-def test_orchestrator_panel_rendering(mocker, capsys) -> None:
-    # 1. Inject a diagnostic event directly into an empty orchestrator
-    config = UserConfig()
-    orchestrator = Orchestrator(modules=[], user_config=config)
+# ---------------------------------------------------------------------------
+# InitRequest defaults
+# ---------------------------------------------------------------------------
 
-    mocker.patch("protostar.orchestrator.SystemExecutor")
-    mocker.patch.object(orchestrator, "_evaluate_collisions")
 
-    orchestrator.run()
+def test_init_request_defaults():
+    """InitRequest initializes with safe, no-op defaults."""
+    req = InitRequest()
+    assert req.template_blueprint is None
+    assert req.python_version is None
+    assert req.docker is False
+    assert req.force_merge is False
+    assert req.force_replace is False
+    assert req.metadata is None
+    assert req.is_external is False
+    assert req.is_user_aliased is False
 
-    # No diagnostics = SUCCESS output
-    captured = capsys.readouterr()
-    assert "SUCCESS" in captured.out
-    assert "PARTIAL SUCCESS" not in captured.out
-    assert "Diagnostic Summary" not in captured.out
 
-    # 2. Add a warning and re-run
-    orchestrator.manifest.add_diagnostic(
-        phase="Test", message="Simulated warning", severity=Severity.WARNING
+def test_orchestrator_defaults_to_empty_request(mock_config):
+    """Orchestrator initialized without a request defaults to a no-op InitRequest."""
+    engine = Orchestrator([], mock_config)
+    assert isinstance(engine.request, InitRequest)
+    assert engine.request.docker is False
+
+
+# ---------------------------------------------------------------------------
+# Trust boundary (now belongs in CLI; verified absent from Orchestrator)
+# ---------------------------------------------------------------------------
+
+
+def test_orchestrator_has_no_trust_method(mock_config):
+    """Verify that _prompt_remote_trust no longer exists on Orchestrator."""
+    engine = Orchestrator([], mock_config)
+    assert not hasattr(engine, "_prompt_remote_trust")
+
+
+def test_orchestrator_has_no_run_method(mock_config):
+    """Verify that the monolithic run() method no longer exists on Orchestrator."""
+    engine = Orchestrator([], mock_config)
+    assert not hasattr(engine, "run")
+
+
+def test_workspace_collision_error_carries_paths():
+    """WorkspaceCollisionError exposes the conflicting paths as a frozenset."""
+    paths = frozenset([Path("pyproject.toml"), Path(".python-version")])
+    err = WorkspaceCollisionError(paths=paths)
+    assert err.paths == paths
+    assert "pyproject.toml" in str(err)
+
+
+def test_plan_metadata_injected_into_manifest(mocker, mock_config):
+    """plan() merges request.metadata into the manifest's metadata dict."""
+    engine = Orchestrator(
+        [],
+        mock_config,
+        request=InitRequest(metadata={"author_name": "Ada Lovelace"}),
     )
-    orchestrator.run()
+    mocker.patch.object(Path, "exists", return_value=False)
 
-    captured = capsys.readouterr()
-    assert "Diagnostic Summary" in captured.out
-    assert "Simulated warning" in captured.out
-    assert "PARTIAL SUCCESS" in captured.out
+    manifest = engine.plan()
 
-
-def test_orchestrator_injects_files_from_config(mocker):
-    blueprint = TemplateBlueprint(files={"src/main.py": "print('hello')"})
-
-    # Patch the method directly on the source class to guarantee interception,
-    # preventing the real SystemExecutor from polluting the host disk.
-    mocker.patch("protostar.executor.SystemExecutor.execute")
-
-    orchestrator = Orchestrator(
-        modules=[],
-        user_config=UserConfig(),
-        options=OrchestratorOptions(blueprint=blueprint),
-    )
-    orchestrator.run()
-
-    assert "src/main.py" in orchestrator.manifest.filesystem.file_injections
+    assert manifest.metadata.get("author_name") == "Ada Lovelace"
 
 
-@pytest.fixture
-def base_orchestrator() -> Orchestrator:
-    """Provides a baseline orchestrator with no external flags."""
-    return Orchestrator(modules=[], user_config=UserConfig())
+def test_plan_does_not_mutate_filesystem(mocker, tmp_path, mock_config):
+    """plan() must not record any touched_paths — all disk writes happen in execute()."""
+    engine = Orchestrator([], mock_config)
+    mocker.patch.object(Path, "exists", return_value=False)
 
+    manifest = engine.plan()
 
-def test_trust_dialog_bypassed_for_local_templates(base_orchestrator, mocker) -> None:
-    """Verifies that local templates bypass the trust dialog entirely."""
-    base_orchestrator.is_external = False
-    base_orchestrator.manifest.tasks.system_tasks.append(SystemTask(["echo", "danger"]))
-
-    mock_confirm = mocker.patch("questionary.confirm")
-    base_orchestrator._prompt_remote_trust()  # Should return immediately
-    mock_confirm.assert_not_called()
-
-
-def test_trust_dialog_bypassed_for_user_aliases(base_orchestrator, mocker) -> None:
-    """Verifies that external templates declared in the user config bypass the prompt."""
-    base_orchestrator.is_external = True
-    base_orchestrator.is_user_aliased = True
-    base_orchestrator.manifest.tasks.system_tasks.append(SystemTask(["echo", "danger"]))
-
-    mock_confirm = mocker.patch("questionary.confirm")
-    base_orchestrator._prompt_remote_trust()  # Should return immediately
-    mock_confirm.assert_not_called()
-
-
-def test_trust_dialog_fails_in_non_interactive_env(base_orchestrator, mocker) -> None:
-    """Verifies that untrusted remote templates with executable tasks abort in headless CI."""
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=False)
-
-    base_orchestrator.is_external = True
-    base_orchestrator.is_user_aliased = False
-    base_orchestrator.manifest.tasks.system_tasks.append(SystemTask(["echo", "danger"]))
-
-    with pytest.raises(
-        ProtostarError, match="Untrusted external template contains executable tasks"
-    ):
-        base_orchestrator._prompt_remote_trust()
-
-
-def test_trust_dialog_aborts_on_user_decline(base_orchestrator, mocker) -> None:
-    """Verifies that an interactive 'No' raises an ExecutionAbortedError."""
-    mocker.patch("protostar.orchestrator.is_interactive", return_value=True)
-    mock_confirm = mocker.patch("questionary.confirm")
-    # Simulate user answering 'False' (No) to the prompt
-    mock_confirm.return_value.ask.return_value = False
-
-    base_orchestrator.is_external = True
-    base_orchestrator.is_user_aliased = False
-    base_orchestrator.manifest.tasks.post_install_tasks.append(
-        SystemTask(["npm", "run", "sketchy"])
-    )
-
-    with pytest.raises(ExecutionAbortedError, match="Untrusted external source"):
-        base_orchestrator._prompt_remote_trust()
-
-
-def test_orchestrator_options_defaults():
-    """Verifies that Orchestrator initializes with clean default options."""
-    orchestrator = Orchestrator(modules=[], user_config=UserConfig())
-    assert isinstance(orchestrator.options, OrchestratorOptions)
-    assert orchestrator.blueprint is None
-    assert orchestrator.docker is False
-    assert orchestrator.force_merge is False
-    assert orchestrator.force_replace is False
-    assert orchestrator.metadata is None
-    assert orchestrator.is_external is False
-    assert orchestrator.is_user_aliased is False
-
-
-def test_orchestrator_with_custom_options():
-    """Verifies that Orchestrator correctly unpacks custom OrchestratorOptions."""
-    options = OrchestratorOptions(
-        docker=True,
-        force_merge=True,
-        metadata={"project_name": "cosmo"},
-        is_external=True,
-        is_user_aliased=True,
-    )
-    orchestrator = Orchestrator(modules=[], user_config=UserConfig(), options=options)
-    assert orchestrator.options is options
-    assert orchestrator.docker is True
-    assert orchestrator.force_merge is True
-    assert orchestrator.force_replace is False
-    assert orchestrator.metadata == {"project_name": "cosmo"}
-    assert orchestrator.is_external is True
-    assert orchestrator.is_user_aliased is True
-    assert orchestrator.manifest.collision_strategy == CollisionStrategy.MERGE
+    # plan() must not record any touched paths — all disk I/O is deferred to execute()
+    assert len(manifest.filesystem.touched_paths) == 0

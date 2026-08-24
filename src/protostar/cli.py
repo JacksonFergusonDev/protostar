@@ -20,6 +20,7 @@ from rich import box
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
+from rich.status import Status
 from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
@@ -38,22 +39,40 @@ from .errors import (
     ProtostarError,
     SecurityViolationError,
     TemplateResolutionError,
+    WorkspaceCollisionError,
 )
 from .fs import atomic_write_text
+from .manifest import CollisionStrategy, Severity
 from .metadata import resolve_auto_metadata
+from .models import InitRequest
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
     PythonCore,
     SystemWorkspaceModule,
 )
-from .orchestrator import Orchestrator, OrchestratorOptions
+from .orchestrator import Orchestrator
+from .system import is_interactive
 from .wizard import (
     resolve_missing_variables,
     run_init_wizard,
 )
 
 console = Console()
+
+
+class SpinnerHandler(logging.Handler):
+    """Routes INFO-level logs to update a rich Status spinner."""
+
+    def __init__(self, status_obj: Status) -> None:
+        super().__init__(level=logging.INFO)
+        self.status_obj = status_obj
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Processes the log record and updates the status spinner if level is INFO."""
+        # Only update the spinner for INFO logs (ignore DEBUG)
+        if record.levelno == logging.INFO:
+            self.status_obj.update(record.getMessage())
 
 
 def _print_templates_and_exit(error_msg: str | None = None) -> None:
@@ -96,6 +115,181 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
 
     # Exit with 1 if it was a failure, 0 if it was an intentional listing
     sys.exit(1 if error_msg else 0)
+
+
+def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
+    """Runs the full plan → trust → execute → render pipeline for the CLI.
+
+    Encapsulates the collision prompt loop, remote trust boundary, execution,
+    and diagnostic rendering so both the argument-driven and wizard-driven
+    entry points share the same presentation logic.
+
+    Args:
+        engine: A fully constructed Orchestrator.
+        request: The InitRequest used to build the engine. May be replaced if
+            the user resolves a collision interactively.
+    """
+    import questionary
+    from questionary import Choice
+
+    # --- Collision Loop ---
+    try:
+        manifest = engine.plan()
+    except WorkspaceCollisionError as e:
+        console.print(
+            "\n[bold yellow]Gravitational Anomaly:[/bold yellow] Protostar detected "
+            "existing configuration files in the workspace."
+        )
+        for path in sorted(e.paths):
+            console.print(f"  - {path}")
+
+        if not is_interactive():
+            raise ProtostarError(
+                "Orbital Collision Detected: The target workspace is not empty.\n"
+                "Aborting to prevent destructive mutations in a non-interactive context.\n"
+                "Use the --force-merge or --force-replace flag to bypass this check."
+            ) from e
+
+        choice = questionary.select(
+            "\nHow would you like to proceed?",
+            choices=[
+                Choice(
+                    title="Merge     (Safely injects missing configs; preserves existing user data)",
+                    value=CollisionStrategy.MERGE,
+                ),
+                Choice(
+                    title="Overwrite (Forces injection; updates existing keys to match Protostar)",
+                    value=CollisionStrategy.OVERWRITE,
+                ),
+                Choice(
+                    title="Abort     (Safely exit without modifying the environment)",
+                    value=CollisionStrategy.ABORT,
+                ),
+            ],
+            style=questionary.Style(
+                [
+                    ("answer", "fg:cyan bold"),
+                    ("pointer", "fg:cyan bold"),
+                    ("selected", "fg:cyan"),
+                ]
+            ),
+        ).ask()
+
+        if not choice or choice == CollisionStrategy.ABORT:
+            raise ExecutionAbortedError(
+                "Environment initialization cancelled by user."
+            ) from None
+
+        # Rebuild engine with updated force flag and re-plan with a fresh manifest
+        if choice == CollisionStrategy.MERGE:
+            request = InitRequest(
+                template_blueprint=request.template_blueprint,
+                python_version=request.python_version,
+                docker=request.docker,
+                force_merge=True,
+                force_replace=False,
+                metadata=request.metadata,
+                is_external=request.is_external,
+                is_user_aliased=request.is_user_aliased,
+            )
+        else:
+            request = InitRequest(
+                template_blueprint=request.template_blueprint,
+                python_version=request.python_version,
+                docker=request.docker,
+                force_merge=False,
+                force_replace=True,
+                metadata=request.metadata,
+                is_external=request.is_external,
+                is_user_aliased=request.is_user_aliased,
+            )
+        engine = Orchestrator(engine.modules, engine.user_config, request=request)
+        manifest = engine.plan()
+
+    # --- Trust Boundary ---
+    if request.is_external and not request.is_user_aliased:
+        tasks = [*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks]
+        if tasks:
+            console.print(
+                "\n[bold red]⚠️  REMOTE TEMPLATE WARNING ⚠️[/bold red]\n\n"
+                "This template was loaded from an external source and will execute "
+                "the following shell commands on your system:"
+            )
+            for task in tasks:
+                console.print(f"  - {' '.join(task.command)}")
+            console.print()
+
+            if not is_interactive():
+                raise ProtostarError(
+                    "Execution aborted: Untrusted external template contains executable tasks.\n"
+                    "To trust this template in non-interactive environments, add its URL to "
+                    "the [templates] block in your global configuration."
+                )
+
+            confirmed = questionary.confirm(
+                "Do you trust this source to modify your system?", default=False
+            ).ask()
+            if not confirmed or confirmed is None:
+                raise ExecutionAbortedError(
+                    "Execution cancelled: Untrusted external source."
+                )
+
+    # --- Execute ---
+    console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
+
+    logger = logging.getLogger("protostar")
+    # Temporarily drop the log level to INFO so the spinner receives the events
+    previous_level = logger.level
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.setLevel(logging.INFO)
+
+    with console.status("Initializing...") as status:
+        spinner_handler = SpinnerHandler(status)
+        logger.addHandler(spinner_handler)
+        try:
+            result = engine.execute(manifest)
+        finally:
+            logger.removeHandler(spinner_handler)
+            logger.setLevel(previous_level)
+
+    # --- Render Diagnostics ---
+    has_warnings = False
+    if result.diagnostics:
+        lines = []
+        for event in result.diagnostics:
+            if event.severity == Severity.WARNING:
+                has_warnings = True
+                lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
+            elif event.severity == Severity.SKIP:
+                lines.append(
+                    rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
+                )
+            else:
+                lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
+
+            if event.detail:
+                lines.append(f"  [dim]{event.detail}[/dim]")
+
+        console.print()
+        console.print(
+            Panel(
+                "\n".join(lines),
+                title="[bold]Diagnostic Summary",
+                border_style="yellow" if has_warnings else "blue",
+                expand=False,
+                padding=(1, 2),
+            )
+        )
+
+    if has_warnings:
+        console.print(
+            "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
+            "but some non-critical tasks encountered issues."
+        )
+    else:
+        console.print(
+            "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
+        )
 
 
 def handle_init(args: argparse.Namespace) -> None:
@@ -223,9 +417,8 @@ def handle_init(args: argparse.Namespace) -> None:
 
     resolved_metadata = resolve_auto_metadata(required_keys)
 
-    # Execute
-    options = OrchestratorOptions(
-        blueprint=blueprint,
+    request = InitRequest(
+        template_blueprint=blueprint,
         docker=args.docker,
         force_merge=getattr(args, "force_merge", False),
         force_replace=getattr(args, "force_replace", False),
@@ -233,12 +426,8 @@ def handle_init(args: argparse.Namespace) -> None:
         is_external=is_external,
         is_user_aliased=is_user_aliased,
     )
-    engine = Orchestrator(
-        modules,
-        user_config,
-        options=options,
-    )
-    engine.run()
+    engine = Orchestrator(modules, user_config, request=request)
+    _run_engine(engine, request)
 
 
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
@@ -566,8 +755,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             modules.insert(0, SystemWorkspaceModule())
             modules.insert(1, PythonCore())
 
-            options = OrchestratorOptions(
-                blueprint=selections.blueprint,
+            request = InitRequest(
+                template_blueprint=selections.blueprint,
                 docker=selections.docker,
                 force_merge=False,
                 force_replace=False,
@@ -575,12 +764,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 is_external=selections.is_external,
                 is_user_aliased=selections.is_user_aliased,
             )
-            engine = Orchestrator(
-                modules,
-                user_config,
-                options=options,
-            )
-            engine.run()
+            engine = Orchestrator(modules, user_config, request=request)
+            _run_engine(engine, request)
             sys.exit(0)
 
 

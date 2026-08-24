@@ -1,5 +1,9 @@
 """Domain-specific exceptions for Protostar."""
 
+from __future__ import annotations
+
+from pathlib import Path
+
 DOCS_BASE_URL = "https://protostar.readthedocs.io/en/stable/"
 
 
@@ -181,12 +185,12 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
     """Raised when execution is interrupted after disk mutations have begun."""
 
     def __init__(
-        self, touched_paths: set[str], *, docs_path: str | None = None
+        self, touched_paths: frozenset[str], *, docs_path: str | None = None
     ) -> None:
-        """Initializes the exception with the set of paths modified before the interrupt.
+        """Initializes the exception with the frozenset of paths modified before the interrupt.
 
         Args:
-            touched_paths: Set of file and directory paths touched on disk.
+            touched_paths: Immutable set of file and directory paths touched on disk.
             docs_path: Optional path to relevant documentation.
         """
         if touched_paths:
@@ -205,6 +209,30 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
         hint = "Inspect the modified paths or clean up the workspace before re-running Protostar."
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.touched_paths = touched_paths
+
+
+class WorkspaceCollisionError(ProtostarError):
+    """Raised by plan() when collision markers exist and no force flag was provided.
+
+    Carries a structured set of conflicting paths so callers can programmatically
+    present the collision details or decide a resolution strategy without re-scanning
+    the filesystem.
+    """
+
+    def __init__(self, paths: frozenset[Path]) -> None:
+        """Initializes the error with the set of conflicting workspace paths.
+
+        Args:
+            paths: The set of existing collision-marker paths detected on disk.
+        """
+        bulleted = "\n".join(f"  - {p}" for p in sorted(paths))
+        message = (
+            "Orbital Collision Detected: existing configuration files found in the workspace:\n"
+            f"{bulleted}\n"
+            "Use --force-merge or --force-replace to bypass, or resolve interactively."
+        )
+        super().__init__(message)
+        self.paths = paths
 
 
 class SecurityViolationError(ProtostarError):

@@ -730,8 +730,8 @@ def test_executor_run_tasks(mocker, mock_config):
 
 
 def test_executor_uses_custom_task_description(mocker):
-    # Mock the console and subprocess
-    mock_status = mocker.patch("protostar.executor.console.status")
+    # Mock the logger and subprocess
+    mock_info = mocker.patch("protostar.executor.logger.info")
     mocker.patch("protostar.executor.execute_subprocess")
 
     manifest = EnvironmentManifest()
@@ -743,11 +743,11 @@ def test_executor_uses_custom_task_description(mocker):
 
     executor._run_tasks(manifest.tasks.system_tasks)
 
-    mock_status.assert_called_with("Initializing git repo")
+    mock_info.assert_called_with("Initializing git repo")
 
 
 def test_executor_task_description_fallback(mocker):
-    mock_status = mocker.patch("protostar.executor.console.status")
+    mock_info = mocker.patch("protostar.executor.logger.info")
     mocker.patch("protostar.executor.execute_subprocess")
 
     manifest = EnvironmentManifest()
@@ -760,7 +760,7 @@ def test_executor_task_description_fallback(mocker):
     executor._run_tasks(manifest.tasks.system_tasks)
 
     # Verify the fallback logic stripped the path and grabbed the binary name
-    mock_status.assert_called_once_with("Propelling sequence: pre-commit")
+    mock_info.assert_called_once_with("Propelling sequence: pre-commit")
 
 
 def test_executor_handles_write_permission_denied(mocker):
