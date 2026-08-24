@@ -3,8 +3,6 @@ import logging
 import tomllib
 from pathlib import Path
 
-from rich.console import Console
-
 from .appends import append_marker_blocks
 from .config import UserConfig
 from .dependencies import install_dependencies
@@ -43,7 +41,6 @@ from .workspace import (
 )
 
 logger = logging.getLogger("protostar")
-console = Console()
 
 __all__ = ["SystemExecutor"]
 
@@ -222,8 +219,8 @@ class SystemExecutor:
             enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Propelling sequence: {binary_name}"
-            with console.status(msg):
-                execute_subprocess(task.command, timeout=task.timeout)
+            logger.info(msg)
+            execute_subprocess(task.command, timeout=task.timeout)
 
     def _write_ci_workflow(self) -> None:
         """Assembles and writes the .github/workflows/ci.yml file if requested."""
