@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787687729141,
+  "lastUpdate": 1787688353424,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7587,6 +7587,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 224.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "68d4fddcd1f75a8ba318ba4a767fc7a1c58e8dd7",
+          "message": "fix(cli): centralize argument parser errors into InvalidUsageError (#197)\n\nOverride JsonAwareParser.error to raise InvalidUsageError rather than delegating\nto super().error in human mode. This routes all argparse parsing failures\n(invalid subcommands, missing required arguments, bad choices) through the\ncentralized ProtostarError handler, ensuring uniform Rich error panel presentation\nin human mode, structured error payloads in JSON mode, and consistent POSIX EX_USAGE\nexit codes across all CLI usage errors.",
+          "timestamp": "2026-08-25T13:04:53-07:00",
+          "tree_id": "47d27cf3653a0e0c92d4b67a60c5bdc6f8190ef5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/68d4fddcd1f75a8ba318ba4a767fc7a1c58e8dd7"
+        },
+        "date": 1787688352837,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 150.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.18,
             "unit": "ms"
           }
         ]
