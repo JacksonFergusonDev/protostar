@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787692052520,
+  "lastUpdate": 1787696383651,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7689,6 +7689,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 217.74,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f5c0f5617102d8047e3779a2af82df59407881de",
+          "message": "refactor(docs): robust introspection-driven template schema fixture generation (#199)\n\n- Refactor generate_template_schema_fixture in scripts/generate_doc_fixtures.py to use tomlkit AST generation rather than manual string concatenation.\n- Dynamically introspect TemplateBlueprint dataclass fields to ensure 100% schema coverage and prevent documentation drift.\n- Add mock examples and documentation comments for missing fields (dev_dependencies, appends).\n- Format static file and AST injections with multiline literal strings (''') for clean TOML formatting.\n- Regenerate docs/fixtures/template_schema.toml.",
+          "timestamp": "2026-08-25T15:18:47-07:00",
+          "tree_id": "eed1fff48ed7c3277343a9efac476a79b0e2bb24",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f5c0f5617102d8047e3779a2af82df59407881de"
+        },
+        "date": 1787696382799,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 126.63,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 182.85,
             "unit": "ms"
           }
         ]
