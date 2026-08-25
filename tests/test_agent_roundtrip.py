@@ -27,7 +27,7 @@ def test_agent_dry_run_and_execute(capsys, monkeypatch, tmp_path):
     # Dry run
     monkeypatch.setattr(
         "sys.argv",
-        ["protostar", "init", "--template", "minimal", "--dry-run", "--json"],
+        ["protostar", "init", "--template", "cli", "--dry-run", "--json"],
     )
     with pytest.raises(SystemExit) as exc:
         main()
@@ -41,11 +41,9 @@ def test_agent_dry_run_and_execute(capsys, monkeypatch, tmp_path):
 
     # Execute
     monkeypatch.setattr(
-        "sys.argv", ["protostar", "init", "--template", "minimal", "--json"]
+        "sys.argv", ["protostar", "init", "--template", "cli", "--json"]
     )
-    with pytest.raises(SystemExit) as exc:
-        main()
-    assert exc.value.code == 0
+    main()
 
     captured = capsys.readouterr()
     payload = json.loads(captured.out.splitlines()[-1])

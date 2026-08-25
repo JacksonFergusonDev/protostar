@@ -859,7 +859,7 @@ def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):
     (tmp_path / "pyproject.toml").touch()
     monkeypatch.setattr("protostar.cli.is_json_mode", True)
     monkeypatch.setattr(
-        "sys.argv", ["protostar", "init", "--template", "minimal", "--json"]
+        "sys.argv", ["protostar", "init", "--template", "cli", "--json"]
     )
     with pytest.raises(SystemExit) as exc:
         main()
