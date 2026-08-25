@@ -185,6 +185,28 @@ Now you can run `protostar init --template backend` anywhere, and it will automa
 
 *Note: To prevent unauthorized remote code execution, external templates containing shell tasks are secured behind an explicit Interactive Trust Dialog. Templates mapped as global aliases bypass this prompt automatically.*
 
+### Authoring Custom Templates & Schema Validation
+
+You can author custom templates to enforce organizational standards across dependencies, linter configurations, and directory structures. Protostar can export the official JSON Schema to enable real-time linting and autocompletion in editors like VS Code (via *Even Better TOML*):
+
+```bash
+# Export the template JSON Schema
+protostar export-schema --json > protostar-template.schema.json
+```
+
+Add the schema header to the top of your custom template file for editor validation:
+
+```toml
+#:schema ./protostar-template.schema.json
+
+# --- Dependencies ---
+dependencies = ["fastapi", "uvicorn"]
+ruff = true
+pytest = true
+```
+
+For full template specifications, AST injections, and multi-file repository templating, visit the **[Template Authoring Guide](https://protostar.readthedocs.io/en/stable/usage/authoring-templates/)**.
+
 ---
 
 ## 🤝 Collaboration
