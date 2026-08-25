@@ -2,6 +2,7 @@
 
 import argparse
 import importlib.resources
+import json
 import logging
 import os
 import platform
@@ -58,7 +59,36 @@ from .wizard import (
     run_init_wizard,
 )
 
+# ---------------------------------------------------------------------------
+# JSON Mode Infrastructure
+# ---------------------------------------------------------------------------
+
+# Marks the agent interface as experimental. Increment when the schema
+# stabilises and a compatibility commitment is made.
+CLI_API_VERSION: int = 0
+
+# Evaluated at import time so the flag is position-independent (e.g. both
+# `protostar --json init` and `protostar init --json` are equivalent).
+is_json_mode: bool = "--json" in sys.argv
+
+# Primary Rich console for human-readable output to stdout.
 console = Console()
+
+# Dedicated stderr console used in JSON mode to keep stdout clean.
+_stderr_console = Console(stderr=True)
+
+
+def emit_json(payload: dict[str, Any]) -> None:
+    """Writes exactly one JSON document to stdout and flushes immediately.
+
+    This is the sole exit path for all machine-readable output. Callers are
+    responsible for calling ``sys.exit()`` immediately after to ensure exactly
+    one document is emitted per invocation.
+
+    Args:
+        payload: A JSON-serializable dictionary to emit.
+    """
+    print(json.dumps(payload, sort_keys=True), flush=True)  # noqa: T201
 
 
 class SpinnerHandler(logging.Handler):
@@ -770,11 +800,18 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
 
 def configure_logging() -> None:
-    """Injects Rich tracebacks and debug handlers into the global logger."""
+    """Injects Rich tracebacks and debug handlers into the global logger.
+
+    In JSON mode, the handler writes to ``stderr`` to preserve ``stdout`` for
+    the exclusive use of machine-readable JSON payloads.
+    """
+    log_console = _stderr_console if is_json_mode else console
     logger = logging.getLogger("protostar")
     logger.setLevel(logging.DEBUG)
     logger.handlers.clear()
-    logger.addHandler(RichHandler(console=console, markup=True, rich_tracebacks=True))
+    logger.addHandler(
+        RichHandler(console=log_console, markup=True, rich_tracebacks=True)
+    )
 
 
 def handle_config(args: argparse.Namespace) -> None:
