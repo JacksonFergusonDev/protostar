@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787688353424,
+  "lastUpdate": 1787689885131,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7621,6 +7621,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.18,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "56110c410edaf5cab9e3192679e1758d916c6a93",
+          "message": "docs: add cli dry run fixture and svg preview (#198)",
+          "timestamp": "2026-08-25T13:30:32-07:00",
+          "tree_id": "805b1f9faa33cc661e08654ce8e41e3edd36567d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/56110c410edaf5cab9e3192679e1758d916c6a93"
+        },
+        "date": 1787689884534,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 119.23,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 169.48,
             "unit": "ms"
           }
         ]
