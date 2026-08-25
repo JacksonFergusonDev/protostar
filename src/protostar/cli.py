@@ -473,16 +473,16 @@ def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
         console.print("\n[bold cyan]Tasks[/bold cyan]")
         for i, task in enumerate(manifest.tasks.system_tasks, 1):
             cmd = shlex.join(task.command)
-            console.print(f"  {i}. [dim]({task.description})[/dim] {cmd}")
+            console.print(f"  {i}. {cmd}")
         offset = len(manifest.tasks.system_tasks)
         for i, task in enumerate(manifest.tasks.post_install_tasks, offset + 1):
             cmd = shlex.join(task.command)
-            console.print(f"  {i}. [dim]({task.description})[/dim] {cmd}")
+            console.print(f"  {i}. {cmd}")
 
     if files_to_create > 0:
         console.print("\n[bold cyan]Filesystem[/bold cyan]")
 
-        tree = Tree("📁 [bold].[/bold] (Workspace Root)")
+        tree = Tree("[bold].[/bold] (Workspace Root)")
         all_paths = set(manifest.filesystem.directories)
         all_paths.update(manifest.filesystem.file_injections.keys())
         all_paths.update(manifest.filesystem.file_appends.keys())
@@ -502,9 +502,11 @@ def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
                         path not in manifest.filesystem.directories
                     )
                     if is_file:
-                        nodes[current] = nodes[parent].add(f"📄 {part}")
+                        nodes[current] = nodes[parent].add(f"{part}")
                     else:
-                        nodes[current] = nodes[parent].add(f"📁 {part}")
+                        nodes[current] = nodes[parent].add(
+                            f"[bold blue]{part}/[/bold blue]"
+                        )
 
         console.print(tree)
 
