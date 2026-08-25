@@ -19,6 +19,7 @@ from typing import Any, ClassVar, cast
 import argcomplete
 from rich import box
 from rich.console import Console
+from rich.json import JSON
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.status import Status
@@ -806,8 +807,8 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         # In JSON mode, stdout should be compact for agents
         print(json.dumps(schema, separators=(",", ":")))  # noqa: T201
     else:
-        # Human mode: pretty print
-        print(json.dumps(schema, indent=2))  # noqa: T201
+        # Human mode: pretty print with syntax highlighting
+        console.print(JSON.from_data(schema))
 
     sys.exit(0)
 
