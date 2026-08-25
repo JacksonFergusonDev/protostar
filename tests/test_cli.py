@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from protostar.cli import (
+    JsonAwareParser,
     ProtoHelpFormatter,
     _parse_dynamic_kwargs,
     _resolve_usage_doc_path,
@@ -869,3 +870,95 @@ def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "WorkspaceCollisionError"
     assert "pyproject.toml" in payload["error"]["paths"][0]
+
+
+def test_resolve_usage_doc_path_with_leading_flags(mocker):
+    """Test that doc path resolution extracts the subcommand even if flags precede it."""
+    mocker.patch.object(sys, "argv", ["protostar", "-v", "init", "--bad"])
+    assert _resolve_usage_doc_path() == "usage/init/"
+
+
+def test_json_aware_parser_raises_invalid_usage_error():
+    """Test that JsonAwareParser.error raises InvalidUsageError with doc path."""
+    parser = JsonAwareParser()
+    with pytest.raises(InvalidUsageError) as exc_info:
+        parser.error("test parse error")
+    assert "test parse error" in str(exc_info.value)
+
+
+def test_main_invalid_subcommand_human_mode(mocker):
+    """Test that an invalid subcommand in human mode is pretty-printed and exits with EX_USAGE."""
+    mocker.patch.object(sys, "argv", ["protostar", "wrong-command"])
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_USAGE)
+    assert mock_print.call_count >= 1
+    # Check that the Rich Panel was passed to console.print
+    from rich.panel import Panel
+
+    panels = [
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], Panel)
+    ]
+    assert len(panels) == 1
+    assert "invalid choice" in str(panels[0].renderable)
+    assert "wrong-command" in str(panels[0].renderable)
+
+
+def test_main_invalid_subcommand_json_mode(capsys, monkeypatch):
+    """Test that an invalid subcommand in JSON mode emits structured error and exits with EX_USAGE."""
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "wrong-command", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == os.EX_USAGE
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "error"
+    assert payload["error"]["type"] == "InvalidUsageError"
+    assert "invalid choice" in payload["error"]["message"]
+    assert "wrong-command" in payload["error"]["message"]
+
+
+def test_main_missing_argument_human_mode(mocker):
+    """Test that missing required option arguments exit with EX_USAGE and rich panel."""
+    mocker.patch.object(sys, "argv", ["protostar", "init", "--python-version"])
+    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.console.print")
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_exit.assert_called_once_with(os.EX_USAGE)
+    from rich.panel import Panel
+
+    panels = [
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], Panel)
+    ]
+    assert len(panels) == 1
+    assert "expected one argument" in str(panels[0].renderable)
+
+
+def test_main_missing_argument_json_mode(capsys, monkeypatch):
+    """Test that missing required option arguments in JSON mode emit structured error."""
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--python-version", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == os.EX_USAGE
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "error"
+    assert payload["error"]["type"] == "InvalidUsageError"
+    assert "expected one argument" in payload["error"]["message"]
