@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787689885131,
+  "lastUpdate": 1787692052520,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7655,6 +7655,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 169.48,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f556ae49742416c30d86ca0fc22ce39b3575729e",
+          "message": "docs: simplify agent lifecycle sequence diagram and fix rendering padding",
+          "timestamp": "2026-08-25T14:06:20-07:00",
+          "tree_id": "51289f9e4a4556fad2c6d9f9609fc89d1a7e1df4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f556ae49742416c30d86ca0fc22ce39b3575729e"
+        },
+        "date": 1787692051923,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 153.26,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 217.74,
             "unit": "ms"
           }
         ]
