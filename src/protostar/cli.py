@@ -731,6 +731,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     import dataclasses
 
     properties: dict[str, Any] = {}
+    dev_properties: dict[str, Any] = {}
 
     for f in dataclasses.fields(TemplateBlueprint):
         desc = f.metadata.get("description", "")
@@ -749,13 +750,13 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                 "type": "array",
                 "items": {"type": "array", "items": {"type": "string"}},
             }
-        elif "list[str]" in type_str:
-            prop = {"type": "array", "items": {"type": "string"}}
         elif "dict[str, list[str]]" in type_str:
             prop = {
                 "type": "object",
                 "additionalProperties": {"type": "array", "items": {"type": "string"}},
             }
+        elif "list[str]" in type_str:
+            prop = {"type": "array", "items": {"type": "string"}}
         elif "dict[str, str]" in type_str:
             prop = {"type": "object", "additionalProperties": {"type": "string"}}
         elif "dict[str, bool]" in type_str:
@@ -768,7 +769,21 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         if desc:
             prop["description"] = desc
 
-        properties[f.name] = prop
+        if f.name == "dev_dependencies":
+            dev_properties["dev_dependencies"] = prop
+            dev_properties["extra_dependencies"] = prop
+        elif f.name == "pyproject_injections":
+            dev_properties["pyproject"] = prop
+        else:
+            properties[f.name] = prop
+
+    if dev_properties:
+        properties["dev"] = {
+            "type": "object",
+            "properties": dev_properties,
+            "additionalProperties": False,
+            "description": "Development environment configurations.",
+        }
 
     schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
