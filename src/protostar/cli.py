@@ -853,6 +853,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,  # Prevents subparser from overwriting root namespace
         help="Enable verbose debug output and rich tracebacks.",
     )
+    base_parser.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,  # Hide from human help output
+    )
 
     parser = JsonAwareParser(
         description="A modular CLI tool for quickly scaffolding Python environments. ",
@@ -1141,6 +1147,9 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
 #    runners to programmatically differentiate configuration errors from disk or network failures.
 def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
+    if is_json_mode:
+        return
+
     if len(sys.argv) == 1:
         sys.argv.append("init")
 
