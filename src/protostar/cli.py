@@ -43,7 +43,7 @@ from .errors import (
     WorkspaceCollisionError,
 )
 from .fs import atomic_write_text
-from .manifest import CollisionStrategy, Severity
+from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .metadata import resolve_auto_metadata
 from .models import ExecutionResult, InitRequest
 from .modules import (
@@ -421,6 +421,40 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     return result
 
 
+def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
+    """Renders a human-readable summary of the planned environment manifest."""
+    console.print("\n[bold]Protostar Dry Run Summary[/bold]")
+    table = Table(box=box.ROUNDED, show_header=False, padding=(0, 2))
+    table.add_column("Category", style="cyan", justify="right")
+    table.add_column("Details", style="white")
+
+    # Filesystem
+    files_to_create = len(manifest.filesystem.directories) + len(
+        manifest.filesystem.file_injections
+    )
+    table.add_row("Filesystem", f"{files_to_create} files/directories to scaffold")
+
+    # Dependencies
+    deps_total = (
+        len(manifest.dependencies.dependencies)
+        + len(manifest.dependencies.dev_dependencies)
+        + len(manifest.dependencies.docs_dependencies)
+    )
+    table.add_row("Dependencies", f"{deps_total} packages to install")
+
+    # Tasks
+    tasks_total = len(manifest.tasks.system_tasks) + len(
+        manifest.tasks.post_install_tasks
+    )
+    table.add_row("Tasks", f"{tasks_total} system commands to execute")
+
+    # Collision Strategy
+    table.add_row("Collision Strategy", manifest.collision_strategy.value.title())
+
+    console.print(table)
+    console.print("[dim]No changes were made to your system.[/dim]")
+
+
 def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments."""
     if getattr(args, "list_templates", False):
@@ -556,6 +590,21 @@ def handle_init(args: argparse.Namespace) -> None:
         is_user_aliased=is_user_aliased,
     )
     engine = Orchestrator(modules, user_config, request=request)
+
+    if getattr(args, "dry_run", False):
+        manifest = engine.plan()
+        if is_json_mode:
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "planned",
+                    "manifest": manifest.to_dict(),
+                }
+            )
+        else:
+            _print_dry_run_summary(manifest)
+        sys.exit(0)
+
     result = _run_engine(engine, request)
     if is_json_mode:
         emit_json(
@@ -739,7 +788,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=argparse.SUPPRESS,
     )
-
+    init_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan the execution and print the resulting manifest without mutating the disk.",
+    )
     base_group = init_parser.add_argument_group("Base Configuration")
 
     base_group.add_argument(
