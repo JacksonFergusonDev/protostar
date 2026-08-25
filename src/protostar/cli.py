@@ -45,7 +45,7 @@ from .errors import (
 from .fs import atomic_write_text
 from .manifest import CollisionStrategy, Severity
 from .metadata import resolve_auto_metadata
-from .models import InitRequest
+from .models import ExecutionResult, InitRequest
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -214,17 +214,27 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     sys.exit(1 if error_msg else 0)
 
 
-def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
+def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     """Runs the full plan → trust → execute → render pipeline for the CLI.
 
     Encapsulates the collision prompt loop, remote trust boundary, execution,
     and diagnostic rendering so both the argument-driven and wizard-driven
     entry points share the same presentation logic.
 
+    In JSON mode:
+    - ``WorkspaceCollisionError`` re-raises immediately (no interactive prompt).
+    - Untrusted external templates raise ``SecurityViolationError`` rather than
+      prompting for confirmation.
+    - The Rich spinner and all human-readable output are suppressed to preserve
+      ``stdout`` for the JSON payload emitted by the caller.
+
     Args:
         engine: A fully constructed Orchestrator.
         request: The InitRequest used to build the engine. May be replaced if
             the user resolves a collision interactively.
+
+    Returns:
+        The ExecutionResult produced by the engine.
     """
     import questionary
     from questionary import Choice
@@ -233,6 +243,10 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
     try:
         manifest = engine.plan()
     except WorkspaceCollisionError as e:
+        # JSON mode: let the error bubble to main()'s ProtostarError handler.
+        if is_json_mode:
+            raise
+
         console.print(
             "\n[bold yellow]Gravitational Anomaly:[/bold yellow] Protostar detected "
             "existing configuration files in the workspace."
@@ -307,6 +321,18 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
     if request.is_external and not request.is_user_aliased:
         tasks = [*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks]
         if tasks:
+            # JSON mode: reject immediately without prompting to avoid blocking agents.
+            if is_json_mode:
+                raise SecurityViolationError(
+                    "Execution aborted: Untrusted external template contains "
+                    "executable tasks. To trust this source, add its URL to the "
+                    "[templates] block in your global configuration.",
+                    hint=(
+                        "Add the URL to the [templates] section of "
+                        "~/.config/protostar/config.toml and re-run with --from."
+                    ),
+                )
+
             console.print(
                 "\n[bold red]⚠️  REMOTE TEMPLATE WARNING ⚠️[/bold red]\n\n"
                 "This template was loaded from an external source and will execute "
@@ -332,61 +358,67 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
                 )
 
     # --- Execute ---
-    console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
-
     logger = logging.getLogger("protostar")
     # Temporarily drop the log level to INFO so the spinner receives the events
     previous_level = logger.level
     if logger.getEffectiveLevel() > logging.INFO:
         logger.setLevel(logging.INFO)
 
-    with console.status("Initializing...") as status:
-        spinner_handler = SpinnerHandler(status)
-        logger.addHandler(spinner_handler)
-        try:
-            result = engine.execute(manifest)
-        finally:
-            logger.removeHandler(spinner_handler)
-            logger.setLevel(previous_level)
-
-    # --- Render Diagnostics ---
-    has_warnings = False
-    if result.diagnostics:
-        lines = []
-        for event in result.diagnostics:
-            if event.severity == Severity.WARNING:
-                has_warnings = True
-                lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
-            elif event.severity == Severity.SKIP:
-                lines.append(
-                    rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
-                )
-            else:
-                lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
-
-            if event.detail:
-                lines.append(f"  [dim]{event.detail}[/dim]")
-
-        console.print()
-        console.print(
-            Panel(
-                "\n".join(lines),
-                title="[bold]Diagnostic Summary",
-                border_style="yellow" if has_warnings else "blue",
-                expand=False,
-                padding=(1, 2),
-            )
-        )
-
-    if has_warnings:
-        console.print(
-            "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
-            "but some non-critical tasks encountered issues."
-        )
+    if is_json_mode:
+        # Bypass the spinner entirely in JSON mode to keep stdout clean.
+        result = engine.execute(manifest)
+        logger.setLevel(previous_level)
     else:
-        console.print(
-            "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
-        )
+        console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
+        with console.status("Initializing...") as status:
+            spinner_handler = SpinnerHandler(status)
+            logger.addHandler(spinner_handler)
+            try:
+                result = engine.execute(manifest)
+            finally:
+                logger.removeHandler(spinner_handler)
+                logger.setLevel(previous_level)
+
+        # --- Render Diagnostics ---
+        has_warnings = False
+        if result.diagnostics:
+            lines = []
+            for event in result.diagnostics:
+                if event.severity == Severity.WARNING:
+                    has_warnings = True
+                    lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
+                elif event.severity == Severity.SKIP:
+                    lines.append(
+                        rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
+                    )
+                else:
+                    lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
+
+                if event.detail:
+                    lines.append(f"  [dim]{event.detail}[/dim]")
+
+            console.print()
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold]Diagnostic Summary",
+                    border_style="yellow" if has_warnings else "blue",
+                    expand=False,
+                    padding=(1, 2),
+                )
+            )
+
+        if has_warnings:
+            console.print(
+                "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
+                "but some non-critical tasks encountered issues."
+            )
+        else:
+            console.print(
+                "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
+            )
+
+    return result
 
 
 def handle_init(args: argparse.Namespace) -> None:
@@ -524,7 +556,15 @@ def handle_init(args: argparse.Namespace) -> None:
         is_user_aliased=is_user_aliased,
     )
     engine = Orchestrator(modules, user_config, request=request)
-    _run_engine(engine, request)
+    result = _run_engine(engine, request)
+    if is_json_mode:
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "result": result.to_dict(),
+            }
+        )
 
 
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
@@ -1135,26 +1175,46 @@ def main() -> None:
         args.func(args)
 
     except ProtostarError as e:
-        # Expected domain errors route here for clean terminal formatting
-        console.print()
-
-        body = str(e)
-        if isinstance(e, CommandExecutionError) and e.output_detail:
-            body += f"\n\n[dim]{e.output_detail}[/dim]"
-        if e.hint:
-            body += f"\n\n[dim]Hint: {e.hint}[/dim]"
-        if e.docs_url:
-            body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
-
-        console.print(
-            Panel(
-                body,
-                title="[bold red]Execution Aborted",
-                border_style="red",
-                expand=False,
-                padding=(1, 2),
+        if is_json_mode:
+            # Machine-readable error envelope: structured type, message, and optional extras.
+            error_dict: dict[str, Any] = {
+                "type": type(e).__name__,
+                "message": str(e),
+            }
+            if e.hint:
+                error_dict["hint"] = e.hint
+            if e.docs_url:
+                error_dict["docs_url"] = e.docs_url
+            if isinstance(e, WorkspaceCollisionError):
+                error_dict["paths"] = sorted(str(p) for p in e.paths)
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": error_dict,
+                }
             )
-        )
+        else:
+            # Expected domain errors route here for clean terminal formatting
+            console.print()
+
+            body = str(e)
+            if isinstance(e, CommandExecutionError) and e.output_detail:
+                body += f"\n\n[dim]{e.output_detail}[/dim]"
+            if e.hint:
+                body += f"\n\n[dim]Hint: {e.hint}[/dim]"
+            if e.docs_url:
+                body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
+
+            console.print(
+                Panel(
+                    body,
+                    title="[bold red]Execution Aborted",
+                    border_style="red",
+                    expand=False,
+                    padding=(1, 2),
+                )
+            )
 
         # Route specific domain exceptions to standard POSIX status codes
         if isinstance(e, InvalidUsageError):
@@ -1182,10 +1242,31 @@ def main() -> None:
 
     except KeyboardInterrupt:
         # Catch Ctrl+C cleanly
-        console.print("\n[bold red]Aborted by user.[/bold red]")
+        if is_json_mode:
+            _stderr_console.print("\n[bold red]Aborted by user.[/bold red]")
+        else:
+            console.print("\n[bold red]Aborted by user.[/bold red]")
         sys.exit(130)
 
     except Exception as e:
+        if is_json_mode:
+            # Emit a compact JSON error envelope; print the traceback to stderr.
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": {
+                        "type": "InternalError",
+                        "message": (
+                            f"An unexpected internal error occurred: "
+                            f"{type(e).__name__}: {e}"
+                        ),
+                    },
+                }
+            )
+            _stderr_console.print_exception(show_locals=False, max_frames=10)
+            sys.exit(os.EX_SOFTWARE)
+
         # Unexpected core system bugs route here for the crash report payload
         console.print(
             "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
@@ -1214,6 +1295,7 @@ def main() -> None:
         console.print(
             f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
         )
+
         sys.exit(os.EX_SOFTWARE)  # 70: Internal software malfunction code
 
 
