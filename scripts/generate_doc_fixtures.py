@@ -9,11 +9,12 @@ import sys
 import tempfile
 import tomllib
 from collections.abc import Sequence
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, fields, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
+import tomlkit
 from rich.console import Console
 from rich.panel import Panel
 from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
@@ -176,92 +177,229 @@ def generate_default_config() -> None:
 
 def generate_template_schema_fixture() -> None:
     """Dynamically generates an annotated TOML template schema fixture from internal definitions."""
-    # Collect tooling flag keys from the registered tooling modules
-    tooling_keys = sorted([mod.config_key for mod in TOOLING_MODULES if mod.config_key])
+    doc = tomlkit.document()
 
-    lines = [
-        "# ==============================================================================",
-        "# Protostar Template Specification Schema",
-        "# ==============================================================================",
-        "",
-        "# --- Dependencies ---",
-        "# Core runtime packages installed into the project environment (type: list[str])",
-        "dependencies = [",
-        '    "fastapi",',
-        '    "uvicorn",',
-        '    "pydantic",',
-        "]",
-        "",
-        "# Documentation toolchain dependencies (type: list[str])",
-        "docs_dependencies = [",
-        '    "mkdocstrings[python]",',
-        '    "zensical",',
-        "]",
-        "",
-        "# --- Directory Architecture ---",
-        "# Relative directory paths scaffolded in the workspace (type: list[str])",
-        "directories = [",
-        '    "src/<% PACKAGE_NAME %>",',
-        '    "tests",',
-        '    "data/raw",',
-        "]",
-        "",
-        "# --- Version Control Ignores ---",
-        "# Patterns appended and deduplicated in .gitignore (type: list[str])",
-        "vcs_ignores = [",
-        '    "*.log",',
-        '    ".env",',
-        '    "local_data/",',
-        "]",
-        "",
-        "# --- Subprocess Tasks ---",
-        "# Commands executed before dependency installation (type: list[list[str]])",
-        "system_tasks = [",
-        '    ["git", "init"],',
-        "]",
-        "",
-        "# Commands executed after dependencies are installed (type: list[list[str]])",
-        "post_install_tasks = [",
-        '    ["uv", "run", "nbdime", "config-git", "--enable"],',
-        "]",
-        "",
-        "# --- Tooling Opinions & Overrides ---",
-        "# Boolean toggles configuring baseline tooling opinions.",
-        "# Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig",
+    doc.add(
+        tomlkit.comment(
+            "=============================================================================="
+        )
+    )
+    doc.add(tomlkit.comment("Protostar Template Specification Schema"))
+    doc.add(
+        tomlkit.comment(
+            "=============================================================================="
+        )
+    )
+    doc.add(tomlkit.nl())
+
+    def add_dependencies() -> None:
+        doc.add(tomlkit.comment("--- Dependencies ---"))
+        doc.add(
+            tomlkit.comment(
+                "Core runtime packages installed into the project environment (type: list[str])"
+            )
+        )
+        deps = tomlkit.array()
+        deps.extend(["fastapi", "uvicorn", "pydantic"])
+        deps.multiline(True)
+        doc.add("dependencies", deps)
+        doc.add(tomlkit.nl())
+
+    def add_dev_dependencies() -> None:
+        doc.add(
+            tomlkit.comment(
+                "Development packages not shipped to production (type: list[str])"
+            )
+        )
+        dev_deps = tomlkit.array()
+        dev_deps.extend(["pytest", "mypy", "ruff"])
+        dev_deps.multiline(True)
+        doc.add("dev_dependencies", dev_deps)
+        doc.add(tomlkit.nl())
+
+    def add_docs_dependencies() -> None:
+        doc.add(
+            tomlkit.comment("Documentation toolchain dependencies (type: list[str])")
+        )
+        docs_deps = tomlkit.array()
+        docs_deps.extend(["mkdocstrings[python]", "zensical"])
+        docs_deps.multiline(True)
+        doc.add("docs_dependencies", docs_deps)
+        doc.add(tomlkit.nl())
+
+    def add_directories() -> None:
+        doc.add(tomlkit.comment("--- Directory Architecture ---"))
+        doc.add(
+            tomlkit.comment(
+                "Relative directory paths scaffolded in the workspace (type: list[str])"
+            )
+        )
+        dirs = tomlkit.array()
+        dirs.extend(["src/<% PACKAGE_NAME %>", "tests", "data/raw"])
+        dirs.multiline(True)
+        doc.add("directories", dirs)
+        doc.add(tomlkit.nl())
+
+    def add_vcs_ignores() -> None:
+        doc.add(tomlkit.comment("--- Version Control Ignores ---"))
+        doc.add(
+            tomlkit.comment(
+                "Patterns appended and deduplicated in .gitignore (type: list[str])"
+            )
+        )
+        ignores = tomlkit.array()
+        ignores.extend(["*.log", ".env", "local_data/"])
+        ignores.multiline(True)
+        doc.add("vcs_ignores", ignores)
+        doc.add(tomlkit.nl())
+
+    def add_system_tasks() -> None:
+        doc.add(tomlkit.comment("--- Subprocess Tasks ---"))
+        doc.add(
+            tomlkit.comment(
+                "Commands executed before dependency installation (type: list[list[str]])"
+            )
+        )
+        tasks = tomlkit.array()
+        task1 = tomlkit.array()
+        task1.extend(["git", "init"])
+        tasks.append(task1)
+        tasks.multiline(True)
+        doc.add("system_tasks", tasks)
+        doc.add(tomlkit.nl())
+
+    def add_post_install_tasks() -> None:
+        doc.add(
+            tomlkit.comment(
+                "Commands executed after dependencies are installed (type: list[list[str]])"
+            )
+        )
+        tasks = tomlkit.array()
+        task1 = tomlkit.array()
+        task1.extend(["uv", "run", "nbdime", "config-git", "--enable"])
+        tasks.append(task1)
+        tasks.multiline(True)
+        doc.add("post_install_tasks", tasks)
+        doc.add(tomlkit.nl())
+
+    def _multiline_literal(content: str) -> tomlkit.items.String:
+        clean = content.strip("\r\n")
+        return tomlkit.items.String(
+            tomlkit.items.StringType.MLL,
+            clean,
+            f"\n{clean}\n",
+            tomlkit.items.Trivia(),
+        )
+
+    def add_files() -> None:
+        doc.add(tomlkit.comment("--- Static File Injections ---"))
+        doc.add(
+            tomlkit.comment(
+                "Exact file paths mapped to their raw template contents (type: dict[str, str])"
+            )
+        )
+        files_table = tomlkit.table()
+        readme_content = (
+            "# <% PROJECT_NAME %>\n\nAuto-scaffolded using custom template."
+        )
+        init_content = '"""<% PROJECT_NAME %> package."""\n__version__ = "0.1.0"'
+        files_table.add(
+            "README.md",
+            _multiline_literal(readme_content),
+        )
+        files_table.add(
+            "src/<% PACKAGE_NAME %>/__init__.py",
+            _multiline_literal(init_content),
+        )
+        doc.add("files", files_table)
+        doc.add(tomlkit.nl())
+
+    def add_pyproject_injections() -> None:
+        doc.add(tomlkit.comment("--- pyproject.toml AST Injections ---"))
+        doc.add(
+            tomlkit.comment("Arbitrary tables deep-merged into target pyproject.toml")
+        )
+        pyproject_table = tomlkit.table()
+        custom_linting = '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]'
+        pyproject_table.add(
+            "custom_linting",
+            _multiline_literal(custom_linting),
+        )
+
+        dev_table = tomlkit.table()
+        dev_table.add("pyproject", pyproject_table)
+        doc.add("dev", dev_table)
+        doc.add(tomlkit.nl())
+
+    def add_appends() -> None:
+        doc.add(tomlkit.comment("--- File Appends ---"))
+        doc.add(
+            tomlkit.comment(
+                "Lines appended to existing files, creating them if necessary (type: dict[str, list[str]])"
+            )
+        )
+        appends_table = tomlkit.table()
+        lines = tomlkit.array()
+        lines.extend(["# Custom comment appended to bottom of pyproject.toml"])
+        appends_table.add("pyproject.toml", lines)
+        doc.add("appends", appends_table)
+        doc.add(tomlkit.nl())
+
+    def add_tooling_overrides() -> None:
+        doc.add(tomlkit.comment("--- Tooling Opinions & Overrides ---"))
+        doc.add(
+            tomlkit.comment("Boolean toggles configuring baseline tooling opinions.")
+        )
+        doc.add(
+            tomlkit.comment(
+                "Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig"
+            )
+        )
+
+        tooling_keys = sorted(
+            [mod.config_key for mod in TOOLING_MODULES if mod.config_key]
+        )
+        for key in tooling_keys:
+            default_val = key in ("ruff", "pytest")
+            doc.add(key, default_val)
+
+        doc.add(tomlkit.nl())
+
+    mock_data_generators = {
+        "dependencies": add_dependencies,
+        "dev_dependencies": add_dev_dependencies,
+        "docs_dependencies": add_docs_dependencies,
+        "directories": add_directories,
+        "vcs_ignores": add_vcs_ignores,
+        "system_tasks": add_system_tasks,
+        "post_install_tasks": add_post_install_tasks,
+        "files": add_files,
+        "pyproject_injections": add_pyproject_injections,
+        "appends": add_appends,
+        "tooling_overrides": add_tooling_overrides,
+    }
+
+    blueprint_fields = [f.name for f in fields(TemplateBlueprint)]
+
+    # In TOML, root-level key-value pairs MUST appear before any tables.
+    # We re-order the iteration to process tooling_overrides (booleans)
+    # before tables (files, pyproject_injections, appends).
+    table_fields = {"files", "pyproject_injections", "appends", "dev"}
+    ordered_fields = [f for f in blueprint_fields if f not in table_fields] + [
+        f for f in blueprint_fields if f in table_fields
     ]
 
-    for key in tooling_keys:
-        default_val = "true" if key in ("ruff", "pytest") else "false"
-        lines.append(f"{key} = {default_val}")
+    for field_name in ordered_fields:
+        if field_name not in mock_data_generators:
+            raise RuntimeError(
+                f"Missing mock data generator for TemplateBlueprint field: '{field_name}'. "
+                "Update generate_template_schema_fixture() to document this field."
+            )
+        mock_data_generators[field_name]()
 
-    lines.extend(
-        [
-            "",
-            "# --- Static File Injections ---",
-            "# Exact file paths mapped to their raw template contents (type: dict[str, str])",
-            "[files]",
-            "\"README.md\" = '''",
-            "# <% PROJECT_NAME %>",
-            "",
-            "Auto-scaffolded using custom template.",
-            "'''",
-            "",
-            "\"src/<% PACKAGE_NAME %>/__init__.py\" = '''",
-            '"""<% PROJECT_NAME %> package."""',
-            '__version__ = "0.1.0"',
-            "'''",
-            "",
-            "# --- pyproject.toml AST Injections ---",
-            "# Arbitrary tables deep-merged into target pyproject.toml",
-            "[dev.pyproject]",
-            "custom_linting = '''",
-            "[tool.ruff.lint]",
-            'extend-select = ["I", "UP", "B"]',
-            "'''",
-        ]
-    )
-
-    _write_fixture("template_schema.toml", "\n".join(lines))
+    # Remove the trailing newline sequence added by the last element for cleaner output
+    out_str = doc.as_string().strip() + "\n"
+    _write_fixture("template_schema.toml", out_str)
 
 
 def generate_capability_tables() -> None:
