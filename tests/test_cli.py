@@ -1,5 +1,6 @@
 import argparse
 import importlib.metadata
+import json
 import os
 import subprocess
 import sys
@@ -826,3 +827,45 @@ def test_cli_rejects_unknown_templates(mocker) -> None:
         match="not found in built-ins or global configuration aliases",
     ):
         handle_init(args)
+
+
+def test_export_schema_json_mode(capsys, monkeypatch):
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "export-schema", "--json"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert "properties" in payload
+
+
+def test_list_templates_json_mode(capsys, monkeypatch):
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates", "--json"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "success"
+    assert "templates" in payload
+    assert isinstance(payload["templates"], list)
+
+
+def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").touch()
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr(
+        "sys.argv", ["protostar", "init", "--template", "minimal", "--json"]
+    )
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 1
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "error"
+    assert payload["error"]["type"] == "WorkspaceCollisionError"
+    assert "pyproject.toml" in payload["error"]["paths"][0]
