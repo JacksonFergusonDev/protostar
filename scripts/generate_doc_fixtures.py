@@ -20,17 +20,20 @@ from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
 
 import protostar.cli
-from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint
+from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
 from protostar.fs import atomic_write_text
 from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
 from protostar.metadata import METADATA_FIELDS
+from protostar.models import InitRequest
 from protostar.modules import (
     LICENSE_MAP,
     TOOLING_MODULES,
     BootstrapModule,
     PythonCore,
     RuffModule,
+    SystemWorkspaceModule,
 )
+from protostar.orchestrator import Orchestrator
 
 # Define matrices for combinatorial CLI execution scenarios
 FIXTURES = {
@@ -597,6 +600,84 @@ def generate_cli_help_svgs() -> None:
             protostar.cli.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign]
 
 
+def generate_cli_dry_run_svg() -> None:
+    """Captures an SVG snapshot of the dry-run CLI telemetry preview via Rich."""
+    original_global_console = protostar.cli.console
+
+    record_console = Console(
+        record=True,
+        width=100,
+        force_terminal=True,
+        color_system="truecolor",
+        legacy_windows=False,
+        file=io.StringIO(),
+    )
+
+    prompt = Text.assemble(
+        ("❯ ", "bold magenta"),  # noqa: RUF001
+        ("protostar ", "bold cyan"),
+        ("init --template cli --dry-run\n", "white"),
+    )
+    record_console.print(prompt)
+
+    try:
+        protostar.cli.console = record_console
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            orig_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                target = importlib.resources.files("protostar.templates").joinpath(
+                    "cli.toml"
+                )
+                blueprint = TemplateBlueprint.load(str(target))
+                user_config = UserConfig()
+                modules: list[BootstrapModule] = [
+                    SystemWorkspaceModule(),
+                    PythonCore(),
+                ]
+                for mod in TOOLING_MODULES:
+                    is_active = getattr(user_config, mod.config_key, False)
+                    if blueprint and mod.config_key in blueprint.tooling_overrides:
+                        is_active = blueprint.tooling_overrides[mod.config_key]
+                    if is_active:
+                        modules.append(mod)
+
+                request = InitRequest(template_blueprint=blueprint)
+                engine = Orchestrator(modules, user_config, request=request)
+                manifest = engine.plan()
+                protostar.cli._print_dry_run_summary(manifest)
+            finally:
+                os.chdir(orig_cwd)
+
+        ansi_colors = [
+            (color.red, color.green, color.blue)
+            for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
+        ]
+        ansi_colors[4] = (97, 175, 239)
+        ansi_colors[12] = (97, 175, 239)
+        ansi_colors[6] = (34, 211, 238)
+        ansi_colors[14] = (34, 211, 238)
+
+        protostar_theme = TerminalTheme(
+            background=(10, 15, 31),
+            foreground=(220, 225, 235),
+            normal=ansi_colors[:8],
+            bright=ansi_colors[8:16],
+        )
+
+        svg_content = record_console.export_svg(
+            title="zsh",
+            theme=protostar_theme,
+            unique_id="cli_dry_run",
+        )
+
+        clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+        _write_fixture("cli_dry_run.svg", clean_svg)
+    finally:
+        protostar.cli.console = original_global_console
+
+
 def generate_diagnostic_panel_svg() -> None:
     """Captures an SVG snapshot of a styled Rich Diagnostic Summary panel."""
     record_console = Console(
@@ -708,6 +789,7 @@ def main() -> None:
 
         # Fast executions (instant)
         generate_cli_help_svgs()
+        generate_cli_dry_run_svg()
         generate_default_config()
         generate_capability_tables()
         generate_manifest_state()
