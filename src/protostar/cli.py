@@ -107,13 +107,41 @@ class SpinnerHandler(logging.Handler):
             self.status_obj.update(record.getMessage())
 
 
-class JsonAwareParser(argparse.ArgumentParser):
-    """ArgumentParser subclass that emits structured JSON errors in JSON mode.
+# Maps known subcommands to their documentation page.
+# Only include subcommands that have a dedicated reference page.
+# Unmapped subcommands fall back to the docs root.
+_SUBCOMMAND_DOC_PATHS: dict[str, str] = {
+    "init": "usage/init/",
+    "config": "usage/configuration/",
+}
 
-    When ``--json`` is detected in ``sys.argv``, parse failures (e.g., unrecognised
-    flags, missing required arguments) are intercepted and routed through
-    ``emit_json()`` as a machine-readable error envelope rather than being
-    printed to ``stderr`` in argparse's human-readable format.
+
+def _resolve_usage_doc_path() -> str:
+    """Returns the docs_path for the active subcommand, or '' for the root page.
+
+    Iterates through sys.argv to identify the first non-flag subcommand.
+    Returns a mapped docs_path if the subcommand is known, otherwise returns ''
+    which resolves to the documentation root. This is intentionally conservative:
+    an incorrect link is worse than the root page.
+
+    Returns:
+        A docs_path string suitable for passing to InvalidUsageError.
+    """
+    for arg in sys.argv[1:]:
+        if not arg.startswith("-"):
+            return _SUBCOMMAND_DOC_PATHS.get(arg, "")
+    return ""
+
+
+class JsonAwareParser(argparse.ArgumentParser):
+    """ArgumentParser subclass that raises InvalidUsageError on parse failures.
+
+    Intercepts standard argparse parse errors (e.g., invalid subcommands,
+    missing required arguments, unrecognized choices) and raises
+    ``InvalidUsageError``. This centralizes error handling through ``main()``'s
+    ``ProtostarError`` handler so that both human mode (Rich pretty-printed
+    error panel) and JSON mode (structured JSON envelope) are handled consistently
+    with POSIX ``EX_USAGE`` exit codes.
     """
 
     def error(self, message: str) -> None:  # type: ignore[override]
@@ -121,20 +149,11 @@ class JsonAwareParser(argparse.ArgumentParser):
 
         Args:
             message: The human-readable error description produced by argparse.
+
+        Raises:
+            InvalidUsageError: Always raised to route errors to the centralized handler.
         """
-        if is_json_mode:
-            emit_json(
-                {
-                    "api_version": CLI_API_VERSION,
-                    "status": "error",
-                    "error": {
-                        "type": "InvalidUsageError",
-                        "message": message,
-                    },
-                }
-            )
-            sys.exit(os.EX_USAGE)
-        super().error(message)
+        raise InvalidUsageError(message, docs_path=_resolve_usage_doc_path())
 
 
 def _print_templates_and_exit(error_msg: str | None = None) -> None:
@@ -1388,31 +1407,6 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
             )
         i += 1
     return kwargs
-
-
-# Maps known subcommands to their documentation page.
-# Only include subcommands that have a dedicated reference page.
-# Unmapped subcommands fall back to the docs root.
-_SUBCOMMAND_DOC_PATHS: dict[str, str] = {
-    "init": "usage/init/",
-    "config": "usage/configuration/",
-}
-
-
-def _resolve_usage_doc_path() -> str:
-    """Returns the docs_path for the active subcommand, or '' for the root page.
-
-    Reads sys.argv[1] to identify the subcommand. Returns a mapped docs_path
-    if the subcommand is known, otherwise returns '' which resolves to the
-    documentation root. This is intentionally conservative: an incorrect link
-    is worse than the root page.
-
-    Returns:
-        A docs_path string suitable for passing to InvalidUsageError.
-    """
-    if len(sys.argv) >= 2:
-        return _SUBCOMMAND_DOC_PATHS.get(sys.argv[1], "")
-    return ""
 
 
 def main() -> None:
