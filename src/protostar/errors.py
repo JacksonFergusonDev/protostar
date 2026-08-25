@@ -239,6 +239,10 @@ class SecurityViolationError(ProtostarError):
     """Raised when a template attempts an unauthorized system or filesystem operation."""
 
     def __init__(
-        self, message: str, *, docs_path: str | None = "usage/templates/"
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        docs_path: str | None = "usage/templates/",
     ) -> None:
-        super().__init__(message, docs_path=docs_path)
+        super().__init__(message, hint=hint, docs_path=docs_path)

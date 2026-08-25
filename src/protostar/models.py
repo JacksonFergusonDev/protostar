@@ -48,3 +48,29 @@ class ExecutionResult:
 
     touched_paths: frozenset[str]
     diagnostics: tuple[DiagnosticEvent, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the execution result to a JSON-safe dictionary.
+
+        The ``touched_paths`` frozenset is emitted as a sorted list for deterministic
+        output. Each diagnostic event is emitted as an explicit dict; the optional
+        ``detail`` field is omitted when absent to keep payloads compact.
+
+        Returns:
+            A JSON-serializable dictionary representation.
+        """
+        diagnostics: list[dict[str, Any]] = []
+        for event in self.diagnostics:
+            entry: dict[str, Any] = {
+                "phase": str(event.phase),
+                "message": event.message,
+                "severity": event.severity.value,
+            }
+            if event.detail is not None:
+                entry["detail"] = event.detail
+            diagnostics.append(entry)
+
+        return {
+            "touched_paths": sorted(self.touched_paths),
+            "diagnostics": diagnostics,
+        }

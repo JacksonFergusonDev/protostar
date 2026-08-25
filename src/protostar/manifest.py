@@ -123,6 +123,21 @@ class DependencyManifest:
         if package not in self.docs_dependencies:
             self.docs_dependencies.append(package)
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the dependency manifest to a JSON-safe dictionary.
+
+        Ordered lists (dependencies, dev_dependencies, docs_dependencies) preserve
+        their semantic insertion order so agents can reason about dependency intent.
+
+        Returns:
+            A JSON-serializable dictionary representation.
+        """
+        return {
+            "dependencies": list(self.dependencies),
+            "dev_dependencies": list(self.dev_dependencies),
+            "docs_dependencies": list(self.docs_dependencies),
+        }
+
 
 @dataclass
 class FilesystemManifest:
@@ -161,6 +176,24 @@ class FilesystemManifest:
         """Appends a file or directory pattern to both the VCS ignore and IDE exclusion lists."""
         self.add_vcs_ignore(path)
         self.add_workspace_hide(path)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the filesystem manifest to a JSON-safe dictionary.
+
+        Set-backed fields (directories, vcs_ignores, workspace_hides) are emitted as
+        sorted lists for deterministic output. Dict-backed fields preserve their
+        insertion-ordered structure.
+
+        Returns:
+            A JSON-serializable dictionary representation.
+        """
+        return {
+            "directories": sorted(self.directories),
+            "file_injections": dict(self.file_injections),
+            "file_appends": {k: list(v) for k, v in self.file_appends.items()},
+            "vcs_ignores": sorted(self.vcs_ignores),
+            "workspace_hides": sorted(self.workspace_hides),
+        }
 
 
 @dataclass
@@ -205,6 +238,42 @@ class ToolingManifest:
         """Queues an IDE extension ID (or fallback tuple) for verification during the realization phase."""
         self.ide_extensions.add(extension_id)
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the tooling manifest to a JSON-safe dictionary.
+
+        Set-backed fields (ci_flags, ide_extensions) are emitted as sorted lists.
+        Enum values are coerced to their string representation. IDE extension tuples
+        are converted to lists for JSON compatibility.
+
+        Returns:
+            A JSON-serializable dictionary representation.
+        """
+
+        def _serialize_extension(ext: str | tuple[str, ...]) -> str | list[str]:
+            return list(ext) if isinstance(ext, tuple) else ext
+
+        return {
+            "wants_pre_commit": self.wants_pre_commit,
+            "wants_prek": self.wants_prek,
+            "pre_commit_hooks": list(self.pre_commit_hooks),
+            "pre_commit_local_hooks": list(self.pre_commit_local_hooks),
+            "wants_ci": self.wants_ci,
+            "wants_release": self.wants_release,
+            "ci_flags": sorted(
+                f.value if isinstance(f, CIFlag) else str(f) for f in self.ci_flags
+            ),
+            "ci_steps": list(self.ci_steps),
+            "wants_just": self.wants_just,
+            "just_format_commands": list(self.just_format_commands),
+            "just_lint_commands": list(self.just_lint_commands),
+            "just_typecheck_commands": list(self.just_typecheck_commands),
+            "just_clean_paths": list(self.just_clean_paths),
+            "ide_extensions": sorted(
+                (_serialize_extension(ext) for ext in self.ide_extensions),
+                key=lambda x: x[0] if isinstance(x, list) else x,
+            ),
+        }
+
 
 @dataclass
 class TaskManifest:
@@ -239,6 +308,29 @@ class TaskManifest:
             SystemTask(command=command, timeout=timeout, description=description)
         )
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the task manifest to a JSON-safe dictionary.
+
+        SystemTask objects are emitted as explicit dicts with ``command``,
+        ``description``, and ``timeout`` keys so agents can evaluate the exact
+        shell commands that would be executed.
+
+        Returns:
+            A JSON-serializable dictionary representation.
+        """
+
+        def _task_to_dict(task: SystemTask) -> dict[str, object]:
+            return {
+                "command": task.command,
+                "description": task.description,
+                "timeout": task.timeout,
+            }
+
+        return {
+            "system_tasks": [_task_to_dict(t) for t in self.system_tasks],
+            "post_install_tasks": [_task_to_dict(t) for t in self.post_install_tasks],
+        }
+
 
 @dataclass
 class EnvironmentManifest:
@@ -268,3 +360,26 @@ class EnvironmentManifest:
         return (
             target.exists() and self.collision_strategy != CollisionStrategy.OVERWRITE
         )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the full environment manifest to a JSON-safe dictionary.
+
+        Delegates serialization to each sub-manifest's ``to_dict()`` method and
+        coerces top-level scalar fields to JSON-safe types. The collision_strategy
+        enum is emitted as its string value. Metadata and IDE settings are included
+        as-is since they are already dict-typed.
+
+        Returns:
+            A JSON-serializable dictionary representation of the full manifest.
+        """
+        return {
+            "collision_strategy": self.collision_strategy.value,
+            "force_merge": self.force_merge,
+            "force_replace": self.force_replace,
+            "metadata": dict(self.metadata),
+            "ide_settings": dict(self.ide_settings),
+            "dependencies": self.dependencies.to_dict(),
+            "filesystem": self.filesystem.to_dict(),
+            "tooling": self.tooling.to_dict(),
+            "tasks": self.tasks.to_dict(),
+        }

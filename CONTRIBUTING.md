@@ -58,6 +58,20 @@ To guarantee that the workspace remains deterministic, error management follows 
 - **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
 - **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
 
+### 8. Machine & Agent Interface Invariants (`--json` & `--dry-run`)
+
+Protostar exposes an experimental machine-readable CLI interface for AI agents, automation pipelines, and external developer tools. Any new subcommands, flags, or error paths must preserve the following operational invariants:
+
+- **Strict `stdout` Purity:** `stdout` is strictly reserved for the machine-readable JSON payload. All human-readable logging, diagnostic summaries, progress spinners, and Rich tracebacks must route exclusively to `stderr` (e.g., via `_stderr_console` or logging handlers). An automated consumer must always be able to parse `stdout` directly as valid JSON.
+- **Position-Independent Flag Evaluation:** The `--json` flag is position-independent and must be recognized globally across all commands, subparsers, and bare invocations.
+- **Zero Interactive Trapping in Machine Mode:** When `is_json_mode` is active, the CLI must **never** block on terminal-interactive prompts (such as `questionary` wizards, collision resolution prompts, or external template trust dialogs). Instead, the CLI must either bypass the prompt deterministically (if explicit override flags like `--force-merge` are present) or raise a domain exception immediately so that a structured JSON error envelope is returned.
+- **Deterministic State Serialization (`.to_dict()`):** All manifest domain slices and execution models exposed to agents must implement deterministic `.to_dict()` methods:
+  - Mathematical sets (such as `directories`, `vcs_ignores`, `workspace_hides`) must serialize to alphabetically sorted lists.
+  - Insertion-ordered lists (such as `dependencies`, `dev_dependencies`, `system_tasks`) must preserve their exact declaration order.
+  - Enums (such as `CollisionStrategy`) must serialize as their string `.value`.
+  - File system paths must be normalized to POSIX string format.
+- **Protocol Envelopes & API Versioning:** All JSON outputs must be wrapped in standard envelopes (`planned`, `success`, or `error`) and include the top-level `"api_version"` key (`CLI_API_VERSION = 0` during experimental phase) to maintain forward-compatible schema evolution.
+
 ## Coding Standards
 
 1. **Type Hinting:** All new application functions and methods must include strict Python 3.12 type hints. We use `mypy` to statically enforce this (`disallow_untyped_defs = true`). The test suite (`tests/*`) is granted an exemption from strict untyped definition checks.

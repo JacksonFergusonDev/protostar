@@ -46,6 +46,7 @@ Ready to dive deeper? The README only scratches the surface.
 Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/stable/)** for:
 
 - **Command Reference:** Full flags and capabilities for `init`.
+- **Agent & Machine Interface:** Driving Protostar programmatically via `--json` and `--dry-run`.
 - **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, Embedded, REST API, and CLI Application workflows.
 - **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
 - **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
@@ -59,6 +60,8 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, locking in your dependency managers and directory structures.
 
 1. **Manifest-First, Side-Effects-Last (Headless Engine Bulkhead):** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar strictly decouples state calculation from execution. The engine core is headless: modules declare requirements into a centralized `EnvironmentManifest` during the read-only `plan()` phase, while disk mutations and subprocesses only execute during `execute()`. This guarantees side-effect-free dry-running and pure determinism.
+
+1. **AI & Agent Ready:** With position-independent `--json` flags and atomic dry-running, AI agents and automation scripts can programmatically interrogate the CLI, plan workspace changes, resolve collisions, and execute headless scaffolding without interactive prompt trapping.
 
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
 
@@ -142,6 +145,26 @@ protostar init --template cli --no-direnv --docker
 *Result: Scaffolds the cli template, strips out the default direnv scaffolding, and generates container artifacts (`Dockerfile`, `.dockerignore`).*
 
 To bypass any interactive collision prompts when running in headless CI environments, use `--force-merge` or `--force-replace`. You can also explicitly override the target Python version by passing `--python-version 3.13`.
+
+### Dry-Run Simulations & Agent Integration
+
+You can preview the entire scaffolding plan without touching disk or running subprocesses by passing `--dry-run`:
+
+```bash
+protostar init --template cli --dry-run
+```
+
+For AI coding agents and automated scripts, append the position-independent `--json` flag. Protostar outputs structured, machine-parseable JSON envelopes to `stdout` while routing all human logs to `stderr`:
+
+```bash
+# Plan scaffolding via JSON
+protostar init --template cli --dry-run --json
+
+# Execute scaffolding via JSON
+protostar init --template cli --force-merge --json
+```
+
+See the **[Agent & Machine Interface Guide](https://protostar.readthedocs.io/en/stable/usage/agent-interface/)** for complete protocol documentation.
 
 ### Portable Templates & Global Aliases
 

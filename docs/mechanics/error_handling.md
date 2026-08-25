@@ -158,6 +158,32 @@ Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after 
 
 ---
 
+## Machine-Readable Error Envelopes (`--json`)
+
+When running in `--json` mode, Protostar suppresses all terminal UI formatting, spinners, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to `stdout`:
+
+```json
+{
+  "api_version": 0,
+  "status": "error",
+  "error": {
+    "type": "WorkspaceCollisionError",
+    "message": "Gravitational Anomaly: Protostar detected existing configuration files in the workspace.",
+    "hint": "Pass --force-merge to merge configs safely, or --force-replace to overwrite.",
+    "docs_url": "https://protostar.readthedocs.io/en/stable/usage/init/#progressive-scaffolding-collisions",
+    "paths": ["pyproject.toml"]
+  }
+}
+```
+
+The error envelope guarantees:
+
+- __Clean Parsing:__ `stdout` contains only valid JSON. Debug traces and logs are routed exclusively to `stderr`.
+- __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`, and `paths` for collisions).
+- __POSIX Status Codes:__ The process exits with the exact same POSIX exit code defined in the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
+
+---
+
 ## POSIX Exit Code Matrix
 
 Protostar routes operational exceptions to standard UNIX exit codes (defined in `os`), allowing automation tooling and CI pipelines to programmatically identify failure causes:

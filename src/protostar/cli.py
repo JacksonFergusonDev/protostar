@@ -2,6 +2,7 @@
 
 import argparse
 import importlib.resources
+import json
 import logging
 import os
 import platform
@@ -18,11 +19,13 @@ from typing import Any, ClassVar, cast
 import argcomplete
 from rich import box
 from rich.console import Console
+from rich.json import JSON
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.status import Status
 from rich.style import Style
 from rich.table import Table
+from rich.tree import Tree
 from rich_argparse import RawTextRichHelpFormatter
 
 from protostar import __version__
@@ -42,9 +45,9 @@ from .errors import (
     WorkspaceCollisionError,
 )
 from .fs import atomic_write_text
-from .manifest import CollisionStrategy, Severity
+from .manifest import CollisionStrategy, EnvironmentManifest, Severity
 from .metadata import resolve_auto_metadata
-from .models import InitRequest
+from .models import ExecutionResult, InitRequest
 from .modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -58,7 +61,36 @@ from .wizard import (
     run_init_wizard,
 )
 
+# ---------------------------------------------------------------------------
+# JSON Mode Infrastructure
+# ---------------------------------------------------------------------------
+
+# Marks the agent interface as experimental. Increment when the schema
+# stabilises and a compatibility commitment is made.
+CLI_API_VERSION: int = 0
+
+# Evaluated at import time so the flag is position-independent (e.g. both
+# `protostar --json init` and `protostar init --json` are equivalent).
+is_json_mode: bool = "--json" in sys.argv
+
+# Primary Rich console for human-readable output to stdout.
 console = Console()
+
+# Dedicated stderr console used in JSON mode to keep stdout clean.
+_stderr_console = Console(stderr=True)
+
+
+def emit_json(payload: dict[str, Any]) -> None:
+    """Writes exactly one JSON document to stdout and flushes immediately.
+
+    This is the sole exit path for all machine-readable output. Callers are
+    responsible for calling ``sys.exit()`` immediately after to ensure exactly
+    one document is emitted per invocation.
+
+    Args:
+        payload: A JSON-serializable dictionary to emit.
+    """
+    print(json.dumps(payload, sort_keys=True), flush=True)  # noqa: T201
 
 
 class SpinnerHandler(logging.Handler):
@@ -75,13 +107,90 @@ class SpinnerHandler(logging.Handler):
             self.status_obj.update(record.getMessage())
 
 
+class JsonAwareParser(argparse.ArgumentParser):
+    """ArgumentParser subclass that emits structured JSON errors in JSON mode.
+
+    When ``--json`` is detected in ``sys.argv``, parse failures (e.g., unrecognised
+    flags, missing required arguments) are intercepted and routed through
+    ``emit_json()`` as a machine-readable error envelope rather than being
+    printed to ``stderr`` in argparse's human-readable format.
+    """
+
+    def error(self, message: str) -> None:  # type: ignore[override]
+        """Overrides argparse's default error handler.
+
+        Args:
+            message: The human-readable error description produced by argparse.
+        """
+        if is_json_mode:
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": {
+                        "type": "InvalidUsageError",
+                        "message": message,
+                    },
+                }
+            )
+            sys.exit(os.EX_USAGE)
+        super().error(message)
+
+
 def _print_templates_and_exit(error_msg: str | None = None) -> None:
     """Renders a rich table of all available templates and exits.
+
+    In JSON mode, emits a structured list of template objects instead of a
+    Rich table, then exits with the appropriate code.
 
     Args:
         error_msg: If provided, prints a red error warning before the table
             and exits with a status code of 1 instead of 0.
     """
+    # Collect template metadata for both JSON and human output paths
+    templates: list[dict[str, str]] = []
+    try:
+        template_dir = importlib.resources.files("protostar.templates")
+        for item in template_dir.iterdir():
+            if item.is_file() and item.name.endswith(".toml"):
+                templates.append(
+                    {
+                        "name": item.name[:-5],
+                        "type": "built-in",
+                        "source": "protostar.templates",
+                    }
+                )
+    except Exception:
+        pass
+
+    user_config = UserConfig.load()
+    if user_config.templates:
+        for alias, source in user_config.templates.items():
+            templates.append({"name": alias, "type": "global-alias", "source": source})
+
+    if is_json_mode:
+        if error_msg:
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": {
+                        "type": "InvalidUsageError",
+                        "message": error_msg,
+                    },
+                    "templates": templates,
+                }
+            )
+            sys.exit(1)
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "templates": templates,
+            }
+        )
+        sys.exit(0)
+
     if error_msg:
         console.print(f"[bold red]Error:[/bold red] {error_msg}\n")
 
@@ -96,20 +205,10 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     table.add_column("Type", style="magenta")
     table.add_column("Source", style="dim")
 
-    # 1. Evaluate Built-ins
-    try:
-        template_dir = importlib.resources.files("protostar.templates")
-        for item in template_dir.iterdir():
-            if item.is_file() and item.name.endswith(".toml"):
-                table.add_row(item.name[:-5], "Built-in", "protostar.templates")
-    except Exception:
-        pass
-
-    # 2. Evaluate Global Aliases
-    user_config = UserConfig.load()
-    if user_config.templates:
-        for alias, source in user_config.templates.items():
-            table.add_row(alias, "Global Alias", source)
+    for tmpl in templates:
+        table.add_row(
+            tmpl["name"], tmpl["type"].replace("-", " ").title(), tmpl["source"]
+        )
 
     console.print(table)
 
@@ -117,17 +216,27 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     sys.exit(1 if error_msg else 0)
 
 
-def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
+def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     """Runs the full plan → trust → execute → render pipeline for the CLI.
 
     Encapsulates the collision prompt loop, remote trust boundary, execution,
     and diagnostic rendering so both the argument-driven and wizard-driven
     entry points share the same presentation logic.
 
+    In JSON mode:
+    - ``WorkspaceCollisionError`` re-raises immediately (no interactive prompt).
+    - Untrusted external templates raise ``SecurityViolationError`` rather than
+      prompting for confirmation.
+    - The Rich spinner and all human-readable output are suppressed to preserve
+      ``stdout`` for the JSON payload emitted by the caller.
+
     Args:
         engine: A fully constructed Orchestrator.
         request: The InitRequest used to build the engine. May be replaced if
             the user resolves a collision interactively.
+
+    Returns:
+        The ExecutionResult produced by the engine.
     """
     import questionary
     from questionary import Choice
@@ -136,6 +245,10 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
     try:
         manifest = engine.plan()
     except WorkspaceCollisionError as e:
+        # JSON mode: let the error bubble to main()'s ProtostarError handler.
+        if is_json_mode:
+            raise
+
         console.print(
             "\n[bold yellow]Gravitational Anomaly:[/bold yellow] Protostar detected "
             "existing configuration files in the workspace."
@@ -210,6 +323,18 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
     if request.is_external and not request.is_user_aliased:
         tasks = [*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks]
         if tasks:
+            # JSON mode: reject immediately without prompting to avoid blocking agents.
+            if is_json_mode:
+                raise SecurityViolationError(
+                    "Execution aborted: Untrusted external template contains "
+                    "executable tasks. To trust this source, add its URL to the "
+                    "[templates] block in your global configuration.",
+                    hint=(
+                        "Add the URL to the [templates] section of "
+                        "~/.config/protostar/config.toml and re-run with --from."
+                    ),
+                )
+
             console.print(
                 "\n[bold red]⚠️  REMOTE TEMPLATE WARNING ⚠️[/bold red]\n\n"
                 "This template was loaded from an external source and will execute "
@@ -235,61 +360,190 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> None:
                 )
 
     # --- Execute ---
-    console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
-
     logger = logging.getLogger("protostar")
     # Temporarily drop the log level to INFO so the spinner receives the events
     previous_level = logger.level
     if logger.getEffectiveLevel() > logging.INFO:
         logger.setLevel(logging.INFO)
 
-    with console.status("Initializing...") as status:
-        spinner_handler = SpinnerHandler(status)
-        logger.addHandler(spinner_handler)
-        try:
-            result = engine.execute(manifest)
-        finally:
-            logger.removeHandler(spinner_handler)
-            logger.setLevel(previous_level)
+    if is_json_mode:
+        # Bypass the spinner entirely in JSON mode to keep stdout clean.
+        result = engine.execute(manifest)
+        logger.setLevel(previous_level)
+    else:
+        console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
+        with console.status("Initializing...") as status:
+            spinner_handler = SpinnerHandler(status)
+            logger.addHandler(spinner_handler)
+            try:
+                result = engine.execute(manifest)
+            finally:
+                logger.removeHandler(spinner_handler)
+                logger.setLevel(previous_level)
 
-    # --- Render Diagnostics ---
-    has_warnings = False
-    if result.diagnostics:
-        lines = []
-        for event in result.diagnostics:
-            if event.severity == Severity.WARNING:
-                has_warnings = True
-                lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
-            elif event.severity == Severity.SKIP:
-                lines.append(
-                    rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
+        # --- Render Diagnostics ---
+        has_warnings = False
+        if result.diagnostics:
+            lines = []
+            for event in result.diagnostics:
+                if event.severity == Severity.WARNING:
+                    has_warnings = True
+                    lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
+                elif event.severity == Severity.SKIP:
+                    lines.append(
+                        rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
+                    )
+                else:
+                    lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
+
+                if event.detail:
+                    lines.append(f"  [dim]{event.detail}[/dim]")
+
+            console.print()
+            console.print(
+                Panel(
+                    "\n".join(lines),
+                    title="[bold]Diagnostic Summary",
+                    border_style="yellow" if has_warnings else "blue",
+                    expand=False,
+                    padding=(1, 2),
                 )
-            else:
-                lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
+            )
 
-            if event.detail:
-                lines.append(f"  [dim]{event.detail}[/dim]")
+        if has_warnings:
+            console.print(
+                "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
+                "but some non-critical tasks encountered issues."
+            )
+        else:
+            console.print(
+                "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
+            )
+
+    return result
+
+
+def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
+    """Renders a human-readable summary of the planned environment manifest."""
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Category", justify="right", style="bold")
+    table.add_column("Details")
+
+    # Filesystem
+    files_to_create = len(manifest.filesystem.directories) + len(
+        manifest.filesystem.file_injections
+    )
+    table.add_row("Filesystem:", f"{files_to_create} files/directories to scaffold")
+
+    # Dependencies
+    deps_total = (
+        len(manifest.dependencies.dependencies)
+        + len(manifest.dependencies.dev_dependencies)
+        + len(manifest.dependencies.docs_dependencies)
+    )
+    table.add_row("Dependencies:", f"{deps_total} packages to install")
+
+    # Tasks
+    tasks_total = len(manifest.tasks.system_tasks) + len(
+        manifest.tasks.post_install_tasks
+    )
+    table.add_row("Tasks:", f"{tasks_total} system commands to execute")
+
+    # Collision Strategy
+    table.add_row("Collision Strategy:", manifest.collision_strategy.value.title())
+
+    console.print()
+    console.print(
+        Panel(
+            table,
+            title="[bold]Summary",
+            border_style="cyan",
+            padding=(0, 2),
+            expand=False,
+        )
+    )
+
+    if deps_total > 0:
+        dep_lines = []
+        if manifest.dependencies.dependencies:
+            pkgs = ", ".join(manifest.dependencies.dependencies)
+            dep_lines.append(f"[bold]Standard:[/bold] {pkgs}")
+        if manifest.dependencies.dev_dependencies:
+            pkgs = ", ".join(manifest.dependencies.dev_dependencies)
+            dep_lines.append(f"[bold]Development:[/bold] {pkgs}")
+        if manifest.dependencies.docs_dependencies:
+            pkgs = ", ".join(manifest.dependencies.docs_dependencies)
+            dep_lines.append(f"[bold]Documentation:[/bold] {pkgs}")
 
         console.print()
         console.print(
             Panel(
-                "\n".join(lines),
-                title="[bold]Diagnostic Summary",
-                border_style="yellow" if has_warnings else "blue",
+                "\n".join(dep_lines),
+                title="[bold]Dependencies",
+                border_style="cyan",
+                padding=(0, 2),
                 expand=False,
-                padding=(1, 2),
             )
         )
 
-    if has_warnings:
+    if tasks_total > 0:
+        task_lines = []
+        for i, task in enumerate(manifest.tasks.system_tasks, 1):
+            cmd = shlex.join(task.command)
+            task_lines.append(f"  {i}. {cmd}")
+        offset = len(manifest.tasks.system_tasks)
+        for i, task in enumerate(manifest.tasks.post_install_tasks, offset + 1):
+            cmd = shlex.join(task.command)
+            task_lines.append(f"  {i}. {cmd}")
+
+        console.print()
         console.print(
-            "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
-            "but some non-critical tasks encountered issues."
+            Panel(
+                "\n".join(task_lines),
+                title="[bold]Tasks",
+                border_style="cyan",
+                padding=(0, 2),
+                expand=False,
+            )
         )
-    else:
+
+    if files_to_create > 0:
+        tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
+        all_paths = set(manifest.filesystem.directories)
+        all_paths.update(manifest.filesystem.file_injections.keys())
+        all_paths.update(manifest.filesystem.file_appends.keys())
+
+        sorted_paths = sorted(all_paths)
+        nodes: dict[str, Tree] = {"": tree}
+
+        for path in sorted_paths:
+            parts = path.split("/")
+            current = ""
+            for idx, part in enumerate(parts):
+                parent = current
+                current = f"{current}/{part}" if current else part
+
+                if current not in nodes:
+                    is_file = (idx == len(parts) - 1) and (
+                        path not in manifest.filesystem.directories
+                    )
+                    if is_file:
+                        nodes[current] = nodes[parent].add(f"{part}")
+                    else:
+                        nodes[current] = nodes[parent].add(f"{part}/")
+
+        console.print()
         console.print(
-            "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
+            Panel(
+                tree,
+                title="[bold]Filesystem",
+                border_style="cyan",
+                padding=(0, 2),
+                expand=False,
+            )
         )
+
+    console.print("\n[dim]No changes were made to your system.[/dim]")
 
 
 def handle_init(args: argparse.Namespace) -> None:
@@ -427,7 +681,136 @@ def handle_init(args: argparse.Namespace) -> None:
         is_user_aliased=is_user_aliased,
     )
     engine = Orchestrator(modules, user_config, request=request)
-    _run_engine(engine, request)
+
+    if getattr(args, "dry_run", False):
+        manifest = engine.plan()
+        if is_json_mode:
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "planned",
+                    "manifest": manifest.to_dict(),
+                }
+            )
+        else:
+            _print_dry_run_summary(manifest)
+        sys.exit(0)
+
+    result = _run_engine(engine, request)
+    if is_json_mode:
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "result": result.to_dict(),
+            }
+        )
+
+
+def handle_export_schema(args: argparse.Namespace) -> None:
+    """Handles the 'export-schema' subcommand to output the template JSON schema."""
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://protostar.dev/schema/template/experimental-v{CLI_API_VERSION}.json",
+        "title": "Protostar Template Schema",
+        "description": "Experimental JSON Schema for validating Protostar TOML templates.",
+        "type": "object",
+        "properties": {
+            "template": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "version": {"type": "string"},
+                },
+                "required": ["name", "description", "version"],
+                "additionalProperties": False,
+            },
+            "environment": {
+                "type": "object",
+                "properties": {
+                    "python_version": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+            "tooling": {
+                "type": "object",
+                "patternProperties": {
+                    "^[a-z0-9-]+$": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
+            "dependencies": {
+                "type": "object",
+                "properties": {
+                    "dependencies": {"type": "array", "items": {"type": "string"}},
+                    "dev_dependencies": {"type": "array", "items": {"type": "string"}},
+                    "docs_dependencies": {"type": "array", "items": {"type": "string"}},
+                },
+                "additionalProperties": False,
+            },
+            "tasks": {
+                "type": "object",
+                "properties": {
+                    "system": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "command": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "description": {"type": "string"},
+                                "timeout": {"type": "integer"},
+                            },
+                            "required": ["command"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "post_install": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "command": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "description": {"type": "string"},
+                                "timeout": {"type": "integer"},
+                            },
+                            "required": ["command"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "additionalProperties": False,
+            },
+            "metadata": {
+                "type": "object",
+                "additionalProperties": True,
+            },
+            "files": {
+                "type": "object",
+                "patternProperties": {
+                    "^.+$": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "required": ["template"],
+        "additionalProperties": False,
+    }
+
+    if is_json_mode:
+        # In JSON mode, stdout should be compact for agents
+        print(json.dumps(schema, separators=(",", ":")))  # noqa: T201
+    else:
+        # Human mode: pretty print with syntax highlighting
+        console.print(JSON.from_data(schema))
+
+    sys.exit(0)
 
 
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
@@ -547,7 +930,7 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
-    base_parser = argparse.ArgumentParser(add_help=False)
+    base_parser = JsonAwareParser(add_help=False)
     base_parser.add_argument(
         "--version",
         action="version",
@@ -561,8 +944,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,  # Prevents subparser from overwriting root namespace
         help="Enable verbose debug output and rich tracebacks.",
     )
+    base_parser.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,  # Hide from human help output
+    )
 
-    parser = argparse.ArgumentParser(
+    parser = JsonAwareParser(
         description="A modular CLI tool for quickly scaffolding Python environments. ",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
@@ -602,7 +991,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=argparse.SUPPRESS,
     )
-
+    init_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan the execution and print the resulting manifest without mutating the disk.",
+    )
     base_group = init_parser.add_argument_group("Base Configuration")
 
     base_group.add_argument(
@@ -670,6 +1063,17 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.set_defaults(func=handle_init)
     init_parser.print_help = types.MethodType(print_table_help, init_parser)  # type: ignore[method-assign]
 
+    # --- Export Schema Subparser ---
+    export_schema_parser = subparsers.add_parser(
+        "export-schema",
+        help="Export the JSON Schema for the TOML template format.",
+        description="Generates and prints the JSON Schema representing the layout of Protostar template files. Intended for IDE tooling and programmatic interrogation.",
+        formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
+        parents=[base_parser],
+    )
+    export_schema_parser.set_defaults(func=handle_export_schema)
+
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
         "config",
@@ -727,6 +1131,104 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _build_capabilities_schema(parser: argparse.ArgumentParser) -> dict[str, Any]:
+    """Introspects the parser to build a dynamic capabilities schema.
+
+    Generates a structured description of all available subcommands and their
+    flags by walking the parser's action groups. This is the payload emitted
+    when ``--help --json`` or bare ``--json`` is invoked.
+
+    Args:
+        parser: The fully constructed root argument parser.
+
+    Returns:
+        A JSON-serializable capabilities dictionary.
+    """
+    commands: dict[str, Any] = {}
+    subparsers_action = next(
+        (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+        None,
+    )
+    if subparsers_action is not None:
+        for name, subparser in subparsers_action.choices.items():
+            flags: list[dict[str, Any]] = []
+            for action in subparser._actions:
+                if isinstance(action, argparse._HelpAction):
+                    continue
+                if action.help == argparse.SUPPRESS:
+                    continue
+                flag_entry: dict[str, Any] = {
+                    "names": action.option_strings or [action.dest],
+                    "help": action.help or "",
+                }
+                if action.metavar:
+                    flag_entry["metavar"] = action.metavar
+                if (
+                    isinstance(
+                        action,
+                        (
+                            argparse.BooleanOptionalAction,
+                            argparse._StoreTrueAction,
+                            argparse._StoreFalseAction,
+                        ),
+                    )
+                    or action.nargs == 0
+                ):
+                    flag_entry["type"] = "bool"
+                else:
+                    flag_entry["type"] = "str"
+                flags.append(flag_entry)
+            commands[name] = {
+                "description": subparser.description or "",
+                "flags": flags,
+            }
+    return {"commands": commands}
+
+
+def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
+    """Intercepts JSON-mode meta-flags before argparse runs.
+
+    Examines raw ``sys.argv`` for flag combinations that should short-circuit
+    normal parsing: ``--version --json``, ``--help --json``, and bare ``--json``
+    with no subcommand. Each path emits exactly one JSON document and exits.
+
+    Must be called after ``build_parser()`` but before ``parse_known_args()``.
+
+    Args:
+        parser: The fully constructed root argument parser, used to build the
+            capabilities schema payload.
+    """
+    if not is_json_mode:
+        return
+
+    argv_set = set(sys.argv[1:])
+
+    # --version --json  (any order)
+    if "--version" in argv_set:
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "version": __version__,
+            }
+        )
+        sys.exit(0)
+
+    # --help --json or bare --json with no recognised subcommand
+    has_known_subcommand = bool(
+        argv_set - {"--json", "--help", "-h", "--verbose", "-v"}
+    )
+    if "--help" in argv_set or "-h" in argv_set or not has_known_subcommand:
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "capabilities": _build_capabilities_schema(parser),
+            }
+        )
+        sys.exit(0)
+
+
 # --- CLI Design Note: Pre-Parser Interception & POSIX Exit Mapping ---
 # 1. Interactive TUI Interception: Evaluates raw `sys.argv` before `argparse.parse_args()`
 #    to seamlessly drop users into interactive wizards when flags are omitted, avoiding generic
@@ -736,6 +1238,9 @@ def build_parser() -> argparse.ArgumentParser:
 #    runners to programmatically differentiate configuration errors from disk or network failures.
 def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
+    if is_json_mode:
+        return
+
     if len(sys.argv) == 1:
         sys.argv.append("init")
 
@@ -770,11 +1275,18 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
 
 def configure_logging() -> None:
-    """Injects Rich tracebacks and debug handlers into the global logger."""
+    """Injects Rich tracebacks and debug handlers into the global logger.
+
+    In JSON mode, the handler writes to ``stderr`` to preserve ``stdout`` for
+    the exclusive use of machine-readable JSON payloads.
+    """
+    log_console = _stderr_console if is_json_mode else console
     logger = logging.getLogger("protostar")
     logger.setLevel(logging.DEBUG)
     logger.handlers.clear()
-    logger.addHandler(RichHandler(console=console, markup=True, rich_tracebacks=True))
+    logger.addHandler(
+        RichHandler(console=log_console, markup=True, rich_tracebacks=True)
+    )
 
 
 def handle_config(args: argparse.Namespace) -> None:
@@ -906,6 +1418,7 @@ def _resolve_usage_doc_path() -> str:
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
     parser = build_parser()
+    _dispatch_preparser_flags(parser)
 
     try:
         intercept_interactive_wizards(parser)
@@ -932,26 +1445,46 @@ def main() -> None:
         args.func(args)
 
     except ProtostarError as e:
-        # Expected domain errors route here for clean terminal formatting
-        console.print()
-
-        body = str(e)
-        if isinstance(e, CommandExecutionError) and e.output_detail:
-            body += f"\n\n[dim]{e.output_detail}[/dim]"
-        if e.hint:
-            body += f"\n\n[dim]Hint: {e.hint}[/dim]"
-        if e.docs_url:
-            body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
-
-        console.print(
-            Panel(
-                body,
-                title="[bold red]Execution Aborted",
-                border_style="red",
-                expand=False,
-                padding=(1, 2),
+        if is_json_mode:
+            # Machine-readable error envelope: structured type, message, and optional extras.
+            error_dict: dict[str, Any] = {
+                "type": type(e).__name__,
+                "message": str(e),
+            }
+            if e.hint:
+                error_dict["hint"] = e.hint
+            if e.docs_url:
+                error_dict["docs_url"] = e.docs_url
+            if isinstance(e, WorkspaceCollisionError):
+                error_dict["paths"] = sorted(str(p) for p in e.paths)
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": error_dict,
+                }
             )
-        )
+        else:
+            # Expected domain errors route here for clean terminal formatting
+            console.print()
+
+            body = str(e)
+            if isinstance(e, CommandExecutionError) and e.output_detail:
+                body += f"\n\n[dim]{e.output_detail}[/dim]"
+            if e.hint:
+                body += f"\n\n[dim]Hint: {e.hint}[/dim]"
+            if e.docs_url:
+                body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
+
+            console.print(
+                Panel(
+                    body,
+                    title="[bold red]Execution Aborted",
+                    border_style="red",
+                    expand=False,
+                    padding=(1, 2),
+                )
+            )
 
         # Route specific domain exceptions to standard POSIX status codes
         if isinstance(e, InvalidUsageError):
@@ -979,10 +1512,31 @@ def main() -> None:
 
     except KeyboardInterrupt:
         # Catch Ctrl+C cleanly
-        console.print("\n[bold red]Aborted by user.[/bold red]")
+        if is_json_mode:
+            _stderr_console.print("\n[bold red]Aborted by user.[/bold red]")
+        else:
+            console.print("\n[bold red]Aborted by user.[/bold red]")
         sys.exit(130)
 
     except Exception as e:
+        if is_json_mode:
+            # Emit a compact JSON error envelope; print the traceback to stderr.
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": {
+                        "type": "InternalError",
+                        "message": (
+                            f"An unexpected internal error occurred: "
+                            f"{type(e).__name__}: {e}"
+                        ),
+                    },
+                }
+            )
+            _stderr_console.print_exception(show_locals=False, max_frames=10)
+            sys.exit(os.EX_SOFTWARE)
+
         # Unexpected core system bugs route here for the crash report payload
         console.print(
             "\n[bold red]CRITICAL FAILURE:[/bold red] Protostar encountered an unexpected error."
@@ -1011,6 +1565,7 @@ def main() -> None:
         console.print(
             f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
         )
+
         sys.exit(os.EX_SOFTWARE)  # 70: Internal software malfunction code
 
 

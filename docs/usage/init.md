@@ -354,6 +354,8 @@ Selecting __Merge__ executes an AST injection:
 
 ## Advanced Flags
 
+- __Dry-Run Simulation__: Append `--dry-run` to preview the planned filesystem structure, dependencies, and tasks without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`).
+- __Machine-Readable Output__: Pass the position-independent `--json` flag to emit structured JSON envelopes to `stdout` and route logs to `stderr` (e.g., `protostar init --template cli --json`). See the __[Agent & Machine Interface](./agent-interface.md)__ for the full protocol specification.
 - __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).
 - __List Available Templates__: Run `protostar init --list-templates` to view all built-in templates and registered global aliases.
 - __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.13`).

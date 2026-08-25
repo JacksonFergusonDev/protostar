@@ -18,6 +18,17 @@ Below is the complete annotated schema for a Protostar template. It defines how 
 --8<-- "template_schema.toml"
 ```
 
+??? tip "Exporting the JSON Schema (`protostar export-schema`)"
+    Protostar can generate the official JSON Schema for template files. You can use this for automated validation in external pipelines or configure IDE plugins like VS Code's *Even Better TOML* to get real-time autocompletion and linting:
+
+    ```bash
+    # Print formatted schema to terminal:
+    protostar export-schema
+
+    # Export machine-readable JSON schema to a file:
+    protostar export-schema --json > protostar-template.schema.json
+    ```
+
 ### AST Injections & Appends
 
 Protostar's true power lies in its ability to safely mutate existing files via Abstract Syntax Tree (AST) deep-merging and marker blocks.
