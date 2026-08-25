@@ -3,28 +3,28 @@
 # ==============================================================================
 
 # --- Dependencies ---
-# Core runtime packages installed into the project environment (type: list[str])
+# Core runtime packages installed into the project environment.
 dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
 ]
 
-# Development packages not shipped to production (type: list[str])
+# Development packages not shipped to production.
 dev_dependencies = [
     "pytest",
     "mypy",
     "ruff",
 ]
 
-# Documentation toolchain dependencies (type: list[str])
+# Documentation toolchain dependencies.
 docs_dependencies = [
     "mkdocstrings[python]",
     "zensical",
 ]
 
 # --- Directory Architecture ---
-# Relative directory paths scaffolded in the workspace (type: list[str])
+# Relative directory paths scaffolded in the workspace.
 directories = [
     "src/<% PACKAGE_NAME %>",
     "tests",
@@ -32,7 +32,7 @@ directories = [
 ]
 
 # --- Version Control Ignores ---
-# Patterns appended and deduplicated in .gitignore (type: list[str])
+# Patterns appended and deduplicated in .gitignore.
 vcs_ignores = [
     "*.log",
     ".env",
@@ -40,12 +40,12 @@ vcs_ignores = [
 ]
 
 # --- Subprocess Tasks ---
-# Commands executed before dependency installation (type: list[list[str]])
+# Commands executed before dependency installation.
 system_tasks = [
     ["git", "init"],
 ]
 
-# Commands executed after dependencies are installed (type: list[list[str]])
+# Commands executed after dependencies are installed.
 post_install_tasks = [
     ["uv", "run", "nbdime", "config-git", "--enable"],
 ]
@@ -72,7 +72,7 @@ ty = false
 zensical = false
 
 # --- Static File Injections ---
-# Exact file paths mapped to their raw template contents (type: dict[str, str])
+# Exact file paths mapped to their raw template contents.
 
 [files]
 "README.md" = '''
@@ -86,7 +86,7 @@ __version__ = "0.1.0"
 '''
 
 # --- pyproject.toml AST Injections ---
-# Arbitrary tables deep-merged into target pyproject.toml
+# Arbitrary tables deep-merged into target pyproject.toml.
 
 [dev.pyproject]
 custom_linting = '''
@@ -95,7 +95,7 @@ extend-select = ["I", "UP", "B"]
 '''
 
 # --- File Appends ---
-# Lines appended to existing files, creating them if necessary (type: dict[str, list[str]])
+# Lines appended to existing files, creating them if necessary.
 
 [appends]
 "pyproject.toml" = ["# Custom comment appended to bottom of pyproject.toml"]

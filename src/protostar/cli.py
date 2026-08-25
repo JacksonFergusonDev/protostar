@@ -728,97 +728,70 @@ def handle_init(args: argparse.Namespace) -> None:
 
 def handle_export_schema(args: argparse.Namespace) -> None:
     """Handles the 'export-schema' subcommand to output the template JSON schema."""
+    import dataclasses
+
+    properties: dict[str, Any] = {}
+    dev_properties: dict[str, Any] = {}
+
+    for f in dataclasses.fields(TemplateBlueprint):
+        desc = f.metadata.get("description", "")
+        if f.name == "tooling_overrides":
+            for mod in TOOLING_MODULES:
+                if mod.config_key:
+                    properties[mod.config_key] = {
+                        "type": "boolean",
+                        "description": mod.cli_help,
+                    }
+            continue
+
+        type_str = str(f.type)
+        if "list[list[str]]" in type_str:
+            prop = {
+                "type": "array",
+                "items": {"type": "array", "items": {"type": "string"}},
+            }
+        elif "dict[str, list[str]]" in type_str:
+            prop = {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            }
+        elif "list[str]" in type_str:
+            prop = {"type": "array", "items": {"type": "string"}}
+        elif "dict[str, str]" in type_str:
+            prop = {"type": "object", "additionalProperties": {"type": "string"}}
+        elif "dict[str, bool]" in type_str:
+            prop = {"type": "object", "additionalProperties": {"type": "boolean"}}
+        elif "bool" in type_str:
+            prop = {"type": "boolean"}
+        else:
+            prop = {"type": "string"}
+
+        if desc:
+            prop["description"] = desc
+
+        if f.name == "dev_dependencies":
+            dev_properties["dev_dependencies"] = prop
+            dev_properties["extra_dependencies"] = prop
+        elif f.name == "pyproject_injections":
+            dev_properties["pyproject"] = prop
+        else:
+            properties[f.name] = prop
+
+    if dev_properties:
+        properties["dev"] = {
+            "type": "object",
+            "properties": dev_properties,
+            "additionalProperties": False,
+            "description": "Development environment configurations.",
+        }
+
     schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": f"https://protostar.dev/schema/template/experimental-v{CLI_API_VERSION}.json",
         "title": "Protostar Template Schema",
         "description": "Experimental JSON Schema for validating Protostar TOML templates.",
         "type": "object",
-        "properties": {
-            "template": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "description": {"type": "string"},
-                    "version": {"type": "string"},
-                },
-                "required": ["name", "description", "version"],
-                "additionalProperties": False,
-            },
-            "environment": {
-                "type": "object",
-                "properties": {
-                    "python_version": {"type": "string"},
-                },
-                "additionalProperties": False,
-            },
-            "tooling": {
-                "type": "object",
-                "patternProperties": {
-                    "^[a-z0-9-]+$": {"type": "boolean"},
-                },
-                "additionalProperties": False,
-            },
-            "dependencies": {
-                "type": "object",
-                "properties": {
-                    "dependencies": {"type": "array", "items": {"type": "string"}},
-                    "dev_dependencies": {"type": "array", "items": {"type": "string"}},
-                    "docs_dependencies": {"type": "array", "items": {"type": "string"}},
-                },
-                "additionalProperties": False,
-            },
-            "tasks": {
-                "type": "object",
-                "properties": {
-                    "system": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "command": {
-                                    "type": "array",
-                                    "items": {"type": "string"},
-                                },
-                                "description": {"type": "string"},
-                                "timeout": {"type": "integer"},
-                            },
-                            "required": ["command"],
-                            "additionalProperties": False,
-                        },
-                    },
-                    "post_install": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "command": {
-                                    "type": "array",
-                                    "items": {"type": "string"},
-                                },
-                                "description": {"type": "string"},
-                                "timeout": {"type": "integer"},
-                            },
-                            "required": ["command"],
-                            "additionalProperties": False,
-                        },
-                    },
-                },
-                "additionalProperties": False,
-            },
-            "metadata": {
-                "type": "object",
-                "additionalProperties": True,
-            },
-            "files": {
-                "type": "object",
-                "patternProperties": {
-                    "^.+$": {"type": "string"},
-                },
-                "additionalProperties": False,
-            },
-        },
-        "required": ["template"],
+        "properties": properties,
         "additionalProperties": False,
     }
 
