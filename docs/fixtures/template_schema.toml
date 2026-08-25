@@ -10,6 +10,13 @@ dependencies = [
     "pydantic",
 ]
 
+# Development packages not shipped to production (type: list[str])
+dev_dependencies = [
+    "pytest",
+    "mypy",
+    "ruff",
+]
+
 # Documentation toolchain dependencies (type: list[str])
 docs_dependencies = [
     "mkdocstrings[python]",
@@ -66,13 +73,13 @@ zensical = false
 
 # --- Static File Injections ---
 # Exact file paths mapped to their raw template contents (type: dict[str, str])
+
 [files]
 "README.md" = '''
 # <% PROJECT_NAME %>
 
 Auto-scaffolded using custom template.
 '''
-
 "src/<% PACKAGE_NAME %>/__init__.py" = '''
 """<% PROJECT_NAME %> package."""
 __version__ = "0.1.0"
@@ -80,8 +87,15 @@ __version__ = "0.1.0"
 
 # --- pyproject.toml AST Injections ---
 # Arbitrary tables deep-merged into target pyproject.toml
+
 [dev.pyproject]
 custom_linting = '''
 [tool.ruff.lint]
 extend-select = ["I", "UP", "B"]
 '''
+
+# --- File Appends ---
+# Lines appended to existing files, creating them if necessary (type: dict[str, list[str]])
+
+[appends]
+"pyproject.toml" = ["# Custom comment appended to bottom of pyproject.toml"]
