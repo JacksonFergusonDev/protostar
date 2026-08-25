@@ -19,6 +19,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
+from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
 from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
@@ -192,13 +193,13 @@ def generate_template_schema_fixture() -> None:
     )
     doc.add(tomlkit.nl())
 
-    def _multiline_literal(content: str) -> tomlkit.items.String:
+    def _multiline_literal(content: str) -> String:
         clean = content.strip("\r\n")
-        return tomlkit.items.String(
-            tomlkit.items.StringType.MLL,
+        return String(
+            StringType.MLL,
             clean,
             f"\n{clean}\n",
-            tomlkit.items.Trivia(),
+            Trivia(),
         )
 
     def _python_to_tomlkit(val: Any) -> Any:
