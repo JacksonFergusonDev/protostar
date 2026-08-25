@@ -20,7 +20,10 @@ def test_agent_capabilities_discovery(capsys, monkeypatch):
     assert "init" in payload["capabilities"]["commands"]
 
 
-def test_agent_dry_run_and_execute(capsys, monkeypatch, tmp_path):
+def test_agent_dry_run_and_execute(capsys, monkeypatch, mocker, tmp_path):
+    mocker.patch("protostar.executor.execute_subprocess")
+    mocker.patch("protostar.executor.install_dependencies")
+
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr("protostar.cli.is_json_mode", True)
 
