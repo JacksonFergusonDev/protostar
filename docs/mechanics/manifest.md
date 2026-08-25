@@ -68,7 +68,15 @@ During the `build()` phase, modules route their state declarations through these
 
 ## State Serialization
 
-To understand the decoupling, it is helpful to visualize the manifest's internal state. Below is a dynamically generated JSON representation of the aggregate state just before execution, simulating a user running `protostar init --template astro`.
+Every sub-manifest (`DependencyManifest`, `FilesystemManifest`, `ToolingManifest`, `TaskManifest`) as well as the root `EnvironmentManifest` implements a deterministic `.to_dict()` serialization method.
+
+This method enables machine interfaces (such as `protostar init --dry-run --json`) and external tooling to inspect the full planned environment state:
+
+- __Sets $\to$ Sorted Lists:__ Unordered set collections (such as `directories`, `vcs_ignores`, `workspace_hides`) are sorted alphabetically for deterministic JSON output.
+- __Ordered Lists Preserved:__ Sequential task queues and dependency lists maintain their exact insertion order.
+- __Enums & Objects:__ Enums (such as `CollisionStrategy`) are emitted as string values, and `SystemTask` objects are serialized as structured dictionaries (`command`, `description`, `timeout`).
+
+Below is an example JSON representation of an aggregate state during a dry-run of `protostar init --template astro --dry-run --json`:
 
 ```json
 --8<-- "manifest_state.json"
