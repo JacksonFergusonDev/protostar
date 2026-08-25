@@ -105,13 +105,90 @@ class SpinnerHandler(logging.Handler):
             self.status_obj.update(record.getMessage())
 
 
+class JsonAwareParser(argparse.ArgumentParser):
+    """ArgumentParser subclass that emits structured JSON errors in JSON mode.
+
+    When ``--json`` is detected in ``sys.argv``, parse failures (e.g., unrecognised
+    flags, missing required arguments) are intercepted and routed through
+    ``emit_json()`` as a machine-readable error envelope rather than being
+    printed to ``stderr`` in argparse's human-readable format.
+    """
+
+    def error(self, message: str) -> None:  # type: ignore[override]
+        """Overrides argparse's default error handler.
+
+        Args:
+            message: The human-readable error description produced by argparse.
+        """
+        if is_json_mode:
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": {
+                        "type": "InvalidUsageError",
+                        "message": message,
+                    },
+                }
+            )
+            sys.exit(os.EX_USAGE)
+        super().error(message)
+
+
 def _print_templates_and_exit(error_msg: str | None = None) -> None:
     """Renders a rich table of all available templates and exits.
+
+    In JSON mode, emits a structured list of template objects instead of a
+    Rich table, then exits with the appropriate code.
 
     Args:
         error_msg: If provided, prints a red error warning before the table
             and exits with a status code of 1 instead of 0.
     """
+    # Collect template metadata for both JSON and human output paths
+    templates: list[dict[str, str]] = []
+    try:
+        template_dir = importlib.resources.files("protostar.templates")
+        for item in template_dir.iterdir():
+            if item.is_file() and item.name.endswith(".toml"):
+                templates.append(
+                    {
+                        "name": item.name[:-5],
+                        "type": "built-in",
+                        "source": "protostar.templates",
+                    }
+                )
+    except Exception:
+        pass
+
+    user_config = UserConfig.load()
+    if user_config.templates:
+        for alias, source in user_config.templates.items():
+            templates.append({"name": alias, "type": "global-alias", "source": source})
+
+    if is_json_mode:
+        if error_msg:
+            emit_json(
+                {
+                    "api_version": CLI_API_VERSION,
+                    "status": "error",
+                    "error": {
+                        "type": "InvalidUsageError",
+                        "message": error_msg,
+                    },
+                    "templates": templates,
+                }
+            )
+            sys.exit(1)
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "templates": templates,
+            }
+        )
+        sys.exit(0)
+
     if error_msg:
         console.print(f"[bold red]Error:[/bold red] {error_msg}\n")
 
@@ -126,20 +203,10 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     table.add_column("Type", style="magenta")
     table.add_column("Source", style="dim")
 
-    # 1. Evaluate Built-ins
-    try:
-        template_dir = importlib.resources.files("protostar.templates")
-        for item in template_dir.iterdir():
-            if item.is_file() and item.name.endswith(".toml"):
-                table.add_row(item.name[:-5], "Built-in", "protostar.templates")
-    except Exception:
-        pass
-
-    # 2. Evaluate Global Aliases
-    user_config = UserConfig.load()
-    if user_config.templates:
-        for alias, source in user_config.templates.items():
-            table.add_row(alias, "Global Alias", source)
+    for tmpl in templates:
+        table.add_row(
+            tmpl["name"], tmpl["type"].replace("-", " ").title(), tmpl["source"]
+        )
 
     console.print(table)
 
@@ -577,7 +644,7 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
-    base_parser = argparse.ArgumentParser(add_help=False)
+    base_parser = JsonAwareParser(add_help=False)
     base_parser.add_argument(
         "--version",
         action="version",
@@ -592,7 +659,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable verbose debug output and rich tracebacks.",
     )
 
-    parser = argparse.ArgumentParser(
+    parser = JsonAwareParser(
         description="A modular CLI tool for quickly scaffolding Python environments. ",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
@@ -755,6 +822,104 @@ def build_parser() -> argparse.ArgumentParser:
     argcomplete.autocomplete(parser)
 
     return parser
+
+
+def _build_capabilities_schema(parser: argparse.ArgumentParser) -> dict[str, Any]:
+    """Introspects the parser to build a dynamic capabilities schema.
+
+    Generates a structured description of all available subcommands and their
+    flags by walking the parser's action groups. This is the payload emitted
+    when ``--help --json`` or bare ``--json`` is invoked.
+
+    Args:
+        parser: The fully constructed root argument parser.
+
+    Returns:
+        A JSON-serializable capabilities dictionary.
+    """
+    commands: dict[str, Any] = {}
+    subparsers_action = next(
+        (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+        None,
+    )
+    if subparsers_action is not None:
+        for name, subparser in subparsers_action.choices.items():
+            flags: list[dict[str, Any]] = []
+            for action in subparser._actions:
+                if isinstance(action, argparse._HelpAction):
+                    continue
+                if action.help == argparse.SUPPRESS:
+                    continue
+                flag_entry: dict[str, Any] = {
+                    "names": action.option_strings or [action.dest],
+                    "help": action.help or "",
+                }
+                if action.metavar:
+                    flag_entry["metavar"] = action.metavar
+                if (
+                    isinstance(
+                        action,
+                        (
+                            argparse.BooleanOptionalAction,
+                            argparse._StoreTrueAction,
+                            argparse._StoreFalseAction,
+                        ),
+                    )
+                    or action.nargs == 0
+                ):
+                    flag_entry["type"] = "bool"
+                else:
+                    flag_entry["type"] = "str"
+                flags.append(flag_entry)
+            commands[name] = {
+                "description": subparser.description or "",
+                "flags": flags,
+            }
+    return {"commands": commands}
+
+
+def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
+    """Intercepts JSON-mode meta-flags before argparse runs.
+
+    Examines raw ``sys.argv`` for flag combinations that should short-circuit
+    normal parsing: ``--version --json``, ``--help --json``, and bare ``--json``
+    with no subcommand. Each path emits exactly one JSON document and exits.
+
+    Must be called after ``build_parser()`` but before ``parse_known_args()``.
+
+    Args:
+        parser: The fully constructed root argument parser, used to build the
+            capabilities schema payload.
+    """
+    if not is_json_mode:
+        return
+
+    argv_set = set(sys.argv[1:])
+
+    # --version --json  (any order)
+    if "--version" in argv_set:
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "version": __version__,
+            }
+        )
+        sys.exit(0)
+
+    # --help --json or bare --json with no recognised subcommand
+    has_known_subcommand = bool(
+        argv_set - {"--json", "--help", "-h", "--verbose", "-v"}
+    )
+    if "--help" in argv_set or "-h" in argv_set or not has_known_subcommand:
+        emit_json(
+            {
+                "api_version": CLI_API_VERSION,
+                "status": "success",
+                "capabilities": _build_capabilities_schema(parser),
+            }
+        )
+        sys.exit(0)
 
 
 # --- CLI Design Note: Pre-Parser Interception & POSIX Exit Mapping ---
@@ -943,6 +1108,7 @@ def _resolve_usage_doc_path() -> str:
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
     parser = build_parser()
+    _dispatch_preparser_flags(parser)
 
     try:
         intercept_interactive_wizards(parser)
