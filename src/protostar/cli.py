@@ -616,6 +616,112 @@ def handle_init(args: argparse.Namespace) -> None:
         )
 
 
+def handle_export_schema(args: argparse.Namespace) -> None:
+    """Handles the 'export-schema' subcommand to output the template JSON schema."""
+    schema = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": f"https://protostar.dev/schema/template/experimental-v{CLI_API_VERSION}.json",
+        "title": "Protostar Template Schema",
+        "description": "Experimental JSON Schema for validating Protostar TOML templates.",
+        "type": "object",
+        "properties": {
+            "template": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "version": {"type": "string"},
+                },
+                "required": ["name", "description", "version"],
+                "additionalProperties": False,
+            },
+            "environment": {
+                "type": "object",
+                "properties": {
+                    "python_version": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+            "tooling": {
+                "type": "object",
+                "patternProperties": {
+                    "^[a-z0-9-]+$": {"type": "boolean"},
+                },
+                "additionalProperties": False,
+            },
+            "dependencies": {
+                "type": "object",
+                "properties": {
+                    "dependencies": {"type": "array", "items": {"type": "string"}},
+                    "dev_dependencies": {"type": "array", "items": {"type": "string"}},
+                    "docs_dependencies": {"type": "array", "items": {"type": "string"}},
+                },
+                "additionalProperties": False,
+            },
+            "tasks": {
+                "type": "object",
+                "properties": {
+                    "system": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "command": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "description": {"type": "string"},
+                                "timeout": {"type": "integer"},
+                            },
+                            "required": ["command"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "post_install": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "command": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "description": {"type": "string"},
+                                "timeout": {"type": "integer"},
+                            },
+                            "required": ["command"],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                "additionalProperties": False,
+            },
+            "metadata": {
+                "type": "object",
+                "additionalProperties": True,
+            },
+            "files": {
+                "type": "object",
+                "patternProperties": {
+                    "^.+$": {"type": "string"},
+                },
+                "additionalProperties": False,
+            },
+        },
+        "required": ["template"],
+        "additionalProperties": False,
+    }
+
+    if is_json_mode:
+        # In JSON mode, stdout should be compact for agents
+        print(json.dumps(schema, separators=(",", ":")))  # noqa: T201
+    else:
+        # Human mode: pretty print
+        print(json.dumps(schema, indent=2))  # noqa: T201
+
+    sys.exit(0)
+
+
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
     """Custom help formatter for Protostar CLI using rich-argparse.
 
@@ -859,6 +965,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     init_parser.set_defaults(func=handle_init)
     init_parser.print_help = types.MethodType(print_table_help, init_parser)  # type: ignore[method-assign]
+
+    # --- Export Schema Subparser ---
+    export_schema_parser = subparsers.add_parser(
+        "export-schema",
+        help="Export the JSON Schema for the TOML template format.",
+        description="Generates and prints the JSON Schema representing the layout of Protostar template files. Intended for IDE tooling and programmatic interrogation.",
+        formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
+        parents=[base_parser],
+    )
+    export_schema_parser.set_defaults(func=handle_export_schema)
 
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
