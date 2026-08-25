@@ -246,17 +246,92 @@ class UserConfig:
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
 
-    dependencies: list[str] = field(default_factory=list)
-    dev_dependencies: list[str] = field(default_factory=list)
-    docs_dependencies: list[str] = field(default_factory=list)
-    directories: list[str] = field(default_factory=list)
-    vcs_ignores: list[str] = field(default_factory=list)
-    system_tasks: list[list[str]] = field(default_factory=list)
-    post_install_tasks: list[list[str]] = field(default_factory=list)
-    files: dict[str, str] = field(default_factory=dict)
-    pyproject_injections: dict[str, str] = field(default_factory=dict)
-    appends: dict[str, list[str]] = field(default_factory=dict)
-    tooling_overrides: dict[str, bool] = field(default_factory=dict)
+    dependencies: list[str] = field(
+        default_factory=list,
+        metadata={
+            "description": "Core runtime packages installed into the project environment.",
+            "example": ["fastapi", "uvicorn", "pydantic"],
+        },
+    )
+    dev_dependencies: list[str] = field(
+        default_factory=list,
+        metadata={
+            "description": "Development packages not shipped to production.",
+            "example": ["pytest", "mypy", "ruff"],
+        },
+    )
+    docs_dependencies: list[str] = field(
+        default_factory=list,
+        metadata={
+            "description": "Documentation toolchain dependencies.",
+            "example": ["mkdocstrings[python]", "zensical"],
+        },
+    )
+    directories: list[str] = field(
+        default_factory=list,
+        metadata={
+            "description": "Relative directory paths scaffolded in the workspace.",
+            "example": ["src/<% PACKAGE_NAME %>", "tests", "data/raw"],
+        },
+    )
+    vcs_ignores: list[str] = field(
+        default_factory=list,
+        metadata={
+            "description": "Patterns appended and deduplicated in .gitignore.",
+            "example": ["*.log", ".env", "local_data/"],
+        },
+    )
+    system_tasks: list[list[str]] = field(
+        default_factory=list,
+        metadata={
+            "description": "Commands executed before dependency installation.",
+            "example": [["git", "init"]],
+        },
+    )
+    post_install_tasks: list[list[str]] = field(
+        default_factory=list,
+        metadata={
+            "description": "Commands executed after dependencies are installed.",
+            "example": [["uv", "run", "nbdime", "config-git", "--enable"]],
+        },
+    )
+    files: dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Exact file paths mapped to their raw template contents.",
+            "example": {
+                "README.md": "# <% PROJECT_NAME %>\n\nAuto-scaffolded using custom template.",
+                "src/<% PACKAGE_NAME %>/__init__.py": '"""<% PROJECT_NAME %> package."""\n__version__ = "0.1.0"',
+            },
+        },
+    )
+    pyproject_injections: dict[str, str] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Arbitrary tables deep-merged into target pyproject.toml.",
+            "example": {
+                "custom_linting": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]'
+            },
+        },
+    )
+    appends: dict[str, list[str]] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Lines appended to existing files, creating them if necessary.",
+            "example": {
+                "pyproject.toml": [
+                    "# Custom comment appended to bottom of pyproject.toml"
+                ]
+            },
+        },
+    )
+    tooling_overrides: dict[str, bool] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Boolean toggles configuring baseline tooling opinions.",
+            "example": None,
+        },
+    )
 
     @classmethod
     def load(
