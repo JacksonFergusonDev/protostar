@@ -16,6 +16,10 @@
     margin: 3em 0;
 }
 
+.mermaid svg {
+    overflow: visible !important;
+}
+
 .protostar-kicker {
     display: inline-block;
     margin-bottom: 0.8rem;

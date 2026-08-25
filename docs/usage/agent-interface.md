@@ -127,34 +127,25 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
 
 ## The Agent Scaffolding Lifecycle
 
-AI agents can interact with Protostar using a predictable four-phase loop:
+AI agents can interact with Protostar using a predictable three-phase lifecycle:
 
 ```mermaid
+%%{init: {'sequence': {'mirrorActors': false, 'diagramMarginY': 30, 'bottomMarginAdj': 50}}}%%
 sequenceDiagram
     autonumber
     actor Agent as AI Agent
     participant CLI as Protostar CLI
     participant Disk as Local Workspace
 
-    Note over Agent,CLI: Phase 1: Capabilities Discovery
-    Agent->>CLI: protostar --json
-    CLI-->>Agent: {"status": "success", "capabilities": {...}}
+    Agent->>CLI: Phase 1: Request Capabilities
+    CLI-->>Agent: Return capabilities schema
 
-    Note over Agent,CLI: Phase 2: Simulation & Dry-Run
-    Agent->>CLI: protostar init --template cli --dry-run --json
-    CLI-->>Agent: {"status": "planned", "manifest": {...}}
+    Agent->>CLI: Phase 2: Request Dry-Run Plan
+    CLI-->>Agent: Return planned manifest
 
-    alt Workspace Collision Detected
-        CLI-->>Agent: {"status": "error", "error": {"type": "WorkspaceCollisionError", "paths": [...]}}
-        Note over Agent: Agent inspects collision paths & decides strategy
-        Agent->>CLI: protostar init --template cli --force-merge --dry-run --json
-        CLI-->>Agent: {"status": "planned", "manifest": {...}}
-    end
-
-    Note over Agent,CLI: Phase 3: Headless Execution
-    Agent->>CLI: protostar init --template cli --force-merge --json
-    CLI->>Disk: Apply atomic disk mutations & run tasks
-    CLI-->>Agent: {"status": "success", "result": {"touched_paths": [...]}}
+    Agent->>CLI: Phase 3: Execute Scaffold
+    CLI->>Disk: Apply disk mutations & tasks
+    CLI-->>Agent: Return Success
 ```
 
 ### 1. Capabilities Discovery
@@ -181,7 +172,7 @@ protostar init --template astro --dry-run --json
 
 The resulting payload exposes all directories, injected file contents, dependencies, and shell commands that Protostar plans to execute.
 
-### 3. Collision Handling & Recovery
+#### Collision Handling & Recovery
 
 If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with an error payload:
 
@@ -202,7 +193,7 @@ The agent can parse the `"paths"` array and choose how to proceed:
 - Pass `--force-merge` to safely deep-merge configurations and append ignore rules.
 - Pass `--force-replace` to overwrite existing configuration files.
 
-### 4. Headless Execution
+### 3. Headless Execution
 
 Once the plan is verified, the agent executes initialization:
 
