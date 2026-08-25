@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787696383651,
+  "lastUpdate": 1787701583903,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7723,6 +7723,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 182.85,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f1f219275f81d6f070c0da31b7a64a10674713c9",
+          "message": "refactor: establish single source of truth for template schema (#200)\n\n* feat(schema): add ssot metadata to TemplateBlueprint\n\n* refactor(docs): derive toml schema fixture from TemplateBlueprint metadata\n\n* refactor(cli): dynamically generate json schema from TemplateBlueprint\n\n* fix(cli): correct schema types and dev nesting in export-schema\n\n* docs(readme): add template schema export and validation section",
+          "timestamp": "2026-08-25T16:45:19-07:00",
+          "tree_id": "cc01d0e8ef9a90996257a9deb3f71515f130071f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f1f219275f81d6f070c0da31b7a64a10674713c9"
+        },
+        "date": 1787701583070,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 151.07,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.56,
             "unit": "ms"
           }
         ]
