@@ -24,6 +24,7 @@ from rich.panel import Panel
 from rich.status import Status
 from rich.style import Style
 from rich.table import Table
+from rich.tree import Tree
 from rich_argparse import RawTextRichHelpFormatter
 
 from protostar import __version__
@@ -452,7 +453,62 @@ def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     table.add_row("Collision Strategy", manifest.collision_strategy.value.title())
 
     console.print(table)
-    console.print("[dim]No changes were made to your system.[/dim]")
+
+    if deps_total > 0:
+        console.print("\n[bold cyan]Dependencies[/bold cyan]")
+        if manifest.dependencies.dependencies:
+            console.print(
+                f"  [bold]Standard:[/bold] {', '.join(manifest.dependencies.dependencies)}"
+            )
+        if manifest.dependencies.dev_dependencies:
+            console.print(
+                f"  [bold]Development:[/bold] {', '.join(manifest.dependencies.dev_dependencies)}"
+            )
+        if manifest.dependencies.docs_dependencies:
+            console.print(
+                f"  [bold]Documentation:[/bold] {', '.join(manifest.dependencies.docs_dependencies)}"
+            )
+
+    if tasks_total > 0:
+        console.print("\n[bold cyan]Tasks[/bold cyan]")
+        for i, task in enumerate(manifest.tasks.system_tasks, 1):
+            cmd = shlex.join(task.command)
+            console.print(f"  {i}. [dim]({task.description})[/dim] {cmd}")
+        offset = len(manifest.tasks.system_tasks)
+        for i, task in enumerate(manifest.tasks.post_install_tasks, offset + 1):
+            cmd = shlex.join(task.command)
+            console.print(f"  {i}. [dim]({task.description})[/dim] {cmd}")
+
+    if files_to_create > 0:
+        console.print("\n[bold cyan]Filesystem[/bold cyan]")
+
+        tree = Tree("📁 [bold].[/bold] (Workspace Root)")
+        all_paths = set(manifest.filesystem.directories)
+        all_paths.update(manifest.filesystem.file_injections.keys())
+        all_paths.update(manifest.filesystem.file_appends.keys())
+
+        sorted_paths = sorted(all_paths)
+        nodes: dict[str, Tree] = {"": tree}
+
+        for path in sorted_paths:
+            parts = path.split("/")
+            current = ""
+            for idx, part in enumerate(parts):
+                parent = current
+                current = f"{current}/{part}" if current else part
+
+                if current not in nodes:
+                    is_file = (idx == len(parts) - 1) and (
+                        path not in manifest.filesystem.directories
+                    )
+                    if is_file:
+                        nodes[current] = nodes[parent].add(f"📄 {part}")
+                    else:
+                        nodes[current] = nodes[parent].add(f"📁 {part}")
+
+        console.print(tree)
+
+    console.print("\n[dim]No changes were made to your system.[/dim]")
 
 
 def handle_init(args: argparse.Namespace) -> None:
