@@ -424,16 +424,15 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
 
 def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     """Renders a human-readable summary of the planned environment manifest."""
-    console.print("\n[bold]Protostar Dry Run Summary[/bold]")
-    table = Table(box=box.ROUNDED, show_header=False, padding=(0, 2))
-    table.add_column("Category", style="cyan", justify="right")
-    table.add_column("Details", style="white")
+    table = Table(box=None, show_header=False, padding=(0, 2))
+    table.add_column("Category", justify="right", style="bold")
+    table.add_column("Details")
 
     # Filesystem
     files_to_create = len(manifest.filesystem.directories) + len(
         manifest.filesystem.file_injections
     )
-    table.add_row("Filesystem", f"{files_to_create} files/directories to scaffold")
+    table.add_row("Filesystem:", f"{files_to_create} files/directories to scaffold")
 
     # Dependencies
     deps_total = (
@@ -441,48 +440,74 @@ def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
         + len(manifest.dependencies.dev_dependencies)
         + len(manifest.dependencies.docs_dependencies)
     )
-    table.add_row("Dependencies", f"{deps_total} packages to install")
+    table.add_row("Dependencies:", f"{deps_total} packages to install")
 
     # Tasks
     tasks_total = len(manifest.tasks.system_tasks) + len(
         manifest.tasks.post_install_tasks
     )
-    table.add_row("Tasks", f"{tasks_total} system commands to execute")
+    table.add_row("Tasks:", f"{tasks_total} system commands to execute")
 
     # Collision Strategy
-    table.add_row("Collision Strategy", manifest.collision_strategy.value.title())
+    table.add_row("Collision Strategy:", manifest.collision_strategy.value.title())
 
-    console.print(table)
+    console.print()
+    console.print(
+        Panel(
+            table,
+            title="[bold]Summary",
+            border_style="cyan",
+            padding=(0, 2),
+            expand=False,
+        )
+    )
 
     if deps_total > 0:
-        console.print("\n[bold cyan]Dependencies[/bold cyan]")
+        dep_lines = []
         if manifest.dependencies.dependencies:
-            console.print(
-                f"  [bold]Standard:[/bold] {', '.join(manifest.dependencies.dependencies)}"
-            )
+            pkgs = ", ".join(manifest.dependencies.dependencies)
+            dep_lines.append(f"[bold]Standard:[/bold] {pkgs}")
         if manifest.dependencies.dev_dependencies:
-            console.print(
-                f"  [bold]Development:[/bold] {', '.join(manifest.dependencies.dev_dependencies)}"
-            )
+            pkgs = ", ".join(manifest.dependencies.dev_dependencies)
+            dep_lines.append(f"[bold]Development:[/bold] {pkgs}")
         if manifest.dependencies.docs_dependencies:
-            console.print(
-                f"  [bold]Documentation:[/bold] {', '.join(manifest.dependencies.docs_dependencies)}"
+            pkgs = ", ".join(manifest.dependencies.docs_dependencies)
+            dep_lines.append(f"[bold]Documentation:[/bold] {pkgs}")
+
+        console.print()
+        console.print(
+            Panel(
+                "\n".join(dep_lines),
+                title="[bold]Dependencies",
+                border_style="cyan",
+                padding=(0, 2),
+                expand=False,
             )
+        )
 
     if tasks_total > 0:
-        console.print("\n[bold cyan]Tasks[/bold cyan]")
+        task_lines = []
         for i, task in enumerate(manifest.tasks.system_tasks, 1):
             cmd = shlex.join(task.command)
-            console.print(f"  {i}. {cmd}")
+            task_lines.append(f"  {i}. {cmd}")
         offset = len(manifest.tasks.system_tasks)
         for i, task in enumerate(manifest.tasks.post_install_tasks, offset + 1):
             cmd = shlex.join(task.command)
-            console.print(f"  {i}. {cmd}")
+            task_lines.append(f"  {i}. {cmd}")
+
+        console.print()
+        console.print(
+            Panel(
+                "\n".join(task_lines),
+                title="[bold]Tasks",
+                border_style="cyan",
+                padding=(0, 2),
+                expand=False,
+            )
+        )
 
     if files_to_create > 0:
-        console.print("\n[bold cyan]Filesystem[/bold cyan]")
-
-        tree = Tree("[bold].[/bold] (Workspace Root)")
+        tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
         all_paths = set(manifest.filesystem.directories)
         all_paths.update(manifest.filesystem.file_injections.keys())
         all_paths.update(manifest.filesystem.file_appends.keys())
@@ -504,11 +529,18 @@ def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
                     if is_file:
                         nodes[current] = nodes[parent].add(f"{part}")
                     else:
-                        nodes[current] = nodes[parent].add(
-                            f"[bold blue]{part}/[/bold blue]"
-                        )
+                        nodes[current] = nodes[parent].add(f"{part}/")
 
-        console.print(tree)
+        console.print()
+        console.print(
+            Panel(
+                tree,
+                title="[bold]Filesystem",
+                border_style="cyan",
+                padding=(0, 2),
+                expand=False,
+            )
+        )
 
     console.print("\n[dim]No changes were made to your system.[/dim]")
 
