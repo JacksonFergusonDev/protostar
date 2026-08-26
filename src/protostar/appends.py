@@ -87,7 +87,9 @@ def append_marker_blocks(
 
     for payload in payloads:
         # Generate a deterministic boundary marker based on the payload content
-        payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
+        payload_hash = hashlib.md5(
+            payload.encode("utf-8"), usedforsecurity=False
+        ).hexdigest()[:8]
         marker_begin = (
             f"{c_start} --- Protostar Injection: {payload_hash} --- {c_end}".strip()
         )

@@ -71,7 +71,7 @@ def run_init_wizard() -> WizardSelections | None:
         for item in template_dir.iterdir():
             if item.is_file() and item.name.endswith(".toml"):
                 builtins.append(item.name[:-5])
-    except Exception:
+    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
         pass
 
     if builtins:

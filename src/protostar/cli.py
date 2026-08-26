@@ -179,7 +179,7 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
                         "source": "protostar.templates",
                     }
                 )
-    except Exception:
+    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
         pass
 
     user_config = UserConfig.load()
