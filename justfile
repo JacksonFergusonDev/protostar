@@ -189,6 +189,7 @@ sandbox *args: sync
     MOCK_HOME="$SANDBOX_DIR/home"
     WORKSPACE="$SANDBOX_DIR/workspace"
     SANDBOX_VENV="$SANDBOX_DIR/venv"
+    HOST_UV_CACHE="${UV_CACHE_DIR:-$HOME/Library/Caches/uv}"
 
     mkdir -p "$MOCK_HOME" "$WORKSPACE"
 
@@ -201,10 +202,9 @@ sandbox *args: sync
 
     printf "\n{{ blue }}=== Building Fresh Protostar Sandbox Environment ==={{ nc }}\n"
 
-    # 1. Force a clean venv build from the working tree (no cache, forced package reinstall)
+    # 1. Build sandbox venv with local Protostar
     uv venv "$SANDBOX_VENV" --quiet
-    VIRTUAL_ENV="$SANDBOX_VENV" uv pip install \
-        --no-cache \
+    UV_CACHE_DIR="$HOST_UV_CACHE" VIRTUAL_ENV="$SANDBOX_VENV" uv pip install \
         --reinstall-package protostar \
         -e "$REPO_ROOT" --quiet
 
@@ -219,12 +219,12 @@ sandbox *args: sync
     RAW_ARGS="{{ args }}"
 
     if [[ -n "$RAW_ARGS" ]]; then
-        # Single-command mode: run the specified arguments with mocked HOME and overridden PATH
-        HOME="$MOCK_HOME" PATH="$SANDBOX_VENV/bin:$PATH" protostar {{ args }}
+        # Single-command mode: run the specified arguments with mocked HOME, host UV cache, and overridden PATH
+        HOME="$MOCK_HOME" UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" protostar {{ args }}
     else
         # Interactive shell mode: drop into sub-shell where 'protostar' points to the sandbox build
         printf "{{ blue }}Entering interactive sandbox shell (type 'exit' or Ctrl+D when done):{{ nc }}\n\n"
-        HOME="$MOCK_HOME" PATH="$SANDBOX_VENV/bin:$PATH" PROTOSANDBOX=1 $SHELL -i
+        HOME="$MOCK_HOME" UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" PROTOSANDBOX=1 $SHELL -i
     fi
 
 # Build the local test container with inspection CLI tools, runtime dependencies, and shell aliases
@@ -244,14 +244,14 @@ sandbox-linux-build:
             ripgrep \
             fd-find \
             nano && \
-        npm install -g markdownlint-cli2 && \
-        ln -s /usr/bin/batcat /usr/local/bin/bat && \
-        ln -s /usr/bin/fdfind /usr/local/bin/fd && \
-        # Install eza binary dynamically for current architecture
-        ARCH=$(uname -m) && \
-        curl -sL "https://github.com/eza-community/eza/releases/latest/download/eza_${ARCH}-unknown-linux-gnu.tar.gz" | tar xz -C /usr/local/bin && \
-        chmod +x /usr/local/bin/eza && \
-        apt-get clean && rm -rf /var/lib/apt/lists/*
+            npm install -g markdownlint-cli2 && \
+            ln -s /usr/bin/batcat /usr/local/bin/bat && \
+            ln -s /usr/bin/fdfind /usr/local/bin/fd && \
+            # Install eza binary dynamically for current architecture
+            ARCH=$(uname -m) && \
+            curl -sL "https://github.com/eza-community/eza/releases/latest/download/eza_${ARCH}-unknown-linux-gnu.tar.gz" | tar xz -C /usr/local/bin && \
+            chmod +x /usr/local/bin/eza && \
+            apt-get clean && rm -rf /var/lib/apt/lists/*
 
     # Bake native zshrc-style eza aliases into bashrc
     RUN echo 'alias ls="eza --icons --git"' >> /root/.bashrc && \
@@ -292,12 +292,13 @@ sandbox-linux *args: sync
 
     docker run --rm -it \
         -v "$REPO_ROOT:/protostar:ro" \
+        -v protostar-uv-cache:/root/.cache/uv \
         -w /workspace \
         protostar-test-harness \
         bash -c "
             # 1. Create a dedicated container virtualenv and install local protostar
             uv venv /tmp/venv --quiet
-            VIRTUAL_ENV=/tmp/venv uv pip install --no-cache -e /protostar --quiet
+            VIRTUAL_ENV=/tmp/venv uv pip install --reinstall-package protostar -e /protostar --quiet
             export PATH=\"/tmp/venv/bin:\$PATH\"
 
             # 2. Single-command vs interactive shell
