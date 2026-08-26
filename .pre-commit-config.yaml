@@ -20,7 +20,7 @@ repos:
         language: system
         types: [python]
         exclude: ^docs/
-        pass_filenames: false
+        require_serial: true
 
       - id: ruff-format
         name: ruff format
@@ -28,7 +28,7 @@ repos:
         language: system
         types: [python]
         exclude: ^docs/
-        pass_filenames: false
+        require_serial: true
 
       - id: mypy
         name: mypy
@@ -36,7 +36,7 @@ repos:
         language: system
         types: [python]
         exclude: ^docs/
-        pass_filenames: true
+        require_serial: true
 
   # Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2
