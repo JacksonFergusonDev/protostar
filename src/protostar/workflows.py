@@ -99,32 +99,75 @@ def generate_pre_commit_config(
     local_hooks: list[str],
     remote_hooks: list[str],
     dependencies: list[str] | None = None,
+    is_prek: bool = False,
 ) -> str:
     """Assembles and formats the .pre-commit-config.yaml content."""
-    base_yaml = """repos:
+    if is_prek:
+        base_yaml = """repos:
   # Generic hooks (configured to IGNORE Python)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+  - repo: builtin
     hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
       - id: trailing-whitespace
         exclude: \\.py$
       - id: end-of-file-fixer
         exclude: \\.py$
       - id: check-yaml
+      - id: check-json
+      - id: check-toml
+
+  # Check for accidental commits of secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks"""
+    else:
+        base_yaml = """repos:
+  # Generic hooks (configured to IGNORE Python)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: trailing-whitespace
         exclude: \\.py$
-      - id: check-added-large-files"""
+      - id: end-of-file-fixer
+        exclude: \\.py$
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+
+  # Check for accidental commits of secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks"""
 
     repo_blocks: list[str] = []
 
-    if local_hooks:
-        joined_local = "\n\n".join(local_hooks)
-        local_block = (
-            f"  # Local Python Toolchain (Managed via uv.lock)\n"
-            f"  - repo: local\n"
-            f"    hooks:\n"
-            f"{joined_local}"
-        )
-        repo_blocks.append(local_block)
+    uv_lock_hook = """      - id: uv-lock-check
+        name: uv lock check
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\\.toml|uv\\.lock)$"""
+
+    local_hooks_with_uv = [uv_lock_hook] + (local_hooks or [])
+    joined_local = "\n\n".join(local_hooks_with_uv)
+    local_block = (
+        f"  # Local Python Toolchain (Managed via uv.lock)\n"
+        f"  - repo: local\n"
+        f"    hooks:\n"
+        f"{joined_local}"
+    )
+    repo_blocks.append(local_block)
 
     if remote_hooks:
         repo_blocks.extend(remote_hooks)

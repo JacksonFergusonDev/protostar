@@ -259,7 +259,8 @@ def test_mypy_module_adds_pre_commit_hook():
     assert "id: mypy" in hook
     assert "entry: uv run mypy" in hook
     assert "language: system" in hook
-    assert "pass_filenames: true" in hook
+    assert "require_serial: true" in hook
+    assert "pass_filenames" not in hook
 
 
 def test_ty_module_build():

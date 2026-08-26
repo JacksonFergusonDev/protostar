@@ -1,19 +1,36 @@
 repos:
   # Generic hooks (configured to IGNORE Python)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+  - repo: builtin
     hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
       - id: trailing-whitespace
         exclude: \.py$
       - id: end-of-file-fixer
         exclude: \.py$
       - id: check-yaml
-        exclude: \.py$
-      - id: check-added-large-files
+      - id: check-json
+      - id: check-toml
+
+  # Check for accidental commits of secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks
 
   # Local Python Toolchain (Managed via uv.lock)
   - repo: local
     hooks:
+      - id: uv-lock-check
+        name: uv lock check
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
+
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix
@@ -33,7 +50,7 @@ repos:
         entry: uv run mypy
         language: system
         types: [python]
-        pass_filenames: true
+        require_serial: true
 
   # Markdown linting
   - repo: https://github.com/DavidAnson/markdownlint-cli2

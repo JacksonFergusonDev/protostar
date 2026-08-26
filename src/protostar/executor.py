@@ -192,6 +192,7 @@ class SystemExecutor:
             local_hooks=self.manifest.tooling.pre_commit_local_hooks,
             remote_hooks=self.manifest.tooling.pre_commit_hooks,
             dependencies=self.manifest.dependencies.dependencies,
+            is_prek=self.manifest.tooling.wants_prek,
         )
 
         try:

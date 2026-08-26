@@ -281,7 +281,7 @@ class MypyModule(BootstrapModule):
         entry: uv run mypy
         language: system
         types: [python]
-        pass_filenames: true"""
+        require_serial: true"""
         manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
         manifest.tooling.add_ci_step(

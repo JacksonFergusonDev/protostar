@@ -1,19 +1,37 @@
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
+default_stages:
+  - pre-commit
+
 repos:
   # Generic hooks (configured to IGNORE Python)
   - repo: builtin
     hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
       - id: trailing-whitespace
         exclude: \.py$
       - id: end-of-file-fixer
         exclude: \.py$
       - id: check-yaml
-      - id: check-added-large-files
-      - id: check-merge-conflict
+      - id: check-json
       - id: check-toml
 
   # Local Python Toolchain (Managed via uv.lock)
   - repo: local
     hooks:
+      - id: uv-lock-check
+        name: uv lock check
+        entry: uv lock --check
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
+
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix
@@ -44,6 +62,19 @@ repos:
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]
+
+  # Check for accidental commits of secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  # Commit message validation
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
 
   # Renovate config validation
   - repo: https://github.com/renovatebot/pre-commit-hooks

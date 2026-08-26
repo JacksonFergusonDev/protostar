@@ -15,11 +15,40 @@ from protostar.workflows import (
 def test_generate_pre_commit_config_basic():
     content = generate_pre_commit_config(local_hooks=[], remote_hooks=[])
     assert "repos:" in content
+    assert "repo: https://github.com/pre-commit/pre-commit-hooks" in content
+    assert "rev: v6.0.0" in content
+    assert "check-added-large-files" in content
+    assert "check-merge-conflict" in content
+    assert "check-case-conflict" in content
+    assert "check-symlinks" in content
+    assert "check-executables-have-shebangs" in content
     assert "trailing-whitespace" in content
     assert "end-of-file-fixer" in content
     assert "check-yaml" in content
+    assert "check-json" in content
+    assert "check-toml" in content
+    assert "gitleaks" in content
+    assert "repo: local" in content
+    assert "uv-lock-check" in content
+
+
+def test_generate_pre_commit_config_prek():
+    content = generate_pre_commit_config(local_hooks=[], remote_hooks=[], is_prek=True)
+    assert "repos:" in content
+    assert "repo: builtin" in content
     assert "check-added-large-files" in content
-    assert "repo: local" not in content
+    assert "check-merge-conflict" in content
+    assert "check-case-conflict" in content
+    assert "check-symlinks" in content
+    assert "check-executables-have-shebangs" in content
+    assert "trailing-whitespace" in content
+    assert "end-of-file-fixer" in content
+    assert "check-yaml" in content
+    assert "check-json" in content
+    assert "check-toml" in content
+    assert "gitleaks" in content
+    assert "repo: local" in content
+    assert "uv-lock-check" in content
 
 
 def test_generate_pre_commit_config_local_and_remote_hooks():

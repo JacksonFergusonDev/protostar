@@ -130,7 +130,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
         entry: uv run mypy
         language: system
         types: [python]
-        pass_filenames: true"""
+        require_serial: true"""
     manifest.tooling.add_pre_commit_local_hook(mypy_payload)
 
     executor = SystemExecutor(manifest, mock_config)
@@ -152,6 +152,28 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
     assert "- id: mypy" in written_data
     assert "entry: uv run mypy" in written_data
     assert "language: system" in written_data
+    assert "repo: https://github.com/pre-commit/pre-commit-hooks" in written_data
+    assert "rev: v6.0.0" in written_data
+
+
+def test_executor_writes_prek_config(mocker, mock_config):
+    """Test that the executor scaffolds builtin generic hooks for prek."""
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_prek = True
+
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_pre_commit_config()
+
+    written_data = mock_write.call_args[0][1]
+    assert "  - repo: builtin" in written_data
+    assert "check-merge-conflict" in written_data
+    assert "check-toml" in written_data
+    assert "gitleaks" in written_data
+    assert "uv-lock-check" in written_data
 
 
 def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_config):
