@@ -107,10 +107,14 @@ def run_init_wizard() -> WizardSelections | None:
                     f"{answer}.toml"
                 )
             )
-        else:
+        elif answer in config.templates:
             target = config.templates[answer]
             is_external = True
             is_user_aliased = True
+        else:
+            raise ExecutionAbortedError(
+                f"Template selection '{answer}' could not be resolved."
+            )
 
         blueprint = TemplateBlueprint.load(
             target, variable_resolver=resolve_missing_variables
