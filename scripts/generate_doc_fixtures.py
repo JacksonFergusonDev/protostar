@@ -9,6 +9,7 @@ import sys
 import tempfile
 import tomllib
 from collections.abc import Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, fields, is_dataclass
 from enum import Enum
 from pathlib import Path
@@ -77,7 +78,6 @@ def _write_fixture(filepath: str | Path, content: str) -> None:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(output_path, content)
-    print(f"Generated: {output_path.name}")
 
 
 def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
@@ -452,12 +452,22 @@ def _execute_fixture_scenario(
         env: Isolated environment variables map.
     """
     for flags in commands:
-        subprocess.run(
-            ["protostar", "init", *flags],
-            cwd=cwd,
-            check=True,
-            env=env,
-        )
+        try:
+            subprocess.run(
+                ["protostar", "init", *flags],
+                cwd=cwd,
+                check=True,
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"Scenario command failed: {' '.join(e.cmd)}", file=sys.stderr)
+            if e.stdout:
+                print(f"STDOUT:\n{e.stdout}", file=sys.stderr)
+            if e.stderr:
+                print(f"STDERR:\n{e.stderr}", file=sys.stderr)
+            raise
 
 
 def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
@@ -515,25 +525,66 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         _write_fixture(target_path, content)
 
 
+def _get_host_uv_cache_dir() -> Path:
+    """Resolves the user's host uv cache directory for sharing with isolated environments."""
+    if env_dir := os.environ.get("UV_CACHE_DIR"):
+        return Path(env_dir).expanduser().resolve()
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Caches" / "uv"
+    if sys.platform == "win32":
+        local_app_data = os.environ.get(
+            "LOCALAPPDATA", str(Path.home() / "AppData" / "Local")
+        )
+        return Path(local_app_data) / "uv" / "cache"
+    xdg_cache = os.environ.get("XDG_CACHE_HOME")
+    if xdg_cache:
+        return Path(xdg_cache) / "uv"
+    return Path.home() / ".cache" / "uv"
+
+
+def _build_fixture_scenario(
+    name: str,
+    commands: list[list[str]],
+    clean_env: dict[str, str],
+    host_cache_dir: str,
+) -> None:
+    """Builds a single fixture scenario in an isolated temporary directory."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # --- Override host config paths for the subprocess ---
+        isolated_env = clean_env.copy()
+        isolated_env["HOME"] = tmpdir
+        isolated_env["USERPROFILE"] = tmpdir
+        isolated_env["XDG_CONFIG_HOME"] = tmpdir
+        isolated_env["UV_CACHE_DIR"] = host_cache_dir
+        isolated_env["UV_NO_PROGRESS"] = "1"
+
+        # Create a static working directory to prevent random project names
+        static_cwd = Path(tmpdir) / "demo_project"
+        static_cwd.mkdir()
+
+        _execute_fixture_scenario(commands, static_cwd, isolated_env)
+        _extract_and_write_targets(static_cwd, name)
+        print(f"  ✔ Scenario [{name}] fixtures generated")
+
+
 def build_fixtures() -> None:
-    """Iterates through predefined scenarios, executing commands and extracting artifacts."""
+    """Iterates through predefined scenarios concurrently and extracts artifacts."""
     clean_env = os.environ.copy()
     clean_env.pop("VIRTUAL_ENV", None)
 
-    for name, commands in FIXTURES.items():
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # --- Override host config paths for the subprocess ---
-            isolated_env = clean_env.copy()
-            isolated_env["HOME"] = tmpdir
-            isolated_env["USERPROFILE"] = tmpdir
-            isolated_env["XDG_CONFIG_HOME"] = tmpdir
+    cache_path = _get_host_uv_cache_dir()
+    cache_path.mkdir(parents=True, exist_ok=True)
+    host_cache_dir = str(cache_path)
 
-            # Create a static working directory to prevent random project names
-            static_cwd = Path(tmpdir) / "demo_project"
-            static_cwd.mkdir()
-
-            _execute_fixture_scenario(commands, static_cwd, isolated_env)
-            _extract_and_write_targets(static_cwd, name)
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(
+                _build_fixture_scenario, name, commands, clean_env, host_cache_dir
+            )
+            for name, commands in FIXTURES.items()
+        ]
+        for future in futures:
+            future.result()
 
 
 def generate_cli_help_svgs() -> None:
@@ -818,9 +869,7 @@ def main() -> None:
     try:
         FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
 
-        print("Generating documentation fixtures...")
-
-        # Fast executions (instant)
+        print("Generating static documentation fixtures...")
         generate_cli_help_svgs()
         generate_cli_dry_run_svg()
         generate_default_config()
@@ -828,12 +877,15 @@ def main() -> None:
         generate_manifest_state()
         generate_template_schema_fixture()
         generate_diagnostic_panel_svg()
+        print("✔ Static fixtures generated.\n")
 
         # Slow executions (disk I/O and subprocess isolation)
         if not args.fast:
+            print("Generating scenario fixtures...")
             build_fixtures()
+            print("✔ Scenario fixtures generated.")
         else:
-            print("Skipping full fixture builds (--fast enabled).")
+            print("Skipping scenario fixture builds (--fast enabled).")
 
         print("\nDocumentation fixtures updated successfully!")
 
