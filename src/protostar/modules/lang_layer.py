@@ -82,6 +82,7 @@ class PythonCore(BootstrapModule):
         artifacts = [
             ".venv/",
             "__pycache__/",
+            ".cache/",
         ]
         for artifact in artifacts:
             manifest.filesystem.add_environment_artifact(artifact)

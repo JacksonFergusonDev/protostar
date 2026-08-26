@@ -45,6 +45,28 @@ def test_individual_template_scaffolding(run_cli, template):
         f"Expected dependency '{expected_dep}' missing from pyproject.toml for template '{template}'."
     )
 
+    # Ensure no generated files contain trailing whitespace or lack a trailing newline
+    for file_path in workspace.rglob("*"):
+        if (
+            file_path.is_file()
+            and not file_path.name.endswith((".pyc", ".png", ".gif", ".ico", ".lock"))
+            and ".git" not in file_path.parts
+            and ".venv" not in file_path.parts
+            and ".cache" not in file_path.parts
+        ):
+            text = file_path.read_text(encoding="utf-8")
+            for line_idx, line in enumerate(text.splitlines(), 1):
+                assert not line.endswith(" "), (
+                    f"Trailing space in {file_path.relative_to(workspace)}:{line_idx}: {line!r}"
+                )
+                assert not line.endswith("\t"), (
+                    f"Trailing tab in {file_path.relative_to(workspace)}:{line_idx}: {line!r}"
+                )
+            if text:
+                assert text.endswith("\n"), (
+                    f"Missing trailing newline in {file_path.relative_to(workspace)}"
+                )
+
 
 def test_malformed_cli_arguments(run_cli):
     """Verifies the CLI parser intercepts invalid boundaries and returns non-zero codes."""

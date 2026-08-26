@@ -246,7 +246,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
         with:
@@ -283,13 +283,13 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
-        
+
       - name: Build package
         run: uv build
-        
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 """

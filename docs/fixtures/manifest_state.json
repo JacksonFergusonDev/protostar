@@ -39,12 +39,14 @@
             "*.fits",
             "*.fts",
             "*.parquet",
+            ".cache/",
             ".ipynb_checkpoints/",
             ".ruff_cache/",
             ".venv/",
             "__pycache__/"
         ],
         "workspace_hides": [
+            ".cache/",
             ".ruff_cache/",
             ".venv/",
             "__pycache__/"

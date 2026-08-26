@@ -5,6 +5,7 @@
 *.parquet
 *~
 .DS_Store
+.cache/
 .direnv/
 .env
 .envrc.local

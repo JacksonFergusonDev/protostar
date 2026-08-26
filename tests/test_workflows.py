@@ -274,3 +274,33 @@ def test_generate_gitignore():
 
     # Nothing to append
     assert generate_gitignore(vcs_ignores={".venv"}, existing_content=".venv\n") is None
+
+
+def test_generate_workflows_no_trailing_whitespace():
+    """Verifies that generated workflow templates contain zero trailing whitespace and valid newlines."""
+    ci_content = generate_ci_workflow(
+        CIWorkflowSpec(
+            supported_os=["Linux", "MacOS"],
+            min_python="3.12",
+            ci_flags={"pytest", "codecov"},
+            ci_steps=["      - name: Lint\n        run: uv run ruff check"],
+        )
+    )
+    for idx, line in enumerate(ci_content.splitlines(), 1):
+        assert not line.endswith(" "), (
+            f"Trailing space in CI workflow line {idx}: {line!r}"
+        )
+        assert not line.endswith("\t"), (
+            f"Trailing tab in CI workflow line {idx}: {line!r}"
+        )
+    assert ci_content.endswith("\n")
+
+    release_content = generate_release_workflow()
+    for idx, line in enumerate(release_content.splitlines(), 1):
+        assert not line.endswith(" "), (
+            f"Trailing space in Release workflow line {idx}: {line!r}"
+        )
+        assert not line.endswith("\t"), (
+            f"Trailing tab in Release workflow line {idx}: {line!r}"
+        )
+    assert release_content.endswith("\n")

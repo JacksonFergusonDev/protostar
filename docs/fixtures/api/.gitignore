@@ -2,6 +2,7 @@
 *.pem
 *~
 .DS_Store
+.cache/
 .cz-cache/
 .direnv/
 .env

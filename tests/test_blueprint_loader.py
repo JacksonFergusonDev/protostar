@@ -68,3 +68,34 @@ def test_template_blueprint_missing_variables_error(tmp_path):
         TemplateResolutionError, match="requires variables: DATABASE_URL"
     ):
         TemplateBlueprint.load(str(tmp_path))
+
+
+@pytest.mark.parametrize(
+    "template_name", ["cli", "api", "astro", "dsp", "embedded", "ml"]
+)
+def test_builtin_templates_no_trailing_whitespace(template_name: str):
+    """Statically verifies all built-in template files have zero trailing whitespace and valid newlines."""
+    import importlib.resources
+    import tomllib
+
+    content = (
+        importlib.resources.files("protostar.templates")
+        .joinpath(f"{template_name}.toml")
+        .read_text(encoding="utf-8")
+    )
+    data = tomllib.loads(content)
+    files = data.get("files", {})
+
+    for filepath, file_content in files.items():
+        for idx, line in enumerate(file_content.splitlines(), 1):
+            assert not line.endswith(" "), (
+                f"Trailing space in {template_name}.toml -> {filepath}:{idx}"
+            )
+            assert not line.endswith("\t"), (
+                f"Trailing tab in {template_name}.toml -> {filepath}:{idx}"
+            )
+
+        if file_content:
+            assert file_content.endswith("\n"), (
+                f"Missing trailing newline in {template_name}.toml -> {filepath}"
+            )
