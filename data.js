@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787724215150,
+  "lastUpdate": 1787771020802,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7995,6 +7995,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "496263896fedb57060c359636d8517daddcd4334",
+          "message": "feat(tooling): update and split pre-commit and prek scaffolded hooks\n\n- Update generic hooks order and add case-conflict, symlinks, json, and shebang checks\n- Split generic hooks configuration between prek (builtin) and pre-commit (v6.0.0)\n- Add uv-lock-check local hook and gitleaks secrets scanner by default\n- Enforce require_serial for mypy and remove pass_filenames\n- Update fixtures and test suite",
+          "timestamp": "2026-08-26T12:01:46-07:00",
+          "tree_id": "032b9a7f959e6bf53358738e791126c19dc029b9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/496263896fedb57060c359636d8517daddcd4334"
+        },
+        "date": 1787771015653,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 127.45,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 185.6,
             "unit": "ms"
           }
         ]
