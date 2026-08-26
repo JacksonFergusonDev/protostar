@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787774155634,
+  "lastUpdate": 1787774643878,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8165,6 +8165,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 217.59,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e91fe3ee195865ad08c5ce36eef728dacf419076",
+          "message": "fix(lint): configure ruff bandit rules and resolve diagnostics (#202)\n\n- Enable flake8-bandit (S) rule family in Ruff lint configuration\n- Ignore S603 (untrusted subprocess audit) and S607 (partial executable path) globally\n- Explicitly mark md5 hashing with usedforsecurity=False in appends.py (S324)\n- Narrow broad exception suppression to concrete exceptions in cli.py, wizard.py, and workspace.py (S110)\n- Enforce HTTPS protocol validation in network.py and add inline noqa S310 annotations (S310)\n- Add unit tests verifying rejection of non-HTTPS schemes",
+          "timestamp": "2026-08-26T13:02:57-07:00",
+          "tree_id": "90a09b96fb1a8a5d3374cd575590624e6e3c8b98",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e91fe3ee195865ad08c5ce36eef728dacf419076"
+        },
+        "date": 1787774642374,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 156.49,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 225.38,
             "unit": "ms"
           }
         ]
