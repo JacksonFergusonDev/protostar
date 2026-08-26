@@ -113,20 +113,11 @@ clean:
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
 
-# Generate ALL fixtures for documentation
-docs-fixtures: sync
+# Generate and verify documentation fixtures are up-to-date
+check-fixtures: sync
     @printf "\n{{ blue }}=== Generating All Documentation Fixtures ==={{ nc }}\n"
     uv run python scripts/generate_doc_fixtures.py
     @printf "{{ green }}✔ Documentation fixtures generated in docs/fixtures/{{ nc }}\n"
-
-# Generate only the fast documentation fixtures
-docs-fixtures-fast: sync
-    @printf "\n{{ blue }}=== Generating Fast Documentation Fixtures ==={{ nc }}\n"
-    uv run python scripts/generate_doc_fixtures.py --fast
-    @printf "{{ green }}✔ Fast documentation fixtures generated in docs/fixtures/{{ nc }}\n"
-
-# Check if documentation fixtures are out of sync with the codebase
-check-fixtures: docs-fixtures
     @printf "\n{{ blue }}=== Checking Snapshot Drift ==={{ nc }}\n"
     @git diff --exit-code docs/fixtures/ > /dev/null || (printf "{{ yellow }}⚠ Snapshot drift detected. The generator modified files in docs/fixtures/. Review the diff and commit the changes.{{ nc }}\n" && exit 1)
     @printf "{{ green }}✔ Snapshots are up-to-date{{ nc }}\n"

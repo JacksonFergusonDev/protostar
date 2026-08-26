@@ -108,10 +108,10 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
     just ci
     ```
 
-=== "Documentation Generation"
-    Generates all fixtures for the documentation in `docs/fixtures/`. Use the `--fast` variant (`just docs-fixtures-fast`) to skip slower subprocess executions during rapid iteration.
+=== "Documentation Verification"
+    Generates all fixtures for the documentation in `docs/fixtures/` and verifies there is no snapshot drift.
     ```bash
-    just docs-fixtures
+    just check-fixtures
     ```
 
 === "Local Server"
