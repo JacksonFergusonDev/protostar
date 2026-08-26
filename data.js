@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787723093309,
+  "lastUpdate": 1787723569478,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7893,6 +7893,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.15,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a427eefa3eb851633d4de0df06c72ce70f8a9b08",
+          "message": "fix: eliminate trailing whitespace and formatting friction in generated templates",
+          "timestamp": "2026-08-25T22:51:48-07:00",
+          "tree_id": "e7374f9060acb02dbe94296eddf7be8ca05221a3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a427eefa3eb851633d4de0df06c72ce70f8a9b08"
+        },
+        "date": 1787723568843,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.79,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 190.42,
             "unit": "ms"
           }
         ]
