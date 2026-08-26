@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787774643878,
+  "lastUpdate": 1787778200480,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8199,6 +8199,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 225.38,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "497f8adeb6f0cd0704e6979c6d6d665951998e28",
+          "message": "perf(docs): optimize doc fixture generation with host uv cache and parallelization",
+          "timestamp": "2026-08-26T14:00:23-07:00",
+          "tree_id": "f81ca16d90f28df8d161641a5bde26e0a3b2ecf3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/497f8adeb6f0cd0704e6979c6d6d665951998e28"
+        },
+        "date": 1787778199786,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 151.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 215.15,
             "unit": "ms"
           }
         ]
