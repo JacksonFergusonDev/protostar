@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787772864298,
+  "lastUpdate": 1787774155634,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8131,6 +8131,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 162.4,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "41450151adf039856a55a43ecb8e127a25ecf4f9",
+          "message": "feat(tooling): add default install hook types header for commit-msg hooks (#201)\n\n* feat(tooling): add default hook types header for commit-msg hooks\n\n- Add pre_commit_install_hook_types to ToolingManifest for declarative Git hook lifecycle registration\n- Register commit-msg hook type in CommitizenModule\n- Update generate_pre_commit_config to prepend default_install_hook_types and default_stages when commit-msg is required\n- Simplify pre-commit and prek install post-install tasks to standard install commands\n- Update tests and regenerate documentation fixtures\n\n* docs: document git hook lifecycle declaration and header injection",
+          "timestamp": "2026-08-26T12:54:50-07:00",
+          "tree_id": "6009813b9cc8881582021523d263eb52c3581b7d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/41450151adf039856a55a43ecb8e127a25ecf4f9"
+        },
+        "date": 1787774154503,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 152.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 217.59,
             "unit": "ms"
           }
         ]
