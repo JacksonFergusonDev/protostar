@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787702246312,
+  "lastUpdate": 1787715473471,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7791,6 +7791,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 206.91,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "4ac82de7ae4bf0ceefbf5903279017cbab7a3e23",
+          "message": "fix(cli): support json mode for help subcommand and scoped capabilities\n\n- Add JSON mode support to dispatch_help for 'protostar help [topic] --json'\n\n- Support command-scoped schema generation in _build_capabilities_schema\n\n- Refactor capability emission into reusable emit_capabilities helper\n\n- Add unit tests for help command in JSON mode",
+          "timestamp": "2026-08-25T20:36:36-07:00",
+          "tree_id": "b8101fcfb1efb4447b64e6b9a089707a40bd4b99",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4ac82de7ae4bf0ceefbf5903279017cbab7a3e23"
+        },
+        "date": 1787715472869,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 148.99,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.15,
             "unit": "ms"
           }
         ]
