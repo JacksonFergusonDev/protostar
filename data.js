@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787724049867,
+  "lastUpdate": 1787724215150,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -7961,6 +7961,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 227.91,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "074327aaab1a3840df3ecddb4c691a378f0b69e8",
+          "message": "ci: enforce serial execution for python toolchain\n\nSet `require_serial: true` across `ruff-check`, `ruff-format`, and `mypy`\nto prevent multi-process oversubscription and avoid cache lock collisions.\nDrop redundant `pass_filenames` declarations to rely on the default behavior.",
+          "timestamp": "2026-08-25T23:01:58-07:00",
+          "tree_id": "6ea14c391af845eecec2cf6bcf409fff174428e0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/074327aaab1a3840df3ecddb4c691a378f0b69e8"
+        },
+        "date": 1787724214498,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 151.17,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 218.55,
             "unit": "ms"
           }
         ]
