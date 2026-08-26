@@ -78,7 +78,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     ??? abstract "See the generated `.pre-commit-config.yaml`"
         ```yaml
-        --8<-- "cli/.pre-commit-config.yaml"
+        --8<-- "cli/pre-commit-config.fixture.yaml"
         ```
 
     ??? abstract "See the generated `pyproject.toml`"

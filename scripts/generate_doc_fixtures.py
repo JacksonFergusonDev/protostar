@@ -491,7 +491,11 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         ):
             continue
 
-        target_path = FIXTURES_DIR / fixture_name / rel_path
+        target_rel_path = rel_path
+        if rel_path.name == ".pre-commit-config.yaml":
+            target_rel_path = rel_path.with_name("pre-commit-config.fixture.yaml")
+
+        target_path = FIXTURES_DIR / fixture_name / target_rel_path
         content = file_path.read_text(encoding="utf-8")
 
         # Freeze mutable dependencies and VCS revisions if updating an existing file
@@ -500,7 +504,12 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
 
             if rel_path.name == "pyproject.toml":
                 content = _freeze_pyproject_deps(old_content, content)
-            elif rel_path.name == ".pre-commit-config.yaml":
+            elif target_rel_path.name == "pre-commit-config.fixture.yaml":
+                content = _freeze_pre_commit_hooks(old_content, content)
+        elif target_rel_path.name == "pre-commit-config.fixture.yaml":
+            legacy_target = FIXTURES_DIR / fixture_name / rel_path
+            if legacy_target.exists():
+                old_content = legacy_target.read_text(encoding="utf-8")
                 content = _freeze_pre_commit_hooks(old_content, content)
 
         _write_fixture(target_path, content)
