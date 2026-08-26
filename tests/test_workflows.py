@@ -27,9 +27,15 @@ def test_generate_pre_commit_config_basic():
     assert "check-yaml" in content
     assert "check-json" in content
     assert "check-toml" in content
-    assert "gitleaks" in content
     assert "repo: local" in content
     assert "uv-lock-check" in content
+    assert "gitleaks" in content
+
+    # Verify structural ordering: generic hooks -> repo: local -> remote repos (gitleaks)
+    pos_generic = content.find("repo: https://github.com/pre-commit/pre-commit-hooks")
+    pos_local = content.find("repo: local")
+    pos_gitleaks = content.find("https://github.com/gitleaks/gitleaks")
+    assert pos_generic < pos_local < pos_gitleaks
 
 
 def test_generate_pre_commit_config_prek():
@@ -46,9 +52,15 @@ def test_generate_pre_commit_config_prek():
     assert "check-yaml" in content
     assert "check-json" in content
     assert "check-toml" in content
-    assert "gitleaks" in content
     assert "repo: local" in content
     assert "uv-lock-check" in content
+    assert "gitleaks" in content
+
+    # Verify structural ordering: builtin -> repo: local -> remote repos (gitleaks)
+    pos_builtin = content.find("repo: builtin")
+    pos_local = content.find("repo: local")
+    pos_gitleaks = content.find("https://github.com/gitleaks/gitleaks")
+    assert pos_builtin < pos_local < pos_gitleaks
 
 
 def test_generate_pre_commit_config_local_and_remote_hooks():
@@ -71,6 +83,13 @@ def test_generate_pre_commit_config_local_and_remote_hooks():
     assert "repo: local" in content
     assert "uv run ruff check --fix" in content
     assert "https://github.com/astral-sh/ruff-pre-commit" in content
+
+    # Verify structural ordering: generic -> repo: local -> gitleaks -> other remote hooks
+    pos_generic = content.find("repo: https://github.com/pre-commit/pre-commit-hooks")
+    pos_local = content.find("repo: local")
+    pos_gitleaks = content.find("https://github.com/gitleaks/gitleaks")
+    pos_custom_remote = content.find("https://github.com/astral-sh/ruff-pre-commit")
+    assert pos_generic < pos_local < pos_gitleaks < pos_custom_remote
 
 
 def test_generate_pre_commit_config_mypy_dependencies_interpolation():

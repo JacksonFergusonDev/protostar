@@ -118,13 +118,7 @@ def generate_pre_commit_config(
         exclude: \\.py$
       - id: check-yaml
       - id: check-json
-      - id: check-toml
-
-  # Check for accidental commits of secrets
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.0
-    hooks:
-      - id: gitleaks"""
+      - id: check-toml"""
     else:
         base_yaml = """repos:
   # Generic hooks (configured to IGNORE Python)
@@ -142,13 +136,7 @@ def generate_pre_commit_config(
         exclude: \\.py$
       - id: check-yaml
       - id: check-json
-      - id: check-toml
-
-  # Check for accidental commits of secrets
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.0
-    hooks:
-      - id: gitleaks"""
+      - id: check-toml"""
 
     repo_blocks: list[str] = []
 
@@ -168,6 +156,14 @@ def generate_pre_commit_config(
         f"{joined_local}"
     )
     repo_blocks.append(local_block)
+
+    gitleaks_hook = """  # Check for accidental commits of secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks"""
+
+    repo_blocks.append(gitleaks_hook)
 
     if remote_hooks:
         repo_blocks.extend(remote_hooks)
