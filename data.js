@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787772491975,
+  "lastUpdate": 1787772864298,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8097,6 +8097,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.75,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f5429ac267ca6f5a1f427932621ae0bbab15343c",
+          "message": "feat(tooling): group remote repo pre-commit hooks after local python tooling\n\n- Enforce deterministic pre-commit hook ordering: builtin -> python tooling -> remote repos\n- Move gitleaks to the beginning of the remote repositories section\n- Update fixtures and test suite with structural ordering assertions",
+          "timestamp": "2026-08-26T12:32:52-07:00",
+          "tree_id": "9ad58e21c7692a4372dbd23bf908106c926762c2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f5429ac267ca6f5a1f427932621ae0bbab15343c"
+        },
+        "date": 1787772862669,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.03,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 162.4,
             "unit": "ms"
           }
         ]
