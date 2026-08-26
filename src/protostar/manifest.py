@@ -204,6 +204,7 @@ class ToolingManifest:
     wants_prek: bool = False
     pre_commit_hooks: list[str] = field(default_factory=list)
     pre_commit_local_hooks: list[str] = field(default_factory=list)
+    pre_commit_install_hook_types: set[str] = field(default_factory=set)
     wants_ci: bool = False
     wants_release: bool = False
     ci_flags: set[CIFlag | str] = field(default_factory=set)
@@ -224,6 +225,10 @@ class ToolingManifest:
         """Appends a raw YAML hook payload to the local pre-commit toolchain configuration."""
         if payload not in self.pre_commit_local_hooks:
             self.pre_commit_local_hooks.append(payload)
+
+    def add_pre_commit_hook_type(self, hook_type: str) -> None:
+        """Declares a Git hook lifecycle type required by a tooling module (e.g. 'commit-msg')."""
+        self.pre_commit_install_hook_types.add(hook_type)
 
     def add_ci_flag(self, key: CIFlag | str) -> None:
         """Adds a CI flag to trigger specialized executor generation logic."""
