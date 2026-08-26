@@ -90,7 +90,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 
     - __Dependency Locking:__ Protostar locks `typer` and `rich` from the CLI template.
     - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside development dependency groups.
-    - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. This eliminates isolated virtualenv overhead and version discrepancies.
+    - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. When commit message validation (such as Commitizen) is included, top-level `default_install_hook_types` (`pre-commit`, `commit-msg`) and `default_stages` (`pre-commit`) are automatically declared.
 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`

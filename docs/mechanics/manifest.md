@@ -47,7 +47,7 @@ During the `build()` phase, modules route their state declarations through these
 === "Tooling & CI Configuration (`manifest.tooling`)"
     Managed by `ToolingManifest`. Configures development tools, CI/CD pipeline steps, pre-commit hooks, and IDE extension recommendations.
 
-    * `pre_commit_hooks` / `pre_commit_local_hooks`: Hook configurations registered via `manifest.tooling.add_pre_commit_hook()` and `manifest.tooling.add_pre_commit_local_hook()`.
+    * `pre_commit_hooks` / `pre_commit_local_hooks` / `pre_commit_install_hook_types`: Hook configurations and Git lifecycle hook types (e.g., `commit-msg`) registered via `manifest.tooling.add_pre_commit_hook()`, `manifest.tooling.add_pre_commit_local_hook()`, and `manifest.tooling.add_pre_commit_hook_type()`.
     * `ci_steps` / `ci_flags`: Continuous integration steps and workflow flags (`manifest.tooling.add_ci_step()`, `manifest.tooling.add_ci_flag()`).
     * `ide_extensions`: Recommended IDE extensions queued for workspace configuration (`manifest.tooling.add_ide_extension()`).
 

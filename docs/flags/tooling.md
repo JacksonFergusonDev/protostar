@@ -6,11 +6,11 @@ Tooling modules handle the injection of static analysis, testing frameworks, and
 
 - :material-check-all: __Pre-Commit (`--pre-commit`)__
 
-    The orchestration engine that binds all linting and formatting hooks. Evaluates your workspace, initializes `.git` if absent, and automatically executes `pre-commit install`.
+    The orchestration engine that binds all linting and formatting hooks. Evaluates your workspace, initializes `.git` if absent, and automatically executes `pre-commit install`. When modules requiring additional Git lifecycle stages (such as Commitizen for `commit-msg`) are enabled, Protostar automatically declares `default_install_hook_types` (`pre-commit`, `commit-msg`) and `default_stages` (`pre-commit`) at the top of `.pre-commit-config.yaml` so standard `pre-commit install` commands wire all hook lifecycles out-of-the-box.
 
 - :material-lightning-bolt: __Prek (`--prek`)__
 
-    A dependency-free, extremely fast Rust alternative to `pre-commit`. Like `--pre-commit`, this initializes `.git` and installs your git hooks.
+    A dependency-free, extremely fast Rust alternative to `pre-commit`. Like `--pre-commit`, this initializes `.git` and installs your git hooks using the same portable `.pre-commit-config.yaml` configuration.
 
 - :material-console: __Direnv (`--direnv`)__
 
