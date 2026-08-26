@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787778317357,
+  "lastUpdate": 1787778564599,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8267,6 +8267,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 245.77,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "7b2f36cb42815d5b68ace7cb9d9db8463400c477",
+          "message": "perf(tooling): share host uv cache in macos sandbox and persistent volume in linux sandbox",
+          "timestamp": "2026-08-26T14:05:42-07:00",
+          "tree_id": "11e6a44e7749326b1ef67e6a052fb7b8de4a4541",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7b2f36cb42815d5b68ace7cb9d9db8463400c477"
+        },
+        "date": 1787778563329,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 155.89,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 217.56,
             "unit": "ms"
           }
         ]
