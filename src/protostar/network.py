@@ -110,7 +110,7 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
     )
 
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with urllib.request.urlopen(url, timeout=timeout) as response:  # noqa: S310
             return str(response.read(1024 * 1024).decode("utf-8"))
     except URLError as e:
         raise NetworkFetchError(
@@ -140,6 +140,11 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
             url,
             message="Insecure protocol detected. Protostar requires HTTPS for remote configurations.",
         )
+    if not url.startswith("https://"):
+        raise NetworkFetchError(
+            url,
+            message="Remote configuration URLs must start with 'https://'.",
+        )
 
     archive_format = ArchiveFormat.from_path(url)
     if archive_format is None:
@@ -150,7 +155,7 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
 
     try:
         with (
-            urllib.request.urlopen(url, timeout=timeout) as response,
+            urllib.request.urlopen(url, timeout=timeout) as response,  # noqa: S310
             tempfile.NamedTemporaryFile(delete=False) as tmp_file,
         ):
             tmp_file.write(response.read())

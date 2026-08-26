@@ -142,7 +142,7 @@ def resolve_python_version(
                 match = re.search(r"(\d+\.\d+)", req_python)
                 if match:
                     return str(PythonVersion.from_string(match.group(1)))
-        except Exception:
+        except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError, KeyError):
             pass
 
     if default:
@@ -218,7 +218,7 @@ def resolve_project_name(
                 name = data.get("project", {}).get("name")
                 if name:
                     return str(ProjectName(str(name)))
-        except Exception:
+        except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError, KeyError):
             pass
 
     if default:

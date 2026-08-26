@@ -60,11 +60,7 @@ ci = [
     "ruff>=0.14.13",
 ]
 docs = ["mkdocstrings[python]>=1.0.3", "zensical>=0.0.26"]
-dev = [
-    { include-group = "ci" },
-    { include-group = "docs" },
-    "prek>=0.4.11",
-]
+dev = [{ include-group = "ci" }, { include-group = "docs" }, "prek>=0.4.11"]
 
 # ==================================================
 # Tool Configuration
@@ -92,8 +88,9 @@ select = [
     "SIM", # flake8-simplify
     "T20", # flake8-print
     "UP",  # pyupgrade
+    "S",   # flake8-bandit (security)
 ]
-ignore = ["D100", "D104", "D107", "E501"]
+ignore = ["D100", "D104", "D107", "E501", "S603", "S607"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -109,15 +106,15 @@ section-order = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = ["T201", "D"]
-"scripts/*.py" = ["T201"]
+"tests/*.py" = ["T201", "D", "S"]
+"scripts/*.py" = ["T201", "S"]
 
 # ---- mypy ---- #
 
 [tool.mypy]
 mypy_path = "src"
 python_version = "3.12"
-strict=true
+strict = true
 pretty = true
 show_error_codes = true
 show_error_context = true

@@ -34,6 +34,18 @@ def test_fetch_remote_config_rejects_http():
         fetch_remote_config("http://example.com/config.toml")
 
 
+def test_fetch_remote_config_rejects_non_https():
+    """Test that non-HTTPS URLs (e.g. file://, ftp://) are explicitly rejected."""
+    with pytest.raises(
+        NetworkFetchError, match="Remote configuration URLs must start with 'https://'"
+    ):
+        fetch_remote_config("file:///etc/passwd")
+    with pytest.raises(
+        NetworkFetchError, match="Remote configuration URLs must start with 'https://'"
+    ):
+        fetch_remote_config("ftp://example.com/config.toml")
+
+
 def test_fetch_remote_config_github_translation(mocker):
     """Test that GitHub blob URLs are translated to raw."""
     mock_urlopen = mocker.patch("urllib.request.urlopen")
@@ -178,6 +190,17 @@ def test_fetch_template_archive_zip_extraction(mocker, tmp_path):
 def test_fetch_template_archive_rejects_http():
     with pytest.raises(NetworkFetchError, match="Insecure protocol detected"):
         fetch_template_archive("http://example.com/archive.zip", Path("/tmp"))
+
+
+def test_fetch_template_archive_rejects_non_https():
+    with pytest.raises(
+        NetworkFetchError, match="Remote configuration URLs must start with 'https://'"
+    ):
+        fetch_template_archive("file:///tmp/archive.zip", Path("/tmp"))
+    with pytest.raises(
+        NetworkFetchError, match="Remote configuration URLs must start with 'https://'"
+    ):
+        fetch_template_archive("ftp://example.com/archive.zip", Path("/tmp"))
 
 
 def test_fetch_template_archive_handles_url_error(mocker, tmp_path):
