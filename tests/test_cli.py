@@ -962,3 +962,75 @@ def test_main_missing_argument_json_mode(capsys, monkeypatch):
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "InvalidUsageError"
     assert "expected one argument" in payload["error"]["message"]
+
+
+def test_help_json_mode_global(capsys, monkeypatch):
+    """Test that 'protostar help --json' emits full capabilities JSON schema."""
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "help", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "success"
+    assert "capabilities" in payload
+    commands = payload["capabilities"]["commands"]
+    assert "init" in commands
+    assert "config" in commands
+    assert "export-schema" in commands
+
+
+def test_help_subcommand_json_mode(capsys, monkeypatch):
+    """Test that 'protostar help init --json' emits scoped capabilities JSON schema."""
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "help", "init", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "success"
+    assert "capabilities" in payload
+    commands = payload["capabilities"]["commands"]
+    assert "init" in commands
+    assert "config" not in commands
+    assert "export-schema" not in commands
+
+
+def test_init_help_flag_json_mode(capsys, monkeypatch):
+    """Test that 'protostar init --help --json' emits scoped capabilities JSON schema."""
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--help", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "success"
+    assert "capabilities" in payload
+    commands = payload["capabilities"]["commands"]
+    assert "init" in commands
+    assert "config" not in commands
+
+
+def test_help_invalid_subcommand_json_mode(capsys, monkeypatch):
+    """Test that 'protostar help invalid --json' emits InvalidUsageError JSON payload."""
+    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "help", "invalid-topic", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == os.EX_USAGE
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "error"
+    assert payload["error"]["type"] == "InvalidUsageError"
+    assert "invalid choice" in payload["error"]["message"]

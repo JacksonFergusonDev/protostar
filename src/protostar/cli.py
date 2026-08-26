@@ -1108,6 +1108,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     def dispatch_help(parsed_args: argparse.Namespace) -> None:
         """Closure to evaluate and print the requested help scope."""
+        if is_json_mode:
+            emit_capabilities(parser, command=getattr(parsed_args, "topic", None))
+
         if getattr(parsed_args, "topic", None):
             # Print the localized help for the specific subcommand
             subparsers.choices[parsed_args.topic].print_help()
@@ -1123,15 +1126,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _build_capabilities_schema(parser: argparse.ArgumentParser) -> dict[str, Any]:
+def _build_capabilities_schema(
+    parser: argparse.ArgumentParser, command: str | None = None
+) -> dict[str, Any]:
     """Introspects the parser to build a dynamic capabilities schema.
 
     Generates a structured description of all available subcommands and their
     flags by walking the parser's action groups. This is the payload emitted
-    when ``--help --json`` or bare ``--json`` is invoked.
+    when ``--help --json``, ``help <command> --json``, or bare ``--json`` is invoked.
 
     Args:
         parser: The fully constructed root argument parser.
+        command: Optional specific subcommand name to filter capabilities for.
 
     Returns:
         A JSON-serializable capabilities dictionary.
@@ -1142,7 +1148,12 @@ def _build_capabilities_schema(parser: argparse.ArgumentParser) -> dict[str, Any
         None,
     )
     if subparsers_action is not None:
-        for name, subparser in subparsers_action.choices.items():
+        choices = (
+            {command: subparsers_action.choices[command]}
+            if command and command in subparsers_action.choices
+            else subparsers_action.choices
+        )
+        for name, subparser in choices.items():
             flags: list[dict[str, Any]] = []
             for action in subparser._actions:
                 if isinstance(action, argparse._HelpAction):
@@ -1177,6 +1188,20 @@ def _build_capabilities_schema(parser: argparse.ArgumentParser) -> dict[str, Any
     return {"commands": commands}
 
 
+def emit_capabilities(
+    parser: argparse.ArgumentParser, command: str | None = None
+) -> None:
+    """Emits the structured capabilities schema in JSON format and exits immediately."""
+    emit_json(
+        {
+            "api_version": CLI_API_VERSION,
+            "status": "success",
+            "capabilities": _build_capabilities_schema(parser, command=command),
+        }
+    )
+    sys.exit(0)
+
+
 def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
     """Intercepts JSON-mode meta-flags before argparse runs.
 
@@ -1206,19 +1231,28 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
         )
         sys.exit(0)
 
-    # --help --json or bare --json with no recognised subcommand
-    has_known_subcommand = bool(
-        argv_set - {"--json", "--help", "-h", "--verbose", "-v"}
+    # Resolve available subcommands from parser choices
+    subparsers_action = next(
+        (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
+        None,
     )
-    if "--help" in argv_set or "-h" in argv_set or not has_known_subcommand:
-        emit_json(
-            {
-                "api_version": CLI_API_VERSION,
-                "status": "success",
-                "capabilities": _build_capabilities_schema(parser),
-            }
-        )
-        sys.exit(0)
+    known_commands = (
+        set(subparsers_action.choices.keys()) if subparsers_action else set()
+    )
+    # Find any subcommand present in sys.argv (excluding 'help' if handled via dispatch_help)
+    subcommand = next(
+        (arg for arg in sys.argv[1:] if arg in known_commands and arg != "help"),
+        None,
+    )
+
+    has_help_flag = "--help" in argv_set or "-h" in argv_set
+    is_bare_json = not bool(argv_set - {"--json", "--verbose", "-v"})
+
+    if has_help_flag:
+        emit_capabilities(parser, command=subcommand)
+
+    if is_bare_json:
+        emit_capabilities(parser)
 
 
 # --- CLI Design Note: Pre-Parser Interception & POSIX Exit Mapping ---
