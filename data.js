@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787772294568,
+  "lastUpdate": 1787772491975,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8063,6 +8063,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 241.99,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "ec681ce3584beb5e7d7ee6b66ce7278eb77bb40a",
+          "message": "fix(docs): rename pre-commit config fixtures to prevent hook collisions\n\n- Output pre-commit config fixtures as pre-commit-config.fixture.yaml\n- Prevent prek and pre-commit from treating fixture templates as repository configs\n- Retain YAML syntax highlighting in editors\n- Update snippet inclusion in docs/usage/init.md",
+          "timestamp": "2026-08-26T12:24:51-07:00",
+          "tree_id": "6ebec6b01bf2ffac87503f2ba1bef24761bb7035",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ec681ce3584beb5e7d7ee6b66ce7278eb77bb40a"
+        },
+        "date": 1787772491342,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 150.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.75,
             "unit": "ms"
           }
         ]
