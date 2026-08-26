@@ -324,17 +324,7 @@ def test_pre_commit_build_uv(manifest, mocker):
     assert manifest.tooling.wants_pre_commit is True
     assert "pre-commit" in manifest.dependencies.dev_dependencies
     assert any(
-        t.command
-        == [
-            "uv",
-            "run",
-            "pre-commit",
-            "install",
-            "--hook-type",
-            "pre-commit",
-            "--hook-type",
-            "commit-msg",
-        ]
+        t.command == ["uv", "run", "pre-commit", "install"]
         for t in manifest.tasks.post_install_tasks
     )
     assert any(
@@ -371,17 +361,7 @@ def test_prek_build_uv(manifest, mocker):
     assert manifest.tooling.wants_prek is True
     assert "prek" in manifest.dependencies.dev_dependencies
     assert any(
-        t.command
-        == [
-            "uv",
-            "run",
-            "prek",
-            "install",
-            "--hook-type",
-            "pre-commit",
-            "--hook-type",
-            "commit-msg",
-        ]
+        t.command == ["uv", "run", "prek", "install"]
         for t in manifest.tasks.post_install_tasks
     )
     assert any(
@@ -507,6 +487,7 @@ def test_commitizen_module_adds_pre_commit_hook():
         "commitizen-tools/commitizen" in hook
         for hook in manifest.tooling.pre_commit_hooks
     )
+    assert "commit-msg" in manifest.tooling.pre_commit_install_hook_types
 
 
 def test_commitizen_module_adds_gitignore_entry():

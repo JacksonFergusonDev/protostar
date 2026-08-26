@@ -180,6 +180,17 @@ def test_add_pre_commit_local_hook(manifest):
     assert "- id: mypy" in manifest.tooling.pre_commit_local_hooks
 
 
+def test_add_pre_commit_hook_type(manifest):
+    """Test that pre-commit hook types are queued and deduplicated correctly."""
+    manifest.tooling.add_pre_commit_hook_type("commit-msg")
+    manifest.tooling.add_pre_commit_hook_type("commit-msg")  # Duplicate
+    manifest.tooling.add_pre_commit_hook_type("pre-push")
+
+    assert len(manifest.tooling.pre_commit_install_hook_types) == 2
+    assert "commit-msg" in manifest.tooling.pre_commit_install_hook_types
+    assert "pre-push" in manifest.tooling.pre_commit_install_hook_types
+
+
 def test_should_skip_file_pure(tmp_path):
     """Test that should_skip_file is a pure boolean check based on existence and collision strategy."""
 

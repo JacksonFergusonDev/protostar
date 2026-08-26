@@ -422,16 +422,7 @@ class PreCommitModule(BootstrapModule):
         # `autoupdate` pulls remote git repositories to update hook definitions,
         # requiring a wider time window than a local install.
         manifest.tasks.add_post_install_task(
-            [
-                "uv",
-                "run",
-                "pre-commit",
-                "install",
-                "--hook-type",
-                "pre-commit",
-                "--hook-type",
-                "commit-msg",
-            ],
+            ["uv", "run", "pre-commit", "install"],
             description="Installing pre-commit git hooks",
         )
         manifest.tasks.add_post_install_task(
@@ -482,16 +473,7 @@ class PrekModule(BootstrapModule):
         manifest.dependencies.add_dev("prek")
 
         manifest.tasks.add_post_install_task(
-            [
-                "uv",
-                "run",
-                "prek",
-                "install",
-                "--hook-type",
-                "pre-commit",
-                "--hook-type",
-                "commit-msg",
-            ],
+            ["uv", "run", "prek", "install"],
             description="Installing prek git hooks",
         )
         manifest.tasks.add_post_install_task(
@@ -513,6 +495,10 @@ class CommitizenModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Commitizen"
 
+    def pre_flight(self) -> None:
+        """Verifies that the runtime environment satisfies all commitizen prerequisites."""
+        return
+
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for commitizen."""
@@ -532,6 +518,8 @@ class CommitizenModule(BootstrapModule):
             "CHANGELOG.md",
             "# Changelog\n\nAll notable changes to this project will be documented in this file.\n",
         )
+
+        manifest.tooling.add_pre_commit_hook_type("commit-msg")
 
         # The cz check hook enforces Conventional Commit message format.
         # Uses the official commitizen pre-commit mirror, which vendors its own

@@ -1,6 +1,7 @@
 """Pure string and template generators for CI/CD workflows and workspace boilerplate."""
 
 import enum
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from .workspace import (
@@ -100,6 +101,7 @@ def generate_pre_commit_config(
     remote_hooks: list[str],
     dependencies: list[str] | None = None,
     is_prek: bool = False,
+    install_hook_types: set[str] | Sequence[str] | None = None,
 ) -> str:
     """Assembles and formats the .pre-commit-config.yaml content."""
     if is_prek:
@@ -168,11 +170,28 @@ def generate_pre_commit_config(
     if remote_hooks:
         repo_blocks.extend(remote_hooks)
 
+    has_commit_msg = bool(install_hook_types and "commit-msg" in install_hook_types)
+
+    header = ""
+    if has_commit_msg:
+        header = """default_install_hook_types:
+  - pre-commit
+  - commit-msg
+
+default_stages:
+  - pre-commit
+
+"""
+
     # Enforce exactly one empty line between all dynamic payloads
     hooks_yaml = "\n\n".join(repo_blocks)
 
     # Enforce exactly one empty line between the base block and the dynamic payloads
-    full_yaml = f"{base_yaml}\n\n{hooks_yaml}\n" if hooks_yaml else f"{base_yaml}\n"
+    full_yaml = (
+        f"{header}{base_yaml}\n\n{hooks_yaml}\n"
+        if hooks_yaml
+        else f"{header}{base_yaml}\n"
+    )
 
     if "<% MYPY_DEPENDENCIES %>" in full_yaml:
         deps = dependencies or []

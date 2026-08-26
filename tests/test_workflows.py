@@ -92,6 +92,43 @@ def test_generate_pre_commit_config_local_and_remote_hooks():
     assert pos_generic < pos_local < pos_gitleaks < pos_custom_remote
 
 
+def test_generate_pre_commit_config_with_commit_msg_hook_type():
+    commitizen_hook = """  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.8.3
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]"""
+    content = generate_pre_commit_config(
+        local_hooks=[],
+        remote_hooks=[commitizen_hook],
+        install_hook_types={"commit-msg"},
+    )
+    expected_header = (
+        "default_install_hook_types:\n"
+        "  - pre-commit\n"
+        "  - commit-msg\n"
+        "\n"
+        "default_stages:\n"
+        "  - pre-commit\n"
+        "\n"
+        "repos:\n"
+    )
+    assert content.startswith(expected_header)
+    assert "https://github.com/commitizen-tools/commitizen" in content
+
+
+def test_generate_pre_commit_config_without_commit_msg_hook_type():
+    content = generate_pre_commit_config(
+        local_hooks=[],
+        remote_hooks=[],
+        install_hook_types=set(),
+    )
+    assert content.startswith("repos:\n")
+    assert "default_install_hook_types" not in content
+    assert "default_stages" not in content
+
+
 def test_generate_pre_commit_config_mypy_dependencies_interpolation():
     local_hooks = [
         """      - id: mypy

@@ -59,6 +59,7 @@
         "pre_commit_local_hooks": [
             "      - id: ruff-check\n        name: ruff check\n        entry: uv run ruff check --fix\n        language: system\n        types: [python]\n        require_serial: true\n\n      - id: ruff-format\n        name: ruff format\n        entry: uv run ruff format\n        language: system\n        types: [python]\n        require_serial: true"
         ],
+        "pre_commit_install_hook_types": [],
         "wants_ci": false,
         "wants_release": false,
         "ci_flags": [],
