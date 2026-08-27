@@ -3,7 +3,7 @@ name = "demo-project"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "mpremote>=1.28.0",
+    "mpremote>=1.29.0",
     "pyserial>=3.5",
 ]
 description = "Add your description here."
@@ -12,7 +12,7 @@ authors = [{ name = "your-name", email = "your-email" }]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.16.3",
+    "ruff>=0.16.5",
 ]
 
 # ==================================================
