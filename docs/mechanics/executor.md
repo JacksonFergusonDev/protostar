@@ -21,6 +21,7 @@ flowchart TD
         E --> T(toml_ast.py):::pure
         E --> A(appends.py):::pure
         E --> W(workflows.py):::pure
+        E --> R(registry.py):::stateful
 
         E --> D(dependencies.py):::stateful
         E --> I(ide.py):::stateful
@@ -47,6 +48,7 @@ These modules interact with external boundaries, but do so predictably.
 - **`security.py`**: Enforces strict boundaries (Pure). Validates that no filesystem operations escape the workspace root (`enforce_path_jail`) and that no unauthorized shell commands are executed (`enforce_binary_safelist`).
 - **`dependencies.py`**: Orchestrates `uv add` commands to resolve and install Python packages into their appropriate dependency groups (main, dev, docs).
 - **`ide.py`**: Verifies the presence of recommended extensions via the IDE's CLI (e.g., `code --list-extensions`) and deep-merges telemetry diagnostics and settings into `.vscode/settings.json`.
+- **`registry.py`**: Interacts with the asynchronous static registry to fetch the latest pre-commit hook versions during the execution phase, falling back gracefully to a hardcoded defaults mapping if network access is unavailable.
 
 ---
 

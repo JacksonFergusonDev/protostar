@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.errors import ConfigurationError, MissingDependencyError
+from protostar.registry import HookRegistry, RemoteHook
 from protostar.workflows import CIFlag
 
 from .base import BootstrapModule
@@ -96,9 +97,10 @@ class MarkdownLintModule(BootstrapModule):
 
         manifest.tooling.add_ide_extension("DavidAnson.vscode-markdownlint")
 
-        hook_payload = """  # Markdown linting
-  - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.23.0
+        rev = HookRegistry.get_revision(RemoteHook.MARKDOWNLINT)
+        hook_payload = f"""  # Markdown linting
+  - repo: {RemoteHook.MARKDOWNLINT.value}
+    rev: {rev}
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]"""
@@ -425,11 +427,6 @@ class PreCommitModule(BootstrapModule):
             ["uv", "run", "pre-commit", "install"],
             description="Installing pre-commit git hooks",
         )
-        manifest.tasks.add_post_install_task(
-            ["uv", "run", "pre-commit", "autoupdate"],
-            timeout=300,
-            description="Updating pre-commit hooks to latest versions...",
-        )
 
 
 class PrekModule(BootstrapModule):
@@ -476,11 +473,6 @@ class PrekModule(BootstrapModule):
             ["uv", "run", "prek", "install"],
             description="Installing prek git hooks",
         )
-        manifest.tasks.add_post_install_task(
-            ["uv", "run", "prek", "update"],
-            timeout=300,
-            description="Updating prek hooks to latest versions...",
-        )
 
 
 class CommitizenModule(BootstrapModule):
@@ -521,20 +513,15 @@ class CommitizenModule(BootstrapModule):
 
         manifest.tooling.add_pre_commit_hook_type("commit-msg")
 
-        # The cz check hook enforces Conventional Commit message format.
-        # Uses the official commitizen pre-commit mirror, which vendors its own
-        # Python environment — no venv wiring required beyond what pre-commit handles.
-        hook_payload = """  # Commit message validation
-  - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.8.3
+        rev = HookRegistry.get_revision(RemoteHook.COMMITIZEN)
+        hook_payload = f"""  # Commit message validation
+  - repo: {RemoteHook.COMMITIZEN.value}
+    rev: {rev}
     hooks:
       - id: commitizen
         stages: [commit-msg]"""
         manifest.tooling.add_pre_commit_hook(hook_payload)
 
-        # version_provider = "pep621" reads/writes [project].version in pyproject.toml
-        # directly — no duplication, no separate version file. This is the correct
-        # choice since `uv init` scaffolds a standard PEP 621 pyproject.toml.
         config = """[tool.commitizen]
 name = "cz_conventional_commits"
 version_provider = "pep621"
@@ -608,9 +595,10 @@ class RenovateModule(BootstrapModule):
         """
         logger.debug("Building Renovate tooling layer.")
 
-        hook_payload = """  # Renovate config validation
-  - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.24.3
+        rev = HookRegistry.get_revision(RemoteHook.RENOVATE)
+        hook_payload = f"""  # Renovate config validation
+  - repo: {RemoteHook.RENOVATE.value}
+    rev: {rev}
     hooks:
       - id: renovate-config-validator
         files: '.github/renovate.json'"""

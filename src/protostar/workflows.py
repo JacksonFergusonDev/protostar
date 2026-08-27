@@ -99,6 +99,8 @@ class DockerfileSpec:
 def generate_pre_commit_config(
     local_hooks: list[str],
     remote_hooks: list[str],
+    core_rev: str,
+    gitleaks_rev: str,
     dependencies: list[str] | None = None,
     is_prek: bool = False,
     install_hook_types: set[str] | Sequence[str] | None = None,
@@ -122,10 +124,10 @@ def generate_pre_commit_config(
       - id: check-json
       - id: check-toml"""
     else:
-        base_yaml = """repos:
+        base_yaml = f"""repos:
   # Generic hooks (configured to IGNORE Python)
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: {core_rev}
     hooks:
       - id: check-added-large-files
       - id: check-merge-conflict
@@ -159,9 +161,9 @@ def generate_pre_commit_config(
     )
     repo_blocks.append(local_block)
 
-    gitleaks_hook = """  # Check for accidental commits of secrets
+    gitleaks_hook = f"""  # Check for accidental commits of secrets
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.0
+    rev: {gitleaks_rev}
     hooks:
       - id: gitleaks"""
 
