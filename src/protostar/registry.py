@@ -20,6 +20,8 @@ import logging
 import urllib.request
 from urllib.error import URLError
 
+from ._fallbacks import DEFAULT_REVISIONS
+
 logger = logging.getLogger("protostar")
 
 __all__ = ["HookRegistry", "RemoteHook"]
@@ -33,16 +35,6 @@ class RemoteHook(enum.StrEnum):
     MARKDOWNLINT = "https://github.com/DavidAnson/markdownlint-cli2"
     COMMITIZEN = "https://github.com/commitizen-tools/commitizen"
     RENOVATE = "https://github.com/renovatebot/pre-commit-hooks"
-
-
-# Immutable fallback state guarantees zero downtime if the user is offline
-DEFAULT_REVISIONS: dict[RemoteHook, str] = {
-    RemoteHook.PRE_COMMIT_HOOKS: "v6.0.0",
-    RemoteHook.GITLEAKS: "v8.30.1",
-    RemoteHook.MARKDOWNLINT: "v0.23.2",
-    RemoteHook.COMMITIZEN: "v4.18.0",
-    RemoteHook.RENOVATE: "44.48.0",
-}
 
 
 class HookRegistry:

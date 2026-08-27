@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from protostar.registry import DEFAULT_REVISIONS, HookRegistry, RemoteHook
+from protostar._fallbacks import DEFAULT_REVISIONS
+from protostar.registry import HookRegistry, RemoteHook
 
 
 @pytest.fixture(autouse=True)

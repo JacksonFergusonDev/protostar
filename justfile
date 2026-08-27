@@ -149,6 +149,9 @@ serve: sync
 bump part: lint typecheck test-unit
     #!/usr/bin/env bash
 
+    echo "Syncing registry fallbacks..."
+    uv run python scripts/sync_registry_fallbacks.py
+
     echo "Ensuring local repository is up to date..."
     git pull --ff-only
 
