@@ -1,4 +1,18 @@
-"""Remote registry fetching and caching for pre-commit hook revisions."""
+"""Remote registry fetching and caching for pre-commit hook revisions.
+
+Architectural Context:
+Historically, Protostar relied on executing `pre-commit autoupdate` or `prek update`
+as a post-install task. This approach scaled poorly: for every remote repository,
+the CLI halted while the machine performed full `git fetch` operations just to read
+a semantic version tag.
+
+To eliminate this client-side bottleneck, we shifted to an asynchronous static registry model:
+1. An auxiliary repository (`protostar-hook-registry`) tracks upstream tools via Renovate Bot.
+2. A GitHub Actions pipeline catches version bumps, compiles them, and deploys a lightweight `registry.json` payload to an edge CDN.
+3. This module makes a single HTTP GET request during the `plan()` phase. It parses the JSON in memory and the Orchestrator injects these resolved semantic versions into the YAML string blocks before writing to disk.
+
+This decoupling provides zero-dependency churn in core, maximum determinism, and graceful offline degradation.
+"""
 
 import enum
 import json

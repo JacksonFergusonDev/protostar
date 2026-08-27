@@ -75,10 +75,10 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 Protostar is built to be lightweight, so Python's startup overhead never slows down your local development.
 
-We measure initialization latency using two benchmarking approaches:
-
-1. **Fast-Path Execution:** Measures the latency of non-interactive commands (e.g., `protostar help init`).
-1. **TUI-Path Execution:** Measures the overhead of triggering the interactive `questionary` wizards.
+- **Asynchronous Static Registry:** To eliminate the severe network bottleneck of client-side git resolution (e.g., `pre-commit autoupdate`), Protostar resolves hook versions via an autonomous, edge-deployed JSON registry. The CLI never halts to negotiate TLS handshakes or clone remote repositories—it fetches a pre-compiled JSON payload in milliseconds and features immutable offline fallbacks if you're on a plane or disconnected.
+- **Micro-Optimization:** We measure initialization latency using two benchmarking approaches:
+  1. **Fast-Path Execution:** Measures the latency of non-interactive commands (e.g., `protostar help init`).
+  1. **TUI-Path Execution:** Measures the overhead of triggering the interactive `questionary` wizards.
 
 Our CI pipeline enforces a strict performance budget using `hyperfine`, gating any PR that introduces significant regressions in either path. We maintain historical tracking to ensure long-term architectural stability rather than chasing absolute CI metrics (which are subject to heavy VM variance).
 
