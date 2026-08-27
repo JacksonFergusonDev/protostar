@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787865819196,
+  "lastUpdate": 1787867355461,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8335,6 +8335,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 232.08,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6b7faeda321f50e5694d2dae581fd84e1381bed",
+          "message": "chore: automate registry fallbacks synchronization for releases (#204)\n\n* refactor: extract default revisions to _fallbacks.py for automated syncing\n\n* chore: automate registry fallbacks synchronization for releases\n\n* fix: resolve mypy error by importing DEFAULT_REVISIONS from _fallbacks in tests\n\n* docs: clarify that offline fallbacks are auto-synced prior to each release",
+          "timestamp": "2026-08-27T14:48:10-07:00",
+          "tree_id": "d35ba79d3bb14196a5f72528038ad1974741180c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e6b7faeda321f50e5694d2dae581fd84e1381bed"
+        },
+        "date": 1787867354878,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 160.21,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 229.31,
             "unit": "ms"
           }
         ]
