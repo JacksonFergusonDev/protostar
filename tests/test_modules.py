@@ -327,10 +327,6 @@ def test_pre_commit_build_uv(manifest, mocker):
         t.command == ["uv", "run", "pre-commit", "install"]
         for t in manifest.tasks.post_install_tasks
     )
-    assert any(
-        t.command == ["uv", "run", "pre-commit", "autoupdate"]
-        for t in manifest.tasks.post_install_tasks
-    )
 
 
 # --- PrekModule Tests ---
@@ -362,10 +358,6 @@ def test_prek_build_uv(manifest, mocker):
     assert "prek" in manifest.dependencies.dev_dependencies
     assert any(
         t.command == ["uv", "run", "prek", "install"]
-        for t in manifest.tasks.post_install_tasks
-    )
-    assert any(
-        t.command == ["uv", "run", "prek", "update"]
         for t in manifest.tasks.post_install_tasks
     )
 

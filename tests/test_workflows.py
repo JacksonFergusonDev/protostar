@@ -13,7 +13,9 @@ from protostar.workflows import (
 
 
 def test_generate_pre_commit_config_basic():
-    content = generate_pre_commit_config(local_hooks=[], remote_hooks=[])
+    content = generate_pre_commit_config(
+        local_hooks=[], remote_hooks=[], core_rev="v6.0.0", gitleaks_rev="v8.24.0"
+    )
     assert "repos:" in content
     assert "repo: https://github.com/pre-commit/pre-commit-hooks" in content
     assert "rev: v6.0.0" in content
@@ -39,7 +41,13 @@ def test_generate_pre_commit_config_basic():
 
 
 def test_generate_pre_commit_config_prek():
-    content = generate_pre_commit_config(local_hooks=[], remote_hooks=[], is_prek=True)
+    content = generate_pre_commit_config(
+        local_hooks=[],
+        remote_hooks=[],
+        core_rev="v6.0.0",
+        gitleaks_rev="v8.24.0",
+        is_prek=True,
+    )
     assert "repos:" in content
     assert "repo: builtin" in content
     assert "check-added-large-files" in content
@@ -79,6 +87,8 @@ def test_generate_pre_commit_config_local_and_remote_hooks():
     content = generate_pre_commit_config(
         local_hooks=local_hooks,
         remote_hooks=remote_hooks,
+        core_rev="v6.0.0",
+        gitleaks_rev="v8.24.0",
     )
     assert "repo: local" in content
     assert "uv run ruff check --fix" in content
@@ -102,6 +112,8 @@ def test_generate_pre_commit_config_with_commit_msg_hook_type():
     content = generate_pre_commit_config(
         local_hooks=[],
         remote_hooks=[commitizen_hook],
+        core_rev="v6.0.0",
+        gitleaks_rev="v8.24.0",
         install_hook_types={"commit-msg"},
     )
     expected_header = (
@@ -122,6 +134,8 @@ def test_generate_pre_commit_config_without_commit_msg_hook_type():
     content = generate_pre_commit_config(
         local_hooks=[],
         remote_hooks=[],
+        core_rev="v6.0.0",
+        gitleaks_rev="v8.24.0",
         install_hook_types=set(),
     )
     assert content.startswith("repos:\n")
@@ -142,6 +156,8 @@ def test_generate_pre_commit_config_mypy_dependencies_interpolation():
     content = generate_pre_commit_config(
         local_hooks=local_hooks,
         remote_hooks=[],
+        core_rev="v6.0.0",
+        gitleaks_rev="v8.24.0",
         dependencies=["fastapi", "pydantic"],
     )
     assert "          - fastapi\n          - pydantic" in content
@@ -151,6 +167,8 @@ def test_generate_pre_commit_config_mypy_dependencies_interpolation():
     content_empty = generate_pre_commit_config(
         local_hooks=local_hooks,
         remote_hooks=[],
+        core_rev="v6.0.0",
+        gitleaks_rev="v8.24.0",
         dependencies=[],
     )
     assert "additional_dependencies:" not in content_empty
