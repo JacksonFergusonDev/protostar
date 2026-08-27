@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787778564599,
+  "lastUpdate": 1787865819196,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8301,6 +8301,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 217.56,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1067b607197d59f429601864e5d09e3706dbe4f0",
+          "message": "feat: migrate to asynchronous static hook registry (#203)\n\n* feat: migrate to asynchronous static hook registry\n\n* test: update tests for async hook registry migration\n\n* docs: document async hook registry architecture\n\n* docs: update fixtures",
+          "timestamp": "2026-08-27T14:22:29-07:00",
+          "tree_id": "1068bc36acef3247acb258fed89208ddf95a8250",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1067b607197d59f429601864e5d09e3706dbe4f0"
+        },
+        "date": 1787865818002,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 166.18,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 232.08,
             "unit": "ms"
           }
         ]
