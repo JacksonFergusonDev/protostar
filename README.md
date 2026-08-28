@@ -32,7 +32,7 @@ Setting up a new python project often requires the same manual steps: configurin
 <picture>
   <img alt="Protostar demo"
        src="docs/assets/demo_headless.gif"
-       width="700"
+       width="900"
        style="max-width:100%; height:auto;">
 </picture>
 </div>

@@ -38,14 +38,14 @@ It is designed to automate environment setup while staying out of your way.
 <div class="protostar-terminal">
 
 ```bash
-mkdir orbital-mechanics-sim
-cd orbital-mechanics-sim
-protostar init --template astro
+mkdir hyperdrive-cli
+cd hyperdrive-cli
+protostar init --template cli
 ```
 
 </div>
 
-![Headless Scaffolding](../assets/demo_headless.gif){ width="700" }
+<div class="protostar-asciinema" data-asciinema="./assets/demo_headless.cast"></div>
 
 This initializes a working environment quickly while preserving explicit control over tools and context.
 

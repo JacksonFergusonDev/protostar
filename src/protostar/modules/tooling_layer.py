@@ -513,6 +513,9 @@ class CommitizenModule(BootstrapModule):
 
         manifest.tooling.add_pre_commit_hook_type("commit-msg")
 
+        # The cz check hook enforces Conventional Commit message format.
+        # Uses the official commitizen pre-commit mirror, which vendors its own
+        # Python environment — no venv wiring required beyond what pre-commit handles.
         rev = HookRegistry.get_revision(RemoteHook.COMMITIZEN)
         hook_payload = f"""  # Commit message validation
   - repo: {RemoteHook.COMMITIZEN.value}

@@ -36,24 +36,29 @@ cd orbital-mechanics-sim
 protostar init
 ```
 
-![Protostar Interactive Wizard](../assets/demo_wizard.gif){ width="700" }
+<div class="protostar-asciinema" data-asciinema="../assets/demo_wizard.cast"></div>
 
 ## Headless Scaffolding
 
 For rapid, repeatable initialization, you can bypass the TUI entirely by providing your desired environment matrix as CLI flags. Universal system workspace hygiene is automatically applied, and IDE settings are conditionally injected based on your global configuration and chosen language footprints.
 
 ```bash
-protostar init --template astro
+mkdir hyperdrive-cli
+cd hyperdrive-cli
+protostar init --template cli
 ```
 
 **What just happened?**
 In a fraction of a second, Protostar:
 
-- Initialized the repository and scaffolded the base directory structure (e.g., `src/`, `tests/`, `data/`).
-- Resolved and injected the astrophysics computing stack (`numpy`, `scipy`, `pandas`, `matplotlib`) alongside `pytest` into your dependency manager (preferring `uv` if available).
-- Generated a strictly typed `pyproject.toml`, injected a `.markdownlint-cli2.yaml` configuration, and safely deduplicated your `.gitignore` without overwriting existing entries.
+- **Scaffolded Application & Test Suites**: Created a modular package architecture with an executable Typer and Rich CLI application (`src/hyperdrive_cli/cli.py`, `__init__.py`) alongside a unit test suite (`tests/test_cli.py`).
+- **Resolved Dependencies & Registered Entrypoints**: Injected runtime dependencies (`rich`, `typer`), wired the console script entrypoint in `pyproject.toml` (`[project.scripts]`), and populated development dependency groups.
+- **Configured Static Analysis & Testing ASTs**: Generated strictly typed `[tool.mypy]` rules, configured `[tool.ruff]` linting and formatting opinions, and wired coverage-backed `[tool.pytest.ini_options]`.
+- **Wired Automation & Pre-Commit Git Hooks**: Initialized `.pre-commit-config.yaml` with local toolchain hooks, configured Commitizen conventional commit checks (`CHANGELOG.md`), and scaffolded task automation in `justfile`.
+- **Provisioned CI/CD & Documentation**: Scaffolded GitHub Actions workflows (`.github/workflows/ci.yml`, `release.yml`, `codecov.yml`, `renovate.json`) alongside a ready-to-publish Zensical documentation site (`mkdocs.yml`, `docs/index.md`, `.readthedocs.yaml`).
+- **Applied Universal Workspace Hygiene**: Evaluated the virtual environment via `.envrc` (direnv), locked dependencies with `uv.lock`, injected `.markdownlint-cli2.yaml`, and safely deduplicated `.gitignore` without overwriting existing entries.
 
-![Headless Scaffolding](../assets/demo_headless.gif){ width="700" }
+<div class="protostar-asciinema" data-asciinema="../assets/demo_headless.cast"></div>
 
 ## Exploration & Help
 
