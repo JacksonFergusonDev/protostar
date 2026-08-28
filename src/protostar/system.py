@@ -25,12 +25,13 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
     import shutil
 
     exe = shutil.which(cmd[0])
+    resolved_cmd = list(cmd)
     if exe:
-        cmd[0] = exe
+        resolved_cmd[0] = exe
 
     try:
         subprocess.run(
-            cmd,
+            resolved_cmd,
             check=True,
             capture_output=True,
             text=True,
