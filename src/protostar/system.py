@@ -22,8 +22,6 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
         CommandTimeoutError: If the execution time limit is exceeded.
         CommandExecutionError: If the process returns a non-zero exit code.
     """
-    import shutil
-
     exe = shutil.which(cmd[0])
     resolved_cmd = list(cmd)
     if exe:
