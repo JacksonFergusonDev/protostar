@@ -23,7 +23,7 @@ jobs:
           python-version: "3.14"
 
       - name: Verify registry fallbacks
-        run: uv run python scripts/sync_registry_fallbacks.py --check
+        run: python scripts/sync_registry_fallbacks.py --check
 
       - name: Build distribution
         run: uv build
