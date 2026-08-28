@@ -23,3 +23,31 @@ def test_render_template():
     result = render_template(template, context)
     assert 'name = "my_app"' in result
     assert 'dir = "src/my_app"' in result
+
+
+def test_render_template_preserves_unmatched_placeholders():
+    """Test that placeholders absent from context are left intact."""
+    template = 'name = "<% project_name %>"\nauthor = "<% unknown_var %>"\n'
+    context = {"project_name": "my_app"}
+
+    result = render_template(template, context)
+    assert 'name = "my_app"' in result
+    assert 'author = "<% unknown_var %>"' in result
+
+
+def test_render_template_without_toml_escape():
+    """Test rendering template with escape_toml=False."""
+    template = 'raw = "<% value %>"'
+    context = {"value": 'unescaped "quotes"\nand newlines'}
+
+    result = render_template(template, context, escape_toml=False)
+    assert result == 'raw = "unescaped "quotes"\nand newlines"'
+
+
+def test_render_template_multiple_placeholders_and_whitespaces():
+    """Test various spacing styles and multiple variables in single string."""
+    template = "<% a %><%b%><%   c   %>-<%a%>"
+    context = {"a": "1", "b": "2", "c": "3"}
+
+    result = render_template(template, context)
+    assert result == "123-1"

@@ -1,6 +1,9 @@
 """Interpolation utilities for safely injecting variables into TOML strings."""
 
 import re
+from typing import Final
+
+VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(r"<\%\s*([a-zA-Z0-9_]+)\s*\%>")
 
 
 # --- Design Note: Lightweight Regex Interpolation vs Jinja2 ---
@@ -18,8 +21,7 @@ def extract_variables(content: str) -> list[str]:
     Returns:
         A deduplicated list of placeholder names, preserving insertion order.
     """
-    pattern = r"<\%\s*([a-zA-Z0-9_]+)\s*\%>"
-    matches = re.findall(pattern, content)
+    matches = VARIABLE_PATTERN.findall(content)
     # dict.fromkeys() preserves insertion order while removing duplicates
     return list(dict.fromkeys(matches))
 
@@ -40,7 +42,7 @@ def toml_escape(value: str) -> str:
 def render_template(
     content: str, context: dict[str, str], escape_toml: bool = True
 ) -> str:
-    """Replaces placeholders in the content with context values.
+    """Replaces placeholders in the content with context values in a single pass.
 
     Args:
         content: The raw text content.
@@ -50,13 +52,12 @@ def render_template(
     Returns:
         The interpolated string.
     """
-    rendered = content
-    for key, value in context.items():
-        safe_value = toml_escape(value) if escape_toml else value
-        pattern = r"<\%\s*" + re.escape(key) + r"\s*\%>"
 
-        def replacement(_match: re.Match[str], sv: str = safe_value) -> str:
-            return sv
+    def replacement(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if key in context:
+            val = context[key]
+            return toml_escape(val) if escape_toml else val
+        return match.group(0)
 
-        rendered = re.sub(pattern, replacement, rendered)
-    return rendered
+    return VARIABLE_PATTERN.sub(replacement, content)
