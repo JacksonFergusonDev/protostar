@@ -13,8 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.12", "3.13", "3.14"]
+
+    env:
+      PYTHONIOENCODING: "utf-8"
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -32,12 +35,17 @@ jobs:
         uv pip install pytest-github-actions-annotate-failures
 
     - name: Mock direnv
+      shell: bash
       run: |
         mkdir -p "$RUNNER_TEMP/bin"
         cat > "$RUNNER_TEMP/bin/direnv" <<'EOF'
         #!/bin/sh
         # direnv is not required in CI; Protostar only invokes `direnv allow`.
         exit 0
+        EOF
+        cat > "$RUNNER_TEMP/bin/direnv.cmd" <<'EOF'
+        @echo off
+        exit /b 0
         EOF
         chmod +x "$RUNNER_TEMP/bin/direnv"
         echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
@@ -97,6 +105,9 @@ jobs:
   benchmark-gate:
     name: Benchmark Regression Check
     runs-on: ubuntu-latest
+
+    env:
+      PYTHONIOENCODING: "utf-8"
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7

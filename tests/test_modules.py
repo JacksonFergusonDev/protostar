@@ -92,7 +92,18 @@ def test_python_module_ide_injection_active(manifest, mocker):
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" in manifest.ide_settings
-    assert "/.venv/bin/python" in manifest.ide_settings["python.defaultInterpreterPath"]
+    import sys
+
+    if sys.platform == "win32":
+        assert (
+            "\\.venv\\Scripts\\python.exe"
+            in manifest.ide_settings["python.defaultInterpreterPath"]
+        )
+    else:
+        assert (
+            "/.venv/bin/python"
+            in manifest.ide_settings["python.defaultInterpreterPath"]
+        )
     assert manifest.ide_settings["python.terminal.activateEnvironment"] is True
 
 

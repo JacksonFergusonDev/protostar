@@ -6,7 +6,7 @@
 
 ## Installation
 
-Protostar is designed to be installed globally as a standalone CLI tool.
+Protostar is designed to be installed globally as a standalone CLI tool, with native cross-platform support for Linux, macOS, and Windows.
 
 === "macOS (Homebrew)"
     ```bash

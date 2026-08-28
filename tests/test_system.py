@@ -6,6 +6,11 @@ from protostar.errors import CommandExecutionError, CommandTimeoutError
 from protostar.system import execute_subprocess
 
 
+@pytest.fixture(autouse=True)
+def mock_shutil_which(mocker):
+    mocker.patch("protostar.system.shutil.which", side_effect=lambda x: x)
+
+
 def test_execute_subprocess_with_timeout(mocker):
     """Test that explicitly provided timeouts are passed down to the subprocess layer."""
     mock_run = mocker.patch("protostar.system.subprocess.run")
@@ -17,6 +22,7 @@ def test_execute_subprocess_with_timeout(mocker):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=15,
     )
 
@@ -55,7 +61,12 @@ def test_execute_subprocess_success(mocker):
     mock_run = mocker.patch("subprocess.run")
     execute_subprocess(["uv", "version"])
     mock_run.assert_called_once_with(
-        ["uv", "version"], check=True, capture_output=True, text=True, timeout=None
+        ["uv", "version"],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=None,
     )
 
 

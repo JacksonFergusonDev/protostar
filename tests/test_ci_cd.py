@@ -36,7 +36,7 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
     mock_write.assert_called_once()
     args, _ = mock_write.call_args
     path, content = args
-    assert str(path) == ".github/workflows/ci.yml"
+    assert path.as_posix() == ".github/workflows/ci.yml"
     assert (
         "Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}" in content
     )
@@ -101,5 +101,5 @@ def test_executor_release_assembly(manifest: EnvironmentManifest, mocker) -> Non
     mock_write.assert_called_once()
     args, _ = mock_write.call_args
     path, content = args
-    assert str(path) == ".github/workflows/release.yml"
+    assert path.as_posix() == ".github/workflows/release.yml"
     assert "pypa/gh-action-pypi-publish@release/v1" in content

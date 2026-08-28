@@ -35,6 +35,7 @@ from .errors import (
     CommandExecutionError,
     ConfigurationError,
     ExecutionAbortedError,
+    ExitCode,
     FileSystemError,
     InvalidUsageError,
     MissingDependencyError,
@@ -1489,23 +1490,23 @@ def main() -> None:
 
         # Route specific domain exceptions to standard POSIX status codes
         if isinstance(e, InvalidUsageError):
-            sys.exit(os.EX_USAGE)  # 64: Command line usage error
+            sys.exit(ExitCode.USAGE)  # 64: Command line usage error
         if isinstance(e, SecurityViolationError):
-            sys.exit(os.EX_NOPERM)  # 77: Permission denied / Security constraint
+            sys.exit(ExitCode.NOPERM)  # 77: Permission denied / Security constraint
         if isinstance(e, ConfigurationError):
-            sys.exit(os.EX_CONFIG)  # 78: Malformed configuration tables
+            sys.exit(ExitCode.CONFIG)  # 78: Malformed configuration tables
         if isinstance(e, TemplateResolutionError):
             sys.exit(
-                os.EX_DATAERR
+                ExitCode.DATAERR
             )  # 65: Data format error (e.g., bad zip, missing variables)
         if isinstance(e, NetworkFetchError):
-            sys.exit(os.EX_TEMPFAIL)  # 75: Temporary failure (network drop)
+            sys.exit(ExitCode.TEMPFAIL)  # 75: Temporary failure (network drop)
         if isinstance(e, MissingDependencyError):
             sys.exit(
-                os.EX_UNAVAILABLE
+                ExitCode.UNAVAILABLE
             )  # 69: Expected background tool executable missing
         if isinstance(e, FileSystemError):
-            sys.exit(os.EX_IOERR)  # 74: Critical disk access or storage write faults
+            sys.exit(ExitCode.IOERR)  # 74: Critical disk access or storage write faults
         if isinstance(e, ExecutionAbortedError):
             sys.exit(130)  # User aborted via interactive prompt
 
@@ -1536,7 +1537,7 @@ def main() -> None:
                 }
             )
             _stderr_console.print_exception(show_locals=False, max_frames=10)
-            sys.exit(os.EX_SOFTWARE)
+            sys.exit(ExitCode.SOFTWARE)
 
         # Unexpected core system bugs route here for the crash report payload
         console.print(
@@ -1567,7 +1568,7 @@ def main() -> None:
             f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
         )
 
-        sys.exit(os.EX_SOFTWARE)  # 70: Internal software malfunction code
+        sys.exit(ExitCode.SOFTWARE)  # 70: Internal software malfunction code
 
 
 if __name__ == "__main__":

@@ -175,7 +175,12 @@ Issues = "https://github.com/{github}/{repo_name}/issues"
         # --- IDE Injection ---
         config = UserConfig.load()
         if config.ide in (IDEType.VSCODE, IDEType.CURSOR):
-            interpreter_path = Path.cwd() / ".venv" / "bin" / "python"
+            import sys
+
+            if sys.platform == "win32":
+                interpreter_path = Path.cwd() / ".venv" / "Scripts" / "python.exe"
+            else:
+                interpreter_path = Path.cwd() / ".venv" / "bin" / "python"
             manifest.add_ide_setting(
                 "python.defaultInterpreterPath", str(interpreter_path)
             )
