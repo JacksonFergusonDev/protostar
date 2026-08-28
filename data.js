@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787881781694,
+  "lastUpdate": 1787883389525,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8403,6 +8403,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 219.31,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e53d2c1456813f86e57203b8715e5131b7e50af8",
+          "message": "perf(registry): defer remote hook resolution and skip retrieval when unused (#206)\n\n- Introduce RemoteHook.placeholder and HookRegistry.resolve_placeholders() to resolve hook revisions lazily at config generation time\n- Prevent eager HTTP requests during orchestrator.plan() across all tooling modules\n- Bypass remote registry network requests completely when git hooks are disabled or when no remote hooks are present in the workspace\n- Add unit tests verifying zero-network planning and selective placeholder resolution",
+          "timestamp": "2026-08-27T19:15:26-07:00",
+          "tree_id": "e74db9b4c98320bc7f5e8bfcb07ed28b7910fbd4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e53d2c1456813f86e57203b8715e5131b7e50af8"
+        },
+        "date": 1787883388667,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 151.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 215.58,
             "unit": "ms"
           }
         ]
