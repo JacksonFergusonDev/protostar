@@ -90,7 +90,8 @@ class HookRegistry:
             import urllib.request
 
             with urllib.request.urlopen(cls._REGISTRY_URL, timeout=1.5) as response:  # noqa: S310
-                data = json.loads(response.read().decode("utf-8"))
+                raw = response.read(65_536)
+                data = json.loads(raw.decode("utf-8"))
                 if isinstance(data, dict) and data.get("schema_version") == 1:
                     logger.debug("Successfully resolved remote hook registry.")
                     hooks = data.get("hooks", {})

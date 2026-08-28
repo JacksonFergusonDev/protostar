@@ -3,6 +3,7 @@ import argparse
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -50,9 +51,10 @@ def main() -> None:
     print(f"Fetching latest registry from {REGISTRY_URL}...")
     try:
         with urllib.request.urlopen(REGISTRY_URL, timeout=5) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except Exception as e:
-        print(f"Failed to fetch registry: {e}")
+            raw = response.read(65_536)
+            data = json.loads(raw.decode("utf-8"))
+    except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
+        print(f"Failed to fetch registry: {e}", file=sys.stderr)
         sys.exit(1)
 
     if not isinstance(data, dict) or data.get("schema_version") != 1:
@@ -65,15 +67,7 @@ def main() -> None:
         sys.exit(1)
 
     # Compare
-    is_out_of_date = False
-    for hook, rev in remote_hooks.items():
-        if hook not in DEFAULT_REVISIONS or DEFAULT_REVISIONS[hook] != rev:
-            is_out_of_date = True
-            break
-    for hook in DEFAULT_REVISIONS:
-        if hook not in remote_hooks:
-            is_out_of_date = True
-            break
+    is_out_of_date = dict(remote_hooks) != dict(DEFAULT_REVISIONS)
 
     if not is_out_of_date:
         print("Fallbacks are perfectly up to date with the remote registry!")
