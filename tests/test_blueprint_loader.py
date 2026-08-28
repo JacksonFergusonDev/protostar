@@ -1,9 +1,14 @@
+import sys
+
 import pytest
 
 from protostar.config import TemplateBlueprint
 from protostar.errors import TemplateResolutionError
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Windows does not support < or > in filenames"
+)
 def test_template_blueprint_load_local_directory(tmp_path):
     """Test loading a TemplateBlueprint from a local directory."""
     # Setup standard protostar.toml

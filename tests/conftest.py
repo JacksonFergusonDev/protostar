@@ -1,4 +1,6 @@
 import os
+
+os.environ["PYTHONIOENCODING"] = "utf-8"
 import subprocess
 import sys
 from collections.abc import Callable
