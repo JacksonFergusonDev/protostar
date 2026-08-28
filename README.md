@@ -88,6 +88,8 @@ Our CI pipeline enforces a strict performance budget using `hyperfine`, gating a
 
 ## 📦 Installation
 
+Protostar offers full cross-platform support and runs natively on Linux, macOS, and Windows.
+
 ### macOS (Homebrew)
 
 ```bash
