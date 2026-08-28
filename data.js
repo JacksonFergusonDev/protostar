@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787953084865,
+  "lastUpdate": 1787953365343,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8743,6 +8743,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 222.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "6e3f7e10ca54aa845b2f4df8aa31bdde77c56dc7",
+          "message": "ci: lock scaffolded dependencies and omit redundant cache glob",
+          "timestamp": "2026-08-28T14:41:22-07:00",
+          "tree_id": "4f4cced1671524da6e4706fed0d42d07acad2266",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6e3f7e10ca54aa845b2f4df8aa31bdde77c56dc7"
+        },
+        "date": 1787953364190,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 141.61,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 215.91,
             "unit": "ms"
           }
         ]
