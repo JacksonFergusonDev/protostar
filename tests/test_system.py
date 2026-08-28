@@ -17,6 +17,7 @@ def test_execute_subprocess_with_timeout(mocker):
         check=True,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=15,
     )
 
@@ -53,9 +54,15 @@ def test_execute_subprocess_failure(mocker):
 
 def test_execute_subprocess_success(mocker):
     mock_run = mocker.patch("subprocess.run")
+    mocker.patch("shutil.which", side_effect=lambda x: x)
     execute_subprocess(["uv", "version"])
     mock_run.assert_called_once_with(
-        ["uv", "version"], check=True, capture_output=True, text=True, timeout=None
+        ["uv", "version"],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=None,
     )
 
 
