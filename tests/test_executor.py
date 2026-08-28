@@ -1214,3 +1214,31 @@ def test_executor_skips_justfile_when_file_exists(mocker, mock_config):
     assert executor.diagnostics[0].phase == DiagnosticPhase.JUST
     assert executor.diagnostics[0].severity == Severity.SKIP
     assert "Skipping justfile generation" in executor.diagnostics[0].message
+
+
+def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_config):
+    """Test that _write_pre_commit_config replaces RemoteHook placeholders dynamically."""
+    from protostar.registry import RemoteHook
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_pre_commit = True
+
+    hook_payload = f"""  - repo: {RemoteHook.MARKDOWNLINT.value}
+    rev: {RemoteHook.MARKDOWNLINT.placeholder}
+    hooks:
+      - id: markdownlint-cli2"""
+    manifest.tooling.add_pre_commit_hook(hook_payload)
+
+    executor = SystemExecutor(manifest, mock_config)
+    mocker.patch("protostar.executor.Path.exists", return_value=False)
+    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_pre_commit_config()
+
+    written_data = mock_write.call_args[0][1]
+    assert RemoteHook.MARKDOWNLINT.placeholder not in written_data
+    assert RemoteHook.PRE_COMMIT_HOOKS.placeholder not in written_data
+    assert RemoteHook.GITLEAKS.placeholder not in written_data
+    assert "https://github.com/DavidAnson/markdownlint-cli2" in written_data
+    assert "https://github.com/pre-commit/pre-commit-hooks" in written_data
+    assert "https://github.com/gitleaks/gitleaks" in written_data

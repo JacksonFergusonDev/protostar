@@ -36,6 +36,11 @@ class RemoteHook(enum.StrEnum):
     COMMITIZEN = "https://github.com/commitizen-tools/commitizen"
     RENOVATE = "https://github.com/renovatebot/pre-commit-hooks"
 
+    @property
+    def placeholder(self) -> str:
+        """Returns the template placeholder string for deferred revision interpolation."""
+        return f"<% REV_{self.name} %>"
+
 
 class HookRegistry:
     """Memoized fetcher for the static JSON pre-commit hook registry."""
@@ -44,6 +49,25 @@ class HookRegistry:
     _REGISTRY_URL = (
         "https://jacksonfergusondev.github.io/protostar-hook-registry/registry.json"
     )
+
+    @classmethod
+    def resolve_placeholders(cls, content: str) -> str:
+        """Replaces any remote hook revision placeholders with resolved revisions.
+
+        Only fetches from the remote registry if at least one placeholder is present.
+
+        Args:
+            content: Text content containing optional `<% REV_* %>` placeholders.
+
+        Returns:
+            The content with all remote hook placeholders replaced by resolved versions.
+        """
+        rendered = content
+        for hook in RemoteHook:
+            if hook.placeholder in rendered:
+                rev = cls.get_revision(hook)
+                rendered = rendered.replace(hook.placeholder, rev)
+        return rendered
 
     @classmethod
     def get_revision(cls, hook: RemoteHook) -> str:

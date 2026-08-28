@@ -4,6 +4,7 @@ import enum
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from .registry import RemoteHook
 from .workspace import (
     PackageName,
     ProjectName,
@@ -97,10 +98,10 @@ class DockerfileSpec:
 
 
 def generate_pre_commit_config(
-    local_hooks: list[str],
-    remote_hooks: list[str],
-    core_rev: str,
-    gitleaks_rev: str,
+    local_hooks: list[str] | None = None,
+    remote_hooks: list[str] | None = None,
+    core_rev: str | None = None,
+    gitleaks_rev: str | None = None,
     dependencies: list[str] | None = None,
     is_prek: bool = False,
     install_hook_types: set[str] | Sequence[str] | None = None,
@@ -124,10 +125,11 @@ def generate_pre_commit_config(
       - id: check-json
       - id: check-toml"""
     else:
+        resolved_core_rev = core_rev or RemoteHook.PRE_COMMIT_HOOKS.placeholder
         base_yaml = f"""repos:
   # Generic hooks (configured to IGNORE Python)
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: {core_rev}
+    rev: {resolved_core_rev}
     hooks:
       - id: check-added-large-files
       - id: check-merge-conflict
@@ -161,9 +163,10 @@ def generate_pre_commit_config(
     )
     repo_blocks.append(local_block)
 
+    resolved_gitleaks_rev = gitleaks_rev or RemoteHook.GITLEAKS.placeholder
     gitleaks_hook = f"""  # Check for accidental commits of secrets
   - repo: https://github.com/gitleaks/gitleaks
-    rev: {gitleaks_rev}
+    rev: {resolved_gitleaks_rev}
     hooks:
       - id: gitleaks"""
 
