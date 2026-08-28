@@ -139,19 +139,25 @@ def safe_extract_tar(tar_path: Path, target_dir: Path) -> None:
         SecurityViolationError: If any archive member attempts path traversal.
     """
     import tarfile
+    from collections.abc import Iterator
 
     from .errors import SecurityViolationError
 
     resolved_target_dir = target_dir.resolve()
 
-    with tarfile.open(tar_path, "r:*") as archive:
-        for member in archive.getmembers():
+    def _safe_members(archive_obj: tarfile.TarFile) -> Iterator[tarfile.TarInfo]:
+        for member in archive_obj:
             member_path = (target_dir / member.name).resolve()
             if not member_path.is_relative_to(resolved_target_dir):
                 raise SecurityViolationError(
                     f"SECURITY VIOLATION: Tar archive member attempted path traversal outside target directory: {member.name}"
                 )
-        archive.extractall(path=target_dir, filter="data")
+            yield member
+
+    with tarfile.open(tar_path, "r:*") as archive:
+        archive.extractall(
+            path=target_dir, members=_safe_members(archive), filter="data"
+        )
 
 
 def safe_extract_archive(

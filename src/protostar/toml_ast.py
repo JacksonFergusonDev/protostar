@@ -16,6 +16,41 @@ logger = logging.getLogger("protostar")
 
 __all__ = ["deep_merge_tomlkit", "format_pyproject_toml", "merge_toml_payloads"]
 
+_RAW_TOOL_HEADERS = [
+    ("Ruff", r"\[+tool\.ruff(?:\.[^\]]+)?\]+"),
+    ("Mypy", r"\[+tool\.mypy(?:\.[^\]]+)?\]+"),
+    ("Ty", r"\[+tool\.ty(?:\.[^\]]+)?\]+"),
+    ("Pyrefly", r"\[+tool\.pyrefly(?:\.[^\]]+)?\]+"),
+    ("Pytest", r"\[+tool\.(?:pytest|coverage)(?:\.[^\]]+)?\]+"),
+    ("Commitizen", r"\[+tool\.commitizen(?:\.[^\]]+)?\]+"),
+]
+
+_COMPILED_TOOL_HEADERS: list[tuple[re.Pattern[str], re.Pattern[str], str]] = [
+    (
+        re.compile(rf"^{re.escape(f'# ---- {title} ---- #')}", re.MULTILINE),
+        re.compile(rf"^{table_regex}\s*$", re.MULTILINE),
+        f"# ---- {title} ---- #",
+    )
+    for title, table_regex in _RAW_TOOL_HEADERS
+]
+
+_FIRST_TOOL_HEADER_RE: re.Pattern[str] = re.compile(
+    r"^# ---- (?:Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen) ---- #\s*$",
+    re.MULTILINE,
+)
+
+_MULTI_NEWLINE_RE: re.Pattern[str] = re.compile(r"\n{3,}")
+
+_TOOL_CONFIG_BANNER_RE: re.Pattern[str] = re.compile(
+    r"^[ \t]*# =+\s*\n[ \t]*# Tool Configuration\s*\n[ \t]*# =+\s*\n*",
+    re.MULTILINE,
+)
+
+_TOOL_SECTION_HEADER_RE: re.Pattern[str] = re.compile(
+    r"^[ \t]*# ---- [A-Za-z0-9_-]+ ---- #[ \t]*\n*",
+    re.MULTILINE,
+)
+
 
 def deep_merge_tomlkit(
     base: Any,
@@ -186,33 +221,17 @@ def format_pyproject_toml(doc: Any) -> str:
     raw_dump = new_content
 
     # 3. Apply visual separators safely using anchored regex
-    tool_headers = [
-        ("Ruff", r"\[+tool\.ruff(?:\.[^\]]+)?\]+"),
-        ("Mypy", r"\[+tool\.mypy(?:\.[^\]]+)?\]+"),
-        ("Ty", r"\[+tool\.ty(?:\.[^\]]+)?\]+"),
-        ("Pyrefly", r"\[+tool\.pyrefly(?:\.[^\]]+)?\]+"),
-        ("Pytest", r"\[+tool\.(?:pytest|coverage)(?:\.[^\]]+)?\]+"),
-        ("Commitizen", r"\[+tool\.commitizen(?:\.[^\]]+)?\]+"),
-    ]
-
-    for title, table_regex in tool_headers:
-        marker = f"# ---- {title} ---- #"
-        if not re.search(rf"^{re.escape(marker)}", new_content, flags=re.MULTILINE):
-            new_content = re.sub(
-                rf"^{table_regex}\s*$",
+    for marker_re, table_re, marker in _COMPILED_TOOL_HEADERS:
+        if not marker_re.search(new_content):
+            new_content = table_re.sub(
                 rf"\n{marker}\n\n\g<0>",
                 new_content,
                 count=1,
-                flags=re.MULTILINE,
             )
 
     # 4. Add main Tool Configuration banner before the first tool header if not exists
     if "# Tool Configuration" not in new_content:
-        tool_match = re.search(
-            r"^# ---- (Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen) ---- #\s*$",
-            new_content,
-            flags=re.MULTILINE,
-        )
+        tool_match = _FIRST_TOOL_HEADER_RE.search(new_content)
         if tool_match:
             header = (
                 "# ==================================================\n"
@@ -227,7 +246,7 @@ def format_pyproject_toml(doc: Any) -> str:
             )
 
     # 5. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
-    new_content = re.sub(r"\n{3,}", "\n\n", new_content).rstrip() + "\n"
+    new_content = _MULTI_NEWLINE_RE.sub("\n\n", new_content).rstrip() + "\n"
 
     # 6. Safety Parity Guard: Guarantee data integrity
     try:
@@ -268,18 +287,8 @@ def merge_toml_payloads(
     """
     clean_content = original_content
     if is_pyproject and clean_content:
-        clean_content = re.sub(
-            r"^[ \t]*# =+\s*\n[ \t]*# Tool Configuration\s*\n[ \t]*# =+\s*\n*",
-            "",
-            clean_content,
-            flags=re.MULTILINE,
-        )
-        clean_content = re.sub(
-            r"^[ \t]*# ---- [A-Za-z0-9_-]+ ---- #[ \t]*\n*",
-            "",
-            clean_content,
-            flags=re.MULTILINE,
-        )
+        clean_content = _TOOL_CONFIG_BANNER_RE.sub("", clean_content)
+        clean_content = _TOOL_SECTION_HEADER_RE.sub("", clean_content)
 
     doc = tomlkit.parse(clean_content) if clean_content else tomlkit.document()
 

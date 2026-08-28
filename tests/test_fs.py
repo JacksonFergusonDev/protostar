@@ -114,3 +114,32 @@ def test_safe_extract_tar_and_archive(tmp_path: Path) -> None:
         TemplateResolutionError, match="Unsupported or unrecognized archive format"
     ):
         safe_extract_archive(tmp_path / "unknown.rar", dest_dir2)
+
+
+def test_safe_extract_tar_multiple_streaming_members(tmp_path: Path) -> None:
+    import io
+    import tarfile
+
+    from protostar.fs import safe_extract_tar
+
+    tar_path = tmp_path / "multi.tar.gz"
+    files = {
+        "dir/file1.txt": b"file 1 content",
+        "dir/nested/file2.txt": b"file 2 content",
+        "README.md": b"# Readme",
+    }
+
+    with tarfile.open(tar_path, "w:gz") as tf:
+        for name, content in files.items():
+            info = tarfile.TarInfo(name=name)
+            info.size = len(content)
+            tf.addfile(info, io.BytesIO(content))
+
+    dest_dir = tmp_path / "multi_extracted"
+    dest_dir.mkdir()
+    safe_extract_tar(tar_path, dest_dir)
+
+    for rel_path, content in files.items():
+        extracted_file = dest_dir / rel_path
+        assert extracted_file.exists()
+        assert extracted_file.read_bytes() == content
