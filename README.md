@@ -39,6 +39,19 @@ Setting up a new python project often requires the same manual steps: configurin
 
 ---
 
+## 🆚 Why Protostar? (vs. Copier/Cookiecutter)
+
+While general-purpose template engines like **Copier** and **Cookiecutter** are incredibly powerful for cross-language scaffolding, they treat configuration files as raw text templates. Protostar is deeply specialized for the modern Python ecosystem:
+
+- **Semantic AST Merging:** Instead of brittle string templates (`{{ dependencies }}`), Protostar natively parses and merges `pyproject.toml` and `.gitignore` files, preserving your comments and formatting.
+- **Composable Tooling:** No more sprawling template repos with nested Jinja conditionals. Toggle tools dynamically at runtime (`--no-direnv --docker`).
+- **Scalable Templates:** Define entire organizational standards in a single, shareable `.toml` file, or scale up to a full Git repository for complex multi-file architectures.
+- **Agent & Machine Ready:** Manifest-first architecture enables atomic `--dry-run` simulations and position-independent `--json` output for AI workflows.
+
+*Use Copier for complex, multi-language codebases needing long-term 3-way git sync. Use Protostar for fast, modular, zero-friction Python environment bootstrapping.*
+
+---
+
 ## 📖 Official Documentation
 
 Ready to dive deeper? The README only scratches the surface.

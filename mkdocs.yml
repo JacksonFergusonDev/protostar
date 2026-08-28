@@ -8,6 +8,7 @@ copyright: "&copy; 2026 Jackson Ferguson. <a href=\"https://github.com/jacksonfe
 
 nav:
   - Home: index.md
+  - Why Protostar?: why-protostar.md
   - Getting Started: getting-started.md
   - Usage:
     - Initialization: usage/init.md
