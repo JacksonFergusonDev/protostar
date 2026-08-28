@@ -112,6 +112,62 @@
     margin: 0;
 }
 
+.protostar-asciinema {
+    margin: 1.5rem 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.protostar-asciinema .asciinema-player-wrapper {
+    border-radius: 0.9rem;
+}
+
+/* Custom Asciinema Player Theme matching Protostar Documentation */
+.asciinema-player-theme-protostar {
+    --term-color-bg: #0a0f1f;
+    --term-color-fg: #cdd6f4;
+    --background: #0a0f1f;
+    --foreground: #cdd6f4;
+
+    /* Base 8 ANSI colors */
+    --term-color-0: #1e1e2e;
+    --term-color-1: #f38ba8;
+    --term-color-2: #a6e3a1;
+    --term-color-3: #f9e2af;
+    --term-color-4: #89b4fa;
+    --term-color-5: #cba6f7;
+    --term-color-6: #22d3ee;
+    --term-color-7: #bac2de;
+
+    /* Bright 8 ANSI colors */
+    --term-color-8: #585b70;
+    --term-color-9: #f38ba8;
+    --term-color-10: #a6e3a1;
+    --term-color-11: #f9e2af;
+    --term-color-12: #89b4fa;
+    --term-color-13: #f5c2e7;
+    --term-color-14: #38bdf8;
+    --term-color-15: #a6adc8;
+
+    --color-0: #1e1e2e;
+    --color-1: #f38ba8;
+    --color-2: #a6e3a1;
+    --color-3: #f9e2af;
+    --color-4: #89b4fa;
+    --color-5: #cba6f7;
+    --color-6: #22d3ee;
+    --color-7: #bac2de;
+    --color-8: #585b70;
+    --color-9: #f38ba8;
+    --color-10: #a6e3a1;
+    --color-11: #f9e2af;
+    --color-12: #89b4fa;
+    --color-13: #f5c2e7;
+    --color-14: #38bdf8;
+    --color-15: #a6adc8;
+}
+
 .md-typeset .grid.cards>ul>li,
 .md-typeset .grid.cards>ol>li,
 .md-typeset .grid.cards>li {
@@ -272,6 +328,11 @@
     /* --- Markdown Elements --- */
     .protostar-terminal {
         border: 1px solid rgba(124, 77, 255, 0.18);
+    }
+
+    .protostar-asciinema {
+        border: 1px solid var(--protostar-border);
+        box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
     }
 
     .md-typeset h1 {

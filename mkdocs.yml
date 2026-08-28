@@ -112,6 +112,11 @@ plugins:
 
 extra_css:
   - stylesheets/extra.css
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.css
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.min.js
+  - javascripts/asciinema-init.js
 
 extra:
   generator: false
