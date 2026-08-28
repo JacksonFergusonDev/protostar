@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.errors import ConfigurationError, MissingDependencyError
-from protostar.registry import HookRegistry, RemoteHook
+from protostar.registry import RemoteHook
 from protostar.workflows import CIFlag
 
 from .base import BootstrapModule
@@ -97,10 +97,9 @@ class MarkdownLintModule(BootstrapModule):
 
         manifest.tooling.add_ide_extension("DavidAnson.vscode-markdownlint")
 
-        rev = HookRegistry.get_revision(RemoteHook.MARKDOWNLINT)
         hook_payload = f"""  # Markdown linting
   - repo: {RemoteHook.MARKDOWNLINT.value}
-    rev: {rev}
+    rev: {RemoteHook.MARKDOWNLINT.placeholder}
     hooks:
       - id: markdownlint-cli2
         args: ["--fix"]"""
@@ -516,10 +515,9 @@ class CommitizenModule(BootstrapModule):
         # The cz check hook enforces Conventional Commit message format.
         # Uses the official commitizen pre-commit mirror, which vendors its own
         # Python environment — no venv wiring required beyond what pre-commit handles.
-        rev = HookRegistry.get_revision(RemoteHook.COMMITIZEN)
         hook_payload = f"""  # Commit message validation
   - repo: {RemoteHook.COMMITIZEN.value}
-    rev: {rev}
+    rev: {RemoteHook.COMMITIZEN.placeholder}
     hooks:
       - id: commitizen
         stages: [commit-msg]"""
@@ -598,10 +596,9 @@ class RenovateModule(BootstrapModule):
         """
         logger.debug("Building Renovate tooling layer.")
 
-        rev = HookRegistry.get_revision(RemoteHook.RENOVATE)
         hook_payload = f"""  # Renovate config validation
   - repo: {RemoteHook.RENOVATE.value}
-    rev: {rev}
+    rev: {RemoteHook.RENOVATE.placeholder}
     hooks:
       - id: renovate-config-validator
         files: '.github/renovate.json'"""

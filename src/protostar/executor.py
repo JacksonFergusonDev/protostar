@@ -21,7 +21,7 @@ from .manifest import (
     Severity,
     SystemTask,
 )
-from .registry import HookRegistry, RemoteHook
+from .registry import HookRegistry
 from .security import enforce_binary_safelist, enforce_path_jail
 from .system import execute_subprocess
 from .toml_ast import merge_toml_payloads
@@ -192,12 +192,12 @@ class SystemExecutor:
         full_yaml = generate_pre_commit_config(
             local_hooks=self.manifest.tooling.pre_commit_local_hooks,
             remote_hooks=self.manifest.tooling.pre_commit_hooks,
-            core_rev=HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS),
-            gitleaks_rev=HookRegistry.get_revision(RemoteHook.GITLEAKS),
             dependencies=self.manifest.dependencies.dependencies,
             is_prek=self.manifest.tooling.wants_prek,
             install_hook_types=self.manifest.tooling.pre_commit_install_hook_types,
         )
+
+        full_yaml = HookRegistry.resolve_placeholders(full_yaml)
 
         try:
             atomic_write_text(target, full_yaml)
