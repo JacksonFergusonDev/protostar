@@ -4,7 +4,11 @@ import enum
 import re
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.error import URLError
+
+if TYPE_CHECKING:
+    from urllib.request import OpenerDirector
 
 from .errors import (
     NetworkFetchError,
@@ -19,6 +23,59 @@ __all__ = [
     "fetch_template_archive",
     "resolve_remote_template",
 ]
+
+_BLOB_TRANSLATORS: list[tuple[re.Pattern[str], str]] = [
+    (
+        re.compile(r"^https://github\.com/([^/]+)/([^/]+)/blob/(.+)$"),
+        r"https://raw.githubusercontent.com/\1/\2/\3",
+    ),
+    (
+        re.compile(r"^https://gitlab\.com/([^/]+)/([^/]+)/-/blob/(.+)$"),
+        r"https://gitlab.com/\1/\2/-/raw/\3",
+    ),
+    (
+        re.compile(r"^https://bitbucket\.org/([^/]+)/([^/]+)/src/(.+)$"),
+        r"https://bitbucket.org/\1/\2/raw/\3",
+    ),
+    (
+        re.compile(r"^https://codeberg\.org/([^/]+)/([^/]+)/src/(.+)$"),
+        r"https://codeberg.org/\1/\2/raw/\3",
+    ),
+    (
+        re.compile(r"^https://git\.sr\.ht/([^/]+)/([^/]+)/tree/(.+?)/item/(.+)$"),
+        r"https://git.sr.ht/\1/\2/blob/\3/\4",
+    ),
+]
+
+_ARCHIVE_TRANSLATORS: list[tuple[re.Pattern[str], str]] = [
+    (
+        re.compile(r"^https://github\.com/([^/]+)/([^/]+)/?$"),
+        r"https://github.com/\1/\2/archive/refs/heads/main.zip",
+    ),
+    (
+        re.compile(r"^https://gitlab\.com/([^/]+)/([^/]+)/?$"),
+        r"https://gitlab.com/\1/\2/-/archive/main/\2-main.zip",
+    ),
+    (
+        re.compile(r"^https://bitbucket\.org/([^/]+)/([^/]+)/?$"),
+        r"https://bitbucket.org/\1/\2/get/main.zip",
+    ),
+    (
+        re.compile(r"^https://codeberg\.org/([^/]+)/([^/]+)/?$"),
+        r"https://codeberg.org/\1/\2/archive/main.zip",
+    ),
+]
+
+_opener: "OpenerDirector | None" = None
+
+
+def _get_opener() -> "OpenerDirector":
+    global _opener
+    if _opener is None:
+        import urllib.request
+
+        _opener = urllib.request.build_opener()
+    return _opener
 
 
 class GitHost(enum.StrEnum):
@@ -73,45 +130,11 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
             message="Remote configuration URLs must start with 'https://'.",
         )
 
-    # Translate GitHub blob URLs
-    url = re.sub(
-        r"^https://github\.com/([^/]+)/([^/]+)/blob/(.+)$",
-        r"https://raw.githubusercontent.com/\1/\2/\3",
-        url,
-    )
-
-    # Translate GitLab blob URLs
-    url = re.sub(
-        r"^https://gitlab\.com/([^/]+)/([^/]+)/-/blob/(.+)$",
-        r"https://gitlab.com/\1/\2/-/raw/\3",
-        url,
-    )
-
-    # Translate Bitbucket source URLs
-    url = re.sub(
-        r"^https://bitbucket\.org/([^/]+)/([^/]+)/src/(.+)$",
-        r"https://bitbucket.org/\1/\2/raw/\3",
-        url,
-    )
-
-    # Translate Codeberg source URLs
-    url = re.sub(
-        r"^https://codeberg\.org/([^/]+)/([^/]+)/src/(.+)$",
-        r"https://codeberg.org/\1/\2/raw/\3",
-        url,
-    )
-
-    # Translate Sourcehut tree URLs
-    url = re.sub(
-        r"^https://git\.sr\.ht/([^/]+)/([^/]+)/tree/(.+?)/item/(.+)$",
-        r"https://git.sr.ht/\1/\2/blob/\3/\4",
-        url,
-    )
+    for pattern, replacement in _BLOB_TRANSLATORS:
+        url = pattern.sub(replacement, url)
 
     try:
-        import urllib.request
-
-        with urllib.request.urlopen(url, timeout=timeout) as response:  # noqa: S310
+        with _get_opener().open(url, timeout=timeout) as response:
             return str(response.read(1024 * 1024).decode("utf-8"))
     except URLError as e:
         raise NetworkFetchError(
@@ -155,10 +178,8 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
         )
 
     try:
-        import urllib.request
-
         with (
-            urllib.request.urlopen(url, timeout=timeout) as response,  # noqa: S310
+            _get_opener().open(url, timeout=timeout) as response,
             tempfile.NamedTemporaryFile(delete=False) as tmp_file,
         ):
             tmp_file.write(response.read())
@@ -205,30 +226,8 @@ def resolve_remote_template(url: str, temp_workspace: Path, timeout: int = 10) -
     """
     # Archive translators
     archive_url = url
-    # GitHub
-    archive_url = re.sub(
-        r"^https://github\.com/([^/]+)/([^/]+)/?$",
-        r"https://github.com/\1/\2/archive/refs/heads/main.zip",
-        archive_url,
-    )
-    # GitLab
-    archive_url = re.sub(
-        r"^https://gitlab\.com/([^/]+)/([^/]+)/?$",
-        r"https://gitlab.com/\1/\2/-/archive/main/\2-main.zip",
-        archive_url,
-    )
-    # Bitbucket
-    archive_url = re.sub(
-        r"^https://bitbucket\.org/([^/]+)/([^/]+)/?$",
-        r"https://bitbucket.org/\1/\2/get/main.zip",
-        archive_url,
-    )
-    # Codeberg
-    archive_url = re.sub(
-        r"^https://codeberg\.org/([^/]+)/([^/]+)/?$",
-        r"https://codeberg.org/\1/\2/archive/main.zip",
-        archive_url,
-    )
+    for pattern, replacement in _ARCHIVE_TRANSLATORS:
+        archive_url = pattern.sub(replacement, archive_url)
 
     if ArchiveFormat.from_path(archive_url) is not None:
         return fetch_template_archive(archive_url, temp_workspace, timeout=timeout)
