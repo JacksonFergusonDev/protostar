@@ -22,7 +22,9 @@ def test_fetch_remote_config_https_success(mocker):
     mock_context_manager.__enter__ = mocker.Mock(return_value=mock_response)
     mock_context_manager.__exit__ = mocker.Mock(return_value=None)
 
-    mocker.patch("urllib.request.urlopen", return_value=mock_context_manager)
+    mocker.patch("protostar.network._get_opener").return_value.open = mocker.Mock(
+        return_value=mock_context_manager
+    )
 
     result = fetch_remote_config("https://example.com/config.toml")
     assert result == "[env]\nruff = true"
@@ -48,7 +50,7 @@ def test_fetch_remote_config_rejects_non_https():
 
 def test_fetch_remote_config_github_translation(mocker):
     """Test that GitHub blob URLs are translated to raw."""
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
 
     # Mocking the context manager for urlopen
     mock_response = mocker.Mock()
@@ -66,7 +68,7 @@ def test_fetch_remote_config_github_translation(mocker):
 
 def test_fetch_remote_config_gitlab_translation(mocker):
     """Test that GitLab blob URLs are translated to raw."""
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_response = mocker.Mock()
     mock_response.read.return_value = b""
     mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -79,7 +81,7 @@ def test_fetch_remote_config_gitlab_translation(mocker):
 
 def test_fetch_remote_config_bitbucket_translation(mocker):
     """Test that Bitbucket source URLs are translated to raw."""
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_response = mocker.Mock()
     mock_response.read.return_value = b""
     mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -92,7 +94,7 @@ def test_fetch_remote_config_bitbucket_translation(mocker):
 
 def test_fetch_remote_config_codeberg_translation(mocker):
     """Test that Codeberg source URLs are translated to raw."""
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_response = mocker.Mock()
     mock_response.read.return_value = b""
     mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -105,7 +107,7 @@ def test_fetch_remote_config_codeberg_translation(mocker):
 
 def test_fetch_remote_config_sourcehut_translation(mocker):
     """Test that Sourcehut tree URLs are translated to blob."""
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_response = mocker.Mock()
     mock_response.read.return_value = b""
     mock_urlopen.return_value.__enter__.return_value = mock_response
@@ -174,7 +176,7 @@ def test_fetch_template_archive_zip_extraction(mocker, tmp_path):
 
     mock_response = mocker.Mock()
     mock_response.read.return_value = zip_path.read_bytes()
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     dest_dir = tmp_path / "dest"
@@ -215,7 +217,7 @@ def test_fetch_template_archive_handles_url_error(mocker, tmp_path):
 def test_fetch_template_archive_unsupported_format(mocker, tmp_path):
     mock_response = mocker.Mock()
     mock_response.read.return_value = b"some data"
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     dest_dir = tmp_path / "dest"
@@ -234,7 +236,7 @@ def test_fetch_template_archive_missing_protostar_toml(mocker, tmp_path):
 
     mock_response = mocker.Mock()
     mock_response.read.return_value = zip_path.read_bytes()
-    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen = mocker.patch("protostar.network._get_opener").return_value.open
     mock_urlopen.return_value.__enter__.return_value = mock_response
 
     dest_dir = tmp_path / "dest"
