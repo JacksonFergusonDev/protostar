@@ -32,6 +32,7 @@ jobs:
         uv pip install pytest-github-actions-annotate-failures
 
     - name: Mock direnv
+      shell: bash
       run: |
         mkdir -p "$RUNNER_TEMP/bin"
         cat > "$RUNNER_TEMP/bin/direnv" <<'EOF'
