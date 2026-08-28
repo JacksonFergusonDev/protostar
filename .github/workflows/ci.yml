@@ -50,26 +50,36 @@ jobs:
         echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
     - name: Run Ruff Linter
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
       run: uv run ruff check --output-format=github .
 
     - name: Run Ruff Formatter
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
       run: uv run ruff format --check --output-format=github .
 
     - name: Lint Markdown
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
       uses: DavidAnson/markdownlint-cli2-action@8de2aa07cae85fd17c0b35642db70cf5495f1d25 # v24
       with:
         globs: '**/*.md'
 
     - name: Type check with Mypy
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
       run: uv run mypy .
 
     - name: Run tests with coverage # (for Codecov)
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14' }}
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
       run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-      if: ${{ !(matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14') }}
+      if: matrix.os != 'windows-latest' && !(matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14')
       run: uv run pytest
+
+    - name: Run tests (Windows) # (skip slow tests, but run one E2E smoke test)
+      if: matrix.os == 'windows-latest'
+      run: |
+        uv run pytest -m "not (integration or exhaustive)"
+        uv run pytest "tests/test_exhaustive.py::test_individual_template_scaffolding[cli]"
 
     - name: Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
