@@ -281,6 +281,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
     # Assemble the rest of the steps
     tool_steps = "\n\n".join(spec.ci_steps)
+    tool_steps = tool_steps.replace("<% PRIMARY_OS %>", primary_os)
+    tool_steps = tool_steps.replace("<% BASELINE_PYTHON %>", python_matrix[0])
     if pytest_step:
         if tool_steps:
             tool_steps += "\n\n" + pytest_step

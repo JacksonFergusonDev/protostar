@@ -31,15 +31,19 @@ jobs:
           uv pip install pytest-github-actions-annotate-failures
 
       - name: Run MarkdownLint
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         uses: DavidAnson/markdownlint-cli2-action@v24
 
       - name: Run Ruff Linter
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: uv run ruff check --output-format=github .
 
       - name: Run Ruff Formatter
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: uv run ruff format --check --output-format=github .
 
       - name: Run Mypy
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: uv run mypy src/
 
       - name: Run Tests
