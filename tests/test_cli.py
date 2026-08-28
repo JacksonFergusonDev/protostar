@@ -1,7 +1,6 @@
 import argparse
 import importlib.metadata
 import json
-import os
 import subprocess
 import sys
 
@@ -24,6 +23,7 @@ from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
     ExecutionAbortedError,
+    ExitCode,
     FileSystemError,
     InvalidUsageError,
     MissingDependencyError,
@@ -245,7 +245,7 @@ def test_main_value_error_handling(mocker):
 
     with pytest.raises(SystemExit):
         main()
-    # Updated from 1 to os.EX_SOFTWARE (70) to align with standard UNIX runtime constraints
+    # Updated from 1 to ExitCode.SOFTWARE (70) to align with standard UNIX runtime constraints
     mock_exit.assert_called_once_with(70)
 
 
@@ -483,7 +483,7 @@ def test_main_handles_unexpected_bugs(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    # Updated from 1 to os.EX_SOFTWARE (70) to align with standard UNIX runtime constraints
+    # Updated from 1 to ExitCode.SOFTWARE (70) to align with standard UNIX runtime constraints
     mock_exit.assert_called_once_with(70)
 
 
@@ -510,7 +510,7 @@ def test_main_handles_keyboard_interrupt(mocker):
 
 
 def test_main_routes_invalid_usage_error_to_posix_status(mocker):
-    """Verify that an InvalidUsageError returns os.EX_USAGE (64)."""
+    """Verify that an InvalidUsageError returns ExitCode.USAGE (64)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
         side_effect=InvalidUsageError("bad flag"),
@@ -520,7 +520,7 @@ def test_main_routes_invalid_usage_error_to_posix_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_USAGE)
+    mock_exit.assert_called_once_with(ExitCode.USAGE)
 
 
 def test_resolve_usage_doc_path_known_subcommand(mocker):
@@ -539,7 +539,7 @@ def test_resolve_usage_doc_path_no_subcommand_falls_back_to_root(mocker):
 
 
 def test_main_routes_configuration_error_to_posix_status(mocker):
-    """Verify that a ConfigurationError returns os.EX_CONFIG (78)."""
+    """Verify that a ConfigurationError returns ExitCode.CONFIG (78)."""
     # Mock an operation *inside* the try-except frame to catch the error correctly
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
@@ -550,11 +550,11 @@ def test_main_routes_configuration_error_to_posix_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_CONFIG)  # 78
+    mock_exit.assert_called_once_with(ExitCode.CONFIG)  # 78
 
 
 def test_main_routes_template_resolution_error_to_posix_status(mocker):
-    """Verify that a TemplateResolutionError returns os.EX_DATAERR (65)."""
+    """Verify that a TemplateResolutionError returns ExitCode.DATAERR (65)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
         side_effect=TemplateResolutionError("my-template", "Malformed archive"),
@@ -564,11 +564,11 @@ def test_main_routes_template_resolution_error_to_posix_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_DATAERR)  # 65
+    mock_exit.assert_called_once_with(ExitCode.DATAERR)  # 65
 
 
 def test_main_routes_network_fetch_error_to_posix_status(mocker):
-    """Verify that a NetworkFetchError returns os.EX_TEMPFAIL (75)."""
+    """Verify that a NetworkFetchError returns ExitCode.TEMPFAIL (75)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
         side_effect=NetworkFetchError("https://example.com"),
@@ -578,11 +578,11 @@ def test_main_routes_network_fetch_error_to_posix_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_TEMPFAIL)  # 75
+    mock_exit.assert_called_once_with(ExitCode.TEMPFAIL)  # 75
 
 
 def test_main_routes_missing_dependency_to_posix_status(mocker):
-    """Verify that a MissingDependencyError returns os.EX_UNAVAILABLE (69)."""
+    """Verify that a MissingDependencyError returns ExitCode.UNAVAILABLE (69)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
         side_effect=MissingDependencyError("uv", "env scaffolding", "install hint"),
@@ -592,7 +592,7 @@ def test_main_routes_missing_dependency_to_posix_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_UNAVAILABLE)  # 69
+    mock_exit.assert_called_once_with(ExitCode.UNAVAILABLE)  # 69
 
 
 def test_main_routes_execution_aborted_to_posix_status(mocker):
@@ -610,7 +610,7 @@ def test_main_routes_execution_aborted_to_posix_status(mocker):
 
 
 def test_main_routes_filesystem_error_to_posix_status(mocker):
-    """Verify that a FileSystemError returns os.EX_IOERR (74)."""
+    """Verify that a FileSystemError returns ExitCode.IOERR (74)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
         side_effect=FileSystemError("write", "foo.txt", OSError("Permission denied")),
@@ -620,11 +620,11 @@ def test_main_routes_filesystem_error_to_posix_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_IOERR)  # 74
+    mock_exit.assert_called_once_with(ExitCode.IOERR)  # 74
 
 
 def test_main_routes_generic_crash_to_software_status(mocker):
-    """Verify that a standard unhandled exception returns os.EX_SOFTWARE (70)."""
+    """Verify that a standard unhandled exception returns ExitCode.SOFTWARE (70)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
         side_effect=ZeroDivisionError("Unexpected math fault"),
@@ -635,7 +635,7 @@ def test_main_routes_generic_crash_to_software_status(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_with(os.EX_SOFTWARE)  # 70
+    mock_exit.assert_called_with(ExitCode.SOFTWARE)  # 70
 
 
 def test_cli_handles_command_execution_error_output(mocker):
@@ -895,7 +895,7 @@ def test_main_invalid_subcommand_human_mode(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_USAGE)
+    mock_exit.assert_called_once_with(ExitCode.USAGE)
     assert mock_print.call_count >= 1
     # Check that the Rich Panel was passed to console.print
     from rich.panel import Panel
@@ -918,7 +918,7 @@ def test_main_invalid_subcommand_json_mode(capsys, monkeypatch):
     with pytest.raises(SystemExit) as exc:
         main()
 
-    assert exc.value.code == os.EX_USAGE
+    assert exc.value.code == ExitCode.USAGE
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert payload["status"] == "error"
@@ -936,7 +936,7 @@ def test_main_missing_argument_human_mode(mocker):
     with pytest.raises(SystemExit):
         main()
 
-    mock_exit.assert_called_once_with(os.EX_USAGE)
+    mock_exit.assert_called_once_with(ExitCode.USAGE)
     from rich.panel import Panel
 
     panels = [
@@ -956,7 +956,7 @@ def test_main_missing_argument_json_mode(capsys, monkeypatch):
     with pytest.raises(SystemExit) as exc:
         main()
 
-    assert exc.value.code == os.EX_USAGE
+    assert exc.value.code == ExitCode.USAGE
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert payload["status"] == "error"
@@ -1028,7 +1028,7 @@ def test_help_invalid_subcommand_json_mode(capsys, monkeypatch):
     with pytest.raises(SystemExit) as exc:
         main()
 
-    assert exc.value.code == os.EX_USAGE
+    assert exc.value.code == ExitCode.USAGE
     captured = capsys.readouterr()
     payload = json.loads(captured.out)
     assert payload["status"] == "error"

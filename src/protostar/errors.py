@@ -2,7 +2,25 @@
 
 from __future__ import annotations
 
+import os
+from enum import IntEnum
 from pathlib import Path
+
+
+class ExitCode(IntEnum):
+    """Standardized cross-platform exit codes."""
+
+    OK = getattr(os, "EX_OK", 0)
+    USAGE = getattr(os, "EX_USAGE", 64)
+    DATAERR = getattr(os, "EX_DATAERR", 65)
+    UNAVAILABLE = getattr(os, "EX_UNAVAILABLE", 69)
+    SOFTWARE = getattr(os, "EX_SOFTWARE", 70)
+    OSERR = getattr(os, "EX_OSERR", 71)
+    IOERR = getattr(os, "EX_IOERR", 74)
+    TEMPFAIL = getattr(os, "EX_TEMPFAIL", 75)
+    NOPERM = getattr(os, "EX_NOPERM", 77)
+    CONFIG = getattr(os, "EX_CONFIG", 78)
+
 
 DOCS_BASE_URL = "https://protostar.readthedocs.io/en/stable/"
 
