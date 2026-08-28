@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787950456887,
+  "lastUpdate": 1787951109873,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8641,6 +8641,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 177.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "12aced6cb67787350ae6b64fa57947304cd764ab",
+          "message": "feat: restrict scaffolded static analysis steps to primary CI runner",
+          "timestamp": "2026-08-28T14:02:18-07:00",
+          "tree_id": "85c62f2fa0ee79237f95c4faef2ddfed75e0be3f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/12aced6cb67787350ae6b64fa57947304cd764ab"
+        },
+        "date": 1787951108635,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 116.29,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 170.81,
             "unit": "ms"
           }
         ]
