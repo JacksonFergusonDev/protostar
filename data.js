@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787952618381,
+  "lastUpdate": 1787953084865,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8709,6 +8709,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.13,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "d79813207feb16b8722ec69b83b281937143e8e0",
+          "message": "chore: harden remote registry client and sync script",
+          "timestamp": "2026-08-28T14:36:35-07:00",
+          "tree_id": "e49b7d893777aaeeb0e92968c66ddf24456b9fc5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d79813207feb16b8722ec69b83b281937143e8e0"
+        },
+        "date": 1787953083773,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 146.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 222.65,
             "unit": "ms"
           }
         ]
