@@ -832,7 +832,8 @@ def test_executor_handles_mkdir_io_failure(mocker):
         executor._create_directories()
 
     assert "create scaffolding directory" in exc_info.value.operation
-    assert "src/core" in exc_info.value.path
+    assert "src" in str(exc_info.value.path)
+    assert "core" in str(exc_info.value.path)
 
 
 def test_append_files_handles_read_or_mkdir_failure(mocker):

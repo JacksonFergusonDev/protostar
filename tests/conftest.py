@@ -74,6 +74,7 @@ def run_cli(
             [sys.executable, "-m", "protostar.cli", *args],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=False,
             env=env,  # Inject the sandboxed environment
         )
