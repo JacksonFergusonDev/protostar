@@ -99,6 +99,7 @@ clean:
         .coverage \
         coverage.xml \
         coverage_annotations \
+        tmp_demo \
         tmp_wizard \
         tmp_headless \
         tmp_gen \
@@ -122,19 +123,36 @@ check-fixtures: sync
     @git diff --exit-code docs/fixtures/ > /dev/null || (printf "{{ yellow }}⚠ Snapshot drift detected. The generator modified files in docs/fixtures/. Review the diff and commit the changes.{{ nc }}\n" && exit 1)
     @printf "{{ green }}✔ Snapshots are up-to-date{{ nc }}\n"
 
+# Pre-warm environment and caches for demo generation
+prewarm-demo: sync
+    @printf "\n{{ blue }}=== Pre-warming Demo Environment & Caches ==={{ nc }}\n"
+    @uv pip install --dry-run \
+        numpy scipy pandas matplotlib astropy astroquery photutils specutils nbdime \
+        mypy pytest pytest-cov pytest-mock ruff markdownlint-cli2 typer rich commitizen prek zensical \
+        --quiet 2>/dev/null || true
+    @python3 -m compileall -q src/
+    @uv run --with prek prek --config docs/fixtures/cli/pre-commit-config.fixture.yaml prepare-hooks 2>/dev/null || true
+    @printf "{{ green }}✔ Demo environment warmed{{ nc }}\n"
+
+# Helper recipe to record and render demo using asciinema + agg
+_run-demo name target: prewarm-demo
+    @printf "\n{{ blue }}=== Generating {{ name }} Demo ==={{ nc }}\n"
+    rm -rf /tmp/demo_project && mkdir -p /tmp/demo_project
+    PATH="{{ invocation_directory() }}/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$$PATH" \
+        uv run python scripts/record_demos.py {{ target }} --output docs/assets/demo_{{ target }}.cast
+    agg docs/assets/demo_{{ target }}.cast docs/assets/demo_{{ target }}.gif \
+        --font-family "JetBrainsMono Nerd Font Mono" \
+        --font-size 22 \
+        --line-height 1.35 \
+        --theme 1e1e2e,cdd6f4,181825,f38ba8,a6e3a1,f9e2af,89b4fa,f5c2e7,94e2d5,bac2de,585b70,f38ba8,a6e3a1,f9e2af,89b4fa,f5c2e7,94e2d5,a6adc8
+    rm -rf /tmp/demo_project
+    @printf "{{ green }}✔ {{ name }} demo generated in docs/assets/demo_{{ target }}.gif{{ nc }}\n"
+
 # Generate wizard demo
-wizard-demo: sync
-    @printf "\n{{ blue }}=== Generating Wizard Demo ==={{ nc }}\n"
-    vhs demo/wizard.tape
-    rm -rf tmp_wizard
-    @printf "{{ green }}✔ Wizard demo generated{{ nc }}\n"
+wizard-demo: (_run-demo "Wizard" "wizard")
 
 # Generate headless demo
-headless-demo: sync
-    @printf "\n{{ blue }}=== Generating Headless Demo ==={{ nc }}\n"
-    vhs demo/headless_init.tape
-    rm -rf tmp_headless
-    @printf "{{ green }}✔ Headless demo generated{{ nc }}\n"
+headless-demo: (_run-demo "Headless" "headless")
 
 # Generate all demos
 all-demo: wizard-demo headless-demo
