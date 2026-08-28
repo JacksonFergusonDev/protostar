@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787951109873,
+  "lastUpdate": 1787952618381,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8675,6 +8675,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 170.81,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64a6bb0816d0c7a4407e88a2765a18bab76c7863",
+          "message": "docs: add 'Why Protostar?' comparison guide against Copier and Cookiecutter (#210)\n\nIntroduce a prominent comparison guide and README section articulating Protostar's Python-specialized value proposition over general-purpose template tools.\n\n- Add docs/why-protostar.md featuring MkDocs Material grid cards, interactive tabs, schema tooltips, and comparison matrices\n- Detail template authoring benefits (JSON Schema-backed TOML, zero-logic toggles, zero-overhead Gist sharing) vs Jinja2 syntax limitations\n- Explain non-destructive AST deep-merging vs 3-way Git merge conflicts\n- Update mkdocs.yml navigation and docs/index.md flight paths\n- Feature a condensed 'Why Protostar?' section front-and-center in README.md",
+          "timestamp": "2026-08-28T14:29:17-07:00",
+          "tree_id": "fbe7b56d8f4ea8e532dac5fe00e4d3ccdefa995d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/64a6bb0816d0c7a4407e88a2765a18bab76c7863"
+        },
+        "date": 1787952617734,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.13,
             "unit": "ms"
           }
         ]
