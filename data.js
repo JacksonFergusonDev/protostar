@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787883804176,
+  "lastUpdate": 1787900264584,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8471,6 +8471,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 176.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e6014889773729c6b3f2f19ae7646fb16ea4f70f",
+          "message": "refactor(errors): abstract POSIX exit codes to cross-platform Enum (#207)\n\n* refactor(errors): abstract POSIX exit codes into ExitCode IntEnum\n\nThis abstracts os.EX_* into an internal enum for better cross-platform support and testability, specifically targeting Windows compatibility. Includes CI updates.\n\n* fix(ci): use bash shell for direnv mock on Windows runners\n\n* chore(scripts): fix mypy unused-ignore cross-platform strictness\n\n* fix(tests): resolve windows specific test failures\n\nThis addresses various windows specific test failures:\n- Adds direnv.cmd to mock step\n- Sets PYTHONIOENCODING=utf-8\n- Skips local blueprint tests on Windows (illegal characters in paths)\n- Normalizes paths for executor assertions\n\n* fix(tests): decode subprocess output as utf-8 on Windows\n\nThis addresses the charmap UnicodeDecodeError in tests/test_exhaustive.py\n\n* fix(windows): resolve executable paths explicitly for subprocess\n\nWindows CreateProcess doesn't always resolve files without extensions from PATH, so we use shutil.which explicitly before delegating to subprocess.run.\n\n* fix(tests): update test_system.py for subprocess mock\n\nSince execute_subprocess now resolves paths explicitly via shutil.which and passes encoding=utf-8, we need to mock shutil.which in tests and update the subprocess.run assertion.\n\n* fix: copy command list in execute_subprocess to avoid mutating caller tasks\n\n* fix(tests): mock shutil.which globally in test_system.py\n\nexecute_subprocess calls shutil.which on the first command argument, which can resolve to absolute paths on runners. We mock it globally for this test module to keep the assertion arguments deterministic.\n\n* docs: clarify cross-platform Windows support\n\n* refactor(system): remove redundant local shutil import",
+          "timestamp": "2026-08-27T23:56:48-07:00",
+          "tree_id": "33c8a4b3a218ce69da65e8778ecbc23a1b1b5c6c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e6014889773729c6b3f2f19ae7646fb16ea4f70f"
+        },
+        "date": 1787900263364,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 111,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 164.28,
             "unit": "ms"
           }
         ]
