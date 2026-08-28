@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787949299262,
+  "lastUpdate": 1787950456887,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8607,6 +8607,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 250.89,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "550398a50de69e1b13310cec6b53b3ce7968779b",
+          "message": "ci: optimize Windows runner performance and balance matrix load",
+          "timestamp": "2026-08-28T13:53:02-07:00",
+          "tree_id": "2ec14c2c2a234d8ff63ef15ee138d4bfe4b09512",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/550398a50de69e1b13310cec6b53b3ce7968779b"
+        },
+        "date": 1787950455194,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 121.01,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 177.16,
             "unit": "ms"
           }
         ]
