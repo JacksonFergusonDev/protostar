@@ -31,7 +31,7 @@ DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
 def set_winsize(fd: int, rows: int, cols: int) -> None:
     """Sets the terminal window dimensions on a file descriptor."""
     winsize = struct.pack("HHHH", rows, cols, 0, 0)
-    fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)  # type: ignore[attr-defined, unused-ignore]
 
 
 def get_fixture_line_count(
@@ -71,7 +71,7 @@ class PTYSession:
         shutil.rmtree(self.workspace, ignore_errors=True)
         os.makedirs(self.workspace, exist_ok=True)
 
-        self.master_fd, self.slave_fd = pty.openpty()
+        self.master_fd, self.slave_fd = pty.openpty()  # type: ignore[attr-defined, unused-ignore]
         set_winsize(self.master_fd, self.rows, self.cols)
         set_winsize(self.slave_fd, self.rows, self.cols)
 
