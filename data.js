@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787900264584,
+  "lastUpdate": 1787900816003,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8505,6 +8505,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 164.28,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4b12c8d66b02b90315722fbf7f5cd83800e9418c",
+          "message": "perf(core): optimize regex evaluation and tar streaming memory (#208)\n\n- Pre-compile static regex patterns at module level in interpolation.py and toml_ast.py\n- Refactor render_template to use single-pass regex replacement instead of multi-pass iteration\n- Stream tar archive members lazily in safe_extract_tar to avoid buffering TarInfo objects\n- Add unit tests for unmatched template placeholders, multiple occurrences, and multi-file tar extraction",
+          "timestamp": "2026-08-28T00:05:49-07:00",
+          "tree_id": "2f7b66206036f314ac3b1abb03367148ad1c9c6b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4b12c8d66b02b90315722fbf7f5cd83800e9418c"
+        },
+        "date": 1787900815210,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 157.51,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 236.33,
             "unit": "ms"
           }
         ]
