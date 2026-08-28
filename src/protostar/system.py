@@ -2,6 +2,7 @@
 
 import logging
 import os
+import shutil
 import subprocess
 import sys
 
@@ -21,12 +22,19 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
         CommandTimeoutError: If the execution time limit is exceeded.
         CommandExecutionError: If the process returns a non-zero exit code.
     """
+    import shutil
+
+    exe = shutil.which(cmd[0])
+    if exe:
+        cmd[0] = exe
+
     try:
         subprocess.run(
             cmd,
             check=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as e:
@@ -66,9 +74,10 @@ def get_git_config(key: str) -> str | None:
     """Gets a global git configuration value."""
     try:
         result = subprocess.run(
-            ["git", "config", "--global", key],
+            [shutil.which("git") or "git", "config", "--global", key],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             check=True,
         )
         val = result.stdout.strip()
