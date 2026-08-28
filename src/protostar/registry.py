@@ -17,7 +17,6 @@ This decoupling provides zero-dependency churn in core, maximum determinism, and
 import enum
 import json
 import logging
-import urllib.request
 from urllib.error import URLError
 
 from ._fallbacks import DEFAULT_REVISIONS
@@ -88,6 +87,8 @@ class HookRegistry:
     def _fetch_registry(cls) -> dict[str, str]:
         """Performs a single HTTP GET to the static registry CDN."""
         try:
+            import urllib.request
+
             with urllib.request.urlopen(cls._REGISTRY_URL, timeout=1.5) as response:  # noqa: S310
                 data = json.loads(response.read().decode("utf-8"))
                 if isinstance(data, dict) and data.get("schema_version") == 1:

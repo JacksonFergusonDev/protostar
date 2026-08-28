@@ -3,7 +3,6 @@
 import enum
 import re
 import tempfile
-import urllib.request
 from pathlib import Path
 from urllib.error import URLError
 
@@ -110,6 +109,8 @@ def fetch_remote_config(url: str, timeout: int = 10) -> str:
     )
 
     try:
+        import urllib.request
+
         with urllib.request.urlopen(url, timeout=timeout) as response:  # noqa: S310
             return str(response.read(1024 * 1024).decode("utf-8"))
     except URLError as e:
@@ -154,6 +155,8 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
         )
 
     try:
+        import urllib.request
+
         with (
             urllib.request.urlopen(url, timeout=timeout) as response,  # noqa: S310
             tempfile.NamedTemporaryFile(delete=False) as tmp_file,
