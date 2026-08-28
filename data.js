@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787867355461,
+  "lastUpdate": 1787881781694,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8369,6 +8369,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 229.31,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "541cbfbadd35324bdfe7b7d8b52cb28bcc975772",
+          "message": "perf(demo): transition terminal demo pipeline to asciinema and agg (#205)\n\n* feat(demo): replace VHS pipeline with asciinema and agg recorder\n\n* docs(demo): embed interactive asciinema player and update demo assets",
+          "timestamp": "2026-08-27T18:48:39-07:00",
+          "tree_id": "83953972b55e5b5aee3efae4da9d4c2a15e7ff98",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/541cbfbadd35324bdfe7b7d8b52cb28bcc975772"
+        },
+        "date": 1787881781097,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 158.39,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 219.31,
             "unit": "ms"
           }
         ]
