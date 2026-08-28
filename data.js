@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787901581082,
+  "lastUpdate": 1787949299262,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8573,6 +8573,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.23,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "4991639916ee9a7ad737ae5db02d3367e3aab3ad",
+          "message": "ci: optimize workflows with locked dependencies and leaner installations\n\n- Add `--locked` to `uv sync` steps to enforce lockfile consistency across CI\n- Switch benchmark installations to `--no-dev` to only install production\n  dependencies (mirroring real-world CLI usage)\n- Remove explicit `cache-dependency-glob` from setup-uv (action handles this\n  automatically with sensible defaults)\n- Drop `uv run` wrapper in release workflow – `sync_registry_fallbacks.py` uses\n  only the standard library and loads source directly via `sys.path`",
+          "timestamp": "2026-08-28T13:33:39-07:00",
+          "tree_id": "ad0dbee2b32144dd80481f6cccbb9a133c2f26d2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4991639916ee9a7ad737ae5db02d3367e3aab3ad"
+        },
+        "date": 1787949298147,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 164.13,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 250.89,
             "unit": "ms"
           }
         ]
