@@ -316,12 +316,11 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.0
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
           python-version: ${{{{ matrix.python-version }}}}
 
       - name: Install dependencies
         run: |
-          uv sync --all-extras --dev
+          uv sync --all-extras --dev --locked
           uv pip install pytest-github-actions-annotate-failures
 
 {tool_steps}

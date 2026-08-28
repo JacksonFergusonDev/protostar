@@ -187,7 +187,9 @@ def test_generate_ci_workflow_default():
     assert 'os: ["ubuntu-latest"]' in content
     assert '"3.13"' in content
     assert "Install uv" in content
+    assert "cache-dependency-glob" not in content
     assert "Install dependencies" in content
+    assert "uv sync --all-extras --dev --locked" in content
 
 
 def test_generate_ci_workflow_matrix():
