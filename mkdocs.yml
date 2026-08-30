@@ -10,26 +10,24 @@ nav:
   - Home: index.md
   - Why Protostar?: why-protostar.md
   - Getting Started: getting-started.md
-  - Usage:
+  - User Guide:
     - Initialization: usage/init.md
     - Templates & Portable Configs: usage/templates.md
     - Authoring Templates: usage/authoring-templates.md
+    - Tooling & Flags Matrix: usage/tooling-matrix.md
     - Configuration: usage/configuration.md
     - Agent & Machine Interface: usage/agent-interface.md
-  - Flags & Tooling:
-    - Built-in Templates: flags/templates.md
-    - Tooling Modules: flags/tooling.md
   - Mechanics:
     - Manifest: mechanics/manifest.md
     - Orchestrator: mechanics/orchestrator.md
     - Executor: mechanics/executor.md
     - Modules: mechanics/modules.md
     - Error Handling: mechanics/error_handling.md
-  - Mission Control:
-    - Overview: mission-control/overview.md
-    - Extending Protostar: mission-control/extending-protostar.md
-    - Testing: mission-control/testing.md
-    - API Reference: mission-control/api-reference.md
+  - Developer Guide:
+    - Overview: developer/overview.md
+    - Extending Protostar: developer/extending-protostar.md
+    - Testing & Philosophy: developer/testing.md
+    - API Reference: developer/api-reference.md
 
 
 theme:
