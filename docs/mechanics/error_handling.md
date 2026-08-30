@@ -223,4 +223,4 @@ When Protostar encounters an unhandled internal exception (an unexpected Python 
 
 ## API Reference
 
-For detailed docstrings and class signatures, see the [Error Handling API Reference](../mission-control/api-reference.md#class-definitions).
+For detailed docstrings and class signatures, see the [Error Handling API Reference](../developer/api-reference.md#class-definitions).

@@ -233,7 +233,7 @@ This tool uses a highly decoupled, plugin-style architecture. The CLI parser dyn
 
 We maintain strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
 
-Please see the [Documentation](https://protostar.readthedocs.io/en/stable/mission-control/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
+Please see the [Documentation](https://protostar.readthedocs.io/en/stable/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
 
 ## 📧 Contact
 
