@@ -130,14 +130,14 @@ jobs:
     - name: Install hyperfine
       uses: taiki-e/install-action@d8055f5aa4515e0781b947765fa3d1559d2d3f45 # hyperfine
 
-    - name: Install just
-      uses: taiki-e/install-action@8991259aacd8c48a9c45228f33e9a308d825765b # just
-
     - name: Install dependencies
       run: uv sync --no-dev --locked
 
     - name: Run benchmarks
-      run: just test-benchmark
+      run: |
+        hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
+          '.venv/bin/protostar help init' \
+          'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
 
     - name: Convert hyperfine output for benchmark action
       run: uv run python scripts/parse_benchmarks.py --input benchmark.json --output benchmark-gh.json --gate-mode
