@@ -15,8 +15,10 @@ nav:
     - Templates & Portable Configs: usage/templates.md
     - Authoring Templates: usage/authoring-templates.md
     - Tooling & Flags Matrix: usage/tooling-matrix.md
-    - Configuration: usage/configuration.md
+    - Global Configuration: usage/configuration.md
     - Agent & Machine Interface: usage/agent-interface.md
+    - CLI Reference: usage/cli-reference.md
+    - Troubleshooting & FAQ: usage/troubleshooting.md
   - Mechanics:
     - Manifest: mechanics/manifest.md
     - Orchestrator: mechanics/orchestrator.md
