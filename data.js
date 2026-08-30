@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788049055706,
+  "lastUpdate": 1788049865580,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8811,6 +8811,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 224,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a560335b34d679c506d71c4e769b7cb37f8bccfa",
+          "message": "docs: restructure navigation hierarchy and consolidate tooling matrix (#212)\n\n- Consolidate 'flags/templates.md' and 'flags/tooling.md' into 'usage/tooling-matrix.md'\n- Rename and relocate 'mission-control/' docs to 'developer/'\n- Reorganize mkdocs.yml navigation into User Guide, Mechanics, and Developer Guide\n- Update internal cross-references and links across all docs and README",
+          "timestamp": "2026-08-29T17:30:05-07:00",
+          "tree_id": "0bbb6694497a5ef744ececce3ee726a97bdc8eac",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a560335b34d679c506d71c4e769b7cb37f8bccfa"
+        },
+        "date": 1788049864902,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.27,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 211.3,
             "unit": "ms"
           }
         ]
