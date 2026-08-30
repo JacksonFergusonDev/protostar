@@ -124,6 +124,6 @@ alias proto="protostar"
 
 With your accretion disk stabilized, you can dive deeper into Protostar's mechanics:
 
-- **[Configuration](../usage/configuration.md):** Learn how to set up global defaults (like your preferred Python version, dev dependencies, or custom ruff configuration) so you don't have to specify them every time.
-- **[The Flags Matrix](../flags/tooling.md):** Explore the full list of supported languages, tools, and built-in templates.
-- **[Architecture](../mechanics/orchestrator.md):** Read how the Orchestrator guarantees idempotent disk operations without corrupting your existing files.
+- **[Configuration](./usage/configuration.md):** Learn how to set up global defaults (like your preferred Python version, dev dependencies, or custom ruff configuration) so you don't have to specify them every time.
+- **[The Flags Matrix](./flags/tooling.md):** Explore the full list of supported languages, tools, and built-in templates.
+- **[Architecture](./mechanics/orchestrator.md):** Read how the Orchestrator guarantees idempotent disk operations without corrupting your existing files.
