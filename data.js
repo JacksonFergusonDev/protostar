@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787953365343,
+  "lastUpdate": 1788049055706,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8777,6 +8777,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 215.91,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd182e8a9b6db1befe8be2db374d40aec160cf49",
+          "message": "docs: resolve relative link paths and update theme toggle names (#211)\n\n- Correct relative link paths in index.md and getting-started.md from '../' to './'\n- Update palette toggle descriptions in mkdocs.yml to standard light/dark mode terminology and icons",
+          "timestamp": "2026-08-29T17:16:32-07:00",
+          "tree_id": "645c719a832b86e8915bc8b417085f5ff8d6eecd",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/dd182e8a9b6db1befe8be2db374d40aec160cf49"
+        },
+        "date": 1788049054868,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.62,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 224,
             "unit": "ms"
           }
         ]
