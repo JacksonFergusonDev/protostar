@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788049865580,
+  "lastUpdate": 1788050486562,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8845,6 +8845,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 211.3,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "02647a35e6e4dae3069b76779937091618172d9b",
+          "message": "docs: add CLI reference, troubleshooting guide, and expand user guide navigation (#213)\n\n- Add 'usage/cli-reference.md' detailing all subcommands, global options, tri-state flags, and POSIX exit codes\n- Add 'usage/troubleshooting.md' with remediation steps for missing dependencies, collisions, security prompts, and IDE schema setup\n- Update mkdocs.yml User Guide navigation and getting-started.md next steps",
+          "timestamp": "2026-08-29T17:40:26-07:00",
+          "tree_id": "4dc6d02302e1faa65aaa8f4b82d65bceda3e9663",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/02647a35e6e4dae3069b76779937091618172d9b"
+        },
+        "date": 1788050485907,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 148.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 221.58,
             "unit": "ms"
           }
         ]
