@@ -54,5 +54,5 @@ This initializes a working environment quickly while preserving explicit control
 - Read **[Why Protostar?](./why-protostar.md)** to see how it compares to general-purpose templaters like Copier.
 - Head to **[Getting Started](./getting-started.md)** to get Protostar onto your system.
 - Use **[Environment Initialization](./usage/init.md)** to learn the `init` workflow.
-- Read **[Mechanics: Executor](../mechanics/executor.md)** to see how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments
+- Read **[Mechanics: Executor](./mechanics/executor.md)** to see how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments
 - Visit **[Mission Control](./mission-control/overview.md)** for architecture, philosophy, and advanced guidance.
