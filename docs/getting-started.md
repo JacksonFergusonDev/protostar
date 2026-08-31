@@ -1,3 +1,8 @@
+---
+description: "Install Protostar and scaffold your first Python project in seconds."
+icon: material/rocket
+---
+
 ## Prerequisites
 
 - **Python 3.12+**

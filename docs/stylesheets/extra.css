@@ -1,7 +1,121 @@
 /* ====================================================================
-   1. UNIVERSAL LAYOUT (Always On)
-   Structure: Grids, flex, padding, margins, base typography.
-   ==================================================================== */
+    1. UNIVERSAL LAYOUT (Always On)
+    Structure: Grids, flex, padding, margins, base typography.
+==================================================================== */
+
+/* --- Homepage Navigation --- */
+.protostar-home-nav {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+    margin-bottom: 3rem;
+}
+
+.md-typeset .protostar-home-nav a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--rm-radius-sm, 8px);
+    color: var(--md-default-fg-color--light);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.md-typeset .protostar-home-nav a:hover {
+    color: var(--protostar-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.md-typeset .protostar-home-nav .protostar-home-nav__docs {
+    color: var(--md-default-fg-color);
+}
+
+.md-typeset .protostar-home-nav .protostar-home-nav__docs::after {
+    width: 5px;
+    height: 5px;
+    margin-left: 0.6rem;
+    border-radius: 50%;
+    background: var(--protostar-cyan, #22d3ee);
+    content: "";
+}
+
+/* --- Hero Install Box & Copy Button --- */
+.protostar-command-label {
+    margin: 2rem 0 0.5rem;
+    color: var(--md-default-fg-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.protostar-install {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    max-width: 32rem;
+    min-height: 48px;
+    overflow: hidden;
+    border: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+    border-radius: var(--rm-radius-sm, 8px);
+    background: #0a0f1f;
+    /* Matches your Asciinema theme background */
+}
+
+.protostar-install code {
+    padding: 0.75rem 0.9rem;
+    color: #cdd6f4;
+    background: transparent;
+    font-size: 0.82rem;
+}
+
+.protostar-install code::before {
+    margin-right: 0.6rem;
+    color: #a6e3a1;
+    /* Terminal green */
+    content: "$";
+}
+
+.protostar-copy {
+    align-self: stretch;
+    min-width: 7.25rem;
+    border: 0;
+    border-left: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+    color: #000;
+    background: var(--protostar-cyan, #22d3ee);
+    cursor: pointer;
+    font: 600 0.75rem var(--md-text-font-family);
+    transition: background-color 0.2s ease;
+}
+
+.protostar-copy:hover {
+    background: #00e5ff;
+}
+
+/* --- Left Nav Visual Hierarchy --- */
+
+/* 1. Top-level page titles – bold & accented */
+.md-sidebar .md-nav--primary>.md-nav__list>.md-nav__item--nested>.md-nav__link {
+    font-weight: 700;
+    color: var(--md-primary-fg-color, #22d3ee);
+    padding-left: 0.75rem;
+}
+
+/* 2. Integrated TOC entries (h2 headings) – lighter, smaller, grey */
+.md-sidebar .md-nav--secondary .md-nav__link {
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: var(--md-default-fg-color--light, #a6adc8);
+}
+
+/* 3. Deeper TOC entries (h3 headings) – slightly more indented */
+.md-sidebar .md-nav--secondary .md-nav__item[data-md-depth="2"] .md-nav__link {
+    padding-left: 1.5rem;
+    /* add extra indent */
+}
 
 /* --- Utilities --- */
 .spacer-1 {
@@ -219,7 +333,7 @@
 [data-md-color-scheme="slate"] {
 
     /* Custom Variables */
-    --protostar-bg-base: #0a0f1f;
+    --protostar-bg-base: #0a0a0a;
     --protostar-cyan: #22d3ee;
     --protostar-text-soft: #a9b7d0;
     --protostar-border: rgba(34, 211, 238, 0.14);
@@ -245,54 +359,36 @@
     }
 
     /* --- Navigation & Headers --- */
-    .md-header,
-    .md-tabs {
-        background: linear-gradient(90deg, rgba(15, 18, 36, 0.96), rgba(27, 20, 56, 0.96));
-        border-bottom: 1px solid rgba(124, 77, 255, 0.16);
-    }
-
     .md-tabs__link--active,
     .md-nav__link--active,
     .md-typeset a:hover {
         text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
     }
 
-    /* --- Hero Section Theming --- */
+    /* --- Minimal Hero Layout --- */
     .protostar-hero {
-        border: 1px solid var(--protostar-border);
-        background:
-            radial-gradient(circle at 15% 20%, rgba(34, 211, 238, 0.14), transparent 24%),
-            radial-gradient(circle at 85% 25%, rgba(124, 77, 255, 0.18), transparent 28%),
-            radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.05), transparent 35%),
-            linear-gradient(180deg, rgba(17, 23, 43, 0.96), rgba(10, 15, 31, 0.98));
-        box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
-    }
-
-    .protostar-hero::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image:
-            radial-gradient(2px 2px at 12% 18%, rgba(255, 255, 255, 0.55), transparent 50%),
-            radial-gradient(1.5px 1.5px at 22% 72%, rgba(255, 255, 255, 0.35), transparent 50%),
-            radial-gradient(1.5px 1.5px at 78% 22%, rgba(255, 255, 255, 0.45), transparent 50%),
-            radial-gradient(2px 2px at 64% 64%, rgba(34, 211, 238, 0.35), transparent 50%),
-            radial-gradient(1.5px 1.5px at 88% 42%, rgba(124, 77, 255, 0.35), transparent 50%);
-        pointer-events: none;
-        opacity: 0.8;
-    }
-
-    .protostar-hero>* {
         position: relative;
-        z-index: 1;
+        padding: 2.5rem 0 3.5rem;
     }
 
-    .hero-img-dark {
-        display: block;
+    /* Fluid, massive typography */
+    .hero-content h1 {
+        max-width: 10ch;
+        margin: 0 0 1rem;
+        font-size: clamp(2.8rem, 5.5vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+        text-wrap: balance;
+        color: var(--md-default-fg-color);
     }
 
-    .hero-img-light {
-        display: none;
+    .protostar-lede {
+        max-width: 60ch;
+        margin: 0;
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        line-height: 1.65;
+        color: var(--md-default-fg-color--light);
     }
 
     /* --- Cards --- */

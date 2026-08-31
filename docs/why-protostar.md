@@ -1,3 +1,7 @@
+---
+icon: material/rocket-launch
+---
+
 # Why Protostar?
 
 <span class="protostar-kicker">Architecture & Philosophy</span>

@@ -1,16 +1,31 @@
+---
+icon: material/home
+hide:
+  - navigation
+  - toc
+---
+
+<div class="protostar-home" markdown>
+
+<nav class="protostar-home-nav" aria-label="Primary site navigation">
+  <a class="protostar-home-nav__docs" href="getting-started.md">Documentation</a>
+  <a href="why-protostar.md">Why Protostar?</a>
+  <a href="https://github.com/jacksonfergusondev/protostar">GitHub</a>
+</nav>
+
 <div class="protostar-hero">
   <div class="hero-content">
-    <div class="protostar-kicker">High-velocity environment scaffolding</div>
-    <h1>Launch faster. Drift less.</h1>
-    <p class="protostar-muted">
-      Protostar bootstraps development environments with a manifest-first,
-      non-destructive architecture designed for speed, clarity, and low entropy.
+    <h1>Modular. Declarative. Fast.</h1>
+    <p class="protostar-lede">
+      Protostar bootstraps development environments with a manifest-first, non-destructive architecture designed for speed, clarity, and low entropy.
     </p>
   </div>
-  <div class="hero-visual">
-    <img class="hero-img-light" src="./assets/favicon.svg" alt="Logo" />
-    <img class="hero-img-dark" src="./assets/favicon.svg" alt="Logo" />
-  </div>
+</div>
+
+<div class="protostar-command-label">Install globally via uv</div>
+<div class="protostar-install" aria-label="Install command">
+  <code>uv tool install protostar</code>
+  <button type="button" class="protostar-copy" data-copy="uv tool install protostar" aria-label="Copy install command">Copy command</button>
 </div>
 
 ## First light
