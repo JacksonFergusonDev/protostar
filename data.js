@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788052385403,
+  "lastUpdate": 1788155650538,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8913,6 +8913,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 210.1,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "58a43a56c012eb0024cc237b4709a77074714113",
+          "message": "chore(deps): update astral-sh/setup-uv action to v10 (#214)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-08-31T05:53:06Z",
+          "tree_id": "e8389e418921ccbc36b545256b609bb13b5f9e05",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/58a43a56c012eb0024cc237b4709a77074714113"
+        },
+        "date": 1788155649502,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.43,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 211.99,
             "unit": "ms"
           }
         ]
