@@ -35,11 +35,15 @@ Protostar is designed to be installed globally as a standalone CLI tool, with na
 
 If you run `protostar init` without any arguments, it will launch an interactive Terminal User Interface (TUI). This wizard allows you to visually map out your languages, tools, and built-in templates using the spacebar—no CLI flag memorization required.
 
+<div class="protostar-terminal">
+
 ```bash
 mkdir orbital-mechanics-sim
 cd orbital-mechanics-sim
 protostar init
 ```
+
+</div>
 
 <div class="protostar-asciinema" data-asciinema="../assets/demo_wizard.cast"></div>
 
@@ -47,11 +51,15 @@ protostar init
 
 For rapid, repeatable initialization, you can bypass the TUI entirely by providing your desired environment matrix as CLI flags. Universal system workspace hygiene is automatically applied, and IDE settings are conditionally injected based on your global configuration and chosen language footprints.
 
+<div class="protostar-terminal">
+
 ```bash
 mkdir hyperdrive-cli
 cd hyperdrive-cli
 protostar init --template cli
 ```
+
+</div>
 
 **What just happened?**
 In a fraction of a second, Protostar:

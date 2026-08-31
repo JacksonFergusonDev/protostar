@@ -218,12 +218,52 @@
 
 /* --- MkDocs Material Overrides --- */
 .protostar-terminal {
-    border-radius: 0.9rem;
+    margin: 1.5rem 0;
+    border: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+    border-radius: var(--rm-radius-sm, 8px);
+    background: #0a0f1f;
     overflow: hidden;
 }
 
 .protostar-terminal .highlight {
     margin: 0;
+    background: #0a0f1f !important;
+}
+
+.md-typeset .protostar-terminal pre {
+    margin: 0;
+    padding: 0.75rem 0.9rem;
+    background: #0a0f1f !important;
+    border: none !important;
+    box-shadow: none !important;
+    line-height: 1.6;
+}
+
+.md-typeset .protostar-terminal pre > code {
+    padding: 0 !important;
+    color: #cdd6f4 !important;
+    background: transparent !important;
+    font-size: 0.82rem !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.md-typeset .protostar-terminal .nb { color: #89b4fa; }
+.md-typeset .protostar-terminal .s1,
+.md-typeset .protostar-terminal .s2 { color: #a6e3a1; }
+.md-typeset .protostar-terminal .nv { color: #f38ba8; }
+.md-typeset .protostar-terminal .c1 { color: #585b70; font-style: italic; }
+.md-typeset .protostar-terminal .k  { color: #cba6f7; }
+
+.md-typeset .protostar-terminal pre > code:hover {
+    box-shadow: none !important;
+}
+
+.md-typeset .protostar-terminal .md-clipboard,
+.md-typeset .protostar-terminal .md-code__nav,
+.md-typeset .protostar-terminal .md-code__button,
+.md-typeset .protostar-terminal button {
+    display: none !important;
 }
 
 .protostar-asciinema {
@@ -423,7 +463,7 @@
 
     /* --- Markdown Elements --- */
     .protostar-terminal {
-        border: 1px solid rgba(124, 77, 255, 0.18);
+        border: 1px solid var(--protostar-border);
     }
 
     .protostar-asciinema {
