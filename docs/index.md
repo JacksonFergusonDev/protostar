@@ -1,4 +1,5 @@
 ---
+title: Protostar
 icon: material/home
 hide:
   - navigation
