@@ -1,5 +1,6 @@
 ---
 title: Protostar
+description: "The declarative, domain-specific project initializer for modern Python environments."
 icon: material/home
 hide:
   - navigation

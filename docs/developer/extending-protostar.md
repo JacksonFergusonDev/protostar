@@ -1,3 +1,6 @@
+---
+description: "Learn how to extend Protostar's architecture by adding new modules, tools, or domain workflows without altering core execution."
+---
 <!-- markdownlint-disable -->
 # Extending Protostar
 

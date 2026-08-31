@@ -1,3 +1,7 @@
+---
+description: "Comprehensive command-line interface reference for the Protostar CLI, including flags and options."
+---
+
 # Command Line Interface (CLI) Reference
 
 Protostar provides a composable, deterministic command-line interface. Commands can be run interactively through terminal wizards (TUI) or headlessly via flags.

@@ -1,3 +1,7 @@
+---
+description: "Configure Protostar's global defaults, including preferred tools, author information, and behaviors."
+---
+
 # Global Configuration
 
 Your global configuration file acts as the singular source of truth for environment initialization. Open it in your system's default `$EDITOR` by running:

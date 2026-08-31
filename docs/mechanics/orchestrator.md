@@ -1,3 +1,7 @@
+---
+description: "Deep dive into Protostar's Orchestrator: the primary deterministic state machine for environment generation."
+---
+
 # The Orchestrator
 
 The `Orchestrator` operates as the primary deterministic state machine for Protostar. It is responsible for bridging the gap between declarative module configurations and imperative disk/shell mutations, ensuring the local filesystem is manipulated safely and predictably.
