@@ -1,3 +1,8 @@
+---
+description: "Discover why Protostar's domain-specific approach outpaces generic scaffolders for modern Python development."
+icon: material/rocket-launch
+---
+
 # Why Protostar?
 
 <span class="protostar-kicker">Architecture & Philosophy</span>

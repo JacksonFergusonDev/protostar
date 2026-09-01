@@ -1,3 +1,7 @@
+---
+description: "Understand the EnvironmentManifest: Protostar's central state object for guaranteeing atomicity during scaffolding."
+---
+
 # The Environment Manifest
 
 The `EnvironmentManifest` is the critical boundary between declarative intent and imperative execution. It acts as an isolated, centralized state object that guarantees atomicity during environment scaffolding.

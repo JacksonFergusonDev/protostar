@@ -9,7 +9,7 @@ To ensure robustness, security, and testability, Protostar's execution logic is 
 ## The 7-Module Architecture
 
 ```mermaid
-flowchart TD
+flowchart LR
     classDef pure fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
     classDef stateful fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
     classDef orchestrator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;

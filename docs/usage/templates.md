@@ -1,3 +1,7 @@
+---
+description: "Use and create declarative templates to define reusable Python environment blueprints in Protostar."
+---
+
 # Templates & Portable Configurations
 
 Protostar's template engine allows you to define declarative, reusable environment blueprints. Whether you are using built-in domain presets, fetching team standards from remote Git repositories, or defining custom local setups, templates eliminate boilerplate and ensure consistent repository architecture.

@@ -1,3 +1,7 @@
+---
+description: "Learn how to use protostar init to safely construct and manage your Python project architecture."
+---
+
 # Environment Initialization
 
 The `init` command is the core engine of Protostar. It is a deterministic state-machine designed to safely aggregate configurations, wire development tooling together, and construct robust directory architectures in seconds.
