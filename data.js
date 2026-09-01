@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788241384487,
+  "lastUpdate": 1788242042127,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9117,6 +9117,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.06,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "2652fffac5a0ad062b1488e69652aca66fbb6cd1",
+          "message": "docs: add design principles page explaining core architectural concepts",
+          "timestamp": "2026-08-31T22:52:44-07:00",
+          "tree_id": "5e4565cf7da5ace897af5b955b178ef041f3f5c8",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2652fffac5a0ad062b1488e69652aca66fbb6cd1"
+        },
+        "date": 1788242040893,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 143.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 209.68,
             "unit": "ms"
           }
         ]
