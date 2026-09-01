@@ -10,7 +10,7 @@ As a contributor, you must adhere to our strict isolation boundaries. Tests that
 
 ### 1. Disk I/O Isolation
 
-Protostar's primary function is generating and modifying files. To prevent the test suite from polluting the host machine or overwriting a developer's local configurations, all disk I/O must be sandboxed.
+Protostar's primary function is generating and modifying files. To prevent the test suite from polluting the host machine or overwriting your local configurations, all disk I/O must be sandboxed.
 
 Use the `tmp_path` fixture provided by `pytest` for any test requiring an actual filesystem hierarchy, or patch `pathlib.Path` for purely logical validation.
 

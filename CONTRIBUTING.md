@@ -2,10 +2,10 @@
 
 ## Architecture & Implementation Rules
 
-Protostar has one job: save the user time on setup they would have done anyway. When evaluating a new feature, ask:
+Protostar has one job: save you time on setup you would have done anyway. When evaluating a new feature, ask:
 
 - Would *most* users want this, or just some?
-- Would a user plausibly revert this manually after running the tool?
+- Would you plausibly revert this manually after running the tool?
 
 If the answer to either of the first two is "maybe not", the feature probably doesn't belong in the tool.
 
@@ -56,7 +56,7 @@ To guarantee that the workspace remains deterministic, error management follows 
   - `PartialExecutionAbortedError`: For interruptions occurring mid-execution after disk mutations have begun (stores immutable `frozenset[str]` of touched paths).
 - **Respect POSIX Exit Code Mappings:** The top-level CLI main routine automatically routes domain exceptions to standardized POSIX return codes (`os.EX_CONFIG` / 78, `os.EX_TEMPFAIL` / 75, `os.EX_DATAERR` / 65, `os.EX_UNAVAILABLE` / 69, `os.EX_IOERR` / 74, `os.EX_NOPERM` / 77). Ensure your exception selection aligns with the expected POSIX category.
 - **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
-- **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct user-facing system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
+- **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
 
 ### 8. Machine & Agent Interface Invariants (`--json` & `--dry-run`)
 
@@ -111,7 +111,7 @@ To contribute to this project, you will need the following system-level dependen
 - **[uv](https://docs.astral.sh/uv/getting-started/installation/)**: For dependency and environment management.
 - **[just](https://just.systems/man/en/packages.html)**: Our command runner.
 
-*(For macOS users with homebrew: `brew install uv just`)*
+*(If you are on macOS with Homebrew: `brew install uv just`)*
 
 1. **Fork & Clone**
 

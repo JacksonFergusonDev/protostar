@@ -106,7 +106,7 @@ ProtostarError (Exception)
 
 ### `ProtostarError`
 
-Base exception for all expected operational failures in Protostar. Accepts a descriptive `message` and an optional `hint` parameter containing user-facing installation or remediation instructions.
+Base exception for all expected operational failures in Protostar. Accepts a descriptive `message` and an optional `hint` parameter containing actionable installation or remediation instructions.
 
 ```python
 class ProtostarError(Exception):
@@ -151,7 +151,7 @@ Raised when a template or archive attempts an unauthorized filesystem operation 
 
 ### `ExecutionAbortedError`
 
-Raised when the user explicitly aborts execution via an interactive prompt.
+Raised when you explicitly abort execution via an interactive prompt.
 
 ### `PartialExecutionAbortedError`
 
@@ -197,7 +197,7 @@ Protostar routes operational exceptions to standard UNIX exit codes (defined in 
 | `MissingDependencyError` | `os.EX_UNAVAILABLE` | `69` | Required system binary (e.g. `uv`, `git`) missing during `pre_flight()` |
 | `FileSystemError` | `os.EX_IOERR` | `74` | File write permission denied, disk full, invalid path I/O |
 | `SecurityViolationError` | `os.EX_NOPERM` | `77` | Path traversal (Zip Slip) security constraint violation |
-| `ExecutionAbortedError` | Shell Signal | `130` | User cancelled interactive wizard prompt via Ctrl+C / abort |
+| `ExecutionAbortedError` | Shell Signal | `130` | You cancelled interactive wizard prompt via Ctrl+C / abort |
 | `CommandExecutionError` | Generic Exit | `1` | Subprocess (e.g. `uv sync`, `git init`) exited non-zero |
 | `CommandTimeoutError` | Generic Exit | `1` | Subprocess exceeded execution timeout threshold |
 | *Unhandled Internal Bug* | `os.EX_SOFTWARE` | `70` | Unexpected Python exception / AST parsing collapse |
@@ -230,6 +230,6 @@ For detailed docstrings and class signatures, see the [Error Handling API Refere
 
 ## Related Guides & References
 
-- __[Troubleshooting & FAQ](../usage/troubleshooting.md):__ User-facing remediation steps for missing dependencies, collisions, and editor setups.
+- __[Troubleshooting & FAQ](../usage/troubleshooting.md):__ Remediation steps for missing dependencies, collisions, and editor setups.
 - __[Agent & Machine Interface](../usage/agent-interface.md):__ Learn how AI coding agents and CI runners parse machine error envelopes.
 - __[The Orchestrator](./orchestrator.md):__ Understand the top-level exception trap and diagnostic telemetry gathering.

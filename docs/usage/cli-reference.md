@@ -86,7 +86,7 @@ protostar init --from ./api.toml --DATABASE_URL="postgresql://localhost:5432/db"
 
 ### `protostar config`
 
-Manages user-level default preferences stored in `~/.config/protostar/config.toml`.
+Manages your default preferences stored in `~/.config/protostar/config.toml`.
 
 ```bash
 protostar config [OPTIONS]
@@ -140,4 +140,4 @@ Protostar maps runtime outcomes and operational exceptions to standard POSIX sta
 | `75` | `os.EX_TEMPFAIL` | Transient network failure during remote template download |
 | `77` | `os.EX_NOPERM` | Security violation (e.g., path traversal Zip Slip) |
 | `78` | `os.EX_CONFIG` | Invalid TOML syntax or conflicting CLI configuration |
-| `130` | Shell Signal | User aborted interactive wizard prompt (Ctrl+C) |
+| `130` | Shell Signal | You aborted interactive wizard prompt (Ctrl+C) |

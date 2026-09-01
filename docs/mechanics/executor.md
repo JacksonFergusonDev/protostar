@@ -39,7 +39,7 @@ These modules are mathematically pure functions: given the same inputs, they con
 
 - **`workflows.py`**: Handles string templating for CI/CD workflows, Justfiles, Dockerfiles, pre-commit configurations, and VCS ignores.
 - **`appends.py`**: Resolves language-specific comment syntax and injects hash-delimited marker blocks into existing file strings.
-- **`toml_ast.py`**: Parses TOML strings using `tomlkit` to manipulate the Abstract Syntax Tree (AST), performing deep merges, header formatting, and array-of-tables (AoT) conflict resolution while preserving user comments.
+- **`toml_ast.py`**: Parses TOML strings using `tomlkit` to manipulate the Abstract Syntax Tree (AST), performing deep merges, header formatting, and array-of-tables (AoT) conflict resolution while preserving your comments.
 
 ### 3. Policy & System Integration
 
@@ -100,7 +100,7 @@ The merge behavior is governed by the resolved `CollisionStrategy`:
 
 Directly calling `subprocess.run` in a CLI tool often leads to silent failures or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `protostar.system.execute_subprocess`.
 
-This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts. If the process returns a non-zero exit code, the executor raises a strictly typed `CommandExecutionError`. These exceptions preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to the user without destructively flattening the context.
+This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts. If the process returns a non-zero exit code, the executor raises a strictly typed `CommandExecutionError`. These exceptions preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to you without destructively flattening the context.
 
 !!! example "Simulated Subprocess Telemetry Output"
     When a shell execution fails, the captured streams are formatted to pinpoint the exact failure mechanism:

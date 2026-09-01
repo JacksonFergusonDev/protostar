@@ -54,7 +54,7 @@ Gravitational Anomaly: Protostar detected existing configuration files in the wo
 
 In interactive terminals, you can choose from three strategies:
 
-1. **Merge (Default):** Deep-merges AST tables and arrays into `pyproject.toml` and appends missing rules to `.gitignore`, preserving all custom user settings and comments.
+1. **Merge (Default):** Deep-merges AST tables and arrays into `pyproject.toml` and appends missing rules to `.gitignore`, preserving all your custom settings and comments.
 1. **Overwrite:** Overwrites existing configuration keys with Protostar's baseline standards.
 1. **Abort:** Safely cancels the operation without making changes.
 

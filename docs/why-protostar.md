@@ -93,7 +93,7 @@ When building templates in Copier, supporting optional features (e.g., Docker, p
 
 === "The Protostar Way"
 
-    The template author writes **zero control logic**. You define your ideal standard in a static `.toml` blueprint. The user can then toggle any component on or off dynamically at runtime:
+    The template author writes **zero control logic**. You define your ideal standard in a static `.toml` blueprint. You can then toggle any component on or off dynamically at runtime:
 
     ```bash
     # Use standard template opinions:
@@ -155,24 +155,24 @@ Copier requires a complete Git repository containing a directory structure and c
 
 ---
 
-## The End-User Experience: Safe & Deterministic
+## Your Experience: Safe & Deterministic
 
 ### AST Deep-Merging vs. 3-Way Git Conflicts
 
-When applying template updates or injecting tooling into an existing repository, Copier runs a 3-way Git merge against the generated file diffs. If the developer reformatted `pyproject.toml` or added custom comments, this often results in messy Git merge conflicts.
+When applying template updates or injecting tooling into an existing repository, Copier runs a 3-way Git merge against the generated file diffs. If you reformatted `pyproject.toml` or added custom comments, this often results in messy Git merge conflicts.
 
 === "Protostar: Non-Destructive AST Merge"
 
     Protostar parses `pyproject.toml` into an Abstract Syntax Tree via `tomlkit`. It updates tables and arrays with exact semantic precision:
 
     ```toml
-    # Existing user comments and specific indentation are 100% preserved
+    # Your existing comments and specific indentation are 100% preserved
     [project]
     name = "my-existing-app"
     version = "0.1.0" # Version tracked in CI
 
     [tool.ruff]
-    line-length = 100 # Custom user setting preserved
+    line-length = 100 # Custom setting preserved
 
     # --- Protostar injects new tables safely ---
     [tool.ruff.lint]
@@ -183,7 +183,7 @@ When applying template updates or injecting tooling into an existing repository,
 
     ```text
     <<<<<<< HEAD
-    line-length = 100 # Custom user setting preserved
+    line-length = 100 # Custom setting preserved
     =======
     line-length = 88
     >>>>>>> template/v2.0.0
@@ -193,7 +193,7 @@ When applying template updates or injecting tooling into an existing repository,
 
 ### Manifest-First Pre-flight Execution
 
-Generic scaffolding tools execute shell hooks imperatively. If a required tool (such as `uv`, `git`, or `docker`) is missing from the developer's machine, the script fails halfway through, leaving a dirty, half-scaffolded workspace.
+Generic scaffolding tools execute shell hooks imperatively. If a required tool (such as `uv`, `git`, or `docker`) is missing from your machine, the script fails halfway through, leaving a dirty, half-scaffolded workspace.
 
 Protostar uses a **two-phase headless architecture**:
 

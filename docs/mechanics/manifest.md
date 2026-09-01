@@ -93,11 +93,11 @@ Below is an example JSON representation of an aggregate state during a dry-run o
 
 ## Collision Strategies
 
-When the Orchestrator detects that a collision marker (e.g., an existing `pyproject.toml`) is present in the target workspace, it alters the manifest's `collision_strategy` attribute based on user input or `--force-merge` / `--force-replace` flags.
+When the Orchestrator detects that a collision marker (e.g., an existing `pyproject.toml`) is present in the target workspace, it alters the manifest's `collision_strategy` attribute based on your input or `--force-merge` / `--force-replace` flags.
 
 The `SystemExecutor` reads this enum to govern its AST mutation logic:
 
-- __`MERGE` (Default):__ Safely injects missing configurations. If a user has a custom line-length defined in their `pyproject.toml`, it is preserved. Missing arrays are appended, but existing scalar values are respected.
+- __`MERGE` (Default):__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Missing arrays are appended, but existing scalar values are respected.
 - __`OVERWRITE`:__ Forces Protostar's configuration onto the AST. Keys conflicting with Protostar's payload will be updated to match the tool's baseline.
 - __`ABORT`:__ Halts execution completely.
 

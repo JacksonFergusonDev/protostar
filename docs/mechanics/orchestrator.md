@@ -12,7 +12,7 @@ To guarantee idempotency and prevent partial initialization states (e.g., half-w
 
 - :material-arrow-decision-outline: __Idempotent Execution__
 
-    Execution logic is strictly decoupled from state definition. Running the Orchestrator repeatedly yields the same mathematical environment baseline without corrupting existing user configurations.
+    Execution logic is strictly decoupled from state definition. Running the Orchestrator repeatedly yields the same mathematical environment baseline without corrupting your existing configurations.
 
 - :material-sort-variant: __Deterministic Sequencing__
 
@@ -98,8 +98,8 @@ flowchart TD
 === "2. Interactive Resolution (CLI Layer)"
     When `WorkspaceCollisionError` or untrusted external templates are encountered:
 
-    * **Interactive TUI:** In interactive terminals, `cli.py` prompts the user to `Merge`, `Overwrite`, or `Abort`. If authorized, it generates a fresh `InitRequest` with updated force flags and calls `plan()` again.
-    * **Headless Contexts:** In non-interactive environments (CI/CD), `cli.py` aborts safely with an error message instructing the user to supply `--force-merge` or `--force-replace`.
+    * **Interactive TUI:** In interactive terminals, `cli.py` prompts you to `Merge`, `Overwrite`, or `Abort`. If authorized, it generates a fresh `InitRequest` with updated force flags and calls `plan()` again.
+    * **Headless Contexts:** In non-interactive environments (CI/CD), `cli.py` aborts safely with an error message instructing you to supply `--force-merge` or `--force-replace`.
 
 === "3. Execution (`execute(manifest)`)"
     The `execute()` phase hands the calculated manifest to `SystemExecutor` to apply all side effects in a deterministic sequence:
@@ -127,7 +127,7 @@ During planning and execution, non-fatal skips and warnings (e.g., missing optio
 
 ### Exception Handling & Triage
 
-By trapping errors at the highest level, Protostar guarantees that users are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
+By trapping errors at the highest level, Protostar guarantees that you are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
 
 - __Expected Anomalies:__ Domain-specific exceptions inheriting from `ProtostarError` (such as `FileSystemError` for I/O constraints, or `MissingDependencyError` for absent binaries) are caught and gracefully presented as a clean abort message in the terminal, alongside a decoupled remediation hint.
 - __Critical Failures:__ If Protostar encounters an unhandled internal exception (a genuine bug or AST parsing collapse), it assumes the state is unstable. It traps the stack trace, collects a vector of the environment state, and outputs a URL-encoded link. Clicking this link instantly opens a pre-populated GitHub issue before exiting with `os.EX_SOFTWARE`.

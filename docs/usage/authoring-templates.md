@@ -33,7 +33,7 @@ Below is the complete annotated schema for a Protostar template. It defines how 
 
 Protostar's true power lies in its ability to safely mutate existing files via Abstract Syntax Tree (AST) deep-merging and marker blocks.
 
-- **`[dev.pyproject]`**: Any table defined here is parsed via `tomlkit` and deeply merged into the target workspace's `pyproject.toml`. This allows you to inject custom linter configurations (e.g., specific Ruff rules) without overwriting the user's existing dependencies or project metadata.
+- **`[dev.pyproject]`**: Any table defined here is parsed via `tomlkit` and deeply merged into the target workspace's `pyproject.toml`. This allows you to inject custom linter configurations (e.g., specific Ruff rules) without overwriting your existing dependencies or project metadata.
 - **`[appends]`**: For non-TOML files (like `justfile`, `Makefile`, or `.envrc`), you can define generic string payloads. Protostar wraps these payloads in language-aware comment markers (e.g., `# --- Protostar Injection ---`) and safely appends them to the target file.
 
 ---
@@ -53,7 +53,7 @@ When you point the `--from` flag at a remote repository or a local directory arc
 my-org-fastapi-template/
 ├── README.md
 ├── protostar.toml       # The environment manifest
-└── template/            # Files here are mapped to the user's root workspace
+└── template/            # Files here are mapped to your root workspace
     ├── src/
     │   └── <% PACKAGE_NAME %>/
     │       ├── __init__.py
@@ -75,7 +75,7 @@ Protostar features a lightweight, regex-based templating engine that evaluates p
 
 ### Built-in Variables
 
-The execution engine automatically computes and injects the following variables based on the user's CLI inputs, Git configuration, and directory context:
+The execution engine automatically computes and injects the following variables based on your CLI inputs, Git configuration, and directory context:
 
 - `<% PROJECT_NAME %>`: The human-readable project name (e.g., `my-cool-app`).
 - `<% PACKAGE_NAME %>`: The PEP 8 sanitized Python module identifier (e.g., `my_cool_app`).
@@ -92,13 +92,13 @@ You can define custom placeholders tailored to your domain footprint. For exampl
 DATABASE_URL = "<% DATABASE_URL %>"
 ```
 
-If the user initializes the template headlessly via CLI flags:
+If you initialize the template headlessly via CLI flags:
 
 ```bash
 protostar init --from https://github.com/Org/template --DATABASE_URL="sqlite:///./test.db"
 ```
 
-If the user *omits* the flag, Protostar parses the AST, detects the unresolved `<% DATABASE_URL %>` placeholder, and automatically halts to prompt the user via the interactive terminal wizard before any disk mutations occur.
+If you *omit* the flag, Protostar parses the AST, detects the unresolved `<% DATABASE_URL %>` placeholder, and automatically halts to prompt you via the interactive terminal wizard before any disk mutations occur.
 
 ---
 
@@ -117,13 +117,13 @@ protostar init --from ~/Developer/templates/my-custom-template
 
 Once your template is ready, push it to your organization's version control platform. Protostar automatically translates standard web UI URLs into raw downloadable endpoints or archive targets for all major hosting providers (GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut).
 
-Users can invoke your template directly:
+You can invoke your template directly:
 
 ```bash
 protostar init --from https://github.com/YourOrg/data-science-template
 ```
 
-Or, they can register it as a global alias in their `~/.config/protostar/config.toml` to access it natively in their interactive wizard:
+Or, you can register it as a global alias in your `~/.config/protostar/config.toml` to access it natively in your interactive wizard:
 
 ```toml
 [templates]
@@ -132,9 +132,9 @@ org-ds-base = "https://github.com/YourOrg/data-science-template"
 
 ### Security Considerations
 
-Protostar enforces an **Informed Consent Security Model**. If your template defines `system_tasks` or `post_install_tasks` (executable shell commands), and a user loads it directly from an untrusted remote URL via `--from`, Protostar will halt execution and display an interactive security prompt.
+Protostar enforces an **Informed Consent Security Model**. If your template defines `system_tasks` or `post_install_tasks` (executable shell commands), and you load it directly from an untrusted remote URL via `--from`, Protostar will halt execution and display an interactive security prompt.
 
-Templates registered in a user's global `config.toml` aliases bypass this prompt. For a complete breakdown of how the runtime evaluates trust boundaries, see the [Remote Trust Model](templates.md#security-model-the-remote-trust-dialog).
+Templates registered in your global `config.toml` aliases bypass this prompt. For a complete breakdown of how the runtime evaluates trust boundaries, see the [Remote Trust Model](templates.md#security-model-the-remote-trust-dialog).
 
 ---
 

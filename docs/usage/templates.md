@@ -188,8 +188,8 @@ flowchart TD
     TrustCheck -- "Source == Built-in\nOR Source == Global Alias" --> Execute
     TrustCheck -- "Source == Remote URL" --> Dialog[Remote Trust Intercept]:::security
 
-    Dialog -- User Accepts --> Execute
-    Dialog -- User Rejects OR Headless CI --> Abort([Execution Aborted]):::security
+    Dialog -- You Accept --> Execute
+    Dialog -- You Reject OR Headless CI --> Abort([Execution Aborted]):::security
 ```
 
 ### Sandboxing vs. Informed Consent
