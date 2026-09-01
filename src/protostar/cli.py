@@ -1,6 +1,7 @@
 """Command-line interface and entry point for Protostar."""
 
 import argparse
+import difflib
 import importlib.resources
 import json
 import logging
@@ -31,6 +32,7 @@ from rich_argparse import RawTextRichHelpFormatter
 from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
+from .docs_registry import DocsPage
 from .errors import (
     CommandExecutionError,
     ConfigurationError,
@@ -110,28 +112,38 @@ class SpinnerHandler(logging.Handler):
 
 # Maps known subcommands to their documentation page.
 # Only include subcommands that have a dedicated reference page.
-# Unmapped subcommands fall back to the docs root.
-_SUBCOMMAND_DOC_PATHS: dict[str, str] = {
-    "init": "usage/init/",
-    "config": "usage/configuration/",
+# Unmapped subcommands fall back to the CLI reference page.
+_SUBCOMMAND_DOC_PATHS: dict[str, DocsPage] = {
+    "init": DocsPage.INIT,
+    "config": DocsPage.CONFIGURATION,
 }
 
 
 def _resolve_usage_doc_path() -> str:
-    """Returns the docs_path for the active subcommand, or '' for the root page.
+    """Returns the docs_path for the active subcommand, or CLI reference for unknown.
 
     Iterates through sys.argv to identify the first non-flag subcommand.
-    Returns a mapped docs_path if the subcommand is known, otherwise returns ''
-    which resolves to the documentation root. This is intentionally conservative:
-    an incorrect link is worse than the root page.
+    Returns a mapped docs_path if the subcommand is known. If unknown, it attempts
+    to guess the intended command using difflib. If no match is found, it defaults
+    to the CLI reference page.
 
     Returns:
         A docs_path string suitable for passing to InvalidUsageError.
     """
     for arg in sys.argv[1:]:
         if not arg.startswith("-"):
-            return _SUBCOMMAND_DOC_PATHS.get(arg, "")
-    return ""
+            if arg in _SUBCOMMAND_DOC_PATHS:
+                return _SUBCOMMAND_DOC_PATHS[arg].value
+
+            # Try to guess the command for typos (e.g. "initt" -> "init")
+            matches = difflib.get_close_matches(
+                arg, _SUBCOMMAND_DOC_PATHS.keys(), n=1, cutoff=0.6
+            )
+            if matches:
+                return _SUBCOMMAND_DOC_PATHS[matches[0]].value
+
+            return DocsPage.CLI_REFERENCE.value
+    return DocsPage.CLI_REFERENCE.value
 
 
 class JsonAwareParser(argparse.ArgumentParser):

@@ -530,12 +530,12 @@ def test_resolve_usage_doc_path_known_subcommand(mocker):
 
 def test_resolve_usage_doc_path_unknown_subcommand_falls_back_to_root(mocker):
     mocker.patch.object(sys, "argv", ["protostar", "deploy", "--bad"])
-    assert _resolve_usage_doc_path() == ""
+    assert _resolve_usage_doc_path() == "usage/cli-reference/"
 
 
 def test_resolve_usage_doc_path_no_subcommand_falls_back_to_root(mocker):
     mocker.patch.object(sys, "argv", ["protostar"])
-    assert _resolve_usage_doc_path() == ""
+    assert _resolve_usage_doc_path() == "usage/cli-reference/"
 
 
 def test_main_routes_configuration_error_to_posix_status(mocker):
