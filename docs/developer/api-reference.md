@@ -8,7 +8,7 @@ Think of the `EnvironmentManifest` as the nucleus of the scaffolding process. Al
 
 ```mermaid
 classDiagram
-    direction BT
+    direction LR
 
     class EnvironmentManifest {
         +DependencyManifest dependencies

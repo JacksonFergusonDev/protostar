@@ -34,6 +34,7 @@ All terminal UI interaction (collision prompts, remote trust confirmations, prog
 
 ```mermaid
 flowchart TD
+    %%{init: {'flowchart': {'useMaxWidth': false}}}%%
     %% Styling
     classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
     classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
@@ -54,10 +55,10 @@ flowchart TD
     subgraph PlanPhase [Engine Phase 1: plan]
         direction TB
         C{Collision Check}:::phase
-        C -- Markers Found (No Force) --> E_Col[Raise WorkspaceCollisionError]:::error
-        C -- Nominal / Forced --> PF[Pre-Flight Verification]:::phase
-        PF -- Missing Dependency --> E_Dep[Raise MissingDependencyError]:::error
-        PF -- Nominal --> Agg[Manifest Aggregation]:::phase
+        C -- "Markers Found<br/>(No Force)" --> E_Col["Raise<br/>WorkspaceCollisionError"]:::error
+        C -- "Nominal / Forced" --> PF["Pre-Flight<br/>Verification"]:::phase
+        PF -- "Missing<br/>Dependency" --> E_Dep["Raise<br/>MissingDependencyError"]:::error
+        PF -- Nominal --> Agg["Manifest<br/>Aggregation"]:::phase
         Agg --> M[(EnvironmentManifest)]
     end
 
@@ -72,9 +73,9 @@ flowchart TD
     end
 
     CLI --> PlanPhase
-    E_Col -. Caught by CLI .-> CPrompt
-    CPrompt -- Re-plan with Force Flag --> PlanPhase
-    CPrompt -- Abort --> Exit1([POSIX Exit Code 130]):::error
+    E_Col -. "Caught<br/>by CLI" .-> CPrompt
+    CPrompt -- "Re-plan with<br/>Force Flag" --> PlanPhase
+    CPrompt -- Abort --> Exit1(["POSIX Exit<br/>Code 130"]):::error
 
     M --> TPrompt
     TPrompt -- Approved --> Spinner

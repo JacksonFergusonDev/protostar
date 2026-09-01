@@ -32,6 +32,7 @@ The flow below illustrates how errors propagate from deep pipeline operations (p
 
 ```mermaid
 flowchart TD
+    %%{init: {'flowchart': {'useMaxWidth': false}}}%%
     %% Styling
     classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
     classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
@@ -43,27 +44,27 @@ flowchart TD
     subgraph PreFlight [1. Pre-Flight Checks]
         direction TB
         PF{Missing Dependency?}:::phase
-        PF -- Yes --> E_Dep[MissingDependencyError]:::error
-        PF -- No --> Config[2. Config & Manifest Parsing]:::phase
+        PF -- Yes --> E_Dep["Missing<br/>DependencyError"]:::error
+        PF -- No --> Config["2. Config &<br/>Manifest Parsing"]:::phase
     end
 
     subgraph Parsing [2. Configuration & AST]
         direction TB
         Config{Malformed TOML / Spec?}:::phase
-        Config -- Yes --> E_Cfg[ConfigurationError]:::error
-        Config -- No --> Net{Remote Template / Network?}:::phase
-        Net -- Network Drop / Insecure --> E_Net[NetworkFetchError]:::error
-        Net -- Bad Zip / Missing Vars --> E_Tmpl[TemplateResolutionError]:::error
-        Net -- Success --> Execution[3. Side-Effect Realization]:::phase
+        Config -- Yes --> E_Cfg["Configuration<br/>Error"]:::error
+        Config -- No --> Net{"Remote Template<br/>/ Network?"}:::phase
+        Net -- "Network Drop<br/>/ Insecure" --> E_Net["Network<br/>FetchError"]:::error
+        Net -- "Bad Zip<br/>/ Missing Vars" --> E_Tmpl["Template<br/>ResolutionError"]:::error
+        Net -- Success --> Execution["3. Side-Effect<br/>Realization"]:::phase
     end
 
     subgraph SideEffects [3. Disk & Subprocess Execution]
         direction TB
         Execution --> Disk{Disk I/O Fault?}:::phase
-        Disk -- Yes --> E_FS[FileSystemError]:::error
+        Disk -- Yes --> E_FS["FileSystem<br/>Error"]:::error
         Disk -- No --> Sub{Subprocess Fault?}:::phase
-        Sub -- Exit != 0 --> E_Exec[CommandExecutionError]:::error
-        Sub -- Timeout --> E_Time[CommandTimeoutError]:::error
+        Sub -- Exit != 0 --> E_Exec["Command<br/>ExecutionError"]:::error
+        Sub -- Timeout --> E_Time["Command<br/>TimeoutError"]:::error
         Sub -- Success --> End([Environment Stabilized]):::success
     end
 
