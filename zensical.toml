@@ -44,7 +44,6 @@ extra_javascript = [
     { path = "https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.min.js", defer = true },
     { path = "javascripts/asciinema-init.js", defer = true },
     { path = "javascripts/protostar.js", defer = true },
-    { path = "javascripts/mermaid-pan-zoom.js", defer = true },
 ]
 
 [project.theme]
