@@ -620,12 +620,13 @@
 .mermaid svg {
     display: block;
     /*
-       Allows small diagrams to render at their native size (e.g. 600px),
-       but forces huge oversized diagrams (e.g. 1600px) to scale down
-       to 1100px (zooming out a bit). Because 1100px is wider than the
-       prose column, it triggers the overflow-x on the .mermaid container
-       and natively enables horizontal scrolling!
+       Crucial: Mermaid injects width="100%" directly onto the SVG element.
+       If we don't override the width, max-width does nothing because
+       100% of the column is already smaller than 1100px.
     */
+    width: auto !important;
+    width: max-content !important;
+
     max-width: 1100px !important;
     height: auto !important;
     margin: 0 auto;
