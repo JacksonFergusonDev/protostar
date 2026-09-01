@@ -13,6 +13,7 @@ Run:
 """
 
 import inspect
+import re
 import sys
 from pathlib import Path
 
@@ -124,27 +125,55 @@ def collect_cli_doc_paths() -> dict[str, str]:
     return results
 
 
-def docs_path_to_file(docs_path: str) -> Path:
-    """Converts a MkDocs-style URL path segment to its Markdown source file.
+def slugify(text: str) -> str:
+    """Generates a Markdown header slug matching Python-Markdown/MkDocs conventions."""
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[-\s]+", "-", text)
+    return text.strip("-")
+
+
+def extract_anchors(file_path: Path) -> set[str]:
+    """Extracts all header slugs and HTML anchor IDs from a markdown file."""
+    if not file_path.is_file():
+        return set()
+
+    content = file_path.read_text(encoding="utf-8")
+    anchors: set[str] = set()
+
+    for match in re.finditer(r"^#{1,6}\s+(.+)$", content, re.MULTILINE):
+        heading_text = match.group(1).strip()
+        heading_clean = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", heading_text)
+        heading_clean = re.sub(r"[`*_~]", "", heading_clean)
+        anchors.add(slugify(heading_clean))
+
+    for match in re.finditer(r"""(?:id|name)=["']([^"']+)["']""", content):
+        anchors.add(match.group(1))
+
+    return anchors
+
+
+def docs_path_to_file(docs_path: str) -> tuple[Path, str | None]:
+    """Converts a MkDocs-style URL path segment to its Markdown source file and anchor.
 
     Applies the MkDocs URL routing convention:
-        usage/init/        →  docs/usage/init.md
-        getting-started/   →  docs/getting-started.md
-        usage/init         →  docs/usage/init.md  (trailing slash optional)
+        usage/init/                                     →  docs/usage/init.md (no anchor)
+        getting-started/                                →  docs/getting-started.md (no anchor)
+        usage/troubleshooting/#workspace-collisions     →  docs/usage/troubleshooting.md (anchor: 'workspace-collisions')
 
     Args:
         docs_path: The path segment after the base URL (e.g. 'usage/init/').
 
     Returns:
-        The resolved absolute Path to the expected Markdown file.
+        A tuple of (resolved absolute Path to expected Markdown file, optional anchor).
     """
-    # Normalize: strip leading/trailing slashes and any .html extensions
-    normalized = docs_path.strip("/").removesuffix(".html")
+    path_part, _, anchor = docs_path.partition("#")
+    normalized = path_part.strip("/").removesuffix(".html")
 
-    if not normalized:
-        return DOCS_DIR / "index.md"
-
-    return DOCS_DIR / f"{normalized}.md"
+    file_path = (
+        (DOCS_DIR / "index.md") if not normalized else (DOCS_DIR / f"{normalized}.md")
+    )
+    return file_path, (anchor if anchor else None)
 
 
 def main() -> None:
@@ -161,15 +190,23 @@ def main() -> None:
 
     print(f"Found {len(all_paths)} documentation reference(s):\n")
 
-    broken: list[tuple[str, str, Path]] = []
+    broken: list[tuple[str, str, Path, str]] = []
     valid: list[tuple[str, str, Path]] = []
 
     for label, docs_path in sorted(all_paths.items()):
-        resolved = docs_path_to_file(docs_path)
-        if resolved.exists():
-            valid.append((label, docs_path, resolved))
+        resolved_file, anchor = docs_path_to_file(docs_path)
+        if not resolved_file.exists():
+            broken.append((label, docs_path, resolved_file, "FILE NOT FOUND"))
+        elif anchor:
+            anchors = extract_anchors(resolved_file)
+            if anchor not in anchors:
+                broken.append(
+                    (label, docs_path, resolved_file, f"ANCHOR '#{anchor}' NOT FOUND")
+                )
+            else:
+                valid.append((label, docs_path, resolved_file))
         else:
-            broken.append((label, docs_path, resolved))
+            valid.append((label, docs_path, resolved_file))
 
     for label, docs_path, resolved in valid:
         rel = resolved.relative_to(REPO_ROOT)
@@ -178,15 +215,15 @@ def main() -> None:
     if broken:
         print(f"\n{'─' * 80}")
         print(f"BROKEN DOCUMENTATION REFERENCES ({len(broken)}):\n")
-        for label, docs_path, resolved in broken:
+        for label, docs_path, resolved, reason in broken:
             rel = resolved.relative_to(REPO_ROOT)
             print(
-                f"  \u2717  {label:35s}  {docs_path!r:35s}  \u2192  {rel}  [NOT FOUND]"
+                f"  \u2717  {label:35s}  {docs_path!r:35s}  \u2192  {rel}  [{reason}]"
             )
         print(
             f"\n{'─' * 80}\n"
             f"{len(broken)} broken reference(s) detected.\n"
-            "Update the docs_path value in the corresponding error class, or create the missing file."
+            "Update the docs_path value in the corresponding error class, or create the missing file/anchor."
         )
         sys.exit(1)
 

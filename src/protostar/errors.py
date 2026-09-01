@@ -6,6 +6,8 @@ import os
 from enum import IntEnum
 from pathlib import Path
 
+from protostar.docs_registry import DocsPage
+
 
 class ExitCode(IntEnum):
     """Standardized cross-platform exit codes."""
@@ -29,18 +31,31 @@ class ProtostarError(Exception):
     """Base class for all expected operational errors in Protostar."""
 
     def __init__(
-        self, message: str, *, hint: str | None = None, docs_path: str | None = None
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        docs_path: DocsPage | str | None = None,
+        docs_anchor: str | None = None,
     ) -> None:
         super().__init__(message)
         self.hint = hint
         self.docs_path = docs_path
+        self.docs_anchor = docs_anchor
 
     @property
     def docs_url(self) -> str | None:
         """Returns the full URL to the documentation page, or None if not set."""
-        if self.docs_path is None:
-            return None
-        return f"{DOCS_BASE_URL}{self.docs_path.lstrip('/')}"
+        path = self.docs_path
+        if path is None or path == "":
+            path = DocsPage.GETTING_STARTED.value
+        elif isinstance(path, DocsPage):
+            path = path.value
+
+        url = f"{DOCS_BASE_URL}{path.lstrip('/')}"
+        if self.docs_anchor:
+            url = f"{url}#{self.docs_anchor.lstrip('#')}"
+        return url
 
 
 class ConfigurationError(ProtostarError):
@@ -51,7 +66,7 @@ class ConfigurationError(ProtostarError):
         message: str,
         *,
         hint: str | None = None,
-        docs_path: str | None = "usage/configuration/",
+        docs_path: DocsPage | str | None = DocsPage.CONFIGURATION,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
 
@@ -59,7 +74,9 @@ class ConfigurationError(ProtostarError):
 class InvalidUsageError(ProtostarError):
     """Raised when the user provides unrecognized or invalid CLI arguments."""
 
-    def __init__(self, message: str, *, docs_path: str | None = None) -> None:
+    def __init__(
+        self, message: str, *, docs_path: DocsPage | str | None = DocsPage.CLI_REFERENCE
+    ) -> None:
         super().__init__(message, docs_path=docs_path)
 
 
@@ -73,7 +90,7 @@ class NetworkFetchError(ProtostarError):
         *,
         message: str | None = None,
         hint: str | None = None,
-        docs_path: str | None = "usage/templates/",
+        docs_path: DocsPage | str | None = DocsPage.TEMPLATES,
     ) -> None:
         default_message = (
             f"Network failure: Could not fetch remote configuration from '{url}'."
@@ -95,7 +112,7 @@ class TemplateResolutionError(ProtostarError):
         detail: str,
         *,
         hint: str | None = None,
-        docs_path: str | None = "usage/authoring-templates/",
+        docs_path: DocsPage | str | None = DocsPage.AUTHORING_TEMPLATES,
     ) -> None:
         message = f"Failed to resolve template '{target}': {detail}"
         super().__init__(message, hint=hint, docs_path=docs_path)
@@ -112,7 +129,7 @@ class MissingDependencyError(ProtostarError):
         purpose: str,
         install_hint: str,
         *,
-        docs_path: str | None = "getting-started/",
+        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
         message = f"Missing dependency: '{dependency}' is required for {purpose}."
         super().__init__(message, hint=install_hint, docs_path=docs_path)
@@ -130,7 +147,7 @@ class CommandExecutionError(ProtostarError):
         stdout: str = "",
         stderr: str = "",
         *,
-        docs_path: str | None = None,
+        docs_path: DocsPage | str | None = None,
     ) -> None:
         message = f"Protostar failed to execute command: {' '.join(command)}"
         super().__init__(message, docs_path=docs_path)
@@ -158,7 +175,7 @@ class CommandTimeoutError(ProtostarError):
         command: list[str],
         timeout: int,
         *,
-        docs_path: str | None = "usage/templates/",
+        docs_path: DocsPage | str | None = DocsPage.TEMPLATES,
     ) -> None:
         message = f"Command timed out after {timeout} seconds: {' '.join(command)}"
         hint = "This is often caused by a stalled network request or an unresponsive registry."
@@ -176,7 +193,7 @@ class FileSystemError(ProtostarError):
         path: str,
         original: Exception,
         *,
-        docs_path: str | None = None,
+        docs_path: DocsPage | str | None = None,
     ) -> None:
         err_msg = getattr(original, "strerror", None) or str(original)
         message = f"Failed to {operation} '{path}': {err_msg}"
@@ -194,7 +211,7 @@ class ExecutionAbortedError(ProtostarError):
         message: str = "Execution aborted by user.",
         *,
         hint: str | None = None,
-        docs_path: str | None = None,
+        docs_path: DocsPage | str | None = None,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
 
@@ -203,7 +220,7 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
     """Raised when execution is interrupted after disk mutations have begun."""
 
     def __init__(
-        self, touched_paths: frozenset[str], *, docs_path: str | None = None
+        self, touched_paths: frozenset[str], *, docs_path: DocsPage | str | None = None
     ) -> None:
         """Initializes the exception with the frozenset of paths modified before the interrupt.
 
@@ -249,7 +266,7 @@ class WorkspaceCollisionError(ProtostarError):
             f"{bulleted}\n"
             "Use --force-merge or --force-replace to bypass, or resolve interactively."
         )
-        super().__init__(message)
+        super().__init__(message, docs_path=DocsPage.TROUBLESHOOTING_COLLISIONS)
         self.paths = paths
 
 
@@ -261,6 +278,6 @@ class SecurityViolationError(ProtostarError):
         message: str,
         *,
         hint: str | None = None,
-        docs_path: str | None = "usage/templates/",
+        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_SECURITY,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
