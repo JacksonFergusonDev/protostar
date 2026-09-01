@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788242042127,
+  "lastUpdate": 1788286232817,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9151,6 +9151,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 209.68,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "943b3aa25e8aa07641cc8273dc43b251caf222cc",
+          "message": "feat(docs): introduce granular documentation linking and registry (#217)\n\n* docs: link to github issues and discussions in troubleshooting guide\n\n* feat(docs): introduce granular documentation linking and registry\n\n- Add central DocsPage registry for all documentation URLs\n- Link MissingDependencyError to troubleshooting anchor\n- Add anchor support for all ProtostarError types\n- Use difflib to suggest close matches for invalid CLI commands\n- Never default to root index.md; fallback to getting-started.md\n\n* fix(ci): support url anchor fragments in check_doc_links script",
+          "timestamp": "2026-09-01T11:09:46-07:00",
+          "tree_id": "c32eb1a242bf3d5704ed3a4a4f22341ad83625eb",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/943b3aa25e8aa07641cc8273dc43b251caf222cc"
+        },
+        "date": 1788286231671,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 87.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 130.22,
             "unit": "ms"
           }
         ]
