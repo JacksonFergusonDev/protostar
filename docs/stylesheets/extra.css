@@ -9,7 +9,7 @@
     min-height: 48px;
     align-items: center;
     gap: 0.25rem;
-    border-bottom: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
     margin-bottom: 3rem;
 }
 
@@ -476,7 +476,7 @@
         letter-spacing: -0.04em;
         line-height: 1.05;
         text-wrap: balance;
-        color: var(--md-default-fg-color);
+        color: #ffffff;
     }
 
     .protostar-lede {
@@ -533,7 +533,7 @@
     }
 
     .md-typeset h2 {
-        border-bottom: 1px solid var(--protostar-border);
+        border-bottom: 1px solid var(--md-default-fg-color--lightest);
         padding-bottom: 0.35rem;
         margin-top: 2.2rem;
     }
