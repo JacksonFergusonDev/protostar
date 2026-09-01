@@ -607,11 +607,9 @@
 }
 
 .mermaid {
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: auto;
     max-width: 100%;
     margin: 1.2em 0;
-    padding-bottom: 0.5rem; /* for the scrollbar */
     background: var(--md-code-bg-color);
     border-radius: 0.2rem;
     border: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
@@ -619,15 +617,6 @@
 
 .mermaid svg {
     display: block;
-    /*
-       Crucial: Mermaid injects width="100%" directly onto the SVG element.
-       If we don't override the width, max-width does nothing because
-       100% of the column is already smaller than 1100px.
-    */
-    width: auto !important;
-    width: max-content !important;
-
-    max-width: 1100px !important;
-    height: auto !important;
-    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
 }
