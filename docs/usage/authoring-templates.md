@@ -138,6 +138,17 @@ Templates registered in your global `config.toml` aliases bypass this prompt. Fo
 
 ---
 
+## Best Practices
+
+When building templates for your team or the open-source community, keep the following guidelines in mind:
+
+- **Choose the Right Complexity:** Start with a single-file blueprint (`protostar.toml`) if you only need to enforce tooling configurations (like Ruff or Pyright rules). Graduate to a multi-file repository only when you need to scaffold physical code, directories, or CI/CD pipelines.
+- **Descriptive Variable Names:** Use clear, self-explanatory names for custom placeholders (e.g., `<% AWS_REGION %>` instead of `<% REG %>`). Since Protostar automatically generates interactive terminal prompts for unresolved variables, descriptive names provide a better user experience.
+- **Minimize Shell Scripts:** Be cautious with `system_tasks` and `post_install_tasks`. Heavy reliance on shell commands can compromise cross-platform compatibility (e.g., failing on Windows). It also triggers the Informed Consent Security Model for remote URLs, which might alarm users.
+- **Test Locally:** Always test your template locally against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
+
+---
+
 ## Next Steps
 
 - **[Templates & Portable Configs](./templates.md):** Learn about CLI options, URL translation, and template consumption.
