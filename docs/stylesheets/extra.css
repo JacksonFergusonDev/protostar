@@ -606,6 +606,27 @@
     }
 }
 
+.mermaid {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    margin: 1.2em 0;
+    padding-bottom: 0.5rem; /* for the scrollbar */
+    background: var(--md-code-bg-color);
+    border-radius: 0.2rem;
+    border: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+}
+
 .mermaid svg {
-    overflow: visible !important;
+    display: block;
+    /*
+       Allows small diagrams to render at their native size (e.g. 600px),
+       but forces huge oversized diagrams (e.g. 1600px) to scale down
+       to 1100px (zooming out a bit). Because 1100px is wider than the
+       prose column, it triggers the overflow-x on the .mermaid container
+       and natively enables horizontal scrolling!
+    */
+    max-width: 1100px !important;
+    height: auto !important;
+    margin: 0 auto;
 }
