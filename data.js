@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788241198238,
+  "lastUpdate": 1788241384487,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9083,6 +9083,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 215.31,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "38a9a177d6685139da4f5aadf9ff14498bb4d219",
+          "message": "docs: add best practices section to authoring templates guide",
+          "timestamp": "2026-08-31T22:41:45-07:00",
+          "tree_id": "84a57164278e5494af0ad5f9f10c4b8ef09c11d0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/38a9a177d6685139da4f5aadf9ff14498bb4d219"
+        },
+        "date": 1788241383598,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 218.06,
             "unit": "ms"
           }
         ]
