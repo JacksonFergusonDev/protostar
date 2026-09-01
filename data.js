@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788296435624,
+  "lastUpdate": 1788299084963,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9253,6 +9253,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 215.88,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "0db2d8da7552b203f8d052b2e592f04dd0e41320",
+          "message": "docs: replace hardcoded configuration and agent JSON payloads with dynamic fixtures",
+          "timestamp": "2026-09-01T14:42:16-07:00",
+          "tree_id": "2313aac62e74c694273cb5803003c8df89856ffa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0db2d8da7552b203f8d052b2e592f04dd0e41320"
+        },
+        "date": 1788299083659,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 159.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 236.7,
             "unit": "ms"
           }
         ]
