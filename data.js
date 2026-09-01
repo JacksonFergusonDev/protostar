@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788296090003,
+  "lastUpdate": 1788296435624,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9219,6 +9219,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 173.39,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "57089672fa07209aec7d9ee48783e4fd000a1464",
+          "message": "docs: replace CLI reference tables with auto-generated fixtures (#218)\n\n- Generate CLI reference tables dynamically in scripts/generate_doc_fixtures.py:\n  - table_cli_global.md for global options\n  - table_cli_init_core.md for core initialization flags\n  - table_cli_tooling_flags.md from registered TOOLING_MODULES\n  - table_cli_config.md for configuration commands\n  - table_cli_export_schema.md for export schema options\n  - table_exit_codes.md for POSIX exit code mappings\n- Update docs/usage/cli-reference.md to embed fixtures via pymdownx snippets\n- Add test_cli_reference_fixture_tables unit test in tests/test_cli.py",
+          "timestamp": "2026-09-01T13:59:30-07:00",
+          "tree_id": "8ca36686497ca22bf499ffc16bfbed38374fe889",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/57089672fa07209aec7d9ee48783e4fd000a1464"
+        },
+        "date": 1788296434420,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.89,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 215.88,
             "unit": "ms"
           }
         ]
