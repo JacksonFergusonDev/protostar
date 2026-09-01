@@ -463,9 +463,7 @@ class TemplateBlueprint:
         # Extract environment fields
         if "dev" in data:
             dev_data = data["dev"]
-            if "extra_dependencies" in dev_data:
-                instance.dev_dependencies = dev_data["extra_dependencies"]
-            elif "dev_dependencies" in dev_data:
+            if "dev_dependencies" in dev_data:
                 instance.dev_dependencies = dev_data["dev_dependencies"]
 
             if "pyproject" in dev_data:

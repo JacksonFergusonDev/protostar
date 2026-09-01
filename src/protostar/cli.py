@@ -784,7 +784,6 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
         if f.name == "dev_dependencies":
             dev_properties["dev_dependencies"] = prop
-            dev_properties["extra_dependencies"] = prop
         elif f.name == "pyproject_injections":
             dev_properties["pyproject"] = prop
         else:

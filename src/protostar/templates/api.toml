@@ -29,7 +29,7 @@ renovate = true
 
 # --- Development Dependencies ---
 [dev]
-extra_dependencies = ["httpx", "pytest-asyncio"]
+dev_dependencies = ["httpx", "pytest-asyncio"]
 
 # --- Static File Injections ---
 [files]

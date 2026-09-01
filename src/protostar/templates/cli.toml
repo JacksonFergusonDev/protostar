@@ -22,7 +22,7 @@ markdownlint = true
 
 # --- Development Dependencies ---
 [dev]
-extra_dependencies = ["pytest-cov"]
+dev_dependencies = ["pytest-cov"]
 
 # --- pyproject.toml AST Injections ---
 [dev.pyproject]

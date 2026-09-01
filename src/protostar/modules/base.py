@@ -38,14 +38,6 @@ class BootstrapModule(abc.ABC):
         pass
 
     @property
-    def aliases(self) -> list[str]:
-        """Returns a list of configuration aliases that map to this module.
-
-        Used for dynamic resolution from the global configuration file.
-        """
-        return []
-
-    @property
     def collision_markers(self) -> list[Path]:
         """Returns a list of critical filesystem paths to evaluate for collisions during pre-flight.
 

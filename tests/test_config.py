@@ -380,7 +380,7 @@ def test_user_config_pyrefly_parsed_from_env(tmp_path):
 def test_template_blueprint_parse():
     content = """
 [dev]
-extra_dependencies = ["bump-my-version"]
+dev_dependencies = ["bump-my-version"]
 
 [dev.pyproject]
 custom_ruff = "[tool.ruff]\\nline-length = 100"
