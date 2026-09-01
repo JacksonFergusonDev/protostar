@@ -151,6 +151,14 @@ If Protostar encounters an unexpected internal error or AST collapse:
 1. It collects non-sensitive system environment vectors (OS, Python version, command invocation).
 1. It outputs a URL-encoded link that opens a pre-formatted GitHub issue ticket with the exact telemetry attached.
 
+### Filing Bugs & Asking Questions
+
+If you encounter an issue or behavior not covered in this guide:
+
+- **Search Existing Issues:** Check the [GitHub Issues tracker](https://github.com/jacksonfergusondev/protostar/issues) to see if a workaround or fix already exists.
+- **Open a Bug Report:** If you've found a bug or unexpected behavior, [open a new issue](https://github.com/jacksonfergusondev/protostar/issues/new) with your environment details and `--verbose` output attached.
+- **Community Support:** For general questions, configuration help, or workflow ideas, start a thread in [GitHub Discussions](https://github.com/jacksonfergusondev/protostar/discussions).
+
 ---
 
 ## Related Resources
