@@ -135,3 +135,11 @@ org-ds-base = "https://github.com/YourOrg/data-science-template"
 Protostar enforces an **Informed Consent Security Model**. If your template defines `system_tasks` or `post_install_tasks` (executable shell commands), and a user loads it directly from an untrusted remote URL via `--from`, Protostar will halt execution and display an interactive security prompt.
 
 Templates registered in a user's global `config.toml` aliases bypass this prompt. For a complete breakdown of how the runtime evaluates trust boundaries, see the [Remote Trust Model](templates.md#security-model-the-remote-trust-dialog).
+
+---
+
+## Next Steps
+
+- **[Templates & Portable Configs](./templates.md):** Learn about CLI options, URL translation, and template consumption.
+- **[Global Configuration](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
+- **[Extending Protostar](../developer/extending-protostar.md):** Implement custom Python bootstrap modules if your project requires engine-level integrations.

@@ -182,3 +182,11 @@ The `justfile` includes predefined recipes leveraging [hyperfine](https://github
     ```bash
     just test-benchmark-slower
     ```
+
+---
+
+## Related Developer Guides
+
+- **[Developer Overview & Contributing](./overview.md):** Setup instructions, coding standards, and PR workflows.
+- **[Extending Protostar](./extending-protostar.md):** Build new tooling or preset modules to accompany your tests.
+- **[The Orchestrator](../mechanics/orchestrator.md):** Understand the engine bulkhead and execution lifecycle under test.

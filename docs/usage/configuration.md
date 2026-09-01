@@ -70,4 +70,10 @@ data-science = "~/Developer/templates/ds_base.toml"
 
 Templates declared here can be invoked directly with `protostar init --template my-org-api`, appear automatically in the interactive wizard, and bypass the remote trust warning dialog.
 
-For complete documentation on creating and using templates, see __[Templates & Portable Configurations](./templates.md)__.
+---
+
+## Next Steps
+
+- **[Environment Initialization](./init.md):** Test your configured global defaults with `protostar init`.
+- **[Templates & Portable Configurations](./templates.md):** Discover how template aliases streamline custom template consumption and bypass remote security prompts.
+- **[CLI Reference](./cli-reference.md):** Review all command-line options and runtime flag overrides.

@@ -117,4 +117,11 @@ If you are extending Protostar with custom domains or tooling layers, your `Boot
             separate_signature: true
             members_order: source
 
-Head over to __[Extending Protostar](../developer/extending-protostar.md)__ for more information.
+---
+
+## Related Mechanics & Guides
+
+- __[The Orchestrator](./orchestrator.md):__ Learn how the engine coordinates the planning and execution phases using the manifest.
+- __[The System Executor](./executor.md):__ Discover how the manifest is transformed into atomic disk mutations and managed subprocesses.
+- __[The Module Architecture](./modules.md):__ Understand how modules declare dependencies, file injections, and AST appends.
+- __[Extending Protostar](../developer/extending-protostar.md):__ Build custom bootstrap modules that interact directly with `EnvironmentManifest`.

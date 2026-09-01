@@ -225,3 +225,11 @@ When Protostar encounters an unhandled internal exception (an unexpected Python 
 ## API Reference
 
 For detailed docstrings and class signatures, see the [Error Handling API Reference](../developer/api-reference.md#class-definitions).
+
+---
+
+## Related Guides & References
+
+- __[Troubleshooting & FAQ](../usage/troubleshooting.md):__ User-facing remediation steps for missing dependencies, collisions, and editor setups.
+- __[Agent & Machine Interface](../usage/agent-interface.md):__ Learn how AI coding agents and CI runners parse machine error envelopes.
+- __[The Orchestrator](./orchestrator.md):__ Understand the top-level exception trap and diagnostic telemetry gathering.

@@ -373,3 +373,12 @@ Selecting __Merge__ executes an AST injection:
 To view all supported subcommands and flags in your terminal, run `protostar help init`.
 
 ![Protostar Help Init](../fixtures/cli_init_help.svg)
+
+---
+
+## Next Steps
+
+- __[Templates & Portable Configs](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
+- __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
+- __[Global Configuration](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
+- __[Troubleshooting & FAQ](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.

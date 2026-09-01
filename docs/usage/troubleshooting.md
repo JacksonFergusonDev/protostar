@@ -150,3 +150,11 @@ If Protostar encounters an unexpected internal error or AST collapse:
 1. It traps the exception to prevent incomplete disk operations.
 1. It collects non-sensitive system environment vectors (OS, Python version, command invocation).
 1. It outputs a URL-encoded link that opens a pre-formatted GitHub issue ticket with the exact telemetry attached.
+
+---
+
+## Related Resources
+
+- **[Error Handling Architecture](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, POSIX exit codes, and subprocess telemetry.
+- **[Environment Initialization](./init.md):** Review collision handling, AST injection, and `--force-merge` behavior.
+- **[Global Configuration](./configuration.md):** Learn how to view, modify, or reset your global settings with `protostar config --reset`.

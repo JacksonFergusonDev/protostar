@@ -39,3 +39,11 @@ Built-in templates act as high-level macros that execute on top of a base langua
     Templates do not hardcode package versions. They pass the library requirements directly to the package manager (`uv`), allowing your environment to resolve the latest compatible telemetry, astrophysics, or API packages at runtime.
 
 --8<-- "table_templates.md"
+
+---
+
+## Related Guides
+
+- __[Environment Initialization](./init.md):__ See complete generated directory trees and configuration footprints for CLI, API, ML, and DSP templates.
+- __[Global Configuration](./configuration.md):__ Configure persistent default tooling selections so your preferred flags apply automatically.
+- __[CLI Reference](./cli-reference.md):__ Comprehensive reference table for all tri-state tooling flags and CLI options.

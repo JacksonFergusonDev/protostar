@@ -101,3 +101,11 @@ warn_return_any = true
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
+
+---
+
+## Next Steps & Developer Guides
+
+- __[Extending Protostar](../developer/extending-protostar.md):__ Step-by-step guide to implementing your own custom `BootstrapModule`.
+- __[The Environment Manifest](./manifest.md):__ Full breakdown of the manifest namespaces and mutation methods used during `build()`.
+- __[Testing Architecture & Philosophy](../developer/testing.md):__ Learn how to test modules in-memory with strict subprocess mocking.

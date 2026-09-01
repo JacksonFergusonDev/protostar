@@ -187,3 +187,11 @@ By trapping errors at the highest level, Protostar guarantees that users are nev
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
+
+---
+
+## Related Mechanics & Guides
+
+- __[The Environment Manifest](./manifest.md):__ Deep dive into the structured state container generated during the `plan()` phase.
+- __[The System Executor](./executor.md):__ See how the executor applies atomic AST deep-merges, file injections, and subprocess execution.
+- __[Error Handling Architecture](./error_handling.md):__ Learn how the orchestrator traps exceptions and routes them to POSIX exit codes and telemetry reports.

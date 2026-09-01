@@ -137,3 +137,11 @@ This wrapper executes the command silently while capturing both `stdout` and `st
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
+
+---
+
+## Related Mechanics & Guides
+
+- **[The Orchestrator](./orchestrator.md):** See how the state machine coordinates the planning phase and passes the manifest to the executor.
+- **[The Environment Manifest](./manifest.md):** Review the structured state container evaluated by the executor.
+- **[The Module Architecture](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.

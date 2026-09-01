@@ -212,3 +212,12 @@ Do you trust this source to modify your system? [y/N]
 ```
 
 In non-interactive environments (e.g., CI/CD), untrusted templates with executable tasks abort immediately. To run them headlessly, register the template in your global configuration aliases.
+
+---
+
+## Related Guides & Next Steps
+
+- __[Authoring Custom Templates](./authoring-templates.md):__ Build your own single-file blueprints or multi-file repository archives with dynamic variables.
+- __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all tools and built-in templates available in Protostar.
+- __[Global Configuration](./configuration.md):__ Learn how to register shorthand aliases under `[templates]` in your `config.toml`.
+- __[Agent & Machine Interface](./agent-interface.md):__ Inspect blueprints and validate template JSON schemas in automated agent pipelines.

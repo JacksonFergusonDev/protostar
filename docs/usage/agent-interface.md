@@ -220,3 +220,11 @@ protostar export-schema --json > protostar-template.schema.json
 ```
 
 Agents can use standard JSON Schema validators (e.g., `jsonschema` in Python or `ajv` in JavaScript) to verify their generated blueprints before invoking `protostar init --from <file>`.
+
+---
+
+## Related Architecture & Next Steps
+
+- __[The Environment Manifest](../mechanics/manifest.md):__ Detailed structure and domain slices of the in-memory state object serialized during `--dry-run --json`.
+- __[Error Handling Architecture](../mechanics/error_handling.md):__ Deep dive into machine error envelopes, collision paths, and POSIX exit code mappings.
+- __[CLI Reference](./cli-reference.md):__ Full list of subcommands, global flags, and exit status codes.
