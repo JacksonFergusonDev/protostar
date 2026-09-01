@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788204683938,
+  "lastUpdate": 1788240284407,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -8981,6 +8981,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.42,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a32c4068e703ad76eb0e64e0a46fe4c6c5e88c83",
+          "message": "docs: overhaul documentation styling, frontmatter, and mermaid diagrams (#216)\n\n* Standardize code and terminal blocks with dark theme, cyan borders, 0.68rem typography, and restored hover copy buttons.\n* Constrain hero asciinema demo max-width and fix sticky header title fallback on scroll.\n* Add descriptive SEO frontmatter across all major documentation pages.\n* Refactor dense Mermaid diagrams with LR topologies, condensed edge labels, and responsive horizontal scrolling.",
+          "timestamp": "2026-08-31T22:23:35-07:00",
+          "tree_id": "a291c6e7c1cbc82f3181441ab92f1ff58d5d7c14",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a32c4068e703ad76eb0e64e0a46fe4c6c5e88c83"
+        },
+        "date": 1788240283102,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 161.44,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 246.08,
             "unit": "ms"
           }
         ]
