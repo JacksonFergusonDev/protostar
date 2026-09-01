@@ -372,6 +372,192 @@ def generate_capability_tables() -> None:
         "table_licenses.md", _format_markdown_table(license_headers, license_rows)
     )
 
+    # CLI Global options table
+    global_headers = ["Flag", "Shorthand", "Description"]
+    global_rows = [
+        [
+            "`--json`",
+            "*None*",
+            "Position-independent flag. Emits structured JSON to `stdout` and redirects human-readable logging to `stderr`.",
+        ],
+        [
+            "`--dry-run`",
+            "*None*",
+            "Executes the read-only `plan()` phase to preview planned files, AST merges, and system tasks without touching disk.",
+        ],
+        [
+            "`--verbose`",
+            "`-v`",
+            "Enables debug-level logging and uncapped Python tracebacks for triage.",
+        ],
+        [
+            "`--version`",
+            "*None*",
+            "Displays the installed Protostar version string.",
+        ],
+        [
+            "`--help`",
+            "`-h`",
+            "Displays top-level help and available subcommands.",
+        ],
+    ]
+    _write_fixture(
+        "table_cli_global.md",
+        _format_markdown_table(global_headers, global_rows),
+    )
+
+    # CLI init core options table
+    init_core_headers = ["Option", "Shorthand", "Description"]
+    init_core_rows = [
+        [
+            "`--template <NAME>`",
+            "`-t <NAME>`",
+            "Scaffold from a built-in template or a registered global alias.",
+        ],
+        [
+            "`--from <TARGET>`",
+            "*None*",
+            "Scaffold from a local file/directory, raw TOML URL, or remote Git repository archive (`.zip`, `.tar.gz`).",
+        ],
+        [
+            "`--list-templates`",
+            "*None*",
+            "Lists all available built-in templates and configured global aliases.",
+        ],
+        [
+            "`--python-version <VER>`",
+            "*None*",
+            "Override the target Python version for this initialization (e.g. `3.13`).",
+        ],
+        [
+            "`--force-merge`",
+            "*None*",
+            "Non-destructively deep-merge configurations and ignores into existing workspace files without prompting.",
+        ],
+        [
+            "`--force-replace`",
+            "*None*",
+            "Forcefully overwrite colliding workspace configuration files without prompting.",
+        ],
+    ]
+    _write_fixture(
+        "table_cli_init_core.md",
+        _format_markdown_table(init_core_headers, init_core_rows),
+    )
+
+    # CLI tooling flags table
+    tooling_flags_headers = ["Enable Flag", "Disable Flag", "Description"]
+    tooling_flags_rows = [
+        [
+            f"`{mod.cli_flags[0]}`",
+            f"`{mod.cli_flags[0].replace('--', '--no-', 1)}`",
+            mod.cli_help,
+        ]
+        for mod in TOOLING_MODULES
+        if mod.cli_flags
+    ]
+    tooling_flags_rows.append(
+        [
+            "`--docker`",
+            "`--no-docker`",
+            "Multi-stage `Dockerfile` and `.dockerignore` container scaffolding",
+        ]
+    )
+    _write_fixture(
+        "table_cli_tooling_flags.md",
+        _format_markdown_table(tooling_flags_headers, tooling_flags_rows),
+    )
+
+    # CLI config options table
+    config_headers = ["Option", "Description"]
+    config_rows = [
+        [
+            "*(No args)*",
+            "Opens `config.toml` in your system's default `$EDITOR`.",
+        ],
+        [
+            "`--reset`",
+            "Resets configuration to factory defaults (prompts for confirmation).",
+        ],
+        [
+            "`--force-replace`",
+            "Bypasses the confirmation prompt when used with `--reset`.",
+        ],
+    ]
+    _write_fixture(
+        "table_cli_config.md",
+        _format_markdown_table(config_headers, config_rows),
+    )
+
+    # CLI export-schema options table
+    export_schema_headers = ["Option", "Description"]
+    export_schema_rows = [
+        [
+            "*(No args)*",
+            "Pretty-prints the syntax-highlighted schema to the terminal.",
+        ],
+        [
+            "`--json`",
+            "Emits raw JSON schema for piping to files or schema validators.",
+        ],
+    ]
+    _write_fixture(
+        "table_cli_export_schema.md",
+        _format_markdown_table(export_schema_headers, export_schema_rows),
+    )
+
+    # POSIX exit codes table
+    exit_code_headers = ["Code", "POSIX Name", "Trigger Condition"]
+    exit_code_rows = [
+        ["`0`", "`EX_OK`", "Successful execution"],
+        ["`1`", "Generic", "Subprocess failure or command timeout"],
+        ["`64`", "`os.EX_USAGE`", "Invalid CLI arguments or command usage syntax"],
+        [
+            "`65`",
+            "`os.EX_DATAERR`",
+            "Template resolution error (corrupted archive, missing variables)",
+        ],
+        [
+            "`69`",
+            "`os.EX_UNAVAILABLE`",
+            "Missing required system binary (`uv`, `git`, etc.)",
+        ],
+        [
+            "`70`",
+            "`os.EX_SOFTWARE`",
+            "Unhandled internal Python bug (prompts automated bug report)",
+        ],
+        [
+            "`74`",
+            "`os.EX_IOERR`",
+            "Local filesystem read/write or permission failure",
+        ],
+        [
+            "`75`",
+            "`os.EX_TEMPFAIL`",
+            "Transient network failure during remote template download",
+        ],
+        [
+            "`77`",
+            "`os.EX_NOPERM`",
+            "Security violation (e.g., path traversal Zip Slip)",
+        ],
+        [
+            "`78`",
+            "`os.EX_CONFIG`",
+            "Invalid TOML syntax or conflicting CLI configuration",
+        ],
+        [
+            "`130`",
+            "Shell Signal",
+            "You aborted interactive wizard prompt (Ctrl+C)",
+        ],
+    ]
+    _write_fixture(
+        "table_exit_codes.md",
+        _format_markdown_table(exit_code_headers, exit_code_rows),
+    )
+
 
 def generate_manifest_state() -> None:
     """Simulates an initialization sequence to compute a deterministic JSON manifest."""

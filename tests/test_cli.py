@@ -1034,3 +1034,59 @@ def test_help_invalid_subcommand_json_mode(capsys, monkeypatch):
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "InvalidUsageError"
     assert "invalid choice" in payload["error"]["message"]
+
+
+def test_cli_reference_fixture_tables():
+    """Verify that all generated CLI fixture tables exist and contain required headers and flags."""
+    from pathlib import Path
+
+    from protostar.modules import TOOLING_MODULES
+
+    fixtures_dir = Path("docs/fixtures")
+    assert fixtures_dir.exists()
+
+    # Verify Global Options fixture
+    global_file = fixtures_dir / "table_cli_global.md"
+    assert global_file.exists()
+    global_content = global_file.read_text()
+    assert "| Flag | Shorthand | Description |" in global_content
+    assert "`--json`" in global_content
+    assert "`--dry-run`" in global_content
+    assert "`--verbose`" in global_content
+
+    # Verify Init Core Options fixture
+    init_core_file = fixtures_dir / "table_cli_init_core.md"
+    assert init_core_file.exists()
+    init_core_content = init_core_file.read_text()
+    assert "| Option | Shorthand | Description |" in init_core_content
+    assert "`--template <NAME>`" in init_core_content
+    assert "`--force-merge`" in init_core_content
+
+    # Verify Tooling Flags fixture contains all TOOLING_MODULES
+    tooling_flags_file = fixtures_dir / "table_cli_tooling_flags.md"
+    assert tooling_flags_file.exists()
+    tooling_flags_content = tooling_flags_file.read_text()
+    assert "| Enable Flag | Disable Flag | Description |" in tooling_flags_content
+    for mod in TOOLING_MODULES:
+        if mod.cli_flags:
+            assert f"`{mod.cli_flags[0]}`" in tooling_flags_content
+
+    # Verify Config Options fixture
+    config_file = fixtures_dir / "table_cli_config.md"
+    assert config_file.exists()
+    config_content = config_file.read_text()
+    assert "`--reset`" in config_content
+
+    # Verify Export Schema Options fixture
+    export_file = fixtures_dir / "table_cli_export_schema.md"
+    assert export_file.exists()
+    export_content = export_file.read_text()
+    assert "`--json`" in export_content
+
+    # Verify Exit Codes fixture
+    exit_codes_file = fixtures_dir / "table_exit_codes.md"
+    assert exit_codes_file.exists()
+    exit_codes_content = exit_codes_file.read_text()
+    assert "| Code | POSIX Name | Trigger Condition |" in exit_codes_content
+    assert "`EX_OK`" in exit_codes_content
+    assert "`os.EX_USAGE`" in exit_codes_content
