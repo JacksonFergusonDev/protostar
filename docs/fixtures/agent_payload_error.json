@@ -1,0 +1,12 @@
+{
+  "api_version": 0,
+  "status": "error",
+  "error": {
+    "type": "WorkspaceCollisionError",
+    "message": "Orbital Collision Detected: existing configuration files found in the workspace:\n  - pyproject.toml\nUse --force-merge or --force-replace to bypass, or resolve interactively.",
+    "docs_url": "https://protostar.readthedocs.io/en/stable/usage/troubleshooting/#workspace-collisions",
+    "paths": [
+      "pyproject.toml"
+    ]
+  }
+}

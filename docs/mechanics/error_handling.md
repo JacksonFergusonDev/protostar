@@ -164,17 +164,7 @@ Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after 
 When running in `--json` mode, Protostar suppresses all terminal UI formatting, spinners, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to `stdout`:
 
 ```json
-{
-  "api_version": 0,
-  "status": "error",
-  "error": {
-    "type": "WorkspaceCollisionError",
-    "message": "Gravitational Anomaly: Protostar detected existing configuration files in the workspace.",
-    "hint": "Pass --force-merge to merge configs safely, or --force-replace to overwrite.",
-    "docs_url": "https://protostar.readthedocs.io/en/stable/usage/init/#progressive-scaffolding-collisions",
-    "paths": ["pyproject.toml"]
-  }
-}
+--8<-- "agent_payload_error.json"
 ```
 
 The error envelope guarantees:

@@ -42,15 +42,7 @@ When you first run `protostar config` a configuration file is created and opened
 
 Controls base environment toggles and global tool preferences applied whenever `protostar init` is executed:
 
-- `ide`: Preferred IDE (`"vscode"`, `"cursor"`, or `"none"`).
-- `python_version`: Default Python version to pin (e.g., `"3.13"`).
-- `license`: Default project license identifier (e.g., `"MIT"`, `"Apache-2.0"`).
-- `author_name`: Default author name for project metadata.
-- `author_email`: Default author email for project metadata.
-- `github_username`: Default GitHub username for repository URL formatting.
-- `supported_os`: Operating systems matrix for CI workflows (e.g., `["MacOS", "Linux", "Windows"]`).
-- `direnv`: Auto-scaffold `.envrc` shell bindings.
-- Tooling toggles (`ruff`, `mypy`, `ty`, `pyrefly`, `pytest`, `pre_commit`, `prek`, `commitizen`, `renovate`, `codecov`, `zensical`, `readthedocs`, `ci`, `release`, `just`, `markdownlint`).
+--8<-- "table_config_env.md"
 
 ### Supported Licenses
 

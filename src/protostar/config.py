@@ -64,8 +64,12 @@ class UserConfig:
 
     Attributes:
         ide (IDEType | str | None): The preferred IDE (e.g., 'vscode', 'cursor', 'none').
+        author_name (str | None): Default author name for project metadata.
+        author_email (str | None): Default author email for project metadata.
+        github_username (str | None): Default GitHub username for repository URL formatting.
         direnv (bool): Whether to auto-scaffold .envrc shell bindings.
         python_version (str | None): The specific Python version to scaffold.
+        license (str | None): Default project license identifier (e.g., 'MIT', 'Apache-2.0').
         supported_os (list[str]): The supported operating systems to scaffold CI for.
         markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.

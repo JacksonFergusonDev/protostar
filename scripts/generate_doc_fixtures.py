@@ -24,10 +24,11 @@ from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
 from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
+from protostar.errors import WorkspaceCollisionError
 from protostar.fs import atomic_write_text
 from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
 from protostar.metadata import METADATA_FIELDS
-from protostar.models import InitRequest
+from protostar.models import ExecutionResult, InitRequest
 from protostar.modules import (
     LICENSE_MAP,
     TOOLING_MODULES,
@@ -406,6 +407,45 @@ def generate_capability_tables() -> None:
         _format_markdown_table(global_headers, global_rows),
     )
 
+    # Configuration Environment Settings Table
+    config_env_headers = ["Setting", "Type", "Description"]
+    config_env_rows = []
+
+    if UserConfig.__doc__:
+        doc_lines = UserConfig.__doc__.splitlines()
+        in_attributes = False
+        for line in doc_lines:
+            line = line.strip()
+            if line == "Attributes:":
+                in_attributes = True
+                continue
+            if in_attributes and line:
+                if ":" in line:
+                    # Format: key (type): Description
+                    attr_part, desc_part = line.split(":", 1)
+                    if "(" in attr_part and ")" in attr_part:
+                        attr_name = attr_part.split("(")[0].strip()
+                        typ = attr_part.split("(")[1].split(")")[0].strip()
+                        desc = desc_part.strip()
+
+                        # Only include simple types or well-known ones for the documentation
+                        if attr_name != "templates":
+                            # Format type for markdown, wrapping individual components in backticks so pipes stay outside code spans
+                            if "IDEType" in typ:
+                                typ_formatted = '`"vscode"` \\| `"cursor"` \\| `"none"`'
+                            else:
+                                typ_formatted = " \\| ".join(
+                                    f"`{part.strip()}`" for part in typ.split("|")
+                                )
+                            config_env_rows.append(
+                                [f"`{attr_name}`", typ_formatted, desc]
+                            )
+
+    _write_fixture(
+        "table_config_env.md",
+        _format_markdown_table(config_env_headers, config_env_rows),
+    )
+
     # CLI init core options table
     init_core_headers = ["Option", "Shorthand", "Description"]
     init_core_rows = [
@@ -599,6 +639,77 @@ def generate_manifest_state() -> None:
 
     state_json = json.dumps(manifest, cls=ManifestEncoder, indent=4)
     _write_fixture("manifest_state.json", state_json)
+
+
+def generate_agent_payloads() -> None:
+    """Generates JSON payloads for the Agent & Machine Interface documentation."""
+    # 1. Planned payload computed dynamically from an EnvironmentManifest
+    manifest = EnvironmentManifest(
+        metadata={
+            "description": "High-velocity CLI application.",
+            "author_name": "Demo Author",
+            "license": "MIT",
+        }
+    )
+    bootstrap_mods: list[BootstrapModule] = [
+        SystemWorkspaceModule(),
+        PythonCore(),
+        RuffModule(),
+    ]
+    for b_mod in bootstrap_mods:
+        b_mod.build(manifest)
+
+    # Set mock IDE settings for stable deterministic fixtures
+    manifest.ide_settings = {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvironment": True,
+    }
+
+    planned_payload = {
+        "api_version": protostar.cli.CLI_API_VERSION,
+        "status": "planned",
+        "manifest": manifest.to_dict(),
+    }
+    _write_fixture("agent_payload_planned.json", json.dumps(planned_payload, indent=2))
+
+    # 2. Success payload generated dynamically using ExecutionResult
+    result = ExecutionResult(
+        touched_paths=frozenset(
+            [
+                ".gitignore",
+                "pyproject.toml",
+                "src/my_app/__init__.py",
+                "tests/test_cli.py",
+            ]
+        ),
+        diagnostics=(),
+    )
+    success_payload = {
+        "api_version": protostar.cli.CLI_API_VERSION,
+        "status": "success",
+        "result": result.to_dict(),
+    }
+    _write_fixture("agent_payload_success.json", json.dumps(success_payload, indent=2))
+
+    # 3. Error payload generated dynamically using WorkspaceCollisionError
+    err = WorkspaceCollisionError(paths=frozenset([Path("pyproject.toml")]))
+    error_dict: dict[str, Any] = {
+        "type": type(err).__name__,
+        "message": str(err),
+    }
+    if err.hint:
+        error_dict["hint"] = err.hint
+    if err.docs_url:
+        error_dict["docs_url"] = err.docs_url
+    if isinstance(err, WorkspaceCollisionError):
+        error_dict["paths"] = sorted(str(p) for p in err.paths)
+
+    error_payload = {
+        "api_version": protostar.cli.CLI_API_VERSION,
+        "status": "error",
+        "error": error_dict,
+    }
+    _write_fixture("agent_payload_error.json", json.dumps(error_payload, indent=2))
 
 
 def generate_tree(dir_path: Path) -> str:
@@ -1061,6 +1172,7 @@ def main() -> None:
         generate_default_config()
         generate_capability_tables()
         generate_manifest_state()
+        generate_agent_payloads()
         generate_template_schema_fixture()
         generate_diagnostic_panel_svg()
         print("✔ Static fixtures generated.\n")

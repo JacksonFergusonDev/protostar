@@ -1,0 +1,95 @@
+{
+  "api_version": 0,
+  "status": "planned",
+  "manifest": {
+    "collision_strategy": "merge",
+    "force_merge": false,
+    "force_replace": false,
+    "metadata": {
+      "description": "High-velocity CLI application.",
+      "author_name": "Demo Author",
+      "license": "MIT"
+    },
+    "ide_settings": {
+      "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+      "python.terminal.activateEnvironment": true
+    },
+    "dependencies": {
+      "dependencies": [],
+      "dev_dependencies": [
+        "ruff"
+      ],
+      "docs_dependencies": []
+    },
+    "filesystem": {
+      "directories": [],
+      "file_injections": {
+        "LICENSE": "MIT License\n\nCopyright (c) <% CURRENT_YEAR %> <% AUTHOR_NAME %>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+      },
+      "file_appends": {
+        "pyproject.toml": [
+          "[project]\ndescription = \"High-velocity CLI application.\"\nreadme = \"README.md\"\nauthors = [{ name = \"Demo Author\", email = \"your-email\" }]\nlicense = { file = \"LICENSE\" }\nclassifiers = [\n    \"License :: OSI Approved :: MIT License\",\n]\n",
+          "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n"
+        ]
+      },
+      "vcs_ignores": [
+        "*~",
+        ".DS_Store",
+        ".cache/",
+        ".env",
+        ".idea/",
+        ".ruff_cache/",
+        ".venv/",
+        ".vscode/",
+        "Thumbs.db",
+        "__pycache__/"
+      ],
+      "workspace_hides": [
+        "*~",
+        ".DS_Store",
+        ".cache/",
+        ".env",
+        ".idea/",
+        ".ruff_cache/",
+        ".venv/",
+        ".vscode/",
+        "Thumbs.db",
+        "__pycache__/"
+      ]
+    },
+    "tooling": {
+      "wants_pre_commit": false,
+      "wants_prek": false,
+      "pre_commit_hooks": [],
+      "pre_commit_local_hooks": [
+        "      - id: ruff-check\n        name: ruff check\n        entry: uv run ruff check --fix\n        language: system\n        types: [python]\n        require_serial: true\n\n      - id: ruff-format\n        name: ruff format\n        entry: uv run ruff format\n        language: system\n        types: [python]\n        require_serial: true"
+      ],
+      "wants_ci": false,
+      "wants_release": false,
+      "ci_flags": [],
+      "ci_steps": [
+        "      - name: Run Ruff Linter\n        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n        run: uv run ruff format --check --output-format=github ."
+      ],
+      "wants_just": false,
+      "just_format_commands": [
+        "uv run ruff check --fix .",
+        "uv run ruff format ."
+      ],
+      "just_lint_commands": [
+        "uv run ruff check .",
+        "uv run ruff format --check ."
+      ],
+      "just_typecheck_commands": [],
+      "just_clean_paths": [
+        ".ruff_cache"
+      ],
+      "ide_extensions": [
+        "charliermarsh.ruff"
+      ]
+    },
+    "tasks": {
+      "system_tasks": [],
+      "post_install_tasks": []
+    }
+  }
+}
