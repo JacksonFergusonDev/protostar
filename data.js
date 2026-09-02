@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788386195733,
+  "lastUpdate": 1788386371101,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9797,6 +9797,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 163.41,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "72fd967b50def5c834a9f292219150b376df1c15",
+          "message": "docs: use sun and moon icons for light and dark mode toggles",
+          "timestamp": "2026-09-02T14:57:14-07:00",
+          "tree_id": "cd2c88ef126f53911f026d846f153a942b0e8770",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/72fd967b50def5c834a9f292219150b376df1c15"
+        },
+        "date": 1788386370008,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 105.61,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 155.07,
             "unit": "ms"
           }
         ]
