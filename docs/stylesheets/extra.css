@@ -1,5 +1,6 @@
 :root {
     --protostar-cyan: #22d3ee;
+    --protostar-radius: 8px;
     --protostar-code-bg: #f8fafc;
     --protostar-code-fg: #1e293b;
     --protostar-code-border: #e2e8f0;
@@ -26,7 +27,7 @@
     min-height: 44px;
     align-items: center;
     padding: 0.55rem 0.8rem;
-    border-radius: var(--rm-radius-sm, 8px);
+    border-radius: var(--protostar-radius);
     color: var(--md-default-fg-color--light);
     font-size: 0.78rem;
     font-weight: 700;
@@ -35,7 +36,7 @@
 }
 
 .md-typeset .protostar-home-nav a:hover {
-    color: var(--protostar-cyan, #22d3ee);
+    color: var(--protostar-cyan);
     background: rgba(34, 211, 238, 0.05);
 }
 
@@ -48,7 +49,7 @@
     height: 5px;
     margin-left: 0.6rem;
     border-radius: 50%;
-    background: var(--protostar-cyan, #22d3ee);
+    background: var(--protostar-cyan);
     content: "";
 }
 
@@ -68,7 +69,7 @@
     min-height: 48px;
     overflow: hidden;
     border: 1px solid var(--protostar-code-border);
-    border-radius: var(--rm-radius-sm, 8px);
+    border-radius: var(--protostar-radius);
     background: var(--protostar-code-bg);
     transition: background-color 0.25s ease, border-color 0.25s ease;
 }
@@ -95,9 +96,11 @@
     border: 0;
     border-left: 1px solid var(--protostar-code-border);
     color: #000;
-    background: var(--protostar-cyan, #22d3ee);
+    background: var(--protostar-cyan);
     cursor: pointer;
-    font: 600 0.75rem var(--md-text-font-family);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
     transition: background-color 0.2s ease, border-color 0.25s ease;
 }
 
@@ -110,7 +113,7 @@
 /* Top-level page titles – bold & accented */
 .md-sidebar .md-nav--primary>.md-nav__list>.md-nav__item--nested>.md-nav__link {
     font-weight: 700;
-    color: var(--md-primary-fg-color, #22d3ee);
+    color: var(--protostar-cyan);
     padding-left: 0.75rem;
 }
 
@@ -175,7 +178,7 @@
 .md-typeset .highlight {
     margin: 1.2rem 0;
     border: 1px solid var(--protostar-code-border);
-    border-radius: var(--rm-radius-sm, 8px);
+    border-radius: var(--protostar-radius);
     background: var(--protostar-code-bg) !important;
     overflow: hidden;
     transition: background-color 0.25s ease, border-color 0.25s ease;
@@ -193,7 +196,7 @@
     background: var(--protostar-code-bg) !important;
     border: none !important;
     box-shadow: none !important;
-    border-radius: var(--rm-radius-sm, 8px);
+    border-radius: var(--protostar-radius);
     line-height: 1.6;
     transition: background-color 0.25s ease;
 }
@@ -246,7 +249,6 @@
 
     /* Custom Variables */
     --protostar-bg-base: #0a0a0a;
-    --protostar-cyan: #22d3ee;
     --protostar-text-soft: #a9b7d0;
     --protostar-border: rgba(34, 211, 238, 0.14);
     --protostar-card-bg: rgba(255, 255, 255, 0.025);
