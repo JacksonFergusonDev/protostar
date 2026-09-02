@@ -11,46 +11,6 @@ Every architectural constraint — the two-phase engine, the AST merging, the PO
 
 This page explains the vocabulary: what each principle is called, exactly what problem it solves, and what goes wrong when you ignore it.
 
-<div class="spacer-2"></div>
-
-<div class="grid cards" markdown>
-
-- :material-swap-horizontal: **Declarative over Imperative**
-
-    You describe target state. Protostar resolves the path to get there.
-
-- :material-format-list-checks: **Manifest-First**
-
-    Full intent is calculated and validated before a single byte touches disk.
-
-- :material-engine-outline: **Engine Bulkhead**
-
-    The core engine is headless. All terminal UI lives outside it.
-
-- :material-layers-outline: **Modular & Decoupled**
-
-    Each tool is a self-contained module that can be toggled independently.
-
-- :material-alert-circle-outline: **Fail Loud, Fail Early**
-
-    Pre-flight checks run before any disk mutation, not partway through.
-
-- :material-code-braces: **Non-Destructive AST Merging**
-
-    Configuration files are surgically updated via Abstract Syntax Trees, never blindly overwritten.
-
-- :material-chart-timeline-variant: **Actionable Telemetry**
-
-    Errors surface the exact subprocess output alongside a remediation hint — not just "something went wrong."
-
-- :material-numeric: **POSIX Exit Codes**
-
-    Every failure class maps to a standard POSIX integer so scripts and CI pipelines can tell failures apart.
-
-</div>
-
-<div class="spacer-2"></div>
-
 ---
 
 ## Declarative over Imperative

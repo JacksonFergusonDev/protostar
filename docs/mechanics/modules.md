@@ -4,22 +4,6 @@ At its core, Protostar is a polymorphic module resolution engine. The CLI parser
 
 These modules act as autonomous, stateless plugins that interact strictly with the `EnvironmentManifest`. They do not inspect sibling modules, do not read the host filesystem, and do not execute system commands directly.
 
-<div class="grid cards" markdown>
-
-- :material-puzzle-outline: __Polymorphic Contracts__
-
-    Every toolchain component inherits from `BootstrapModule`. This enforces a standardized API (`pre_flight` and `build`) that the Orchestrator iterates over.
-
-- :material-layers-triple: __Topological Sequencing__
-
-    Modules are loaded into the Orchestrator in a specific hierarchy (OS $\rightarrow$ Language $\rightarrow$ Tooling). This prevents race conditions during AST compilation.
-
-- :material-link-variant-off: __Strict Decoupling__
-
-    A module only declares intent. Because modules never execute their own side-effects, testing a new language implementation simply requires asserting the state of the manifest in-memory.
-
-</div>
-
 ---
 
 ## The Layering Model

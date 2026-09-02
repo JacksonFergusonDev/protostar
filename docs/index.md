@@ -45,6 +45,10 @@ It is designed to automate environment setup while staying out of your way.
     <p>Existing files are respected, merged carefully, or left untouched when collisions occur.</p>
   </div>
   <div class="protostar-card">
+    <h3>Composable tooling</h3>
+    <p>Modern Python tools composed dynamically via tri-state CLI flags and declarative blueprints.</p>
+  </div>
+  <div class="protostar-card">
     <h3>Actionable telemetry</h3>
     <p>Errors surface clearly, with useful diagnostics instead of opaque setup failures.</p>
   </div>

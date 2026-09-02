@@ -6,18 +6,6 @@ description: "Learn how to extend Protostar's architecture by adding new modules
 
 Protostar's architecture strictly isolates state definition from execution. This guarantees that you can add entirely new languages, tools, or domain workflows without altering the core orchestrator or the system executor.
 
-<div class="grid cards" markdown>
-
--   :material-rocket-launch: __Bootstrap Modules__
-
-    <hr>
-
-    Define the foundational environment footprint (languages, core tooling). Evaluated during `protostar init`.
-
-    [:octicons-arrow-right-24: Learn more](#building-a-custom-bootstrap-module)
-
-</div>
-
 ---
 
 ## Building a Custom Bootstrap Module

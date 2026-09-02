@@ -8,22 +8,6 @@ The `Orchestrator` operates as the primary deterministic state machine for Proto
 
 To guarantee idempotency and prevent partial initialization states (e.g., half-written configuration files following a pre-flight failure), the Orchestrator enforces a strict, multi-phase execution topology.
 
-<div class="grid cards" markdown>
-
-- :material-arrow-decision-outline: __Idempotent Execution__
-
-    Execution logic is strictly decoupled from state definition. Running the Orchestrator repeatedly yields the same mathematical environment baseline without corrupting your existing configurations.
-
-- :material-sort-variant: __Deterministic Sequencing__
-
-    Dependencies and tasks are not executed arbitrarily. The Orchestrator enforces a strict, statically defined execution sequence, ensuring that structural scaffolding and abstract syntax trees (like TOML payloads) are fully resolved and merged before any shell subprocesses attempt to read them.
-
-- :material-satellite-uplink: __Telemetry & Triage__
-
-    Acts as the top-level exception handler. Traps `sys.exit`, OS-level I/O constraints, and unhandled runtime exceptions to provide clean terminal exits or automated GitHub crash reports.
-
-</div>
-
 ---
 
 ## Execution Topology (The Engine Bulkhead)

@@ -22,6 +22,10 @@ By strictly prohibiting modules from mutating the host operating system directly
 
     The manifest aggregates all requested files, ignores, and configuration injections in one place, allowing the Orchestrator to detect and resolve target collisions before any destructive operations occur.
 
+- :material-play-speed: __Deterministic Simulation__
+
+    Enables side-effect-free execution simulations (`--dry-run`) and programmatic inspection of planned state ahead of disk mutation.
+
 </div>
 
 ---

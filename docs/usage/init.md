@@ -70,25 +70,19 @@ To understand how Protostar interprets your flags, observe what happens when we 
     --8<-- "tree_cli.txt"
     ```
 
-    ??? abstract "See the generated `.gitignore`"
-        ```gitignore
-        --8<-- "cli/.gitignore"
-        ```
-
-    ??? abstract "See the generated `.markdownlint-cli2.yaml`"
-        ```yaml
-        --8<-- "cli/.markdownlint-cli2.yaml"
-        ```
-
-    ??? abstract "See the generated `.pre-commit-config.yaml`"
-        ```yaml
-        --8<-- "cli/pre-commit-config.fixture.yaml"
-        ```
-
-    ??? abstract "See the generated `pyproject.toml`"
-        ```toml
-        --8<-- "cli/pyproject.toml"
-        ```
+    ??? abstract "Inspect Generated Files"
+        === "pyproject.toml"
+            ```toml
+            --8<-- "cli/pyproject.toml"
+            ```
+        === ".pre-commit-config.yaml"
+            ```yaml
+            --8<-- "cli/pre-commit-config.fixture.yaml"
+            ```
+        === ".gitignore"
+            ```gitignore
+            --8<-- "cli/.gitignore"
+            ```
 
     __The Intelligence:__
 
@@ -105,20 +99,19 @@ To understand how Protostar interprets your flags, observe what happens when we 
     --8<-- "tree_astro.txt"
     ```
 
-    ??? abstract "See the generated `.gitattributes`"
-        ```gitattributes
-        --8<-- "astro/.gitattributes"
-        ```
-
-    ??? abstract "See the generated `.gitignore`"
-        ```gitignore
-        --8<-- "astro/.gitignore"
-        ```
-
-    ??? abstract "See the generated `pyproject.toml`"
-        ```toml
-        --8<-- "astro/pyproject.toml"
-        ```
+    ??? abstract "Inspect Generated Files"
+        === "pyproject.toml"
+            ```toml
+            --8<-- "astro/pyproject.toml"
+            ```
+        === ".gitattributes"
+            ```gitattributes
+            --8<-- "astro/.gitattributes"
+            ```
+        === ".gitignore"
+            ```gitignore
+            --8<-- "astro/.gitignore"
+            ```
 
     __The Intelligence:__
 
@@ -136,25 +129,19 @@ To understand how Protostar interprets your flags, observe what happens when we 
     --8<-- "tree_ml.txt"
     ```
 
-    ??? abstract "See the generated `Dockerfile`"
-        ```dockerfile
-        --8<-- "ml/Dockerfile"
-        ```
-
-    ??? abstract "See the generated `.dockerignore`"
-        ```dockerignore
-        --8<-- "ml/.dockerignore"
-        ```
-
-    ??? abstract "See the generated `.gitignore`"
-        ```gitignore
-        --8<-- "ml/.gitignore"
-        ```
-
-    ??? abstract "See the generated `pyproject.toml`"
-        ```toml
-        --8<-- "ml/pyproject.toml"
-        ```
+    ??? abstract "Inspect Generated Files"
+        === "Dockerfile"
+            ```dockerfile
+            --8<-- "ml/Dockerfile"
+            ```
+        === ".dockerignore"
+            ```dockerignore
+            --8<-- "ml/.dockerignore"
+            ```
+        === "pyproject.toml"
+            ```toml
+            --8<-- "ml/pyproject.toml"
+            ```
 
     __The Intelligence:__
 
@@ -170,20 +157,19 @@ To understand how Protostar interprets your flags, observe what happens when we 
     --8<-- "tree_api.txt"
     ```
 
-    ??? abstract "See the generated `CHANGELOG.md`"
-        ```markdown
-        --8<-- "api/CHANGELOG.md"
-        ```
-
-    ??? abstract "See the generated `justfile`"
-        ```just
-        --8<-- "api/justfile"
-        ```
-
-    ??? abstract "See the generated `pyproject.toml`"
-        ```toml
-        --8<-- "api/pyproject.toml"
-        ```
+    ??? abstract "Inspect Generated Files"
+        === "pyproject.toml"
+            ```toml
+            --8<-- "api/pyproject.toml"
+            ```
+        === "justfile"
+            ```just
+            --8<-- "api/justfile"
+            ```
+        === "CHANGELOG.md"
+            ```markdown
+            --8<-- "api/CHANGELOG.md"
+            ```
 
     __The Intelligence:__
 
@@ -200,15 +186,15 @@ To understand how Protostar interprets your flags, observe what happens when we 
     --8<-- "tree_dsp.txt"
     ```
 
-    ??? abstract "See the generated `justfile`"
-        ```just
-        --8<-- "dsp/justfile"
-        ```
-
-    ??? abstract "See the generated `pyproject.toml`"
-        ```toml
-        --8<-- "dsp/pyproject.toml"
-        ```
+    ??? abstract "Inspect Generated Files"
+        === "pyproject.toml"
+            ```toml
+            --8<-- "dsp/pyproject.toml"
+            ```
+        === "justfile"
+            ```just
+            --8<-- "dsp/justfile"
+            ```
 
     __The Intelligence:__
 
@@ -225,15 +211,15 @@ To understand how Protostar interprets your flags, observe what happens when we 
     --8<-- "tree_embedded.txt"
     ```
 
-    ??? abstract "See the generated `justfile`"
-        ```just
-        --8<-- "embedded/justfile"
-        ```
-
-    ??? abstract "See the generated `pyproject.toml`"
-        ```toml
-        --8<-- "embedded/pyproject.toml"
-        ```
+    ??? abstract "Inspect Generated Files"
+        === "pyproject.toml"
+            ```toml
+            --8<-- "embedded/pyproject.toml"
+            ```
+        === "justfile"
+            ```just
+            --8<-- "embedded/justfile"
+            ```
 
     __The Intelligence:__
 
@@ -294,63 +280,10 @@ Selecting __Merge__ executes an AST injection:
 - Merges tooling configuration tables into `pyproject.toml`.
 - Appends new file patterns to `.gitignore` without duplicating existing rules.
 
-??? abstract "See the comparison"
-    === "Directory Structure Before"
-        ```text
-        --8<-- "tree_ml.txt"
-        ```
-
-    === "Directory Structure After"
-        ```text
-        --8<-- "tree_ml_merged.txt"
-        ```
-
-    <hr>
-
-    === "`Dockerfile` Before"
-        ```dockerfile
-        --8<-- "ml/Dockerfile"
-        ```
-
-    === "`Dockerfile` After"
-        ```dockerfile
-        --8<-- "ml_merged/Dockerfile"
-        ```
-
-    <hr>
-
-    === "`.dockerignore` Before"
-        ```dockerignore
-        --8<-- "ml/.dockerignore"
-        ```
-
-    === "`.dockerignore` After"
-        ```dockerignore
-        --8<-- "ml_merged/.dockerignore"
-        ```
-
-    <hr>
-
-    === "`.gitignore` Before"
-        ```gitignore
-        --8<-- "ml/.gitignore"
-        ```
-
-    === "`.gitignore` After"
-        ```gitignore
-        --8<-- "ml_merged/.gitignore"
-        ```
-
-    <hr>
-
-    === "`pyproject.toml` Before"
-        ```toml
-        --8<-- "ml/pyproject.toml"
-        ```
-
-    === "`pyproject.toml` After"
-        ```toml
-        --8<-- "ml_merged/pyproject.toml"
+    ??? abstract "See the injected changes"
+        ```diff
+        --8<-- "diff_ml_ml_merged_pyproject_toml.diff"
+        --8<-- "diff_ml_ml_merged__gitignore.diff"
         ```
 
 !!! tip "Headless Operations"
