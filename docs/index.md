@@ -21,13 +21,15 @@ hide:
     <p class="protostar-lede">
       Protostar bootstraps development environments with a manifest-first, non-destructive architecture designed for speed, clarity, and low entropy.
     </p>
+    <div class="protostar-command-label">Install globally via uv</div>
+    <div class="protostar-install" aria-label="Install command">
+      <code>uv tool install protostar</code>
+      <button type="button" class="protostar-copy" data-copy="uv tool install protostar" aria-label="Copy install command">Copy command</button>
+    </div>
   </div>
-</div>
-
-<div class="protostar-command-label">Install globally via uv</div>
-<div class="protostar-install" aria-label="Install command">
-  <code>uv tool install protostar</code>
-  <button type="button" class="protostar-copy" data-copy="uv tool install protostar" aria-label="Copy install command">Copy command</button>
+  <div class="hero-preview">
+    <img src="fixtures/cli_dry_run.svg" alt="Protostar CLI Dry Run" class="hero-preview__img" />
+  </div>
 </div>
 
 ## First light
