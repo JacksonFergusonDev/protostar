@@ -97,24 +97,11 @@
 
 /* --- Left Nav Visual Hierarchy --- */
 
-/* 1. Top-level page titles – bold & accented */
+/* Top-level page titles – bold & accented */
 .md-sidebar .md-nav--primary>.md-nav__list>.md-nav__item--nested>.md-nav__link {
     font-weight: 700;
     color: var(--md-primary-fg-color, #22d3ee);
     padding-left: 0.75rem;
-}
-
-/* 2. Integrated TOC entries (h2 headings) – lighter, smaller, grey */
-.md-sidebar .md-nav--secondary .md-nav__link {
-    font-size: 0.9rem;
-    font-weight: 300;
-    color: var(--md-default-fg-color--light, #a6adc8);
-}
-
-/* 3. Deeper TOC entries (h3 headings) – slightly more indented */
-.md-sidebar .md-nav--secondary .md-nav__item[data-md-depth="2"] .md-nav__link {
-    padding-left: 1.5rem;
-    /* add extra indent */
 }
 
 /* --- Utilities --- */

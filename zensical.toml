@@ -4,7 +4,6 @@ site_description = "High-velocity, zero-friction python environment scaffolding.
 site_url = "https://protostar.readthedocs.io/stable/"
 repo_url = "https://github.com/jacksonfergusondev/protostar"
 repo_name = "jacksonfergusondev/protostar"
-edit_uri = "edit/main/docs/"
 copyright = "&copy; 2026 Jackson Ferguson. <a href=\"https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE\">License</a>"
 
 nav = [
@@ -53,21 +52,16 @@ logo = "assets/favicon.svg"
 favicon = "assets/favicon.png"
 
 features = [
-    "content.code.annotate",
     "content.code.copy",
-    "content.code.select",
-    "content.footnote.tooltips",
     "content.tabs.link",
     "content.tooltips",
     "navigation.footer",
-    "navigation.indexes",
     "navigation.instant",
     "navigation.instant.prefetch",
     "navigation.path",
     "navigation.sections",
     "navigation.top",
     "search.highlight",
-    "search.suggest",
 ]
 
 [project.theme.font]
@@ -95,9 +89,6 @@ tip = "material/rocket-launch"
 warning = "material/alert"
 info = "material/satellite-variant"
 
-[project.plugins]
-search = {}
-
 [project.plugins.mkdocstrings]
 handlers.python.options.show_root_heading = true
 handlers.python.options.show_source = true
@@ -124,12 +115,10 @@ attr_list = {}
 def_list = {}
 md_in_html = {}
 toc = { permalink = true }
-"pymdownx.blocks.caption" = {}
-"pymdownx.inlinehilite" = {}
 "pymdownx.details" = {}
-"pymdownx.highlight" = { anchor_linenums = true }
+"pymdownx.highlight" = { anchor_linenums = true, line_spans = "__span", pygments_lang_class = true }
 "pymdownx.snippets" = { base_path = ["docs/fixtures", "."], check_paths = true }
-"pymdownx.tabbed" = { alternate_style = true }
+"pymdownx.tabbed" = { alternate_style = true, combine_header_slug = true }
 
 [project.markdown_extensions."pymdownx.emoji"]
 emoji_index = "zensical.extensions.emoji.twemoji"
