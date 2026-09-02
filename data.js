@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788392142303,
+  "lastUpdate": 1788393187725,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10001,6 +10001,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 219.23,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "1ed7a96f3e95df5908006e8805291e11c18e3594",
+          "message": "ci: configure pre-push hooks and add doc link checking to local CI",
+          "timestamp": "2026-09-02T16:48:45-07:00",
+          "tree_id": "db2ac22c119b9ea8cf54465042f238a408b6b0ee",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1ed7a96f3e95df5908006e8805291e11c18e3594"
+        },
+        "date": 1788393186200,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.63,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 167.34,
             "unit": "ms"
           }
         ]
