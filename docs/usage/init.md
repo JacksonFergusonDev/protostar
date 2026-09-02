@@ -262,7 +262,7 @@ When Protostar detects existing configuration files (like `pyproject.toml`), it 
 ```text
 Protostar Ignition Sequence Initiated
 
-Gravitational Anomaly: Protostar detected existing configuration files in the workspace.
+Workspace Collision: Protostar detected existing configuration files in the workspace.
   - pyproject.toml
 
 ? How would you like to proceed?

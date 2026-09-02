@@ -52,7 +52,9 @@ def _install_group(
 
     cmd = ["uv", "add", *group.cli_args, *packages]
     try:
-        logger.info(f"Resolving and installing {len(packages)} {group.label} payloads")
+        logger.info(
+            f"Resolving and installing {len(packages)} {group.label} dependencies"
+        )
         execute_subprocess(cmd, timeout=600)
     except (CommandExecutionError, CommandTimeoutError) as e:
         detail = e.output_detail if isinstance(e, CommandExecutionError) else None

@@ -257,7 +257,7 @@ class SystemExecutor:
         for task in tasks:
             enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
-            msg = task.description or f"Propelling sequence: {binary_name}"
+            msg = task.description or f"Running: {binary_name}"
             logger.info(msg)
             execute_subprocess(task.command, timeout=task.timeout)
 

@@ -262,7 +262,7 @@ class WorkspaceCollisionError(ProtostarError):
         """
         bulleted = "\n".join(f"  - {p}" for p in sorted(paths))
         message = (
-            "Orbital Collision Detected: existing configuration files found in the workspace:\n"
+            "Workspace collision detected: existing configuration files found in the workspace:\n"
             f"{bulleted}\n"
             "Use --force-merge or --force-replace to bypass, or resolve interactively."
         )

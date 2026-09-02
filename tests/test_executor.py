@@ -789,7 +789,7 @@ def test_executor_task_description_fallback(mocker):
     executor._run_tasks(manifest.tasks.system_tasks)
 
     # Verify the fallback logic stripped the path and grabbed the binary name
-    mock_info.assert_called_once_with("Propelling sequence: pre-commit")
+    mock_info.assert_called_once_with("Running: pre-commit")
 
 
 def test_executor_handles_write_permission_denied(mocker):

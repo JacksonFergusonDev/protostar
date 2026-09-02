@@ -282,7 +282,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
             raise
 
         console.print(
-            "\n[bold yellow]Gravitational Anomaly:[/bold yellow] Protostar detected "
+            "\n[bold yellow]Workspace Collision:[/bold yellow] Protostar detected "
             "existing configuration files in the workspace."
         )
         for path in sorted(e.paths):
@@ -290,7 +290,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
 
         if not is_interactive():
             raise ProtostarError(
-                "Orbital Collision Detected: The target workspace is not empty.\n"
+                "Workspace collision detected: The target workspace is not empty.\n"
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"
                 "Use the --force-merge or --force-replace flag to bypass this check."
             ) from e
