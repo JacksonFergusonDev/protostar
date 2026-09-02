@@ -163,11 +163,13 @@
     margin-top: 1.2rem;
 }
 
-.protostar-card {
+.protostar-card,
+.md-typeset .grid.cards>ul>li,
+.md-typeset .grid.cards>ol>li {
     padding: 1rem;
     border-radius: 0.9rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-    /* Light mode shadow */
+    border: 1px solid transparent;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     transition: all 0.2s ease-in-out;
 }
 
@@ -209,15 +211,6 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
-.md-typeset .grid.cards>ul>li,
-.md-typeset .grid.cards>ol>li {
-    padding: 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid transparent;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
 
 /* ====================================================================
    2. DARK MODE THEMING (Slate Only)
@@ -256,19 +249,8 @@
         color: #ffffff;
     }
 
-    /* --- Cards --- */
-    .protostar-card {
-        background: var(--protostar-card-bg);
-        border: 1px solid rgba(34, 211, 238, 0.08);
-        backdrop-filter: blur(4px);
-    }
-
-    .protostar-card:hover {
-        box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
-        transform: translateY(-2px);
-    }
-
-    /* --- Material Grid Card Theming --- */
+    /* --- Cards & Grids --- */
+    .protostar-card,
     .md-typeset .grid.cards>ul>li,
     .md-typeset .grid.cards>ol>li {
         background: var(--protostar-card-bg);
@@ -276,6 +258,7 @@
         backdrop-filter: blur(4px);
     }
 
+    .protostar-card:hover,
     .md-typeset .grid.cards>ul>li:hover,
     .md-typeset .grid.cards>ol>li:hover {
         border-color: rgba(34, 211, 238, 0.15);
