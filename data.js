@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788369525020,
+  "lastUpdate": 1788371366912,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9593,6 +9593,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 235.36,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a5a8524f0a43e6fbe5aa9ba0b0db49e8e1fdea3c",
+          "message": "style(docs): enable light and dark mode switching for code and install boxes",
+          "timestamp": "2026-09-02T10:47:43-07:00",
+          "tree_id": "160dfb981ee8a9220bb4e96c876dab00539959d8",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a5a8524f0a43e6fbe5aa9ba0b0db49e8e1fdea3c"
+        },
+        "date": 1788371366194,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 143.8,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 210.18,
             "unit": "ms"
           }
         ]
