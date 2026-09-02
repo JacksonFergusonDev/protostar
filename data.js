@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788321948177,
+  "lastUpdate": 1788324591491,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9389,6 +9389,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.88,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "87c69b90b8c1d33a7b03c3278beea80f9162dd27",
+          "message": "docs: streamline documentation by removing excessive grid cards and consolidating nested tabs\n\n- Removed redundant grid cards in docs/design-principles.md and other docs.\n- Consolidate template fixture sub-tabs in docs/usage/init.md.\n- Replaced multiple 'Before'/'After' fixture tabs with dynamic unified diff blocks.\n- Added automated unified diff fixture generation to scripts/generate_doc_fixtures.py.",
+          "timestamp": "2026-09-01T21:47:23-07:00",
+          "tree_id": "1d30b57c543967ec107361c64b9fbb2191227a84",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/87c69b90b8c1d33a7b03c3278beea80f9162dd27"
+        },
+        "date": 1788324590635,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 145.71,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.92,
             "unit": "ms"
           }
         ]
