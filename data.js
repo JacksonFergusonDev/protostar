@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788384905818,
+  "lastUpdate": 1788386195733,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9763,6 +9763,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 232.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "41037302effa425814fd3dba7929e526e49f9865",
+          "message": "docs: create two-column hero layout and restore seamless footer styling",
+          "timestamp": "2026-09-02T14:55:18-07:00",
+          "tree_id": "eda220e6712f5bccc01b795a7e73375c44631ca0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/41037302effa425814fd3dba7929e526e49f9865"
+        },
+        "date": 1788386194933,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 112.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 163.41,
             "unit": "ms"
           }
         ]
