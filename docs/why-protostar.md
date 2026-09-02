@@ -9,8 +9,6 @@ When starting new projects, developers frequently turn to general-purpose templa
 
 If you've ever wrestled with complex Jinja conditionals just to toggle a linter, had your IDE formatters break on a templated repository, or had a template update overwrite your `pyproject.toml`, Protostar was engineered for you.
 
-<div class="spacer-2"></div>
-
 <div class="grid cards" markdown>
 
 - :material-code-json: **Semantic AST Merging**
@@ -30,8 +28,6 @@ If you've ever wrestled with complex Jinja conditionals just to toggle a linter,
     Separates planning from execution. Run atomic `--dry-run` simulations and pipe machine-readable `--json` envelopes to AI agents.
 
 </div>
-
-<div class="spacer-2"></div>
 
 ---
 

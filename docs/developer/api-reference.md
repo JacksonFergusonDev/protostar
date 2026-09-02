@@ -4,8 +4,6 @@ The engine strictly isolates state definition from imperative execution. Rather 
 
 Think of the `EnvironmentManifest` as the nucleus of the scaffolding process. All modules revolve around this state object, mutating its properties and injecting AST payloads during their respective `build()` phases.
 
-<div class="spacer-2"></div>
-
 ```mermaid
 classDiagram
     direction LR
@@ -67,8 +65,6 @@ classDiagram
     EnvironmentManifest *-- ToolingManifest : contains
     BootstrapModule ..> EnvironmentManifest : Mutates state via build()
 ```
-
-<div class="spacer-1"></div>
 
 ## Class Definitions
 

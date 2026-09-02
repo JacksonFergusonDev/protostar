@@ -8,8 +8,6 @@ The `init` command is the core engine of Protostar. It is a deterministic state-
 
 Protostar is designed to be run on Day 1 to build your repository foundation, but it is safe to re-run on Day 50 to inject a forgotten dependency or adopt a new static analysis tool.
 
-<div class="spacer-2"></div>
-
 <div class="grid cards" markdown>
 
 - :material-shield-check: __State-Aware Aggregation__

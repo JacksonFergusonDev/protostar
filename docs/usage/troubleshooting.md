@@ -2,8 +2,6 @@
 
 This guide provides remediation steps for common operational errors, environment constraints, and editor integrations when using Protostar.
 
-<div class="spacer-2"></div>
-
 ---
 
 ## Missing Dependencies & Environment Checks
