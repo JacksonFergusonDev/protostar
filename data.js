@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788324801015,
+  "lastUpdate": 1788368788640,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9491,6 +9491,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 209.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "71f666e30f7d7107d62fc685f4e569bdc48aa852",
+          "message": "docs: clean up unused zensical features and remove legacy toc css",
+          "timestamp": "2026-09-02T10:01:40-07:00",
+          "tree_id": "258f1052ddb4ca23f4a1378fae8241d5491525d7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/71f666e30f7d7107d62fc685f4e569bdc48aa852"
+        },
+        "date": 1788368787941,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 216.52,
             "unit": "ms"
           }
         ]
