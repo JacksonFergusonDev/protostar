@@ -77,3 +77,30 @@ This initializes a working environment quickly while preserving explicit control
 - Use **[Environment Initialization](./usage/init.md)** to learn the `init` workflow.
 - Read **[Mechanics: Executor](./mechanics/executor.md)** to see how Protostar safely merges a `pyproject.toml` without breaking existing keys or stripping your comments
 - Visit **[Developer Guide](./developer/overview.md)** for architecture, philosophy, and advanced guidance.
+
+</div>
+
+<script>
+(() => {
+  const init = () => {
+    document.querySelectorAll("[data-copy]").forEach((btn) => {
+      if (btn.dataset.psReady === "true") return;
+      btn.dataset.psReady = "true";
+      const idle = btn.textContent;
+      btn.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(btn.dataset.copy || "");
+          btn.textContent = "Copied!";
+        } catch {
+          btn.textContent = "Failed";
+        }
+        window.setTimeout(() => { btn.textContent = idle; }, 1800);
+      });
+    });
+  };
+  init();
+  if (typeof document$ !== "undefined") {
+    document$.subscribe(init);
+  }
+})();
+</script>
