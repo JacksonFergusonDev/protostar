@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788371832334,
+  "lastUpdate": 1788372240541,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9661,6 +9661,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.61,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "973d0b934cc5b5164298e1ebdeba1e3c67473d5c",
+          "message": "docs: move getting started ahead of why protostar in nav",
+          "timestamp": "2026-09-02T11:01:04-07:00",
+          "tree_id": "b8a7ca7fc245cdceb56223a951adfed2a67d42bc",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/973d0b934cc5b5164298e1ebdeba1e3c67473d5c"
+        },
+        "date": 1788372239284,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 111.22,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 165.13,
             "unit": "ms"
           }
         ]
