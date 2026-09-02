@@ -5,8 +5,6 @@ icon: material/lightbulb-on-outline
 
 # Design Principles
 
-<span class="protostar-kicker">Architecture & Philosophy</span>
-
 Every architectural constraint — the two-phase engine, the AST merging, the POSIX exit codes — exists because a simpler alternative has a concrete, observable failure mode.
 
 This page explains the vocabulary: what each principle is called, exactly what problem it solves, and what goes wrong when you ignore it.

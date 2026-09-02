@@ -5,8 +5,6 @@ icon: material/rocket-launch
 
 # Why Protostar?
 
-<span class="protostar-kicker">Architecture & Philosophy</span>
-
 When starting new projects, developers frequently turn to general-purpose template generators like **Copier** or **Cookiecutter**. While these tools excel at multi-language scaffolding, Protostar takes a radically different approach: **deep domain specialization for the modern Python ecosystem**.
 
 If you've ever wrestled with complex Jinja conditionals just to toggle a linter, had your IDE formatters break on a templated repository, or had a template update overwrite your `pyproject.toml`, Protostar was engineered for you.

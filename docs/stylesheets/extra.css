@@ -123,17 +123,6 @@
     margin: 2em 0;
 }
 
-.protostar-kicker {
-    display: inline-block;
-    margin-bottom: 0.8rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
 /* --- Hero Section --- */
 .protostar-hero {
     position: relative;
@@ -274,13 +263,6 @@
     --md-footer-bg-color--dark: var(--protostar-bg-base);
     --md-code-bg-color: var(--protostar-code-bg);
     --md-code-fg-color: var(--protostar-code-fg);
-
-    /* --- Typography & Elements --- */
-    .protostar-kicker {
-        color: var(--protostar-cyan);
-        border: 1px solid rgba(34, 211, 238, 0.16);
-        background: rgba(34, 211, 238, 0.04);
-    }
 
     /* --- Navigation & Headers --- */
     .md-nav__link--active,
