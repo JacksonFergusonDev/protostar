@@ -103,7 +103,7 @@ The contrasting model is **imperative scripting**: a sequence of shell commands 
 Protostar's engine operates in two strictly ordered phases:
 
 ```mermaid
-flowchart LR
+flowchart TD
     classDef phase fill:#1e293b,stroke:#22d3ee,stroke-width:2px,color:#fff;
     classDef manifest fill:#334155,stroke:#7c4dff,stroke-width:2px,color:#fff;
     classDef action fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
@@ -133,7 +133,7 @@ flowchart LR
 The engine's public surface — `Orchestrator.plan()` and `Orchestrator.execute()` — takes and returns pure data objects (`InitRequest` → `EnvironmentManifest` → `ExecutionResult`). It has no knowledge of terminal colors, interactive prompts, spinners, or `--json` formatting. Those concerns belong entirely to `cli.py`.
 
 ```mermaid
-flowchart LR
+flowchart TD
     classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
     classDef engine fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
 

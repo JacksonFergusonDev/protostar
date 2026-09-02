@@ -610,9 +610,8 @@
     overflow: auto;
     max-width: 100%;
     margin: 1.2em 0;
-    background: var(--md-code-bg-color);
-    border-radius: 0.2rem;
-    border: 1px solid var(--protostar-border, rgba(34, 211, 238, 0.14));
+    background: transparent;
+    border: none;
 }
 
 .mermaid svg {
