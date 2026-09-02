@@ -123,10 +123,6 @@
     margin: 2em 0;
 }
 
-.spacer-3 {
-    margin: 3em 0;
-}
-
 .protostar-kicker {
     display: inline-block;
     margin-bottom: 0.8rem;
@@ -138,11 +134,6 @@
     font-weight: 600;
 }
 
-.protostar-muted {
-    /* Color injected in dark mode, fallback for light mode */
-    opacity: 0.8;
-}
-
 /* --- Hero Section --- */
 .protostar-hero {
     position: relative;
@@ -150,8 +141,7 @@
 }
 
 /* Fluid, massive typography */
-.md-typeset .hero-content h1,
-.hero-content h1 {
+.md-typeset .hero-content h1 {
     max-width: 10ch;
     margin: 0 0 1rem;
     font-size: clamp(2.8rem, 5.5vw, 4.5rem);
@@ -219,9 +209,7 @@
     transition: background-color 0.25s ease;
 }
 
-.md-typeset pre>code,
-.md-typeset .highlight pre>code,
-.md-typeset .protostar-terminal pre>code {
+.md-typeset pre>code {
     padding: 0 !important;
     color: var(--protostar-code-fg) !important;
     background: transparent !important;
@@ -231,9 +219,7 @@
     transition: color 0.25s ease;
 }
 
-.md-typeset pre>code:hover,
-.md-typeset .highlight pre>code:hover,
-.md-typeset .protostar-terminal pre>code:hover {
+.md-typeset pre>code:hover {
     box-shadow: none !important;
 }
 
@@ -242,8 +228,6 @@
 .md-typeset .admonition .highlight {
     margin: 0.8rem 0;
 }
-
-
 
 .protostar-asciinema {
     width: 100%;
@@ -254,96 +238,13 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
-.protostar-asciinema .asciinema-player-wrapper {
-    width: 100%;
-    border-radius: 0.9rem;
-}
-
-/* Custom Asciinema Player Theme matching Protostar Documentation */
-.asciinema-player-theme-protostar {
-    --term-color-bg: #0a0f1f;
-    --term-color-fg: #cdd6f4;
-    --background: #0a0f1f;
-    --foreground: #cdd6f4;
-
-    /* Base 8 ANSI colors */
-    --term-color-0: #1e1e2e;
-    --term-color-1: #f38ba8;
-    --term-color-2: #a6e3a1;
-    --term-color-3: #f9e2af;
-    --term-color-4: #89b4fa;
-    --term-color-5: #cba6f7;
-    --term-color-6: #22d3ee;
-    --term-color-7: #bac2de;
-
-    /* Bright 8 ANSI colors */
-    --term-color-8: #585b70;
-    --term-color-9: #f38ba8;
-    --term-color-10: #a6e3a1;
-    --term-color-11: #f9e2af;
-    --term-color-12: #89b4fa;
-    --term-color-13: #f5c2e7;
-    --term-color-14: #38bdf8;
-    --term-color-15: #a6adc8;
-
-    --color-0: #1e1e2e;
-    --color-1: #f38ba8;
-    --color-2: #a6e3a1;
-    --color-3: #f9e2af;
-    --color-4: #89b4fa;
-    --color-5: #cba6f7;
-    --color-6: #22d3ee;
-    --color-7: #bac2de;
-    --color-8: #585b70;
-    --color-9: #f38ba8;
-    --color-10: #a6e3a1;
-    --color-11: #f9e2af;
-    --color-12: #89b4fa;
-    --color-13: #f5c2e7;
-    --color-14: #38bdf8;
-    --color-15: #a6adc8;
-}
-
 .md-typeset .grid.cards>ul>li,
-.md-typeset .grid.cards>ol>li,
-.md-typeset .grid.cards>li {
+.md-typeset .grid.cards>ol>li {
     padding: 1rem;
     border-radius: 0.9rem;
     border: 1px solid transparent;
     transition: all 0.2s ease-in-out;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-}
-
-.md-typeset dl {
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    gap: 0.8rem 0rem;
-}
-
-.md-typeset dt {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 0.4rem;
-    font-weight: 600;
-    padding: 0rem;
-    border-radius: 0.7rem;
-}
-
-.md-typeset dd {
-    margin: 0;
-    padding: 0.9rem 1rem;
-    border-radius: 0.7rem;
-}
-
-.md-typeset dd ul {
-    margin: 0;
-    padding-left: 1rem;
-}
-
-.md-typeset dd li {
-    margin-bottom: 0.35rem;
 }
 
 
@@ -375,11 +276,6 @@
     --md-code-fg-color: var(--protostar-code-fg);
 
     /* --- Typography & Elements --- */
-    .protostar-muted {
-        color: var(--protostar-text-soft);
-        opacity: 1;
-    }
-
     .protostar-kicker {
         color: var(--protostar-cyan);
         border: 1px solid rgba(34, 211, 238, 0.16);
@@ -387,15 +283,13 @@
     }
 
     /* --- Navigation & Headers --- */
-    .md-tabs__link--active,
     .md-nav__link--active,
     .md-typeset a:hover {
         text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
     }
 
     /* --- Hero Section --- */
-    .md-typeset .hero-content h1,
-    .hero-content h1 {
+    .md-typeset .hero-content h1 {
         color: #ffffff;
     }
 
@@ -413,26 +307,17 @@
 
     /* --- Material Grid Card Theming --- */
     .md-typeset .grid.cards>ul>li,
-    .md-typeset .grid.cards>ol>li,
-    .md-typeset .grid.cards>li {
+    .md-typeset .grid.cards>ol>li {
         background: var(--protostar-card-bg);
         border: 1px solid rgba(34, 211, 238, 0.08);
         backdrop-filter: blur(4px);
     }
 
     .md-typeset .grid.cards>ul>li:hover,
-    .md-typeset .grid.cards>ol>li:hover,
-    .md-typeset .grid.cards>li:hover,
-    .md-typeset .grid.cards>a:hover {
+    .md-typeset .grid.cards>ol>li:hover {
         border-color: rgba(34, 211, 238, 0.15);
         box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
         transform: translateY(-2px);
-    }
-
-    /* --- Markdown Elements --- */
-    .protostar-terminal,
-    .md-typeset .highlight {
-        border: 1px solid var(--protostar-border);
     }
 
     /* --- Syntax Highlighting (Dark Theme) --- */
@@ -523,26 +408,6 @@
 
     .md-typeset code {
         border-radius: 0.35rem;
-    }
-
-    .md-typeset pre>code {
-        border: none;
-        box-shadow: none;
-    }
-
-    .md-typeset pre>code:hover {
-        box-shadow: none;
-    }
-
-    /* --- Definition Lists --- */
-    .md-typeset dt {
-        border: 1px solid var(--protostar-border);
-        background: rgba(124, 77, 255, 0.08);
-    }
-
-    .md-typeset dd {
-        border: 1px solid rgba(34, 211, 238, 0.12);
-        background: rgba(255, 255, 255, 0.03);
     }
 
     /* --- Tables --- */
