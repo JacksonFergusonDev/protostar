@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788368788640,
+  "lastUpdate": 1788369010779,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9525,6 +9525,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 216.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "fc7758407089da190cc1b7f862dc9cc07b8e7606",
+          "message": "docs: inline hero copy button script on homepage and remove protostar.js",
+          "timestamp": "2026-09-02T10:06:52-07:00",
+          "tree_id": "990697c28b6f3c33b9ae3da3892ce89a910e909c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fc7758407089da190cc1b7f862dc9cc07b8e7606"
+        },
+        "date": 1788369009469,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.33,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 207.25,
             "unit": "ms"
           }
         ]
