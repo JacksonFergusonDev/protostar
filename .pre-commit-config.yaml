@@ -70,10 +70,11 @@ repos:
       - id: gitleaks
 
   # Commit message validation
-  - repo: https://github.com/compilerla/conventional-pre-commit
-    rev: v4.4.0
+  - repo: https://github.com/Goldziher/gitfluff
+    rev: v0.8.0
     hooks:
-      - id: conventional-pre-commit
+      - id: gitfluff-lint
+        args: [--write]
         stages: [commit-msg]
 
   # Renovate config validation
