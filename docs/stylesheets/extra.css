@@ -136,46 +136,28 @@
 /* --- Hero Section --- */
 .protostar-hero {
     position: relative;
-    overflow: hidden;
-    padding: 2.5rem 2rem;
-    border-radius: 1.2rem;
-    display: grid;
-    grid-template-columns: 1.4fr 0.8fr;
-    align-items: center;
-    gap: 2rem;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    /* Light mode shadow */
+    padding: 2.5rem 0 3.5rem;
 }
 
-.hero-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* Fluid, massive typography */
+.md-typeset .hero-content h1,
+.hero-content h1 {
+    max-width: 10ch;
+    margin: 0 0 1rem;
+    font-size: clamp(2.8rem, 5.5vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    text-wrap: balance;
+    color: #000000;
 }
 
-.hero-visual img {
-    width: 60%;
-    max-width: 450px;
-    height: auto;
-    filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.1));
-}
-
-.hero-img-dark {
-    display: none;
-}
-
-.hero-img-light {
-    display: block;
-}
-
-@media screen and (max-width: 768px) {
-    .protostar-hero {
-        grid-template-columns: 1fr;
-    }
-
-    .hero-visual {
-        display: none;
-    }
+.protostar-lede {
+    max-width: 60ch;
+    margin: 0;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    line-height: 1.65;
+    color: var(--md-default-fg-color--light);
 }
 
 /* --- Card Grids --- */
@@ -448,30 +430,10 @@
         text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
     }
 
-    /* --- Minimal Hero Layout --- */
-    .protostar-hero {
-        position: relative;
-        padding: 2.5rem 0 3.5rem;
-    }
-
-    /* Fluid, massive typography */
+    /* --- Hero Section --- */
+    .md-typeset .hero-content h1,
     .hero-content h1 {
-        max-width: 10ch;
-        margin: 0 0 1rem;
-        font-size: clamp(2.8rem, 5.5vw, 4.5rem);
-        font-weight: 800;
-        letter-spacing: -0.04em;
-        line-height: 1.05;
-        text-wrap: balance;
         color: #ffffff;
-    }
-
-    .protostar-lede {
-        max-width: 60ch;
-        margin: 0;
-        font-size: clamp(1rem, 2vw, 1.25rem);
-        line-height: 1.65;
-        color: var(--md-default-fg-color--light);
     }
 
     /* --- Cards --- */
