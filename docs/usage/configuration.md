@@ -4,7 +4,7 @@ description: "Configure Protostar's global defaults, including preferred tools, 
 
 # Global Configuration
 
-Your global configuration file acts as the singular source of truth for environment initialization. Open it in your system's default `$EDITOR` by running:
+Your global configuration file acts as the baseline defaults for environment initialization (which can be overridden by templates or CLI flags). Open it in your system's default `$EDITOR` by running:
 
 ```bash
 protostar config

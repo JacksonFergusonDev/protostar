@@ -1,3 +1,7 @@
+---
+description: "Experimental machine-readable CLI interface for AI agents, CI/CD pipelines, and automation tools."
+---
+
 # Agent & Machine Interface
 
 Protostar features an experimental, machine-readable command-line interface designed specifically for AI coding agents, CI/CD pipelines, and automated developer tooling.

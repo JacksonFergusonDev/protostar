@@ -44,7 +44,7 @@ graph TD
     end
 
     %% Annotations
-    Note1[<b>Foundation</b><br/>Universal Hygiene] -- Initialized first --> L1
+    Note1["**Foundation**<br/>Universal Hygiene"] -- Initialized first --> L1
 
     style Stack fill:transparent,stroke:#475569,stroke-dasharray: 5 5
 ```

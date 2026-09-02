@@ -106,7 +106,7 @@ If you *omit* the flag, Protostar parses the AST, detects the unresolved `<% DAT
 
 ### Local Testing
 
-When authoring a template, you do not need to commit and push to a remote remote repository to test its execution. You can point the `--from` flag directly at your local template directory:
+When authoring a template, you do not need to commit and push to a remote repository to test its execution. You can point the `--from` flag directly at your local template directory:
 
 ```bash
 # From within an empty target directory

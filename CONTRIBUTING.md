@@ -130,7 +130,7 @@ To contribute to this project, you will need the following system-level dependen
 
 1. **Install Hooks**
 
-    Set up prek hooks to handle linting and type checking automatically.
+    Set up [prek](https://github.com/j178/prek) hooks to handle linting and type checking automatically.
 
     ```bash
     uv run prek install

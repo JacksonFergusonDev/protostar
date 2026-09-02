@@ -3,6 +3,8 @@ description: "Install Protostar and scaffold your first Python project in second
 icon: material/rocket
 ---
 
+# Getting Started
+
 ## Prerequisites
 
 - **Python 3.12+**

@@ -12,9 +12,9 @@ To ensure robustness, security, and testability, Protostar's execution logic is 
 flowchart LR
     classDef pure fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
     classDef stateful fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef orchestrator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef coordinator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
 
-    M[(Environment\nManifest)] --> E(executor.py):::orchestrator
+    M[(Environment\nManifest)] --> E(executor.py):::coordinator
 
     subgraph Execution Engine
         E --> S(security.py):::pure

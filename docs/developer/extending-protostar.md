@@ -55,7 +55,8 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
         def pre_flight(self) -> None:
             import shutil
             if not shutil.which("just"):
-                raise RuntimeError("Missing dependency: 'just' is not installed.")
+                from protostar.errors import MissingDependencyError
+                raise MissingDependencyError("just", purpose="task runner", hint="Install: brew install just")
 
         def build(self, manifest: EnvironmentManifest) -> None:
             content = """default:

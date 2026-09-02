@@ -197,21 +197,10 @@ Generic scaffolding tools execute shell hooks imperatively. If a required tool (
 
 Protostar uses a **two-phase headless architecture**:
 
-```mermaid
-flowchart LR
-    classDef phase fill:#1e293b,stroke:#22d3ee,stroke-width:2px,color:#fff;
-    classDef manifest fill:#334155,stroke:#7c4dff,stroke-width:2px,color:#fff;
-    classDef action fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
-
-    A[CLI Input / Flags] --> B[Phase 1: plan]:::phase
-    B --> C[EnvironmentManifest]:::manifest
-    C -->|Pre-flight Checks Pass| D[Phase 2: execute]:::phase
-    C -.->|Dry Run / Inspect| E[--dry-run / --json]:::action
-    D --> F[Atomic Disk Mutations]:::action
-```
-
 1. **`plan()` (Read-Only Phase):** All modules declare requirements into a centralized `EnvironmentManifest`. System checks verify all dependencies upfront.
 1. **`execute()` (Side-Effect Phase):** Disk mutations and subprocesses run only after the entire plan is validated.
+
+*(For a deeper visual breakdown of this two-phase execution, see [Design Principles](./design-principles.md)).*
 
 ---
 

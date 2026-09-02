@@ -70,7 +70,7 @@ Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/
 
 Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
 
-1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, locking in your dependency managers and directory structures.
+1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, establishing your dependency managers and directory structures.
 
 1. **Manifest-First, Side-Effects-Last (Headless Engine Bulkhead):** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar strictly decouples state calculation from execution. The engine core is headless: modules declare requirements into a centralized `EnvironmentManifest` during the read-only `plan()` phase, while disk mutations and subprocesses only execute during `execute()`. This guarantees side-effect-free dry-running and pure determinism.
 
@@ -231,7 +231,7 @@ This tool uses a highly decoupled, plugin-style architecture. The CLI parser dyn
 - **To add support for a new core tool (e.g., a linter or formatter):** Subclass `BootstrapModule`.
 - **To define a new domain workflow:** Author a declarative TOML Template.
 
-We maintain strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
+Protostar maintains strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
 
 Please see the [Documentation](https://protostar.readthedocs.io/en/stable/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
 

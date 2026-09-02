@@ -127,9 +127,9 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
     uv run pytest -m "not exhaustive"
     ```
 
-### Pytest Configuration
+### TOML Merge Fixture Reference
 
-The test runner utilizes the following base configuration injected dynamically from `pyproject.toml`:
+The test runner utilizes the following messy baseline configuration (injected dynamically from a dummy `pyproject.toml`) to validate AST deep-merging behavior:
 
 ```toml
 [project]
