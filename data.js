@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788372240541,
+  "lastUpdate": 1788372278650,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9695,6 +9695,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 165.13,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a27b6732b264c08de8e8fb9e7d1aacfb63240077",
+          "message": "docs: remove redundant kickers from why protostar and design principles",
+          "timestamp": "2026-09-02T11:03:22-07:00",
+          "tree_id": "0ce24c5ec845558862305040efffac997fc07103",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a27b6732b264c08de8e8fb9e7d1aacfb63240077"
+        },
+        "date": 1788372277442,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 126.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 188.64,
             "unit": "ms"
           }
         ]
