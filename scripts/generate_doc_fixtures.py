@@ -16,8 +16,10 @@ from pathlib import Path
 from typing import Any
 
 import tomlkit
+from rich.cells import cell_len
 from rich.console import Console
 from rich.panel import Panel
+from rich.segment import Segment
 from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
 from tomlkit.items import String, StringType, Trivia
@@ -884,6 +886,99 @@ def build_fixtures() -> None:
             future.result()
 
 
+def _get_protostar_terminal_theme() -> TerminalTheme:
+    """Constructs the standard Protostar dark terminal theme."""
+    ansi_colors = [
+        (color.red, color.green, color.blue)
+        for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
+    ]
+    ansi_colors[4] = (97, 175, 239)
+    ansi_colors[12] = (97, 175, 239)
+    ansi_colors[6] = (34, 211, 238)
+    ansi_colors[14] = (34, 211, 238)
+
+    return TerminalTheme(
+        background=(10, 15, 31),
+        foreground=(220, 225, 235),
+        normal=ansi_colors[:8],
+        bright=ansi_colors[8:16],
+    )
+
+
+def _calculate_content_width(console: Console, min_width: int = 1) -> int:
+    """Calculates the maximum visible column width across all lines in the console buffer.
+
+    Inspects rendered segments to determine the rightmost column occupied by visible
+    text (excluding trailing whitespace) or styled background blocks, providing a
+    deterministic width for shrinkwrapping without arbitrary diff churn.
+
+    Args:
+        console: The rich Console instance with recorded buffer segments.
+        min_width: Minimum allowable width in columns. Defaults to 1.
+
+    Returns:
+        The maximum column width required to display the content without clipping.
+    """
+    segments = list(Segment.filter_control(console._record_buffer))
+    lines = list(Segment.split_and_crop_lines(segments, length=10000, pad=False))
+    max_col = 0
+    for line in lines:
+        current_col = 0
+        line_max_col = 0
+        for seg in line:
+            text = seg.text
+            if text == "\n":
+                continue
+            style = seg.style
+            has_bg = False
+            if style is not None:
+                has_bg = bool(
+                    style.reverse
+                    or (style.bgcolor is not None and not style.bgcolor.is_default)
+                )
+
+            if has_bg:
+                current_col += cell_len(text)
+                line_max_col = current_col
+            else:
+                rstripped = text.rstrip()
+                if rstripped:
+                    line_max_col = current_col + cell_len(rstripped)
+                current_col += cell_len(text)
+        if line_max_col > max_col:
+            max_col = line_max_col
+
+    return max(max_col, min_width)
+
+
+def _render_and_write_svg(
+    console: Console,
+    title: str,
+    filename: str,
+    unique_id: str | None = None,
+) -> None:
+    """Shrinkwraps recorded console output and writes a clean deterministic SVG fixture.
+
+    Args:
+        console: The rich Console instance with recorded buffer segments.
+        title: Window title displayed in the SVG terminal chrome.
+        filename: Destination SVG filename relative to FIXTURES_DIR.
+        unique_id: Optional unique identifier for SVG CSS classes and IDs. Defaults to filename stem.
+    """
+    content_width = _calculate_content_width(console)
+    if content_width > 0:
+        console.width = content_width
+
+    svg_content = console.export_svg(
+        title=title,
+        theme=_get_protostar_terminal_theme(),
+        unique_id=unique_id or filename.replace(".svg", ""),
+    )
+
+    clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+    _write_fixture(filename, clean_svg)
+
+
 def generate_cli_help_svgs() -> None:
     """Captures isolated SVG snapshots of the Protostar CLI help menus via Rich."""
     original_global_console = protostar.cli.console
@@ -927,31 +1022,12 @@ def generate_cli_help_svgs() -> None:
             ansi_str = target_parser.format_help()
             record_console.print(Text.from_ansi(ansi_str, no_wrap=True))
 
-        # Re-map primary colors to match project theme defaults
-        ansi_colors = [
-            (color.red, color.green, color.blue)
-            for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
-        ]
-        ansi_colors[4] = (97, 175, 239)
-        ansi_colors[12] = (97, 175, 239)
-        ansi_colors[6] = (34, 211, 238)
-        ansi_colors[14] = (34, 211, 238)
-
-        protostar_theme = TerminalTheme(
-            background=(10, 15, 31),
-            foreground=(220, 225, 235),
-            normal=ansi_colors[:8],
-            bright=ansi_colors[8:16],
-        )
-
-        svg_content = record_console.export_svg(
+        _render_and_write_svg(
+            record_console,
             title="zsh",
-            theme=protostar_theme,
+            filename=filename,
             unique_id=filename.replace(".svg", ""),
         )
-
-        clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
-        _write_fixture(filename, clean_svg)
 
     try:
         parser = protostar.cli.build_parser()
@@ -1031,30 +1107,12 @@ def generate_cli_dry_run_svg() -> None:
             finally:
                 os.chdir(orig_cwd)
 
-        ansi_colors = [
-            (color.red, color.green, color.blue)
-            for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
-        ]
-        ansi_colors[4] = (97, 175, 239)
-        ansi_colors[12] = (97, 175, 239)
-        ansi_colors[6] = (34, 211, 238)
-        ansi_colors[14] = (34, 211, 238)
-
-        protostar_theme = TerminalTheme(
-            background=(10, 15, 31),
-            foreground=(220, 225, 235),
-            normal=ansi_colors[:8],
-            bright=ansi_colors[8:16],
-        )
-
-        svg_content = record_console.export_svg(
+        _render_and_write_svg(
+            record_console,
             title="zsh",
-            theme=protostar_theme,
+            filename="cli_dry_run.svg",
             unique_id="cli_dry_run",
         )
-
-        clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
-        _write_fixture("cli_dry_run.svg", clean_svg)
     finally:
         protostar.cli.console = original_global_console
 
@@ -1117,30 +1175,12 @@ def generate_diagnostic_panel_svg() -> None:
 
     record_console.print(panel)
 
-    ansi_colors = [
-        (color.red, color.green, color.blue)
-        for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
-    ]
-    ansi_colors[4] = (97, 175, 239)
-    ansi_colors[12] = (97, 175, 239)
-    ansi_colors[6] = (34, 211, 238)
-    ansi_colors[14] = (34, 211, 238)
-
-    protostar_theme = TerminalTheme(
-        background=(10, 15, 31),
-        foreground=(220, 225, 235),
-        normal=ansi_colors[:8],
-        bright=ansi_colors[8:16],
-    )
-
-    svg_content = record_console.export_svg(
+    _render_and_write_svg(
+        record_console,
         title="Diagnostic Telemetry",
-        theme=protostar_theme,
+        filename="diagnostic_panel.svg",
         unique_id="diagnostic_panel",
     )
-
-    clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
-    _write_fixture("diagnostic_panel.svg", clean_svg)
 
 
 def generate_diff_fixtures() -> None:
