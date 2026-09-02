@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788388596651,
+  "lastUpdate": 1788392142303,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9967,6 +9967,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 221.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "68e77b3ead8a5625169cab21d4c62a0d149d5d97",
+          "message": "chore: migrate from markdownlint-cli2 to rumdl for Markdown linting/formatting\n\nReplace markdownlint-cli2 with rumdl, a faster Rust-native Markdown linter\nand formatter, to improve performance and simplify configuration.\n\nKey changes:\n- Remove root and docs/ markdownlint-cli2 YAML configs\n- Add rumdl configuration to pyproject.toml with:\n  - Global rule overrides (MD013, MD033, MD077 disabled)\n  - Enforced styles (ATX headings, dash lists, \"one\" ordered lists)\n  - Per-file ignores for docs/ (MD041, MD046 relaxed)\n- Update CI workflow: replace markdownlint-cli2 action with rumdl check/fmt\n- Update pre-commit hooks: replace markdownlint-cli2 with rumdl check/fmt\n- Update justfile format/lint targets to use rumdl\n- Add rumdl to ci dependency group in pyproject.toml\n- Clean up obsolete markdownlint-disable comments in docs files\n- Fix minor Markdown issues revealed by rumdl (list numbering consistency)",
+          "timestamp": "2026-09-02T16:25:06-07:00",
+          "tree_id": "c6f6f58bd78340851af90696318a2ce342352236",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/68e77b3ead8a5625169cab21d4c62a0d149d5d97"
+        },
+        "date": 1788392141008,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.68,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 219.23,
             "unit": "ms"
           }
         ]
