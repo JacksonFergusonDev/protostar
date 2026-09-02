@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788372278650,
+  "lastUpdate": 1788384905818,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9729,6 +9729,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 188.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "534139b5216b2375c02b05ff1fd55285f556467b",
+          "message": "refactor(docs): simplify custom css and streamline documentation layout (#219)\n\n* docs: resolve phantom css variables and redundant fallbacks\n\n* docs: remove protostar-terminal wrapper and clean up code block styles\n\n* docs: consolidate duplicate card implementations\n\n* docs: move typography and footer layout out of dark mode block\n\n* docs: clean up heading styles, syntax overrides, and spacer markup",
+          "timestamp": "2026-09-02T14:33:58-07:00",
+          "tree_id": "e02bbb9ce03545336bcab4c481ede5fe23db97e1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/534139b5216b2375c02b05ff1fd55285f556467b"
+        },
+        "date": 1788384904622,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 155.4,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 232.52,
             "unit": "ms"
           }
         ]
