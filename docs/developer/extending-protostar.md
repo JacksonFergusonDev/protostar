@@ -1,7 +1,7 @@
 ---
 description: "Learn how to extend Protostar's architecture by adding new modules, tools, or domain workflows without altering core execution."
 ---
-<!-- markdownlint-disable -->
+
 # Extending Protostar
 
 Protostar's architecture strictly isolates state definition from execution. This guarantees that you can add entirely new languages, tools, or domain workflows without altering the core orchestrator or the system executor.

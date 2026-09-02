@@ -65,8 +65,8 @@ protostar init -t astro --no-direnv --mypy
 
 !!! tip "Precedence Cascade (Highest to Lowest)"
     1. __CLI Flags__ – Explicit terminal arguments (e.g., `--mypy`).
-    2. __Template Blueprint__ – Settings declared in your active template.
-    3. __Global UserConfig__ – Your fallback defaults in `~/.config/protostar/config.toml`.
+    1. __Template Blueprint__ – Settings declared in your active template.
+    1. __Global UserConfig__ – Your fallback defaults in `~/.config/protostar/config.toml`.
 
 ---
 
