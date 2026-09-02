@@ -71,13 +71,13 @@ code = "JetBrains Mono"
 scheme = "slate"
 primary = "deep purple"
 accent = "cyan"
-toggle = { icon = "material/brightness-4", name = "Switch to light mode" }
+toggle = { icon = "material/weather-sunny", name = "Switch to light mode" }
 
 [[project.theme.palette]]
 scheme = "default"
 primary = "white"
 accent = "cyan"
-toggle = { icon = "material/brightness-7", name = "Switch to dark mode" }
+toggle = { icon = "material/weather-night", name = "Switch to dark mode" }
 
 [project.theme.icon]
 repo = "fontawesome/brands/space-awesome"
