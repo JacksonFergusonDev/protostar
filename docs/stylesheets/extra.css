@@ -15,6 +15,21 @@
     Structure: Grids, flex, padding, margins, base typography.
 ==================================================================== */
 
+/* --- Base Typography & Elements --- */
+.md-typeset h1 {
+    letter-spacing: 0.02em;
+}
+
+.md-typeset h2 {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+    padding-bottom: 0.35rem;
+    margin-top: 2.2rem;
+}
+
+.md-typeset code {
+    border-radius: 0.35rem;
+}
+
 /* --- Homepage Navigation --- */
 .protostar-home-nav {
     display: flex;
@@ -144,7 +159,7 @@
     letter-spacing: -0.04em;
     line-height: 1.05;
     text-wrap: balance;
-    color: #000000;
+    color: var(--md-default-fg-color);
 }
 
 .protostar-lede {
@@ -211,6 +226,16 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
+/* --- Footers --- */
+.md-footer__inner {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.md-footer {
+    border-top: none;
+}
+
 
 /* ====================================================================
    2. DARK MODE THEMING (Slate Only)
@@ -244,10 +269,6 @@
         text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
     }
 
-    /* --- Hero Section --- */
-    .md-typeset .hero-content h1 {
-        color: #ffffff;
-    }
 
     /* --- Cards & Grids --- */
     .protostar-card,
@@ -328,15 +349,6 @@
         box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
     }
 
-    .md-typeset h1 {
-        letter-spacing: 0.02em;
-    }
-
-    .md-typeset h2 {
-        border-bottom: 1px solid var(--md-default-fg-color--lightest);
-        padding-bottom: 0.35rem;
-        margin-top: 2.2rem;
-    }
 
     .md-typeset h4 {
         margin-top: 1.8rem;
@@ -352,9 +364,6 @@
         box-shadow: 0 0 10px rgba(124, 77, 255, 0.2);
     }
 
-    .md-typeset code {
-        border-radius: 0.35rem;
-    }
 
     /* --- Tables --- */
     .md-typeset table tr:nth-child(even) td {
@@ -372,17 +381,8 @@
     }
 
     /* --- Footers --- */
-    .md-footer__inner {
-        padding-top: 0.4rem;
-        padding-bottom: 0.4rem;
-    }
-
     .md-footer-meta {
         background-color: var(--protostar-bg-base);
-    }
-
-    .md-footer {
-        border-top: none;
     }
 }
 
