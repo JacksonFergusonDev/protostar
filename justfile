@@ -81,7 +81,7 @@ test-benchmark-slower: sync
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test-unit check-fixtures
+ci: lint typecheck test-unit check-fixtures check-doc-links
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -118,6 +118,12 @@ check-fixtures: sync
     @printf "\n{{ blue }}=== Checking Snapshot Drift ==={{ nc }}\n"
     @git diff --exit-code docs/fixtures/ > /dev/null || (printf "{{ yellow }}⚠ Snapshot drift detected. The generator modified files in docs/fixtures/. Review the diff and commit the changes.{{ nc }}\n" && exit 1)
     @printf "{{ green }}✔ Snapshots are up-to-date{{ nc }}\n"
+
+# Validate that embedded documentation links in errors resolve to real files
+check-doc-links: sync
+    @printf "\n{{ blue }}=== Validating Embedded Documentation Links ==={{ nc }}\n"
+    uv run python scripts/check_doc_links.py
+    @printf "{{ green }}✔ All embedded documentation links are valid{{ nc }}\n"
 
 # Pre-warm environment and caches for demo generation
 prewarm-demo: sync
