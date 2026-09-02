@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788371366912,
+  "lastUpdate": 1788371832334,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -9627,6 +9627,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 210.18,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "d3a4da5a97b070924cfa712adb88f16b135eee59",
+          "message": "docs: clean up unused and redundant custom css",
+          "timestamp": "2026-09-02T10:55:23-07:00",
+          "tree_id": "78441bcc16bd3d71471a28a63a607c7e14371890",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d3a4da5a97b070924cfa712adb88f16b135eee59"
+        },
+        "date": 1788371831531,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.68,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.61,
             "unit": "ms"
           }
         ]
