@@ -4,19 +4,19 @@ description: "Learn how to use protostar init to safely construct and manage you
 
 # Environment Initialization
 
-The `init` command is the core engine of Protostar. It is a deterministic state-machine designed to safely aggregate configurations, wire development tooling together, and construct robust directory architectures in seconds.
+The `init` command is Protostar's primary command. It sets up folder structures, wires together tools, and configures dependencies in seconds.
 
 Protostar is designed to be run on Day 1 to build your repository foundation, but it is safe to re-run on Day 50 to inject a forgotten dependency or adopt a new static analysis tool.
 
 <div class="grid cards" markdown>
 
-- :material-shield-check: __State-Aware Aggregation__
+- :material-shield-check: __Safe Merging__
 
     Protostar doesn't blindly overwrite files. It parses ASTs, deduplicates `.gitignore` entries, and safely deep-merges configurations. It is safe to execute on pre-existing codebases.
 
-- :material-clock-fast: __Deterministic Velocity__
+- :material-clock-fast: __Instant & Repeatable__
 
-    Instead of manually copying boilerplate from old repositories or relying on fragile shell scripts, Protostar guarantees a consistent, idempotent environment in fractions of a second.
+    Instead of manually copying boilerplate from old repositories or relying on fragile shell scripts, Protostar creates a clean, consistent environment in fractions of a second.
 
 </div>
 
@@ -52,17 +52,17 @@ For custom authoring, variable interpolation, global aliases, and security mecha
 
 ---
 
-## Execution Footprints
+## Example Setups
 
 To understand how Protostar interprets your flags, observe what happens when we execute different workflows in an empty directory.
 
-!!! note "IDE Configuration Footprints"
+!!! note "IDE Configurations"
     The following repository tree examples assume you have configured an IDE in your global settings (e.g., `ide = "vscode"`) in addition to enabling direnv. If your config remains set to the default `None`, the `.vscode/settings.json` file will not be generated, though the universal `.vscode/` exclusion will still be safely appended to your `.gitignore`.
 
 === "The CLI Application (Tooling Focus)"
     __Command:__ `protostar init --template cli`
 
-    This footprint demonstrates Protostar's ability to wire complex tooling together automatically.
+    This example demonstrates Protostar's ability to wire complex tooling together automatically.
 
     ```text
     --8<-- "tree_cli.txt"
@@ -82,7 +82,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
             --8<-- "cli/.gitignore"
             ```
 
-    __The Intelligence:__
+    __What Protostar sets up:__
 
     - __Dependency Locking:__ Protostar locks `typer` and `rich` from the CLI template.
     - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside development dependency groups.
@@ -91,7 +91,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`
 
-    This footprint focuses on managing serialized data assets and preventing repository bloat.
+    This template focuses on managing dataset files and preventing repository bloat.
 
     ```text
     --8<-- "tree_astro.txt"
@@ -111,17 +111,17 @@ To understand how Protostar interprets your flags, observe what happens when we 
             --8<-- "astro/.gitignore"
             ```
 
-    __The Intelligence:__
+    __What Protostar sets up:__
 
-    - __Directory Scaffolding:__ It injects `data/catalogs` and `data/fits`, isolating telemetry from source code.
+    - __Directory Scaffolding:__ It injects `data/catalogs` and `data/fits`, isolating dataset files from source code.
     - __Binary Safety:__ It generates a `.gitattributes` file explicitly marking `*.fits` files as binary, and configuring `*.ipynb` for clean text diffing.
     - __Notebook Diffing:__ It automatically configures `nbdime` at the git level, avoiding unreadable JSON diffs when tracking Jupyter Notebooks.
-    - __Artifact Exclusions:__ The `.gitignore` is populated with `*.fits`, `*.csv`, and `*.parquet`, preventing accidental commits of massive telemetry files.
+    - __Artifact Exclusions:__ The `.gitignore` is populated with `*.fits`, `*.csv`, and `*.parquet`, preventing accidental commits of large data files.
 
 === "The Machine Learning Stack (Artifact Focus)"
     __Command:__ `protostar init --template ml --docker`
 
-    This footprint focuses on containerization and strictly excluding model artifacts.
+    This template focuses on containerization and excluding model artifacts.
 
     ```text
     --8<-- "tree_ml.txt"
@@ -141,7 +141,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
             --8<-- "ml/pyproject.toml"
             ```
 
-    __The Intelligence:__
+    __What Protostar sets up:__
 
     - __Container Scaffolding:__ Passing `--docker` generates a multi-stage `Dockerfile` and optimized `.dockerignore`. The `Dockerfile` leverages `uv` layer caching, non-root user execution (`appuser`), and minimal runtime images.
     - __Model Checkpoints:__ The ML template injects ignores for tensor weights (`*.pth`, `*.pt`, `*.onnx`, `*.safetensors`) and experiment tracking directories (`wandb/`, `mlruns/`).
@@ -149,7 +149,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 === "The API Service (FastAPI Focus)"
     __Command:__ `protostar init --template api`
 
-    This footprint scaffolds a modern asynchronous web API service using FastAPI and Pydantic.
+    This template scaffolds a modern asynchronous web API service using FastAPI and Pydantic.
 
     ```text
     --8<-- "tree_api.txt"
@@ -169,7 +169,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
             --8<-- "api/CHANGELOG.md"
             ```
 
-    __The Intelligence:__
+    __What Protostar sets up:__
 
     - __Modular API Architecture:__ Establishes a clean directory layout separating routers (`src/demo_project/api/routers`), core application settings (`src/demo_project/core/config.py`), database models, and schemas.
     - __Async Toolchain:__ Pre-configures `fastapi`, `uvicorn`, `pydantic-settings`, and asynchronous test infrastructure powered by `pytest-asyncio` and `httpx`.
@@ -178,7 +178,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 === "The DSP Pipeline (Audio Focus)"
     __Command:__ `protostar init --template dsp`
 
-    This footprint focuses on audio signal processing, feature extraction, and exploratory analysis.
+    This template focuses on audio signal processing, feature extraction, and exploratory analysis.
 
     ```text
     --8<-- "tree_dsp.txt"
@@ -194,7 +194,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
             --8<-- "dsp/justfile"
             ```
 
-    __The Intelligence:__
+    __What Protostar sets up:__
 
     - __Audio Pipeline Layout:__ Scaffolds dedicated sample directories (`data/samples/raw`, `data/samples/bounces`) alongside modular analysis and effects packages (`src/demo_project/analysis`, `src/demo_project/effects`).
     - __Scientific Signal Stack:__ Locks in core numerical and audio processing libraries: `librosa`, `soundfile`, `pedalboard`, `scipy`, `numpy`, and `matplotlib`.
@@ -203,7 +203,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
 === "The Embedded System (MicroPython Focus)"
     __Command:__ `protostar init --template embedded`
 
-    This footprint scaffolds an embedded hardware development environment optimized for MicroPython and circuit prototyping.
+    This template scaffolds an embedded hardware development environment optimized for MicroPython and circuit prototyping.
 
     ```text
     --8<-- "tree_embedded.txt"
@@ -219,7 +219,7 @@ To understand how Protostar interprets your flags, observe what happens when we 
             --8<-- "embedded/justfile"
             ```
 
-    __The Intelligence:__
+    __What Protostar sets up:__
 
     - __Board & Host Decoupling:__ Separates on-device firmware code (`src/board/boot.py`, `src/board/main.py`) from host workstation tools (`src/host/`).
     - __Host Mock Testing:__ Scaffolds a `tests/host_mocks/` harness to validate hardware interaction logic locally without physical microcontrollers connected.
@@ -257,7 +257,7 @@ The following metadata fields are prompted during initialization or automaticall
 
 ## Progressive Scaffolding & Collisions
 
-When Protostar detects existing configuration markers (like `pyproject.toml`), it triggers the __Gravitational Anomaly__ intercept prompt:
+When Protostar detects existing configuration files (like `pyproject.toml`), it prompts you to choose how to handle the conflict:
 
 ```text
 Protostar Ignition Sequence Initiated

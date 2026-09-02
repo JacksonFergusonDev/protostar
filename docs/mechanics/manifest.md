@@ -6,7 +6,7 @@ description: "Understand the EnvironmentManifest: Protostar's central state obje
 
 The `EnvironmentManifest` is the critical boundary between declarative intent and imperative execution. It acts as an isolated, centralized state object that guarantees atomicity during environment scaffolding.
 
-By strictly prohibiting modules from mutating the host operating system directly, Protostar isolates side-effects to a single, easily testable execution phase. Think of it as a strict idempotency boundary: side-effects (disk writes, network calls, shell executions) are contained entirely within the Orchestrator's final realization phase.
+By preventing modules from writing to disk directly during planning, Protostar keeps side effects contained to a single, easily testable execution phase. All disk writes, package downloads, and shell commands are held until this final step.
 
 <div class="grid cards" markdown>
 
@@ -34,10 +34,10 @@ By strictly prohibiting modules from mutating the host operating system directly
 
 Rather than storing all state in a monolithic structure, `EnvironmentManifest` delegates state management to specialized domain classes: `DependencyManifest`, `FilesystemManifest`, `ToolingManifest`, and `TaskManifest`.
 
-During the `build()` phase, modules route their state declarations through these explicit domain namespaces (e.g., `manifest.dependencies`, `manifest.filesystem`, `manifest.tooling`, `manifest.tasks`). This composition allows the `SystemExecutor` to cleanly apply topological sorting to disk writes and execution tasks.
+During the `build()` phase, modules route their state declarations through these explicit domain namespaces (e.g., `manifest.dependencies`, `manifest.filesystem`, `manifest.tooling`, `manifest.tasks`). This structure allows the `SystemExecutor` to run setup tasks and write files in the correct dependency order.
 
 === "Dependency Resolution (`manifest.dependencies`)"
-    Managed by `DependencyManifest`. Holds the required packages for the active footprint. These are routed to the configured package manager (e.g., `uv`, `pip`, `npm`) at the very end of the execution lifecycle to maximize network concurrency and prevent fragmented lockfiles.
+    Managed by `DependencyManifest`. Holds the required packages for your project setup. These are passed to the package manager (e.g., `uv`, `pip`, `npm`) at the end of the run to install dependencies in a single step and prevent fragmented lockfiles.
 
     * `dependencies`: Core application or scientific libraries (`manifest.dependencies.add()`).
     * `dev_dependencies`: Tooling, linters, and testing frameworks (`manifest.dependencies.add_dev()`).

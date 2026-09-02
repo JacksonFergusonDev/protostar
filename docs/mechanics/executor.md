@@ -1,8 +1,8 @@
 # The System Executor & Modular Execution Engine
 
-If the Orchestrator is the state machine, the execution engine is the physical actuator that mutates the host. It is responsible for translating the declarative `EnvironmentManifest` into imperative disk operations and shell commands.
+While the Orchestrator plans the environment, the execution engine carries it out—writing files, updating configurations, and running shell commands.
 
-To ensure robustness, security, and testability, Protostar's execution logic is decomposed into seven strictly focused, single-responsibility modules. This architecture prevents the "god module" anti-pattern by explicitly separating **pure content generation** and **policy enforcement** from **stateful orchestration**.
+To keep the codebase maintainable, secure, and testable, Protostar breaks execution logic into seven focused modules. This separates **content generation** and **security checks** from **command execution**.
 
 ---
 
@@ -35,7 +35,7 @@ The `SystemExecutor` class acts as a thin coordinator. It iterates over the mani
 
 ### 2. Pure Content Generation
 
-These modules are mathematically pure functions: given the same inputs, they consistently return the same string or AST object without ever touching the disk or network.
+These modules contain pure functions: given the same inputs, they always return the same string or AST without touching the disk or network.
 
 - **`workflows.py`**: Handles string templating for CI/CD workflows, Justfiles, Dockerfiles, pre-commit configurations, and VCS ignores.
 - **`appends.py`**: Resolves language-specific comment syntax and injects hash-delimited marker blocks into existing file strings.
@@ -54,10 +54,10 @@ These modules interact with external boundaries, but do so predictably.
 
 ## Security & Path Isolation
 
-All disk writing and subprocess execution strictly pass through `security.py`'s invariants:
+All disk writes and subprocess calls pass through security checks in `security.py`:
 
 - **Path Jailing**: Before the executor writes any artifact, it asserts that the `target` path is physically bounded within `Path.cwd()`. This structurally prevents malicious blueprint templates from triggering directory traversal attacks (e.g., writing to `/etc/passwd`).
-- **Binary Safelisting**: Before any shell task is executed (whether pre-install or post-install), the first segment of the command vector is verified against `ALLOWED_BINARIES` (e.g., `uv`, `git`, `npm`).
+- **Binary Safelisting**: Before any shell task is executed (whether pre-install or post-install), the executable command name is verified against `ALLOWED_BINARIES` (e.g., `uv`, `git`, `npm`).
 
 ---
 

@@ -20,9 +20,9 @@ Protostar's template engine allows you to define declarative, reusable environme
 
     Register custom templates in your global `config.toml` to access them directly by name without retyping long URLs.
 
-- :material-shield-alert-outline: __Informed-Consent Security__
+- :material-shield-alert-outline: __Interactive Security Prompts__
 
-    Explicit trust boundaries for external templates containing executable shell commands, preventing unauthorized command execution.
+    Clear confirmation prompts for external templates containing executable shell commands, preventing unauthorized command execution.
 
 </div>
 
@@ -190,11 +190,11 @@ flowchart TD
     Dialog -- You Reject OR Headless CI --> Abort([Execution Aborted]):::security
 ```
 
-### Sandboxing vs. Informed Consent
+### Sandboxing & Security Prompts
 
 While Protostar enforces filesystem path jailing (preventing templates from writing outside your workspace) and binary safelisting (disallowing direct calls to shells like `/bin/sh`), developer tools like `uv run`, `git`, and `npm` can still execute scripts provided within the repository.
 
-To address this, Protostar uses an __Informed Consent Security Model__:
+To address this, Protostar prompts for confirmation before running external commands:
 
 1. __Built-in Templates:__ Trusted implicitly (shipped within the validated Protostar package).
 1. __Global Config Aliases:__ Trusted implicitly (you explicitly added the template to your own `config.toml`).

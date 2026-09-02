@@ -19,7 +19,7 @@ hide:
   <div class="hero-content">
     <h1>Modular. Declarative. Fast.</h1>
     <p class="protostar-lede">
-      Protostar bootstraps development environments with a manifest-first, non-destructive architecture designed for speed, clarity, and low entropy.
+      Protostar sets up Python development environments cleanly and predictably—without overwriting existing work or leaving half-finished setups.
     </p>
     <div class="protostar-command-label">Install globally via uv</div>
     <div class="protostar-install" aria-label="Install command">
@@ -32,7 +32,7 @@ hide:
   </div>
 </div>
 
-## First light
+## Overview
 
 Protostar is a modular CLI for initializing repositories and generating repeatable boilerplate.
 It is designed to automate environment setup while staying out of your way.
@@ -56,7 +56,7 @@ It is designed to automate environment setup while staying out of your way.
   </div>
 </div>
 
-## Launch sequence
+## Quick start
 
 ```bash
 mkdir hyperdrive-cli
@@ -68,7 +68,7 @@ protostar init --template cli
 
 This initializes a working environment quickly while preserving explicit control over tools and context.
 
-## Flight paths
+## Next steps
 
 - Read **[Why Protostar?](./why-protostar.md)** to see how it compares to general-purpose templaters like Copier.
 - Head to **[Getting Started](./getting-started.md)** to get Protostar onto your system.

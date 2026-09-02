@@ -47,7 +47,7 @@ protostar init
 
 ## Headless Scaffolding
 
-For rapid, repeatable initialization, you can bypass the TUI entirely by providing your desired environment matrix as CLI flags. Universal system workspace hygiene is automatically applied, and IDE settings are conditionally injected based on your global configuration and chosen language footprints.
+For fast, repeatable initialization, you can bypass the TUI entirely and pass your options as CLI flags. Protostar automatically configures common ignore files (`.gitignore`, `.envrc`) and adds your preferred IDE settings.
 
 ```bash
 mkdir hyperdrive-cli
@@ -129,7 +129,7 @@ alias proto="protostar"
 
 ## Next Steps
 
-With your accretion disk stabilized, you can dive deeper into Protostar's mechanics:
+Now that your environment is ready, explore the rest of Protostar's features:
 
 - **[Configuration](./usage/configuration.md):** Learn how to set up global defaults (like your preferred Python version, dev dependencies, or custom ruff configuration) so you don't have to specify them every time.
 - **[Tooling & Flags Matrix](./usage/tooling-matrix.md):** Explore the full list of supported languages, tools, and built-in templates.

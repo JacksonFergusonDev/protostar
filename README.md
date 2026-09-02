@@ -12,7 +12,7 @@
 
 <br>
 
-**A modular CLI tool for high-velocity environment scaffolding.**
+**A modular CLI that sets up complete Python projects in seconds.**
 
 [![PyPI Version](https://img.shields.io/pypi/v/protostar?color=22d3ee&labelColor=0A0A0A&logo=pypi&logoColor=white)](https://pypi.org/project/protostar/)
 [![CI](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/ci.yml?color=22d3ee&labelColor=0A0A0A&label=CI)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
@@ -72,15 +72,15 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, establishing your dependency managers and directory structures.
 
-1. **Manifest-First, Side-Effects-Last (Headless Engine Bulkhead):** Many bootstrapping scripts run a sequence of shell commands and fail unpredictably midway through. Protostar strictly decouples state calculation from execution. The engine core is headless: modules declare requirements into a centralized `EnvironmentManifest` during the read-only `plan()` phase, while disk mutations and subprocesses only execute during `execute()`. This guarantees side-effect-free dry-running and pure determinism.
+1. **Plan First, Write Later:** Many setup scripts run a sequence of shell commands and fail unpredictably midway through, leaving behind half-configured files. Protostar plans all changes upfront in memory during the read-only `plan()` phase before touching disk or running subprocesses in `execute()`. This guarantees clean dry-runs and zero partial failures.
 
-1. **AI & Agent Ready:** With position-independent `--json` flags and atomic dry-running, AI agents and automation scripts can programmatically interrogate the CLI, plan workspace changes, resolve collisions, and execute headless scaffolding without interactive prompt trapping.
+1. **AI & Agent Ready:** With position-independent `--json` flags and atomic dry-running, AI agents and automation scripts can programmatically interrogate the CLI, plan workspace changes, resolve collisions, and execute headless scaffolding without hanging on interactive prompts.
 
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
 
 1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses deterministic AST modification to deep-merge TOML configurations, and safely aborts if generated files already exist.
 
-1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment vector to eliminate debugging entropy. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
+1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment details to make debugging painless. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
 
 ---
 
@@ -88,7 +88,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 Protostar is built to be lightweight, so Python's startup overhead never slows down your local development.
 
-- **Asynchronous Static Registry:** To eliminate the severe network bottleneck of client-side git resolution (e.g., `pre-commit autoupdate`), Protostar resolves hook versions via an autonomous, edge-deployed JSON registry. The CLI never halts to negotiate TLS handshakes or clone remote repositories—it fetches a pre-compiled JSON payload in milliseconds and features immutable offline fallbacks (auto-synced to the live registry prior to each release) if you're on a plane or disconnected.
+- **Fast Hook Resolution:** Instead of making slow Git network calls to resolve hook versions (like `pre-commit autoupdate`), Protostar resolves them via a pre-compiled JSON registry fetched in milliseconds, with an offline fallback if you are disconnected.
 - **Micro-Optimization:** We measure initialization latency using two benchmarking approaches:
   1. **Fast-Path Execution:** Measures the latency of non-interactive commands (e.g., `protostar help init`).
   1. **TUI-Path Execution:** Measures the overhead of triggering the interactive `questionary` wizards.
@@ -135,7 +135,7 @@ Protostar is designed to be run right after you `mkdir` a new project.
 
 If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI).
 
-The wizard will first ask if you want to scaffold using a **Template**. Templates are the gold standard of Protostar, instantly wiring together complex tools, dependencies, and directory structures. You can choose from built-in domain templates (like `astro` or `cli`), select your own custom global aliases, or build an environment from scratch.
+The wizard will first ask if you want to scaffold using a **Template**. Templates are the fastest way to use Protostar, instantly wiring together tools, dependencies, and directory structures. You can choose from built-in domain templates (like `astro` or `cli`), select your own custom global aliases, or build an environment from scratch.
 
 ```bash
 mkdir orbital-mechanics-sim

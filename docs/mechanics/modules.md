@@ -1,6 +1,6 @@
 # The Module Architecture
 
-At its core, Protostar is a polymorphic module resolution engine. The CLI parser translates a matrix of flags into an ordered array of instantiated module objects.
+Protostar is built around modular plugins. When you run a command, Protostar turns your CLI flags into an ordered list of tool modules.
 
 These modules act as autonomous, stateless plugins that interact strictly with the `EnvironmentManifest`. They do not inspect sibling modules, do not read the host filesystem, and do not execute system commands directly.
 
@@ -53,7 +53,7 @@ Ancillary development tools. Tools like `ruff`, `mypy`, `pytest`, and `prek` eva
 
 ### `pre_flight()`
 
-The fail-fast perimeter. If a module requires external binaries (e.g., `git`, `uv`), it verifies their presence in `$PATH`. If the check fails, an exception is raised before any filesystem mutation occurs.
+Pre-flight checks. If a module requires external binaries (e.g., `git`, `uv`), it verifies their presence in `$PATH`. If the check fails, an exception is raised before any files or directories are created.
 
 ### `build(manifest: EnvironmentManifest)`
 

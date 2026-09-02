@@ -1,8 +1,8 @@
 # Error Handling Architecture
 
-Protostar enforces a deterministic, type-safe error handling paradigm designed to guarantee that host workspace mutations fail safely and transparently. Execution logic is structured so that operational errors never leave the workspace in a fragmented or irrecoverable state.
+Protostar handles errors predictably so that failed runs never leave your workspace broken or half-configured.
 
-During standard CLI usage, domain-specific operational exceptions are intercepted at the highest level of the execution pipeline, formatted into high-visibility terminal panels with decoupled remediation hints, and routed to standardized POSIX exit codes.
+During standard CLI usage, operational errors are caught at the top level of the CLI, displayed in clean terminal panels with helpful installation hints, and routed to standard POSIX exit codes.
 
 <div class="grid cards" markdown>
 
@@ -26,7 +26,7 @@ During standard CLI usage, domain-specific operational exceptions are intercepte
 
 ---
 
-## Exception Propagation Topology
+## How Errors Propagate
 
 The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, shell subprocesses) up to the top-level CLI boundary in `cli.py`:
 
@@ -190,7 +190,7 @@ Protostar routes operational exceptions to standard UNIX exit codes (defined in 
 | `ExecutionAbortedError` | Shell Signal | `130` | You cancelled interactive wizard prompt via Ctrl+C / abort |
 | `CommandExecutionError` | Generic Exit | `1` | Subprocess (e.g. `uv sync`, `git init`) exited non-zero |
 | `CommandTimeoutError` | Generic Exit | `1` | Subprocess exceeded execution timeout threshold |
-| *Unhandled Internal Bug* | `os.EX_SOFTWARE` | `70` | Unexpected Python exception / AST parsing collapse |
+| *Unhandled Internal Bug* | `os.EX_SOFTWARE` | `70` | Unexpected Python exception or TOML syntax error |
 
 ---
 
@@ -208,7 +208,7 @@ protostar init --verbose
 
 ### Automated Bug Reporting
 
-When Protostar encounters an unhandled internal exception (an unexpected Python bug or AST collapse), it traps the stack trace, gathers non-sensitive system environment vectors (OS, Python version, command invocation), constructs a pre-populated GitHub issue URL, and exits with `os.EX_SOFTWARE` (`70`). Clicking the generated link opens a pre-formatted issue ticket on GitHub so telemetry is captured immediately.
+When Protostar encounters an unhandled internal exception (an unexpected bug or crash), it captures the traceback, gathers basic system details (OS, Python version, command run), generates a pre-filled GitHub issue URL, and exits with `os.EX_SOFTWARE` (`70`). Clicking the link opens a pre-formatted issue so bugs can be reported instantly.
 
 ---
 
