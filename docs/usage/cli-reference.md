@@ -6,8 +6,6 @@ description: "Comprehensive command-line interface reference for the Protostar C
 
 Protostar provides a composable, deterministic command-line interface. Commands can be run interactively through terminal wizards (TUI) or headlessly via flags.
 
-<div class="spacer-2"></div>
-
 ```bash
 protostar [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
 ```

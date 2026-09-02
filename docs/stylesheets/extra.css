@@ -1,15 +1,34 @@
 :root {
     --protostar-cyan: #22d3ee;
+    --protostar-radius: 8px;
     --protostar-code-bg: #f8fafc;
     --protostar-code-fg: #1e293b;
     --protostar-code-border: #e2e8f0;
     --protostar-term-prompt: #16a34a;
+
+    --md-code-bg-color: var(--protostar-code-bg);
+    --md-code-fg-color: var(--protostar-code-fg);
 }
 
 /* ====================================================================
     1. UNIVERSAL LAYOUT (Always On)
     Structure: Grids, flex, padding, margins, base typography.
 ==================================================================== */
+
+/* --- Base Typography & Elements --- */
+.md-typeset h1 {
+    letter-spacing: 0.02em;
+}
+
+.md-typeset h2 {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+    padding-bottom: 0.35rem;
+    margin-top: 2.2rem;
+}
+
+.md-typeset code {
+    border-radius: 0.35rem;
+}
 
 /* --- Homepage Navigation --- */
 .protostar-home-nav {
@@ -26,7 +45,7 @@
     min-height: 44px;
     align-items: center;
     padding: 0.55rem 0.8rem;
-    border-radius: var(--rm-radius-sm, 8px);
+    border-radius: var(--protostar-radius);
     color: var(--md-default-fg-color--light);
     font-size: 0.78rem;
     font-weight: 700;
@@ -35,7 +54,7 @@
 }
 
 .md-typeset .protostar-home-nav a:hover {
-    color: var(--protostar-cyan, #22d3ee);
+    color: var(--protostar-cyan);
     background: rgba(34, 211, 238, 0.05);
 }
 
@@ -48,7 +67,7 @@
     height: 5px;
     margin-left: 0.6rem;
     border-radius: 50%;
-    background: var(--protostar-cyan, #22d3ee);
+    background: var(--protostar-cyan);
     content: "";
 }
 
@@ -68,7 +87,7 @@
     min-height: 48px;
     overflow: hidden;
     border: 1px solid var(--protostar-code-border);
-    border-radius: var(--rm-radius-sm, 8px);
+    border-radius: var(--protostar-radius);
     background: var(--protostar-code-bg);
     transition: background-color 0.25s ease, border-color 0.25s ease;
 }
@@ -95,9 +114,11 @@
     border: 0;
     border-left: 1px solid var(--protostar-code-border);
     color: #000;
-    background: var(--protostar-cyan, #22d3ee);
+    background: var(--protostar-cyan);
     cursor: pointer;
-    font: 600 0.75rem var(--md-text-font-family);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
     transition: background-color 0.2s ease, border-color 0.25s ease;
 }
 
@@ -110,17 +131,8 @@
 /* Top-level page titles – bold & accented */
 .md-sidebar .md-nav--primary>.md-nav__list>.md-nav__item--nested>.md-nav__link {
     font-weight: 700;
-    color: var(--md-primary-fg-color, #22d3ee);
+    color: var(--protostar-cyan);
     padding-left: 0.75rem;
-}
-
-/* --- Utilities --- */
-.spacer-1 {
-    margin: 1.2em 0;
-}
-
-.spacer-2 {
-    margin: 2em 0;
 }
 
 /* --- Hero Section --- */
@@ -138,7 +150,7 @@
     letter-spacing: -0.04em;
     line-height: 1.05;
     text-wrap: balance;
-    color: #000000;
+    color: var(--md-default-fg-color);
 }
 
 .protostar-lede {
@@ -150,18 +162,24 @@
 }
 
 /* --- Card Grids --- */
+.protostar-grid,
+.md-typeset .grid.cards {
+    margin: 1.8rem 0;
+}
+
 .protostar-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
-    margin-top: 1.2rem;
 }
 
-.protostar-card {
+.protostar-card,
+.md-typeset .grid.cards>ul>li,
+.md-typeset .grid.cards>ol>li {
     padding: 1rem;
     border-radius: 0.9rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-    /* Light mode shadow */
+    border: 1px solid transparent;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     transition: all 0.2s ease-in-out;
 }
 
@@ -170,46 +188,22 @@
     margin-bottom: 0.4rem;
 }
 
-/* --- MkDocs Material Overrides: Universal Code & Terminal Blocks --- */
-.protostar-terminal,
+/* --- Code Blocks --- */
 .md-typeset .highlight {
     margin: 1.2rem 0;
     border: 1px solid var(--protostar-code-border);
-    border-radius: var(--rm-radius-sm, 8px);
-    background: var(--protostar-code-bg) !important;
+    border-radius: var(--protostar-radius);
     overflow: hidden;
-    transition: background-color 0.25s ease, border-color 0.25s ease;
+    transition: border-color 0.25s ease;
 }
 
-.protostar-terminal .highlight {
+.md-typeset .highlight pre {
     margin: 0;
-    border: none;
-}
-
-.md-typeset .highlight pre,
-.md-typeset .protostar-terminal pre {
-    margin: 0;
-    padding: 0.75rem 0.9rem;
-    background: var(--protostar-code-bg) !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: var(--rm-radius-sm, 8px);
     line-height: 1.6;
-    transition: background-color 0.25s ease;
 }
 
-.md-typeset pre>code {
-    padding: 0 !important;
-    color: var(--protostar-code-fg) !important;
-    background: transparent !important;
-    font-size: 0.68rem !important;
-    border: none !important;
-    box-shadow: none !important;
-    transition: color 0.25s ease;
-}
-
-.md-typeset pre>code:hover {
-    box-shadow: none !important;
+.md-typeset .highlight pre code {
+    padding: 0.75rem 0.9rem;
 }
 
 /* Tab and Admonition Nested Code Block Spacing */
@@ -227,13 +221,14 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
-.md-typeset .grid.cards>ul>li,
-.md-typeset .grid.cards>ol>li {
-    padding: 1rem;
-    border-radius: 0.9rem;
-    border: 1px solid transparent;
-    transition: all 0.2s ease-in-out;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+/* --- Footers --- */
+.md-footer__inner {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+.md-footer {
+    border-top: none;
 }
 
 
@@ -246,7 +241,6 @@
 
     /* Custom Variables */
     --protostar-bg-base: #0a0a0a;
-    --protostar-cyan: #22d3ee;
     --protostar-text-soft: #a9b7d0;
     --protostar-border: rgba(34, 211, 238, 0.14);
     --protostar-card-bg: rgba(255, 255, 255, 0.025);
@@ -270,24 +264,9 @@
         text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
     }
 
-    /* --- Hero Section --- */
-    .md-typeset .hero-content h1 {
-        color: #ffffff;
-    }
 
-    /* --- Cards --- */
-    .protostar-card {
-        background: var(--protostar-card-bg);
-        border: 1px solid rgba(34, 211, 238, 0.08);
-        backdrop-filter: blur(4px);
-    }
-
-    .protostar-card:hover {
-        box-shadow: 0 0 30px rgba(34, 211, 238, 0.1);
-        transform: translateY(-2px);
-    }
-
-    /* --- Material Grid Card Theming --- */
+    /* --- Cards & Grids --- */
+    .protostar-card,
     .md-typeset .grid.cards>ul>li,
     .md-typeset .grid.cards>ol>li {
         background: var(--protostar-card-bg);
@@ -295,6 +274,7 @@
         backdrop-filter: blur(4px);
     }
 
+    .protostar-card:hover,
     .md-typeset .grid.cards>ul>li:hover,
     .md-typeset .grid.cards>ol>li:hover {
         border-color: rgba(34, 211, 238, 0.15);
@@ -302,94 +282,9 @@
         transform: translateY(-2px);
     }
 
-    /* --- Syntax Highlighting (Dark Theme) --- */
-    .md-typeset .highlight .nb {
-        color: #89b4fa;
-    }
-
-    .md-typeset .highlight .s,
-    .md-typeset .highlight .s1,
-    .md-typeset .highlight .s2 {
-        color: #a6e3a1;
-    }
-
-    .md-typeset .highlight .nv {
-        color: #f38ba8;
-    }
-
-    .md-typeset .highlight .c,
-    .md-typeset .highlight .c1 {
-        color: #585b70;
-        font-style: italic;
-    }
-
-    .md-typeset .highlight .k,
-    .md-typeset .highlight .kn,
-    .md-typeset .highlight .kd {
-        color: #cba6f7;
-    }
-
-    .md-typeset .highlight .m,
-    .md-typeset .highlight .mi,
-    .md-typeset .highlight .mf {
-        color: #fab387;
-    }
-
-    .md-typeset .highlight .nt {
-        color: #89b4fa;
-    }
-
-    .md-typeset .highlight .o {
-        color: #89dceb;
-    }
-
-    .md-typeset .highlight .p {
-        color: #bac2de;
-    }
-
-    .md-typeset .highlight .na {
-        color: #f9e2af;
-    }
-
-    .md-typeset .highlight .nf {
-        color: #89b4fa;
-    }
-
-    .md-typeset .highlight .nc {
-        color: #f9e2af;
-    }
-
     .protostar-asciinema {
         border: 1px solid var(--protostar-border);
         box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
-    }
-
-    .md-typeset h1 {
-        letter-spacing: 0.02em;
-    }
-
-    .md-typeset h2 {
-        border-bottom: 1px solid var(--md-default-fg-color--lightest);
-        padding-bottom: 0.35rem;
-        margin-top: 2.2rem;
-    }
-
-    .md-typeset h4 {
-        margin-top: 1.8rem;
-        margin-bottom: 0.8rem;
-        padding: 0.35rem 0.6rem;
-        border-radius: 0.45rem;
-        border: 1px solid var(--protostar-border);
-        background: rgba(124, 77, 255, 0.04);
-        transition: box-shadow 0.2s ease;
-    }
-
-    .md-typeset h4:hover {
-        box-shadow: 0 0 10px rgba(124, 77, 255, 0.2);
-    }
-
-    .md-typeset code {
-        border-radius: 0.35rem;
     }
 
     /* --- Tables --- */
@@ -405,20 +300,6 @@
         border-bottom: 1px solid var(--protostar-border);
         color: white;
         letter-spacing: 0.03em;
-    }
-
-    /* --- Footers --- */
-    .md-footer__inner {
-        padding-top: 0.4rem;
-        padding-bottom: 0.4rem;
-    }
-
-    .md-footer-meta {
-        background-color: var(--protostar-bg-base);
-    }
-
-    .md-footer {
-        border-top: none;
     }
 }
 

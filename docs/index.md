@@ -56,15 +56,11 @@ It is designed to automate environment setup while staying out of your way.
 
 ## Launch sequence
 
-<div class="protostar-terminal">
-
 ```bash
 mkdir hyperdrive-cli
 cd hyperdrive-cli
 protostar init --template cli
 ```
-
-</div>
 
 <div class="protostar-asciinema" data-asciinema="./assets/demo_headless.cast"></div>
 

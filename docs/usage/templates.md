@@ -6,8 +6,6 @@ description: "Use and create declarative templates to define reusable Python env
 
 Protostar's template engine allows you to define declarative, reusable environment blueprints. Whether you are using built-in domain presets, fetching team standards from remote Git repositories, or defining custom local setups, templates eliminate boilerplate and ensure consistent repository architecture.
 
-<div class="spacer-2"></div>
-
 <div class="grid cards" markdown>
 
 - :material-cube-outline: __Built-in Templates__
