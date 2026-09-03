@@ -9,6 +9,7 @@
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.rumdl_cache/
 .venv/
 .vscode/
 Thumbs.db

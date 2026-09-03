@@ -20,6 +20,8 @@ sync:
 # Auto-format code
 format: sync
     @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
+    uv run rumdl check --fix .
+    uv run rumdl fmt .
     uv run ruff check --fix .
     uv run ruff format .
     @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
@@ -27,13 +29,8 @@ format: sync
 # Run linters
 lint: sync
     @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
-    if command -v markdownlint-cli2 >/dev/null 2>&1; then \
-        markdownlint-cli2 "**/*.md"; \
-    elif command -v npx >/dev/null 2>&1; then \
-        npx --yes markdownlint-cli2 "**/*.md"; \
-    else \
-        printf "{{ yellow }}⚠ markdownlint-cli2 not found. Skipping markdown linting.{{ nc }}\n"; \
-    fi
+    uv run rumdl check .
+    uv run rumdl fmt --check .
     uv run ruff check .
     uv run ruff format --check .
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
@@ -64,6 +61,7 @@ ci: lint typecheck test
 clean:
     @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
     rm -rf \
+        .rumdl_cache \
         .ruff_cache \
         .mypy_cache \
         .pytest_cache \

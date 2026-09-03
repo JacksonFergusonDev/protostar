@@ -1,6 +1,6 @@
 --- a/.gitignore
 +++ b/.gitignore
-@@ -24,3 +24,9 @@
+@@ -25,3 +25,9 @@
  mlruns/
  runs/
  wandb/

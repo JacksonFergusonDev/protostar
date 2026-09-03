@@ -23,6 +23,7 @@ _RAW_TOOL_HEADERS = [
     ("Pyrefly", r"\[+tool\.pyrefly(?:\.[^\]]+)?\]+"),
     ("Pytest", r"\[+tool\.(?:pytest|coverage)(?:\.[^\]]+)?\]+"),
     ("Commitizen", r"\[+tool\.commitizen(?:\.[^\]]+)?\]+"),
+    ("rumdl", r"\[+tool\.rumdl(?:\.[^\]]+)?\]+"),
 ]
 
 _COMPILED_TOOL_HEADERS: list[tuple[re.Pattern[str], re.Pattern[str], str]] = [
@@ -35,7 +36,7 @@ _COMPILED_TOOL_HEADERS: list[tuple[re.Pattern[str], re.Pattern[str], str]] = [
 ]
 
 _FIRST_TOOL_HEADER_RE: re.Pattern[str] = re.compile(
-    r"^# ---- (?:Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen) ---- #\s*$",
+    r"^# ---- (?:Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen|rumdl) ---- #\s*$",
     re.MULTILINE,
 )
 
@@ -196,6 +197,7 @@ def format_pyproject_toml(doc: Any) -> str:
             "pytest",
             "coverage",
             "commitizen",
+            "rumdl",
         ]
 
         def tool_sort_key(item: tuple[Any, Any]) -> tuple[int, str]:

@@ -18,6 +18,7 @@ from .tooling_layer import (
     ReadTheDocsModule,
     RenovateModule,
     RuffModule,
+    RumdlModule,
     TyModule,
     ZensicalModule,
 )
@@ -25,6 +26,7 @@ from .tooling_layer import (
 TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     DirenvModule(),
     MarkdownLintModule(),
+    RumdlModule(),
     RuffModule(),
     MypyModule(),
     TyModule(),
@@ -62,6 +64,7 @@ __all__ = [
     "ReleaseModule",
     "RenovateModule",
     "RuffModule",
+    "RumdlModule",
     "SystemWorkspaceModule",
     "TyModule",
     "ZensicalModule",

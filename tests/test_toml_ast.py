@@ -447,3 +447,19 @@ def test_merge_toml_payloads_generic():
     assert parsed["database"]["url"] == "sqlite:///:memory:"
     assert parsed["database"]["pool_size"] == 5
     assert parsed["logging"]["level"] == "DEBUG"
+
+
+def test_format_pyproject_toml_rumdl_header():
+    """Test that rumdl table is preceded by # ---- rumdl ---- # header."""
+    raw = """
+[project]
+name = "demo"
+
+[tool.rumdl]
+disable = ["MD013"]
+"""
+    doc = tomlkit.parse(raw)
+    formatted = format_pyproject_toml(doc)
+
+    assert "# ---- rumdl ---- #" in formatted
+    assert "# ---- rumdl ---- #\n\n[tool.rumdl]" in formatted

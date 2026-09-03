@@ -18,7 +18,7 @@ zensical = true
 ci = true
 release = true
 readthedocs = true
-markdownlint = true
+rumdl = true
 
 # --- Development Dependencies ---
 [dev]

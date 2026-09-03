@@ -3,7 +3,6 @@
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
-├── .markdownlint-cli2.yaml
 ├── .python-version
 ├── Dockerfile
 ├── data
