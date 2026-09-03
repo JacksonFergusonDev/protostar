@@ -7,6 +7,37 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev --locked
+
+      - name: Lint Markdown with rumdl
+        run: uv run rumdl check --output-format github .
+
+      - name: Check Markdown formatting with rumdl
+        run: uv run rumdl fmt --check --output-format github .
+
+      - name: Run Ruff Linter
+        run: uv run ruff check --output-format=github .
+
+      - name: Run Ruff Formatter
+        run: uv run ruff format --check --output-format=github .
+
+      - name: Run Mypy
+        run: uv run mypy src/
+
   test:
     name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
@@ -28,26 +59,6 @@ jobs:
         run: |
           uv sync --all-extras --dev --locked
           uv pip install pytest-github-actions-annotate-failures
-
-      - name: Lint Markdown with rumdl
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: uv run rumdl check --output-format github .
-
-      - name: Check Markdown formatting with rumdl
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: uv run rumdl fmt --check --output-format github .
-
-      - name: Run Ruff Linter
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: uv run ruff check --output-format=github .
-
-      - name: Run Ruff Formatter
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: uv run ruff format --check --output-format=github .
-
-      - name: Run Mypy
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: uv run mypy src/
 
       - name: Run Tests
         run: uv run pytest

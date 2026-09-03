@@ -237,40 +237,47 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     if not python_matrix:
         python_matrix = [str(spec.min_python)]
 
-    # Determine the primary runner for coverage
+    # Determine the primary runner for coverage and baseline for linting
     primary_os = "ubuntu-latest" if "ubuntu-latest" in os_matrix else os_matrix[0]
     primary_python = python_matrix[-1]
+    baseline_python = python_matrix[0]
 
     # Build the pytest/codecov logic
     has_pytest = CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags
     has_codecov = CIFlag.CODECOV in spec.ci_flags or "codecov" in spec.ci_flags
 
+    include_block = ""
     pytest_step = ""
     if has_pytest:
         if has_codecov:
-            pytest_step = f"""      - name: Run tests with coverage # (for Codecov)
-        if: ${{{{ matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}' }}}}
+            include_block = f"""
+        include:
+          - os: {primary_os}
+            python-version: "{primary_python}"
+            coverage: true"""
+            pytest_step = """      - name: Run tests with coverage # (for Codecov)
+        if: matrix.coverage
         run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-        if: ${{{{ !(matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}') }}}}
+        if: ${{ !matrix.coverage }}
         run: uv run pytest
 
       - name: Upload coverage to Codecov
-        if: matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}'
+        if: matrix.coverage
         uses: codecov/codecov-action@v7
         with:
-          token: ${{{{ secrets.CODECOV_TOKEN }}}}
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           disable_search: true
           name: coverage
           fail_ci_if_error: true
 
       - name: Upload test analytics to Codecov
-        if: ${{{{ matrix.os == '{primary_os}' && matrix.python-version == '{primary_python}' && !cancelled() }}}}
+        if: ${{ matrix.coverage && !cancelled() }}
         uses: codecov/codecov-action@v7
         with:
-          token: ${{{{ secrets.CODECOV_TOKEN }}}}
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: junit.xml
           disable_search: true
           report_type: test_results
@@ -279,18 +286,54 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
             pytest_step = """      - name: Run Tests
         run: uv run pytest"""
 
-    # Assemble the rest of the steps
-    tool_steps = "\n\n".join(spec.ci_steps)
-    tool_steps = tool_steps.replace("<% PRIMARY_OS %>", primary_os)
-    tool_steps = tool_steps.replace("<% BASELINE_PYTHON %>", python_matrix[0])
-    if pytest_step:
-        if tool_steps:
-            tool_steps += "\n\n" + pytest_step
-        else:
-            tool_steps = pytest_step
+    # Assemble the lint job if there are CI steps
+    lint_job = ""
+    if spec.ci_steps:
+        lint_steps = "\n\n".join(spec.ci_steps)
+        lint_steps = lint_steps.replace("<% PRIMARY_OS %>", primary_os)
+        lint_steps = lint_steps.replace("<% BASELINE_PYTHON %>", baseline_python)
+        lint_job = f"""  lint:
+    name: Lint & Type Check
+    runs-on: {primary_os}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          python-version: "{baseline_python}"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev --locked
+
+{lint_steps}
+
+"""
 
     os_matrix_str = ", ".join(f'"{o}"' for o in os_matrix)
     python_matrix_str = ", ".join(f'"{p}"' for p in python_matrix)
+
+    test_steps_list = [
+        "      - uses: actions/checkout@v7",
+        "",
+        "      - name: Install uv",
+        "        uses: astral-sh/setup-uv@v10.0.0",
+        "        with:",
+        "          enable-cache: true",
+        "          python-version: ${{ matrix.python-version }}",
+        "",
+        "      - name: Install dependencies",
+        "        run: |",
+        "          uv sync --all-extras --dev --locked",
+        "          uv pip install pytest-github-actions-annotate-failures",
+    ]
+    if pytest_step:
+        test_steps_list.append("")
+        test_steps_list.append(pytest_step)
+
+    test_steps = "\n".join(test_steps_list)
 
     return f"""name: CI
 
@@ -301,29 +344,16 @@ on:
     branches: [main]
 
 jobs:
-  test:
+{lint_job}  test:
     name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
     runs-on: ${{{{ matrix.os }}}}
     strategy:
       matrix:
         os: [{os_matrix_str}]
-        python-version: [{python_matrix_str}]
+        python-version: [{python_matrix_str}]{include_block}
 
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.0
-        with:
-          enable-cache: true
-          python-version: ${{{{ matrix.python-version }}}}
-
-      - name: Install dependencies
-        run: |
-          uv sync --all-extras --dev --locked
-          uv pip install pytest-github-actions-annotate-failures
-
-{tool_steps}
+{test_steps}
 """
 
 

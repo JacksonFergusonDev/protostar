@@ -68,7 +68,7 @@
       "wants_release": false,
       "ci_flags": [],
       "ci_steps": [
-        "      - name: Run Ruff Linter\n        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n        run: uv run ruff format --check --output-format=github ."
+        "      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github ."
       ],
       "wants_just": false,
       "just_format_commands": [

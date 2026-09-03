@@ -107,7 +107,6 @@ class MarkdownLintModule(BootstrapModule):
 
         manifest.tooling.add_ci_step(
             "      - name: Run MarkdownLint\n"
-            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
             "        uses: DavidAnson/markdownlint-cli2-action@v24"
         )
 
@@ -220,11 +219,9 @@ class RumdlModule(BootstrapModule):
 
         manifest.tooling.add_ci_step(
             "      - name: Lint Markdown with rumdl\n"
-            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
             "        run: uv run rumdl check --output-format github .\n"
             "\n"
             "      - name: Check Markdown formatting with rumdl\n"
-            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
             "        run: uv run rumdl fmt --check --output-format github ."
         )
 
@@ -319,11 +316,9 @@ class RuffModule(BootstrapModule):
 
         manifest.tooling.add_ci_step(
             "      - name: Run Ruff Linter\n"
-            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
             "        run: uv run ruff check --output-format=github .\n"
             "\n"
             "      - name: Run Ruff Formatter\n"
-            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
             "        run: uv run ruff format --check --output-format=github ."
         )
 
@@ -387,9 +382,7 @@ class MypyModule(BootstrapModule):
         manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
         manifest.tooling.add_ci_step(
-            "      - name: Run Mypy\n"
-            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
-            "        run: uv run mypy src/"
+            "      - name: Run Mypy\n        run: uv run mypy src/"
         )
 
         manifest.tooling.just_typecheck_commands.append("uv run mypy .")

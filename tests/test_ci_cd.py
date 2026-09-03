@@ -43,6 +43,10 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
     assert '"ubuntu-latest", "macos-latest"' in content
     assert '"3.11", "3.12", "3.13", "3.14"' in content
     assert "name: Run tests with coverage # (for Codecov)" in content
+    assert "name: Lint & Type Check" in content
+    assert "coverage: true" in content
+    assert "if: matrix.coverage" in content
+    assert "if: ${{ !matrix.coverage }}" in content
     assert "name: Run Ruff" in content
     assert "name: Upload coverage to Codecov" in content
     assert "name: Upload test analytics to Codecov" in content
@@ -69,6 +73,7 @@ def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) 
     assert "name: Run tests with coverage" not in content
     assert "name: Run Tests" in content
     assert "Upload coverage to Codecov" not in content
+    assert "coverage: true" not in content
 
 
 def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -> None:

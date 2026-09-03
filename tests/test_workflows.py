@@ -232,6 +232,10 @@ def test_generate_ci_workflow_pytest_and_codecov():
         )
     )
     assert "Run tests with coverage # (for Codecov)" in content_codecov
+    assert "name: Lint & Type Check" in content_codecov
+    assert "coverage: true" in content_codecov
+    assert "if: matrix.coverage" in content_codecov
+    assert "if: ${{ !matrix.coverage }}" in content_codecov
     assert "Upload coverage to Codecov" in content_codecov
     assert "Upload test analytics to Codecov" in content_codecov
     assert (
