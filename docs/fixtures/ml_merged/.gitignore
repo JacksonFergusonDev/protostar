@@ -30,4 +30,3 @@ wandb/
 *.fits
 *.fts
 *.parquet
-.mypy_cache/

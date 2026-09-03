@@ -1,6 +1,6 @@
 --- a/.gitignore
 +++ b/.gitignore
-@@ -25,3 +25,9 @@
+@@ -25,3 +25,8 @@
  mlruns/
  runs/
  wandb/
@@ -9,4 +9,3 @@
 +*.fits
 +*.fts
 +*.parquet
-+.mypy_cache/

@@ -43,21 +43,12 @@ from protostar.orchestrator import Orchestrator
 
 # Define matrices for combinatorial CLI execution scenarios
 FIXTURES = {
-    "cli": [
-        [
-            "--template",
-            "cli",
-            "--mypy",
-            "--pytest",
-            "--prek",
-            "--rumdl",
-        ],
-    ],
+    "cli": [["--template", "cli"]],
     "astro": [["--template", "astro"]],
-    "ml": [["--template", "ml", "--docker"]],
+    "ml": [["--template", "ml"]],
     "ml_merged": [
-        ["--template", "ml", "--docker"],
-        ["--template", "astro", "--mypy", "--docker", "--force-merge"],
+        ["--template", "ml"],
+        ["--template", "astro", "--force-merge"],
     ],
     "api": [["--template", "api"]],
     "dsp": [["--template", "dsp"]],
