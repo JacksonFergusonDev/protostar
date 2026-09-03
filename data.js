@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788405882760,
+  "lastUpdate": 1788472731085,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10239,6 +10239,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.43,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "46e17a364a22e47ecb41eb0bbc1168fc5192e316",
+          "message": "refactor: centralize questionary with typed lazy wrappers",
+          "timestamp": "2026-09-03T14:55:02-07:00",
+          "tree_id": "2a519c5adaaf5e5aec641a957fa8d4f5c873385f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/46e17a364a22e47ecb41eb0bbc1168fc5192e316"
+        },
+        "date": 1788472729770,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 119.9,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 176.12,
             "unit": "ms"
           }
         ]
