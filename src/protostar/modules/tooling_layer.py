@@ -241,7 +241,9 @@ class RumdlModule(BootstrapModule):
             description="Installing rumdl VS Code extension",
         )
 
-        config = """[tool.rumdl]
+        config = """# ---- rumdl ---- #
+
+[tool.rumdl]
 disable = [
     "MD013", # line length - creates unnecessary diff churn
     "MD033", # inline HTML - required for readme and parts of documentation

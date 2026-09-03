@@ -84,6 +84,8 @@ pythonpath = [
     ".",
 ]
 
+# ---- rumdl ---- #
+
 [tool.rumdl]
 disable = [
     "MD013", # line length - creates unnecessary diff churn

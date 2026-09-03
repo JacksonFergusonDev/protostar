@@ -125,6 +125,8 @@ tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
 
+# ---- rumdl ---- #
+
 [tool.rumdl]
 disable = [
     "MD013", # line length - creates unnecessary diff churn
