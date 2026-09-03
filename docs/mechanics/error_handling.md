@@ -183,7 +183,7 @@ Protostar routes operational exceptions to standard UNIX exit codes (defined in 
 
 ---
 
-## Crash Diagnostics & Telemetry
+## Crash Diagnostics and Telemetry
 
 Protostar cleanly separates expected operational failures from unexpected internal crashes:
 

@@ -66,44 +66,13 @@ flowchart TD
 
 ---
 
-## Telemetry & Crash Reporting
+## Telemetry & Diagnostics
 
-The CLI entry point traps all exceptions at the boundary to ensure clear, actionable terminal reporting.
-
-### Diagnostic Telemetry
-
-During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv`) are recorded into `ExecutionResult.diagnostics`. The CLI renders these events in a structured summary panel:
+During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv` or skipped optional tasks) are recorded into `ExecutionResult.diagnostics`. The CLI presentation layer renders these events in a structured summary panel upon completion:
 
 ![Protostar Diagnostic Summary](../fixtures/diagnostic_panel.svg)
 
-### Exception Handling & Triage
-
-By trapping errors at the highest level, Protostar guarantees that you are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
-
-- __Expected Anomalies:__ Domain-specific exceptions inheriting from `ProtostarError` (such as `FileSystemError` for I/O constraints, or `MissingDependencyError` for absent binaries) are caught and gracefully presented as a clean abort message in the terminal, alongside a decoupled remediation hint.
-- __Critical Failures:__ If Protostar encounters an unhandled internal exception (a genuine bug or AST parsing collapse), it assumes the state is unstable. It traps the stack trace, collects a vector of the environment state, and outputs a URL-encoded link. Clicking this link instantly opens a pre-populated GitHub issue before exiting with `os.EX_SOFTWARE`.
-
-!!! example "Simulated Critical Failure Payload"
-    When a catastrophic failure occurs, the CLI encodes the following telemetry into the GitHub issue body:
-
-    ### Environment
-
-    - __OS__: Darwin 25.3.0
-    - __Python__: 3.14.3
-    - __Command__: `protostar init --astro --crash-test`
-
-    ### Traceback
-
-    ```python
-    Traceback (most recent call last):
-    File "/opt/homebrew/bin/protostar", line 8, in <module>
-        sys.exit(main())
-    File "/opt/homebrew/lib/python3.12/site-packages/protostar/cli.py", line 150, in handle_init
-        _run_engine(engine, request)
-    File "/opt/homebrew/lib/python3.12/site-packages/protostar/orchestrator.py", line 85, in plan
-        raise TypeError("INTENTIONAL_CRASH")
-    TypeError: INTENTIONAL_CRASH
-    ```
+For unexpected internal exceptions or AST parsing failures, the runtime traps errors at the CLI boundary to generate pre-filled GitHub crash reports without corrupting the workspace. For complete details on the exception hierarchy, POSIX exit code mappings, and crash issue generation, see the [Error Handling Architecture](./error_handling.md#crash-diagnostics-and-telemetry).
 
 ---
 
