@@ -13,6 +13,7 @@ from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS, MetadataKey, PromptType
 from .modules import TOOLING_MODULES, BootstrapModule
 from .system import is_interactive
+from .ui import Choice, Separator, Style, checkbox, select, text
 
 
 @dataclass
@@ -58,9 +59,6 @@ def run_init_wizard() -> WizardSelections | None:
     if not _should_run_wizard():
         return None
 
-    import questionary
-    from questionary import Choice, Separator
-
     config = UserConfig.load()
 
     template_choices: list[Any] = ["None"]
@@ -87,10 +85,10 @@ def run_init_wizard() -> WizardSelections | None:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
         else:
-            answer = questionary.select(
+            answer = select(
                 "Start from a template?",
                 choices=template_choices,
-            ).ask()
+            )
 
         if answer is None:
             raise ExecutionAbortedError("Template selection cancelled by user.")
@@ -147,10 +145,10 @@ def run_init_wizard() -> WizardSelections | None:
     if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
         sys.exit(0)
 
-    selected = questionary.checkbox(
+    selected = checkbox(
         "Select the components for your new environment:",
         choices=choices,
-    ).ask()
+    )
 
     if selected is None:
         raise ExecutionAbortedError("Component selection cancelled by user.")
@@ -214,8 +212,6 @@ def prompt_metadata(
     Raises:
         ExecutionAbortedError: If the user cancels any prompt.
     """
-    import questionary
-
     config = UserConfig.load()
     resolved: dict[str, Any] = {}
     all_keys = required_keys | (optional_keys or set())
@@ -236,33 +232,33 @@ def prompt_metadata(
     for key, field, default_val in to_prompt:
         key_str = key.value if isinstance(key, MetadataKey) else str(key)
         if field.prompt_type == PromptType.TEXT:
-            answer = questionary.text(
+            text_answer = text(
                 field.label,
                 default=str(default_val) if default_val is not None else "",
-            ).ask()
-            if answer is None:
+            )
+            if text_answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
-            resolved[key_str] = answer
+            resolved[key_str] = text_answer
         elif field.prompt_type == PromptType.CHECKBOX:
             choices = []
             for choice_str in field.choices or []:
                 checked = default_val is not None and choice_str in default_val
-                choices.append(questionary.Choice(choice_str, checked=checked))
+                choices.append(Choice(choice_str, checked=checked))
 
-            answer = questionary.checkbox(field.label, choices=choices).ask()
-            if answer is None:
+            checkbox_answer = checkbox(field.label, choices=choices)
+            if checkbox_answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
-            resolved[key_str] = answer
+            resolved[key_str] = checkbox_answer
         elif field.prompt_type == PromptType.SELECT:
             select_choices = list(field.choices or [])
             if default_val is not None and str(default_val) in select_choices:
                 select_choices.remove(str(default_val))
                 select_choices.insert(0, str(default_val))
 
-            answer = questionary.select(
+            select_answer = select(
                 field.label,
                 choices=select_choices,
-                style=questionary.Style(
+                style=Style(
                     [
                         ("answer", "fg:cyan bold"),
                         ("pointer", "fg:cyan bold"),
@@ -276,10 +272,10 @@ def prompt_metadata(
                         ),
                     ]
                 ),
-            ).ask()
-            if answer is None:
+            )
+            if select_answer is None:
                 raise ExecutionAbortedError("Metadata configuration cancelled by user.")
-            resolved[key_str] = answer
+            resolved[key_str] = select_answer
 
     return resolved
 
@@ -304,15 +300,13 @@ def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
             'Please provide them via CLI flags (e.g. --variable_name="value").'
         )
 
-    import questionary
-
     console = Console()
     console.print("\n[bold cyan]Configuration Variables Required[/bold cyan]")
     console.print("The requested environment specification contains placeholders.\n")
 
     context = {}
     for var in variables:
-        answer = questionary.text(f"{var}:").ask()
+        answer = text(f"{var}:")
         if answer is None:
             raise ExecutionAbortedError("Variable resolution cancelled by user.")
         context[var] = answer

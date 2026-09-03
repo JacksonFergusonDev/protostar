@@ -59,6 +59,8 @@ from .modules import (
 )
 from .orchestrator import Orchestrator
 from .system import is_interactive
+from .ui import Choice, confirm, select
+from .ui import Style as UIStyle
 from .wizard import (
     resolve_missing_variables,
     run_init_wizard,
@@ -270,9 +272,6 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     Returns:
         The ExecutionResult produced by the engine.
     """
-    import questionary
-    from questionary import Choice
-
     # --- Collision Loop ---
     try:
         manifest = engine.plan()
@@ -295,7 +294,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                 "Use the --force-merge or --force-replace flag to bypass this check."
             ) from e
 
-        choice = questionary.select(
+        choice = select(
             "\nHow would you like to proceed?",
             choices=[
                 Choice(
@@ -311,14 +310,14 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                     value=CollisionStrategy.ABORT,
                 ),
             ],
-            style=questionary.Style(
+            style=UIStyle(
                 [
                     ("answer", "fg:cyan bold"),
                     ("pointer", "fg:cyan bold"),
                     ("selected", "fg:cyan"),
                 ]
             ),
-        ).ask()
+        )
 
         if not choice or choice == CollisionStrategy.ABORT:
             raise ExecutionAbortedError(
@@ -383,9 +382,9 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                     "the [templates] block in your global configuration."
                 )
 
-            confirmed = questionary.confirm(
+            confirmed = confirm(
                 "Do you trust this source to modify your system?", default=False
-            ).ask()
+            )
             if not confirmed or confirmed is None:
                 raise ExecutionAbortedError(
                     "Execution cancelled: Untrusted external source."
@@ -1345,12 +1344,10 @@ def handle_config(args: argparse.Namespace) -> None:
         if not getattr(args, "force_merge", False) and not getattr(
             args, "force_replace", False
         ):
-            import questionary
-
-            confirmed = questionary.confirm(
+            confirmed = confirm(
                 "Warning: this will erase your current configuration, are you sure you want to do this?",
                 default=False,
-            ).ask()
+            )
             if confirmed is None:
                 raise ExecutionAbortedError("Configuration reset aborted.")
             if not confirmed:
