@@ -75,6 +75,20 @@ repos:
 
       # --- Pre-push hooks --- #
 
+      - id: zensical-build
+        name: zensical build
+        entry: uv run zensical build --strict
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: check-doc-links
+        name: check embedded doc links
+        entry: uv run python scripts/check_doc_links.py
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
       - id: pytest-unit
         name: pytest unit tests
         entry: uv run pytest -m "not integration and not exhaustive"
@@ -85,13 +99,6 @@ repos:
       - id: check-fixtures
         name: check doc fixtures drift
         entry: uv run python scripts/generate_doc_fixtures.py
-        language: system
-        pass_filenames: false
-        stages: [pre-push]
-
-      - id: check-doc-links
-        name: check embedded doc links
-        entry: uv run python scripts/check_doc_links.py
         language: system
         pass_filenames: false
         stages: [pre-push]
