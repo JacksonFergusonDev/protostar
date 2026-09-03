@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788478546339,
+  "lastUpdate": 1788479044280,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10341,6 +10341,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 218.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "506c4e85382cde2f0bb8b8c295bc33e20031a0d2",
+          "message": "docs: align documentation and configuration with rumdl defaults (#222)",
+          "timestamp": "2026-09-03T16:43:03-07:00",
+          "tree_id": "a21c2e66b2495545ef28edc4b55d2f97eafeec64",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/506c4e85382cde2f0bb8b8c295bc33e20031a0d2"
+        },
+        "date": 1788479043583,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.52,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 223.19,
             "unit": "ms"
           }
         ]
