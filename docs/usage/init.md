@@ -24,31 +24,25 @@ Protostar is designed to be run on Day 1 to build your repository foundation, bu
 
 ## Opinionated Templates
 
-While Protostar is modular, you often want a vetted, turnkey environment without selecting a dozen flags manually. Protostar ships with built-in __Opinionated Templates__ that bundle specific tools, directories, and AST overrides.
+While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in __Opinionated Templates__ that bundle domain-specific tools, directories, and AST configurations.
 
-You can select a template in the interactive wizard (`protostar init`), list all available templates with `protostar init --list-templates`, or trigger one headlessly using `--template` (or `-t`):
+To scaffold from a template headlessly, pass `--template` (or `-t`):
 
 ```bash
-# Scaffold from a built-in template (shorthand: protostar init -t astro)
+# Scaffold from a built-in template (e.g., astro, cli, ml, api)
 protostar init --template astro
-
-# List all available built-in templates and global aliases
-protostar init --list-templates
-
-# Scaffold from a remote team standard
-protostar init --from https://github.com/YourOrg/standards/blob/main/backend.toml
 ```
 
 ### Tri-State CLI Toggles
 
-Every tooling option in Protostar supports tri-state evaluation. Passing `--<tool>` forces it on, while passing `--no-<tool>` forces it off, overriding template opinions:
+Every tooling option supports tri-state evaluation. You can load a template's baseline and explicitly override any tool: passing `--<tool>` forces it on, while passing `--no-<tool>` forces it off:
 
 ```bash
-# Use the astro template but disable direnv and enable mypy
+# Scaffold the astro template with direnv disabled and mypy enabled
 protostar init -t astro --no-direnv --mypy
 ```
 
-For custom authoring, variable interpolation, global aliases, and security mechanics, see the complete __[Templates & Portable Configurations Guide](./templates.md)__.
+To explore all built-in templates, load remote team standards (`--from`), supply dynamic parameters, or register global aliases, see the complete __[Templates & Portable Configurations Guide](./templates.md)__.
 
 ---
 
