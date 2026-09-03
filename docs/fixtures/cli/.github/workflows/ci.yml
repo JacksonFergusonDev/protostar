@@ -29,10 +29,6 @@ jobs:
           uv sync --all-extras --dev --locked
           uv pip install pytest-github-actions-annotate-failures
 
-      - name: Run MarkdownLint
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        uses: DavidAnson/markdownlint-cli2-action@v24
-
       - name: Run rumdl linter
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: uv run rumdl check

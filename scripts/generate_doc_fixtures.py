@@ -50,7 +50,7 @@ FIXTURES = {
             "--mypy",
             "--pytest",
             "--prek",
-            "--markdownlint",
+            "--rumdl",
         ],
     ],
     "astro": [["--template", "astro"]],
@@ -810,6 +810,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     tree_output = generate_tree(source_dir)
     _write_fixture(f"tree_{fixture_name}.txt", tree_output)
 
+    written_targets: set[Path] = set()
     for file_path in sorted(source_dir.rglob("*")):
         if not file_path.is_file():
             continue
@@ -825,6 +826,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 ".pytest_cache",
                 ".ruff_cache",
                 ".mypy_cache",
+                ".rumdl_cache",
                 "uv.lock",
             )
             for part in rel_path.parts
@@ -836,6 +838,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
             target_rel_path = rel_path.with_name("pre-commit-config.fixture.yaml")
 
         target_path = FIXTURES_DIR / fixture_name / target_rel_path
+        written_targets.add(target_path.resolve())
         content = file_path.read_text(encoding="utf-8")
 
         # Freeze mutable dependencies and VCS revisions if updating an existing file
@@ -853,6 +856,16 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 content = _freeze_pre_commit_hooks(old_content, content)
 
         _write_fixture(target_path, content)
+
+    # Prune stale files no longer generated for this scenario
+    fixture_root = FIXTURES_DIR / fixture_name
+    if fixture_root.exists():
+        for existing_file in list(fixture_root.rglob("*")):
+            if (
+                existing_file.is_file()
+                and existing_file.resolve() not in written_targets
+            ):
+                existing_file.unlink()
 
 
 def _get_host_uv_cache_dir() -> Path:

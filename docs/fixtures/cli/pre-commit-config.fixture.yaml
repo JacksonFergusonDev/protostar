@@ -73,13 +73,6 @@ repos:
     hooks:
       - id: gitleaks
 
-  # Markdown linting
-  - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.23.2
-    hooks:
-      - id: markdownlint-cli2
-        args: ["--fix"]
-
   # Commit message validation
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.18.0
