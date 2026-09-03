@@ -308,6 +308,14 @@ def generate_capability_tables() -> None:
         ]
         for mod in TOOLING_MODULES
     ]
+    tool_rows.append(
+        [
+            "Docker",
+            "`--docker`",
+            "Multi-stage `Dockerfile` and `.dockerignore` container scaffolding",
+            "`Dockerfile`, `.dockerignore`",
+        ]
+    )
     _write_fixture("table_tooling.md", _format_markdown_table(tool_headers, tool_rows))
 
     # Built-in Template matrix (scanned directly from protostar/templates)

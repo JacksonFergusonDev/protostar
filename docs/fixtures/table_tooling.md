@@ -17,3 +17,4 @@
 | GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `ci.yml` |
 | GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `release.yml` |
 | Just | `--just` | Scaffold a justfile for command execution | `justfile` |
+| Docker | `--docker` | Multi-stage `Dockerfile` and `.dockerignore` container scaffolding | `Dockerfile`, `.dockerignore` |
