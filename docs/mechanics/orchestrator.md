@@ -10,62 +10,29 @@ To guarantee idempotency and prevent partial initialization states (e.g., half-w
 
 ---
 
-## Execution Topology (The Engine Bulkhead)
+## Execution Lifecycle & Topology
 
-The `Orchestrator` implements a strict engine bulkhead separating read-only state aggregation from physical side effects. The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
+The `Orchestrator` enforces a strict separation between read-only state aggregation and physical side effects (the [Engine Bulkhead](../design-principles.md#engine-bulkhead)). The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
 
-All terminal UI interaction (collision prompts, remote trust confirmations, progress spinners) is isolated in the CLI layer (`cli.py`).
+All terminal interaction (collision prompts, remote trust confirmations, progress spinners) is isolated in the CLI presentation layer (`cli.py`).
 
 ```mermaid
 flowchart TD
-    %%{init: {'flowchart': {'useMaxWidth': false}}}%%
-    %% Styling
-    classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+    classDef boundary fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
+    classDef phase fill:#1e293b,stroke:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef state fill:#334155,stroke:#7c4dff,stroke-width:2px,color:#fff;
     classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
 
-    %% Boundary
-    subgraph CLILayer [CLI Presentation Layer]
-        direction TB
-        CLI([CLI Invocation: InitRequest]):::cli
-        CPrompt[TUI: Collision Resolution]:::cli
-        TPrompt[TUI: Remote Trust Confirmation]:::cli
-        Spinner[Rich Spinner: SpinnerHandler]:::cli
-        DiagRender[Render Diagnostics Panel]:::cli
-    end
+    Req([InitRequest]):::boundary --> Plan["Phase 1: plan()<br/>• Workspace collision checks<br/>• Pre-flight binary verification<br/>• Manifest aggregation"]:::phase
 
-    subgraph PlanPhase [Engine Phase 1: plan]
-        direction TB
-        C{Collision Check}:::phase
-        C -- "Markers Found<br/>(No Force)" --> E_Col["Raise<br/>WorkspaceCollisionError"]:::error
-        C -- "Nominal / Forced" --> PF["Pre-Flight<br/>Verification"]:::phase
-        PF -- "Missing<br/>Dependency" --> E_Dep["Raise<br/>MissingDependencyError"]:::error
-        PF -- Nominal --> Agg["Manifest<br/>Aggregation"]:::phase
-        Agg --> M[(EnvironmentManifest)]
-    end
+    Plan -->|Validation Failure| Err["Raise ProtostarError<br/>(Caught by CLI Presentation Layer)"]:::error
+    Plan -->|Plan Validated| Manifest[(EnvironmentManifest)]:::state
 
-    subgraph ExecPhase [Engine Phase 2: execute]
-        direction TB
-        Exec[System Executor]:::core
-        D1[Validate & Merge ASTs]
-        D2[Write Directories & Files]
-        D3[Execute Shell Subprocesses]
-        Exec --> D1 --> D2 --> D3
-        Exec --> Res[Return ExecutionResult]
-    end
+    Manifest -->|--dry-run / --json| DryRun([Serialize Manifest / Dry Run]):::boundary
+    Manifest -->|Live Execution| Exec["Phase 2: execute()<br/>• Validate & deep-merge ASTs<br/>• Scaffold directories & inject files<br/>• Execute managed subprocesses"]:::phase
 
-    CLI --> PlanPhase
-    E_Col -. "Caught<br/>by CLI" .-> CPrompt
-    CPrompt -- "Re-plan with<br/>Force Flag" --> PlanPhase
-    CPrompt -- Abort --> Exit1(["POSIX Exit<br/>Code 130"]):::error
-
-    M --> TPrompt
-    TPrompt -- Approved --> Spinner
-    Spinner --> ExecPhase
-    Res --> DiagRender
-    DiagRender --> End([Environment Stabilized]):::success
+    Exec --> Result([ExecutionResult]):::success
 ```
 
 ---
@@ -99,44 +66,13 @@ flowchart TD
 
 ---
 
-## Telemetry & Crash Reporting
+## Telemetry & Diagnostics
 
-The CLI entry point traps all exceptions at the boundary to ensure clear, actionable terminal reporting.
-
-### Diagnostic Telemetry
-
-During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv`) are recorded into `ExecutionResult.diagnostics`. The CLI renders these events in a structured summary panel:
+During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv` or skipped optional tasks) are recorded into `ExecutionResult.diagnostics`. The CLI presentation layer renders these events in a structured summary panel upon completion:
 
 ![Protostar Diagnostic Summary](../fixtures/diagnostic_panel.svg)
 
-### Exception Handling & Triage
-
-By trapping errors at the highest level, Protostar guarantees that you are never presented with a raw, unformatted Python stack trace unless explicitly requested via the `--verbose` flag.
-
-- __Expected Anomalies:__ Domain-specific exceptions inheriting from `ProtostarError` (such as `FileSystemError` for I/O constraints, or `MissingDependencyError` for absent binaries) are caught and gracefully presented as a clean abort message in the terminal, alongside a decoupled remediation hint.
-- __Critical Failures:__ If Protostar encounters an unhandled internal exception (a genuine bug or AST parsing collapse), it assumes the state is unstable. It traps the stack trace, collects a vector of the environment state, and outputs a URL-encoded link. Clicking this link instantly opens a pre-populated GitHub issue before exiting with `os.EX_SOFTWARE`.
-
-!!! example "Simulated Critical Failure Payload"
-    When a catastrophic failure occurs, the CLI encodes the following telemetry into the GitHub issue body:
-
-    ### Environment
-
-    - __OS__: Darwin 25.3.0
-    - __Python__: 3.14.3
-    - __Command__: `protostar init --astro --crash-test`
-
-    ### Traceback
-
-    ```python
-    Traceback (most recent call last):
-    File "/opt/homebrew/bin/protostar", line 8, in <module>
-        sys.exit(main())
-    File "/opt/homebrew/lib/python3.12/site-packages/protostar/cli.py", line 150, in handle_init
-        _run_engine(engine, request)
-    File "/opt/homebrew/lib/python3.12/site-packages/protostar/orchestrator.py", line 85, in plan
-        raise TypeError("INTENTIONAL_CRASH")
-    TypeError: INTENTIONAL_CRASH
-    ```
+For unexpected internal exceptions or AST parsing failures, the runtime traps errors at the CLI boundary to generate pre-filled GitHub crash reports without corrupting the workspace. For complete details on the exception hierarchy, POSIX exit code mappings, and crash issue generation, see the [Error Handling Architecture](./error_handling.md#crash-diagnostics-and-telemetry).
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: "Use and create declarative templates to define reusable Python environment blueprints in Protostar."
+description: "Discover, load, and configure declarative templates and portable blueprints in Protostar."
 ---
 
 # Templates & Portable Configurations
@@ -96,45 +96,9 @@ protostar init --from https://github.com/YourOrg/fastapi-template
 
 Protostar downloads the archive, extracts it safely using strict path traversal protection, resolves the contained `protostar.toml`, and injects all files from the `template/` directory into your workspace.
 
----
-
-## Dynamic Variables & Interpolation
-
-Templates can define parameterized placeholders using `<% VARIABLE_NAME %>` delimiters.
-
-### Passing Variables via CLI
-
-Pass dynamic values as trailing arguments during initialization:
-
-```bash
-protostar init --from ./service.toml --PROJECT_NAME="auth-service" --DATABASE_URL="postgresql://localhost:5432/db"
-```
-
-### Interactive Resolution
-
-If a template contains placeholders that were not supplied via CLI flags, Protostar automatically prompts you for the missing values in the terminal (both in headless and TUI modes) before any disk mutations occur.
-
-### Built-in Late-Binding Variables
-
-Protostar automatically reserves and computes the following variables during execution:
-
-- `<% PROJECT_NAME %>`: The human-readable project name (derived from directory name or metadata).
-- `<% PACKAGE_NAME %>`: The PEP 8 sanitized Python package identifier (e.g., `my-cool-app` becomes `my_cool_app`).
-- `<% PYTHON_VERSION %>`: The resolved target Python version (e.g., `3.13`).
-- `<% CURRENT_YEAR %>`: The current calendar year (e.g., `2026`).
-- `<% AUTHOR_NAME %>`: The resolved author name (from project metadata or fallback default).
-
----
-
-## Authoring Custom Templates
-
-See [Authoring Templates](authoring-templates.md) for information on how to create your own templates.
-
----
-
 ## The Global Alias Registry
 
-Instead of memorizing long URLs or local paths, register your templates in your global configuration file (`~/.config/protostar/config.toml`):
+Instead of memorizing long URLs or local paths, you can register templates in your global configuration file (`~/.config/protostar/config.toml`):
 
 ```toml
 # Run `protostar config` to edit this file
@@ -145,7 +109,7 @@ microservice = "https://github.com/YourOrg/microservice-template"
 local-ds = "~/Developer/templates/data-science.toml"
 ```
 
-Once registered, you can reference them directly with `--template` (or `-t`):
+Once registered, you can reference them directly by alias with `--template` (or `-t`):
 
 ```bash
 protostar init --template backend
@@ -154,6 +118,31 @@ protostar init -t backend
 ```
 
 In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
+
+---
+
+## Supplying Template Parameters
+
+Templates can define custom parameters (such as service names, database endpoints, or deployment settings).
+
+### Passing Parameters via CLI
+
+You can pass parameter values directly as trailing CLI flags during initialization:
+
+```bash
+protostar init --from ./service.toml --DATABASE_URL="postgresql://localhost:5432/db"
+```
+
+### Interactive Resolution
+
+If a template requires parameters that were not supplied via CLI flags, Protostar automatically prompts you for the missing values in the terminal (both in headless and TUI modes) before any disk mutations occur.
+
+### Automatic Metadata Resolution
+
+Standard project variables—such as the human-readable project name, PEP 8 sanitized package identifier, target Python version, current calendar year, and author details—are resolved automatically by Protostar from your environment and directory context. You do not need to provide these manually.
+
+!!! tip "Defining Template Variables"
+    If you are authoring your own template and want to embed `<% VARIABLE_NAME %>` placeholders or inspect all built-in late-binding variables, see the [Authoring Custom Templates: Variable Interpolation](authoring-templates.md#level-3-variable-interpolation) guide.
 
 ---
 
@@ -210,6 +199,12 @@ Do you trust this source to modify your system? [y/N]
 ```
 
 In non-interactive environments (e.g., CI/CD), untrusted templates with executable tasks abort immediately. To run them headlessly, register the template in your global configuration aliases.
+
+---
+
+## Ready to Author Your Own Templates?
+
+If you want to build reusable blueprints for your team, inject custom configurations into `pyproject.toml`, or package full multi-file template repositories with dynamic variables, head over to the __[Authoring Custom Templates](./authoring-templates.md)__ guide.
 
 ---
 
