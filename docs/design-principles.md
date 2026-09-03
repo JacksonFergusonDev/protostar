@@ -295,17 +295,7 @@ Telemetry in Protostar operates at three levels:
 **Every failure class maps to a specific, standardized POSIX exit integer — not just `0` (success) or `1` (failure).**
 
 POSIX defines a set of exit code semantics beyond the binary success/fail convention. Protostar maps its exception hierarchy directly to them:
-
-| Failure Condition | Exception | POSIX Code | Integer |
-| :--- | :--- | :--- | :---: |
-| Missing system binary (`uv`, `git`, etc.) | `MissingDependencyError` | `os.EX_UNAVAILABLE` | `69` |
-| Malformed TOML or invalid configuration | `ConfigurationError` | `os.EX_CONFIG` | `78` |
-| Disk I/O error | `FileSystemError` | `os.EX_IOERR` | `74` |
-| Network drop or TLS failure | `NetworkFetchError` | `os.EX_TEMPFAIL` | `75` |
-| Corrupt archive or missing template vars | `TemplateResolutionError` | `os.EX_DATAERR` | `65` |
-| Path traversal security violation | `SecurityViolationError` | `os.EX_NOPERM` | `77` |
-| User aborted interactive prompt | `ExecutionAbortedError` | Shell signal | `130` |
-| Unexpected internal bug | *(unhandled exception)* | `os.EX_SOFTWARE` | `70` |
+--8<-- "table_exit_codes.md"
 
 **Why this matters:** A script that calls Protostar and checks only `if $? -ne 0` can tell that *something* failed. A script that checks specific exit codes can tell whether the failure was a transient network issue (retry), a missing dependency (prompt user to install), or a configuration error (fail fast and alert). The distinction is the difference between a tool that composes well in automation and one that requires a human in the loop to diagnose failures.
 

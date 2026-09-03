@@ -179,18 +179,7 @@ The error envelope guarantees:
 
 Protostar routes operational exceptions to standard UNIX exit codes (defined in `os`), allowing automation tooling and CI pipelines to programmatically identify failure causes:
 
-| Exception Class | POSIX Code Name | Integer Exit Code | Primary Trigger Condition |
-| :--- | :--- | :--- | :--- |
-| `ConfigurationError` | `os.EX_CONFIG` | `78` | Invalid TOML syntax, malformed preset key, missing config file |
-| `NetworkFetchError` | `os.EX_TEMPFAIL` | `75` | Transient network drop, DNS failure, HTTP connection error, insecure protocol |
-| `TemplateResolutionError` | `os.EX_DATAERR` | `65` | Corrupt archive, unsupported archive format, missing template variables |
-| `MissingDependencyError` | `os.EX_UNAVAILABLE` | `69` | Required system binary (e.g. `uv`, `git`) missing during `pre_flight()` |
-| `FileSystemError` | `os.EX_IOERR` | `74` | File write permission denied, disk full, invalid path I/O |
-| `SecurityViolationError` | `os.EX_NOPERM` | `77` | Path traversal (Zip Slip) security constraint violation |
-| `ExecutionAbortedError` | Shell Signal | `130` | You cancelled interactive wizard prompt via Ctrl+C / abort |
-| `CommandExecutionError` | Generic Exit | `1` | Subprocess (e.g. `uv sync`, `git init`) exited non-zero |
-| `CommandTimeoutError` | Generic Exit | `1` | Subprocess exceeded execution timeout threshold |
-| *Unhandled Internal Bug* | `os.EX_SOFTWARE` | `70` | Unexpected Python exception or TOML syntax error |
+--8<-- "table_exit_codes.md"
 
 ---
 
