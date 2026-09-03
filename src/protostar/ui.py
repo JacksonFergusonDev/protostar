@@ -12,7 +12,11 @@ if TYPE_CHECKING:
 else:
 
     class Choice:
-        """Lazily constructs a questionary Choice."""
+        """Lazily constructs a questionary Choice.
+
+        Note: Runtime isinstance() checks against this class will fail
+        because __new__ returns a native questionary.Choice instance.
+        """
 
         def __new__(cls, *args: Any, **kwargs: Any) -> Any:
             """Constructs and returns a questionary Choice instance."""
@@ -21,7 +25,11 @@ else:
             return questionary.Choice(*args, **kwargs)
 
     class Separator:
-        """Lazily constructs a questionary Separator."""
+        """Lazily constructs a questionary Separator.
+
+        Note: Runtime isinstance() checks against this class will fail
+        because __new__ returns a native questionary.Separator instance.
+        """
 
         def __new__(cls, *args: Any, **kwargs: Any) -> Any:
             """Constructs and returns a questionary Separator instance."""
@@ -30,13 +38,20 @@ else:
             return questionary.Separator(*args, **kwargs)
 
     class Style:
-        """Lazily constructs a questionary Style."""
+        """Lazily constructs a questionary Style.
+
+        Note: Runtime isinstance() checks against this class will fail
+        because __new__ returns a native questionary.Style instance.
+        """
 
         def __new__(cls, *args: Any, **kwargs: Any) -> Any:
             """Constructs and returns a questionary Style instance."""
             import questionary
 
             return questionary.Style(*args, **kwargs)
+
+
+ChoiceItem = str | Choice | Separator
 
 
 def _ask(question: Any) -> Any:
@@ -51,7 +66,7 @@ def _ask(question: Any) -> Any:
     return question.ask(kbi_msg="")
 
 
-def select(message: str, choices: Sequence[Any], **kwargs: Any) -> Any:
+def select(message: str, choices: Sequence[ChoiceItem], **kwargs: Any) -> Any | None:
     """Prompt user to select an option from a list.
 
     Args:
@@ -64,7 +79,10 @@ def select(message: str, choices: Sequence[Any], **kwargs: Any) -> Any:
     """
     import questionary
 
-    return _ask(questionary.select(message, choices=choices, **kwargs))
+    return cast(
+        Any | None,
+        _ask(questionary.select(message, choices=choices, **kwargs)),
+    )
 
 
 def confirm(message: str, **kwargs: Any) -> bool | None:
@@ -85,7 +103,9 @@ def confirm(message: str, **kwargs: Any) -> bool | None:
     )
 
 
-def checkbox(message: str, choices: Sequence[Any], **kwargs: Any) -> list[Any] | None:
+def checkbox(
+    message: str, choices: Sequence[ChoiceItem], **kwargs: Any
+) -> list[Any] | None:
     """Prompt user to toggle multiple options from a list.
 
     Args:

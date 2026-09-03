@@ -80,7 +80,7 @@ def run_init_wizard() -> WizardSelections | None:
         template_choices.append(Separator("--- External Aliases ---"))
         template_choices.extend(config.templates.keys())
 
-    answer = "None"
+    answer: str | None = "None"
     if len(template_choices) > 1:
         if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
             answer = "None"
