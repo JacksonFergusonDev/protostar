@@ -1087,6 +1087,9 @@ def test_cli_reference_fixture_tables():
     exit_codes_file = fixtures_dir / "table_exit_codes.md"
     assert exit_codes_file.exists()
     exit_codes_content = exit_codes_file.read_text()
-    assert "| Code | POSIX Name | Trigger Condition |" in exit_codes_content
+    assert (
+        "| Exit Code | POSIX Name | Exception Class | Trigger Condition |"
+        in exit_codes_content
+    )
     assert "`EX_OK`" in exit_codes_content
     assert "`os.EX_USAGE`" in exit_codes_content
