@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788394103561,
+  "lastUpdate": 1788405049099,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10137,6 +10137,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.46,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64737d35b7886fdcd468c9a30cf5a10d6be2e303",
+          "message": "docs: eliminate unhelpful documentation redundancies and unify fixture snippets (#220)\n\n* docs: streamline orchestrator execution topology diagram\n\n* docs: clarify persona boundaries between template consumption and authoring\n\n* docs: unify POSIX exit codes table across documentation using snippet\n\n* docs: include Docker container scaffolding in tooling capabilities matrix\n\n* docs: consolidate telemetry and crash reporting documentation into error_handling.md\n\n* docs: streamline opinionated templates section in init.md\n\n* test: update fixture assertion for 4-column exit codes table",
+          "timestamp": "2026-09-02T20:09:45-07:00",
+          "tree_id": "9a8276f82d5b7edf0acb56584671e4e9008dc541",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/64737d35b7886fdcd468c9a30cf5a10d6be2e303"
+        },
+        "date": 1788405048062,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.75,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 222.41,
             "unit": "ms"
           }
         ]
