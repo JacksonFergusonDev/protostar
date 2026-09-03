@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788472731085,
+  "lastUpdate": 1788478139711,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10273,6 +10273,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 176.12,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c082b6c86e5e35ad3fdc76b824fec6976ba0b133",
+          "message": "feat(tooling): add rumdl module and set as default for production templates (#221)\n\n* feat: add rumdl module and enable for production-facing templates\n\n* style(toml): add # ---- rumdl ---- # section header for rumdl tooling config\n\n* fix(fixtures): replace --markdownlint with --rumdl and prune stale files\n\n* refactor(fixtures): simplify fixture matrices to pure template invocations\n\n* feat(ci): add --output-format github to rumdl workflow commands\n\n* fix(ide): make rumdl vscode installation optional and non-fatal\n\n* docs(fixtures): add maintainer note on ml docker fixture exception\n\n* refactor(executor): remove rumdl vscode execution from SystemExecutor",
+          "timestamp": "2026-09-03T16:27:48-07:00",
+          "tree_id": "38d74f7ec4aec3f78c3307993ff6d215a12e27a0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c082b6c86e5e35ad3fdc76b824fec6976ba0b133"
+        },
+        "date": 1788478138579,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 156.2,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 225.44,
             "unit": "ms"
           }
         ]
