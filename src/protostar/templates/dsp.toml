@@ -37,7 +37,7 @@ ruff = true
 direnv = true
 pytest = true
 just = true
-markdownlint = true
+rumdl = false
 prek = false
 ci = false
 

@@ -11,7 +11,7 @@ vcs_ignores = ["*.bin", "*.uf2", "build/"]
 ruff = true
 direnv = true
 just = true
-markdownlint = true
+rumdl = false
 prek = false
 ci = false
 

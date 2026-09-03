@@ -33,6 +33,14 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         uses: DavidAnson/markdownlint-cli2-action@v24
 
+      - name: Run rumdl linter
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: uv run rumdl check
+
+      - name: Run rumdl formatter
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
+        run: uv run rumdl fmt --check
+
       - name: Run Ruff Linter
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         run: uv run ruff check --output-format=github .

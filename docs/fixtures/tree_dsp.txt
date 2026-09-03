@@ -1,7 +1,6 @@
 .
 ├── .envrc
 ├── .gitignore
-├── .markdownlint-cli2.yaml
 ├── .python-version
 ├── data
 │   └── samples

@@ -32,6 +32,20 @@ repos:
         pass_filenames: false
         files: ^(pyproject\.toml|uv\.lock)$
 
+      - id: rumdl-check
+        name: rumdl check
+        entry: uv run rumdl check --fix
+        language: system
+        types: [markdown]
+        require_serial: true
+
+      - id: rumdl-fmt
+        name: rumdl fmt
+        entry: uv run rumdl fmt
+        language: system
+        types: [markdown]
+        require_serial: true
+
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix
@@ -58,13 +72,6 @@ repos:
     rev: v8.24.0
     hooks:
       - id: gitleaks
-
-  # Markdown linting
-  - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.23.2
-    hooks:
-      - id: markdownlint-cli2
-        args: ["--fix"]
 
   # Commit message validation
   - repo: https://github.com/commitizen-tools/commitizen

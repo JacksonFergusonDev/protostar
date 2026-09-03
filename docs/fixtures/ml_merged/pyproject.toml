@@ -26,6 +26,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-mock>=3.15.1",
     "ruff>=0.16.5",
+    "rumdl>=0.2.64",
 ]
 docs = [
     "ipywidgets>=8.1.9",
@@ -81,4 +82,45 @@ testpaths = [
 ]
 pythonpath = [
     ".",
+]
+
+[tool.rumdl]
+disable = [
+    "MD013", # line length - creates unnecessary diff churn
+    "MD033", # inline HTML - required for readme and parts of documentation
+    "MD077", # continuation line indentation - 4-space visual indent is intentional
+]
+
+# --- Heading style ---
+# Enforce ATX style (# Heading) exclusively
+[tool.rumdl.MD003]
+style = "atx"
+
+# --- Unordered list style ---
+# Use dash (-) for list markers for consistency and reduced diff noise
+[tool.rumdl.MD004]
+style = "dash"
+
+# --- Trailing spaces ---
+# Allow exactly 2 spaces for hard line breaks; flag other stray whitespace
+[tool.rumdl.MD009]
+br-spaces = 2
+strict = false
+
+# --- Duplicate headings ---
+# Allow identical subheadings under different parent headings
+[tool.rumdl.MD024]
+siblings-only = true
+
+# --- Ordered list numbering ---
+# Use "one" style (1., 1., 1.) to minimize Git diff churn on reorders
+[tool.rumdl.MD029]
+style = "one"
+
+# --- Per-directory overrides for docs/ ---
+# Relax rules that conflict with MkDocs / Zensical extensions
+[tool.rumdl.per-file-ignores]
+"docs/**/*.md" = [
+    "MD041", # first line need not be a top-level heading in doc pages
+    "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]

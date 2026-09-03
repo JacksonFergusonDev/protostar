@@ -185,6 +185,106 @@ config:
         manifest.filesystem.add_file_injection(".markdownlint-cli2.yaml", content)
 
 
+class RumdlModule(BootstrapModule):
+    """Configures the rumdl fast markdown linter."""
+
+    cli_flags = ("--rumdl",)
+    cli_help = "Scaffold rumdl fast markdown linter"
+    config_key = "rumdl"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Rumdl"
+
+    def build(self, manifest: EnvironmentManifest) -> None:
+        """Queues rumdl dev dependency, ignores, hooks, and pyproject.toml config."""
+        logger.debug("Building Rumdl tooling layer.")
+        manifest.dependencies.add_dev("rumdl")
+        manifest.filesystem.add_environment_artifact(".rumdl_cache/")
+
+        hook_payload = """      - id: rumdl-check
+        name: rumdl check
+        entry: uv run rumdl check --fix
+        language: system
+        types: [markdown]
+        require_serial: true
+
+      - id: rumdl-fmt
+        name: rumdl fmt
+        entry: uv run rumdl fmt
+        language: system
+        types: [markdown]
+        require_serial: true"""
+        manifest.tooling.add_pre_commit_local_hook(hook_payload)
+
+        manifest.tooling.add_ci_step(
+            "      - name: Run rumdl linter\n"
+            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
+            "        run: uv run rumdl check\n"
+            "\n"
+            "      - name: Run rumdl formatter\n"
+            "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
+            "        run: uv run rumdl fmt --check"
+        )
+
+        manifest.tooling.just_lint_commands.extend(
+            ["uv run rumdl check .", "uv run rumdl fmt --check ."]
+        )
+        manifest.tooling.just_format_commands.extend(
+            ["uv run rumdl check --fix .", "uv run rumdl fmt ."]
+        )
+        manifest.tooling.just_clean_paths.append(".rumdl_cache")
+
+        manifest.tasks.add_post_install_task(
+            ["uv", "run", "rumdl", "vscode"],
+            description="Installing rumdl VS Code extension",
+        )
+
+        config = """[tool.rumdl]
+disable = [
+    "MD013", # line length - creates unnecessary diff churn
+    "MD033", # inline HTML - required for readme and parts of documentation
+    "MD077", # continuation line indentation - 4-space visual indent is intentional
+]
+
+# --- Heading style ---
+# Enforce ATX style (# Heading) exclusively
+[tool.rumdl.MD003]
+style = "atx"
+
+# --- Unordered list style ---
+# Use dash (-) for list markers for consistency and reduced diff noise
+[tool.rumdl.MD004]
+style = "dash"
+
+# --- Trailing spaces ---
+# Allow exactly 2 spaces for hard line breaks; flag other stray whitespace
+[tool.rumdl.MD009]
+br-spaces = 2
+strict = false
+
+# --- Duplicate headings ---
+# Allow identical subheadings under different parent headings
+[tool.rumdl.MD024]
+siblings-only = true
+
+# --- Ordered list numbering ---
+# Use "one" style (1., 1., 1.) to minimize Git diff churn on reorders
+[tool.rumdl.MD029]
+style = "one"
+
+# --- Per-directory overrides for docs/ ---
+# Relax rules that conflict with MkDocs / Zensical extensions
+[tool.rumdl.per-file-ignores]
+"docs/**/*.md" = [
+    "MD041", # first line need not be a top-level heading in doc pages
+    "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
+]
+"""
+        manifest.filesystem.add_file_append("pyproject.toml", config)
+
+
 class RuffModule(BootstrapModule):
     """Configures the Ruff linter and formatter with a standard baseline."""
 

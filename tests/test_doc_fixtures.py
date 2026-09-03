@@ -138,7 +138,7 @@ def test_existing_svg_documentation_fixtures():
     fixtures_dir = Path("docs/fixtures")
     expected_fixtures = {
         "cli_config_help.svg": 946,  # 76 cols
-        "cli_dry_run.svg": 994,  # 80 cols
+        "cli_dry_run.svg": 1080,  # 80 cols
         "diagnostic_panel.svg": 1006,  # 81 cols
         "cli_help.svg": 1153,  # 93 cols
         "cli_init_help.svg": 1238,  # 100 cols

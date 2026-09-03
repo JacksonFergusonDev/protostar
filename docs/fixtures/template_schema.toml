@@ -68,6 +68,7 @@ readthedocs = false
 release = false
 renovate = false
 ruff = true
+rumdl = false
 ty = false
 zensical = false
 
