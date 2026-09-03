@@ -1243,3 +1243,67 @@ def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_co
     assert "https://github.com/DavidAnson/markdownlint-cli2" in written_data
     assert "https://github.com/pre-commit/pre-commit-hooks" in written_data
     assert "https://github.com/gitleaks/gitleaks" in written_data
+
+
+def test_sync_rumdl_vscode_extension_success(mocker, mock_config):
+    """Test that rumdl vscode extension sync runs when IDE is vscode and succeeds cleanly."""
+    from unittest.mock import MagicMock
+
+    mock_config.ide = "vscode"
+    manifest = EnvironmentManifest()
+    manifest.tooling.add_ide_extension("rvben.rumdl")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mock_run = mocker.patch(
+        "protostar.executor.subprocess.run", return_value=MagicMock(returncode=0)
+    )
+    executor._sync_rumdl_vscode_extension()
+
+    mock_run.assert_called_once_with(
+        ["uv", "run", "rumdl", "vscode"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert not any(
+        d.message == "rumdl failed to install vscode extension"
+        for d in executor.diagnostics
+    )
+
+
+def test_sync_rumdl_vscode_extension_failure_adds_skip_diagnostic(mocker, mock_config):
+    """Test that rumdl vscode failure logs a gentle skip diagnostic rather than aborting."""
+    from unittest.mock import MagicMock
+
+    mock_config.ide = "vscode"
+    manifest = EnvironmentManifest()
+    manifest.tooling.add_ide_extension("rvben.rumdl")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch(
+        "protostar.executor.subprocess.run", return_value=MagicMock(returncode=1)
+    )
+    executor._sync_rumdl_vscode_extension()
+
+    skip_events = [
+        d
+        for d in executor.diagnostics
+        if d.message == "rumdl failed to install vscode extension"
+    ]
+    assert len(skip_events) == 1
+    assert skip_events[0].severity == Severity.SKIP
+    assert skip_events[0].phase == DiagnosticPhase.IDE
+
+
+def test_sync_rumdl_vscode_extension_skipped_when_ide_not_vscode(mocker, mock_config):
+    """Test that rumdl vscode is not called when IDE is not vscode."""
+    mock_config.ide = None
+    manifest = EnvironmentManifest()
+    manifest.tooling.add_ide_extension("rvben.rumdl")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mock_run = mocker.patch("protostar.executor.subprocess.run")
+    executor._sync_rumdl_vscode_extension()
+
+    mock_run.assert_not_called()
+    assert len(executor.diagnostics) == 0

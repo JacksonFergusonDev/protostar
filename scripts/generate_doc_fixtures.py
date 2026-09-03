@@ -45,10 +45,10 @@ from protostar.orchestrator import Orchestrator
 FIXTURES = {
     "cli": [["--template", "cli"]],
     "astro": [["--template", "astro"]],
-    "ml": [["--template", "ml"]],
+    "ml": [["--template", "ml", "--docker"]],
     "ml_merged": [
-        ["--template", "ml"],
-        ["--template", "astro", "--force-merge"],
+        ["--template", "ml", "--docker"],
+        ["--template", "astro", "--mypy", "--docker", "--force-merge"],
     ],
     "api": [["--template", "api"]],
     "dsp": [["--template", "dsp"]],

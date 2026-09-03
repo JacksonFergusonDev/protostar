@@ -1,8 +1,10 @@
 .
+├── .dockerignore
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
 ├── .python-version
+├── Dockerfile
 ├── data
 │   ├── 01_raw
 │   │   └── .gitkeep

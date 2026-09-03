@@ -235,11 +235,7 @@ class RumdlModule(BootstrapModule):
             ["uv run rumdl check --fix .", "uv run rumdl fmt ."]
         )
         manifest.tooling.just_clean_paths.append(".rumdl_cache")
-
-        manifest.tasks.add_post_install_task(
-            ["uv", "run", "rumdl", "vscode"],
-            description="Installing rumdl VS Code extension",
-        )
+        manifest.tooling.add_ide_extension("rvben.rumdl")
 
         config = """# ---- rumdl ---- #
 

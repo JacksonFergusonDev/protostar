@@ -53,8 +53,6 @@ def test_individual_template_scaffolding(run_cli, template):
             and ".git" not in file_path.parts
             and ".venv" not in file_path.parts
             and ".cache" not in file_path.parts
-            and ".vscode" not in file_path.parts
-            and "Library" not in file_path.parts
         ):
             text = file_path.read_text(encoding="utf-8")
             for line_idx, line in enumerate(text.splitlines(), 1):

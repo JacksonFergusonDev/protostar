@@ -1,5 +1,6 @@
 import datetime
 import logging
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from .errors import (
     FileSystemError,
 )
 from .fs import atomic_write_text
-from .ide import check_ide_extensions, write_ide_settings
+from .ide import IDEType, check_ide_extensions, write_ide_settings
 from .interpolation import render_template
 from .manifest import (
     CollisionStrategy,
@@ -137,6 +138,7 @@ class SystemExecutor:
         Fails silently if the IDE CLI is unavailable or execution fails. Appends a warning
         diagnostic only on a successful check that uncovers missing extensions.
         """
+        self._sync_rumdl_vscode_extension()
         check_ide_extensions(
             ide=self.config.ide,
             ide_extensions=self.manifest.tooling.ide_extensions,
@@ -146,6 +148,46 @@ class SystemExecutor:
                 severity=sev,
             ),
         )
+
+    def _sync_rumdl_vscode_extension(self) -> None:
+        """Attempts to install rumdl extension if VS Code is configured; fails gently as a skip diagnostic."""
+        if not self.config.ide:
+            return
+
+        ide_value = (
+            self.config.ide.value
+            if isinstance(self.config.ide, IDEType)
+            else str(self.config.ide).lower()
+        )
+        if ide_value != "vscode":
+            return
+
+        has_rumdl = any(
+            (req == "rvben.rumdl" or (isinstance(req, tuple) and "rvben.rumdl" in req))
+            for req in self.manifest.tooling.ide_extensions
+        )
+        if not has_rumdl:
+            return
+
+        try:
+            result = subprocess.run(
+                ["uv", "run", "rumdl", "vscode"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if result.returncode != 0:
+                self.add_diagnostic(
+                    phase=DiagnosticPhase.IDE,
+                    message="rumdl failed to install vscode extension",
+                    severity=Severity.SKIP,
+                )
+        except Exception:
+            self.add_diagnostic(
+                phase=DiagnosticPhase.IDE,
+                message="rumdl failed to install vscode extension",
+                severity=Severity.SKIP,
+            )
 
     def _validate_targets(self) -> None:
         """Validates the syntax of existing target files before disk I/O begins.
