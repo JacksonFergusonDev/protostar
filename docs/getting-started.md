@@ -5,12 +5,6 @@ icon: material/rocket
 
 # Getting Started
 
-## Prerequisites
-
-- **Python 3.12+**
-- **Git** (Required for VCS ignore scaffolding)
-- **uv** (Highly recommended for sub-second dependency resolution, though `pip` is supported as a fallback)
-
 ## Installation
 
 Protostar is designed to be installed globally as a standalone CLI tool, with native cross-platform support for Linux, macOS, and Windows.
