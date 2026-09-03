@@ -1,3 +1,7 @@
+---
+description: "Author custom single-file blueprints and multi-file repository templates for Protostar."
+---
+
 # Authoring Custom Templates
 
 Protostar templates allow platform engineers, team leads, and open-source maintainers to define reusable, declarative environment blueprints. By abstracting away the boilerplate of configuring linters, type checkers, and directory hierarchies, templates ensure that new projects adhere to organizational standards from initialization.
