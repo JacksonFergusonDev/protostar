@@ -42,6 +42,13 @@ from protostar.modules import (
 from protostar.orchestrator import Orchestrator
 
 # Define matrices for combinatorial CLI execution scenarios
+# NOTE FOR MAINTAINERS:
+# Template scenario fixtures should generally have NO flags other than `["--template", "<name>"]`
+# to ensure fixtures reflect authentic, out-of-the-box default scaffolding output.
+# The `ml` fixture is a purposeful exception to this rule: it includes `--docker` because
+# `docs/usage/init.md` specifically showcases containerization for the ML stack and embeds
+# the resulting `ml/Dockerfile` and `ml/.dockerignore` snippets into the documentation.
+# `ml_merged` similarly exercises combinatorial multi-template merging with container support.
 FIXTURES = {
     "cli": [["--template", "cli"]],
     "astro": [["--template", "astro"]],
