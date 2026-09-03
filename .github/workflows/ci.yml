@@ -54,6 +54,9 @@ jobs:
     - name: Install dependencies
       run: uv sync --only-group ci --locked
 
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
     - name: Verify documentation fixtures are up-to-date
       run: |
         uv run python scripts/generate_doc_fixtures.py
@@ -93,20 +96,7 @@ jobs:
         uv pip install pytest-github-actions-annotate-failures
 
     - name: Mock direnv
-      shell: bash
-      run: |
-        mkdir -p "$RUNNER_TEMP/bin"
-        cat > "$RUNNER_TEMP/bin/direnv" <<'EOF'
-        #!/bin/sh
-        # direnv is not required in CI; Protostar only invokes `direnv allow`.
-        exit 0
-        EOF
-        cat > "$RUNNER_TEMP/bin/direnv.cmd" <<'EOF'
-        @echo off
-        exit /b 0
-        EOF
-        chmod +x "$RUNNER_TEMP/bin/direnv"
-        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      uses: ./.github/actions/mock-direnv
 
     - name: Run tests with coverage # (for Codecov)
       if: matrix.coverage

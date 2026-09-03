@@ -1,0 +1,20 @@
+name: "Mock direnv"
+description: "Mocks direnv in CI environments"
+runs:
+  using: "composite"
+  steps:
+    - name: Mock direnv
+      shell: bash
+      run: |
+        mkdir -p "$RUNNER_TEMP/bin"
+        cat > "$RUNNER_TEMP/bin/direnv" <<'EOF'
+        #!/bin/sh
+        # direnv is not required in CI; Protostar only invokes `direnv allow`.
+        exit 0
+        EOF
+        cat > "$RUNNER_TEMP/bin/direnv.cmd" <<'EOF'
+        @echo off
+        exit /b 0
+        EOF
+        chmod +x "$RUNNER_TEMP/bin/direnv"
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
