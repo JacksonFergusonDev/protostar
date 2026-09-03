@@ -14,6 +14,7 @@ python_version = "3.13"
 # Optional dev tool toggles for Python
 # direnv = true        # Scaffold .envrc and auto-activate virtual environments
 # markdownlint = true  # Scaffold MarkdownLint configuration and hooks
+# rumdl = true         # Scaffold rumdl fast markdown linter and formatter
 # ruff = false         # Disable default Ruff linter and formatter scaffolding
 # mypy = true          # Scaffold Mypy static type checker
 # ty = true            # Scaffold Astral ty type checker

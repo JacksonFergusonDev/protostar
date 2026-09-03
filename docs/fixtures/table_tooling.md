@@ -2,7 +2,7 @@
 | :--- | :--- | :--- | :--- |
 | direnv | `--direnv` | Scaffold a .envrc and evaluate the virtual environment | `.envrc` |
 | MarkdownLint | `--markdownlint` | Scaffold a relaxed .markdownlint-cli2.yaml configuration | `.markdownlint-cli2.yaml` |
-| Rumdl | `--rumdl` | Scaffold rumdl fast markdown linter | *None* |
+| Rumdl | `--rumdl` | Scaffold rumdl fast markdown linter and formatter | *None* |
 | Ruff | `--ruff` | Scaffold Ruff linter and formatter | *None* |
 | Mypy | `--mypy` | Scaffold Mypy static type checker | *None* |
 | Ty | `--ty` | Scaffold Ty static type checker | *None* |

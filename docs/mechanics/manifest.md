@@ -47,7 +47,7 @@ During the `build()` phase, modules route their state declarations through these
     Managed by `FilesystemManifest`. Manages physical directory scaffolding, file injections, AST appends, and ignore configurations.
 
     * `directories`: A mathematical set of directories to be scaffolded via `mkdir -p` (`manifest.filesystem.add_directory()`).
-    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping a `.markdownlint-cli2.yaml` file via `manifest.filesystem.add_file_injection()`).
+    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping configuration files like `renovate.json` or `mkdocs.yml` via `manifest.filesystem.add_file_injection()`).
     * `file_appends`: A mapping of file paths to lists of configuration blocks used primarily for late-binding AST deep-merges into files like `pyproject.toml` (`manifest.filesystem.add_file_append()`).
     * `vcs_ignores`: Deduplicated patterns for `.gitignore` and `.dockerignore` (`manifest.filesystem.add_vcs_ignore()`).
     * `workspace_hides`: Patterns hidden from IDE workspace file explorers (`manifest.filesystem.add_workspace_hide()`).

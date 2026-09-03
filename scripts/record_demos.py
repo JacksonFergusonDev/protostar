@@ -305,7 +305,7 @@ def record_wizard(session: PTYSession) -> None:
     session.enter(wait=0.8)
 
     # 2. Component selection: "Select the components for your new environment:"
-    # In the astro preset, defaults (direnv, Ruff, markdownlint, just) are pre-selected.
+    # In the astro preset, defaults (direnv, Ruff, just) are pre-selected.
     # Pause briefly to showcase the pre-checked template tooling, then submit defaults:
     session.sleep(0.8)
     session.enter(wait=0.8)
