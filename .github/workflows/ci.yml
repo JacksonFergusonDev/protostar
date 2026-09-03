@@ -7,7 +7,62 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      with:
+        enable-cache: true
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: uv sync --only-group ci --locked
+
+    - name: Run Ruff Linter
+      run: uv run ruff check --output-format=github .
+
+    - name: Run Ruff Formatter
+      run: uv run ruff format --check --output-format=github .
+
+    - name: Lint Markdown with rumdl
+      run: uv run rumdl check --output-format github .
+
+    - name: Check Markdown formatting with rumdl
+      run: uv run rumdl fmt --check --output-format github .
+
+    - name: Type check with Mypy
+      run: uv run mypy .
+
+  docs:
+    name: Documentation Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      with:
+        enable-cache: true
+        python-version: "3.14"
+
+    - name: Install dependencies
+      run: uv sync --only-group ci --locked
+
+    - name: Verify documentation fixtures are up-to-date
+      run: |
+        uv run python scripts/generate_doc_fixtures.py
+        git diff --exit-code docs/fixtures/ || (echo "::error::Docs are out of date! Run 'uv run python scripts/generate_doc_fixtures.py' locally and commit the changes." && exit 1)
+
+    - name: Validate embedded documentation links
+      run: uv run python scripts/check_doc_links.py
+
+  test:
     name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -15,6 +70,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.12", "3.13", "3.14"]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.14"
+            coverage: true
 
     env:
       PYTHONIOENCODING: "utf-8"
@@ -49,32 +108,12 @@ jobs:
         chmod +x "$RUNNER_TEMP/bin/direnv"
         echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
-    - name: Run Ruff Linter
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-      run: uv run ruff check --output-format=github .
-
-    - name: Run Ruff Formatter
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-      run: uv run ruff format --check --output-format=github .
-
-    - name: Lint Markdown with rumdl
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-      run: uv run rumdl check --output-format github .
-
-    - name: Check Markdown formatting with rumdl
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-      run: uv run rumdl fmt --check --output-format github .
-
-    - name: Type check with Mypy
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-      run: uv run mypy .
-
     - name: Run tests with coverage # (for Codecov)
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+      if: matrix.coverage
       run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-      if: matrix.os != 'windows-latest' && !(matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14')
+      if: matrix.os != 'windows-latest' && !matrix.coverage
       run: uv run pytest
 
     - name: Run tests (Windows) # (skip slow tests, but run one E2E smoke test)
@@ -84,7 +123,7 @@ jobs:
         uv run pytest "tests/test_exhaustive.py::test_individual_template_scaffolding[cli]"
 
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+      if: matrix.coverage
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -94,7 +133,7 @@ jobs:
         fail_ci_if_error: true
 
     - name: Upload test analytics to Codecov
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14' && !cancelled() }}
+      if: ${{ matrix.coverage && !cancelled() }}
       uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -102,16 +141,6 @@ jobs:
         disable_search: true
         report_type: test_results
         name: test-results-ubuntu-py314
-
-    - name: Verify documentation fixtures are up-to-date
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14' }}
-      run: |
-        uv run python scripts/generate_doc_fixtures.py
-        git diff --exit-code docs/fixtures/ || (echo "::error::Docs are out of date! Run 'uv run python scripts/generate_doc_fixtures.py' locally and commit the changes." && exit 1)
-
-    - name: Validate embedded documentation links
-      if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14' }}
-      run: uv run python scripts/check_doc_links.py
 
   benchmark-gate:
     name: Benchmark Regression Check
