@@ -219,13 +219,13 @@ class RumdlModule(BootstrapModule):
         manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
         manifest.tooling.add_ci_step(
-            "      - name: Run rumdl linter\n"
+            "      - name: Lint Markdown with rumdl\n"
             "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
-            "        run: uv run rumdl check\n"
+            "        run: uv run rumdl check --output-format github .\n"
             "\n"
-            "      - name: Run rumdl formatter\n"
+            "      - name: Check Markdown formatting with rumdl\n"
             "        if: matrix.os == '<% PRIMARY_OS %>' && matrix.python-version == '<% BASELINE_PYTHON %>'\n"
-            "        run: uv run rumdl fmt --check"
+            "        run: uv run rumdl fmt --check --output-format github ."
         )
 
         manifest.tooling.just_lint_commands.extend(
