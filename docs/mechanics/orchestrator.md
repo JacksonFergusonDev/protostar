@@ -10,62 +10,29 @@ To guarantee idempotency and prevent partial initialization states (e.g., half-w
 
 ---
 
-## Execution Topology (The Engine Bulkhead)
+## Execution Lifecycle & Topology
 
-The `Orchestrator` implements a strict engine bulkhead separating read-only state aggregation from physical side effects. The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
+The `Orchestrator` enforces a strict separation between read-only state aggregation and physical side effects (the [Engine Bulkhead](../design-principles.md#engine-bulkhead)). The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
 
-All terminal UI interaction (collision prompts, remote trust confirmations, progress spinners) is isolated in the CLI layer (`cli.py`).
+All terminal interaction (collision prompts, remote trust confirmations, progress spinners) is isolated in the CLI presentation layer (`cli.py`).
 
 ```mermaid
 flowchart TD
-    %%{init: {'flowchart': {'useMaxWidth': false}}}%%
-    %% Styling
-    classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
-    classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
+    classDef boundary fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
+    classDef phase fill:#1e293b,stroke:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef state fill:#334155,stroke:#7c4dff,stroke-width:2px,color:#fff;
     classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
 
-    %% Boundary
-    subgraph CLILayer [CLI Presentation Layer]
-        direction TB
-        CLI([CLI Invocation: InitRequest]):::cli
-        CPrompt[TUI: Collision Resolution]:::cli
-        TPrompt[TUI: Remote Trust Confirmation]:::cli
-        Spinner[Rich Spinner: SpinnerHandler]:::cli
-        DiagRender[Render Diagnostics Panel]:::cli
-    end
+    Req([InitRequest]):::boundary --> Plan["Phase 1: plan()<br/>• Workspace collision checks<br/>• Pre-flight binary verification<br/>• Manifest aggregation"]:::phase
 
-    subgraph PlanPhase [Engine Phase 1: plan]
-        direction TB
-        C{Collision Check}:::phase
-        C -- "Markers Found<br/>(No Force)" --> E_Col["Raise<br/>WorkspaceCollisionError"]:::error
-        C -- "Nominal / Forced" --> PF["Pre-Flight<br/>Verification"]:::phase
-        PF -- "Missing<br/>Dependency" --> E_Dep["Raise<br/>MissingDependencyError"]:::error
-        PF -- Nominal --> Agg["Manifest<br/>Aggregation"]:::phase
-        Agg --> M[(EnvironmentManifest)]
-    end
+    Plan -->|Validation Failure| Err["Raise ProtostarError<br/>(Caught by CLI Presentation Layer)"]:::error
+    Plan -->|Plan Validated| Manifest[(EnvironmentManifest)]:::state
 
-    subgraph ExecPhase [Engine Phase 2: execute]
-        direction TB
-        Exec[System Executor]:::core
-        D1[Validate & Merge ASTs]
-        D2[Write Directories & Files]
-        D3[Execute Shell Subprocesses]
-        Exec --> D1 --> D2 --> D3
-        Exec --> Res[Return ExecutionResult]
-    end
+    Manifest -->|--dry-run / --json| DryRun([Serialize Manifest / Dry Run]):::boundary
+    Manifest -->|Live Execution| Exec["Phase 2: execute()<br/>• Validate & deep-merge ASTs<br/>• Scaffold directories & inject files<br/>• Execute managed subprocesses"]:::phase
 
-    CLI --> PlanPhase
-    E_Col -. "Caught<br/>by CLI" .-> CPrompt
-    CPrompt -- "Re-plan with<br/>Force Flag" --> PlanPhase
-    CPrompt -- Abort --> Exit1(["POSIX Exit<br/>Code 130"]):::error
-
-    M --> TPrompt
-    TPrompt -- Approved --> Spinner
-    Spinner --> ExecPhase
-    Res --> DiagRender
-    DiagRender --> End([Environment Stabilized]):::success
+    Exec --> Result([ExecutionResult]):::success
 ```
 
 ---
