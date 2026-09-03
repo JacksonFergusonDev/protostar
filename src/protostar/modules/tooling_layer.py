@@ -185,10 +185,10 @@ config:
 
 
 class RumdlModule(BootstrapModule):
-    """Configures the rumdl fast markdown linter."""
+    """Configures the rumdl fast markdown linter and formatter."""
 
     cli_flags = ("--rumdl",)
-    cli_help = "Scaffold rumdl fast markdown linter"
+    cli_help = "Scaffold rumdl fast markdown linter and formatter"
     config_key = "rumdl"
 
     @property

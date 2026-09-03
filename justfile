@@ -130,7 +130,7 @@ prewarm-demo: sync
     @printf "\n{{ blue }}=== Pre-warming Demo Environment & Caches ==={{ nc }}\n"
     @uv pip install --dry-run \
         numpy scipy pandas matplotlib astropy astroquery photutils specutils nbdime \
-        mypy pytest pytest-cov pytest-mock ruff markdownlint-cli2 typer rich commitizen prek zensical \
+        mypy pytest pytest-cov pytest-mock ruff rumdl typer rich commitizen prek zensical \
         --quiet 2>/dev/null || true
     @python3 -m compileall -q src/
     @uv run --with prek prek --config docs/fixtures/cli/pre-commit-config.fixture.yaml prepare-hooks 2>/dev/null || true

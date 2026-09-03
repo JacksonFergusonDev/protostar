@@ -9,6 +9,7 @@
 | `license` | `str` \| `None` | Default project license identifier (e.g., 'MIT', 'Apache-2.0'). |
 | `supported_os` | `list[str]` | The supported operating systems to scaffold CI for. |
 | `markdownlint` | `bool` | Whether to auto-scaffold MarkdownLint configs. |
+| `rumdl` | `bool` | Whether to auto-scaffold rumdl fast markdown linter and formatter. |
 | `ruff` | `bool` | Whether to auto-scaffold Ruff dependencies and configs. |
 | `mypy` | `bool` | Whether to auto-scaffold Mypy dependencies and configs. |
 | `ty` | `bool` | Whether to auto-scaffold Astral ty type checker. |

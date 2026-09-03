@@ -36,6 +36,7 @@ python_version = "3.13"
 # Optional dev tool toggles for Python
 # direnv = true        # Scaffold .envrc and auto-activate virtual environments
 # markdownlint = true  # Scaffold MarkdownLint configuration and hooks
+# rumdl = true         # Scaffold rumdl fast markdown linter and formatter
 # ruff = false         # Disable default Ruff linter and formatter scaffolding
 # mypy = true          # Scaffold Mypy static type checker
 # ty = true            # Scaffold Astral ty type checker
@@ -72,6 +73,7 @@ class UserConfig:
         license (str | None): Default project license identifier (e.g., 'MIT', 'Apache-2.0').
         supported_os (list[str]): The supported operating systems to scaffold CI for.
         markdownlint (bool): Whether to auto-scaffold MarkdownLint configs.
+        rumdl (bool): Whether to auto-scaffold rumdl fast markdown linter and formatter.
         ruff (bool): Whether to auto-scaffold Ruff dependencies and configs.
         mypy (bool): Whether to auto-scaffold Mypy dependencies and configs.
         ty (bool): Whether to auto-scaffold Astral ty type checker.
@@ -98,6 +100,7 @@ class UserConfig:
     license: str | None = None
     supported_os: list[str] = field(default_factory=list)
     markdownlint: bool = False
+    rumdl: bool = False
     ruff: bool = True
     mypy: bool = False
     ty: bool = False

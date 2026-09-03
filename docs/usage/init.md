@@ -79,8 +79,8 @@ To understand how Protostar interprets your flags, observe what happens when we 
     __What Protostar sets up:__
 
     - __Dependency Locking:__ Protostar locks `typer` and `rich` from the CLI template.
-    - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, and `[tool.pytest.ini_options]` alongside development dependency groups.
-    - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local Python toolchain hooks (`ruff-check`, `ruff-format`, `mypy`) that execute directly in your project environment via `uv run`. When commit message validation (such as Commitizen) is included, top-level `default_install_hook_types` (`pre-commit`, `commit-msg`) and `default_stages` (`pre-commit`) are automatically declared.
+    - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, and `[tool.rumdl]` alongside development dependency groups.
+    - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local toolchain hooks (`ruff-check`, `ruff-format`, `mypy`, `rumdl-check`, `rumdl-fmt`) that execute directly in your project environment via `uv run`. When commit message validation (such as Commitizen) is included, top-level `default_install_hook_types` (`pre-commit`, `commit-msg`) and `default_stages` (`pre-commit`) are automatically declared.
 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`
@@ -231,8 +231,8 @@ Every initialized repository includes a turnkey `justfile` generated from your a
 
 Running `just` in your project root provides standard developer workflows immediately:
 
-- __`just format`__: Runs automated code formatting with Ruff.
-- __`just lint`__: Executes static analysis with Ruff and markdownlint.
+- __`just format`__: Runs automated code formatting with Ruff and rumdl.
+- __`just lint`__: Executes static analysis with Ruff and rumdl.
 - __`just typecheck`__: Runs static type checking across the project source tree.
 - __`just test` / `just test-cov`__: Executes the test suite with coverage reporting.
 - __`just ci`__: Emulates the GitHub Actions CI pipeline locally.
