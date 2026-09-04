@@ -1,6 +1,7 @@
 """Configuration management and schema definitions for Protostar."""
 
 import logging
+import os
 import tempfile
 import tomllib
 import types
@@ -18,7 +19,11 @@ from .network import resolve_remote_template
 logger = logging.getLogger("protostar")
 
 # Platform-agnostic resolution leveraging standard XDG-like fallbacks
-CONFIG_FILE = Path.home() / ".config" / "protostar" / "config.toml"
+_xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
+if _xdg_config_home:
+    CONFIG_FILE = Path(_xdg_config_home) / "protostar" / "config.toml"
+else:
+    CONFIG_FILE = Path.home() / ".config" / "protostar" / "config.toml"
 
 DEFAULT_CONFIG_CONTENT = """[env]
 # Preferred IDE: 'vscode', 'cursor', or 'none'

@@ -66,6 +66,7 @@ def run_cli(
         env.pop("VIRTUAL_ENV", None)
         env.pop("PRE_COMMIT_HOME", None)
         env.pop("XDG_CACHE_HOME", None)
+        env.pop("XDG_CONFIG_HOME", None)  # Ensure XDG_CONFIG_HOME doesn't leak
         env.pop("GIT_CONFIG_GLOBAL", None)
         env.pop("GIT_CONFIG_SYSTEM", None)
 

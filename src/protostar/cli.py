@@ -362,7 +362,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                     "[templates] block in your global configuration.",
                     hint=(
                         "Add the URL to the [templates] section of "
-                        "~/.config/protostar/config.toml and re-run with --from."
+                        f"{CONFIG_FILE} and re-run with --from."
                     ),
                 )
 
