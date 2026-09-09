@@ -74,7 +74,7 @@ Protostar exposes an experimental machine-readable CLI interface for AI agents, 
 
 ## Coding Standards
 
-1. **Type Hinting:** All new application functions and methods must include strict Python 3.12 type hints. We use `mypy` to statically enforce this (`disallow_untyped_defs = true`). The test suite (`tests/*`) is granted an exemption from strict untyped definition checks.
+1. **Type Hinting:** All new application functions and methods must include strict Python 3.12 type hints. We use `mypy` to statically enforce this (`strict = true`). The test suite (`tests/*`) is granted an exemption from strict untyped definition checks.
 
 1. **Docstrings:** Use Google-style docstrings for public functions, classes, and methods. Module-level, package-level, and `__init__` docstrings are exempt from linting checks.
 
