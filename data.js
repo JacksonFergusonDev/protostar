@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788996342366,
+  "lastUpdate": 1788997030965,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10579,6 +10579,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 222.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7cb91ae943224343a7667349db5a7a8459ee4b4d",
+          "message": "docs: comprehensive documentation polish and DRY exit codes (#224)\n\n* docs: add reporting contact email to code of conduct\n\n* docs: clarify quick start and fix typo in index\n\n* docs: refine Copier vs Cookiecutter comparison\n\n* docs: align type hinting guide with mypy strict config\n\n* docs: hide snippet macro in GitHub raw view\n\n* docs: explicitly tag stateful modules in executor docs\n\n* docs: clarify tri-state toggles and add pipx alternative\n\n* docs: cross-reference source tree in modules guide\n\n* docs: use raw string for justfile content in extending guide\n\n* docs: inject DRY exit codes table into CONTRIBUTING.md",
+          "timestamp": "2026-09-09T16:36:05-07:00",
+          "tree_id": "033831736b82983e708307c6bb5d05f7651faa38",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7cb91ae943224343a7667349db5a7a8459ee4b4d"
+        },
+        "date": 1788997029644,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 149.8,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 206.48,
             "unit": "ms"
           }
         ]
