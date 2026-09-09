@@ -90,6 +90,7 @@ warn_return_any = true
 
 ## Next Steps & Developer Guides
 
+- __[Built-in Modules](https://github.com/JacksonFergusonDev/protostar/tree/main/src/protostar/modules):__ Browse the source code for official implementations.
 - __[Extending Protostar](../developer/extending-protostar.md):__ Step-by-step guide to implementing your own custom `BootstrapModule`.
 - __[The Environment Manifest](./manifest.md):__ Full breakdown of the manifest namespaces and mutation methods used during `build()`.
 - __[Testing Architecture & Philosophy](../developer/testing.md):__ Learn how to test modules in-memory with strict subprocess mocking.
