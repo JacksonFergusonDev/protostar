@@ -47,7 +47,7 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
                 raise MissingDependencyError("just", purpose="task runner", hint="Install: brew install just")
 
         def build(self, manifest: EnvironmentManifest) -> None:
-            content = """default:
+            content = r"""default:
     \t@just --list
 
     lint:
