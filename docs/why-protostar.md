@@ -200,7 +200,7 @@ Protostar uses a **two-phase headless architecture**:
 
 ## Comparison Matrix
 
-| Feature | Copier & Cookiecutter | Protostar |
+| Feature | Copier | Protostar |
 | :--- | :--- | :--- |
 | **Primary Scope** | Multi-language / General Purpose | Modern Python Ecosystem |
 | **Template Format** | Must be a full Git repository of Jinja files | Scales from a single `.toml` file to full repository archives |
@@ -210,6 +210,8 @@ Protostar uses a **two-phase headless architecture**:
 | **Template Upgrades** | 3-way Git diffs (prone to merge conflicts) | Non-destructive AST injection & language marker blocks |
 | **Machine / Agent API** | Basic interactive prompt bypass | Native `--json` envelopes and atomic `--dry-run` |
 | **Performance** | Clones repos & negotiates remote Git TLS | Sub-second edge JSON hook registry with offline fallbacks |
+
+*\* Cookiecutter is another popular tool in this space, but lacks native 3-way Git diff updates. Most of Copier's comparisons in this matrix apply to Cookiecutter as well.*
 
 ---
 

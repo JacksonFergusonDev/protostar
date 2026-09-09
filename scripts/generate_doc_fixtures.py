@@ -629,6 +629,21 @@ def generate_capability_tables() -> None:
         _format_markdown_table(exit_code_headers, exit_code_rows),
     )
 
+    # Inject into CONTRIBUTING.md
+    contributing_path = Path("CONTRIBUTING.md")
+    if contributing_path.exists():
+        contrib_content = contributing_path.read_text()
+        markdown_table = _format_markdown_table(exit_code_headers, exit_code_rows)
+        import re
+
+        new_content = re.sub(
+            r"<!-- BEGIN_EXIT_CODES -->.*<!-- END_EXIT_CODES -->",
+            f"<!-- BEGIN_EXIT_CODES -->\n\n{markdown_table}\n\n<!-- END_EXIT_CODES -->",
+            contrib_content,
+            flags=re.DOTALL,
+        )
+        contributing_path.write_text(new_content)
+
 
 def generate_manifest_state() -> None:
     """Simulates an initialization sequence to compute a deterministic JSON manifest."""

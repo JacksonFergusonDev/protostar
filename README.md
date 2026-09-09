@@ -117,6 +117,12 @@ For isolated CLI tool installation on any OS, `uv` is highly recommended:
 uv tool install protostar
 ```
 
+### Universal (pipx)
+
+```bash
+pipx install protostar
+```
+
 ### Universal (pip)
 
 ```bash
@@ -151,7 +157,7 @@ For rapid, repeatable initialization, bypass the TUI entirely. Templates are the
 protostar init --template cli
 ```
 
-Because Protostar uses **tri-state toggling**, you always remain in control. You can load a template but explicitly override its default opinions by passing `--<flag>` to force a tool on, or `--no-<flag>` to force it off:
+Because Protostar uses **tri-state toggling** (on / off / template-default), you always remain in control. You can load a template but explicitly override its default opinions by passing `--<flag>` to force a tool on, or `--no-<flag>` to force it off:
 
 ```bash
 protostar init --template cli --no-direnv --docker
