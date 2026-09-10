@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789068990866,
+  "lastUpdate": 1789083727590,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11123,6 +11123,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 203.14,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "4735c5f370be8ccc31c3a0eac8048f479c3f2058",
+          "message": "docs: update Read the Docs links to /stable/\n\nRemove the `/en/` locale prefix from all Read the Docs URLs in the README,\ncovering the documentation badge, official docs, agent interface guide,\ntemplate authoring guide, and developer overview links.",
+          "timestamp": "2026-09-10T16:40:32-07:00",
+          "tree_id": "b706714455df50b403ab8a62d414ed988f48973a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4735c5f370be8ccc31c3a0eac8048f479c3f2058"
+        },
+        "date": 1789083726394,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.79,
             "unit": "ms"
           }
         ]
