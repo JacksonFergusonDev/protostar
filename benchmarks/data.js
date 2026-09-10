@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789002678040,
+  "lastUpdate": 1789003605639,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10715,6 +10715,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "53841d11352427ced9dee6a6b6a09f8a153e01ce",
+          "message": "fix: resolve core stability, encoding, and CLI import-time side effects (#226)\n\n* chore: ignore log files in repository gitignore\n\n* perf: lazy-load package version to reduce startup latency\n\n* fix(errors): use urljoin for docs url construction\n\n* fix(executor): enforce utf-8 encoding on file reads\n\n* refactor(cli): avoid module-level argv evaluation and argv mutation",
+          "timestamp": "2026-09-09T18:25:42-07:00",
+          "tree_id": "ac77f47d82eecf29ec7dab6f26417798546bf44c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/53841d11352427ced9dee6a6b6a09f8a153e01ce"
+        },
+        "date": 1789003604393,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.85,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 210.45,
             "unit": "ms"
           }
         ]
