@@ -145,8 +145,7 @@ _run-demo name target: prewarm-demo
     agg docs/assets/demo_{{ target }}.cast docs/assets/demo_{{ target }}.gif \
         --font-family "JetBrainsMono Nerd Font Mono" \
         --font-size 22 \
-        --line-height 1.35 \
-        --theme 1e1e2e,cdd6f4,181825,f38ba8,a6e3a1,f9e2af,89b4fa,f5c2e7,94e2d5,bac2de,585b70,f38ba8,a6e3a1,f9e2af,89b4fa,f5c2e7,94e2d5,a6adc8
+        --line-height 1.35
     rm -rf /tmp/demo_project
     @printf "{{ green }}✔ {{ name }} demo generated in docs/assets/demo_{{ target }}.gif{{ nc }}\n"
 

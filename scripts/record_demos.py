@@ -27,6 +27,13 @@ DEFAULT_ROWS = 30
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
 
+# Single source of truth for demo colors: consumed by asciinema-player (docs) and agg (GIFs)
+DEFAULT_THEME: dict[str, str] = {
+    "fg": "#cdd6f4",
+    "bg": "#0a0f1f",
+    "palette": "#1e1e2e:#f38ba8:#a6e3a1:#f9e2af:#89b4fa:#cba6f7:#22d3ee:#bac2de:#585b70:#f38ba8:#a6e3a1:#f9e2af:#89b4fa:#f5c2e7:#38bdf8:#a6adc8",
+}
+
 
 def set_winsize(fd: int, rows: int, cols: int) -> None:
     """Sets the terminal window dimensions on a file descriptor."""
@@ -210,18 +217,20 @@ class PTYSession:
         """Closes the shell and saves the recorded events to an asciicast v2 file."""
         self.recording = False
         with contextlib.suppress(Exception):
-            self._silent_write("exit\n")
+            self._silent_write("q\nexit\n")
             self._drain(0.2)
             if self.proc:
-                self.proc.wait(timeout=1.0)
+                try:
+                    self.proc.wait(timeout=0.5)
+                except Exception:
+                    self.proc.kill()
+        if self.events:
+            total_duration = round(time.time() - self.start_time, 4)
+            if total_duration > float(self.events[-1][0]):
+                self.events.append([total_duration, "o", ""])
+
         with contextlib.suppress(OSError):
             os.close(self.master_fd)
-
-        theme = {
-            "fg": "#cdd6f4",
-            "bg": "#0a0f1f",
-            "palette": "#1e1e2e:#f38ba8:#a6e3a1:#f9e2af:#89b4fa:#cba6f7:#22d3ee:#bac2de:#585b70:#f38ba8:#a6e3a1:#f9e2af:#89b4fa:#f5c2e7:#38bdf8:#a6adc8",
-        }
 
         header = {
             "version": 2,
@@ -233,7 +242,7 @@ class PTYSession:
                 "TERM": "xterm-256color",
                 "COLORTERM": "truecolor",
             },
-            "theme": theme,
+            "theme": DEFAULT_THEME,
         }
 
         target = Path(output_path)
@@ -277,9 +286,7 @@ def inspect_project_file(
     lines_to_scroll = min(needed_lines, max_scroll)
 
     session.scroll_pager(lines=lines_to_scroll, delay=scroll_delay)
-    session.sleep(2.0)  # Hold view before exiting pager
-
-    session.type("q", char_delay=0.01, post_delay=0.3)
+    session.sleep(2.0)  # Hold view at end of file preview
 
 
 def record_headless(session: PTYSession) -> None:
