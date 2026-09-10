@@ -167,18 +167,19 @@ serve: sync
 # Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
 bump part: lint typecheck test-unit
     #!/usr/bin/env bash
+    set -euo pipefail
 
-    echo "Syncing registry fallbacks..."
-    uv run python scripts/sync_registry_fallbacks.py
+    echo "Checking for pre-existing uncommitted changes..."
+    if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+        echo "Error: Working directory has uncommitted changes. Commit or stash them first." >&2
+        exit 1
+    fi
 
     echo "Ensuring local repository is up to date..."
     git pull --ff-only
 
-    echo "Checking for pre-existing uncommitted changes..."
-    if [[ -n "$(git status --porcelain --untracked-files=no -- pyproject.toml uv.lock)" ]]; then
-        echo "Error: pyproject.toml or uv.lock already has uncommitted changes. Commit or stash them first." >&2
-        exit 1
-    fi
+    echo "Syncing registry fallbacks..."
+    uv run python scripts/sync_registry_fallbacks.py
 
     VERSION=$(uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py {{ part }})
     NEW_TAG="v$VERSION"
