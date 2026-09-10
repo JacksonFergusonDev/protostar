@@ -312,11 +312,6 @@ class AggregatedDependencyError(ProtostarError):
         else:
             unified = f"Install missing tools via your system package manager (e.g. apt, pacman):\n    sudo apt install {' '.join(package_names)}"
 
-        # We append individual fallback hints if they have alternative instructions
-        fallback_hints = []
-        for e in errors:
-            fallback_hints.append(f"• {e.dependency.value}: {e.install_hint}")
-
         import os
 
         if sys.platform == "win32":
@@ -338,11 +333,7 @@ class AggregatedDependencyError(ProtostarError):
 
             reload_hint = f"Note: Reload your shell profile for the PATH changes to take effect:\n    {reload_cmd}"
 
-        hint = (
-            f"{unified}\n\n"
-            f"Alternative instructions:\n" + "\n".join(fallback_hints) + "\n\n"
-            f"{reload_hint}"
-        )
+        hint = f"{unified}\n\n{reload_hint}"
 
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.errors = errors
