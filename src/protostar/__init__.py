@@ -10,6 +10,7 @@ with contextlib.suppress(importlib.metadata.PackageNotFoundError):
 
 from .dependencies import DependencyGroup
 from .errors import (
+    AggregatedDependencyError,
     CommandExecutionError,
     CommandTimeoutError,
     ConfigurationError,
@@ -37,6 +38,7 @@ from .workspace import PackageName, ProjectName, PythonVersion
 logging.getLogger("protostar").addHandler(logging.NullHandler())
 
 __all__ = [
+    "AggregatedDependencyError",
     "ArchiveFormat",
     "BootstrapModule",
     "CIFlag",

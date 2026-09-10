@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from protostar.errors import ConfigurationError, MissingDependencyError
 from protostar.registry import RemoteHook
+from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag
 
 from .base import BootstrapModule
@@ -39,7 +40,9 @@ class DirenvModule(BootstrapModule):
                 "Then re-run: protostar init"
             )
             raise MissingDependencyError(
-                dependency="direnv", purpose="direnv integration", install_hint=hint
+                dependency=GlobalExecutable.DIRENV,
+                purpose="direnv integration",
+                install_hint=hint,
             )
 
     @property
@@ -494,7 +497,7 @@ class PreCommitModule(BootstrapModule):
         """Verifies that the 'git' executable is available in the system PATH."""
         if not shutil.which("git"):
             raise MissingDependencyError(
-                dependency="git",
+                dependency=GlobalExecutable.GIT,
                 purpose="pre-commit hooks",
                 install_hint="Please install Git and try again.",
             )
@@ -542,7 +545,7 @@ class PrekModule(BootstrapModule):
         """Verifies that the 'git' executable is available in the system PATH."""
         if not shutil.which("git"):
             raise MissingDependencyError(
-                dependency="git",
+                dependency=GlobalExecutable.GIT,
                 purpose="prek hooks",
                 install_hint="Please install Git and try again.",
             )

@@ -10,6 +10,7 @@ from protostar.config import UserConfig
 from protostar.errors import MissingDependencyError
 from protostar.ide import IDEType
 from protostar.metadata import LicenseType
+from protostar.system_deps import GlobalExecutable
 from protostar.workflows import TargetOS
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ class PythonCore(BootstrapModule):
         """Ensures uv is available."""
         if not shutil.which("uv"):
             raise MissingDependencyError(
-                dependency="uv",
+                dependency=GlobalExecutable.UV,
                 purpose="Python scaffolding",
                 install_hint="Install it via `curl -LsSf https://astral.sh/uv/install.sh | sh`.",
             )

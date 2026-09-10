@@ -30,6 +30,7 @@ from protostar.errors import (
     NetworkFetchError,
     TemplateResolutionError,
 )
+from protostar.system_deps import GlobalExecutable
 from protostar.wizard import WizardSelections
 
 
@@ -585,7 +586,9 @@ def test_main_routes_missing_dependency_to_posix_status(mocker):
     """Verify that a MissingDependencyError returns ExitCode.UNAVAILABLE (69)."""
     mocker.patch(
         "protostar.cli.intercept_interactive_wizards",
-        side_effect=MissingDependencyError("uv", "env scaffolding", "install hint"),
+        side_effect=MissingDependencyError(
+            GlobalExecutable.UV, "env scaffolding", "install hint"
+        ),
     )
     mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
 

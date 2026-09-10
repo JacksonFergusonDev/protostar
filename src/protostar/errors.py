@@ -7,6 +7,7 @@ from enum import IntEnum
 from pathlib import Path
 
 from protostar.docs_registry import DocsPage
+from protostar.system_deps import GlobalExecutable
 
 
 class ExitCode(IntEnum):
@@ -125,16 +126,17 @@ class MissingDependencyError(ProtostarError):
 
     def __init__(
         self,
-        dependency: str,
+        dependency: GlobalExecutable,
         purpose: str,
         install_hint: str,
         *,
         docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
-        message = f"Missing dependency: '{dependency}' is required for {purpose}."
+        message = f"Missing dependency: '{dependency.value}' is required for {purpose}."
         super().__init__(message, hint=install_hint, docs_path=docs_path)
         self.dependency = dependency
         self.purpose = purpose
+        self.install_hint = install_hint
 
 
 class CommandExecutionError(ProtostarError):
@@ -281,3 +283,33 @@ class SecurityViolationError(ProtostarError):
         docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_SECURITY,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
+
+
+class AggregatedDependencyError(ProtostarError):
+    """Raised when multiple pre-flight executable checks fail."""
+
+    def __init__(
+        self,
+        errors: tuple[MissingDependencyError, ...],
+        *,
+        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
+    ) -> None:
+        if not errors:
+            raise ValueError("AggregatedDependencyError requires at least one error.")
+
+        message = (
+            f"Missing {len(errors)} system dependencies required for this environment."
+        )
+
+        brew_packages = [e.dependency.brew_package_name for e in errors]
+        brew_hint = f"Install missing tools via Homebrew:\n    brew install {' '.join(brew_packages)}"
+
+        # We append individual fallback hints if they have alternative non-homebrew instructions
+        fallback_hints = []
+        for e in errors:
+            fallback_hints.append(f"• {e.dependency.value}: {e.install_hint}")
+
+        hint = f"{brew_hint}\n\nAlternative instructions:\n" + "\n".join(fallback_hints)
+
+        super().__init__(message, hint=hint, docs_path=docs_path)
+        self.errors = errors

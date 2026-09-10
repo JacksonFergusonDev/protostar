@@ -34,6 +34,7 @@ from protostar import __version__
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
 from .docs_registry import DocsPage
 from .errors import (
+    AggregatedDependencyError,
     CommandExecutionError,
     ConfigurationError,
     ExecutionAbortedError,
@@ -1509,7 +1510,7 @@ def main() -> None:
             )  # 65: Data format error (e.g., bad zip, missing variables)
         if isinstance(e, NetworkFetchError):
             sys.exit(ExitCode.TEMPFAIL)  # 75: Temporary failure (network drop)
-        if isinstance(e, MissingDependencyError):
+        if isinstance(e, (MissingDependencyError, AggregatedDependencyError)):
             sys.exit(
                 ExitCode.UNAVAILABLE
             )  # 69: Expected background tool executable missing
