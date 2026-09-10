@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789012741432,
+  "lastUpdate": 1789065570359,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10885,6 +10885,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 158.41,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "f0aa1d82d9cfd4378323f91de8f0a487b458a9d7",
+          "message": "fix(justfile): enforce strict error handling and pre-checks in bump recipe",
+          "timestamp": "2026-09-10T11:38:06-07:00",
+          "tree_id": "9c3ea12c4cae112ec8cd13ef43822a40d1743d42",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f0aa1d82d9cfd4378323f91de8f0a487b458a9d7"
+        },
+        "date": 1789065569578,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.13,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 226.81,
             "unit": "ms"
           }
         ]
