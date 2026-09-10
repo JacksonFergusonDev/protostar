@@ -73,9 +73,8 @@ from .wizard import (
 # stabilises and a compatibility commitment is made.
 CLI_API_VERSION: int = 0
 
-# Evaluated at import time so the flag is position-independent (e.g. both
-# `protostar --json init` and `protostar init --json` are equivalent).
-is_json_mode: bool = "--json" in sys.argv
+# Global JSON mode state, dynamically evaluated during CLI dispatch.
+is_json_mode: bool = False
 
 # Primary Rich console for human-readable output to stdout.
 console = Console()
@@ -1316,37 +1315,37 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     if is_json_mode:
         return
 
+    cmd = None
     if len(sys.argv) == 1:
-        sys.argv.append("init")
-
-    # Intercept parameter-less subcommands for interactive wizards
-    if len(sys.argv) == 2:
+        cmd = "init"
+    elif len(sys.argv) == 2:
         cmd = sys.argv[1]
 
-        if cmd == "init":
-            selections = run_init_wizard()
-            if not selections:
-                return
+    # Intercept parameter-less subcommands for interactive wizards
+    if cmd == "init":
+        selections = run_init_wizard()
+        if not selections:
+            return
 
-            user_config = UserConfig.load()
-            modules = selections.modules
+        user_config = UserConfig.load()
+        modules = selections.modules
 
-            # Inject mandatory universal layers implicitly
-            modules.insert(0, SystemWorkspaceModule())
-            modules.insert(1, PythonCore())
+        # Inject mandatory universal layers implicitly
+        modules.insert(0, SystemWorkspaceModule())
+        modules.insert(1, PythonCore())
 
-            request = InitRequest(
-                template_blueprint=selections.blueprint,
-                docker=selections.docker,
-                force_merge=False,
-                force_replace=False,
-                metadata=selections.project_metadata,
-                is_external=selections.is_external,
-                is_user_aliased=selections.is_user_aliased,
-            )
-            engine = Orchestrator(modules, user_config, request=request)
-            _run_engine(engine, request)
-            sys.exit(0)
+        request = InitRequest(
+            template_blueprint=selections.blueprint,
+            docker=selections.docker,
+            force_merge=False,
+            force_replace=False,
+            metadata=selections.project_metadata,
+            is_external=selections.is_external,
+            is_user_aliased=selections.is_user_aliased,
+        )
+        engine = Orchestrator(modules, user_config, request=request)
+        _run_engine(engine, request)
+        sys.exit(0)
 
 
 def configure_logging() -> None:
@@ -1465,6 +1464,9 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
 
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
+    global is_json_mode
+    is_json_mode = is_json_mode or ("--json" in sys.argv)
+
     parser = build_parser()
     _dispatch_preparser_flags(parser)
 
