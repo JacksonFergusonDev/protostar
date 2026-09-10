@@ -7,6 +7,7 @@ from enum import IntEnum
 from pathlib import Path
 
 from protostar.docs_registry import DocsPage
+from protostar.system_deps import GlobalExecutable
 
 
 class ExitCode(IntEnum):
@@ -125,14 +126,13 @@ class MissingDependencyError(ProtostarError):
 
     def __init__(
         self,
-        dependency: str,
+        dependency: GlobalExecutable,
         purpose: str,
-        install_hint: str,
         *,
         docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
-        message = f"Missing dependency: '{dependency}' is required for {purpose}."
-        super().__init__(message, hint=install_hint, docs_path=docs_path)
+        message = f"Missing dependency: '{dependency.value}' is required for {purpose}."
+        super().__init__(message, hint=None, docs_path=docs_path)
         self.dependency = dependency
         self.purpose = purpose
 
@@ -281,3 +281,57 @@ class SecurityViolationError(ProtostarError):
         docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_SECURITY,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
+
+
+class AggregatedDependencyError(ProtostarError):
+    """Raised when multiple pre-flight executable checks fail."""
+
+    def __init__(
+        self,
+        errors: tuple[MissingDependencyError, ...],
+        *,
+        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
+    ) -> None:
+        if not errors:
+            raise ValueError("AggregatedDependencyError requires at least one error.")
+
+        message = (
+            f"Missing {len(errors)} system dependencies required for this environment."
+        )
+
+        import sys
+
+        package_names = [e.dependency.package_name for e in errors]
+
+        if sys.platform == "darwin":
+            unified = f"Install missing tools via Homebrew:\n    brew install {' '.join(package_names)}"
+        elif sys.platform == "win32":
+            unified = f"Install missing tools via Winget:\n    winget install {' '.join(package_names)}"
+        else:
+            unified = f"Install missing tools via your system package manager (e.g. apt, pacman):\n    sudo apt install {' '.join(package_names)}"
+
+        import os
+
+        if sys.platform == "win32":
+            reload_hint = "Note: Please close and reopen your terminal for the PATH changes to take effect."
+        else:
+            shell = os.environ.get("SHELL", "")
+            if "zsh" in shell:
+                reload_cmd = "source ~/.zshrc"
+            elif "bash" in shell:
+                reload_cmd = (
+                    "source ~/.bash_profile"
+                    if sys.platform == "darwin"
+                    else "source ~/.bashrc"
+                )
+            elif "fish" in shell:
+                reload_cmd = "source ~/.config/fish/config.fish"
+            else:
+                reload_cmd = "source ~/.bashrc  # (or your shell's equivalent)"
+
+            reload_hint = f"Note: Reload your shell profile for the PATH changes to take effect:\n    {reload_cmd}"
+
+        hint = f"{unified}\n\n{reload_hint}"
+
+        super().__init__(message, hint=hint, docs_path=docs_path)
+        self.errors = errors

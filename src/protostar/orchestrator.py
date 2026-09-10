@@ -6,11 +6,17 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from .errors import PartialExecutionAbortedError, WorkspaceCollisionError
+from .errors import (
+    AggregatedDependencyError,
+    MissingDependencyError,
+    PartialExecutionAbortedError,
+    WorkspaceCollisionError,
+)
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
 from .modules import BootstrapModule
+from .system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -97,8 +103,15 @@ class Orchestrator:
                 )
 
         # Phase 3: Pre-flight verification
+        missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
         for mod in self.modules:
-            mod.pre_flight()
+            try:
+                mod.pre_flight()
+            except MissingDependencyError as e:
+                missing_deps[e.dependency] = e
+
+        if missing_deps:
+            raise AggregatedDependencyError(tuple(missing_deps.values()))
 
         # Phase 4: Manifest aggregation
         if req.metadata:

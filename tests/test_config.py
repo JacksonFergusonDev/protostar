@@ -13,6 +13,7 @@ from protostar.errors import (
     ProtostarError,
     TemplateResolutionError,
 )
+from protostar.system_deps import GlobalExecutable
 
 
 @pytest.fixture(autouse=True)
@@ -35,13 +36,11 @@ def test_protostar_error_hint_binding():
 
 def test_missing_dependency_error_formatting():
     err = MissingDependencyError(
-        dependency="direnv",
+        dependency=GlobalExecutable.DIRENV,
         purpose="environment switching",
-        install_hint="brew install direnv",
     )
     assert err.dependency == "direnv"
     assert "required for environment switching" in str(err)
-    assert err.hint == "brew install direnv"
 
 
 def test_command_execution_error_properties():
