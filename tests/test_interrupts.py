@@ -134,10 +134,10 @@ def test_cli_routes_partial_execution_aborted_to_exit_130(
     mocker: MockerFixture,
 ) -> None:
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=PartialExecutionAbortedError(frozenset({"pyproject.toml"})),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()

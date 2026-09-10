@@ -6,7 +6,7 @@ from protostar.cli import main
 
 
 def test_agent_capabilities_discovery(capsys, monkeypatch):
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -25,9 +25,12 @@ def test_agent_dry_run_and_execute(capsys, monkeypatch, mocker, tmp_path):
     mocker.patch("protostar.executor.install_dependencies")
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
 
     # Dry run
+    import logging
+
+    logging.getLogger("protostar").handlers.clear()
     monkeypatch.setattr(
         "sys.argv",
         ["protostar", "init", "--template", "cli", "--dry-run", "--json"],

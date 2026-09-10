@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
-from protostar.cli import handle_init
+from protostar.cli.main import handle_init
 from protostar.manifest import CollisionStrategy
 
 pytestmark = pytest.mark.integration
@@ -150,7 +150,7 @@ def test_collision_overwrite_e2e(
     mocker.patch("subprocess.run", return_value=MagicMock(returncode=0))
 
     # 2. Mock the interactive environment
-    mocker.patch("protostar.cli.is_interactive", return_value=True)
+    mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
     mock_questionary = mocker.patch("questionary.select")
     mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
 
