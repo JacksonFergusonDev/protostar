@@ -19,7 +19,7 @@
 [![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
 [![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![Documentation](https://img.shields.io/readthedocs/protostar/stable?color=22d3ee&labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/en/stable/)
+[![Documentation](https://img.shields.io/readthedocs/protostar/stable?color=22d3ee&labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/stable/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
 
 </div>
@@ -56,7 +56,7 @@ While general-purpose template engines like **Copier** and **Cookiecutter** are 
 
 Ready to dive deeper? The README only scratches the surface.
 
-Head over to the **[Official Documentation](https://protostar.readthedocs.io/en/stable/)** for:
+Head over to the **[Official Documentation](https://protostar.readthedocs.io/stable/)** for:
 
 - **Command Reference:** Full flags and capabilities for `init`.
 - **Agent & Machine Interface:** Driving Protostar programmatically via `--json` and `--dry-run`.
@@ -185,7 +185,7 @@ protostar init --template cli --dry-run --json
 protostar init --template cli --force-merge --json
 ```
 
-See the **[Agent & Machine Interface Guide](https://protostar.readthedocs.io/en/stable/usage/agent-interface/)** for complete protocol documentation.
+See the **[Agent & Machine Interface Guide](https://protostar.readthedocs.io/stable/usage/agent-interface/)** for complete protocol documentation.
 
 ### Portable Templates & Global Aliases
 
@@ -226,7 +226,7 @@ ruff = true
 pytest = true
 ```
 
-For full template specifications, AST injections, and multi-file repository templating, visit the **[Template Authoring Guide](https://protostar.readthedocs.io/en/stable/usage/authoring-templates/)**.
+For full template specifications, AST injections, and multi-file repository templating, visit the **[Template Authoring Guide](https://protostar.readthedocs.io/stable/usage/authoring-templates/)**.
 
 ---
 
@@ -239,7 +239,7 @@ This tool uses a highly decoupled, plugin-style architecture. The CLI parser dyn
 
 Protostar maintains strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
 
-Please see the [Documentation](https://protostar.readthedocs.io/en/stable/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
+Please see the [Documentation](https://protostar.readthedocs.io/stable/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
 
 ## 📧 Contact
 
