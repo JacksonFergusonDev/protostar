@@ -26,8 +26,6 @@
 
 Setting up a new python project often requires the same manual steps: configuring linters, writing `Dockerfile`, `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
 
----
-
 <div align="center">
 <picture>
   <img alt="Protostar demo"
@@ -37,9 +35,7 @@ Setting up a new python project often requires the same manual steps: configurin
 </picture>
 </div>
 
----
-
-## 🆚 Why Protostar? (vs. Copier/Cookiecutter)
+## Why Protostar? (vs. Copier/Cookiecutter)
 
 While general-purpose template engines like **Copier** and **Cookiecutter** are incredibly powerful for cross-language scaffolding, they treat configuration files as raw text templates. Protostar is deeply specialized for the modern Python ecosystem:
 
@@ -52,7 +48,7 @@ While general-purpose template engines like **Copier** and **Cookiecutter** are 
 
 ---
 
-## 📖 Official Documentation
+## Official Documentation
 
 Ready to dive deeper? The README only scratches the surface.
 
@@ -66,7 +62,7 @@ Head over to the **[Official Documentation](https://protostar.readthedocs.io/sta
 
 ---
 
-## 💡 Design Philosophy
+## Design Philosophy
 
 Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
 
@@ -84,7 +80,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 ---
 
-## ⚡️ Performance & Latency Isolation
+## Performance & Latency Isolation
 
 Protostar is built to be lightweight, so Python's startup overhead never slows down your local development.
 
@@ -99,7 +95,7 @@ Our CI pipeline enforces a strict performance budget using `hyperfine`, gating a
 
 ---
 
-## 📦 Installation
+## Installation
 
 Protostar offers full cross-platform support and runs natively on Linux, macOS, and Windows.
 
@@ -133,7 +129,7 @@ pip install protostar
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Protostar is designed to be run right after you `mkdir` a new project.
 
@@ -230,7 +226,7 @@ For full template specifications, AST injections, and multi-file repository temp
 
 ---
 
-## 🤝 Collaboration
+## Collaboration
 
 This tool uses a highly decoupled, plugin-style architecture. The CLI parser dynamically evaluates module registries at runtime.
 
@@ -241,7 +237,9 @@ Protostar maintains strict engineering standards to ensure reliability, includin
 
 Please see the [Documentation](https://protostar.readthedocs.io/stable/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
 
-## 📧 Contact
+---
+
+## Contact
 
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/JacksonFergusonDev)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/jackson--ferguson/)
@@ -249,6 +247,6 @@ Please see the [Documentation](https://protostar.readthedocs.io/stable/developer
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
