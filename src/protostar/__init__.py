@@ -1,12 +1,10 @@
 """High-velocity, zero-friction Python environment scaffolding."""
 
-import contextlib
-import importlib.metadata
 import logging
+from typing import TYPE_CHECKING
 
-__version__ = "unknown"
-with contextlib.suppress(importlib.metadata.PackageNotFoundError):
-    __version__ = importlib.metadata.version("protostar")
+if TYPE_CHECKING:
+    __version__: str
 
 from .dependencies import DependencyGroup
 from .errors import (
@@ -69,4 +67,17 @@ __all__ = [
     "TemplateResolutionError",
     "WizardSelections",
     "WorkspaceCollisionError",
+    "__version__",
 ]
+
+
+def __getattr__(name: str) -> str:
+    """Lazy evaluation for module attributes."""
+    if name == "__version__":
+        import contextlib
+        import importlib.metadata
+
+        with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+            return importlib.metadata.version("protostar")
+        return "unknown"
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

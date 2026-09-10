@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import urllib.parse
 from enum import IntEnum
 from pathlib import Path
 
@@ -53,7 +54,8 @@ class ProtostarError(Exception):
         elif isinstance(path, DocsPage):
             path = path.value
 
-        url = f"{DOCS_BASE_URL}{path.lstrip('/')}"
+        base = DOCS_BASE_URL if DOCS_BASE_URL.endswith("/") else f"{DOCS_BASE_URL}/"
+        url = urllib.parse.urljoin(base, path.lstrip("/"))
         if self.docs_anchor:
             url = f"{url}#{self.docs_anchor.lstrip('#')}"
         return url

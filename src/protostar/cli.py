@@ -14,7 +14,7 @@ import sys
 import traceback
 import types
 import urllib.parse
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, cast
 
 import argcomplete
@@ -28,8 +28,6 @@ from rich.style import Style
 from rich.table import Table
 from rich.tree import Tree
 from rich_argparse import RawTextRichHelpFormatter
-
-from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
 from .docs_registry import DocsPage
@@ -75,9 +73,8 @@ from .wizard import (
 # stabilises and a compatibility commitment is made.
 CLI_API_VERSION: int = 0
 
-# Evaluated at import time so the flag is position-independent (e.g. both
-# `protostar --json init` and `protostar init --json` are equivalent).
-is_json_mode: bool = "--json" in sys.argv
+# Global JSON mode state, dynamically evaluated during CLI dispatch.
+is_json_mode: bool = False
 
 # Primary Rich console for human-readable output to stdout.
 console = Console()
@@ -932,13 +929,52 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
             console.print(self.epilog)
 
 
+def _get_version() -> str:
+    """Returns the installed application version lazily."""
+    import protostar
+
+    return protostar.__version__
+
+
+class _VersionAction(argparse.Action):
+    """Custom action to lazily resolve application version only when requested."""
+
+    def __init__(
+        self,
+        option_strings: list[str],
+        dest: str = argparse.SUPPRESS,
+        default: str = argparse.SUPPRESS,
+        help: str | None = "Show the application's version and exit.",  # noqa: A002
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help,
+            **kwargs,
+        )
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
+        formatter = parser._get_formatter()
+        formatter.add_text(f"%(prog)s {_get_version()}")
+        parser._print_message(formatter.format_help(), sys.stdout)
+        parser.exit()
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
     base_parser = JsonAwareParser(add_help=False)
     base_parser.add_argument(
         "--version",
-        action="version",
-        version=f"%(prog)s {__version__}",
+        action=_VersionAction,
         help="Show the application's version and exit.",
     )
     base_parser.add_argument(
@@ -1238,7 +1274,7 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
             {
                 "api_version": CLI_API_VERSION,
                 "status": "success",
-                "version": __version__,
+                "version": _get_version(),
             }
         )
         sys.exit(0)
@@ -1279,37 +1315,37 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     if is_json_mode:
         return
 
+    cmd = None
     if len(sys.argv) == 1:
-        sys.argv.append("init")
-
-    # Intercept parameter-less subcommands for interactive wizards
-    if len(sys.argv) == 2:
+        cmd = "init"
+    elif len(sys.argv) == 2:
         cmd = sys.argv[1]
 
-        if cmd == "init":
-            selections = run_init_wizard()
-            if not selections:
-                return
+    # Intercept parameter-less subcommands for interactive wizards
+    if cmd == "init":
+        selections = run_init_wizard()
+        if not selections:
+            return
 
-            user_config = UserConfig.load()
-            modules = selections.modules
+        user_config = UserConfig.load()
+        modules = selections.modules
 
-            # Inject mandatory universal layers implicitly
-            modules.insert(0, SystemWorkspaceModule())
-            modules.insert(1, PythonCore())
+        # Inject mandatory universal layers implicitly
+        modules.insert(0, SystemWorkspaceModule())
+        modules.insert(1, PythonCore())
 
-            request = InitRequest(
-                template_blueprint=selections.blueprint,
-                docker=selections.docker,
-                force_merge=False,
-                force_replace=False,
-                metadata=selections.project_metadata,
-                is_external=selections.is_external,
-                is_user_aliased=selections.is_user_aliased,
-            )
-            engine = Orchestrator(modules, user_config, request=request)
-            _run_engine(engine, request)
-            sys.exit(0)
+        request = InitRequest(
+            template_blueprint=selections.blueprint,
+            docker=selections.docker,
+            force_merge=False,
+            force_replace=False,
+            metadata=selections.project_metadata,
+            is_external=selections.is_external,
+            is_user_aliased=selections.is_user_aliased,
+        )
+        engine = Orchestrator(modules, user_config, request=request)
+        _run_engine(engine, request)
+        sys.exit(0)
 
 
 def configure_logging() -> None:
@@ -1428,6 +1464,9 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
 
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
+    global is_json_mode
+    is_json_mode = is_json_mode or ("--json" in sys.argv)
+
     parser = build_parser()
     _dispatch_preparser_flags(parser)
 

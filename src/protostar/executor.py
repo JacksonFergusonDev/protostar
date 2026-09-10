@@ -333,7 +333,9 @@ class SystemExecutor:
             enforce_path_jail(target, Path.cwd())
 
             try:
-                original_content = target.read_text() if target.exists() else ""
+                original_content = (
+                    target.read_text(encoding="utf-8") if target.exists() else ""
+                )
                 if not target.exists():
                     target.parent.mkdir(parents=True, exist_ok=True)
             except OSError as e:
@@ -397,7 +399,9 @@ class SystemExecutor:
         gitignore = Path(".gitignore")
         enforce_path_jail(gitignore, Path.cwd())
         try:
-            existing_content = gitignore.read_text() if gitignore.exists() else ""
+            existing_content = (
+                gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+            )
             new_content = generate_gitignore(
                 vcs_ignores=self.manifest.filesystem.vcs_ignores,
                 existing_content=existing_content,
@@ -423,7 +427,11 @@ class SystemExecutor:
         dockerignore = Path(".dockerignore")
         enforce_path_jail(dockerignore, Path.cwd())
         try:
-            existing_content = dockerignore.read_text() if dockerignore.exists() else ""
+            existing_content = (
+                dockerignore.read_text(encoding="utf-8")
+                if dockerignore.exists()
+                else ""
+            )
             has_uv_init = any(
                 task.command[:2] == ["uv", "init"]
                 for task in self.manifest.tasks.system_tasks

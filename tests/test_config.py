@@ -34,6 +34,25 @@ def test_protostar_error_hint_binding():
     assert str(err) == "Failure summary"
 
 
+def test_protostar_error_docs_url():
+    err = ProtostarError("Failure")
+    assert err.docs_url == "https://protostar.readthedocs.io/en/stable/getting-started/"
+
+    err_with_page = ProtostarError("Failure", docs_path="usage/advanced/")
+    assert (
+        err_with_page.docs_url
+        == "https://protostar.readthedocs.io/en/stable/usage/advanced/"
+    )
+
+    err_with_anchor = ProtostarError(
+        "Failure", docs_path="usage/advanced/", docs_anchor="section-1"
+    )
+    assert (
+        err_with_anchor.docs_url
+        == "https://protostar.readthedocs.io/en/stable/usage/advanced/#section-1"
+    )
+
+
 def test_missing_dependency_error_formatting():
     err = MissingDependencyError(
         dependency=GlobalExecutable.DIRENV,

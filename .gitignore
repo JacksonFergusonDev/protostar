@@ -21,3 +21,4 @@ site/
 .cache/
 .ruff_cache/
 .venv/
+*.log
