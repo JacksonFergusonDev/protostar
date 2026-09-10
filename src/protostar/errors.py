@@ -301,15 +301,28 @@ class AggregatedDependencyError(ProtostarError):
             f"Missing {len(errors)} system dependencies required for this environment."
         )
 
-        brew_packages = [e.dependency.brew_package_name for e in errors]
-        brew_hint = f"Install missing tools via Homebrew:\n    brew install {' '.join(brew_packages)}"
+        import sys
 
-        # We append individual fallback hints if they have alternative non-homebrew instructions
+        package_names = [e.dependency.package_name for e in errors]
+
+        if sys.platform == "darwin":
+            unified = f"Install missing tools via Homebrew:\n    brew install {' '.join(package_names)}"
+        elif sys.platform == "win32":
+            unified = f"Install missing tools via Winget:\n    winget install {' '.join(package_names)}"
+        else:
+            unified = f"Install missing tools via your system package manager (e.g. apt, pacman):\n    sudo apt install {' '.join(package_names)}"
+
+        # We append individual fallback hints if they have alternative instructions
         fallback_hints = []
         for e in errors:
             fallback_hints.append(f"• {e.dependency.value}: {e.install_hint}")
 
-        hint = f"{brew_hint}\n\nAlternative instructions:\n" + "\n".join(fallback_hints)
+        hint = (
+            f"{unified}\n\n"
+            f"Alternative instructions:\n" + "\n".join(fallback_hints) + "\n\n"
+            "Note: You may need to restart your terminal or reload your shell profile "
+            "for your PATH to update before trying again."
+        )
 
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.errors = errors

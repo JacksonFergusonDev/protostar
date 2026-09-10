@@ -1,6 +1,7 @@
 """System dependency enumerations."""
 
 import enum
+import sys
 
 
 class GlobalExecutable(enum.StrEnum):
@@ -11,6 +12,11 @@ class GlobalExecutable(enum.StrEnum):
     DIRENV = "direnv"
 
     @property
-    def brew_package_name(self) -> str:
-        """Returns the corresponding Homebrew package name for the executable."""
+    def package_name(self) -> str:
+        """Returns the OS-specific package name for the executable."""
+        if sys.platform == "win32":
+            if self == GlobalExecutable.UV:
+                return "astral-sh.uv"
+            if self == GlobalExecutable.GIT:
+                return "Git.Git"
         return self.value
