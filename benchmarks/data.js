@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789068005453,
+  "lastUpdate": 1789068479491,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11055,6 +11055,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9b9dd8b6bade9fc636578ab3e7c4c80e41d93c71",
+          "message": "ci: update pypa/gh-action-pypi-publish pin to support Metadata 2.5",
+          "timestamp": "2026-09-10T12:26:38-07:00",
+          "tree_id": "c72c6f56519ddb468e2f89bf7512e904de0b45f3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9b9dd8b6bade9fc636578ab3e7c4c80e41d93c71"
+        },
+        "date": 1789068478770,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.35,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 207.38,
             "unit": "ms"
           }
         ]
