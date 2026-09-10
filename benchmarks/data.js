@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789005906121,
+  "lastUpdate": 1789009016125,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10783,6 +10783,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.59,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "ba12ec74fd54b89404c84c7f9d6c984a3e711009",
+          "message": "chore(docs): sync demo theme and conclude on file preview\n\n- Centralize demo theme definition in scripts/record_demos.py as single source of truth\n- Remove redundant theme override in justfile so agg inherits theme from cast header\n- End demo directly on pyproject.toml preview without quitting bat\n- Regenerate .cast and .gif assets for headless and wizard demos",
+          "timestamp": "2026-09-09T19:54:51-07:00",
+          "tree_id": "0692fbd0b7c88c21d8ff698bf7ed664056c8d17f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ba12ec74fd54b89404c84c7f9d6c984a3e711009"
+        },
+        "date": 1789009015206,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 143.41,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 226.53,
             "unit": "ms"
           }
         ]
