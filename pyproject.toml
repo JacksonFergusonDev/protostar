@@ -1,6 +1,6 @@
 [project]
 name = "protostar"
-version = "0.8.3"
+version = "0.9.0"
 description = "High-velocity, zero-friction Python environment scaffolding."
 readme = "README.md"
 authors = [{ name = "Jackson Ferguson", email = "jackson.ferguson0@gmail.com" }]
