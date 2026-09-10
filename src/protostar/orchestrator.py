@@ -111,8 +111,6 @@ class Orchestrator:
                 missing_deps[e.dependency] = e
 
         if missing_deps:
-            if len(missing_deps) == 1:
-                raise next(iter(missing_deps.values()))
             raise AggregatedDependencyError(tuple(missing_deps.values()))
 
         # Phase 4: Manifest aggregation

@@ -64,7 +64,6 @@ class PythonCore(BootstrapModule):
             raise MissingDependencyError(
                 dependency=GlobalExecutable.UV,
                 purpose="Python scaffolding",
-                install_hint="Install it via `curl -LsSf https://astral.sh/uv/install.sh | sh`.",
             )
 
     @property

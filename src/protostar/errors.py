@@ -128,15 +128,13 @@ class MissingDependencyError(ProtostarError):
         self,
         dependency: GlobalExecutable,
         purpose: str,
-        install_hint: str,
         *,
         docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
         message = f"Missing dependency: '{dependency.value}' is required for {purpose}."
-        super().__init__(message, hint=install_hint, docs_path=docs_path)
+        super().__init__(message, hint=None, docs_path=docs_path)
         self.dependency = dependency
         self.purpose = purpose
-        self.install_hint = install_hint
 
 
 class CommandExecutionError(ProtostarError):

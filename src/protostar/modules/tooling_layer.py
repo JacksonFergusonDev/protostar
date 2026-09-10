@@ -33,16 +33,9 @@ class DirenvModule(BootstrapModule):
     def pre_flight(self) -> None:
         """Ensures direnv is installed and available before disk mutations occur."""
         if not shutil.which("direnv"):
-            hint = (
-                "Install it with: brew install direnv\n\n"
-                "Once installed, ensure the shell hook is active in your ~/.zshrc:\n"
-                '    eval "$(direnv hook zsh)"\n\n'
-                "Then re-run: protostar init"
-            )
             raise MissingDependencyError(
                 dependency=GlobalExecutable.DIRENV,
                 purpose="direnv integration",
-                install_hint=hint,
             )
 
     @property
@@ -499,7 +492,6 @@ class PreCommitModule(BootstrapModule):
             raise MissingDependencyError(
                 dependency=GlobalExecutable.GIT,
                 purpose="pre-commit hooks",
-                install_hint="Please install Git and try again.",
             )
 
     @property
@@ -547,7 +539,6 @@ class PrekModule(BootstrapModule):
             raise MissingDependencyError(
                 dependency=GlobalExecutable.GIT,
                 purpose="prek hooks",
-                install_hint="Please install Git and try again.",
             )
 
     @property
