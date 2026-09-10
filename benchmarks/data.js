@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789065570359,
+  "lastUpdate": 1789066014580,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10919,6 +10919,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 226.81,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "89a3412a37055e0eaf30bd6e31c8cd844443ca25",
+          "message": "feat(release): harden bump recipe with read-only preflights and rollback guard",
+          "timestamp": "2026-09-10T11:44:30-07:00",
+          "tree_id": "870614c1f7ce68f3244438b5c32670e876ea064d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/89a3412a37055e0eaf30bd6e31c8cd844443ca25"
+        },
+        "date": 1789066013872,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 135.22,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 205.69,
             "unit": "ms"
           }
         ]
