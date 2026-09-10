@@ -1,4 +1,4 @@
-"""High-velocity, zero-friction environment scaffolding."""
+"""High-velocity, zero-friction Python environment scaffolding."""
 
 import contextlib
 import importlib.metadata

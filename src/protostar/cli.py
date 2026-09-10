@@ -956,7 +956,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser = JsonAwareParser(
-        description="A modular CLI tool for quickly scaffolding Python environments. ",
+        description="High-velocity, zero-friction Python environment scaffolding.",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         formatter_class=ProtoHelpFormatter,
         add_help=False,
