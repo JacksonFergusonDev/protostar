@@ -52,7 +52,7 @@ jobs:
         tool: 'customSmallerIsBetter'
         output-file-path: benchmark-gh.json
         gh-pages-branch: 'performance-benchmarks'
-        benchmark-data-dir-path: './'
+        benchmark-data-dir-path: 'benchmarks'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         fail-on-alert: true
         alert-threshold: '150%'
