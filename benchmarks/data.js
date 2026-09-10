@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789002031855,
+  "lastUpdate": 1789002246134,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10647,6 +10647,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 216.56,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "fec9ff6591af5e75e2141ea2312dd26a0705ab26",
+          "message": "chore: migrate performance benchmarks to /benchmarks/ directory",
+          "timestamp": "2026-09-09T18:02:47-07:00",
+          "tree_id": "c413c2255222f4ff5d370ffeca6660156438f471",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fec9ff6591af5e75e2141ea2312dd26a0705ab26"
+        },
+        "date": 1789002245445,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 152.06,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 224.52,
             "unit": "ms"
           }
         ]
