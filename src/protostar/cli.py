@@ -14,7 +14,7 @@ import sys
 import traceback
 import types
 import urllib.parse
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, cast
 
 import argcomplete
@@ -28,8 +28,6 @@ from rich.style import Style
 from rich.table import Table
 from rich.tree import Tree
 from rich_argparse import RawTextRichHelpFormatter
-
-from protostar import __version__
 
 from .config import CONFIG_FILE, DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
 from .docs_registry import DocsPage
@@ -932,13 +930,52 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
             console.print(self.epilog)
 
 
+def _get_version() -> str:
+    """Returns the installed application version lazily."""
+    import protostar
+
+    return protostar.__version__
+
+
+class _VersionAction(argparse.Action):
+    """Custom action to lazily resolve application version only when requested."""
+
+    def __init__(
+        self,
+        option_strings: list[str],
+        dest: str = argparse.SUPPRESS,
+        default: str = argparse.SUPPRESS,
+        help: str | None = "Show the application's version and exit.",  # noqa: A002
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help,
+            **kwargs,
+        )
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: str | Sequence[Any] | None,
+        option_string: str | None = None,
+    ) -> None:
+        formatter = parser._get_formatter()
+        formatter.add_text(f"%(prog)s {_get_version()}")
+        parser._print_message(formatter.format_help(), sys.stdout)
+        parser.exit()
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
     base_parser = JsonAwareParser(add_help=False)
     base_parser.add_argument(
         "--version",
-        action="version",
-        version=f"%(prog)s {__version__}",
+        action=_VersionAction,
         help="Show the application's version and exit.",
     )
     base_parser.add_argument(
@@ -1238,7 +1275,7 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
             {
                 "api_version": CLI_API_VERSION,
                 "status": "success",
-                "version": __version__,
+                "version": _get_version(),
             }
         )
         sys.exit(0)
