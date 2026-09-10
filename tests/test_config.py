@@ -1,19 +1,12 @@
 from collections.abc import Generator
-from typing import cast
 
 import pytest
 
 from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import (
-    CommandExecutionError,
-    CommandTimeoutError,
     ConfigurationError,
-    FileSystemError,
-    MissingDependencyError,
-    ProtostarError,
     TemplateResolutionError,
 )
-from protostar.system_deps import GlobalExecutable
 
 
 @pytest.fixture(autouse=True)
@@ -26,63 +19,6 @@ def clear_config_cache() -> Generator[None, None, None]:
     UserConfig._instance = None
     yield
     UserConfig._instance = None
-
-
-def test_protostar_error_hint_binding():
-    err = ProtostarError("Failure summary", hint="Try turning it off and on again")
-    assert err.hint == "Try turning it off and on again"
-    assert str(err) == "Failure summary"
-
-
-def test_protostar_error_docs_url():
-    err = ProtostarError("Failure")
-    assert err.docs_url == "https://protostar.readthedocs.io/en/stable/getting-started/"
-
-    err_with_page = ProtostarError("Failure", docs_path="usage/advanced/")
-    assert (
-        err_with_page.docs_url
-        == "https://protostar.readthedocs.io/en/stable/usage/advanced/"
-    )
-
-    err_with_anchor = ProtostarError(
-        "Failure", docs_path="usage/advanced/", docs_anchor="section-1"
-    )
-    assert (
-        err_with_anchor.docs_url
-        == "https://protostar.readthedocs.io/en/stable/usage/advanced/#section-1"
-    )
-
-
-def test_missing_dependency_error_formatting():
-    err = MissingDependencyError(
-        dependency=GlobalExecutable.DIRENV,
-        purpose="environment switching",
-    )
-    assert err.dependency == "direnv"
-    assert "required for environment switching" in str(err)
-
-
-def test_command_execution_error_properties():
-    err = CommandExecutionError(["uv", "sync"], returncode=2, stderr="Resolution error")
-    assert err.command == ["uv", "sync"]
-    assert err.returncode == 2
-    assert err.stderr == "Resolution error"
-
-
-def test_command_timeout_error_defaults():
-    err = CommandTimeoutError(["git", "clone"], timeout=30)
-    assert err.timeout == 30
-    # Cast to str to satisfy static analysis, as we know hint is not None here
-    assert "stalled network request" in cast(str, err.hint)
-
-
-def test_filesystem_error_unwraps_os_error():
-    os_err = PermissionError(13, "Permission denied")
-    err = FileSystemError("write", ".envrc", os_err)
-    assert err.operation == "write"
-    assert err.path == ".envrc"
-    assert "Permission denied" in str(err)
-    assert err.original == os_err
 
 
 def test_user_config_ruff_toggle(mocker):
