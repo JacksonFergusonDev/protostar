@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789066014580,
+  "lastUpdate": 1789066650398,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10953,6 +10953,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 205.69,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9e85ddbc3f7634d0deb01b31fb9fd57f6789826e",
+          "message": "feat(release): delegate release workflow to centralized ci-cd-tooling script",
+          "timestamp": "2026-09-10T11:56:12-07:00",
+          "tree_id": "8ba93ced80b383b02db7e57482cec5a375d995b1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9e85ddbc3f7634d0deb01b31fb9fd57f6789826e"
+        },
+        "date": 1789066649521,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.32,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 218.22,
             "unit": "ms"
           }
         ]
