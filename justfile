@@ -165,42 +165,106 @@ serve: sync
     uv run zensical serve -o
 
 # Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
-bump part: lint typecheck test-unit
+bump part: ci
     #!/usr/bin/env bash
     set -euo pipefail
 
-    echo "Checking for pre-existing uncommitted changes..."
-    if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-        echo "Error: Working directory has uncommitted changes. Commit or stash them first." >&2
+    BUMP_SCRIPT="https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py"
+
+    # ==========================================
+    # Phase 1: Pre-Flight Checks (Zero Mutation)
+    # ==========================================
+
+    echo "=== [1/7] Verifying branch ==="
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$CURRENT_BRANCH" != "main" ]]; then
+        echo "Error: Releases must be cut from 'main' branch (currently on '$CURRENT_BRANCH')." >&2
         exit 1
     fi
 
-    echo "Ensuring local repository is up to date..."
-    git pull --ff-only
+    echo "=== [2/7] Checking for uncommitted or untracked changes ==="
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "Error: Working directory has uncommitted or untracked changes. Commit, stash, or clean them first:" >&2
+        git status --short >&2
+        exit 1
+    fi
 
-    echo "Syncing registry fallbacks..."
-    uv run python scripts/sync_registry_fallbacks.py
+    echo "=== [3/7] Checking synchronization with remote ==="
+    git fetch origin main --tags --quiet
+    LOCAL_HASH=$(git rev-parse HEAD)
+    REMOTE_HASH=$(git rev-parse origin/main)
+    if [[ "$LOCAL_HASH" != "$REMOTE_HASH" ]]; then
+        echo "Error: Local 'main' ($LOCAL_HASH) does not match 'origin/main' ($REMOTE_HASH)." >&2
+        echo "Please sync your branch with remote before cutting a release." >&2
+        exit 1
+    fi
 
-    VERSION=$(uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/bump.py {{ part }})
-    NEW_TAG="v$VERSION"
+    echo "=== [4/7] Checking offline registry fallbacks ==="
+    if ! uv run python scripts/sync_registry_fallbacks.py --check; then
+        echo "Error: Offline fallbacks in src/protostar/_fallbacks.py are out of date." >&2
+        echo "Run 'uv run python scripts/sync_registry_fallbacks.py', review and commit the changes before releasing." >&2
+        exit 1
+    fi
 
-    echo "Checking tag $NEW_TAG does not already exist..."
+    echo "=== [5/7] Computing target version candidate (dry-run) ==="
+    NEW_VERSION=$(uv run "$BUMP_SCRIPT" --dry-run {{ part }})
+    NEW_TAG="v$NEW_VERSION"
+    echo "Candidate version: $NEW_VERSION (tag: $NEW_TAG)"
+
+    echo "=== [6/7] Verifying tag availability ==="
     if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
-        echo "Error: tag $NEW_TAG already exists." >&2
-        git checkout -- pyproject.toml
+        echo "Error: Tag $NEW_TAG already exists locally." >&2
+        exit 1
+    fi
+    if git ls-remote --tags origin "$NEW_TAG" | grep -q "$NEW_TAG"; then
+        echo "Error: Tag $NEW_TAG already exists on remote origin." >&2
         exit 1
     fi
 
-    echo "Updating lockfile for $NEW_TAG..."
-    uv sync
+    echo "=== [7/7] Pre-validating documentation build ==="
+    uv run zensical build --strict
 
-    echo "Staging changes and creating commit..."
+    # ==========================================
+    # Phase 2: Atomic Execution & Rollback Guard
+    # ==========================================
+
+    echo "=== Executing release mutations for $NEW_TAG ==="
+    INITIAL_REV=$(git rev-parse HEAD)
+    ROLLBACK_ARMED=1
+
+    cleanup() {
+        if [[ $ROLLBACK_ARMED -eq 1 ]]; then
+            echo "" >&2
+            echo "⚠ Release failed mid-flight! Rolling back local mutations..." >&2
+            if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+                git tag -d "$NEW_TAG" >/dev/null 2>&1 || true
+            fi
+            git reset --hard "$INITIAL_REV" >/dev/null 2>&1 || true
+            echo "✔ Rollback complete. Repository restored cleanly to $INITIAL_REV." >&2
+        fi
+    }
+    trap cleanup EXIT
+
+    # 1. Mutate pyproject.toml
+    uv run "$BUMP_SCRIPT" {{ part }} >/dev/null
+
+    # 2. Update and verify lockfile
+    uv sync
+    uv lock --check
+
+    # 3. Stage and commit version bump
     git add pyproject.toml uv.lock
-    git commit -m "chore: bump version to $VERSION"
+    git commit -m "chore: bump version to $NEW_VERSION"
+
+    # 4. Create annotated tag
     git tag -a "$NEW_TAG" -m "Bump version to $NEW_TAG"
 
-    echo "Shipping atomically to remote..."
-    git push origin HEAD --tags
+    # 5. Push branch and tag atomically
+    git push origin HEAD --tags --atomic
+
+    # 6. Disarm rollback guard upon successful push
+    ROLLBACK_ARMED=0
+    echo "✔ Successfully released and pushed $NEW_TAG!"
 
 # Drop into an isolated macOS sandbox shell with a freshly built local Protostar on $PATH
 sandbox *args: sync
