@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789009016125,
+  "lastUpdate": 1789009690771,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10817,6 +10817,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 226.53,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "062592a3b09049e4ab7cb273c810b95648ce507c",
+          "message": "test: modernize test suite and add missing module coverage (#228)\n\n* test(docs_registry): add unit tests for docs registry enum and paths\n\n* test(ui): add unit tests for lazy prompt wrappers and selection helpers\n\n* test(errors): consolidate domain exception tests into test_errors.py\n\n* test(executor): refactor mocked Path operations to use tmp_path",
+          "timestamp": "2026-09-09T20:07:10-07:00",
+          "tree_id": "0d2b538551e8497bf6bba8cb6b6015c030987c30",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/062592a3b09049e4ab7cb273c810b95648ce507c"
+        },
+        "date": 1789009690085,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.27,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 204.52,
             "unit": "ms"
           }
         ]
