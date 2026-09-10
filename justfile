@@ -167,7 +167,7 @@ serve: sync
 # Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
 bump part: ci
     uv run python scripts/sync_registry_fallbacks.py --check
-    uv run https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/release.py {{ part }}
+    uv run --refresh https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-tooling/refs/heads/main/scripts/release.py {{ part }}
 
 # Drop into an isolated macOS sandbox shell with a freshly built local Protostar on $PATH
 sandbox *args: sync
