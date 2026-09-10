@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789009690771,
+  "lastUpdate": 1789012741432,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10851,6 +10851,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "63fd9e3540ae6bec36db1720b6b52592cdef3a69",
+          "message": "refactor(cli): decompose monolithic cli into submodules (#229)\n\n- Break src/protostar/cli.py into main, parser, schema, and ui.\n- Improve separation of concerns for the CLI orchestration.\n- Update test suite to reflect the new package structure.",
+          "timestamp": "2026-09-09T20:58:11-07:00",
+          "tree_id": "64ee84c1904fc05e0309ecb9119079dcd24814f6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/63fd9e3540ae6bec36db1720b6b52592cdef3a69"
+        },
+        "date": 1789012740287,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 102.02,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 158.41,
             "unit": "ms"
           }
         ]
