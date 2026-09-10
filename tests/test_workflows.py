@@ -2,6 +2,7 @@ from protostar.workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
     JustfileSpec,
+    YAMLBuilder,
     generate_ci_workflow,
     generate_dockerfile,
     generate_dockerignore,
@@ -413,3 +414,25 @@ def test_generate_workflows_no_trailing_whitespace():
             f"Trailing tab in Release workflow line {idx}: {line!r}"
         )
     assert release_content.endswith("\n")
+
+
+def test_yaml_builder():
+    """Tests the lightweight zero-dependency YAMLBuilder utility."""
+    builder = YAMLBuilder()
+    builder.append_raw("name: Example")
+    builder.append_block(
+        """
+        jobs:
+          build:
+            runs-on: ubuntu-latest
+        """
+    )
+    result = builder.build()
+    expected = "name: Example\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n"
+    assert result == expected
+
+    # Test with custom indent and empty block handling
+    nested_builder = YAMLBuilder()
+    nested_builder.append_block("step: 1\nstep: 2", indent=2)
+    nested_builder.append_block("")  # should be ignored
+    assert nested_builder.build() == "  step: 1\n  step: 2\n"
