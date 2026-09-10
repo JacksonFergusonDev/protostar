@@ -45,27 +45,21 @@ def test_executor_writes_injected_files(mocker, mock_config):
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "mock content")
 
 
-def test_executor_append_files_late_binding(mocker, mock_config):
+def test_executor_append_files_late_binding(tmp_path, monkeypatch, mock_config):
     """Test that configuration payloads are interpolated with the active python version."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nrequires-python = ">=3.11"\n', encoding="utf-8"
+    )
+
     manifest = EnvironmentManifest()
     manifest.filesystem.add_file_append(
         "pyproject.toml", 'python_version = "<% PYTHON_VERSION %>"'
     )
     executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch(
-        "protostar.executor.Path.read_text",
-        return_value='[project]\nrequires-python = ">=3.11"\n',
-    )
-
-    mock_file = mocker.mock_open(read_data=b'[project]\nrequires-python = ">=3.11"\n')
-    mocker.patch("protostar.executor.Path.open", mock_file)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
-
     executor._append_files()
 
-    written_data = mock_write.call_args[0][1]
+    written_data = (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
     parsed_toml = tomllib.loads(written_data)
 
     # Assert structural integrity rather than string presence
@@ -241,42 +235,36 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     assert "[]" not in written_data
 
 
-def test_executor_writes_dockerignore(mocker, mock_config):
+def test_executor_writes_dockerignore(tmp_path, monkeypatch, mock_config):
     """Test that the executor aggregates base ignores and vcs ignores for docker."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".dockerignore").write_text(".env\n", encoding="utf-8")
+
     manifest = EnvironmentManifest()
     manifest.filesystem.add_vcs_ignore("custom_build_artifact/")
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value=".env\n")
-
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
-
     executor._write_docker_artifacts()
 
-    written_data = mock_write.call_args[0][1]
+    written_data = (tmp_path / ".dockerignore").read_text(encoding="utf-8")
     assert "custom_build_artifact/" in written_data
     assert ".git/" in written_data
     assert "README*" in written_data
 
 
-def test_executor_writes_gitignore(mocker, mock_config):
+def test_executor_writes_gitignore(tmp_path, monkeypatch, mock_config):
     """Test that .gitignore is safely updated without duplicating existing lines."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".gitignore").write_text("existing_ignore.txt\n", encoding="utf-8")
+
     manifest = EnvironmentManifest()
     manifest.filesystem.add_vcs_ignore("new_ignore.txt")
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch(
-        "protostar.executor.Path.read_text", return_value="existing_ignore.txt\n"
-    )
-
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
-
     executor._write_ignores()
-    mock_write.assert_called_once_with(
-        Path(".gitignore"), "existing_ignore.txt\nnew_ignore.txt\n"
-    )
+    assert (tmp_path / ".gitignore").read_text(
+        encoding="utf-8"
+    ) == "existing_ignore.txt\nnew_ignore.txt\n"
 
 
 def test_executor_creates_directories(mocker, mock_config):
@@ -471,21 +459,18 @@ def test_executor_write_text_permission_error_propagation(mocker, mock_config):
         executor._write_injected_files()
 
 
-def test_executor_append_files_ast_no_op_write(mocker, mock_config):
+def test_executor_append_files_ast_no_op_write(
+    tmp_path, monkeypatch, mocker, mock_config
+):
     """Test that file writing is bypassed if the merged AST yields identical content."""
+    monkeypatch.chdir(tmp_path)
     original_content = "[tool.fake_tool]\nstrict = true\n"
+    (tmp_path / "pyproject.toml").write_text(original_content, encoding="utf-8")
 
     manifest = EnvironmentManifest()
     # Queue a payload that is perfectly identical to the existing base document
     manifest.filesystem.add_file_append("pyproject.toml", original_content)
     executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value=original_content)
-
-    # mock_open resolves the python_version lookup gracefully
-    mock_file = mocker.mock_open(read_data=original_content.encode("utf-8"))
-    mocker.patch("protostar.executor.Path.open", mock_file)
 
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
 
@@ -496,28 +481,21 @@ def test_executor_append_files_ast_no_op_write(mocker, mock_config):
     mock_write.assert_not_called()
 
 
-def test_executor_append_files_ast_merge(mocker, mock_config):
+def test_executor_append_files_ast_merge(tmp_path, monkeypatch, mock_config):
     """Test that _append_files mutates the TOML AST logically based on the MERGE strategy."""
+    monkeypatch.chdir(tmp_path)
     base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
     payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
+    (tmp_path / "pyproject.toml").write_text(base_content, encoding="utf-8")
 
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
     manifest.filesystem.add_file_append("pyproject.toml", payload_content)
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value=base_content)
-
-    # mock_open needs to return the pyproject string to resolve the python version
-    mock_file = mocker.mock_open(read_data=base_content.encode("utf-8"))
-    mocker.patch("protostar.executor.Path.open", mock_file)
-
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
-
     executor._append_files()
-    written_data = mock_write.call_args[0][1]
 
+    written_data = (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
     parsed_toml = tomllib.loads(written_data)
 
     # Verify structural merge logic via the AST
@@ -530,27 +508,21 @@ def test_executor_append_files_ast_merge(mocker, mock_config):
     assert parsed_toml["tool"]["mypy"]["python_version"] == "3.11"
 
 
-def test_executor_append_files_ast_overwrite(mocker, mock_config):
+def test_executor_append_files_ast_overwrite(tmp_path, monkeypatch, mock_config):
     """Test that the OVERWRITE strategy completely replaces colliding TOML tables."""
+    monkeypatch.chdir(tmp_path)
     base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
     payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
+    (tmp_path / "pyproject.toml").write_text(base_content, encoding="utf-8")
 
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.filesystem.add_file_append("pyproject.toml", payload_content)
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value=base_content)
-
-    mock_file = mocker.mock_open(read_data=base_content.encode("utf-8"))
-    mocker.patch("protostar.executor.Path.open", mock_file)
-
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
-
     executor._append_files()
 
-    written_data = mock_write.call_args[0][1]
+    written_data = (tmp_path / "pyproject.toml").read_text(encoding="utf-8")
     parsed_toml = tomllib.loads(written_data)
 
     # Verify the table was entirely replaced in the AST, not just merged
