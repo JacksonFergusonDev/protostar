@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789003605639,
+  "lastUpdate": 1789005906121,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10749,6 +10749,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 210.45,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "07a1748f1401c07cdd6023e6b5c929dbd1fc6aff",
+          "message": "refactor(workflows): streamline YAML generation with lightweight YAMLBuilder (#227)\n\n* build: update sdist exclusions in pyproject.toml\n\n* refactor(workflows): streamline YAML generation with lightweight YAMLBuilder",
+          "timestamp": "2026-09-09T19:04:09-07:00",
+          "tree_id": "3795b0f3a4a636a8108e52f45356092ee3cc7958",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/07a1748f1401c07cdd6023e6b5c929dbd1fc6aff"
+        },
+        "date": 1789005905266,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.66,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.59,
             "unit": "ms"
           }
         ]
