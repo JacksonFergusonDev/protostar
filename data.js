@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788997030965,
+  "lastUpdate": 1789002031855,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -10613,6 +10613,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 206.48,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4011c62bc512dc55c57bf6afbb32f65b05b5fdda",
+          "message": "feat: dynamic homebrew missing dependency aggregation (#225)\n\n* feat: aggregate missing dependencies and dynamically generate homebrew hint\n\n* feat: append shell reload instructions to missing dependencies\n\n* feat: provide OS and shell specific reload instructions\n\n* refactor: remove alternative hints from aggregated pre-flight UI\n\n* refactor: eliminate dead MissingDependencyError fields and dead hints",
+          "timestamp": "2026-09-09T17:59:25-07:00",
+          "tree_id": "0d38cbe8489659b59929d2b5af8d7fffbbebb50d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4011c62bc512dc55c57bf6afbb32f65b05b5fdda"
+        },
+        "date": 1789002030461,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 147.44,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 216.56,
             "unit": "ms"
           }
         ]
