@@ -1,6 +1,7 @@
 """Pure string and template generators for CI/CD workflows and workspace boilerplate."""
 
 import enum
+import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -18,6 +19,7 @@ __all__ = [
     "DockerfileSpec",
     "JustfileSpec",
     "TargetOS",
+    "YAMLBuilder",
     "generate_ci_workflow",
     "generate_dockerfile",
     "generate_dockerignore",
@@ -26,6 +28,34 @@ __all__ = [
     "generate_pre_commit_config",
     "generate_release_workflow",
 ]
+
+
+class YAMLBuilder:
+    """Lightweight zero-dependency builder for assembling cleanly formatted YAML documents."""
+
+    def __init__(self) -> None:
+        self._blocks: list[str] = []
+
+    def append_block(self, content: str, indent: int = 0) -> "YAMLBuilder":
+        """Dedents content and optionally indents it before appending."""
+        dedented = textwrap.dedent(content).strip("\n")
+        if dedented:
+            indented = (
+                textwrap.indent(dedented, " " * indent) if indent > 0 else dedented
+            )
+            self._blocks.append(indented)
+        return self
+
+    def append_raw(self, content: str) -> "YAMLBuilder":
+        """Appends a raw content string directly."""
+        stripped = content.strip("\n")
+        if stripped:
+            self._blocks.append(stripped)
+        return self
+
+    def build(self, separator: str = "\n\n") -> str:
+        """Assembles the final document with standardized spacing and trailing newline."""
+        return separator.join(b for b in self._blocks if b) + "\n"
 
 
 class TargetOS(enum.StrEnum):
@@ -202,7 +232,9 @@ default_stages:
         deps = dependencies or []
         if deps:
             # Guarantee exactly 10 spaces of indentation for each list item
-            deps_formatted = "\n".join(f"{' ' * 10}- {d}" for d in deps)
+            deps_formatted = textwrap.indent(
+                "\n".join(f"- {d}" for d in deps), " " * 10
+            )
             full_yaml = full_yaml.replace("<% MYPY_DEPENDENCIES %>", deps_formatted)
         else:
             # If no runtime dependencies, strip the key cleanly
@@ -286,32 +318,6 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
             pytest_step = """      - name: Run Tests
         run: uv run pytest"""
 
-    # Assemble the lint job if there are CI steps
-    lint_job = ""
-    if spec.ci_steps:
-        lint_steps = "\n\n".join(spec.ci_steps)
-        lint_steps = lint_steps.replace("<% PRIMARY_OS %>", primary_os)
-        lint_steps = lint_steps.replace("<% BASELINE_PYTHON %>", baseline_python)
-        lint_job = f"""  lint:
-    name: Lint & Type Check
-    runs-on: {primary_os}
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.0
-        with:
-          enable-cache: true
-          python-version: "{baseline_python}"
-
-      - name: Install dependencies
-        run: uv sync --all-extras --dev --locked
-
-{lint_steps}
-
-"""
-
     os_matrix_str = ", ".join(f'"{o}"' for o in os_matrix)
     python_matrix_str = ", ".join(f'"{p}"' for p in python_matrix)
 
@@ -335,6 +341,42 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
     test_steps = "\n".join(test_steps_list)
 
+    jobs_builder = YAMLBuilder()
+    if spec.ci_steps:
+        lint_steps = "\n\n".join(spec.ci_steps)
+        lint_steps = lint_steps.replace("<% PRIMARY_OS %>", primary_os)
+        lint_steps = lint_steps.replace("<% BASELINE_PYTHON %>", baseline_python)
+        jobs_builder.append_raw(f"""  lint:
+    name: Lint & Type Check
+    runs-on: {primary_os}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          python-version: "{baseline_python}"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev --locked
+
+{lint_steps}""")
+
+    jobs_builder.append_raw(f"""  test:
+    name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
+    runs-on: ${{{{ matrix.os }}}}
+    strategy:
+      matrix:
+        os: [{os_matrix_str}]
+        python-version: [{python_matrix_str}]{include_block}
+
+    steps:
+{test_steps}""")
+
+    jobs_body = jobs_builder.build(separator="\n\n")
+
     return f"""name: CI
 
 on:
@@ -344,49 +386,46 @@ on:
     branches: [main]
 
 jobs:
-{lint_job}  test:
-    name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
-    runs-on: ${{{{ matrix.os }}}}
-    strategy:
-      matrix:
-        os: [{os_matrix_str}]
-        python-version: [{python_matrix_str}]{include_block}
-
-    steps:
-{test_steps}
-"""
+{jobs_body}"""
 
 
 def generate_release_workflow() -> str:
     """Assembles and returns the .github/workflows/release.yml content."""
-    return """name: Release
+    return (
+        YAMLBuilder()
+        .append_block(
+            """
+        name: Release
 
-on:
-  push:
-    tags:
-      - "v*"
+        on:
+          push:
+            tags:
+              - "v*"
 
-jobs:
-  pypi-publish:
-    name: Build and Publish to PyPI
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/${{ github.event.repository.name }}
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
+        jobs:
+          pypi-publish:
+            name: Build and Publish to PyPI
+            runs-on: ubuntu-latest
+            environment:
+              name: pypi
+              url: https://pypi.org/p/${{ github.event.repository.name }}
+            permissions:
+              id-token: write
+            steps:
+              - uses: actions/checkout@v7
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.0
+              - name: Install uv
+                uses: astral-sh/setup-uv@v10.0.0
 
-      - name: Build package
-        run: uv build
+              - name: Build package
+                run: uv build
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-"""
+              - name: Publish to PyPI
+                uses: pypa/gh-action-pypi-publish@release/v1
+    """
+        )
+        .build()
+    )
 
 
 def generate_justfile(spec: JustfileSpec) -> str:

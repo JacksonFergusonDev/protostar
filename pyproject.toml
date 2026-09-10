@@ -44,7 +44,7 @@ exclude = [
     "/demo",
     "/docs",
     "/scripts",
-    "/mkdocs.yml",
+    "/zensical.toml",
     "/.readthedocs.yaml",
 ]
 
