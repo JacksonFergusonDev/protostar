@@ -712,7 +712,7 @@ def generate_agent_payloads() -> None:
     }
 
     planned_payload = {
-        "api_version": protostar.cli.CLI_API_VERSION,
+        "api_version": protostar.cli.schema.CLI_API_VERSION,
         "status": "planned",
         "manifest": manifest.to_dict(),
     }
@@ -731,7 +731,7 @@ def generate_agent_payloads() -> None:
         diagnostics=(),
     )
     success_payload = {
-        "api_version": protostar.cli.CLI_API_VERSION,
+        "api_version": protostar.cli.schema.CLI_API_VERSION,
         "status": "success",
         "result": result.to_dict(),
     }
@@ -751,7 +751,7 @@ def generate_agent_payloads() -> None:
         error_dict["paths"] = sorted(str(p) for p in err.paths)
 
     error_payload = {
-        "api_version": protostar.cli.CLI_API_VERSION,
+        "api_version": protostar.cli.schema.CLI_API_VERSION,
         "status": "error",
         "error": error_dict,
     }
@@ -1038,9 +1038,9 @@ def _render_and_write_svg(
 
 def generate_cli_help_svgs() -> None:
     """Captures isolated SVG snapshots of the Protostar CLI help menus via Rich."""
-    original_global_console = protostar.cli.console
+    original_global_console = protostar.cli.ui.console
     original_formatter_console = getattr(
-        protostar.cli.ProtoHelpFormatter, "console", None
+        protostar.cli.parser.ProtoHelpFormatter, "console", None
     )
 
     def _render_svg(
@@ -1072,10 +1072,10 @@ def generate_cli_help_svgs() -> None:
         )
 
         if is_custom_table:
-            protostar.cli.console = record_console
+            protostar.cli.ui.console = record_console
             target_parser.print_help()
         else:
-            protostar.cli.ProtoHelpFormatter.console = record_console  # type: ignore[method-assign, assignment]
+            protostar.cli.parser.ProtoHelpFormatter.console = record_console  # type: ignore[method-assign, assignment]
             ansi_str = target_parser.format_help()
             record_console.print(Text.from_ansi(ansi_str, no_wrap=True))
 
@@ -1087,7 +1087,7 @@ def generate_cli_help_svgs() -> None:
         )
 
     try:
-        parser = protostar.cli.build_parser()
+        parser = protostar.cli.parser.build_parser()
 
         # Generate base root help SVG
         _render_svg(parser, "help", "cli_help.svg")
@@ -1107,16 +1107,16 @@ def generate_cli_help_svgs() -> None:
 
     finally:
         # Restore the native consoles
-        protostar.cli.console = original_global_console
+        protostar.cli.ui.console = original_global_console
         if original_formatter_console is None:
-            protostar.cli.ProtoHelpFormatter.console = None  # type: ignore[assignment]
+            protostar.cli.parser.ProtoHelpFormatter.console = None  # type: ignore[assignment]
         else:
-            protostar.cli.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign]
+            protostar.cli.parser.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign]
 
 
 def generate_cli_dry_run_svg() -> None:
     """Captures an SVG snapshot of the dry-run CLI telemetry preview via Rich."""
-    original_global_console = protostar.cli.console
+    original_global_console = protostar.cli.ui.console
 
     record_console = Console(
         record=True,
@@ -1135,7 +1135,7 @@ def generate_cli_dry_run_svg() -> None:
     record_console.print(prompt)
 
     try:
-        protostar.cli.console = record_console
+        protostar.cli.ui.console = record_console
 
         with tempfile.TemporaryDirectory() as tmpdir:
             orig_cwd = os.getcwd()
@@ -1160,7 +1160,7 @@ def generate_cli_dry_run_svg() -> None:
                 request = InitRequest(template_blueprint=blueprint)
                 engine = Orchestrator(modules, user_config, request=request)
                 manifest = engine.plan()
-                protostar.cli._print_dry_run_summary(manifest)
+                protostar.cli.ui._print_dry_run_summary(manifest)
             finally:
                 os.chdir(orig_cwd)
 
@@ -1171,7 +1171,7 @@ def generate_cli_dry_run_svg() -> None:
             unique_id="cli_dry_run",
         )
     finally:
-        protostar.cli.console = original_global_console
+        protostar.cli.ui.console = original_global_console
 
 
 def generate_diagnostic_panel_svg() -> None:

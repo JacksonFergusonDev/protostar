@@ -6,17 +6,19 @@ import sys
 
 import pytest
 
-from protostar.cli import (
-    JsonAwareParser,
-    ProtoHelpFormatter,
+from protostar.cli.main import (
     _parse_dynamic_kwargs,
-    _resolve_usage_doc_path,
-    build_parser,
     configure_logging,
     handle_config,
     handle_init,
-    intercept_interactive_wizards,
     main,
+)
+from protostar.cli.parser import (
+    JsonAwareParser,
+    ProtoHelpFormatter,
+    _resolve_usage_doc_path,
+    build_parser,
+    intercept_interactive_wizards,
 )
 from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
 from protostar.errors import (
@@ -74,7 +76,7 @@ def test_intercept_interactive_wizards_cancellations(mocker):
     # Init Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch(
-        "protostar.cli.run_init_wizard",
+        "protostar.cli.parser.run_init_wizard",
         side_effect=ExecutionAbortedError("Initialization wizard cancelled by user."),
     )
     with pytest.raises(ExecutionAbortedError):
@@ -86,8 +88,8 @@ def test_intercept_interactive_wizards_non_interactive_fallback(mocker):
     """Test that non-interactive execution returns cleanly without running orchestrator."""
     parser = mocker.Mock()
     mocker.patch.object(sys, "argv", ["protostar", "init"])
-    mocker.patch("protostar.cli.run_init_wizard", return_value=None)
-    mock_orch = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch("protostar.cli.parser.run_init_wizard", return_value=None)
+    mock_orch = mocker.patch("protostar.cli.main.Orchestrator")
 
     intercept_interactive_wizards(parser)
     mock_orch.assert_not_called()
@@ -109,7 +111,7 @@ def test_configure_logging():
 def test_handle_config_success(mocker, tmp_path):
     """Test the config command successfully spawns the user's editor."""
     mock_config_file = tmp_path / "config.toml"
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mock_run = mocker.patch("subprocess.run")
@@ -125,7 +127,7 @@ def test_handle_config_reset_confirmed(mocker, tmp_path):
     """Test that handle_config with --reset overwrites existing config when confirmed."""
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = True
     mock_run = mocker.patch("subprocess.run")
@@ -147,7 +149,7 @@ def test_handle_config_reset_cancelled(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     initial_content = "custom_setting = true\n"
     mock_config_file.write_text(initial_content)
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = False
     mock_run = mocker.patch("subprocess.run")
@@ -164,7 +166,7 @@ def test_handle_config_reset_aborted(mocker, tmp_path):
     """Test that handle_config with --reset raises ExecutionAbortedError when cancelled via Esc/Ctrl+C."""
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = None
 
@@ -177,7 +179,7 @@ def test_handle_config_reset_force(mocker, tmp_path):
     """Test that handle_config with --reset and --force bypasses confirmation prompt."""
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_run = mocker.patch("subprocess.run")
 
@@ -202,7 +204,7 @@ def test_build_parser_config_reset():
 def test_handle_config_errors(mocker, tmp_path):
     """Test missing binaries, empty env vars, and subprocess crashes in handle_config."""
     mock_config_file = tmp_path / "config.toml"
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     args = argparse.Namespace()
 
     # 1. Empty EDITOR
@@ -227,8 +229,8 @@ def test_handle_config_errors(mocker, tmp_path):
 def test_main_no_command(mocker):
     """Test main gracefully exits if no subcommand is parsed."""
     mocker.patch.object(sys, "argv", ["protostar"])
-    mocker.patch("protostar.cli.intercept_interactive_wizards")
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -238,11 +240,11 @@ def test_main_no_command(mocker):
 def test_main_value_error_handling(mocker):
     """Test that TOML parsing ValueErrors are gracefully handled without crashing."""
     mocker.patch.object(sys, "argv", ["protostar", "init"])
-    mocker.patch("protostar.cli.intercept_interactive_wizards")
+    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
     mocker.patch(
-        "protostar.cli.handle_init", side_effect=ValueError("Syntax Error in TOML")
+        "protostar.cli.main.handle_init", side_effect=ValueError("Syntax Error in TOML")
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -252,9 +254,9 @@ def test_main_value_error_handling(mocker):
 
 def test_handle_init_crash_test_injection(mocker):
     """Test that the --crash-test flag injects the CrashModule and its methods work."""
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mock_orchestrator = mocker.patch("protostar.cli.main.Orchestrator")
     mocker.patch(
-        "protostar.cli.UserConfig.load",
+        "protostar.cli.main.UserConfig.load",
         return_value=UserConfig(
             just=True,
             zensical=True,
@@ -313,9 +315,10 @@ def test_main_keyboard_interrupt_handling(mocker):
 
     # Trigger the interrupt early in the main execution block
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards", side_effect=KeyboardInterrupt
+        "protostar.cli.parser.intercept_interactive_wizards",
+        side_effect=KeyboardInterrupt,
     )
-    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
 
     with pytest.raises(SystemExit) as exc_info:
         main()
@@ -351,11 +354,11 @@ def test_intercept_interactive_wizards_success(mocker):
     mocker.patch.object(sys, "argv", ["protostar"])
 
     selections = WizardSelections(modules=[], docker=True)
-    mocker.patch("protostar.cli.run_init_wizard", return_value=selections)
-    mocker.patch("protostar.cli.UserConfig.load")
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mocker.patch("protostar.cli.parser.run_init_wizard", return_value=selections)
+    mocker.patch("protostar.cli.parser.UserConfig.load")
+    mock_orchestrator = mocker.patch("protostar.cli.parser.Orchestrator")
     mocker.patch(
-        "protostar.cli.UserConfig.load",
+        "protostar.cli.parser.UserConfig.load",
         return_value=UserConfig(
             just=True,
             zensical=True,
@@ -389,7 +392,7 @@ def test_intercept_interactive_wizards_success(mocker):
 def test_print_table_help_execution(mocker):
     """Test the custom table help formatter does not raise on layout evaluation."""
     parser = build_parser()
-    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
 
     # Safely extract the init subparser
     subparsers = next(
@@ -405,7 +408,7 @@ def test_print_table_help_execution(mocker):
 def test_handle_config_parent_dir_creation(mocker, tmp_path):
     """Test configuration gracefully builds missing parent directories."""
     mock_config_file = tmp_path / "deep" / "nested" / "config.toml"
-    mocker.patch("protostar.cli.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mocker.patch("subprocess.run")
@@ -419,9 +422,9 @@ def test_handle_config_parent_dir_creation(mocker, tmp_path):
 def test_main_verbose_flag_before_subcommand(mocker):
     """Test that the --verbose flag correctly triggers logging configuration before the subcommand."""
     mocker.patch.object(sys, "argv", ["protostar", "--verbose", "init"])
-    mocker.patch("protostar.cli.intercept_interactive_wizards")
-    mock_configure_logging = mocker.patch("protostar.cli.configure_logging")
-    mocker.patch("protostar.cli.handle_init")
+    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mock_configure_logging = mocker.patch("protostar.cli.main.configure_logging")
+    mocker.patch("protostar.cli.main.handle_init")
 
     main()
 
@@ -431,9 +434,9 @@ def test_main_verbose_flag_before_subcommand(mocker):
 def test_main_verbose_flag_after_subcommand(mocker):
     """Test that the --verbose flag correctly triggers logging configuration after the subcommand."""
     mocker.patch.object(sys, "argv", ["protostar", "init", "--verbose"])
-    mocker.patch("protostar.cli.intercept_interactive_wizards")
-    mock_configure_logging = mocker.patch("protostar.cli.configure_logging")
-    mocker.patch("protostar.cli.handle_init")
+    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mock_configure_logging = mocker.patch("protostar.cli.main.configure_logging")
+    mocker.patch("protostar.cli.main.handle_init")
 
     main()
 
@@ -445,14 +448,14 @@ def test_main_handles_expected_operational_errors(mocker):
     from protostar.cli import main
     from protostar.errors import ProtostarError
 
-    mocker.patch("protostar.cli.build_parser")
+    mocker.patch("protostar.cli.main.parser.build_parser")
     # Simulate an error raised from deep within the execution sequence
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=ProtostarError("Known config collision"),
     )
-    mock_print = mocker.patch("protostar.cli.console.print")
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -473,13 +476,13 @@ def test_main_handles_unexpected_bugs(mocker):
     """Test that unknown exceptions trigger the traceback and GitHub telemetry payload."""
     from protostar.cli import main
 
-    mocker.patch("protostar.cli.build_parser")
+    mocker.patch("protostar.cli.main.parser.build_parser")
     # Simulate an unhandled Python bug (e.g., dictionary lookup failure)
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=KeyError("Random dictionary crash"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -492,13 +495,14 @@ def test_main_handles_keyboard_interrupt(mocker):
     """Test that Ctrl+C exists gracefully with code 130."""
     from protostar.cli import main
 
-    mocker.patch("protostar.cli.build_parser")
+    mocker.patch("protostar.cli.main.parser.build_parser")
     # Simulate the user aborting the prompt
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards", side_effect=KeyboardInterrupt
+        "protostar.cli.parser.intercept_interactive_wizards",
+        side_effect=KeyboardInterrupt,
     )
-    mock_print = mocker.patch("protostar.cli.console.print")
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -513,10 +517,10 @@ def test_main_handles_keyboard_interrupt(mocker):
 def test_main_routes_invalid_usage_error_to_posix_status(mocker):
     """Verify that an InvalidUsageError returns ExitCode.USAGE (64)."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=InvalidUsageError("bad flag"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -543,10 +547,10 @@ def test_main_routes_configuration_error_to_posix_status(mocker):
     """Verify that a ConfigurationError returns ExitCode.CONFIG (78)."""
     # Mock an operation *inside* the try-except frame to catch the error correctly
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=ConfigurationError("Malformed config"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -557,10 +561,10 @@ def test_main_routes_configuration_error_to_posix_status(mocker):
 def test_main_routes_template_resolution_error_to_posix_status(mocker):
     """Verify that a TemplateResolutionError returns ExitCode.DATAERR (65)."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=TemplateResolutionError("my-template", "Malformed archive"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -571,10 +575,10 @@ def test_main_routes_template_resolution_error_to_posix_status(mocker):
 def test_main_routes_network_fetch_error_to_posix_status(mocker):
     """Verify that a NetworkFetchError returns ExitCode.TEMPFAIL (75)."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=NetworkFetchError("https://example.com"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -585,10 +589,10 @@ def test_main_routes_network_fetch_error_to_posix_status(mocker):
 def test_main_routes_missing_dependency_to_posix_status(mocker):
     """Verify that a MissingDependencyError returns ExitCode.UNAVAILABLE (69)."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=MissingDependencyError(GlobalExecutable.UV, "env scaffolding"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -599,10 +603,10 @@ def test_main_routes_missing_dependency_to_posix_status(mocker):
 def test_main_routes_execution_aborted_to_posix_status(mocker):
     """Verify that an ExecutionAbortedError returns code 130."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=ExecutionAbortedError("Interactive prompt aborted"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -613,10 +617,10 @@ def test_main_routes_execution_aborted_to_posix_status(mocker):
 def test_main_routes_filesystem_error_to_posix_status(mocker):
     """Verify that a FileSystemError returns ExitCode.IOERR (74)."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=FileSystemError("write", "foo.txt", OSError("Permission denied")),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
         main()
@@ -627,11 +631,11 @@ def test_main_routes_filesystem_error_to_posix_status(mocker):
 def test_main_routes_generic_crash_to_software_status(mocker):
     """Verify that a standard unhandled exception returns ExitCode.SOFTWARE (70)."""
     mocker.patch(
-        "protostar.cli.intercept_interactive_wizards",
+        "protostar.cli.parser.intercept_interactive_wizards",
         side_effect=ZeroDivisionError("Unexpected math fault"),
     )
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
-    mocker.patch("protostar.cli.console.print")
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+    mocker.patch("protostar.cli.ui.console.print")
 
     with pytest.raises(SystemExit):
         main()
@@ -646,7 +650,7 @@ def test_cli_handles_command_execution_error_output(mocker):
 
     # Force _run_engine to throw the specific error we want to format
     mocker.patch(
-        "protostar.cli._run_engine",
+        "protostar.cli.ui._run_engine",
         side_effect=CommandExecutionError(
             command=["uv", "init"],
             returncode=1,
@@ -655,7 +659,7 @@ def test_cli_handles_command_execution_error_output(mocker):
         ),
     )
 
-    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
     mock_exit = mocker.patch("sys.exit")
 
     main()
@@ -699,7 +703,7 @@ def test_handle_init_template_resolution(mocker, tmp_path):
     import importlib.resources
 
     # We will mock _run_engine so it doesn't actually scaffold
-    mocker.patch("protostar.cli._run_engine")
+    mocker.patch("protostar.cli.ui._run_engine")
 
     args = argparse.Namespace(
         template_name="astro",
@@ -711,10 +715,12 @@ def test_handle_init_template_resolution(mocker, tmp_path):
 
     from protostar.config import UserConfig
 
-    mock_load = mocker.patch("protostar.cli.UserConfig.load", return_value=UserConfig())
-    mock_bp_load = mocker.patch("protostar.cli.TemplateBlueprint.load")
+    mock_load = mocker.patch(
+        "protostar.cli.main.UserConfig.load", return_value=UserConfig()
+    )
+    mock_bp_load = mocker.patch("protostar.cli.main.TemplateBlueprint.load")
 
-    from protostar.cli import handle_init
+    # Removed handle_init import as it is global
 
     handle_init(args)
 
@@ -732,9 +738,9 @@ def test_handle_init_template_resolution(mocker, tmp_path):
 
 def test_handle_init_cli_template_resolution(mocker):
     """Test that passing --template cli resolves and loads the cli.toml template."""
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mock_orchestrator = mocker.patch("protostar.cli.main.Orchestrator")
     mocker.patch(
-        "protostar.cli.UserConfig.load",
+        "protostar.cli.main.UserConfig.load",
         return_value=UserConfig(
             just=True,
             zensical=True,
@@ -777,10 +783,10 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     mock_config = UserConfig(
         templates={"my-custom-org": "https://example.com/template.toml"}
     )
-    mocker.patch("protostar.cli.UserConfig.load", return_value=mock_config)
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=mock_config)
 
     # Mock the Orchestrator instantiation so we can inspect the flags passed to it
-    mock_orchestrator = mocker.patch("protostar.cli.Orchestrator")
+    mock_orchestrator = mocker.patch("protostar.cli.main.Orchestrator")
     # _run_engine will call plan/execute on the mock — set up safe returns
     mock_orchestrator.return_value.plan.return_value = mocker.MagicMock(
         diagnostics=[], tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[])
@@ -790,7 +796,7 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     )
 
     # Mock TemplateBlueprint to prevent network calls during the test
-    mocker.patch("protostar.cli.TemplateBlueprint.load", return_value=None)
+    mocker.patch("protostar.cli.main.TemplateBlueprint.load", return_value=None)
 
     args = argparse.Namespace(
         template_name="my-custom-org",
@@ -816,7 +822,7 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
 def test_cli_rejects_unknown_templates(mocker) -> None:
     """Verifies that a template not in built-ins or aliases raises a ConfigurationError."""
     mock_config = UserConfig(templates={"valid-alias": "..."})
-    mocker.patch("protostar.cli.UserConfig.load", return_value=mock_config)
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=mock_config)
 
     args = argparse.Namespace(
         template_name="non-existent-template",
@@ -832,7 +838,7 @@ def test_cli_rejects_unknown_templates(mocker) -> None:
 
 
 def test_export_schema_json_mode(capsys, monkeypatch):
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "export-schema", "--json"])
     with pytest.raises(SystemExit) as exc:
         main()
@@ -844,7 +850,7 @@ def test_export_schema_json_mode(capsys, monkeypatch):
 
 
 def test_list_templates_json_mode(capsys, monkeypatch):
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates", "--json"])
     with pytest.raises(SystemExit) as exc:
         main()
@@ -859,7 +865,7 @@ def test_list_templates_json_mode(capsys, monkeypatch):
 def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").touch()
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr(
         "sys.argv", ["protostar", "init", "--template", "cli", "--json"]
     )
@@ -890,8 +896,8 @@ def test_json_aware_parser_raises_invalid_usage_error():
 def test_main_invalid_subcommand_human_mode(mocker):
     """Test that an invalid subcommand in human mode is pretty-printed and exits with EX_USAGE."""
     mocker.patch.object(sys, "argv", ["protostar", "wrong-command"])
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
-    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
 
     with pytest.raises(SystemExit):
         main()
@@ -913,7 +919,7 @@ def test_main_invalid_subcommand_human_mode(mocker):
 
 def test_main_invalid_subcommand_json_mode(capsys, monkeypatch):
     """Test that an invalid subcommand in JSON mode emits structured error and exits with EX_USAGE."""
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "wrong-command", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -931,8 +937,8 @@ def test_main_invalid_subcommand_json_mode(capsys, monkeypatch):
 def test_main_missing_argument_human_mode(mocker):
     """Test that missing required option arguments exit with EX_USAGE and rich panel."""
     mocker.patch.object(sys, "argv", ["protostar", "init", "--python-version"])
-    mock_exit = mocker.patch("protostar.cli.sys.exit", side_effect=SystemExit)
-    mock_print = mocker.patch("protostar.cli.console.print")
+    mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
 
     with pytest.raises(SystemExit):
         main()
@@ -951,7 +957,7 @@ def test_main_missing_argument_human_mode(mocker):
 
 def test_main_missing_argument_json_mode(capsys, monkeypatch):
     """Test that missing required option arguments in JSON mode emit structured error."""
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "init", "--python-version", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -967,7 +973,7 @@ def test_main_missing_argument_json_mode(capsys, monkeypatch):
 
 def test_help_json_mode_global(capsys, monkeypatch):
     """Test that 'protostar help --json' emits full capabilities JSON schema."""
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "help", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -986,7 +992,7 @@ def test_help_json_mode_global(capsys, monkeypatch):
 
 def test_help_subcommand_json_mode(capsys, monkeypatch):
     """Test that 'protostar help init --json' emits scoped capabilities JSON schema."""
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "help", "init", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -1005,7 +1011,7 @@ def test_help_subcommand_json_mode(capsys, monkeypatch):
 
 def test_init_help_flag_json_mode(capsys, monkeypatch):
     """Test that 'protostar init --help --json' emits scoped capabilities JSON schema."""
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "init", "--help", "--json"])
 
     with pytest.raises(SystemExit) as exc:
@@ -1023,7 +1029,7 @@ def test_init_help_flag_json_mode(capsys, monkeypatch):
 
 def test_help_invalid_subcommand_json_mode(capsys, monkeypatch):
     """Test that 'protostar help invalid --json' emits InvalidUsageError JSON payload."""
-    monkeypatch.setattr("protostar.cli.is_json_mode", True)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr("sys.argv", ["protostar", "help", "invalid-topic", "--json"])
 
     with pytest.raises(SystemExit) as exc:
