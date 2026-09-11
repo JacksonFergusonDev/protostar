@@ -170,8 +170,14 @@ class UserConfig:
             The loaded UserConfig instance.
         """
         if cls._instance is not None and not force_reload:
+            logger.debug("Using cached UserConfig instance")
             return cls._instance
 
+        logger.debug(
+            "Loading global configuration from %s (exists=%s)",
+            CONFIG_FILE,
+            CONFIG_FILE.exists(),
+        )
         instance = cls()
 
         if CONFIG_FILE.exists():

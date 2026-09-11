@@ -1,10 +1,13 @@
 import argparse
+import logging
 import os
 import sys
 from dataclasses import dataclass
 from enum import StrEnum
 
 from protostar.cli import schema, ui
+
+logger = logging.getLogger("protostar")
 
 
 class Shell(StrEnum):
@@ -39,6 +42,11 @@ def generate_completion_script(shell: Shell, executable: str = "protostar") -> s
     Returns:
         The raw shell script string suitable for eval or sourcing.
     """
+    logger.debug(
+        "Generating completion script for shell '%s' (executable: '%s')",
+        shell.value,
+        executable,
+    )
     import argcomplete.shell_integration as si
 
     return si.shellcode([executable], shell=shell.value)
@@ -78,16 +86,25 @@ def detect_environment() -> ShellEnvironment:
     is_windows = sys.platform == "win32"
     is_macos = sys.platform == "darwin"
     os_display = "Windows" if is_windows else ("macOS" if is_macos else "Linux")
+    logger.debug(
+        "Detecting active shell environment on OS '%s' (platform: '%s')",
+        os_display,
+        sys.platform,
+    )
 
     shell: Shell
     if "ZSH_VERSION" in os.environ:
+        logger.debug("Detected Zsh from $ZSH_VERSION environment variable")
         shell = Shell.ZSH
     elif "BASH_VERSION" in os.environ:
+        logger.debug("Detected Bash from $BASH_VERSION environment variable")
         shell = Shell.BASH
     elif "FISH_VERSION" in os.environ:
+        logger.debug("Detected Fish from $FISH_VERSION environment variable")
         shell = Shell.FISH
     else:
         raw_shell = os.environ.get("SHELL", "").lower()
+        logger.debug("Evaluating fallback $SHELL environment variable: %r", raw_shell)
         if "zsh" in raw_shell:
             shell = Shell.ZSH
         elif "bash" in raw_shell:
@@ -100,9 +117,11 @@ def detect_environment() -> ShellEnvironment:
             shell = Shell.ZSH
         else:
             shell = Shell.BASH
+        logger.debug("Resolved shell fallback: %s", shell.value)
 
+    env: ShellEnvironment
     if shell == Shell.ZSH:
-        return ShellEnvironment(
+        env = ShellEnvironment(
             shell=Shell.ZSH,
             os_name=os_display,
             profile_path="~/.zshrc",
@@ -111,9 +130,9 @@ def detect_environment() -> ShellEnvironment:
             quick_setup_cmd="protostar completion zsh > ~/.protostar-completion.zsh && echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc && source ~/.zshrc",
             description=f"{os_display} (Zsh)",
         )
-    if shell == Shell.BASH:
+    elif shell == Shell.BASH:
         profile = "~/.bash_profile" if is_macos else "~/.bashrc"
-        return ShellEnvironment(
+        env = ShellEnvironment(
             shell=Shell.BASH,
             os_name=os_display,
             profile_path=profile,
@@ -122,8 +141,8 @@ def detect_environment() -> ShellEnvironment:
             quick_setup_cmd=f"protostar completion bash > ~/.protostar-completion.bash && echo 'source ~/.protostar-completion.bash' >> {profile} && source {profile}",
             description=f"{os_display} (Bash)",
         )
-    if shell == Shell.FISH:
-        return ShellEnvironment(
+    elif shell == Shell.FISH:
+        env = ShellEnvironment(
             shell=Shell.FISH,
             os_name=os_display,
             profile_path="~/.config/fish/config.fish",
@@ -132,16 +151,25 @@ def detect_environment() -> ShellEnvironment:
             quick_setup_cmd="mkdir -p ~/.config/fish/completions && protostar completion fish > ~/.config/fish/completions/protostar.fish",
             description=f"{os_display} (Fish)",
         )
-    # Shell.POWERSHELL
-    return ShellEnvironment(
-        shell=Shell.POWERSHELL,
-        os_name=os_display,
-        profile_path="$PROFILE",
-        completion_file="$HOME\\protostar-completion.ps1",
-        eval_hook='. "$HOME\\protostar-completion.ps1"',
-        quick_setup_cmd='protostar completion powershell > "$HOME\\protostar-completion.ps1"; Add-Content -Path $PROFILE -Value \'. "$HOME\\protostar-completion.ps1"\'; . $PROFILE',
-        description=f"{os_display} (PowerShell)",
+    else:
+        # Shell.POWERSHELL
+        env = ShellEnvironment(
+            shell=Shell.POWERSHELL,
+            os_name=os_display,
+            profile_path="$PROFILE",
+            completion_file="$HOME\\protostar-completion.ps1",
+            eval_hook='. "$HOME\\protostar-completion.ps1"',
+            quick_setup_cmd='protostar completion powershell > "$HOME\\protostar-completion.ps1"; Add-Content -Path $PROFILE -Value \'. "$HOME\\protostar-completion.ps1"\'; . $PROFILE',
+            description=f"{os_display} (PowerShell)",
+        )
+
+    logger.debug(
+        "Resolved shell environment: %s (profile: %s, completion_file: %s)",
+        env.description,
+        env.profile_path,
+        env.completion_file,
     )
+    return env
 
 
 def print_completion_guide() -> None:
@@ -223,10 +251,12 @@ def handle_completion(args: argparse.Namespace) -> None:
         args: Parsed command-line arguments containing the optional target shell.
     """
     target_shell: str | None = getattr(args, "shell", None)
+    logger.debug("Handling 'completion' command (target_shell: %s)", target_shell)
 
     if not target_shell:
         env = detect_environment()
         if ui.is_json_mode:
+            logger.debug("Emitting JSON completion environment payload")
             ui.emit_json(
                 {
                     "api_version": schema.CLI_API_VERSION,
@@ -241,11 +271,15 @@ def handle_completion(args: argparse.Namespace) -> None:
                 }
             )
             sys.exit(0)
+        logger.debug("Printing human-readable completion guide")
         print_completion_guide()
         return
 
     shell_enum = Shell(target_shell)
     script = generate_completion_script(shell_enum)
+    logger.debug(
+        "Generated %d-byte completion script for %s", len(script), shell_enum.value
+    )
 
     if ui.is_json_mode:
         ui.emit_json(

@@ -49,6 +49,8 @@ from protostar.orchestrator import Orchestrator
 from protostar.ui import confirm
 from protostar.wizard import resolve_missing_variables
 
+logger = logging.getLogger("protostar")
+
 
 def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments."""
@@ -236,7 +238,9 @@ def handle_config(args: argparse.Namespace) -> None:
     Args:
         args: Parsed CLI arguments mapping to this command.
     """
+    logger.debug("Handling 'config' command (config path: %s)", CONFIG_FILE)
     if not CONFIG_FILE.parent.exists():
+        logger.debug("Creating configuration parent directory: %s", CONFIG_FILE.parent)
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     if getattr(args, "reset", False):
@@ -253,6 +257,9 @@ def handle_config(args: argparse.Namespace) -> None:
                 ui.console.print("[yellow]Configuration reset aborted.[/yellow]")
                 return
 
+        logger.debug(
+            "Resetting configuration file at %s to default template", CONFIG_FILE
+        )
         atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
         ui.console.print(
             f"[bold green]Reset configuration at {CONFIG_FILE} to default state.[/bold green]"
@@ -260,24 +267,31 @@ def handle_config(args: argparse.Namespace) -> None:
         return
 
     if not CONFIG_FILE.exists():
+        logger.debug("Writing initial default configuration to %s", CONFIG_FILE)
         atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
         ui.console.print(
             f"[bold green]Initialized default configuration at {CONFIG_FILE}[/bold green]"
         )
 
     editor_env = os.environ.get("EDITOR", "nano")
+    logger.debug("Resolved $EDITOR environment variable: %r", editor_env)
     editor_cmd = shlex.split(editor_env)
 
     if not editor_cmd:
         raise ConfigurationError("The $EDITOR environment variable is empty.")
 
-    if not shutil.which(editor_cmd[0]):
+    editor_binary = shutil.which(editor_cmd[0])
+    logger.debug(
+        "Looked up editor binary '%s' in PATH: %s", editor_cmd[0], editor_binary
+    )
+    if not editor_binary:
         raise ConfigurationError(
             f"Could not resolve editor executable '{editor_cmd[0]}'.\n"
             "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
         )
 
     editor_cmd.append(str(CONFIG_FILE))
+    logger.debug("Launching editor command: %s", editor_cmd)
 
     try:
         subprocess.run(editor_cmd, check=True)
@@ -290,15 +304,14 @@ def handle_config(args: argparse.Namespace) -> None:
 def configure_logging() -> None:
     """Injects Rich tracebacks and debug handlers into the global logger.
 
-    In JSON mode, the handler writes to ``stderr`` to preserve ``stdout`` for
-    the exclusive use of machine-readable JSON payloads.
+    Writes to ``stderr`` to preserve ``stdout`` for data output and
+    machine-readable JSON payloads.
     """
-    log_console = ui._stderr_console if ui.is_json_mode else ui.console
     logger = logging.getLogger("protostar")
     logger.setLevel(logging.DEBUG)
     logger.handlers.clear()
     logger.addHandler(
-        RichHandler(console=log_console, markup=True, rich_tracebacks=True)
+        RichHandler(console=ui._stderr_console, markup=True, rich_tracebacks=True)
     )
 
 

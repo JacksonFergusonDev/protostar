@@ -101,11 +101,16 @@ def test_configure_logging():
 
     from rich.logging import RichHandler
 
-    configure_logging()
-    logger = logging.getLogger("protostar")
+    try:
+        configure_logging()
+        logger = logging.getLogger("protostar")
 
-    assert logger.level == logging.DEBUG
-    assert any(isinstance(h, RichHandler) for h in logger.handlers)
+        assert logger.level == logging.DEBUG
+        assert any(isinstance(h, RichHandler) for h in logger.handlers)
+    finally:
+        logger = logging.getLogger("protostar")
+        logger.setLevel(logging.NOTSET)
+        logger.handlers.clear()
 
 
 def test_handle_config_success(mocker, tmp_path):
@@ -1279,3 +1284,40 @@ def test_verbose_flag_functional_on_non_init_subcommands():
 
     args2 = parser.parse_args(["completion", "--verbose"])
     assert getattr(args2, "verbose", False) is True
+
+
+def test_completion_verbose_logging(capsys, monkeypatch):
+    """Test that 'completion --verbose' emits debug log entries to stderr."""
+    import logging
+
+    monkeypatch.setattr(sys, "argv", ["protostar", "completion", "bash", "--verbose"])
+    try:
+        main()
+        captured = capsys.readouterr()
+        assert "Handling 'completion' command" in captured.err
+        assert "Generating completion script" in captured.err
+    finally:
+        logger = logging.getLogger("protostar")
+        logger.setLevel(logging.NOTSET)
+        logger.handlers.clear()
+
+
+def test_config_verbose_logging(capsys, monkeypatch, tmp_path, mocker):
+    """Test that 'config -v' emits debug logs to stderr."""
+    import logging
+
+    mock_config = tmp_path / "config.toml"
+    mock_config.write_text("[env]\n")
+    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config)
+    mocker.patch("subprocess.run")
+
+    monkeypatch.setattr(sys, "argv", ["protostar", "config", "-v"])
+    try:
+        main()
+        captured = capsys.readouterr()
+        assert "Handling 'config' command" in captured.err
+        assert "Looked up editor binary" in captured.err
+    finally:
+        logger = logging.getLogger("protostar")
+        logger.setLevel(logging.NOTSET)
+        logger.handlers.clear()
