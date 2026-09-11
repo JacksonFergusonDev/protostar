@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789156278209,
+  "lastUpdate": 1789156734282,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12007,6 +12007,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 211.45,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6dd3aa0de850c0d69627231544449a8f3890c077",
+          "message": "fix(test): replace mutable singleton class caches with functools.cache and explicit cache clearing (#238)",
+          "timestamp": "2026-09-11T12:58:04-07:00",
+          "tree_id": "1e656e6b114953674a337e8c9b858a9be710405a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6dd3aa0de850c0d69627231544449a8f3890c077"
+        },
+        "date": 1789156733553,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 105.84,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 162.62,
             "unit": "ms"
           }
         ]
