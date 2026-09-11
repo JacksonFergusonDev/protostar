@@ -22,6 +22,13 @@
 [![Documentation](https://img.shields.io/readthedocs/protostar/stable?color=22d3ee&labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/stable/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
 
+| [**Get Started**](https://protostar.readthedocs.io/stable/getting-started/)
+| [**Docs**](https://protostar.readthedocs.io/stable/)
+| [**Why Protostar?**](https://protostar.readthedocs.io/stable/why-protostar/)
+| [**Design Principles**](https://protostar.readthedocs.io/stable/design-principles/)
+| [**Authoring Templates**](https://protostar.readthedocs.io/stable/usage/authoring-templates/)
+| [**Troubleshooting**](https://protostar.readthedocs.io/stable/usage/troubleshooting/) |
+
 </div>
 
 Setting up a new python project often requires the same manual steps: configuring linters, writing `Dockerfile`, `.gitignore` and `.dockerignore` files, setting up virtual environments, and linking IDEs. **Protostar** automates this boilerplate so you can skip the setup and get straight to writing code.
