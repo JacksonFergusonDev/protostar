@@ -68,12 +68,11 @@ def test_completion_subcommand_guide(capsys: pytest.CaptureFixture[str]) -> None
     args = parser.parse_args(["completion"])
     args.func(args)
     captured = capsys.readouterr()
-    assert "Shell Autocompletion Setup" in captured.out
     assert "Detected Environment:" in captured.out
-    assert ".protostar-completion.zsh" in captured.out
-    assert ".protostar-completion.bash" in captured.out
-    assert "protostar.fish" in captured.out
-    assert "protostar-completion.ps1" in captured.out
+    assert "Recommended One-Liner" in captured.out
+    assert "Manual Steps:" in captured.out
+    assert "Using a different shell?" in captured.out
+    assert "Shell Autocompletion Setup" not in captured.out
 
 
 def test_completion_subcommand_json_mode(mocker: Any) -> None:

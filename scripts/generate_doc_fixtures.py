@@ -559,7 +559,7 @@ def generate_capability_tables() -> None:
     completion_rows = [
         [
             "*(No args)*",
-            "Displays a guide with setup instructions for all supported shells.",
+            "Displays tailored setup instructions for the detected shell environment.",
         ],
         [
             "`<shell>`",

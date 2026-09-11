@@ -171,7 +171,6 @@ def print_completion_guide() -> None:
     """Displays user-friendly terminal instructions tailored to the detected shell."""
     env = detect_environment()
 
-    ui.console.print("\n[bold blue]Shell Autocompletion Setup[/bold blue]\n")
     ui.console.print(
         f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n"
     )
@@ -236,46 +235,9 @@ def print_completion_guide() -> None:
         else:
             ui.console.print("")
 
-    ui.console.rule("[dim]Other Supported Shells[/dim]")
-    other_shells = [s for s in Shell if s != env.shell]
-    for s in other_shells:
-        if s == Shell.ZSH:
-            ui.console.print("  • [bold]Zsh[/bold] [dim](~/.zshrc)[/dim]:")
-            ui.console.print(
-                "    [dim]protostar completion zsh > ~/.protostar-completion.zsh && "
-                "echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc && source ~/.zshrc[/dim]",
-                soft_wrap=True,
-            )
-            ui.console.print("")
-        elif s == Shell.BASH:
-            ui.console.print("  • [bold]Bash[/bold] [dim](~/.bashrc)[/dim]:")
-            ui.console.print(
-                "    [dim]protostar completion bash > ~/.protostar-completion.bash && "
-                "echo 'source ~/.protostar-completion.bash' >> ~/.bashrc && source ~/.bashrc[/dim]",
-                soft_wrap=True,
-            )
-            ui.console.print("")
-        elif s == Shell.FISH:
-            ui.console.print(
-                "  • [bold]Fish[/bold] [dim](~/.config/fish/completions/)[/dim]:"
-            )
-            ui.console.print(
-                "    [dim]mkdir -p ~/.config/fish/completions && "
-                "protostar completion fish > ~/.config/fish/completions/protostar.fish[/dim]",
-                soft_wrap=True,
-            )
-            ui.console.print("")
-        elif s == Shell.POWERSHELL:
-            ui.console.print("  • [bold]PowerShell[/bold] [dim]($PROFILE)[/dim]:")
-            ui.console.print(
-                '    [dim]protostar completion powershell > "$HOME\\protostar-completion.ps1"; '
-                "Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'; . $PROFILE[/dim]",
-                soft_wrap=True,
-            )
-            ui.console.print("")
-
+    shells_list = ", ".join(s.value for s in Shell)
     ui.console.print(
-        "[dim]Run [bold]protostar completion <shell>[/bold] to generate raw completion scripts.[/dim]\n"
+        f"[dim]Using a different shell? Run [bold]protostar completion <shell>[/bold] ({shells_list}).[/dim]\n"
     )
 
 
