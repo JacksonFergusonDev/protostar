@@ -301,3 +301,31 @@ def test_posix_fd8_completion_protocol() -> None:
     assert "api" in output
     assert "astro" in output
     assert "cli" not in output
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="POSIX fd 8 protocol is Unix-specific"
+)
+def test_posix_fd8_template_flag_completion() -> None:
+    """Verify that completing after '-t ' only returns templates and not options."""
+    env = os.environ.copy()
+    env["_ARGCOMPLETE"] = "1"
+    env["_ARGCOMPLETE_SHELL"] = "zsh"
+    env["COMP_LINE"] = "protostar init -t "
+    env["COMP_POINT"] = str(len(env["COMP_LINE"]))
+
+    cmd = f'"{sys.executable}" -m protostar.cli 8>&1'
+    proc = subprocess.run(
+        cmd,
+        shell=True,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0
+    items = proc.stdout.split("\x0b")
+    # All items should be template entries (formatted as name:desc in zsh)
+    assert len(items) >= 6
+    for item in items:
+        # None of the completions should be options/flags
+        assert not item.startswith("-")

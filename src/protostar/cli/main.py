@@ -57,13 +57,6 @@ def handle_init(args: argparse.Namespace) -> None:
 
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
-
-    # Intercept a dangling --template flag
-    if template_name == "":
-        ui._print_templates_and_exit(
-            "The '--template' flag requires a name argument. Choose from the list below:"
-        )
-
     template_context = getattr(args, "template_context", {})
 
     user_config = UserConfig.load()

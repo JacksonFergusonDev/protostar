@@ -301,9 +301,6 @@ def build_parser() -> argparse.ArgumentParser:
         "-t",
         "--template",
         type=str,
-        nargs="?",  # Allow 0 or 1 arguments
-        const="",  # Value if flag is present but no argument is provided
-        default=None,  # Value if flag is omitted entirely
         dest="template_name",
         help="Name of a template to apply (run with --list-templates to view available).",
         metavar="NAME",
