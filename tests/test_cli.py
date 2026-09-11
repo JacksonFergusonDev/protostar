@@ -1245,3 +1245,37 @@ def test_version_flag_json_mode_subcommand_rejected(capsys, monkeypatch):
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "InvalidUsageError"
     assert "Unrecognized arguments: --version" in payload["error"]["message"]
+
+
+def test_verbose_flag_suppressed_in_non_init_help(capsys, monkeypatch):
+    """Test that '--verbose' is suppressed from non-init subcommand help output."""
+    monkeypatch.setattr(sys, "argv", ["protostar", "config", "--help"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "--verbose" not in captured.out
+    assert "-v," not in captured.out
+
+
+def test_verbose_flag_visible_in_init_help():
+    """Test that '--verbose' is visible in 'init --help' output."""
+    parser = build_parser()
+    subparsers_action = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    init_parser = subparsers_action.choices["init"]
+    assert any(
+        action.dest == "verbose" and action.help != argparse.SUPPRESS
+        for action in init_parser._actions
+    )
+
+
+def test_verbose_flag_functional_on_non_init_subcommands():
+    """Test that '--verbose' and '-v' are still accepted by non-init subcommands."""
+    parser = build_parser()
+    args1 = parser.parse_args(["config", "-v"])
+    assert getattr(args1, "verbose", False) is True
+
+    args2 = parser.parse_args(["completion", "--verbose"])
+    assert getattr(args2, "verbose", False) is True

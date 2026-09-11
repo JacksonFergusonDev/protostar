@@ -245,6 +245,22 @@ def build_parser() -> argparse.ArgumentParser:
         help=argparse.SUPPRESS,  # Hide from human help output
     )
 
+    # Subcommand base parser: accepts global flags like --verbose but hides them from help output
+    suppressed_base_parser = JsonAwareParser(add_help=False)
+    suppressed_base_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+    suppressed_base_parser.add_argument(
+        "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+
     parser = JsonAwareParser(
         description="High-velocity, zero-friction Python environment scaffolding.",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
@@ -375,7 +391,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Generates and prints the JSON Schema representing the layout of Protostar template files. Intended for IDE tooling and programmatic interrogation.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
-        parents=[base_parser],
+        parents=[suppressed_base_parser],
     )
     export_schema_parser.set_defaults(func=schema.handle_export_schema)
 
@@ -386,7 +402,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Opens the global configuration file in your system's default $EDITOR.",
         formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
-        parents=[base_parser],
+        parents=[suppressed_base_parser],
     )
     config_parser.add_argument(
         "--force-replace",
@@ -422,7 +438,7 @@ def build_parser() -> argparse.ArgumentParser:
             '  protostar completion powershell > "$HOME\\protostar-completion.ps1"\n'
             "  Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'"
         ),
-        parents=[base_parser],
+        parents=[suppressed_base_parser],
     )
     completion_parser.add_argument(
         "shell",
@@ -439,7 +455,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show this help message or a subcommand's manual.",
         description="Displays the CLI help manual.",
         formatter_class=ProtoHelpFormatter,
-        parents=[base_parser],
+        parents=[suppressed_base_parser],
     )
 
     # Dynamically grab registered commands, excluding 'help' itself
