@@ -201,7 +201,7 @@ def test_partial_execution_aborted_error():
 
     empty_err = PartialExecutionAbortedError(touched_paths=frozenset())
     assert "The following paths were modified" not in str(empty_err)
-    assert "Execution was interrupted before Protostar could finish" in str(empty_err)
+    assert "Execution interrupted. Protostar rolled back all tracked workspace changes" in str(empty_err)
     assert empty_err.docs_url is None
 
 
