@@ -61,26 +61,27 @@ def run_init_wizard() -> WizardSelections | None:
     if not _should_run_wizard():
         return None
 
+    from .templates import TemplateType, discover_templates
+
     config = UserConfig.load()
+    discovered = discover_templates(config=config)
+    builtins = [t for t in discovered if t.type == TemplateType.BUILT_IN]
+    aliases = [t for t in discovered if t.type == TemplateType.GLOBAL_ALIAS]
+    templates_by_alias = {t.alias: t for t in discovered}
 
     template_choices: list[Any] = ["None"]
-    builtins = []
-
-    try:
-        template_dir = importlib.resources.files("protostar.templates")
-        for item in template_dir.iterdir():
-            if item.is_file() and item.name.endswith(".toml"):
-                builtins.append(item.name[:-5])
-    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
-        pass
 
     if builtins:
         template_choices.append(Separator("--- Built-in Templates ---"))
-        template_choices.extend(builtins)
+        for t in builtins:
+            title = f"{t.alias:<10} ({t.description})" if t.description else t.alias
+            template_choices.append(Choice(title=title, value=t.alias))
 
-    if config.templates:
+    if aliases:
         template_choices.append(Separator("--- External Aliases ---"))
-        template_choices.extend(config.templates.keys())
+        for t in aliases:
+            title = f"{t.alias:<10} ({t.description})" if t.description else t.alias
+            template_choices.append(Choice(title=title, value=t.alias))
 
     answer: str | None = "None"
     if len(template_choices) > 1:
@@ -101,20 +102,20 @@ def run_init_wizard() -> WizardSelections | None:
     is_trusted = False
 
     if answer != "None":
-        config = UserConfig.load(force_reload=True)
-        if answer in builtins:
-            target = str(
-                importlib.resources.files("protostar.templates").joinpath(
-                    f"{answer}.toml"
+        if answer in templates_by_alias:
+            tmpl_info = templates_by_alias[answer]
+            if tmpl_info.type == TemplateType.BUILT_IN:
+                target = str(
+                    importlib.resources.files("protostar.templates").joinpath(
+                        f"{answer}.toml"
+                    )
                 )
-            )
-            is_trusted = True
-        elif answer in config.templates:
-            alias_cfg = config.templates[answer]
-            target = alias_cfg.source
-            is_external = True
-            is_user_aliased = True
-            is_trusted = alias_cfg.trusted
+                is_trusted = True
+            else:
+                target = tmpl_info.source
+                is_external = True
+                is_user_aliased = True
+                is_trusted = tmpl_info.trusted
         else:
             raise ExecutionAbortedError(
                 f"Template selection '{answer}' could not be resolved."

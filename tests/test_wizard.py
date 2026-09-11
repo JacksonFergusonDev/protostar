@@ -72,6 +72,7 @@ def test_run_init_wizard_template_cancellation(mocker):
     mock_file1 = mocker.MagicMock()
     mock_file1.is_file.return_value = True
     mock_file1.name = "fastapi.toml"
+    mock_file1.read_text.return_value = 'name = "FastAPI"\ndescription = "Scaffold"\n'
     mock_files.return_value.iterdir.return_value = [mock_file1]
 
     mock_select = mocker.patch("questionary.select")

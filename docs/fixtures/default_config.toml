@@ -34,3 +34,9 @@ python_version = "3.13"
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 # data-science-base = "~/Developer/templates/ds_base.toml"
+#
+# [templates.enterprise-api]
+# name = "Enterprise API"
+# source = "https://github.com/myorg/enterprise-template.git"
+# description = "Internal enterprise microservice scaffold with auth & tracing"
+# trusted = true

@@ -886,6 +886,21 @@ def test_list_templates_json_mode(capsys, monkeypatch):
     assert payload["status"] == "success"
     assert "templates" in payload
     assert isinstance(payload["templates"], list)
+    assert len(payload["templates"]) >= 6
+    sample = payload["templates"][0]
+    for key in ("alias", "name", "description", "type", "source", "trusted"):
+        assert key in sample
+
+
+def test_list_templates_table_output(capsys, monkeypatch):
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "Available Templates" in captured.out
+    assert "FastAPI" in captured.out
 
 
 def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):

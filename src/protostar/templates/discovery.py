@@ -82,7 +82,7 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
                 data = tomllib.loads(content)
                 name = data.get("name") or alias
                 description = data.get("description", "")
-            except (OSError, tomllib.TOMLDecodeError):
+            except (OSError, tomllib.TOMLDecodeError, AttributeError, TypeError):
                 name = alias
                 description = ""
 

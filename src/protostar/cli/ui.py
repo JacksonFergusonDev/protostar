@@ -1,4 +1,3 @@
-import importlib.resources
 import json
 import logging
 import shlex
@@ -13,7 +12,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from protostar.cli import schema
-from protostar.config import CONFIG_FILE, UserConfig
+from protostar.config import CONFIG_FILE
 from protostar.errors import (
     ExecutionAbortedError,
     ProtostarError,
@@ -78,28 +77,10 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         error_msg: If provided, prints a red error warning before the table
             and exits with a status code of 1 instead of 0.
     """
-    # Collect template metadata for both JSON and human output paths
-    templates: list[dict[str, str]] = []
-    try:
-        template_dir = importlib.resources.files("protostar.templates")
-        for item in template_dir.iterdir():
-            if item.is_file() and item.name.endswith(".toml"):
-                templates.append(
-                    {
-                        "name": item.name[:-5],
-                        "type": "built-in",
-                        "source": "protostar.templates",
-                    }
-                )
-    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
-        pass
+    from protostar.templates import discover_templates
 
-    user_config = UserConfig.load()
-    if user_config.templates:
-        for alias, alias_cfg in user_config.templates.items():
-            templates.append(
-                {"name": alias, "type": "global-alias", "source": alias_cfg.source}
-            )
+    discovered = discover_templates()
+    templates = [t.to_dict() for t in discovered]
 
     if is_json_mode:
         if error_msg:
@@ -134,13 +115,22 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         title_justify="left",
         padding=(0, 1),
     )
-    table.add_column("Name", style="cyan", no_wrap=True)
+    table.add_column("Template", style="cyan", no_wrap=True)
+    table.add_column("Name", style="bold")
+    table.add_column("Description", style="white")
     table.add_column("Type", style="magenta")
+    table.add_column("Trusted", justify="center")
     table.add_column("Source", style="dim")
 
-    for tmpl in templates:
+    for tmpl in discovered:
+        trusted_markup = "[green]Yes[/green]" if tmpl.trusted else "[yellow]No[/yellow]"
         table.add_row(
-            tmpl["name"], tmpl["type"].replace("-", " ").title(), tmpl["source"]
+            tmpl.alias,
+            tmpl.name,
+            tmpl.description,
+            str(tmpl.type).replace("-", " ").title(),
+            trusted_markup,
+            tmpl.source,
         )
 
     console.print(table)
