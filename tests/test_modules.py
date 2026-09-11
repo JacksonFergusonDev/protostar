@@ -502,6 +502,12 @@ def test_commitizen_module_adds_gitignore_entry():
     assert ".cz-cache/" in manifest.filesystem.workspace_hides
 
 
+def test_commitizen_module_pre_flight_inherited():
+    """Verify CommitizenModule inherits a working no-op pre_flight without error."""
+    module = CommitizenModule()
+    module.pre_flight()
+
+
 def test_renovate_module_properties():
     module = RenovateModule()
     assert module.name == "Renovate"
@@ -599,6 +605,18 @@ def test_zensical_module_build(mocker):
     assert "pyproject.toml" in manifest.filesystem.file_appends
     wiring = manifest.filesystem.file_appends["pyproject.toml"]
     assert any("docs = []" in w and '{ include-group = "docs" }' in w for w in wiring)
+
+
+def test_zensical_module_skips_when_files_exist(mocker):
+    """Verify that ZensicalModule skips docs/index.md and mkdocs.yml when they already exist."""
+    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
+    manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    module = ZensicalModule()
+    module.build(manifest)
+
+    assert "docs/index.md" not in manifest.filesystem.file_injections
+    assert "mkdocs.yml" not in manifest.filesystem.file_injections
 
 
 def test_readthedocs_module_properties():

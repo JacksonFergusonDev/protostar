@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import logging
 import shlex
@@ -215,28 +216,12 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
 
         # Rebuild engine with updated force flag and re-plan with a fresh manifest
         if choice == CollisionStrategy.MERGE:
-            request = InitRequest(
-                template_blueprint=request.template_blueprint,
-                python_version=request.python_version,
-                docker=request.docker,
-                force_merge=True,
-                force_replace=False,
-                metadata=request.metadata,
-                is_external=request.is_external,
-                is_user_aliased=request.is_user_aliased,
-                is_trusted=request.is_trusted,
+            request = dataclasses.replace(
+                request, force_merge=True, force_replace=False
             )
         else:
-            request = InitRequest(
-                template_blueprint=request.template_blueprint,
-                python_version=request.python_version,
-                docker=request.docker,
-                force_merge=False,
-                force_replace=True,
-                metadata=request.metadata,
-                is_external=request.is_external,
-                is_user_aliased=request.is_user_aliased,
-                is_trusted=request.is_trusted,
+            request = dataclasses.replace(
+                request, force_merge=False, force_replace=True
             )
         engine = Orchestrator(engine.modules, engine.user_config, request=request)
         manifest = engine.plan()

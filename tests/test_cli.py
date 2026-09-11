@@ -1335,3 +1335,62 @@ def test_config_verbose_logging(capsys, monkeypatch, tmp_path, mocker):
         logger = logging.getLogger("protostar")
         logger.setLevel(logging.NOTSET)
         logger.handlers.clear()
+
+
+def test_run_engine_collision_retry_replaces_request_flags(
+    mocker, tmp_path, monkeypatch
+):
+    """Verify _run_engine rebuilds request using dataclasses.replace on collision retry."""
+    from pathlib import Path
+
+    from protostar.cli.ui import _run_engine
+    from protostar.config import UserConfig
+    from protostar.errors import WorkspaceCollisionError
+    from protostar.manifest import CollisionStrategy, EnvironmentManifest
+    from protostar.models import InitRequest
+    from protostar.orchestrator import Orchestrator
+
+    monkeypatch.chdir(tmp_path)
+
+    mock_manifest = mocker.MagicMock(
+        spec=EnvironmentManifest,
+        diagnostics=[],
+        tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[]),
+    )
+    mock_result = mocker.MagicMock(diagnostics=())
+
+    initial_request = InitRequest(
+        docker=True,
+        python_version="3.12",
+        metadata={"author_name": "Ada Lovelace"},
+        is_external=True,
+        is_trusted=True,
+    )
+
+    mock_orch_init = mocker.spy(Orchestrator, "__init__")
+    mocker.patch.object(
+        Orchestrator,
+        "plan",
+        side_effect=[
+            WorkspaceCollisionError(paths=frozenset([Path("pyproject.toml")])),
+            mock_manifest,
+        ],
+    )
+    mocker.patch.object(Orchestrator, "execute", return_value=mock_result)
+    mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
+    mocker.patch("protostar.cli.ui.select", return_value=CollisionStrategy.MERGE)
+
+    engine = Orchestrator([], UserConfig(), request=initial_request)
+    res = _run_engine(engine, initial_request)
+
+    assert res is mock_result
+    assert mock_orch_init.call_count == 2
+    second_request = mock_orch_init.call_args_list[1].kwargs.get("request")
+    assert second_request is not None
+    assert second_request.force_merge is True
+    assert second_request.force_replace is False
+    assert second_request.docker is True
+    assert second_request.python_version == "3.12"
+    assert second_request.metadata == {"author_name": "Ada Lovelace"}
+    assert second_request.is_external is True
+    assert second_request.is_trusted is True
