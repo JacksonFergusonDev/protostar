@@ -10,6 +10,7 @@ __all__ = ["TransactionAwareFS"]
 
 class TransactionAwareFS:
     """Transaction-aware file system operations."""
+
     def __init__(self, journal: MutationJournal) -> None:
         self.journal = journal
 
@@ -44,7 +45,7 @@ class TransactionAwareFS:
         ) as temp:
             temp_name = temp.name
             temp.write(content)
-        
+
         try:
             Path(temp_name).replace(path)
         except BaseException:

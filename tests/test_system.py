@@ -1,5 +1,3 @@
-
-
 import pytest
 
 from protostar.errors import CommandExecutionError
@@ -12,6 +10,7 @@ def test_execute_subprocess_success(mocker):
     mock_popen.returncode = 0
     mocker.patch("subprocess.Popen", return_value=mock_popen)
     execute_subprocess(["uv", "sync"])
+
 
 def test_execute_subprocess_failure(mocker):
     mock_popen = mocker.MagicMock()

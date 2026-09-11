@@ -131,7 +131,10 @@ class SystemExecutor:
             rollback_result = self.journal.rollback()
             if not rollback_result.succeeded:
                 from .errors import RollbackFailedError
-                raise RollbackFailedError(rollback_result, original_error) from original_error
+
+                raise RollbackFailedError(
+                    rollback_result, original_error
+                ) from original_error
             raise
 
     def _check_ide_extensions(self) -> None:

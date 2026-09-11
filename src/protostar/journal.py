@@ -41,6 +41,7 @@ class RollbackResult:
 
 class MutationJournal:
     """Tracks file mutations to enable rollback."""
+
     def __init__(self) -> None:
         self._journal: dict[Path, OriginalState] = {}
         self._committed: bool = False
@@ -92,7 +93,9 @@ class MutationJournal:
                 self._journal[path] = OriginalState.file(path.read_bytes())
             except OSError:
                 # We can't guarantee safety if we can't read the existing state
-                raise ValueError(f"Failed to read existing file for journaling: {path}") from None
+                raise ValueError(
+                    f"Failed to read existing file for journaling: {path}"
+                ) from None
         else:
             raise ValueError(
                 f"Unsupported filesystem node for journaling (symlinks/special nodes not supported): {path}"

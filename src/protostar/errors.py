@@ -6,9 +6,13 @@ import os
 import urllib.parse
 from enum import IntEnum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from protostar.docs_registry import DocsPage
 from protostar.system_deps import GlobalExecutable
+
+if TYPE_CHECKING:
+    from .journal import RollbackResult
 
 
 class ExitCode(IntEnum):
@@ -344,12 +348,13 @@ class AggregatedDependencyError(ProtostarError):
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.errors = errors
 
+
 class RollbackFailedError(ProtostarError):
     """Raised when an interrupted execution fails to cleanly rollback to its original state."""
 
     def __init__(
         self,
-        rollback_result,
+        rollback_result: RollbackResult,
         original_error: BaseException,
         *,
         docs_path: str | None = None,
@@ -361,7 +366,9 @@ class RollbackFailedError(ProtostarError):
             f"{failed_list}\n\n"
             f"Original execution error: {original_error}"
         )
-        hint = "Manual intervention is required to restore the workspace to a clean state."
+        hint = (
+            "Manual intervention is required to restore the workspace to a clean state."
+        )
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.rollback_result = rollback_result
         self.original_error = original_error

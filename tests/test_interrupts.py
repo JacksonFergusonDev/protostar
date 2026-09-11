@@ -12,7 +12,16 @@ from protostar.manifest import EnvironmentManifest
 from protostar.orchestrator import Orchestrator
 
 
+def test_partial_execution_aborted_error_formatting_with_paths() -> None:
+    touched = frozenset({"src/app.py", "pyproject.toml", ".github/workflows/ci.yml"})
+    err = PartialExecutionAbortedError(touched)
 
+    assert err.touched_paths == touched
+    err_str = str(err)
+    assert (
+        "Execution interrupted. Protostar rolled back all tracked workspace changes:"
+        in err_str
+    )
     assert "- .github/workflows/ci.yml" in err_str
     assert "- pyproject.toml" in err_str
     assert "- src/app.py" in err_str
@@ -21,16 +30,25 @@ from protostar.orchestrator import Orchestrator
         " workspace files." in err_str
     )
     assert err.hint is not None
-    assert "Inspect the modified paths" in err.hint
+    assert "The managed workspace state has been restored." in err.hint
 
 
+def test_partial_execution_aborted_error_formatting_without_paths() -> None:
+    err = PartialExecutionAbortedError(frozenset())
 
+    assert err.touched_paths == frozenset()
+    err_str = str(err)
+    assert (
+        "Execution interrupted. Protostar rolled back all tracked workspace changes."
+        in err_str
+    )
     assert "The following paths were modified" not in err_str
     assert (
         "Note: External commands (e.g., uv, git) may have also modified"
         " workspace files." in err_str
     )
     assert err.hint is not None
+    assert "The managed workspace state has been restored." in err.hint
 
 
 def test_executor_record_touch_relative_resolution(

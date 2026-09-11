@@ -52,9 +52,7 @@ def _install_group(
         return
 
     cmd = ["uv", "add", *group.cli_args, *packages]
-    logger.info(
-        f"Resolving and installing {len(packages)} {group.label} dependencies"
-    )
+    logger.info(f"Resolving and installing {len(packages)} {group.label} dependencies")
     execute_subprocess(cmd, timeout=600)
 
 

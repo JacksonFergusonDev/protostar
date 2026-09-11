@@ -6,6 +6,7 @@ import shutil
 import signal
 import subprocess
 import sys
+from typing import Any
 
 from .errors import CommandExecutionError, CommandTimeoutError
 
@@ -46,7 +47,7 @@ def execute_subprocess(
     if env is not None:
         clean_env.update(env)
 
-    kwargs = {}
+    kwargs: dict[str, Any] = {}
     if sys.platform == "win32":
         kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
@@ -94,7 +95,7 @@ def execute_subprocess(
         )
 
 
-def _terminate_process_tree(process: subprocess.Popen) -> None:
+def _terminate_process_tree(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
     try:

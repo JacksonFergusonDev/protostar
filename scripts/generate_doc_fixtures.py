@@ -748,15 +748,18 @@ def generate_agent_payloads() -> None:
             os.chdir(orig_cwd)
 
     # 2. Success payload generated dynamically using ExecutionResult
+    paths = frozenset(
+        [
+            ".gitignore",
+            "pyproject.toml",
+            "src/my_app/__init__.py",
+            "tests/test_cli.py",
+        ]
+    )
     result = ExecutionResult(
-        touched_paths=frozenset(
-            [
-                ".gitignore",
-                "pyproject.toml",
-                "src/my_app/__init__.py",
-                "tests/test_cli.py",
-            ]
-        ),
+        created_paths=paths,
+        mutated_paths=frozenset(),
+        touched_paths=paths,
         diagnostics=(),
     )
     success_payload = {

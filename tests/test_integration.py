@@ -5,7 +5,6 @@ import shutil
 import tomllib
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 from pytest_mock import MockerFixture
@@ -147,7 +146,11 @@ def test_collision_overwrite_e2e(
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     seed_global_config("[system]\nheadless_overwrite = true\n")
 
-    mocker.patch("subprocess.run", return_value=MagicMock(returncode=0))
+    mock_proc = mocker.MagicMock()
+    mock_proc.communicate.return_value = ("", "")
+    mock_proc.returncode = 0
+    mock_proc.poll.return_value = 0
+    mocker.patch("subprocess.Popen", return_value=mock_proc)
 
     # 2. Mock the interactive environment
     mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
