@@ -70,17 +70,35 @@ def run_init_wizard() -> WizardSelections | None:
     templates_by_alias = {t.alias: t for t in discovered}
 
     template_choices: list[Any] = ["None"]
+    max_name_len = max((len(t.name) for t in discovered), default=10)
+    col_width = max(max_name_len, 10)
 
     if builtins:
-        template_choices.append(Separator("--- Built-in Templates ---"))
+        template_choices.append(
+            Separator(
+                "── Built-in Templates ─────────────────────────────────────────────"
+            )
+        )
         for t in builtins:
-            title = f"{t.alias:<10} ({t.description})" if t.description else t.alias
+            title = (
+                f"{t.name:<{col_width}}  ·  {t.description}"
+                if t.description
+                else t.name
+            )
             template_choices.append(Choice(title=title, value=t.alias))
 
     if aliases:
-        template_choices.append(Separator("--- External Aliases ---"))
+        template_choices.append(
+            Separator(
+                "── External Aliases ───────────────────────────────────────────────"
+            )
+        )
         for t in aliases:
-            title = f"{t.alias:<10} ({t.description})" if t.description else t.alias
+            title = (
+                f"{t.name:<{col_width}}  ·  {t.description}"
+                if t.description
+                else t.name
+            )
             template_choices.append(Choice(title=title, value=t.alias))
 
     answer: str | None = "None"

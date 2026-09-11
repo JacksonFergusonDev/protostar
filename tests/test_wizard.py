@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 import pytest
 
@@ -107,6 +108,35 @@ def test_run_init_wizard_success(mocker):
     assert result.docker is True
     assert result.project_metadata == {"description": "Test App"}
     mock_metadata.assert_called_once()
+
+
+def test_run_init_wizard_formats_template_choices_with_middle_dot(mocker) -> None:
+    """Test that template choices are formatted using display names and a middle dot separator."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch.dict(os.environ, {}, clear=True)
+
+    captured_choices: list[Any] = []
+
+    def fake_select(message: str, choices: list[Any], **kwargs: Any) -> Any:
+        captured_choices.extend(choices)
+        mock_q = mocker.MagicMock()
+        mock_q.ask.return_value = "None"
+        return mock_q
+
+    mocker.patch("questionary.select", side_effect=fake_select)
+    mocker.patch("questionary.checkbox").return_value.ask.return_value = []
+    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+
+    run_init_wizard()
+
+    choice_titles = [
+        c.title for c in captured_choices if isinstance(getattr(c, "title", None), str)
+    ]
+    fastapi_choice = next(t for t in choice_titles if "FastAPI" in t)
+    assert " · " in fastapi_choice
+    assert "(" not in fastapi_choice
+    assert ")" not in fastapi_choice
 
 
 def test_resolve_missing_variables_non_interactive(mocker):
