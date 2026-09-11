@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789151771512,
+  "lastUpdate": 1789152586321,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11837,6 +11837,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.08,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9c13a3e7bc9f2509fc8c8b9cf362d6b35eb2d310",
+          "message": "chore(workflows): remove unused yellow ANSI color from generated justfiles",
+          "timestamp": "2026-09-11T11:46:40-07:00",
+          "tree_id": "0e10c61b2248e877ed2f785af99e32127738a684",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9c13a3e7bc9f2509fc8c8b9cf362d6b35eb2d310"
+        },
+        "date": 1789152585036,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139.88,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 216.73,
             "unit": "ms"
           }
         ]
