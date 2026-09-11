@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789152586321,
+  "lastUpdate": 1789153502142,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11871,6 +11871,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 216.73,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "898e45f6ed24a8da5d8266c348dbe8f55f24732f",
+          "message": "feat(scaffolding): pair container artifacts and guard license drift (#234)\n\n- Bundle container artifacts (.dockerignore and Dockerfile) in\n  SystemExecutor._write_docker_artifacts() so skipping Dockerfile under\n  MERGE also preserves .dockerignore without mutation.\n- Add Docker collision markers (Dockerfile and .dockerignore) to\n  Orchestrator.plan() Phase 2 collision check when req.docker is enabled.\n- Add Path(\"LICENSE\") to PythonCore.collision_markers.\n- Guard license injection and trove classifier drift in PythonCore.build()\n  when LICENSE already exists on disk and is preserved under MERGE.\n- Update doc fixture generation to isolate planned payload workspace and\n  refresh ml_merged snapshot.\n- Add comprehensive test coverage for container pairing, docker collision\n  detection, and license preservation.",
+          "timestamp": "2026-09-11T12:03:59-07:00",
+          "tree_id": "0695e52e8f44832d31a6eea453b48b600f0b8425",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/898e45f6ed24a8da5d8266c348dbe8f55f24732f"
+        },
+        "date": 1789153501374,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 150.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 232.58,
             "unit": "ms"
           }
         ]
