@@ -611,6 +611,23 @@ def test_executor_validate_targets_malformed_toml(mocker, mock_config):
         executor._validate_targets()
 
 
+def test_executor_validate_targets_malformed_injected_toml(mocker, mock_config):
+    """Test that malformed existing TOML targeted by file_injections triggers ConfigurationError."""
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_file_injection("custom.toml", "[tool.custom]\n")
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+
+    mock_file = mocker.mock_open(read_data=b"[broken toml ::: \n")
+    mocker.patch("protostar.executor.Path.open", mock_file)
+
+    with pytest.raises(
+        ConfigurationError, match="Syntax error in existing workspace file"
+    ):
+        executor._validate_targets()
+
+
 def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
     """Test that malformed payload TOML triggers a ConfigurationError during execution."""
     manifest = EnvironmentManifest()
@@ -1340,3 +1357,147 @@ def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_co
     assert "https://github.com/DavidAnson/markdownlint-cli2" in written_data
     assert "https://github.com/pre-commit/pre-commit-hooks" in written_data
     assert "https://github.com/gitleaks/gitleaks" in written_data
+
+
+def test_executor_write_ci_workflow_skips_existing_merge(
+    tmp_path, monkeypatch, mock_config
+):
+    """Test that CI workflow generation is skipped when target exists and strategy is MERGE."""
+    monkeypatch.chdir(tmp_path)
+    ci_file = tmp_path / ".github" / "workflows" / "ci.yml"
+    ci_file.parent.mkdir(parents=True, exist_ok=True)
+    ci_file.write_text("# Custom CI\n", encoding="utf-8")
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_ci = True
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    executor = SystemExecutor(manifest, mock_config)
+
+    executor._write_ci_workflow()
+
+    assert ci_file.read_text(encoding="utf-8") == "# Custom CI\n"
+    assert len(executor.diagnostics) == 1
+    assert executor.diagnostics[0].phase == DiagnosticPhase.CI
+    assert executor.diagnostics[0].severity == Severity.SKIP
+    assert "Skipping ci.yml generation" in executor.diagnostics[0].message
+
+
+def test_executor_write_ci_workflow_overwrites_existing_overwrite(
+    tmp_path, monkeypatch, mock_config
+):
+    """Test that CI workflow generation overwrites when strategy is OVERWRITE."""
+    monkeypatch.chdir(tmp_path)
+    ci_file = tmp_path / ".github" / "workflows" / "ci.yml"
+    ci_file.parent.mkdir(parents=True, exist_ok=True)
+    ci_file.write_text("# Custom CI\n", encoding="utf-8")
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_ci = True
+    manifest.metadata = {
+        "supported_os": ["Linux"],
+        "minimum_python": "3.13",
+    }
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    executor = SystemExecutor(manifest, mock_config)
+
+    executor._write_ci_workflow()
+
+    content = ci_file.read_text(encoding="utf-8")
+    assert "# Custom CI" not in content
+    assert "name: CI" in content
+    assert len(executor.diagnostics) == 0
+
+
+def test_executor_write_release_workflow_skips_existing_merge(
+    tmp_path, monkeypatch, mock_config
+):
+    """Test that release workflow generation is skipped when target exists and strategy is MERGE."""
+    monkeypatch.chdir(tmp_path)
+    release_file = tmp_path / ".github" / "workflows" / "release.yml"
+    release_file.parent.mkdir(parents=True, exist_ok=True)
+    release_file.write_text("# Custom Release\n", encoding="utf-8")
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_release = True
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    executor = SystemExecutor(manifest, mock_config)
+
+    executor._write_release_workflow()
+
+    assert release_file.read_text(encoding="utf-8") == "# Custom Release\n"
+    assert len(executor.diagnostics) == 1
+    assert executor.diagnostics[0].phase == DiagnosticPhase.CI
+    assert executor.diagnostics[0].severity == Severity.SKIP
+    assert "Skipping release.yml generation" in executor.diagnostics[0].message
+
+
+def test_executor_write_release_workflow_overwrites_existing_overwrite(
+    tmp_path, monkeypatch, mock_config
+):
+    """Test that release workflow generation overwrites when strategy is OVERWRITE."""
+    monkeypatch.chdir(tmp_path)
+    release_file = tmp_path / ".github" / "workflows" / "release.yml"
+    release_file.parent.mkdir(parents=True, exist_ok=True)
+    release_file.write_text("# Custom Release\n", encoding="utf-8")
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_release = True
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    executor = SystemExecutor(manifest, mock_config)
+
+    executor._write_release_workflow()
+
+    content = release_file.read_text(encoding="utf-8")
+    assert "# Custom Release" not in content
+    assert "pypa/gh-action-pypi-publish" in content
+    assert len(executor.diagnostics) == 0
+
+
+def test_executor_write_ci_workflow_handles_os_error(
+    mocker, mock_config, tmp_path, monkeypatch
+):
+    """Test that CI workflow write failure wraps OSError into FileSystemError."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_ci = True
+    manifest.metadata = {
+        "supported_os": ["Linux"],
+        "minimum_python": "3.13",
+    }
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=PermissionError(13, "Permission denied"),
+    )
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_ci_workflow()
+
+    assert "write CI workflow" in exc_info.value.operation
+    assert "ci.yml" in exc_info.value.path
+    assert isinstance(exc_info.value.original, PermissionError)
+
+
+def test_executor_write_release_workflow_handles_os_error(
+    mocker, mock_config, tmp_path, monkeypatch
+):
+    """Test that release workflow write failure wraps OSError into FileSystemError."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_release = True
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    executor = SystemExecutor(manifest, mock_config)
+
+    mocker.patch(
+        "protostar.executor.atomic_write_text",
+        side_effect=PermissionError(13, "Permission denied"),
+    )
+
+    with pytest.raises(FileSystemError) as exc_info:
+        executor._write_release_workflow()
+
+    assert "write release workflow" in exc_info.value.operation
+    assert "release.yml" in exc_info.value.path
+    assert isinstance(exc_info.value.original, PermissionError)

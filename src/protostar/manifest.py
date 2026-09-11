@@ -19,6 +19,7 @@ class DiagnosticPhase(enum.StrEnum):
     JUST = "Just"
     EXECUTOR = "Executor"
     DOCKER = "Docker"
+    CI = "CI"
 
 
 class Severity(enum.StrEnum):
