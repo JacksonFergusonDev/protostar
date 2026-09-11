@@ -597,6 +597,8 @@ def test_zensical_module_build(mocker):
     assert "docs/index.md" in manifest.filesystem.file_injections
     assert "mkdocs.yml" in manifest.filesystem.file_injections
     assert "pyproject.toml" in manifest.filesystem.file_appends
+    wiring = manifest.filesystem.file_appends["pyproject.toml"]
+    assert any("docs = []" in w and '{ include-group = "docs" }' in w for w in wiring)
 
 
 def test_readthedocs_module_properties():

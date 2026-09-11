@@ -72,8 +72,8 @@ def deep_merge_tomlkit(
     """
     # Purge scalar/array keys in base that are missing from the payload
     # to enforce strict AST overwriting, while preserving sibling tables.
-    # We explicitly protect the root document and the [project] table from being purged.
-    if overwrite and len(path) > 0 and path[0] != "project":
+    # We explicitly protect the root document and the [project] and [dependency-groups] tables from being purged.
+    if overwrite and len(path) > 0 and path[0] not in ("project", "dependency-groups"):
         keys_to_remove = []
         for b_key, b_val in base.items():
             if b_key not in payload and not isinstance(
@@ -105,11 +105,11 @@ def deep_merge_tomlkit(
                     for v in value.values()
                 )
 
-                is_project = (key == "project" and len(path) == 0) or (
-                    len(path) > 0 and path[0] == "project"
-                )
+                is_protected_table = (
+                    key in ("project", "dependency-groups") and len(path) == 0
+                ) or (len(path) > 0 and path[0] in ("project", "dependency-groups"))
 
-                if overwrite and not has_sub_tables and not is_project:
+                if overwrite and not has_sub_tables and not is_protected_table:
                     base[key] = value
                 else:
                     deep_merge_tomlkit(
@@ -140,7 +140,11 @@ def deep_merge_tomlkit(
                         )
                     continue
 
-                if overwrite:
+                if (
+                    overwrite
+                    and len(path) > 0
+                    and path[0] not in ("project", "dependency-groups")
+                ):
                     base[key] = value
                 else:
                     for item in value:

@@ -194,6 +194,41 @@ def test_deep_merge_tomlkit_array_deduplication():
     assert deps == ["fastapi", "uvicorn", "pydantic"]
 
 
+def test_deep_merge_tomlkit_dependency_groups_protected_on_overwrite():
+    base = tomlkit.parse(
+        "[dependency-groups]\n"
+        'dev = ["pytest", "prek"]\n'
+        'docs = ["zensical", "mkdocstrings"]\n'
+    )
+    payload = tomlkit.parse(
+        '[dependency-groups]\ndocs = []\ndev = [\n    { include-group = "docs" },\n]\n'
+    )
+
+    deep_merge_tomlkit(base, payload, overwrite=True)
+
+    assert "docs" in base["dependency-groups"]
+    assert list(base["dependency-groups"]["docs"]) == ["zensical", "mkdocstrings"]
+    dev_items = list(base["dependency-groups"]["dev"])
+    assert "pytest" in dev_items
+    assert "prek" in dev_items
+    assert {"include-group": "docs"} in dev_items
+
+
+def test_deep_merge_tomlkit_dependency_groups_initializes_empty_docs_on_overwrite():
+    base = tomlkit.parse('[dependency-groups]\ndev = ["pytest"]\n')
+    payload = tomlkit.parse(
+        '[dependency-groups]\ndocs = []\ndev = [\n    { include-group = "docs" },\n]\n'
+    )
+
+    deep_merge_tomlkit(base, payload, overwrite=True)
+
+    assert "docs" in base["dependency-groups"]
+    assert list(base["dependency-groups"]["docs"]) == []
+    dev_items = list(base["dependency-groups"]["dev"])
+    assert "pytest" in dev_items
+    assert {"include-group": "docs"} in dev_items
+
+
 def test_deep_merge_tomlkit_type_parity_guard_table():
     base = tomlkit.parse('[tool]\nruff = "not a table"\n')
     payload = tomlkit.parse("[tool.ruff]\nline-length = 88\n")

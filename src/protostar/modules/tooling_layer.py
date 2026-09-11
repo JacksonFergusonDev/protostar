@@ -842,6 +842,7 @@ class ZensicalModule(BootstrapModule):
         manifest.filesystem.add_directory("docs")
 
         pyproject_wiring = """[dependency-groups]
+docs = []
 dev = [
     { include-group = "docs" },
 ]
