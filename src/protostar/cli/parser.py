@@ -232,11 +232,6 @@ def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
     base_parser = JsonAwareParser(add_help=False)
     base_parser.add_argument(
-        "--version",
-        action=_VersionAction,
-        help="Show the application's version and exit.",
-    )
-    base_parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -257,6 +252,11 @@ def build_parser() -> argparse.ArgumentParser:
         add_help=False,
         usage=argparse.SUPPRESS,
         parents=[base_parser],
+    )
+    parser.add_argument(
+        "--version",
+        action=_VersionAction,
+        help="Show the application's version and exit.",
     )
 
     # Manually re-add the help flags but suppress them from the visual output
@@ -492,17 +492,6 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
 
     argv_set = set(sys.argv[1:])
 
-    # --version --json  (any order)
-    if "--version" in argv_set:
-        ui.emit_json(
-            {
-                "api_version": schema.CLI_API_VERSION,
-                "status": "success",
-                "version": _get_version(),
-            }
-        )
-        sys.exit(0)
-
     # Resolve available subcommands from parser choices
     subparsers_action = next(
         (a for a in parser._actions if isinstance(a, argparse._SubParsersAction)),
@@ -516,6 +505,17 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
         (arg for arg in sys.argv[1:] if arg in known_commands and arg != "help"),
         None,
     )
+
+    # --version --json  (any order, top-level only)
+    if "--version" in argv_set and subcommand is None:
+        ui.emit_json(
+            {
+                "api_version": schema.CLI_API_VERSION,
+                "status": "success",
+                "version": _get_version(),
+            }
+        )
+        sys.exit(0)
 
     has_help_flag = "--help" in argv_set or "-h" in argv_set
     is_bare_json = not bool(argv_set - {"--json", "--verbose", "-v"})

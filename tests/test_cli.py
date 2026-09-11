@@ -1188,3 +1188,60 @@ def test_cli_reference_fixture_tables():
     )
     assert "`EX_OK`" in exit_codes_content
     assert "`os.EX_USAGE`" in exit_codes_content
+
+
+def test_version_flag_toplevel(capsys, monkeypatch):
+    """Test that 'protostar --version' prints the top-level application version and exits 0."""
+    import protostar
+
+    monkeypatch.setattr(sys, "argv", ["protostar", "--version"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert captured.out.strip() == f"protostar {protostar.__version__}"
+
+
+def test_version_flag_subcommand_rejected(monkeypatch):
+    """Test that passing '--version' to a subcommand is rejected as an invalid argument."""
+    monkeypatch.setattr(sys, "argv", ["protostar", "config", "--version"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == ExitCode.USAGE
+
+
+def test_version_flag_json_mode_toplevel(capsys, monkeypatch):
+    """Test that 'protostar --version --json' returns a success payload with the version."""
+    import protostar
+
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
+    monkeypatch.setattr(sys, "argv", ["protostar", "--version", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "success"
+    assert payload["version"] == protostar.__version__
+
+
+def test_version_flag_json_mode_subcommand_rejected(capsys, monkeypatch):
+    """Test that passing '--version' to a subcommand in JSON mode returns an error envelope."""
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
+    monkeypatch.setattr(sys, "argv", ["protostar", "config", "--version", "--json"])
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == ExitCode.USAGE
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert payload["status"] == "error"
+    assert payload["error"]["type"] == "InvalidUsageError"
+    assert "Unrecognized arguments: --version" in payload["error"]["message"]
