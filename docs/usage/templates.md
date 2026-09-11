@@ -52,7 +52,7 @@ To inspect all available built-in templates alongside any global aliases registe
 protostar init --list-templates
 ```
 
-This displays a structured overview in the terminal outlining template names, types (Built-in or Global Alias), and origin sources.
+This displays a structured overview in the terminal outlining template aliases, display names, descriptions, types (Built-in or Global Alias), trust status, and origin sources. When invoked with `--json`, it emits a machine-readable JSON array of discovered templates.
 
 ### Dynamic Tri-State CLI Toggles
 
@@ -98,26 +98,42 @@ Protostar downloads the archive, extracts it safely using strict path traversal 
 
 ## The Global Alias Registry
 
-Instead of memorizing long URLs or local paths, you can register templates in your global configuration file (`~/.config/protostar/config.toml`):
+Instead of memorizing long URLs or local paths, you can register templates in your global configuration file (`~/.config/protostar/config.toml`). Protostar supports both shorthand string aliases and rich configuration tables:
 
 ```toml
 # Run `protostar config` to edit this file
 
+# Shorthand string aliases:
 [templates]
-backend = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
-microservice = "https://github.com/YourOrg/microservice-template"
+simple-api = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
 local-ds = "~/Developer/templates/data-science.toml"
+
+# Rich configuration tables with explicit metadata and trust:
+[templates.enterprise-api]
+name = "Enterprise API"
+source = "https://github.com/YourOrg/enterprise-template.git"
+description = "Internal enterprise microservice scaffold with auth & tracing"
+trusted = true
 ```
+
+### Table Metadata Fields
+
+When declaring a template via `[templates.<alias>]`, you can specify:
+
+- __`source`__ *(required)*: The remote URL (`https://`, `git@`) or local filesystem path (`~/...`).
+- __`name`__ *(optional)*: A human-readable display name for the template.
+- __`description`__ *(optional)*: A short explanation of the stack, displayed in `protostar init --list-templates`, shell auto-completion, and the interactive wizard.
+- __`trusted`__ *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning dialog.
 
 Once registered, you can reference them directly by alias with `--template` (or `-t`):
 
 ```bash
-protostar init --template backend
+protostar init --template enterprise-api
 # Or using shorthand:
-protostar init -t backend
+protostar init -t enterprise-api
 ```
 
-In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
+In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category with their custom descriptions. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
 
 ---
 
@@ -160,10 +176,10 @@ flowchart TD
     Start([Template Requested]):::terminal --> ResolveTarget{Target Source}:::decision
 
     ResolveTarget -- Built-in Template --> ParseBuiltin[Parse Local TOML]:::process
-    ResolveTarget -- Global Alias --> FetchAlias[Fetch Trusted URL]:::process
-    ResolveTarget -- Remote URL / Archive --> FetchRemote[Fetch Untrusted Target]:::process
+    ResolveTarget -- Global Alias --> FetchAlias[Resolve Alias Config]:::process
+    ResolveTarget -- Remote URL / Archive --> FetchRemote[Fetch External Target]:::process
 
-    FetchAlias --> ParseRemote[Parse Extracted TOML Blueprint]:::process
+    FetchAlias --> ParseRemote[Parse TOML Blueprint]:::process
     FetchRemote --> ParseRemote
 
     ParseBuiltin --> HasTasks
@@ -172,8 +188,8 @@ flowchart TD
     HasTasks -- No --> Execute([Proceed to Execution]):::terminal
     HasTasks -- Yes --> TrustCheck{Trust Boundary Eval}:::decision
 
-    TrustCheck -- "Source == Built-in\nOR Source == Global Alias" --> Execute
-    TrustCheck -- "Source == Remote URL" --> Dialog[Remote Trust Intercept]:::security
+    TrustCheck -- "Built-in OR trusted = true" --> Execute
+    TrustCheck -- "Untrusted External Source" --> Dialog[Remote Trust Intercept]:::security
 
     Dialog -- You Accept --> Execute
     Dialog -- You Reject OR Headless CI --> Abort([Execution Aborted]):::security
@@ -186,8 +202,8 @@ While Protostar enforces filesystem path jailing (preventing templates from writ
 To address this, Protostar prompts for confirmation before running external commands:
 
 1. __Built-in Templates:__ Trusted implicitly (shipped within the validated Protostar package).
-1. __Global Config Aliases:__ Trusted implicitly (you explicitly added the template to your own `config.toml`).
-1. __Untrusted External Templates (`--from`):__ If an untrusted template attempts to execute `system_tasks` or `post_install_tasks`, the Orchestrator halts execution before touching disk or shell and prompts for explicit confirmation:
+1. __Explicitly Trusted Aliases:__ Trusted when configured with `trusted = true` under `[templates.<alias>]` in your global `config.toml`.
+1. __Untrusted External Templates (`--from` or untrusted aliases):__ If an untrusted template attempts to execute `system_tasks` or `post_install_tasks`, the Orchestrator halts execution before touching disk or shell and prompts for explicit confirmation:
 
 ```text
 ⚠️  REMOTE TEMPLATE WARNING ⚠️
@@ -198,7 +214,7 @@ This template was loaded from an external source and will execute the following 
 Do you trust this source to modify your system? [y/N]
 ```
 
-In non-interactive environments (e.g., CI/CD), untrusted templates with executable tasks abort immediately. To run them headlessly, register the template in your global configuration aliases.
+In non-interactive environments (e.g., CI/CD or `--json` mode), untrusted templates with executable tasks abort immediately with `SecurityViolationError` to prevent hanging or unauthorized execution. To run them headlessly, configure them with `trusted = true` in your global configuration aliases.
 
 ---
 

@@ -52,15 +52,32 @@ When configuring `license` in `[env]`, Protostar injects the full license file a
 
 ### Global Template Aliases (`[templates]`)
 
-Map friendly shorthand names to local files or remote URLs:
+Map friendly shorthand names to local files or remote URLs using either shorthand strings or rich configuration tables:
 
 ```toml
+# Shorthand string aliases:
 [templates]
 my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 data-science = "~/Developer/templates/ds_base.toml"
+
+# Rich configuration tables with metadata and explicit trust:
+[templates.enterprise-api]
+name = "Enterprise API"
+source = "https://github.com/myorg/enterprise-template.git"
+description = "Internal enterprise microservice scaffold with auth & tracing"
+trusted = true
 ```
 
-Templates declared here can be invoked directly with `protostar init --template my-org-api`, appear automatically in the interactive wizard, and bypass the remote trust warning dialog.
+#### Template Alias Fields
+
+When declaring a template using the `[templates.<alias>]` table format:
+
+- **`source`** *(required)*: The local filesystem path or remote URL to the template.
+- **`name`** *(optional)*: Display name shown in listings and wizards.
+- **`description`** *(optional)*: Short summary displayed in `protostar init --list-templates`, shell autocompletion, and the TUI wizard.
+- **`trusted`** *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning prompt.
+
+Templates declared here can be invoked directly with `protostar init --template <alias>`, appear automatically in the interactive wizard, and are dynamically surfaced in shell completions.
 
 ---
 

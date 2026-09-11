@@ -33,6 +33,20 @@ Below is the complete annotated schema for a Protostar template. It defines how 
     protostar export-schema --json > protostar-template.schema.json
     ```
 
+### Template Metadata (`name` & `description`)
+
+Templates can declare self-documenting metadata at the root of the file:
+
+```toml
+# Display name of the template
+name = "Enterprise FastAPI"
+
+# Brief explanation of the stack and purpose
+description = "FastAPI web application scaffold with Uvicorn, Pydantic, and Docker"
+```
+
+Protostar's zero-network template discovery engine reads these top-level fields locally to populate `protostar init --list-templates`, shell autocompletion hints, and interactive wizard options.
+
 ### AST Injections & Appends
 
 Protostar's true power lies in its ability to safely mutate existing files via Abstract Syntax Tree (AST) deep-merging and marker blocks.
