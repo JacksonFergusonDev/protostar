@@ -4,9 +4,6 @@ import sys
 from dataclasses import dataclass
 from enum import StrEnum
 
-from rich import box
-from rich.panel import Panel
-
 from protostar.cli import schema, ui
 
 
@@ -165,7 +162,7 @@ def detect_environment() -> ShellEnvironment:
         profile_path="$PROFILE",
         completion_file="$HOME\\protostar-completion.ps1",
         eval_hook='. "$HOME\\protostar-completion.ps1"',
-        quick_setup_cmd='protostar completion powershell > "$HOME\\protostar-completion.ps1"; Add-Content -Path $PROFILE -Value \'. "$HOME\\protostar-completion.ps1"\'',
+        quick_setup_cmd='protostar completion powershell > "$HOME\\protostar-completion.ps1"; Add-Content -Path $PROFILE -Value \'. "$HOME\\protostar-completion.ps1"\'; . $PROFILE',
         description=f"{os_display} (PowerShell)",
     )
 
@@ -174,91 +171,109 @@ def print_completion_guide() -> None:
     """Displays user-friendly terminal instructions tailored to the detected shell."""
     env = detect_environment()
 
+    ui.console.print("\n[bold blue]Shell Autocompletion Setup[/bold blue]\n")
+    ui.console.print(
+        f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n"
+    )
+
     if env.shell == Shell.POWERSHELL:
-        pwsh_setup = (
-            "  [bold cyan]1. Create profile if it does not exist:[/bold cyan]\n"
-            "     [green]if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }[/green]\n\n"
-            "  [bold cyan]2. Generate static completion script:[/bold cyan]\n"
-            '     [green]protostar completion powershell > "$HOME\\protostar-completion.ps1"[/green]\n\n'
-            "  [bold cyan]3. Source completion script in profile:[/bold cyan]\n"
-            "     [green]Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'[/green]\n\n"
-            "  [bold cyan]4. Reload profile in current session:[/bold cyan]\n"
-            "     [green]. $PROFILE[/green]"
+        ui.console.print("[bold]Recommended One-Liner (Zero Startup Overhead):[/bold]")
+        ui.console.print(f"  [green]{env.quick_setup_cmd}[/green]", soft_wrap=True)
+        ui.console.print("")
+        ui.console.print("[bold]Manual Steps:[/bold]")
+        ui.console.print("  1. Create profile if it does not exist:")
+        ui.console.print(
+            "     [green]if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }[/green]",
+            soft_wrap=True,
         )
-        body = (
-            f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n\n"
-            "[bold]Recommended Setup (Zero Startup Overhead):[/bold]\n"
-            f"{pwsh_setup}\n\n"
-            "[dim]Manual Configuration:[/dim]\n"
-            f"  Add this line to [cyan]{env.profile_path}[/cyan]:\n"
-            f"    [yellow]{env.eval_hook}[/yellow]"
+        ui.console.print("  2. Generate static completion script:")
+        ui.console.print(
+            '     [green]protostar completion powershell > "$HOME\\protostar-completion.ps1"[/green]',
+            soft_wrap=True,
         )
+        ui.console.print("  3. Source completion script in profile:")
+        ui.console.print(
+            "     [green]Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'[/green]",
+            soft_wrap=True,
+        )
+        ui.console.print("  4. Reload profile in current session:")
+        ui.console.print("     [green]. $PROFILE[/green]\n")
     elif env.shell == Shell.FISH:
-        body = (
-            f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n\n"
-            "[bold]Recommended Setup (Native Lazy Loading, 0ms startup overhead):[/bold]\n"
-            f"  [green]{env.quick_setup_cmd}[/green]\n\n"
-            "[dim]Fish automatically loads completions from ~/.config/fish/completions on demand.[/dim]"
+        ui.console.print(
+            "[bold]Recommended Setup (Native Lazy Loading, 0ms startup overhead):[/bold]"
+        )
+        ui.console.print(f"  [green]{env.quick_setup_cmd}[/green]", soft_wrap=True)
+        ui.console.print(
+            "\n  [dim]Fish automatically loads completions from ~/.config/fish/completions on demand.[/dim]\n"
         )
     else:
         tip = ""
         if env.shell == Shell.ZSH:
             tip = (
-                "\n\n[dim]Tip: If you use an $fpath completions folder, you can alternatively run:\n"
-                "     protostar completion zsh > ~/.zsh/completions/_protostar[/dim]"
+                "\n  [dim]Tip: If you use an $fpath completions folder, you can save directly:[/dim]\n"
+                "       [green]protostar completion zsh > ~/.zsh/completions/_protostar[/green]\n"
             )
-        body = (
-            f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n\n"
-            "[bold]Recommended One-Liner (Zero Startup Overhead):[/bold]\n"
-            f"  [green]{env.quick_setup_cmd}[/green]\n\n"
-            "[dim]Manual Steps:[/dim]\n"
-            f"  1. Generate static file: [cyan]protostar completion {env.shell.value} > {env.completion_file}[/cyan]\n"
-            f"  2. Add to [cyan]{env.profile_path}[/cyan]:  [yellow]{env.eval_hook}[/yellow]\n"
-            f"  3. Reload:              [cyan]source {env.profile_path}[/cyan]"
-            f"{tip}"
+        ui.console.print("[bold]Recommended One-Liner (Zero Startup Overhead):[/bold]")
+        ui.console.print(f"  [green]{env.quick_setup_cmd}[/green]", soft_wrap=True)
+        ui.console.print("")
+        ui.console.print("[bold]Manual Steps:[/bold]")
+        ui.console.print("  1. Generate static completion script:")
+        ui.console.print(
+            f"     [green]protostar completion {env.shell.value} > {env.completion_file}[/green]",
+            soft_wrap=True,
         )
+        ui.console.print(f"  2. Add to {env.profile_path}:")
+        ui.console.print(
+            f"     [green]echo '{env.eval_hook}' >> {env.profile_path}[/green]",
+            soft_wrap=True,
+        )
+        ui.console.print("  3. Reload active session:")
+        ui.console.print(
+            f"     [green]source {env.profile_path}[/green]", soft_wrap=True
+        )
+        if tip:
+            ui.console.print(tip)
+        else:
+            ui.console.print("")
 
+    ui.console.rule("[dim]Other Supported Shells[/dim]")
     other_shells = [s for s in Shell if s != env.shell]
-    other_lines: list[str] = []
     for s in other_shells:
         if s == Shell.ZSH:
-            other_lines.append(
-                "  • [bold]Zsh[/bold] [dim](~/.zshrc)[/dim]:\n"
-                "    [dim]protostar completion zsh > ~/.protostar-completion.zsh\n"
-                "    echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc && source ~/.zshrc[/dim]"
+            ui.console.print("  • [bold]Zsh[/bold] [dim](~/.zshrc)[/dim]:")
+            ui.console.print(
+                "    [dim]protostar completion zsh > ~/.protostar-completion.zsh && "
+                "echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc && source ~/.zshrc[/dim]",
+                soft_wrap=True,
             )
+            ui.console.print("")
         elif s == Shell.BASH:
-            other_lines.append(
-                "  • [bold]Bash[/bold] [dim](~/.bashrc)[/dim]:\n"
-                "    [dim]protostar completion bash > ~/.protostar-completion.bash\n"
-                "    echo 'source ~/.protostar-completion.bash' >> ~/.bashrc && source ~/.bashrc[/dim]"
+            ui.console.print("  • [bold]Bash[/bold] [dim](~/.bashrc)[/dim]:")
+            ui.console.print(
+                "    [dim]protostar completion bash > ~/.protostar-completion.bash && "
+                "echo 'source ~/.protostar-completion.bash' >> ~/.bashrc && source ~/.bashrc[/dim]",
+                soft_wrap=True,
             )
+            ui.console.print("")
         elif s == Shell.FISH:
-            other_lines.append(
-                "  • [bold]Fish[/bold] [dim](~/.config/fish/completions/)[/dim]:\n"
-                "    [dim]mkdir -p ~/.config/fish/completions && protostar completion fish > ~/.config/fish/completions/protostar.fish[/dim]"
+            ui.console.print(
+                "  • [bold]Fish[/bold] [dim](~/.config/fish/completions/)[/dim]:"
             )
+            ui.console.print(
+                "    [dim]mkdir -p ~/.config/fish/completions && "
+                "protostar completion fish > ~/.config/fish/completions/protostar.fish[/dim]",
+                soft_wrap=True,
+            )
+            ui.console.print("")
         elif s == Shell.POWERSHELL:
-            other_lines.append(
-                "  • [bold]PowerShell[/bold] [dim]($PROFILE)[/dim]:\n"
-                '    [dim]protostar completion powershell > "$HOME\\protostar-completion.ps1"\n'
-                "    Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'[/dim]"
+            ui.console.print("  • [bold]PowerShell[/bold] [dim]($PROFILE)[/dim]:")
+            ui.console.print(
+                '    [dim]protostar completion powershell > "$HOME\\protostar-completion.ps1"; '
+                "Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'; . $PROFILE[/dim]",
+                soft_wrap=True,
             )
+            ui.console.print("")
 
-    body += (
-        "\n\n[dim]──────────────────────────────────────────────────────────────────────[/dim]\n"
-        "[bold]Other Supported Shells:[/bold]\n" + "\n".join(other_lines)
-    )
-
-    ui.console.print(
-        Panel(
-            body,
-            title="[bold blue]Shell Autocompletion Setup[/bold blue]",
-            box=box.ROUNDED,
-            border_style="cyan",
-            padding=(1, 2),
-        )
-    )
     ui.console.print(
         "[dim]Run [bold]protostar completion <shell>[/bold] to generate raw completion scripts.[/dim]\n"
     )
