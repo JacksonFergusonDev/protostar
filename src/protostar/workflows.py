@@ -17,6 +17,7 @@ __all__ = [
     "CIFlag",
     "CIWorkflowSpec",
     "DockerfileSpec",
+    "HookRunner",
     "JustfileSpec",
     "TargetOS",
     "YAMLBuilder",
@@ -94,6 +95,14 @@ class CIFlag(enum.StrEnum):
     ZENSICAL = "zensical"
 
 
+class HookRunner(enum.StrEnum):
+    """Enumeration of supported Git hook managers."""
+
+    NONE = "none"
+    PRE_COMMIT = "pre-commit"
+    PREK = "prek"
+
+
 @dataclass(frozen=True)
 class CIWorkflowSpec:
     """CI Workflow specification."""
@@ -133,11 +142,11 @@ def generate_pre_commit_config(
     core_rev: str | None = None,
     gitleaks_rev: str | None = None,
     dependencies: list[str] | None = None,
-    is_prek: bool = False,
+    hook_runner: HookRunner = HookRunner.PRE_COMMIT,
     install_hook_types: set[str] | Sequence[str] | None = None,
 ) -> str:
     """Assembles and formats the .pre-commit-config.yaml content."""
-    if is_prek:
+    if hook_runner == HookRunner.PREK:
         base_yaml = """repos:
   # Generic hooks (configured to IGNORE Python)
   - repo: builtin

@@ -4,7 +4,7 @@ import pytest
 
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, MissingDependencyError
-from protostar.manifest import EnvironmentManifest
+from protostar.manifest import EnvironmentManifest, HookRunner
 from protostar.modules import (
     CodecovModule,
     CommitizenModule,
@@ -332,7 +332,7 @@ def test_pre_commit_build_uv(manifest, mocker):
     mod = PreCommitModule()
     mod.build(manifest)
 
-    assert manifest.tooling.wants_pre_commit is True
+    assert manifest.tooling.hook_runner == HookRunner.PRE_COMMIT
     assert "pre-commit" in manifest.dependencies.dev_dependencies
     assert any(
         t.command == ["uv", "run", "pre-commit", "install"]
@@ -365,7 +365,7 @@ def test_prek_build_uv(manifest, mocker):
     mod = PrekModule()
     mod.build(manifest)
 
-    assert manifest.tooling.wants_prek is True
+    assert manifest.tooling.hook_runner == HookRunner.PREK
     assert "prek" in manifest.dependencies.dev_dependencies
     assert any(
         t.command == ["uv", "run", "prek", "install"]

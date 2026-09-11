@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast
 
 from .errors import (
     AggregatedDependencyError,
+    ConfigurationError,
     MissingDependencyError,
     PartialExecutionAbortedError,
     WorkspaceCollisionError,
@@ -15,7 +16,7 @@ from .errors import (
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
-from .modules import BootstrapModule
+from .modules import BootstrapModule, PreCommitModule, PrekModule
 from .system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
@@ -103,6 +104,14 @@ class Orchestrator:
                 )
 
         # Phase 3: Pre-flight verification
+        has_pre_commit = any(isinstance(m, PreCommitModule) for m in self.modules)
+        has_prek = any(isinstance(m, PrekModule) for m in self.modules)
+        if has_pre_commit and has_prek:
+            raise ConfigurationError(
+                "Cannot use both '--pre-commit' and '--prek' simultaneously. Please choose one git hook manager.",
+                hint="Remove either --pre-commit or --prek from your selection.",
+            )
+
         missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
         for mod in self.modules:
             try:

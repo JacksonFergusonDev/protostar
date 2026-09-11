@@ -168,12 +168,12 @@ def test_plan_phase_makes_zero_network_requests(mocker):
     """Test that orchestrator.plan() with all tooling modules makes zero network calls."""
     from protostar.config import UserConfig
     from protostar.models import InitRequest
-    from protostar.modules import TOOLING_MODULES
+    from protostar.modules import TOOLING_MODULES, PreCommitModule
     from protostar.orchestrator import Orchestrator
 
     mock_urlopen = mocker.patch("urllib.request.urlopen")
     orchestrator = Orchestrator(
-        modules=list(TOOLING_MODULES),
+        modules=[m for m in TOOLING_MODULES if not isinstance(m, PreCommitModule)],
         user_config=UserConfig(),
         request=InitRequest(force_merge=True),
     )

@@ -11,7 +11,7 @@ from rich.console import Console
 from .config import TemplateBlueprint, UserConfig
 from .errors import ConfigurationError, ExecutionAbortedError
 from .metadata import METADATA_FIELDS, MetadataKey, PromptType
-from .modules import TOOLING_MODULES, BootstrapModule
+from .modules import TOOLING_MODULES, BootstrapModule, PreCommitModule, PrekModule
 from .system import is_interactive
 from .ui import Choice, Separator, Style, checkbox, select, text
 
@@ -180,6 +180,29 @@ def run_init_wizard() -> WizardSelections | None:
 
     modules = [item for item in selected if item in TOOLING_MODULES]
     docker = "docker" in selected
+
+    has_pre_commit = any(isinstance(m, PreCommitModule) for m in modules)
+    has_prek = any(isinstance(m, PrekModule) for m in modules)
+    if has_pre_commit and has_prek:
+        prek_mod = next(m for m in modules if isinstance(m, PrekModule))
+        pre_commit_mod = next(m for m in modules if isinstance(m, PreCommitModule))
+        chosen = select(
+            "Both Pre-Commit and Prek were selected. Which Git hook manager would you like to use?",
+            choices=[
+                Choice(
+                    "Prek (Recommended: Fast Rust-based git hook manager)",
+                    value=prek_mod,
+                ),
+                Choice(
+                    "Pre-Commit (Traditional Python-based git hook manager)",
+                    value=pre_commit_mod,
+                ),
+            ],
+        )
+        if chosen is None:
+            raise ExecutionAbortedError("Hook runner selection cancelled by user.")
+        discard = pre_commit_mod if chosen is prek_mod else prek_mod
+        modules.remove(discard)
 
     required_keys: set[MetadataKey | str] = set()
     optional_keys: set[MetadataKey | str] = set()

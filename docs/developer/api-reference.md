@@ -45,7 +45,7 @@ classDiagram
     }
 
     class ToolingManifest {
-        +bool wants_pre_commit
+        +HookRunner hook_runner
         +bool wants_ci
         +add_pre_commit_hook(payload: str)
         +add_ci_step(step_yaml: str)

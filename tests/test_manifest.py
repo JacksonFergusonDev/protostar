@@ -1,6 +1,10 @@
+import pytest
+
+from protostar.errors import ConfigurationError
 from protostar.manifest import (
     CollisionStrategy,
     EnvironmentManifest,
+    HookRunner,
 )
 
 
@@ -15,10 +19,30 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.filesystem.directories, set)
     assert isinstance(manifest.filesystem.file_injections, dict)
     assert isinstance(manifest.filesystem.file_appends, dict)
-    assert manifest.tooling.wants_pre_commit is False
+    assert manifest.tooling.hook_runner == HookRunner.NONE
+    assert manifest.tooling.wants_hooks is False
     assert isinstance(manifest.tooling.pre_commit_hooks, list)
     assert isinstance(manifest.tooling.pre_commit_local_hooks, list)
     assert manifest.collision_strategy == CollisionStrategy.MERGE
+
+
+def test_tooling_manifest_set_hook_runner(manifest):
+    """Test that setting a hook runner is idempotent but conflicts raise ConfigurationError."""
+    assert manifest.tooling.hook_runner == HookRunner.NONE
+    manifest.tooling.set_hook_runner(HookRunner.PRE_COMMIT)
+    assert manifest.tooling.hook_runner == HookRunner.PRE_COMMIT
+    assert manifest.tooling.wants_hooks is True
+
+    # Idempotent assignment succeeds
+    manifest.tooling.set_hook_runner(HookRunner.PRE_COMMIT)
+    assert manifest.tooling.hook_runner == HookRunner.PRE_COMMIT
+
+    # Conflicting assignment raises ConfigurationError
+    with pytest.raises(
+        ConfigurationError,
+        match="Cannot configure 'prek' when 'pre-commit' is already active",
+    ):
+        manifest.tooling.set_hook_runner(HookRunner.PREK)
 
 
 def test_add_vcs_ignore(manifest):

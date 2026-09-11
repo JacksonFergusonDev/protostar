@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from protostar.errors import ConfigurationError, MissingDependencyError
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
-from protostar.workflows import CIFlag
+from protostar.workflows import CIFlag, HookRunner
 
 from .base import BootstrapModule
 
@@ -508,7 +508,7 @@ class PreCommitModule(BootstrapModule):
         logger.debug("Building Pre-Commit tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
-        manifest.tooling.wants_pre_commit = True
+        manifest.tooling.set_hook_runner(HookRunner.PRE_COMMIT)
         manifest.dependencies.add_dev("pre-commit")
 
         # `autoupdate` pulls remote git repositories to update hook definitions,
@@ -555,7 +555,7 @@ class PrekModule(BootstrapModule):
         logger.debug("Building Prek tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
-        manifest.tooling.wants_prek = True
+        manifest.tooling.set_hook_runner(HookRunner.PREK)
         manifest.dependencies.add_dev("prek")
 
         manifest.tasks.add_post_install_task(

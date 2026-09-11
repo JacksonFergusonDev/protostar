@@ -147,7 +147,13 @@ class UserConfig:
     templates: dict[str, TemplateAliasConfig] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Normalizes template configuration dictionary."""
+        """Normalizes template configuration dictionary and validates invariants."""
+        if self.pre_commit and self.prek:
+            raise ConfigurationError(
+                "Cannot configure both 'pre_commit = true' and 'prek = true'.",
+                hint="Choose either pre_commit or prek as your default git hook manager in your configuration.",
+            )
+
         normalized: dict[str, TemplateAliasConfig] = {}
         for k, v in self.templates.items():
             if isinstance(v, str):

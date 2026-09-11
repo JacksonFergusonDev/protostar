@@ -5,6 +5,7 @@ import pytest
 
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, ExecutionAbortedError
+from protostar.modules import TOOLING_MODULES, PreCommitModule, PrekModule
 from protostar.wizard import (
     WizardSelections,
     _should_run_wizard,
@@ -231,3 +232,50 @@ def test_prompt_metadata_cancellation_checkbox(mocker):
         ExecutionAbortedError, match=r"Metadata configuration cancelled by user\."
     ):
         prompt_metadata(required_keys={"supported_os"})
+
+
+def test_run_init_wizard_resolves_hook_runner_conflict(mocker):
+    """Test that selecting both Pre-Commit and Prek prompts the user to resolve the conflict."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch.dict(os.environ, {}, clear=True)
+
+    pre_commit_mod = next(m for m in TOOLING_MODULES if isinstance(m, PreCommitModule))
+    prek_mod = next(m for m in TOOLING_MODULES if isinstance(m, PrekModule))
+
+    # Template selection: None
+    # Then conflict selection: prek_mod
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.side_effect = ["None", prek_mod]
+
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = [pre_commit_mod, prek_mod]
+
+    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+
+    result = run_init_wizard()
+
+    assert result is not None
+    assert prek_mod in result.modules
+    assert pre_commit_mod not in result.modules
+
+
+def test_run_init_wizard_hook_runner_conflict_cancellation(mocker):
+    """Test that cancelling the hook runner conflict prompt raises ExecutionAbortedError."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch.dict(os.environ, {}, clear=True)
+
+    pre_commit_mod = next(m for m in TOOLING_MODULES if isinstance(m, PreCommitModule))
+    prek_mod = next(m for m in TOOLING_MODULES if isinstance(m, PrekModule))
+
+    mock_select = mocker.patch("questionary.select")
+    mock_select.return_value.ask.side_effect = ["None", None]
+
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = [pre_commit_mod, prek_mod]
+
+    with pytest.raises(
+        ExecutionAbortedError, match=r"Hook runner selection cancelled by user\."
+    ):
+        run_init_wizard()

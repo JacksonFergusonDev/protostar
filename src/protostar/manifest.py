@@ -3,8 +3,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
+from .errors import ConfigurationError
 from .metadata import LicenseType
 from .workflows import CIFlag, TargetOS
+from .workflows import HookRunner as HookRunner
 
 
 class DiagnosticPhase(enum.StrEnum):
@@ -200,8 +202,7 @@ class FilesystemManifest:
 class ToolingManifest:
     """Domain slice managing tooling configuration and templating parameters."""
 
-    wants_pre_commit: bool = False
-    wants_prek: bool = False
+    hook_runner: HookRunner = HookRunner.NONE
     pre_commit_hooks: list[str] = field(default_factory=list)
     pre_commit_local_hooks: list[str] = field(default_factory=list)
     pre_commit_install_hook_types: set[str] = field(default_factory=set)
@@ -215,6 +216,20 @@ class ToolingManifest:
     just_typecheck_commands: list[str] = field(default_factory=list)
     just_clean_paths: list[str] = field(default_factory=list)
     ide_extensions: set[str | tuple[str, ...]] = field(default_factory=set)
+
+    @property
+    def wants_hooks(self) -> bool:
+        """Returns True if a Git hook manager is configured."""
+        return self.hook_runner != HookRunner.NONE
+
+    def set_hook_runner(self, runner: HookRunner) -> None:
+        """Sets the Git hook manager, enforcing mutual exclusivity."""
+        if self.hook_runner != HookRunner.NONE and self.hook_runner != runner:
+            raise ConfigurationError(
+                f"Cannot configure '{runner.value}' when '{self.hook_runner.value}' is already active.",
+                hint="Choose either pre-commit or prek as your git hook manager.",
+            )
+        self.hook_runner = runner
 
     def add_pre_commit_hook(self, payload: str) -> None:
         """Appends a raw YAML payload to the pre-commit configuration."""
@@ -258,8 +273,7 @@ class ToolingManifest:
             return list(ext) if isinstance(ext, tuple) else ext
 
         return {
-            "wants_pre_commit": self.wants_pre_commit,
-            "wants_prek": self.wants_prek,
+            "hook_runner": self.hook_runner.value,
             "pre_commit_hooks": list(self.pre_commit_hooks),
             "pre_commit_local_hooks": list(self.pre_commit_local_hooks),
             "wants_ci": self.wants_ci,
