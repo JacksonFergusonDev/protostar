@@ -217,6 +217,8 @@ class Orchestrator:
             ) from None
 
         return ExecutionResult(
-            touched_paths=frozenset(executor.journal.touched_paths),
+            created_paths=executor.journal.created_paths,
+            mutated_paths=executor.journal.mutated_paths,
+            touched_paths=executor.journal.touched_paths,
             diagnostics=tuple(executor.diagnostics),
         )
