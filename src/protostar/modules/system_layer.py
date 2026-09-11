@@ -5,6 +5,9 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from protostar.errors import MissingDependencyError
+from protostar.system_deps import GlobalExecutable
+
 from .base import BootstrapModule
 
 if TYPE_CHECKING:
@@ -21,16 +24,31 @@ class SystemWorkspaceModule(BootstrapModule):
     Initializes a git repository if git is installed and not already present.
     """
 
+    def __init__(self) -> None:
+        self._git_already_initialized: bool = False
+
     @property
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "System Workspace"
 
+    def pre_flight(self) -> None:
+        """Verifies environment prerequisites and inspects VCS workspace state."""
+        if Path(".git").exists():
+            self._git_already_initialized = True
+            return
+
+        if not shutil.which("git"):
+            raise MissingDependencyError(
+                dependency=GlobalExecutable.GIT,
+                purpose="git repository initialization",
+            )
+
     def build(self, manifest: EnvironmentManifest) -> None:
         """Appends universal artifacts to the ignore and workspace hide lists."""
         logger.debug("Building universal system workspace layer.")
 
-        if shutil.which("git") and not Path(".git").exists():
+        if not self._git_already_initialized:
             manifest.tasks.add_system_task(
                 ["git", "init"], description="Initializing git repository"
             )

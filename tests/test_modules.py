@@ -19,9 +19,11 @@ from protostar.modules import (
     ReadTheDocsModule,
     RenovateModule,
     RuffModule,
+    SystemWorkspaceModule,
     TyModule,
     ZensicalModule,
 )
+from protostar.system_deps import GlobalExecutable
 
 
 def test_python_module_uv_build(manifest, mocker):
@@ -718,3 +720,61 @@ def test_python_core_injects_license_and_classifier_on_overwrite(
     assert 'license = { file = "LICENSE" }' in pyproject_appends
     assert "License :: OSI Approved :: MIT License" in pyproject_appends
     assert "LICENSE" in manifest.filesystem.file_injections
+
+
+def test_system_workspace_module_properties():
+    """Verify SystemWorkspaceModule properties."""
+    module = SystemWorkspaceModule()
+    assert module.name == "System Workspace"
+    assert module.collision_markers == []
+
+
+def test_system_workspace_pre_flight_raises_on_missing_git(
+    tmp_path, monkeypatch, mocker
+):
+    """Verify that pre_flight raises MissingDependencyError when git is missing and repo uninitialized."""
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("shutil.which", return_value=None)
+
+    module = SystemWorkspaceModule()
+    with pytest.raises(MissingDependencyError) as exc_info:
+        module.pre_flight()
+
+    assert exc_info.value.dependency == GlobalExecutable.GIT
+    assert "git repository initialization" in str(exc_info.value)
+
+
+def test_system_workspace_skips_git_init_if_already_repo(tmp_path, monkeypatch, mocker):
+    """Verify that git init is skipped when .git directory is already present."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".git").mkdir()
+    # Even if git was absent from PATH, existing repo does not trigger MissingDependencyError
+    mocker.patch("shutil.which", return_value=None)
+
+    module = SystemWorkspaceModule()
+    module.pre_flight()
+
+    manifest = EnvironmentManifest()
+    module.build(manifest)
+
+    queued_commands = [task.command for task in manifest.tasks.system_tasks]
+    assert ["git", "init"] not in queued_commands
+    assert ".DS_Store" in manifest.filesystem.vcs_ignores
+    assert ".DS_Store" in manifest.filesystem.workspace_hides
+
+
+def test_system_workspace_queues_git_init_in_clean_dir(tmp_path, monkeypatch, mocker):
+    """Verify that git init is queued when .git is absent and git executable is found."""
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("shutil.which", return_value="/usr/bin/git")
+
+    module = SystemWorkspaceModule()
+    module.pre_flight()
+
+    manifest = EnvironmentManifest()
+    module.build(manifest)
+
+    queued_commands = [task.command for task in manifest.tasks.system_tasks]
+    assert ["git", "init"] in queued_commands
+    assert ".idea/" in manifest.filesystem.vcs_ignores
+    assert ".idea/" in manifest.filesystem.workspace_hides
