@@ -207,7 +207,7 @@ def test_write_ide_settings_empty(mocker):
     write_ide_settings(
         ide_settings={},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=None,
     )
 
     mock_write.assert_not_called()
@@ -238,7 +238,7 @@ def test_write_ide_settings_merge(tmp_path: Path, monkeypatch):
             "new.key": "new_value",
         },
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=None,
     )
 
     assert diagnostics == []
@@ -264,7 +264,7 @@ def test_write_ide_settings_empty_file(tmp_path: Path, monkeypatch):
     write_ide_settings(
         ide_settings={"files.exclude": {"**/.venv": True}},  # type: ignore
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=None,
     )
 
     assert diagnostics == []
@@ -287,7 +287,7 @@ def test_write_ide_settings_skips_malformed_json(tmp_path: Path, monkeypatch):
     write_ide_settings(
         ide_settings={"python.defaultInterpreterPath": "/fake/path"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=None,
     )
 
     assert len(diagnostics) == 1
@@ -310,7 +310,7 @@ def test_write_ide_settings_skips_non_dict_json(tmp_path: Path, monkeypatch):
     write_ide_settings(
         ide_settings={"python.defaultInterpreterPath": "/fake/path"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=None,
     )
 
     assert len(diagnostics) == 1

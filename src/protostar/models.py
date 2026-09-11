@@ -44,10 +44,14 @@ class ExecutionResult:
     """Observed outcome returned by Orchestrator.execute().
 
     Attributes:
+        created_paths: Immutable set of relative paths created on disk.
+        mutated_paths: Immutable set of relative paths modified on disk.
         touched_paths: Immutable set of relative paths written or created on disk.
         diagnostics: Ordered tuple of non-fatal diagnostic events emitted during execution.
     """
 
+    created_paths: frozenset[str]
+    mutated_paths: frozenset[str]
     touched_paths: frozenset[str]
     diagnostics: tuple[DiagnosticEvent, ...]
 
@@ -73,6 +77,8 @@ class ExecutionResult:
             diagnostics.append(entry)
 
         return {
+            "created_paths": sorted(self.created_paths),
+            "mutated_paths": sorted(self.mutated_paths),
             "touched_paths": sorted(self.touched_paths),
             "diagnostics": diagnostics,
         }

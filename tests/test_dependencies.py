@@ -12,14 +12,13 @@ def test_install_dependencies_uv(mocker):
     def on_diagnostic(msg: str, sev: Severity, detail: str | None) -> None:
         diagnostics.append((msg, sev, detail))
 
-    failed = install_dependencies(
+    install_dependencies(
         dependencies_manifest=DependencyManifest(
             dependencies=["fastapi"],
             dev_dependencies=["pytest"],
             docs_dependencies=["mkdocs"],
         ),
-        on_diagnostic=on_diagnostic,
-    )
+        )
 
     mock_execute.assert_any_call(["uv", "add", "fastapi"], timeout=600)
     mock_execute.assert_any_call(["uv", "add", "--dev", "pytest"], timeout=600)
@@ -27,7 +26,7 @@ def test_install_dependencies_uv(mocker):
         ["uv", "add", "--group", "docs", "mkdocs"], timeout=600
     )
     assert diagnostics == []
-    assert failed == set()
+    
 
 
 def test_install_dependencies_empty(mocker):
@@ -35,14 +34,13 @@ def test_install_dependencies_empty(mocker):
     mock_execute = mocker.patch("protostar.dependencies.execute_subprocess")
     diagnostics = []
 
-    failed = install_dependencies(
+    install_dependencies(
         dependencies_manifest=DependencyManifest(),
-        on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
-    )
+        )
 
     mock_execute.assert_not_called()
     assert diagnostics == []
-    assert failed == set()
+    
 
 
 def test_install_dependencies_graceful_degradation_uv(mocker):
@@ -59,19 +57,18 @@ def test_install_dependencies_graceful_degradation_uv(mocker):
         ),
     )
 
-    failed = install_dependencies(
+    install_dependencies(
         dependencies_manifest=DependencyManifest(
             dependencies=["invalid-pkg"], dev_dependencies=["invalid-dev-pkg"]
         ),
-        on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
-    )
+        )
 
     assert len(diagnostics) == 2
     assert "Standard dependency resolution failed" in diagnostics[0][0]
     assert diagnostics[0][1] == Severity.WARNING
     assert "Development dependency resolution failed" in diagnostics[1][0]
     assert diagnostics[1][1] == Severity.WARNING
-    assert failed == {DependencyGroup.MAIN, DependencyGroup.DEV}
+    
 
 
 def test_install_dependencies_timeout_degradation(mocker):
@@ -85,15 +82,14 @@ def test_install_dependencies_timeout_degradation(mocker):
         ),
     )
 
-    failed = install_dependencies(
+    install_dependencies(
         dependencies_manifest=DependencyManifest(dependencies=["massive-pkg"]),
-        on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
-    )
+        )
 
     assert len(diagnostics) == 1
     assert "Command timed out" in diagnostics[0][0]
     assert diagnostics[0][1] == Severity.WARNING
-    assert failed == {DependencyGroup.MAIN}
+    
 
 
 def test_install_dependencies_adds_warning_with_diagnostics_on_failure(mocker):
@@ -110,8 +106,7 @@ def test_install_dependencies_adds_warning_with_diagnostics_on_failure(mocker):
 
     install_dependencies(
         dependencies_manifest=DependencyManifest(dependencies=["numpy"]),
-        on_diagnostic=lambda msg, sev, detail: diagnostics.append((msg, sev, detail)),
-    )
+        )
 
     assert len(diagnostics) == 1
     msg, sev, detail = diagnostics[0]

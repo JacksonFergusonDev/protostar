@@ -226,7 +226,7 @@ class ExecutionAbortedError(ProtostarError):
 
 
 class PartialExecutionAbortedError(ExecutionAbortedError):
-    """Raised when execution is interrupted after disk mutations have begun."""
+    """Raised when execution is interrupted after disk mutations have begun but successfully rolled back."""
 
     def __init__(
         self, touched_paths: frozenset[str], *, docs_path: DocsPage | str | None = None
@@ -240,17 +240,16 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
         if touched_paths:
             paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
             message = (
-                "Execution was interrupted before Protostar could finish setting up the environment.\n\n"
-                "The following paths were modified or created before the abort:\n"
+                "Execution interrupted. Protostar rolled back all tracked workspace changes:\n"
                 f"{paths_bulleted}\n\n"
                 "Note: External commands (e.g., uv, git) may have also modified workspace files."
             )
         else:
             message = (
-                "Execution was interrupted before Protostar could finish setting up the environment.\n\n"
+                "Execution interrupted. Protostar rolled back all tracked workspace changes.\n\n"
                 "Note: External commands (e.g., uv, git) may have also modified workspace files."
             )
-        hint = "Inspect the modified paths or clean up the workspace before re-running Protostar."
+        hint = "The managed workspace state has been restored."
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.touched_paths = touched_paths
 
@@ -344,3 +343,25 @@ class AggregatedDependencyError(ProtostarError):
 
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.errors = errors
+
+class RollbackFailedError(ProtostarError):
+    """Raised when an interrupted execution fails to cleanly rollback to its original state."""
+
+    def __init__(
+        self,
+        rollback_result,
+        original_error: BaseException,
+        *,
+        docs_path: str | None = None,
+    ) -> None:
+        failed_list = "\n".join(f"- {p}" for p in rollback_result.failed_paths)
+        message = (
+            "Protostar execution failed and the automated rollback was only partially successful.\n\n"
+            "The following paths could not be restored to their original state:\n"
+            f"{failed_list}\n\n"
+            f"Original execution error: {original_error}"
+        )
+        hint = "Manual intervention is required to restore the workspace to a clean state."
+        super().__init__(message, hint=hint, docs_path=docs_path)
+        self.rollback_result = rollback_result
+        self.original_error = original_error

@@ -38,8 +38,8 @@ def test_executor_writes_injected_files(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_mkdir = mocker.patch("protostar.fs_transaction.TransactionAwareFS.ensure_directory")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_injected_files()
 
@@ -86,7 +86,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
 
@@ -132,7 +132,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
 
@@ -160,7 +160,7 @@ def test_executor_writes_prek_config(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
 
@@ -195,7 +195,7 @@ def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_c
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
 
@@ -225,7 +225,7 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
     written_data = mock_write.call_args[0][1]
@@ -276,7 +276,7 @@ def test_executor_creates_directories(mocker, mock_config):
     manifest.filesystem.add_directory("src/core")
     executor = SystemExecutor(manifest, mock_config)
 
-    mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
+    mock_mkdir = mocker.patch("protostar.fs_transaction.TransactionAwareFS.ensure_directory")
 
     executor._create_directories()
 
@@ -293,7 +293,7 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_docker_artifacts()
 
@@ -309,7 +309,7 @@ def test_executor_writes_dockerfile_default(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_docker_artifacts()
 
@@ -338,7 +338,7 @@ def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_docker_artifacts()
 
@@ -362,7 +362,7 @@ def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_docker_artifacts()
 
@@ -380,7 +380,7 @@ def test_executor_skips_docker_artifacts_on_collision(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value="")
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_docker_artifacts()
 
@@ -408,7 +408,7 @@ def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_c
         "protostar.executor.generate_dockerignore", return_value="new_ignore"
     )
     mocker.patch("protostar.executor.generate_dockerfile", return_value="FROM python")
-    mocker.patch("protostar.executor.atomic_write_text")
+    mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_docker_artifacts()
 
@@ -427,7 +427,7 @@ def test_write_dockerfile_handles_os_error(mocker, mock_config):
         if path == Path("Dockerfile"):
             raise OSError(13, "Permission denied")
 
-    mocker.patch("protostar.executor.atomic_write_text", side_effect=write_side_effect)
+    mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text", side_effect=write_side_effect)
 
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_docker_artifacts()
@@ -447,7 +447,7 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_injected_files()
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "new content")
@@ -460,7 +460,7 @@ def test_executor_mkdir_os_error_propagation(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
-        "protostar.executor.Path.mkdir", side_effect=OSError("Read-only file system")
+        "protostar.fs_transaction.TransactionAwareFS.ensure_directory", side_effect=OSError("Read-only file system")
     )
 
     with pytest.raises(FileSystemError, match="Read-only file system"):
@@ -474,9 +474,9 @@ def test_executor_write_text_permission_error_propagation(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mocker.patch("protostar.executor.Path.mkdir")
+    mocker.patch("protostar.fs_transaction.TransactionAwareFS.ensure_directory")
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=PermissionError("Permission denied"),
     )
 
@@ -498,7 +498,7 @@ def test_executor_append_files_ast_no_op_write(
     manifest.filesystem.add_file_append("pyproject.toml", original_content)
     executor = SystemExecutor(manifest, mock_config)
 
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._append_files()
 
@@ -572,7 +572,7 @@ def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_conf
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
     mock_write.assert_not_called()
@@ -661,7 +661,7 @@ def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._append_files()
     mock_write.assert_not_called()
@@ -690,7 +690,7 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value="existing_data")
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._append_files()
 
@@ -918,7 +918,7 @@ def test_executor_handles_write_permission_denied(mocker):
 
     # Force atomic write helper to crash out mimicking a blocked access request
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=PermissionError(13, "Permission denied"),
     )
 
@@ -974,7 +974,7 @@ def test_append_files_handles_toml_write_failure(mocker):
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="[project]\nname = 'test'")
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=OSError(28, "No space left on device"),
     )
 
@@ -993,7 +993,7 @@ def test_append_files_handles_string_block_write_failure(mocker):
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=OSError(5, "Input/output error"),
     )
 
@@ -1012,7 +1012,7 @@ def test_write_ignores_handles_os_error(mocker):
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=OSError(13, "Permission denied"),
     )
 
@@ -1033,7 +1033,7 @@ def test_write_docker_artifacts_handles_os_error(mocker):
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=OSError(13, "Permission denied"),
     )
 
@@ -1280,7 +1280,7 @@ def test_executor_skips_pre_commit_when_file_exists(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
 
@@ -1301,7 +1301,7 @@ def test_executor_skips_injected_files_when_file_exists(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_injected_files()
 
@@ -1320,7 +1320,7 @@ def test_executor_skips_justfile_when_file_exists(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_justfile()
 
@@ -1346,7 +1346,7 @@ def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_co
 
     executor = SystemExecutor(manifest, mock_config)
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch("protostar.fs_transaction.TransactionAwareFS.write_text")
 
     executor._write_pre_commit_config()
 
@@ -1468,7 +1468,7 @@ def test_executor_write_ci_workflow_handles_os_error(
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=PermissionError(13, "Permission denied"),
     )
 
@@ -1491,7 +1491,7 @@ def test_executor_write_release_workflow_handles_os_error(
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch(
-        "protostar.executor.atomic_write_text",
+        "protostar.fs_transaction.TransactionAwareFS.write_text",
         side_effect=PermissionError(13, "Permission denied"),
     )
 

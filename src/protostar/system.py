@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import sys
 
@@ -21,6 +22,9 @@ def execute_subprocess(
     Sanitizes environment variables (such as VIRTUAL_ENV and PYTHONHOME) so target
     workspace subprocesses execute in clean isolation from caller environments, while
     allowing intentional caller-supplied env overrides.
+
+    Uses Popen with process groups to ensure the entire tree can be terminated
+    if the execution is interrupted.
 
     Args:
         cmd: The command and its arguments as a list of strings.
@@ -42,23 +46,35 @@ def execute_subprocess(
     if env is not None:
         clean_env.update(env)
 
+    kwargs = {}
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+
+    process = subprocess.Popen(
+        resolved_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        env=clean_env,
+        **kwargs,
+    )
+
     try:
-        subprocess.run(
-            resolved_cmd,
-            check=True,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=timeout,
-            env=clean_env,
-        )
+        stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired as e:
+        _terminate_process_tree(process)
         logger.debug(f"Task timed out after {timeout} seconds: {' '.join(cmd)}")
         raise CommandTimeoutError(command=cmd, timeout=timeout or 0) from e
-    except subprocess.CalledProcessError as e:
-        stdout = e.stdout or ""
-        stderr = e.stderr or ""
+    except BaseException:
+        _terminate_process_tree(process)
+        raise
 
+    if process.returncode != 0:
+        stdout = stdout or ""
+        stderr = stderr or ""
         output_blocks = []
         if stdout:
             output_blocks.append(f"--- STDOUT ---\n{stdout.strip()}")
@@ -72,10 +88,24 @@ def execute_subprocess(
 
         raise CommandExecutionError(
             command=cmd,
-            returncode=e.returncode,
+            returncode=process.returncode,
             stdout=stdout,
             stderr=stderr,
-        ) from e
+        )
+
+
+def _terminate_process_tree(process: subprocess.Popen) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        if sys.platform == "win32":
+            process.send_signal(signal.CTRL_BREAK_EVENT)
+            process.kill()
+        else:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+    except OSError:
+        process.kill()
+    process.wait()
 
 
 def is_interactive() -> bool:

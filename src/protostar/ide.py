@@ -6,10 +6,12 @@ import shutil
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .errors import FileSystemError
-from .fs import atomic_write_text
+
+if TYPE_CHECKING:
+    from .fs_transaction import TransactionAwareFS
 from .manifest import IDESettings, Severity
 
 __all__ = ["IDEType", "check_ide_extensions", "write_ide_settings"]
@@ -100,12 +102,13 @@ def check_ide_extensions(
 def write_ide_settings(
     ide_settings: IDESettings,
     on_diagnostic: Callable[[str, Severity], None],
-    on_record_touch: Callable[[Path], None],
+    fs: "TransactionAwareFS",
 ) -> None:
     """Writes the aggregated IDE configuration to the appropriate local files.
 
     Args:
-        ide_settings: Mapping of IDE setting keys to values.
+        ide_settings:
+        fs: Mapping of IDE setting keys to values.
         on_diagnostic: Callback invoked when existing settings cannot be merged safely.
         on_record_touch: Callback to record created or mutated paths.
     """
@@ -147,9 +150,8 @@ def write_ide_settings(
             settings[key] = value
 
     try:
-        vscode_dir.mkdir(exist_ok=True)
-        atomic_write_text(settings_path, json.dumps(settings, indent=4) + "\n")
-        on_record_touch(settings_path)
+        fs.ensure_directory(vscode_dir)
+        fs.write_text(settings_path, json.dumps(settings, indent=4) + "\n")
     except OSError as e:
         raise FileSystemError(
             "synchronize IDE workspace preferences", str(settings_path), e
