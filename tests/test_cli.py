@@ -901,7 +901,7 @@ def test_list_templates_table_output(capsys, monkeypatch):
     captured = capsys.readouterr()
     assert "Available Templates" in captured.out
     assert "FastAPI" in captured.out
-    assert "(api)" in captured.out
+    assert "(api)" not in captured.out
     assert "Built-in" in captured.out
 
 

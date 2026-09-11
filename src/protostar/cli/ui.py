@@ -121,11 +121,6 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     table.add_column("Type", no_wrap=True)
 
     for tmpl in discovered:
-        if tmpl.alias.lower() != tmpl.name.lower():
-            display_name = f"{tmpl.name} [dim]({tmpl.alias})[/dim]"
-        else:
-            display_name = tmpl.name
-
         type_str = (
             "[green]Built-in[/green]"
             if tmpl.type == TemplateType.BUILT_IN
@@ -133,7 +128,7 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         )
 
         table.add_row(
-            display_name,
+            tmpl.name,
             tmpl.description,
             type_str,
         )
