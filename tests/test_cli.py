@@ -1150,3 +1150,49 @@ def test_completion_subcommand_json(mocker):
         assert "protostar" in payload["script"]
     finally:
         cli_ui.is_json_mode = False
+
+
+def test_template_completer(mocker):
+    """Test that template_completer returns available built-in templates and user aliases."""
+    from protostar.cli.completion import get_available_templates, template_completer
+
+    templates = get_available_templates()
+    assert "cli" in templates
+    assert "astro" in templates
+
+    # Test filtering with prefix
+    res = template_completer("as")
+    assert "astro" in res
+    assert "cli" not in res
+
+    # Test with user config template alias
+    mocker.patch(
+        "protostar.config.UserConfig.load",
+        return_value=UserConfig(templates={"my-alias": "git@github.com:foo/bar"}),
+    )
+    alias_res = template_completer("my")
+    assert "my-alias" in alias_res
+    assert "Global alias (git@github.com:foo/bar)" in alias_res["my-alias"]
+
+
+def test_parser_action_completers():
+    """Test that rich completers are attached to CLI arguments."""
+    parser = build_parser()
+    subparsers_action = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    init_parser = subparsers_action.choices["init"]
+
+    template_action = next(
+        a for a in init_parser._actions if "--template" in a.option_strings
+    )
+    assert hasattr(template_action, "completer")
+    assert callable(template_action.completer)
+
+    from_action = next(a for a in init_parser._actions if "--from" in a.option_strings)
+    assert hasattr(from_action, "completer")
+
+    python_version_action = next(
+        a for a in init_parser._actions if "--python-version" in a.option_strings
+    )
+    assert hasattr(python_version_action, "completer")

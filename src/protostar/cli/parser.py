@@ -297,7 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     base_group = init_parser.add_argument_group("Base Configuration")
 
-    base_group.add_argument(
+    template_action = base_group.add_argument(
         "-t",
         "--template",
         type=str,
@@ -308,24 +308,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Name of a template to apply (run with --list-templates to view available).",
         metavar="NAME",
     )
+    template_action.completer = completion.template_completer  # type: ignore[attr-defined]
+
     base_group.add_argument(
         "--list-templates",
         action="store_true",
         help="List all available built-in and global alias templates.",
     )
-    base_group.add_argument(
+    from_action = base_group.add_argument(
         "--from",
         type=str,
         dest="from_path",
         help="Path to a portable configuration TOML file to apply.",
         metavar="PATH",
     )
-    base_group.add_argument(
+    from_action.completer = argcomplete.completers.FilesCompleter(  # type: ignore[attr-defined]
+        allowednames=[".toml"]
+    )
+
+    python_version_action = base_group.add_argument(
         "--python-version",
         type=str,
         help="Specify the Python version to scaffold (e.g., 3.13). Overrides global configuration.",
         dest="python_version",
         metavar="VERSION",
+    )
+    python_version_action.completer = argcomplete.completers.ChoicesCompleter(  # type: ignore[attr-defined]
+        {"3.12": "Python 3.12", "3.13": "Python 3.13", "3.14": "Python 3.14"}
     )
 
     # Tooling Context
