@@ -1090,6 +1090,12 @@ def test_cli_reference_fixture_tables():
     export_content = export_file.read_text()
     assert "`--json`" in export_content
 
+    # Verify Completion Options fixture
+    completion_file = fixtures_dir / "table_cli_completion.md"
+    assert completion_file.exists()
+    completion_content = completion_file.read_text()
+    assert "`<shell>`" in completion_content
+
     # Verify Exit Codes fixture
     exit_codes_file = fixtures_dir / "table_exit_codes.md"
     assert exit_codes_file.exists()

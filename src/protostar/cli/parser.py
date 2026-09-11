@@ -11,8 +11,9 @@ from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
 
+from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
-from protostar.cli import schema, ui
+from protostar.cli.completion import Shell
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import InvalidUsageError
@@ -296,7 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     base_group = init_parser.add_argument_group("Base Configuration")
 
-    base_group.add_argument(
+    template_action = base_group.add_argument(
         "-t",
         "--template",
         type=str,
@@ -307,24 +308,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="Name of a template to apply (run with --list-templates to view available).",
         metavar="NAME",
     )
+    template_action.completer = completion.template_completer  # type: ignore[attr-defined]
+
     base_group.add_argument(
         "--list-templates",
         action="store_true",
         help="List all available built-in and global alias templates.",
     )
-    base_group.add_argument(
+    from_action = base_group.add_argument(
         "--from",
         type=str,
         dest="from_path",
         help="Path to a portable configuration TOML file to apply.",
         metavar="PATH",
     )
-    base_group.add_argument(
+    from_action.completer = argcomplete.completers.FilesCompleter(  # type: ignore[attr-defined]
+        allowednames=[".toml"]
+    )
+
+    python_version_action = base_group.add_argument(
         "--python-version",
         type=str,
         help="Specify the Python version to scaffold (e.g., 3.13). Overrides global configuration.",
         dest="python_version",
         metavar="VERSION",
+    )
+    python_version_action.completer = argcomplete.completers.ChoicesCompleter(  # type: ignore[attr-defined]
+        {"3.12": "Python 3.12", "3.13": "Python 3.13", "3.14": "Python 3.14"}
     )
 
     # Tooling Context
@@ -392,6 +402,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Reset the global configuration file to its default state.",
     )
     config_parser.set_defaults(func=cli_main.handle_config)
+
+    # --- Completion Subparser ---
+    completion_parser = subparsers.add_parser(
+        "completion",
+        help="Generate shell autocompletion scripts.",
+        description="Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).",
+        formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
+        epilog=(
+            "[bold]Examples:[/bold]\n"
+            "  # Zsh (macOS/Linux):\n"
+            "  protostar completion zsh > ~/.protostar-completion.zsh\n"
+            "  echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc\n\n"
+            "  # Bash (Linux/macOS):\n"
+            "  protostar completion bash > ~/.protostar-completion.bash\n"
+            "  echo 'source ~/.protostar-completion.bash' >> ~/.bashrc\n\n"
+            "  # Fish:\n"
+            "  mkdir -p ~/.config/fish/completions\n"
+            "  protostar completion fish > ~/.config/fish/completions/protostar.fish\n\n"
+            "  # PowerShell (Windows):\n"
+            '  protostar completion powershell > "$HOME\\protostar-completion.ps1"\n'
+            "  Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'"
+        ),
+        parents=[base_parser],
+    )
+    completion_parser.add_argument(
+        "shell",
+        nargs="?",
+        choices=[s.value for s in Shell],
+        metavar="<shell>",
+        help=f"Target shell ({', '.join(s.value for s in Shell)}). If omitted, displays configuration instructions.",
+    )
+    completion_parser.set_defaults(func=completion.handle_completion)
 
     # --- Help Subparser ---
     help_parser = subparsers.add_parser(
@@ -528,4 +571,5 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 _SUBCOMMAND_DOC_PATHS: dict[str, DocsPage] = {
     "init": DocsPage.INIT,
     "config": DocsPage.CONFIGURATION,
+    "completion": DocsPage.CLI_REFERENCE,
 }

@@ -79,39 +79,60 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
 
 ### 1. Enable Autocomplete
 
-Protostar uses `argcomplete` for dynamic tab-completion. Install the CLI bindings globally matching the toolchain you used to install Protostar:
+Protostar provides native dynamic completion script generation for **Zsh**, **Bash**, **Fish**, and **PowerShell** via `protostar completion`. No external packages or separate installations are required.
 
-=== "macOS (Homebrew)"
-    ```bash
-    brew install argcomplete
-    ```
-=== "Universal (uv)"
-    ```bash
-    uv tool install argcomplete
-    ```
-=== "Universal (pip)"
-    ```bash
-    pip install argcomplete
-    ```
+To guarantee zero impact on your terminal startup latency (0ms overhead), Protostar generates a static completion script that connects directly to the fast dynamic completer.
 
-!!! warning "Path Resolution for `uv`"
-    If using `uv`, ensure `~/.local/bin` is exported in your system `$PATH` so your shell can resolve the `register-python-argcomplete` executable.
-
-=== "Zsh"
-    Ensure the bash compatibility layer is loaded by adding this to your `~/.zshrc`:
+=== "Zsh (macOS / Linux)"
+    Generate the static completion script and source it in `~/.zshrc`:
 
     ```bash
-    autoload -U bashcompinit
-    bashcompinit
-    eval "$(register-python-argcomplete protostar)"
+    protostar completion zsh > ~/.protostar-completion.zsh
+    echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc
+    source ~/.zshrc
     ```
 
-=== "Bash"
-    Add the evaluation string directly to your `~/.bashrc`:
+    !!! tip "Using Custom Completion Directories (`$fpath`)"
+        If you manage completions via `~/.zsh/completions` and call `compinit`, you can save the file directly to your completions directory instead:
+        ```bash
+        protostar completion zsh > ~/.zsh/completions/_protostar
+        ```
+
+=== "Bash (Linux / macOS)"
+    Generate the static completion script and source it in your bash profile (`~/.bashrc` on Linux, `~/.bash_profile` on macOS):
 
     ```bash
-    eval "$(register-python-argcomplete protostar)"
+    protostar completion bash > ~/.protostar-completion.bash
+    echo 'source ~/.protostar-completion.bash' >> ~/.bashrc
+    source ~/.bashrc
     ```
+
+=== "Fish (macOS / Linux)"
+    Save the completion script to Fish's native completions directory for instant autoloading (no config edits required):
+
+    ```fish
+    mkdir -p ~/.config/fish/completions
+    protostar completion fish > ~/.config/fish/completions/protostar.fish
+    ```
+
+=== "PowerShell (Windows / Cross-platform)"
+    Save the completion script and source it in your PowerShell `$PROFILE`:
+
+    ```powershell
+    protostar completion powershell > "$HOME\protostar-completion.ps1"
+    Add-Content -Path $PROFILE -Value '. "$HOME\protostar-completion.ps1"'
+    . $PROFILE
+    ```
+
+    !!! tip "PowerShell Profile Setup"
+        If your profile script does not exist yet, create it:
+        ```powershell
+        if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }
+        ```
+        If script execution is restricted on Windows, allow signed local scripts by running:
+        ```powershell
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+        ```
 
 ### 2. Set an Alias (Optional)
 
