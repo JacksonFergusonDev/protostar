@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789156734282,
+  "lastUpdate": 1789157072291,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12041,6 +12041,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 162.62,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c51c0e213403eb91064a7a097e5d5c5b3e82007e",
+          "message": "fix(config): enforce type guards on template blueprint fields during parsing (#239)",
+          "timestamp": "2026-09-11T13:02:11-07:00",
+          "tree_id": "69d7cbdee1e387da6a6a4b2f0474d15e44e14fd4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c51c0e213403eb91064a7a097e5d5c5b3e82007e"
+        },
+        "date": 1789157070938,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 108.84,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 171.81,
             "unit": "ms"
           }
         ]
