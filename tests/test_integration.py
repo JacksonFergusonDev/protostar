@@ -2,6 +2,7 @@
 
 import argparse
 import shutil
+import sys
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -190,7 +191,8 @@ def test_pre_commit_lifecycle_integration(
     """Validates git initialization and pre-commit hook mapping."""
     seed_global_config("[env]\npre_commit = true\n")
 
-    code, stdout, stderr, workspace = run_cli("init", "--python-version", "3.12")
+    current_py = f"{sys.version_info.major}.{sys.version_info.minor}"
+    code, stdout, stderr, workspace = run_cli("init", "--python-version", current_py)
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
 
@@ -204,7 +206,10 @@ def test_pre_commit_lifecycle_integration(
 @pytest.mark.skipif(shutil.which("direnv") is None, reason="direnv executable required")
 def test_direnv_lifecycle_integration(run_cli: Any) -> None:
     """Verifies direnv shell commands execute without crashing in the post-install phase."""
-    code, stdout, stderr, workspace = run_cli("init", "--direnv")
+    current_py = f"{sys.version_info.major}.{sys.version_info.minor}"
+    code, stdout, stderr, workspace = run_cli(
+        "init", "--direnv", "--python-version", current_py
+    )
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
     assert (workspace / ".envrc").exists()
@@ -214,7 +219,8 @@ def test_virtual_env_isolation(run_cli: Any, monkeypatch: pytest.MonkeyPatch) ->
     """Verifies Protostar correctly executes even if the parent shell has an active virtual environment."""
     monkeypatch.setenv("VIRTUAL_ENV", "/fake/parent/venv")
 
-    code, _, stderr, workspace = run_cli("init", "--python-version", "3.12")
+    current_py = f"{sys.version_info.major}.{sys.version_info.minor}"
+    code, _, stderr, workspace = run_cli("init", "--python-version", current_py)
 
     assert code == 0, f"Failed execution with parent VIRTUAL_ENV set.\nSTDERR: {stderr}"
     assert (workspace / "pyproject.toml").exists()
