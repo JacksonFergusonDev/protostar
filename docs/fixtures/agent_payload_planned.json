@@ -87,7 +87,29 @@
       ]
     },
     "tasks": {
-      "system_tasks": [],
+      "system_tasks": [
+        {
+          "command": [
+            "git",
+            "init"
+          ],
+          "description": "Initializing git repository",
+          "timeout": 30
+        },
+        {
+          "command": [
+            "uv",
+            "init",
+            "--no-workspace",
+            "--bare",
+            "--pin-python",
+            "--python",
+            "3.13"
+          ],
+          "description": "Scaffolding uv virtual environment",
+          "timeout": 30
+        }
+      ],
       "post_install_tasks": []
     }
   }
