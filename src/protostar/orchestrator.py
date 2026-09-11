@@ -16,7 +16,13 @@ from .errors import (
 from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
-from .modules import BootstrapModule, PreCommitModule, PrekModule
+from .modules import (
+    BootstrapModule,
+    PreCommitModule,
+    PrekModule,
+    ReadTheDocsModule,
+    ZensicalModule,
+)
 from .system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
@@ -115,6 +121,14 @@ class Orchestrator:
             raise ConfigurationError(
                 "Cannot use both '--pre-commit' and '--prek' simultaneously. Please choose one git hook manager.",
                 hint="Remove either --pre-commit or --prek from your selection.",
+            )
+
+        has_readthedocs = any(isinstance(m, ReadTheDocsModule) for m in self.modules)
+        has_zensical = any(isinstance(m, ZensicalModule) for m in self.modules)
+        if has_readthedocs and not has_zensical:
+            raise ConfigurationError(
+                "Read the Docs scaffolding requires the Zensical module to be enabled.",
+                hint="Enable the Zensical documentation module (--zensical or [tooling] zensical = true) or remove the Read the Docs module.",
             )
 
         missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}

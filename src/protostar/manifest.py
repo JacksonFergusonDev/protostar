@@ -157,9 +157,22 @@ class FilesystemManifest:
         self.directories.add(path)
 
     def add_file_injection(self, path: str, content: str) -> None:
-        """Queues a file path and its string content to be written to disk."""
-        if path not in self.file_injections:
-            self.file_injections[path] = content
+        """Queues a file path and its string content to be written to disk.
+
+        Args:
+            path: Relative file path to create.
+            content: File body string payload.
+
+        Raises:
+            ConfigurationError: If the path has already been registered with
+                conflicting file content.
+        """
+        if path in self.file_injections and self.file_injections[path] != content:
+            raise ConfigurationError(
+                f"Conflicting file injections for '{path}': multiple sources registered different content.",
+                hint="Check for conflicting module configurations or overlapping template definitions.",
+            )
+        self.file_injections[path] = content
 
     def add_file_append(self, path: str, content: str) -> None:
         """Queues a string payload to be appended to a file during late-binding."""
