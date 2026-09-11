@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789150632085,
+  "lastUpdate": 1789151201086,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11769,6 +11769,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 226.25,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "68312d767c8f4944c299b0e900046e44c8905690",
+          "message": "fix: pass minimum_python from wizard to PythonCore and omit single-target CI matrix",
+          "timestamp": "2026-09-11T11:20:51-07:00",
+          "tree_id": "c4e9ccd9eba2935d798c842880cb7193d6c8c79e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/68312d767c8f4944c299b0e900046e44c8905690"
+        },
+        "date": 1789151199693,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 110.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 179.43,
             "unit": "ms"
           }
         ]
