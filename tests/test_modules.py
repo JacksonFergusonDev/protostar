@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import UserConfig
-from protostar.errors import ConfigurationError, MissingDependencyError
+from protostar.errors import MissingDependencyError
 from protostar.manifest import CollisionStrategy, EnvironmentManifest, HookRunner
 from protostar.modules import (
     CodecovModule,
@@ -609,21 +609,9 @@ def test_readthedocs_module_properties():
     assert module.collision_markers == [Path(".readthedocs.yaml")]
 
 
-def test_readthedocs_module_requires_zensical():
-    manifest = EnvironmentManifest()
-    module = ReadTheDocsModule()
-
-    with pytest.raises(
-        ConfigurationError,
-        match="Read the Docs scaffolding requires the Zensical module to be enabled",
-    ):
-        module.build(manifest)
-
-
 def test_readthedocs_module_injects_file(mocker):
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
     manifest = EnvironmentManifest()
-    ZensicalModule().build(manifest)
     module = ReadTheDocsModule()
     module.build(manifest)
 
@@ -649,7 +637,6 @@ def test_readthedocs_module_injects_file(mocker):
 def test_readthedocs_module_skips_when_file_exists(mocker):
     mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
     manifest = EnvironmentManifest()
-    manifest.dependencies.add_docs("zensical")
     module = ReadTheDocsModule()
     module.build(manifest)
 

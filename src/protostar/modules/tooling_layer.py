@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.errors import ConfigurationError, MissingDependencyError
+from protostar.errors import MissingDependencyError
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag, HookRunner
@@ -923,18 +923,8 @@ class ReadTheDocsModule(BootstrapModule):
 
         Args:
             manifest: The centralized state object.
-
-        Raises:
-            ConfigurationError: If the Zensical module is not enabled.
         """
         logger.debug("Building Read the Docs tooling layer.")
-
-        if not any(
-            "zensical" in dep for dep in manifest.dependencies.docs_dependencies
-        ):
-            raise ConfigurationError(
-                "Read the Docs scaffolding requires the Zensical module to be enabled."
-            )
 
         if manifest.should_skip_file(Path(".readthedocs.yaml")):
             return

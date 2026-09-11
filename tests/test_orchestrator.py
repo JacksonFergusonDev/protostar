@@ -15,7 +15,14 @@ from protostar.manifest import (
     Severity,
 )
 from protostar.models import ExecutionResult, InitRequest
-from protostar.modules import BootstrapModule, PreCommitModule, PrekModule, PythonCore
+from protostar.modules import (
+    BootstrapModule,
+    PreCommitModule,
+    PrekModule,
+    PythonCore,
+    ReadTheDocsModule,
+    ZensicalModule,
+)
 from protostar.orchestrator import Orchestrator
 
 
@@ -338,6 +345,28 @@ def test_plan_raises_on_conflicting_hook_runners(mock_config, mocker):
         match=r"Cannot use both '--pre-commit' and '--prek' simultaneously",
     ):
         engine.plan()
+
+
+def test_plan_raises_on_readthedocs_without_zensical(mock_config, mocker):
+    """plan() must raise ConfigurationError if ReadTheDocsModule is passed without ZensicalModule."""
+    mocker.patch.object(Path, "exists", return_value=False)
+    engine = Orchestrator([ReadTheDocsModule()], mock_config)
+
+    with pytest.raises(
+        ConfigurationError,
+        match=r"Read the Docs scaffolding requires the Zensical module to be enabled",
+    ):
+        engine.plan()
+
+
+def test_plan_allows_readthedocs_with_zensical_order_independent(mock_config, mocker):
+    """plan() succeeds when both ReadTheDocsModule and ZensicalModule are enabled, regardless of order."""
+    mocker.patch.object(Path, "exists", return_value=False)
+    # Register ReadTheDocsModule before ZensicalModule to verify order independence
+    engine = Orchestrator([ReadTheDocsModule(), ZensicalModule()], mock_config)
+    manifest = engine.plan()
+
+    assert ".readthedocs.yaml" in manifest.filesystem.file_injections
 
 
 def test_plan_detects_docker_collision_without_force_flag(

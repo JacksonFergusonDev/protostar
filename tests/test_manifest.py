@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from protostar.errors import ConfigurationError
@@ -157,14 +159,25 @@ def test_add_directory(manifest):
 
 
 def test_add_file_injection(manifest):
-    """Test that file injections are queued and deduplicated correctly."""
+    """Test that file injections are queued and idempotent for identical content."""
     manifest.filesystem.add_file_injection(".envrc", "export FOO=bar")
     manifest.filesystem.add_file_injection(
-        ".envrc", "export FOO=baz"
-    )  # Should not overwrite
+        ".envrc", "export FOO=bar"
+    )  # Idempotent re-registration
 
     assert len(manifest.filesystem.file_injections) == 1
     assert manifest.filesystem.file_injections[".envrc"] == "export FOO=bar"
+
+
+def test_add_file_injection_raises_on_conflict(manifest):
+    """Test that registering conflicting file content for the same path raises ConfigurationError."""
+    manifest.filesystem.add_file_injection(".envrc", "export FOO=bar")
+
+    with pytest.raises(
+        ConfigurationError,
+        match=re.escape("Conflicting file injections for '.envrc'"),
+    ):
+        manifest.filesystem.add_file_injection(".envrc", "export FOO=baz")
 
 
 def test_add_file_append(manifest):
