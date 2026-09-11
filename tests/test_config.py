@@ -2,7 +2,11 @@ from collections.abc import Generator
 
 import pytest
 
-from protostar.config import TemplateBlueprint, UserConfig
+from protostar.config import (
+    TemplateBlueprint,
+    UserConfig,
+    clear_user_config_cache,
+)
 from protostar.errors import (
     ConfigurationError,
     TemplateResolutionError,
@@ -16,9 +20,9 @@ def clear_config_cache() -> Generator[None, None, None]:
     Ensures that disk I/O mocks in individual tests are evaluated correctly
     rather than returning a polluted instance from a previous test run.
     """
-    UserConfig._instance = None
+    clear_user_config_cache()
     yield
-    UserConfig._instance = None
+    clear_user_config_cache()
 
 
 def test_user_config_ruff_toggle(mocker):
@@ -487,3 +491,19 @@ def test_user_config_pre_commit_and_prek_mutually_exclusive() -> None:
         match="Cannot configure both 'pre_commit = true' and 'prek = true'",
     ):
         UserConfig(pre_commit=True, prek=True)
+
+
+def test_user_config_caching_and_cache_clear(mocker) -> None:
+    """Verifies that UserConfig memoizes instances and clear_user_config_cache evicts them."""
+    mocker.patch("protostar.config.Path.exists", return_value=False)
+
+    cfg1 = UserConfig.load()
+    cfg2 = UserConfig.load()
+    assert cfg1 is cfg2
+
+    clear_user_config_cache()
+    cfg3 = UserConfig.load()
+    assert cfg3 is not cfg1
+
+    cfg4 = UserConfig.load(force_reload=True)
+    assert cfg4 is not cfg3

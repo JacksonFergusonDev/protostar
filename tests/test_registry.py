@@ -5,13 +5,19 @@ from unittest.mock import MagicMock
 import pytest
 
 from protostar._fallbacks import DEFAULT_REVISIONS
-from protostar.registry import HookRegistry, RemoteHook
+from protostar.registry import (
+    HookRegistry,
+    RemoteHook,
+    clear_hook_registry_cache,
+)
 
 
 @pytest.fixture(autouse=True)
 def reset_cache():
     """Reset the registry cache before each test."""
-    HookRegistry._cache = None
+    clear_hook_registry_cache()
+    yield
+    clear_hook_registry_cache()
 
 
 def test_get_revision_success(mocker):
@@ -115,6 +121,41 @@ def test_get_revision_caches_result(mocker):
 
     # urlopen should only have been called once
     assert mock_urlopen.call_count == 1
+
+
+def test_clear_hook_registry_cache(mocker):
+    """Verify that clear_hook_registry_cache evicts cached registry responses."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(
+        {
+            "schema_version": 1,
+            "hooks": {
+                RemoteHook.PRE_COMMIT_HOOKS.value: "v9.9.9",
+            },
+        }
+    ).encode("utf-8")
+
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    rev1 = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    assert rev1 == "v9.9.9"
+    assert mock_urlopen.call_count == 1
+
+    # Clear cache and change response
+    clear_hook_registry_cache()
+    mock_response.read.return_value = json.dumps(
+        {
+            "schema_version": 1,
+            "hooks": {
+                RemoteHook.PRE_COMMIT_HOOKS.value: "v8.8.8",
+            },
+        }
+    ).encode("utf-8")
+
+    rev2 = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    assert rev2 == "v8.8.8"
+    assert mock_urlopen.call_count == 2
 
 
 def test_remote_hook_placeholders():
