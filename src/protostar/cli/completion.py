@@ -4,7 +4,6 @@ from enum import StrEnum
 
 from rich import box
 from rich.panel import Panel
-from rich.table import Table
 
 from protostar.cli import schema, ui
 
@@ -86,49 +85,23 @@ def print_completion_guide() -> None:
     ui.console.print(
         Panel(
             "[bold cyan]Protostar Shell Autocompletion Setup[/bold cyan]\n\n"
-            "Add the one-liner for your shell to your configuration file to enable dynamic tab completion.",
+            "Add the one-liner hook for your shell to your configuration profile:\n\n"
+            "  [bold cyan]• Zsh (macOS / Linux)[/bold cyan] → [dim]~/.zshrc[/dim]\n"
+            '    [green]eval "$(protostar completion zsh)"[/green]\n\n'
+            "  [bold cyan]• Bash (Linux / macOS)[/bold cyan] → [dim]~/.bashrc[/dim]\n"
+            '    [green]eval "$(protostar completion bash)"[/green]\n\n'
+            "  [bold cyan]• Fish[/bold cyan] → [dim]~/.config/fish/config.fish[/dim]\n"
+            "    [green]protostar completion fish | source[/green]\n\n"
+            "  [bold cyan]• PowerShell (Windows)[/bold cyan] → [dim]$PROFILE[/dim]\n"
+            "    [green]protostar completion powershell | Out-String | Invoke-Expression[/green]",
+            title="[bold blue]Shell Autocompletion[/bold blue]",
             box=box.ROUNDED,
-            border_style="cyan",
+            border_style="blue",
             padding=(1, 2),
         )
     )
-
-    table = Table(
-        box=box.ROUNDED,
-        title="Shell Integration Commands",
-        title_style="bold blue",
-        title_justify="left",
-        show_lines=True,
-        padding=(0, 1),
-    )
-    table.add_column("Shell", style="cyan", no_wrap=True)
-    table.add_column("Configuration File", style="yellow", no_wrap=True)
-    table.add_column("One-Liner Hook", style="green", no_wrap=True)
-
-    table.add_row(
-        "Zsh\n(macOS / Linux)",
-        "~/.zshrc",
-        'eval "$(protostar completion zsh)"',
-    )
-    table.add_row(
-        "Bash\n(Linux / macOS)",
-        "~/.bashrc",
-        'eval "$(protostar completion bash)"',
-    )
-    table.add_row(
-        "Fish\n(macOS / Linux)",
-        "~/.config/fish/config.fish",
-        "protostar completion fish | source",
-    )
-    table.add_row(
-        "PowerShell\n(Windows / Cross-platform)",
-        "$PROFILE",
-        "protostar completion powershell | Out-String | Invoke-Expression",
-    )
-
-    ui.console.print(table)
     ui.console.print(
-        "\n[dim]Run [bold]protostar completion <shell>[/bold] to output the raw shell script.[/dim]\n"
+        "[dim]Run [bold]protostar completion <shell>[/bold] to generate raw completion scripts.[/dim]\n"
     )
 
 
