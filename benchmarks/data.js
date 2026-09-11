@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789102792570,
+  "lastUpdate": 1789103178026,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11599,6 +11599,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 205.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "1524d74202f41a0d26b26e3cd4ffbe5870b4e142",
+          "message": "refactor(cli): delete ProtoHelpFormatter and remove all formatter_class noise\n\nAll parsers are JsonAwareParser subclasses whose print_help() centralises\nrendering through print_table_help(). ProtoHelpFormatter was never invoked\non the human-readable code path after that change and carried dead styles,\na dead add_usage override, and dead SVG-generator fallback branches.\n\n- Delete ProtoHelpFormatter entirely\n- Remove formatter_class=ProtoHelpFormatter from root parser and all six\n  subparser add_parser() calls\n- Replace _VersionAction formatter dance with a direct ui.console.print()\n- Collapse generate_cli_help_svgs() is_custom_table branch: always routes\n  through JsonAwareParser.print_help() / print_table_help()\n- Drop now-dead ProtoHelpFormatter.console save/restore in finally block\n- Replace test_proto_help_formatter_usage with\n  test_json_aware_parser_print_help_uses_table_renderer\n- Drop ClassVar, Iterable, Style, RawTextRichHelpFormatter imports",
+          "timestamp": "2026-09-10T22:04:48-07:00",
+          "tree_id": "f181c714f1f098d67ff03c49d9ef729c8a62c606",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1524d74202f41a0d26b26e3cd4ffbe5870b4e142"
+        },
+        "date": 1789103176605,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 140.64,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 228.7,
             "unit": "ms"
           }
         ]
