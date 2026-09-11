@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789085280595,
+  "lastUpdate": 1789087185827,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11225,6 +11225,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 167.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "da8f8abeaa6eeeefb1b5b4e226fee62676efd6bd",
+          "message": "docs: add AGENTS.md with architectural invariants and development guidelines",
+          "timestamp": "2026-09-10T17:38:31-07:00",
+          "tree_id": "e04370346286af1456833b754a2661c85cd084c9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/da8f8abeaa6eeeefb1b5b4e226fee62676efd6bd"
+        },
+        "date": 1789087185089,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.88,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.82,
             "unit": "ms"
           }
         ]
