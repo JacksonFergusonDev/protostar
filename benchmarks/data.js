@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789151201086,
+  "lastUpdate": 1789151771512,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11803,6 +11803,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 179.43,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "27fded9ac478ddecee9443cf1ca0929239347d24",
+          "message": "feat(tooling): model HookRunner and enforce mutual exclusivity for git hook managers (#233)\n\n- Replace dual booleans (wants_pre_commit, wants_prek) on ToolingManifest\n  with HookRunner enum\n- Add wants_hooks property and set_hook_runner() to guard against\n  conflicting runner registrations\n- Enforce mutual exclusivity in Orchestrator.plan() and\n  UserConfig.__post_init__()\n- Add interactive conflict resolution prompt in wizard component selection\n- Update pre-commit config generation and execution logic to consume HookRunner\n- Update API reference docs and regenerate doc snapshot fixtures\n- Add and update comprehensive unit tests across manifest, orchestrator,\n  config, executor, modules, and wizard",
+          "timestamp": "2026-09-11T11:35:10-07:00",
+          "tree_id": "fee037a71d715e1e5f340db2ddf1f940516d4d9d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/27fded9ac478ddecee9443cf1ca0929239347d24"
+        },
+        "date": 1789151770123,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 129.79,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.08,
             "unit": "ms"
           }
         ]
