@@ -96,8 +96,10 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
 
     user_config = UserConfig.load()
     if user_config.templates:
-        for alias, source in user_config.templates.items():
-            templates.append({"name": alias, "type": "global-alias", "source": source})
+        for alias, alias_cfg in user_config.templates.items():
+            templates.append(
+                {"name": alias, "type": "global-alias", "source": alias_cfg.source}
+            )
 
     if is_json_mode:
         if error_msg:

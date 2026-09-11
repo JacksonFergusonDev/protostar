@@ -87,7 +87,8 @@ def handle_init(args: argparse.Namespace) -> None:
             override_target = str(target)
         # 2. Check user aliases
         elif template_name in user_config.templates:
-            override_target = user_config.templates[template_name]
+            alias_cfg = user_config.templates[template_name]
+            override_target = alias_cfg.source
             is_external = True
             is_user_aliased = True
         else:

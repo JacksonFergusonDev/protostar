@@ -106,7 +106,8 @@ def run_init_wizard() -> WizardSelections | None:
                 )
             )
         elif answer in config.templates:
-            target = config.templates[answer]
+            alias_cfg = config.templates[answer]
+            target = alias_cfg.source
             is_external = True
             is_user_aliased = True
         else:

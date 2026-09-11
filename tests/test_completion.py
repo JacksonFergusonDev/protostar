@@ -167,7 +167,13 @@ def test_template_completer(mocker: Any) -> None:
     assert "cli" not in res
 
     # Global alias support via UserConfig
-    fake_config = UserConfig(templates={"my-custom-stack": "git@github.com:foo/bar"})
+    from protostar.config import TemplateAliasConfig
+
+    fake_config = UserConfig(
+        templates={
+            "my-custom-stack": TemplateAliasConfig(source="git@github.com:foo/bar")
+        }
+    )
     mocker.patch("protostar.config.UserConfig.load", return_value=fake_config)
 
     alias_res = template_completer("my")

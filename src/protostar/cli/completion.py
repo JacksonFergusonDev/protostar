@@ -75,8 +75,10 @@ def get_available_templates() -> dict[str, str]:
 
     try:
         user_config = UserConfig.load()
-        for alias, source in user_config.templates.items():
-            templates[alias] = f"Global alias ({source})"
+        for alias, alias_cfg in user_config.templates.items():
+            templates[alias] = (
+                alias_cfg.description or f"Global alias ({alias_cfg.source})"
+            )
     except (OSError, TypeError, ValueError, KeyError, AttributeError):
         pass
 

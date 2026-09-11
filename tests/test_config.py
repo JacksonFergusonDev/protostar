@@ -364,7 +364,7 @@ def test_template_blueprint_load_interpolation(mocker, tmp_path):
 
 
 def test_user_config_parses_template_aliases() -> None:
-    """Verifies that the [templates] block is correctly parsed into the dictionary."""
+    """Verifies that shorthand string [templates] blocks are parsed into TemplateAliasConfig."""
     content = """
     [templates]
     corp-api = "https://raw.githubusercontent.com/org/repo/main/api.toml"
@@ -374,10 +374,39 @@ def test_user_config_parses_template_aliases() -> None:
 
     assert "corp-api" in config.templates
     assert (
-        config.templates["corp-api"]
+        config.templates["corp-api"].source
         == "https://raw.githubusercontent.com/org/repo/main/api.toml"
     )
-    assert config.templates["local-base"] == "/Users/dev/templates/base.toml"
+    assert config.templates["corp-api"].name == "corp-api"
+    assert config.templates["corp-api"].trusted is False
+    assert config.templates["local-base"].source == "/Users/dev/templates/base.toml"
+
+
+def test_user_config_parses_rich_template_table() -> None:
+    """Verifies that table-format [templates.<alias>] blocks are parsed with full metadata."""
+    content = """
+    [templates.enterprise-api]
+    name = "Enterprise API"
+    source = "https://github.com/myorg/enterprise-template.git"
+    description = "Internal enterprise microservice scaffold"
+    trusted = true
+
+    [templates.simple-api]
+    source = "https://github.com/myorg/simple.git"
+    """
+    config = UserConfig._parse_and_merge(content, source="test", instance=UserConfig())
+
+    ent = config.templates["enterprise-api"]
+    assert ent.name == "Enterprise API"
+    assert ent.source == "https://github.com/myorg/enterprise-template.git"
+    assert ent.description == "Internal enterprise microservice scaffold"
+    assert ent.trusted is True
+
+    simple = config.templates["simple-api"]
+    assert simple.name == "simple-api"
+    assert simple.source == "https://github.com/myorg/simple.git"
+    assert simple.description == ""
+    assert simple.trusted is False
 
 
 def test_user_config_rejects_invalid_templates_type() -> None:
@@ -387,6 +416,32 @@ def test_user_config_rejects_invalid_templates_type() -> None:
     corp-api = ["invalid", "list"]
     """
     with pytest.raises(ConfigurationError, match="Type mismatch"):
+        UserConfig._parse_and_merge(content, source="test", instance=UserConfig())
+
+
+def test_user_config_rejects_missing_source_in_table() -> None:
+    """Verifies that [templates.<alias>] missing the 'source' key raises ConfigurationError."""
+    content = """
+    [templates.bad-alias]
+    name = "Bad Alias"
+    description = "Missing source key"
+    """
+    with pytest.raises(
+        ConfigurationError, match="Missing or invalid required field 'source'"
+    ):
+        UserConfig._parse_and_merge(content, source="test", instance=UserConfig())
+
+
+def test_user_config_rejects_unknown_fields_in_template_table() -> None:
+    """Verifies that unrecognized keys in [templates.<alias>] raise ConfigurationError."""
+    content = """
+    [templates.bad-alias]
+    source = "https://example.com"
+    unknown_key = 123
+    """
+    with pytest.raises(
+        ConfigurationError, match=r"Unrecognized fields in '\[templates.bad-alias\]'"
+    ):
         UserConfig._parse_and_merge(content, source="test", instance=UserConfig())
 
 
