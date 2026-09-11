@@ -174,10 +174,7 @@ class SystemExecutor:
 
     def _write_pre_commit_config(self) -> None:
         """Assembles and writes the pre-commit configuration."""
-        if (
-            not self.manifest.tooling.wants_pre_commit
-            and not self.manifest.tooling.wants_prek
-        ):
+        if not self.manifest.tooling.wants_hooks:
             return
 
         target = Path(".pre-commit-config.yaml")
@@ -194,7 +191,7 @@ class SystemExecutor:
             local_hooks=self.manifest.tooling.pre_commit_local_hooks,
             remote_hooks=self.manifest.tooling.pre_commit_hooks,
             dependencies=self.manifest.dependencies.dependencies,
-            is_prek=self.manifest.tooling.wants_prek,
+            hook_runner=self.manifest.tooling.hook_runner,
             install_hook_types=self.manifest.tooling.pre_commit_install_hook_types,
         )
 

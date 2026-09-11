@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from protostar.config import TemplateBlueprint, UserConfig
-from protostar.errors import PartialExecutionAbortedError, WorkspaceCollisionError
+from protostar.errors import (
+    ConfigurationError,
+    PartialExecutionAbortedError,
+    WorkspaceCollisionError,
+)
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -11,7 +15,7 @@ from protostar.manifest import (
     Severity,
 )
 from protostar.models import ExecutionResult, InitRequest
-from protostar.modules import BootstrapModule
+from protostar.modules import BootstrapModule, PreCommitModule, PrekModule
 from protostar.orchestrator import Orchestrator
 
 
@@ -322,3 +326,15 @@ def test_plan_does_not_mutate_filesystem(mocker, mock_config):
     assert isinstance(manifest, EnvironmentManifest)
     assert not hasattr(manifest.filesystem, "touched_paths")
     assert not hasattr(manifest, "diagnostics")
+
+
+def test_plan_raises_on_conflicting_hook_runners(mock_config, mocker):
+    """plan() must raise ConfigurationError if both PreCommitModule and PrekModule are passed."""
+    mocker.patch.object(Path, "exists", return_value=False)
+    engine = Orchestrator([PreCommitModule(), PrekModule()], mock_config)
+
+    with pytest.raises(
+        ConfigurationError,
+        match=r"Cannot use both '--pre-commit' and '--prek' simultaneously",
+    ):
+        engine.plan()

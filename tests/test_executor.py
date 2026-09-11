@@ -17,6 +17,7 @@ from protostar.manifest import (
     DiagnosticEvent,
     DiagnosticPhase,
     EnvironmentManifest,
+    HookRunner,
     ProjectMetadata,
     Severity,
 )
@@ -70,7 +71,7 @@ def test_executor_append_files_late_binding(tmp_path, monkeypatch, mock_config):
 def test_executor_writes_pre_commit_config(mocker, mock_config):
     """Test that the executor concatenates hooks and interpolates only production Mypy dependencies."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
     manifest.dependencies.add("fastapi")
     manifest.dependencies.add_dev("pytest")
 
@@ -103,7 +104,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
 def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
     """Test that the executor aggregates local pre-commit hooks under a single repo: local block."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
 
     ruff_payload = """      - id: ruff-check
         name: ruff check
@@ -154,7 +155,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
 def test_executor_writes_prek_config(mocker, mock_config):
     """Test that the executor scaffolds builtin generic hooks for prek."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_prek = True
+    manifest.tooling.hook_runner = HookRunner.PREK
 
     executor = SystemExecutor(manifest, mock_config)
 
@@ -174,7 +175,7 @@ def test_executor_writes_prek_config(mocker, mock_config):
 def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_config):
     """Test that the executor formats both local and remote repository hooks."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
 
     ruff_payload = """      - id: ruff-check
         name: ruff check
@@ -211,7 +212,7 @@ def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_c
 def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     """Test that mypy late-binding cleanly strips additional_dependencies if no production dependencies exist."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
 
     hook_payload = """  - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.19.1
@@ -542,7 +543,7 @@ def test_executor_append_files_ast_overwrite(tmp_path, monkeypatch, mock_config)
 def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_config):
     """Test that pre-commit generation aborts if file exists and strategy is not OVERWRITE."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -865,7 +866,7 @@ def test_executor_runs_hook_install_when_git_and_dev_succeed(
 
 def test_executor_handles_write_permission_denied(mocker):
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
     manifest.tooling.pre_commit_hooks.append("  - repo: local")
 
     config = UserConfig()
@@ -1232,7 +1233,7 @@ def test_executor_diagnostic_collection_with_enum(mock_config):
 def test_executor_skips_pre_commit_when_file_exists(mocker, mock_config):
     """Test that existing .pre-commit-config.yaml is skipped and logs a diagnostic."""
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -1293,7 +1294,7 @@ def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_co
     from protostar.registry import RemoteHook
 
     manifest = EnvironmentManifest()
-    manifest.tooling.wants_pre_commit = True
+    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
 
     hook_payload = f"""  - repo: {RemoteHook.MARKDOWNLINT.value}
     rev: {RemoteHook.MARKDOWNLINT.placeholder}

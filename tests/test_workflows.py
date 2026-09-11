@@ -1,6 +1,7 @@
 from protostar.workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
+    HookRunner,
     JustfileSpec,
     YAMLBuilder,
     generate_ci_workflow,
@@ -47,7 +48,7 @@ def test_generate_pre_commit_config_prek():
         remote_hooks=[],
         core_rev="v6.0.0",
         gitleaks_rev="v8.24.0",
-        is_prek=True,
+        hook_runner=HookRunner.PREK,
     )
     assert "repos:" in content
     assert "repo: builtin" in content

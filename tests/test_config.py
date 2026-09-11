@@ -478,3 +478,12 @@ def test_template_blueprint_parses_name_and_description() -> None:
     assert blueprint.name == "Custom Stack"
     assert blueprint.description == "Custom microservice stack description"
     assert blueprint.dependencies == ["fastapi"]
+
+
+def test_user_config_pre_commit_and_prek_mutually_exclusive() -> None:
+    """Verifies that configuring both pre_commit and prek raises ConfigurationError."""
+    with pytest.raises(
+        ConfigurationError,
+        match="Cannot configure both 'pre_commit = true' and 'prek = true'",
+    ):
+        UserConfig(pre_commit=True, prek=True)
