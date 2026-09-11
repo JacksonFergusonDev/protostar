@@ -576,10 +576,6 @@ class CommitizenModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Commitizen"
 
-    def pre_flight(self) -> None:
-        """Verifies that the runtime environment satisfies all commitizen prerequisites."""
-        return
-
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for commitizen."""
@@ -849,18 +845,14 @@ dev = [
 """
         manifest.filesystem.add_file_append("pyproject.toml", pyproject_wiring)
 
-        if manifest.should_skip_file(Path("docs/index.md")):
-            pass
-        else:
+        if not manifest.should_skip_file(Path("docs/index.md")):
             index_content = """# Welcome to <% PROJECT_NAME %>
 
 Add your project overview and documentation here.
 """
             manifest.filesystem.add_file_injection("docs/index.md", index_content)
 
-        if manifest.should_skip_file(Path("mkdocs.yml")):
-            pass
-        else:
+        if not manifest.should_skip_file(Path("mkdocs.yml")):
             mkdocs_content = """site_name: <% PROJECT_NAME %>
 site_description: Add your project description here.
 
