@@ -13,15 +13,18 @@ from protostar.manifest import EnvironmentManifest
 
 @pytest.fixture(autouse=True)
 def mock_global_config_file(mocker, tmp_path):
-    """Mocks the global configuration file for all tests to prevent reading the user's real config."""
+    """Mocks the global configuration file and clears singleton caches for all tests."""
     mock_config = tmp_path / "config.toml"
     mock_config.write_text("[env]\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config)
-    from protostar.config import UserConfig
+    from protostar.config import clear_user_config_cache
+    from protostar.registry import clear_hook_registry_cache
 
-    UserConfig._instance = None
+    clear_user_config_cache()
+    clear_hook_registry_cache()
     yield
-    UserConfig._instance = None
+    clear_user_config_cache()
+    clear_hook_registry_cache()
 
 
 @pytest.fixture

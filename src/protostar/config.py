@@ -1,5 +1,6 @@
 """Configuration management and schema definitions for Protostar."""
 
+import functools
 import logging
 import os
 import tempfile
@@ -9,7 +10,7 @@ import typing
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 from .errors import ConfigurationError, TemplateResolutionError
 from .ide import IDEType
@@ -162,9 +163,6 @@ class UserConfig:
                 normalized[k] = v
         self.templates = normalized
 
-    # In-memory cache to prevent repeated disk I/O
-    _instance: ClassVar["UserConfig | None"] = None
-
     @classmethod
     def load(cls, force_reload: bool = False) -> "UserConfig":
         """Loads and parses the global Protostar configuration file.
@@ -175,23 +173,12 @@ class UserConfig:
         Returns:
             The loaded UserConfig instance.
         """
-        if cls._instance is not None and not force_reload:
+        if force_reload:
+            clear_user_config_cache()
+        hits_before = _load_cached_user_config.cache_info().hits
+        instance = _load_cached_user_config()
+        if _load_cached_user_config.cache_info().hits > hits_before:
             logger.debug("Using cached UserConfig instance")
-            return cls._instance
-
-        logger.debug(
-            "Loading global configuration from %s (exists=%s)",
-            CONFIG_FILE,
-            CONFIG_FILE.exists(),
-        )
-        instance = cls()
-
-        if CONFIG_FILE.exists():
-            instance = cls._parse_and_merge(
-                CONFIG_FILE.read_text(encoding="utf-8"), str(CONFIG_FILE), instance
-            )
-
-        cls._instance = instance
         return instance
 
     @classmethod
@@ -338,6 +325,29 @@ class UserConfig:
             updates["templates"] = parsed_templates
 
         return replace(instance, **updates)
+
+
+@functools.cache
+def _load_cached_user_config() -> UserConfig:
+    """Loads and parses the global Protostar configuration file with caching."""
+    logger.debug(
+        "Loading global configuration from %s (exists=%s)",
+        CONFIG_FILE,
+        CONFIG_FILE.exists(),
+    )
+    instance = UserConfig()
+
+    if CONFIG_FILE.exists():
+        instance = UserConfig._parse_and_merge(
+            CONFIG_FILE.read_text(encoding="utf-8"), str(CONFIG_FILE), instance
+        )
+
+    return instance
+
+
+def clear_user_config_cache() -> None:
+    """Clears the memoized global UserConfig instance cache."""
+    _load_cached_user_config.cache_clear()
 
 
 @dataclass

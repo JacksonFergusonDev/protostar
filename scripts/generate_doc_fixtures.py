@@ -1298,7 +1298,7 @@ def main() -> None:
     protostar.config.CONFIG_FILE = (
         Path(tempfile.gettempdir()) / "non_existent_protostar_config.toml"
     )
-    protostar.config.UserConfig._instance = None
+    protostar.config.clear_user_config_cache()
 
     try:
         FIXTURES_DIR.mkdir(parents=True, exist_ok=True)

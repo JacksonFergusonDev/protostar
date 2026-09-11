@@ -15,6 +15,7 @@ This decoupling provides zero-dependency churn in core, maximum determinism, and
 """
 
 import enum
+import functools
 import json
 import logging
 from urllib.error import URLError
@@ -23,7 +24,7 @@ from ._fallbacks import DEFAULT_REVISIONS
 
 logger = logging.getLogger("protostar")
 
-__all__ = ["HookRegistry", "RemoteHook"]
+__all__ = ["HookRegistry", "RemoteHook", "clear_hook_registry_cache"]
 
 
 class RemoteHook(enum.StrEnum):
@@ -41,13 +42,40 @@ class RemoteHook(enum.StrEnum):
         return f"<% REV_{self.name} %>"
 
 
+_REGISTRY_URL = (
+    "https://jacksonfergusondev.github.io/protostar-hook-registry/registry.json"
+)
+
+
+@functools.cache
+def _fetch_hook_registry() -> dict[str, str]:
+    """Performs a single HTTP GET to the static registry CDN, cached in-memory."""
+    try:
+        import urllib.request
+
+        with urllib.request.urlopen(_REGISTRY_URL, timeout=1.5) as response:
+            raw = response.read(65_536)
+            data = json.loads(raw.decode("utf-8"))
+            if isinstance(data, dict) and data.get("schema_version") == 1:
+                logger.debug("Successfully resolved remote hook registry.")
+                hooks = data.get("hooks", {})
+                if isinstance(hooks, dict):
+                    return {str(k): str(v) for k, v in hooks.items()}
+    except (URLError, json.JSONDecodeError, TimeoutError) as e:
+        logger.debug(
+            f"Remote registry unavailable, using offline fallbacks. Reason: {e}"
+        )
+
+    return {}
+
+
+def clear_hook_registry_cache() -> None:
+    """Clears the memoized remote hook registry cache."""
+    _fetch_hook_registry.cache_clear()
+
+
 class HookRegistry:
     """Memoized fetcher for the static JSON pre-commit hook registry."""
-
-    _cache: dict[str, str] | None = None
-    _REGISTRY_URL = (
-        "https://jacksonfergusondev.github.io/protostar-hook-registry/registry.json"
-    )
 
     @classmethod
     def resolve_placeholders(cls, content: str) -> str:
@@ -78,28 +106,5 @@ class HookRegistry:
         Returns:
             The semantic version string (e.g., 'v6.0.0').
         """
-        if cls._cache is None:
-            cls._cache = cls._fetch_registry()
-
-        return cls._cache.get(hook.value, DEFAULT_REVISIONS[hook])
-
-    @classmethod
-    def _fetch_registry(cls) -> dict[str, str]:
-        """Performs a single HTTP GET to the static registry CDN."""
-        try:
-            import urllib.request
-
-            with urllib.request.urlopen(cls._REGISTRY_URL, timeout=1.5) as response:  # noqa: S310
-                raw = response.read(65_536)
-                data = json.loads(raw.decode("utf-8"))
-                if isinstance(data, dict) and data.get("schema_version") == 1:
-                    logger.debug("Successfully resolved remote hook registry.")
-                    hooks = data.get("hooks", {})
-                    if isinstance(hooks, dict):
-                        return {str(k): str(v) for k, v in hooks.items()}
-        except (URLError, json.JSONDecodeError, TimeoutError) as e:
-            logger.debug(
-                f"Remote registry unavailable, using offline fallbacks. Reason: {e}"
-            )
-
-        return {}
+        registry = _fetch_hook_registry()
+        return registry.get(hook.value, DEFAULT_REVISIONS[hook])
