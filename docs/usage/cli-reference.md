@@ -74,6 +74,18 @@ protostar export-schema [OPTIONS]
 
 ---
 
+### `protostar completion`
+
+Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).
+
+```bash
+protostar completion [SHELL]
+```
+
+--8<-- "table_cli_completion.md"
+
+---
+
 ### `protostar help`
 
 Displays comprehensive help panels and usage instructions.

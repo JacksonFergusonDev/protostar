@@ -11,8 +11,9 @@ from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
 
+from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
-from protostar.cli import schema, ui
+from protostar.cli.completion import Shell
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import InvalidUsageError
@@ -393,6 +394,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     config_parser.set_defaults(func=cli_main.handle_config)
 
+    # --- Completion Subparser ---
+    completion_parser = subparsers.add_parser(
+        "completion",
+        help="Generate shell autocompletion scripts.",
+        description="Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).",
+        formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
+        epilog=(
+            "[bold]Examples:[/bold]\n"
+            '  # Zsh (macOS/Linux):\n  eval "$(protostar completion zsh)"\n\n'
+            '  # Bash (Linux/macOS):\n  eval "$(protostar completion bash)"\n\n'
+            "  # Fish:\n  protostar completion fish | source\n\n"
+            "  # PowerShell (Windows):\n  protostar completion powershell | Out-String | Invoke-Expression"
+        ),
+        parents=[base_parser],
+    )
+    completion_parser.add_argument(
+        "shell",
+        nargs="?",
+        choices=[s.value for s in Shell],
+        metavar="<shell>",
+        help=f"Target shell ({', '.join(s.value for s in Shell)}). If omitted, displays configuration instructions.",
+    )
+    completion_parser.set_defaults(func=completion.handle_completion)
+
     # --- Help Subparser ---
     help_parser = subparsers.add_parser(
         "help",
@@ -528,4 +554,5 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 _SUBCOMMAND_DOC_PATHS: dict[str, DocsPage] = {
     "init": DocsPage.INIT,
     "config": DocsPage.CONFIGURATION,
+    "completion": DocsPage.CLI_REFERENCE,
 }

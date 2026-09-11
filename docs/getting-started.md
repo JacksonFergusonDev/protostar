@@ -79,39 +79,64 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
 
 ### 1. Enable Autocomplete
 
-Protostar uses `argcomplete` for dynamic tab-completion. Install the CLI bindings globally matching the toolchain you used to install Protostar:
+Protostar provides native dynamic completion script generation for **Zsh**, **Bash**, **Fish**, and **PowerShell** via `protostar completion`. No external packages or separate installations are required.
 
-=== "macOS (Homebrew)"
-    ```bash
-    brew install argcomplete
-    ```
-=== "Universal (uv)"
-    ```bash
-    uv tool install argcomplete
-    ```
-=== "Universal (pip)"
-    ```bash
-    pip install argcomplete
-    ```
-
-!!! warning "Path Resolution for `uv`"
-    If using `uv`, ensure `~/.local/bin` is exported in your system `$PATH` so your shell can resolve the `register-python-argcomplete` executable.
-
-=== "Zsh"
-    Ensure the bash compatibility layer is loaded by adding this to your `~/.zshrc`:
+=== "Zsh (macOS / Linux)"
+    Add the evaluation hook to your `~/.zshrc`:
 
     ```bash
-    autoload -U bashcompinit
-    bashcompinit
-    eval "$(register-python-argcomplete protostar)"
+    eval "$(protostar completion zsh)"
     ```
 
-=== "Bash"
-    Add the evaluation string directly to your `~/.bashrc`:
+    Then reload your configuration:
+    ```bash
+    source ~/.zshrc
+    ```
+
+=== "Bash (Linux / macOS)"
+    Add the evaluation hook to your `~/.bashrc` (or `~/.bash_profile` on macOS):
 
     ```bash
-    eval "$(register-python-argcomplete protostar)"
+    eval "$(protostar completion bash)"
     ```
+
+    Then reload your configuration:
+    ```bash
+    source ~/.bashrc
+    ```
+
+=== "Fish (macOS / Linux)"
+    Save the completion script to Fish's completions directory:
+
+    ```fish
+    protostar completion fish > ~/.config/fish/completions/protostar.fish
+    ```
+
+    Or dynamically evaluate it within `~/.config/fish/config.fish`:
+    ```fish
+    protostar completion fish | source
+    ```
+
+=== "PowerShell (Windows / Cross-platform)"
+    Add the completer registration to your PowerShell `$PROFILE`:
+
+    ```powershell
+    protostar completion powershell | Out-String | Invoke-Expression
+    ```
+
+    !!! tip "PowerShell Profile Setup"
+        If your profile script does not exist yet, create it:
+        ```powershell
+        if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }
+        ```
+        Then append the one-liner directly to the profile:
+        ```powershell
+        Add-Content -Path $PROFILE -Value 'protostar completion powershell | Out-String | Invoke-Expression'
+        ```
+        If script execution is restricted on Windows, allow signed local scripts by running:
+        ```powershell
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+        ```
 
 ### 2. Set an Alias (Optional)
 

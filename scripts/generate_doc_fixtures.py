@@ -554,6 +554,27 @@ def generate_capability_tables() -> None:
         _format_markdown_table(export_schema_headers, export_schema_rows),
     )
 
+    # CLI completion options table
+    completion_headers = ["Option", "Description"]
+    completion_rows = [
+        [
+            "*(No args)*",
+            "Displays a guide with setup instructions for all supported shells.",
+        ],
+        [
+            "`<shell>`",
+            "Target shell (`bash`, `zsh`, `fish`, `powershell`). Emits the raw completion script to stdout.",
+        ],
+        [
+            "`--json`",
+            "Emits a structured JSON payload containing the shell script or list of supported shells.",
+        ],
+    ]
+    _write_fixture(
+        "table_cli_completion.md",
+        _format_markdown_table(completion_headers, completion_rows),
+    )
+
     # POSIX exit codes table
     exit_code_headers = [
         "Exit Code",

@@ -1090,6 +1090,12 @@ def test_cli_reference_fixture_tables():
     export_content = export_file.read_text()
     assert "`--json`" in export_content
 
+    # Verify Completion Options fixture
+    completion_file = fixtures_dir / "table_cli_completion.md"
+    assert completion_file.exists()
+    completion_content = completion_file.read_text()
+    assert "`<shell>`" in completion_content
+
     # Verify Exit Codes fixture
     exit_codes_file = fixtures_dir / "table_exit_codes.md"
     assert exit_codes_file.exists()
@@ -1100,3 +1106,47 @@ def test_cli_reference_fixture_tables():
     )
     assert "`EX_OK`" in exit_codes_content
     assert "`os.EX_USAGE`" in exit_codes_content
+
+
+def test_completion_subcommand_outputs_script(capsys):
+    """Test that 'protostar completion <shell>' outputs raw shell completion scripts."""
+    parser = build_parser()
+    for shell in ["bash", "zsh", "fish", "powershell"]:
+        args = parser.parse_args(["completion", shell])
+        args.func(args)
+        captured = capsys.readouterr()
+        assert "protostar" in captured.out
+        assert captured.err == ""
+
+
+def test_completion_subcommand_guide(capsys):
+    """Test that 'protostar completion' without arguments outputs the setup guide."""
+    parser = build_parser()
+    args = parser.parse_args(["completion"])
+    args.func(args)
+    captured = capsys.readouterr()
+    assert "Protostar Shell Autocompletion Setup" in captured.out
+    assert 'eval "$(protostar completion zsh)"' in captured.out
+    assert 'eval "$(protostar completion bash)"' in captured.out
+
+
+def test_completion_subcommand_json(mocker):
+    """Test that 'protostar completion' in JSON mode emits structured payload."""
+    import protostar.cli.ui as cli_ui
+
+    emit_mock = mocker.patch("protostar.cli.ui.emit_json")
+    mocker.patch("sys.exit")
+
+    cli_ui.is_json_mode = True
+    try:
+        parser = build_parser()
+        args = parser.parse_args(["completion", "zsh"])
+        args.func(args)
+
+        emit_mock.assert_called_once()
+        payload = emit_mock.call_args[0][0]
+        assert payload["status"] == "success"
+        assert payload["shell"] == "zsh"
+        assert "protostar" in payload["script"]
+    finally:
+        cli_ui.is_json_mode = False
