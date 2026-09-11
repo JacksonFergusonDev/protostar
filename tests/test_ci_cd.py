@@ -18,7 +18,10 @@ def test_releasemodule_build(manifest: EnvironmentManifest) -> None:
     assert any("workflows" in str(d) for d in manifest.filesystem.directories)
 
 
-def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
+def test_executor_ci_assembly(
+    manifest: EnvironmentManifest, mocker, tmp_path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     manifest.tooling.wants_ci = True
     manifest.metadata = {
         "supported_os": ["Linux", "MacOS"],
@@ -52,7 +55,10 @@ def test_executor_ci_assembly(manifest: EnvironmentManifest, mocker) -> None:
     assert "name: Upload test analytics to Codecov" in content
 
 
-def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) -> None:
+def test_executor_ci_assembly_no_codecov(
+    manifest: EnvironmentManifest, mocker, tmp_path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     manifest.tooling.wants_ci = True
     manifest.metadata = {
         "supported_os": ["Linux"],
@@ -76,7 +82,10 @@ def test_executor_ci_assembly_no_codecov(manifest: EnvironmentManifest, mocker) 
     assert "coverage: true" not in content
 
 
-def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -> None:
+def test_executor_ci_assembly_no_pytest(
+    manifest: EnvironmentManifest, mocker, tmp_path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     manifest.tooling.wants_ci = True
     manifest.metadata = {
         "supported_os": ["Linux"],
@@ -97,7 +106,10 @@ def test_executor_ci_assembly_no_pytest(manifest: EnvironmentManifest, mocker) -
     assert "name: Run Tests" not in content
 
 
-def test_executor_release_assembly(manifest: EnvironmentManifest, mocker) -> None:
+def test_executor_release_assembly(
+    manifest: EnvironmentManifest, mocker, tmp_path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
     manifest.tooling.wants_release = True
     mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())

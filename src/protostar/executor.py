@@ -156,9 +156,13 @@ class SystemExecutor:
         and leave the environment fragmented.
 
         Raises:
-            SystemExit: If an existing target TOML file contains syntax errors.
+            ConfigurationError: If an existing target TOML file contains syntax errors.
         """
-        for filepath in self.manifest.filesystem.file_appends:
+        toml_targets = {
+            *self.manifest.filesystem.file_appends.keys(),
+            *self.manifest.filesystem.file_injections.keys(),
+        }
+        for filepath in sorted(toml_targets):
             target = Path(filepath)
             if target.suffix == ".toml" and target.exists():
                 try:
@@ -300,6 +304,16 @@ class SystemExecutor:
         if not self.manifest.tooling.wants_ci:
             return
 
+        target = Path(".github/workflows/ci.yml")
+        enforce_path_jail(target, Path.cwd())
+        if self.manifest.should_skip_file(target):
+            self.add_diagnostic(
+                phase=DiagnosticPhase.CI,
+                message=f"Skipping {target.name} generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+            return
+
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
@@ -308,21 +322,35 @@ class SystemExecutor:
                 ci_steps=self.manifest.tooling.ci_steps,
             )
         )
-        target = Path(".github/workflows/ci.yml")
-        enforce_path_jail(target, Path.cwd())
-        atomic_write_text(target, workflow)
-        self.record_touch(target)
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_text(target, workflow)
+            self.record_touch(target)
+        except OSError as e:
+            raise FileSystemError("write CI workflow", str(target), e) from e
 
     def _write_release_workflow(self) -> None:
         """Assembles and writes the .github/workflows/release.yml file if requested."""
         if not self.manifest.tooling.wants_release:
             return
 
-        workflow = generate_release_workflow()
         target = Path(".github/workflows/release.yml")
         enforce_path_jail(target, Path.cwd())
-        atomic_write_text(target, workflow)
-        self.record_touch(target)
+        if self.manifest.should_skip_file(target):
+            self.add_diagnostic(
+                phase=DiagnosticPhase.CI,
+                message=f"Skipping {target.name} generation; file already exists.",
+                severity=Severity.SKIP,
+            )
+            return
+
+        workflow = generate_release_workflow()
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_text(target, workflow)
+            self.record_touch(target)
+        except OSError as e:
+            raise FileSystemError("write release workflow", str(target), e) from e
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""
@@ -367,10 +395,10 @@ class SystemExecutor:
             enforce_path_jail(target, Path.cwd())
 
             try:
-                original_content = (
-                    target.read_text(encoding="utf-8") if target.exists() else ""
-                )
-                if not target.exists():
+                if target.exists():
+                    original_content = target.read_text(encoding="utf-8")
+                else:
+                    original_content = ""
                     target.parent.mkdir(parents=True, exist_ok=True)
             except OSError as e:
                 raise FileSystemError(
