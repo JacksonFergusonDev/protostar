@@ -80,20 +80,36 @@ def handle_init(args: argparse.Namespace) -> None:
         is_external = True
 
     if template_name:
-        # 1. Check built-ins
-        target = importlib.resources.files("protostar.templates").joinpath(
-            f"{template_name}.toml"
-        )
-        if target.is_file():
-            override_target = str(target)
-            is_trusted = True
-        # 2. Check user aliases
-        elif template_name in user_config.templates:
-            alias_cfg = user_config.templates[template_name]
-            override_target = alias_cfg.source
-            is_external = True
-            is_user_aliased = True
-            is_trusted = alias_cfg.trusted
+        from protostar.templates import TemplateType, discover_templates
+
+        matched_info = None
+        # 1. Match by alias (case-insensitive)
+        for tmpl in discover_templates(user_config):
+            if tmpl.alias.lower() == template_name.lower():
+                matched_info = tmpl
+                break
+
+        # 2. Match by display name (case-insensitive)
+        if matched_info is None:
+            for tmpl in discover_templates(user_config):
+                if tmpl.name.lower() == template_name.lower():
+                    matched_info = tmpl
+                    break
+
+        if matched_info:
+            if matched_info.type == TemplateType.BUILT_IN:
+                override_target = str(
+                    importlib.resources.files("protostar.templates").joinpath(
+                        f"{matched_info.alias}.toml"
+                    )
+                )
+                is_trusted = True
+            else:
+                alias_cfg = user_config.templates[matched_info.alias]
+                override_target = alias_cfg.source
+                is_external = True
+                is_user_aliased = True
+                is_trusted = alias_cfg.trusted
         else:
             raise ConfigurationError(
                 f"Template '{template_name}' not found in built-ins or global configuration aliases."

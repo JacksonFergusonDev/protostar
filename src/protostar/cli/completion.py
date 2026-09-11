@@ -52,7 +52,12 @@ def get_available_templates() -> dict[str, str]:
     """
     from protostar.templates import discover_templates
 
-    return {t.alias: t.description for t in discover_templates()}
+    mapping: dict[str, str] = {}
+    for t in discover_templates():
+        mapping[t.alias] = t.description
+        if t.name.lower() != t.alias.lower():
+            mapping[t.name.lower()] = t.description
+    return mapping
 
 
 def template_completer(prefix: str, **kwargs: object) -> dict[str, str]:

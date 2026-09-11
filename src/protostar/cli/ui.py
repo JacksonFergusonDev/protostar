@@ -77,7 +77,7 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         error_msg: If provided, prints a red error warning before the table
             and exits with a status code of 1 instead of 0.
     """
-    from protostar.templates import discover_templates
+    from protostar.templates import TemplateType, discover_templates
 
     discovered = discover_templates()
     templates = [t.to_dict() for t in discovered]
@@ -114,23 +114,28 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         title_style="bold blue",
         title_justify="left",
         padding=(0, 1),
+        expand=True,
     )
-    table.add_column("Template", style="cyan", no_wrap=True)
-    table.add_column("Name", style="bold")
-    table.add_column("Description", style="white")
-    table.add_column("Type", style="magenta")
-    table.add_column("Trusted", justify="center")
-    table.add_column("Source", style="dim")
+    table.add_column("Template", style="bold cyan", no_wrap=True)
+    table.add_column("Description", style="white", ratio=1)
+    table.add_column("Type", no_wrap=True)
 
     for tmpl in discovered:
-        trusted_markup = "[green]Yes[/green]" if tmpl.trusted else "[yellow]No[/yellow]"
+        if tmpl.alias.lower() != tmpl.name.lower():
+            display_name = f"{tmpl.name} [dim]({tmpl.alias})[/dim]"
+        else:
+            display_name = tmpl.name
+
+        type_str = (
+            "[green]Built-in[/green]"
+            if tmpl.type == TemplateType.BUILT_IN
+            else "[yellow]External[/yellow]"
+        )
+
         table.add_row(
-            tmpl.alias,
-            tmpl.name,
+            display_name,
             tmpl.description,
-            str(tmpl.type).replace("-", " ").title(),
-            trusted_markup,
-            tmpl.source,
+            type_str,
         )
 
     console.print(table)

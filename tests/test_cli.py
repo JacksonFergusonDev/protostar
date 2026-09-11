@@ -901,6 +901,47 @@ def test_list_templates_table_output(capsys, monkeypatch):
     captured = capsys.readouterr()
     assert "Available Templates" in captured.out
     assert "FastAPI" in captured.out
+    assert "(api)" in captured.out
+    assert "Built-in" in captured.out
+
+
+def test_list_templates_table_output_with_external(capsys, monkeypatch, tmp_path):
+    from protostar.config import TemplateAliasConfig, UserConfig
+
+    fake_cfg = UserConfig(
+        templates={
+            "custom-app": TemplateAliasConfig(
+                source="https://github.com/org/template",
+                name="Custom App",
+                description="Custom company application",
+                trusted=True,
+            )
+        }
+    )
+    monkeypatch.setattr("protostar.config.UserConfig.load", lambda: fake_cfg)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "Custom App" in captured.out
+    assert "External" in captured.out
+    assert "Built-in" in captured.out
+
+
+def test_init_resolves_template_by_display_name(capsys, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr(
+        "sys.argv", ["protostar", "init", "--template", "FastAPI", "--dry-run"]
+    )
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "Summary" in captured.out
+    assert "fastapi" in captured.out
 
 
 def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):
