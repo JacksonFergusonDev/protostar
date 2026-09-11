@@ -11,9 +11,9 @@ def test_journal_create_file(tmp_path: Path) -> None:
     target.write_text("hello")
     
     assert target.exists()
-    assert target.name in journal.created_paths
-    assert target.name in journal.touched_paths
-    assert target.name not in journal.mutated_paths
+    assert target.as_posix() in [Path(p).resolve().as_posix() for p in journal.created_paths]
+    assert target.as_posix() in [Path(p).resolve().as_posix() for p in journal.touched_paths]
+    assert target.as_posix() not in [Path(p).resolve().as_posix() for p in journal.mutated_paths]
     
     res = journal.rollback()
     assert res.succeeded
@@ -28,7 +28,7 @@ def test_journal_mutate_file(tmp_path: Path) -> None:
     target.write_text("mutated")
     
     assert target.read_text() == "mutated"
-    assert target.name in journal.mutated_paths
+    assert target.as_posix() in [Path(p).resolve().as_posix() for p in journal.mutated_paths]
     
     res = journal.rollback()
     assert res.succeeded

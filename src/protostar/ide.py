@@ -107,8 +107,9 @@ def write_ide_settings(
     """Writes the aggregated IDE configuration to the appropriate local files.
 
     Args:
-        ide_settings:
-        fs: Mapping of IDE setting keys to values.
+        ide_settings: IDESettings
+        on_diagnostic: Callable
+        fs: TransactionAwareFS Mapping of IDE setting keys to values.
         on_diagnostic: Callback invoked when existing settings cannot be merged safely.
         on_record_touch: Callback to record created or mutated paths.
     """

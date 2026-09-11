@@ -196,7 +196,7 @@ def test_partial_execution_aborted_error():
     assert err.touched_paths == paths
     assert "- path/to/a.txt" in str(err)
     assert "- path/to/b.txt" in str(err)
-    assert "Inspect the modified paths" in (err.hint or "")
+    assert "The managed workspace state has been restored." in (err.hint or "")
     assert err.docs_url is None
 
     empty_err = PartialExecutionAbortedError(touched_paths=frozenset())

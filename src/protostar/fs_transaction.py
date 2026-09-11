@@ -39,15 +39,16 @@ class TransactionAwareFS:
 
         path.parent.mkdir(parents=True, exist_ok=True)
         # Atomic write
-        temp = tempfile.NamedTemporaryFile(
+        with tempfile.NamedTemporaryFile(
             delete=False, dir=path.parent, prefix=".tmp-protostar-"
-        )
-        try:
+        ) as temp:
+            temp_name = temp.name
             temp.write(content)
-            temp.close()
-            Path(temp.name).replace(path)
+        
+        try:
+            Path(temp_name).replace(path)
         except BaseException:
-            Path(temp.name).unlink(missing_ok=True)
+            Path(temp_name).unlink(missing_ok=True)
             raise
 
     def write_text(self, path: Path, content: str, encoding: str = "utf-8") -> None:

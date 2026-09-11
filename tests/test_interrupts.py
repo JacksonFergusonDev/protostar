@@ -59,13 +59,13 @@ def test_executor_record_touch_relative_resolution(
     executor = SystemExecutor(manifest, config)
 
     # Relative path
-    executor.record_touch(Path("src/main.py"))
+    executor.journal.record_mutation(Path("src/main.py"))
     # Absolute path inside cwd
-    executor.record_touch(tmp_path / "pyproject.toml")
+    executor.journal.record_mutation(tmp_path / "pyproject.toml")
     # String path
-    executor.record_touch(".github/workflows/ci.yml")
+    executor.journal.record_mutation(Path(".github/workflows/ci.yml"))
 
-    assert executor.touched_paths == {
+    assert executor.journal.touched_paths == {
         "src/main.py",
         "pyproject.toml",
         ".github/workflows/ci.yml",
@@ -97,8 +97,8 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
     orchestrator = Orchestrator(modules=[], user_config=user_config)
 
     def fake_execute(self_executor: SystemExecutor) -> None:
-        self_executor.record_touch("src")
-        self_executor.record_touch("pyproject.toml")
+        self_executor.journal.record_mutation(Path("src"))
+        self_executor.journal.record_mutation(Path("pyproject.toml"))
         raise KeyboardInterrupt
 
     mocker.patch.object(SystemExecutor, "execute", fake_execute)
@@ -159,7 +159,7 @@ def test_system_executor_records_touches_during_scaffolding(
     executor = SystemExecutor(manifest, config)
     executor.execute()
 
-    assert "src" in executor.touched_paths
-    assert "src/hello.py" in executor.touched_paths
-    assert ".gitignore" in executor.touched_paths
-    assert "justfile" in executor.touched_paths
+    assert "src" in executor.journal.touched_paths
+    assert "src/hello.py" in executor.journal.touched_paths
+    assert ".gitignore" in executor.journal.touched_paths
+    assert "justfile" in executor.journal.touched_paths
