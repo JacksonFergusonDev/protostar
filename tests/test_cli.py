@@ -36,7 +36,7 @@ from protostar.system_deps import GlobalExecutable
 from protostar.wizard import WizardSelections
 
 
-def test_proto_help_formatter_usage(mocker):
+def test_proto_help_formatter_usage():
     """Test that the custom formatter correctly overrides the usage prefix."""
     parser = argparse.ArgumentParser(formatter_class=ProtoHelpFormatter)
     parser.add_argument("--foo", help="Foo argument")
@@ -698,7 +698,7 @@ def test_parse_dynamic_kwargs_rejects_positional():
         _parse_dynamic_kwargs(args)
 
 
-def test_handle_init_template_resolution(mocker, tmp_path):
+def test_handle_init_template_resolution(mocker):
     """Test that passing --template resolves the internal template."""
     import importlib.resources
 
@@ -905,7 +905,7 @@ def test_list_templates_table_output(capsys, monkeypatch):
     assert "Built-in" in captured.out
 
 
-def test_list_templates_table_output_with_external(capsys, monkeypatch, tmp_path):
+def test_list_templates_table_output_with_external(capsys, monkeypatch):
     from protostar.config import TemplateAliasConfig, UserConfig
 
     fake_cfg = UserConfig(

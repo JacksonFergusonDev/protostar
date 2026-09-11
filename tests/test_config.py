@@ -57,7 +57,7 @@ def test_user_config_raises_on_parsing_errors(tmp_path, monkeypatch) -> None:
         UserConfig.load(force_reload=True)
 
 
-def test_user_config_runtime_type_validation(mocker) -> None:
+def test_user_config_runtime_type_validation() -> None:
     """Test that the parser catches invalid types and aborts execution."""
     payload_str = """
     [env]
@@ -69,7 +69,7 @@ def test_user_config_runtime_type_validation(mocker) -> None:
         UserConfig._parse_and_merge(payload_str, "dummy.toml", UserConfig())
 
 
-def test_user_config_unknown_root_keys(mocker) -> None:
+def test_user_config_unknown_root_keys() -> None:
     """Test that the parser strictly enforces allowed root blocks."""
     payload_str = """
     [env]
@@ -351,7 +351,7 @@ custom_ruff = "[tool.ruff]\\nline-length = 100"
     assert blueprint.files["test.txt"] == "hello"
 
 
-def test_template_blueprint_load_interpolation(mocker, tmp_path):
+def test_template_blueprint_load_interpolation(tmp_path):
     target = tmp_path / "custom.toml"
     target.write_text('[files]\n"test.txt" = "<% greeting %>"\n')
 
