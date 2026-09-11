@@ -1086,10 +1086,13 @@ def generate_cli_help_svgs() -> None:
 
         # Dispatch based on the parser's structure to handle custom table
         # rendering versus standard rich-argparse string formatting.
-        is_custom_table = (
+        is_custom_table = isinstance(
+            target_parser, protostar.cli.parser.JsonAwareParser
+        ) or (
             hasattr(target_parser, "print_help")
             and hasattr(target_parser.print_help, "__func__")
-            and target_parser.print_help.__func__.__name__ == "print_table_help"
+            and target_parser.print_help.__func__.__name__
+            in ("print_table_help", "print_help")
         )
 
         if is_custom_table:

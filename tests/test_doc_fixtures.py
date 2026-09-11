@@ -137,10 +137,10 @@ def test_existing_svg_documentation_fixtures():
     """Verify that all generated SVG documentation fixtures exist and have shrinkwrapped widths."""
     fixtures_dir = Path("docs/fixtures")
     expected_fixtures = {
-        "cli_config_help.svg": 897,  # 72 cols
+        "cli_config_help.svg": 933,  # 75 cols
         "cli_dry_run.svg": 1080,  # 80 cols
         "diagnostic_panel.svg": 1006,  # 81 cols
-        "cli_help.svg": 1153,  # 93 cols
+        "cli_help.svg": 1165,  # 94 cols
         "cli_init_help.svg": 1238,  # 100 cols
     }
 

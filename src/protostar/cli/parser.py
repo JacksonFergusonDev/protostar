@@ -1,12 +1,12 @@
 import argparse
 import difflib
 import sys
-import types
 from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar, cast
 
 import argcomplete
 from rich import box
+from rich.console import Console
 from rich.style import Style
 from rich.table import Table
 from rich_argparse import RawTextRichHelpFormatter
@@ -72,6 +72,10 @@ class JsonAwareParser(argparse.ArgumentParser):
         """
         raise InvalidUsageError(message, docs_path=_resolve_usage_doc_path())
 
+    def print_help(self, file: Any = None) -> None:
+        """Prints help output formatted as bordered Rich tables."""
+        print_table_help(self, file)
+
 
 class ProtoHelpFormatter(RawTextRichHelpFormatter):
     """Custom help formatter for Protostar CLI using rich-argparse.
@@ -103,9 +107,11 @@ class ProtoHelpFormatter(RawTextRichHelpFormatter):
 
 def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
     """Custom help printer that formats action groups as bordered Rich tables."""
+    console = ui.console if file in (None, sys.stdout) else Console(file=file)
+
     # Print main parser description
     if self.description:
-        ui.console.print(f"{self.description}\n")
+        console.print(f"{self.description}\n")
 
     # Note: argparse does not provide a public API for iterating over groups.
     # Accessing _action_groups and _group_actions is the standard community workaround.
@@ -120,14 +126,14 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
         if not actions:
             continue
 
-        # Catch the default argparse 'options' group and capitalize it
-        display_title = (
-            group.title.capitalize() if group.title == "options" else group.title
-        )
+        # Catch default argparse groups and normalize them to Title Case
+        display_title = group.title or ""
+        if display_title.lower() in ("options", "positional arguments", "subcommands"):
+            display_title = display_title.title()
 
         table = Table(
             show_header=False,
-            title=display_title,  # Inject the patched title
+            title=display_title,
             box=box.ROUNDED,
             show_lines=False,
             padding=(0, 1),
@@ -138,6 +144,26 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
         table.add_column("Description")
 
         for action in actions:
+            if isinstance(action, argparse._SubParsersAction):
+                choices_actions = getattr(action, "_choices_actions", [])
+                if choices_actions:
+                    for choice_action in choices_actions:
+                        if choice_action.help == argparse.SUPPRESS:
+                            continue
+                        sub_help: Any = choice_action.help or ""
+                        if hasattr(sub_help, "get_renderable"):
+                            sub_help = sub_help.get_renderable()
+                        elif hasattr(sub_help, "__str__") and not isinstance(
+                            sub_help, str
+                        ):
+                            sub_help = str(sub_help)
+                        table.add_row(choice_action.dest, sub_help)
+                else:
+                    for name, subparser in action.choices.items():
+                        sub_help = getattr(subparser, "description", "") or ""
+                        table.add_row(name, sub_help)
+                continue
+
             # Build the invocation string (e.g., "-p, --python")
             if action.option_strings:
                 invocation = ", ".join(action.option_strings)
@@ -176,16 +202,17 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
 
             table.add_row(invocation, help_text)
 
-        ui.console.print(table)
-        ui.console.print()
+        if table.row_count > 0:
+            console.print(table)
+            console.print()
 
     # Append the parser's epilog block if one is defined
     if self.epilog:
         if hasattr(self.epilog, "get_renderable"):
             renderable_method = cast(Any, self.epilog).get_renderable
-            ui.console.print(renderable_method())
+            console.print(renderable_method())
         else:
-            ui.console.print(self.epilog)
+            console.print(self.epilog)
 
 
 def _get_version() -> str:
@@ -382,7 +409,6 @@ def build_parser() -> argparse.ArgumentParser:
             )
 
     init_parser.set_defaults(func=cli_main.handle_init)
-    init_parser.print_help = types.MethodType(print_table_help, init_parser)  # type: ignore[method-assign]
 
     # --- Export Schema Subparser ---
     export_schema_parser = subparsers.add_parser(
@@ -456,6 +482,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show this help message or a subcommand's manual.",
         description="Displays the CLI help manual.",
         formatter_class=ProtoHelpFormatter,
+        usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
     )
 
@@ -466,6 +493,7 @@ def build_parser() -> argparse.ArgumentParser:
         "topic",
         nargs="?",
         choices=available_commands,
+        metavar="<command>",
         help="The specific subcommand to explain.",
     )
 
