@@ -564,49 +564,161 @@ class TemplateBlueprint:
 
         instance = cls()
 
-        # Extract structural fields
-        if "name" in data and isinstance(data["name"], str):
+        # Validate name
+        if "name" in data:
+            if not isinstance(data["name"], str):
+                raise ConfigurationError(
+                    f"Type mismatch in configuration source '{source}' for 'name'.\n"
+                    f"Expected string, but got {type(data['name']).__name__}.",
+                    hint='Define name as a string: name = "my-template"',
+                )
             instance.name = data["name"]
-        if "description" in data and isinstance(data["description"], str):
+
+        # Validate description
+        if "description" in data:
+            if not isinstance(data["description"], str):
+                raise ConfigurationError(
+                    f"Type mismatch in configuration source '{source}' for 'description'.\n"
+                    f"Expected string, but got {type(data['description']).__name__}.",
+                    hint='Define description as a string: description = "Template description"',
+                )
             instance.description = data["description"]
-        if "dependencies" in data:
-            instance.dependencies = data["dependencies"]
-        if "directories" in data:
-            instance.directories = data["directories"]
-        if "vcs_ignores" in data:
-            instance.vcs_ignores = data["vcs_ignores"]
-        if "system_tasks" in data:
-            instance.system_tasks = data["system_tasks"]
-        if "post_install_tasks" in data:
-            instance.post_install_tasks = data["post_install_tasks"]
-        if "docs_dependencies" in data:
-            instance.docs_dependencies = data["docs_dependencies"]
+
+        # Validate string list fields
+        string_list_fields = [
+            "dependencies",
+            "directories",
+            "vcs_ignores",
+            "docs_dependencies",
+        ]
+        for field_name in string_list_fields:
+            if field_name in data:
+                val = data[field_name]
+                if not isinstance(val, list):
+                    raise ConfigurationError(
+                        f"Type mismatch in configuration source '{source}' for '{field_name}'.\n"
+                        f"Expected array of strings, but got {type(val).__name__}.",
+                        hint=f'Define {field_name} as a TOML array: {field_name} = ["..."]',
+                    )
+                for item in val:
+                    if not isinstance(item, str):
+                        raise ConfigurationError(
+                            f"Type mismatch in configuration source '{source}' for '{field_name}' elements.\n"
+                            f"Expected string, but got {type(item).__name__}.",
+                            hint=f"Ensure all elements in '{field_name}' are strings: {field_name} = [\"...\"]",
+                        )
+                setattr(instance, field_name, val)
+
+        # Validate task list fields (list of lists of strings)
+        task_fields = ["system_tasks", "post_install_tasks"]
+        for field_name in task_fields:
+            if field_name in data:
+                val = data[field_name]
+                if not isinstance(val, list):
+                    raise ConfigurationError(
+                        f"Type mismatch in configuration source '{source}' for '{field_name}'.\n"
+                        f"Expected array of commands, but got {type(val).__name__}.",
+                        hint=f'Define {field_name} as an array of command arrays: {field_name} = [["command", "arg"]]',
+                    )
+                for task in val:
+                    if not isinstance(task, list):
+                        raise ConfigurationError(
+                            f"Type mismatch in configuration source '{source}' for '{field_name}' command elements.\n"
+                            f"Expected array of strings, but got {type(task).__name__}.",
+                            hint=f'Define each command in \'{field_name}\' as an array of strings: {field_name} = [["command", "arg"]]',
+                        )
+                    for part in task:
+                        if not isinstance(part, str):
+                            raise ConfigurationError(
+                                f"Type mismatch in configuration source '{source}' for '{field_name}' command arguments.\n"
+                                f"Expected string, but got {type(part).__name__}.",
+                                hint=f"Ensure all command arguments in '{field_name}' are strings.",
+                            )
+                setattr(instance, field_name, val)
 
         # Extract environment fields
         if "dev" in data:
             dev_data = data["dev"]
+            if not isinstance(dev_data, dict):
+                raise ConfigurationError(
+                    f"Type mismatch in configuration source '{source}' for '[dev]'.\n"
+                    f"Expected table, but got {type(dev_data).__name__}.",
+                    hint="Define dev as a TOML table: [dev]",
+                )
             if "dev_dependencies" in dev_data:
-                instance.dev_dependencies = dev_data["dev_dependencies"]
+                dev_deps = dev_data["dev_dependencies"]
+                if not isinstance(dev_deps, list):
+                    raise ConfigurationError(
+                        f"Type mismatch in configuration source '{source}' for '[dev].dev_dependencies'.\n"
+                        f"Expected array of strings, but got {type(dev_deps).__name__}.",
+                        hint='Define dev_dependencies as a TOML array: dev_dependencies = ["..."]',
+                    )
+                for item in dev_deps:
+                    if not isinstance(item, str):
+                        raise ConfigurationError(
+                            f"Type mismatch in configuration source '{source}' for '[dev].dev_dependencies' elements.\n"
+                            f"Expected string, but got {type(item).__name__}.",
+                            hint="Ensure all elements in 'dev_dependencies' are strings: dev_dependencies = [\"...\"]",
+                        )
+                instance.dev_dependencies = dev_deps
 
             if "pyproject" in dev_data:
+                if not isinstance(dev_data["pyproject"], dict):
+                    raise ConfigurationError(
+                        f"Type mismatch in configuration source '{source}' for '[dev].pyproject'.\n"
+                        f"Expected table, but got {type(dev_data['pyproject']).__name__}.",
+                        hint="Define pyproject as a table: [dev.pyproject]",
+                    )
                 instance.pyproject_injections = dev_data["pyproject"]
 
         if "files" in data:
+            if not isinstance(data["files"], dict):
+                raise ConfigurationError(
+                    f"Type mismatch in configuration source '{source}' for '[files]'.\n"
+                    f"Expected table, but got {type(data['files']).__name__}.",
+                    hint="Define files as a table: [files]",
+                )
+            for file_path, file_content in data["files"].items():
+                if not isinstance(file_content, str):
+                    raise ConfigurationError(
+                        f"Type mismatch in configuration source '{source}' for '[files].\"{file_path}\"'.\n"
+                        f"Expected string content, but got {type(file_content).__name__}.",
+                        hint=f'Define file content as a string: [files]\n"{file_path}" = "..."',
+                    )
             instance.files = data["files"]
 
         # Extract generalized file appends
         if "appends" in data:
             appends_data = data["appends"]
+            if not isinstance(appends_data, dict):
+                raise ConfigurationError(
+                    f"Type mismatch in configuration source '{source}' for '[appends]'.\n"
+                    f"Expected table, but got {type(appends_data).__name__}.",
+                    hint="Define appends as a table: [appends]",
+                )
             for k, v in appends_data.items():
                 if isinstance(v, str):
                     instance.appends.setdefault(k, []).append(v)
                 elif isinstance(v, list):
                     for item in v:
-                        if isinstance(item, str):
-                            instance.appends.setdefault(k, []).append(item)
+                        if not isinstance(item, str):
+                            raise ConfigurationError(
+                                f"Type mismatch in configuration source '{source}' for '[appends].{k}' elements.\n"
+                                f"Expected string, but got {type(item).__name__}.",
+                                hint=f"Ensure all lines in '[appends].{k}' are strings.",
+                            )
+                        instance.appends.setdefault(k, []).append(item)
+                else:
+                    raise ConfigurationError(
+                        f"Type mismatch in configuration source '{source}' for '[appends].{k}'.\n"
+                        f"Expected string or array of strings, but got {type(v).__name__}.",
+                        hint=f"Define '[appends].{k}' as a string or array of strings.",
+                    )
 
         # Extract tooling overrides dynamically (root-level boolean flags)
         structural_keys = {
+            "name",
+            "description",
             "dependencies",
             "directories",
             "vcs_ignores",
@@ -615,6 +727,7 @@ class TemplateBlueprint:
             "docs_dependencies",
             "dev",
             "files",
+            "appends",
         }
         for key, value in data.items():
             if key not in structural_keys and isinstance(value, bool):

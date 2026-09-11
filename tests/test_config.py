@@ -507,3 +507,49 @@ def test_user_config_caching_and_cache_clear(mocker) -> None:
 
     cfg4 = UserConfig.load(force_reload=True)
     assert cfg4 is not cfg3
+
+
+@pytest.mark.parametrize(
+    ("content", "expected_err_snippet"),
+    [
+        ('name = ["not", "a", "string"]', "for 'name'"),
+        ("description = 123", "for 'description'"),
+        ('dependencies = "fastapi"', "for 'dependencies'"),
+        ("dependencies = [123]", "for 'dependencies' elements"),
+        ('directories = "src"', "for 'directories'"),
+        ("directories = [true]", "for 'directories' elements"),
+        ("vcs_ignores = 42", "for 'vcs_ignores'"),
+        ("vcs_ignores = [{}]", "for 'vcs_ignores' elements"),
+        ('docs_dependencies = "zensical"', "for 'docs_dependencies'"),
+        ("docs_dependencies = [3.14]", "for 'docs_dependencies' elements"),
+        ('system_tasks = "git init"', "for 'system_tasks'"),
+        ('system_tasks = ["git", "init"]', "for 'system_tasks' command elements"),
+        ('system_tasks = [["git", 123]]', "for 'system_tasks' command arguments"),
+        ("post_install_tasks = true", "for 'post_install_tasks'"),
+        (
+            'post_install_tasks = ["uv", "sync"]',
+            "for 'post_install_tasks' command elements",
+        ),
+        ('dev = "invalid"', "for '[dev]'"),
+        ('dev = { dev_dependencies = "pytest" }', "for '[dev].dev_dependencies'"),
+        ("dev = { dev_dependencies = [99] }", "for '[dev].dev_dependencies' elements"),
+        ('dev = { pyproject = "not-a-table" }', "for '[dev].pyproject'"),
+        ('files = "not-a-table"', "for '[files]'"),
+        ('files = { "foo.txt" = 123 }', "for '[files].\"foo.txt\"'"),
+        ('appends = "not-a-table"', "for '[appends]'"),
+        ('appends = { "pyproject.toml" = 123 }', "for '[appends].pyproject.toml'"),
+        (
+            'appends = { "pyproject.toml" = [123] }',
+            "for '[appends].pyproject.toml' elements",
+        ),
+    ],
+)
+def test_template_blueprint_parse_rejects_wrong_field_types(
+    content: str, expected_err_snippet: str
+) -> None:
+    """Verifies that TemplateBlueprint._parse fails fast with ConfigurationError on type errors."""
+    with pytest.raises(ConfigurationError) as exc_info:
+        TemplateBlueprint._parse(content, source="invalid_blueprint.toml")
+
+    assert expected_err_snippet in str(exc_info.value)
+    assert exc_info.value.hint is not None
