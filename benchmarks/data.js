@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789155882164,
+  "lastUpdate": 1789156278209,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11973,6 +11973,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.73,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba2ae1ec7df1f3a375689e28f8d30011d3bbdd80",
+          "message": "refactor(cli): simplify collision retry with dataclasses.replace and remove dead module stubs (#237)",
+          "timestamp": "2026-09-11T12:50:18-07:00",
+          "tree_id": "ba2b8081ffd86a56289f4aa94c3d61594aa53b7e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ba2ae1ec7df1f3a375689e28f8d30011d3bbdd80"
+        },
+        "date": 1789156277278,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 211.45,
             "unit": "ms"
           }
         ]
