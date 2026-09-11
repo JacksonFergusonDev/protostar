@@ -556,7 +556,11 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
         # Inject mandatory universal layers implicitly
         modules.insert(0, SystemWorkspaceModule())
-        modules.insert(1, PythonCore())
+
+        min_py = selections.project_metadata.get("minimum_python")
+        min_py = str(min_py) if min_py else None
+
+        modules.insert(1, PythonCore(python_version=min_py))
 
         request = InitRequest(
             template_blueprint=selections.blueprint,

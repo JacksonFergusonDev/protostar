@@ -278,16 +278,41 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     has_pytest = CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags
     has_codecov = CIFlag.CODECOV in spec.ci_flags or "codecov" in spec.ci_flags
 
+    is_single_matrix = len(os_matrix) == 1 and len(python_matrix) == 1
+
     include_block = ""
     pytest_step = ""
     if has_pytest:
         if has_codecov:
-            include_block = f"""
+            if is_single_matrix:
+                pytest_step = """      - name: Run tests with coverage
+        run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          disable_search: true
+          name: coverage
+          fail_ci_if_error: true
+
+      - name: Upload test analytics to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit.xml
+          disable_search: true
+          report_type: test_results
+          name: test-results"""
+            else:
+                include_block = f"""
         include:
           - os: {primary_os}
             python-version: "{primary_python}"
             coverage: true"""
-            pytest_step = """      - name: Run tests with coverage # (for Codecov)
+                pytest_step = """      - name: Run tests with coverage # (for Codecov)
         if: matrix.coverage
         run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
@@ -321,20 +346,37 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     os_matrix_str = ", ".join(f'"{o}"' for o in os_matrix)
     python_matrix_str = ", ".join(f'"{p}"' for p in python_matrix)
 
-    test_steps_list = [
-        "      - uses: actions/checkout@v7",
-        "",
-        "      - name: Install uv",
-        "        uses: astral-sh/setup-uv@v10.0.0",
-        "        with:",
-        "          enable-cache: true",
-        "          python-version: ${{ matrix.python-version }}",
-        "",
-        "      - name: Install dependencies",
-        "        run: |",
-        "          uv sync --all-extras --dev --locked",
-        "          uv pip install pytest-github-actions-annotate-failures",
-    ]
+    if is_single_matrix:
+        test_steps_list = [
+            "      - uses: actions/checkout@v7",
+            "",
+            "      - name: Install uv",
+            "        uses: astral-sh/setup-uv@v10.0.0",
+            "        with:",
+            "          enable-cache: true",
+            f'          python-version: "{python_matrix[0]}"',
+            "",
+            "      - name: Install dependencies",
+            "        run: |",
+            "          uv sync --all-extras --dev --locked",
+            "          uv pip install pytest-github-actions-annotate-failures",
+        ]
+    else:
+        test_steps_list = [
+            "      - uses: actions/checkout@v7",
+            "",
+            "      - name: Install uv",
+            "        uses: astral-sh/setup-uv@v10.0.0",
+            "        with:",
+            "          enable-cache: true",
+            "          python-version: ${{ matrix.python-version }}",
+            "",
+            "      - name: Install dependencies",
+            "        run: |",
+            "          uv sync --all-extras --dev --locked",
+            "          uv pip install pytest-github-actions-annotate-failures",
+        ]
+
     if pytest_step:
         test_steps_list.append("")
         test_steps_list.append(pytest_step)
@@ -364,7 +406,15 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
 {lint_steps}""")
 
-    jobs_builder.append_raw(f"""  test:
+    if is_single_matrix:
+        jobs_builder.append_raw(f"""  test:
+    name: Test on {os_matrix[0]} with Python {python_matrix[0]}
+    runs-on: {os_matrix[0]}
+
+    steps:
+{test_steps}""")
+    else:
+        jobs_builder.append_raw(f"""  test:
     name: Test on ${{{{ matrix.os }}}} with Python ${{{{ matrix.python-version }}}}
     runs-on: ${{{{ matrix.os }}}}
     strategy:
