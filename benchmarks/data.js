@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789087932389,
+  "lastUpdate": 1789094876663,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11293,6 +11293,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 224.8,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f1aad2c6d799270f2a41fc05afaeef6c4d16d796",
+          "message": "feat(cli): cross-platform dynamic shell autocompletion and detection (#230)\n\n* feat(cli): add completion command and shell setup instructions\n\n* feat(cli): attach rich completers for templates and configuration flags\n\n* test(cli): add cross-platform tests for POSIX and Windows shell completion protocols\n\n* feat(cli): dynamically detect user shell and tailor completion setup instructions\n\n* feat(cli): adopt zero-startup-overhead static file completion across shells\n\n* style(cli): redesign completion guide to borderless copy-friendly layout\n\n* feat(cli): streamline completion guide to detected shell and remove redundant headers\n\n* style(cli): update completion guide commands to protostar cyan theme",
+          "timestamp": "2026-09-10T19:47:00-07:00",
+          "tree_id": "ef85ebd498d0648d399ab2fad8810dcd0751e866",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f1aad2c6d799270f2a41fc05afaeef6c4d16d796"
+        },
+        "date": 1789094875884,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 205.55,
             "unit": "ms"
           }
         ]
