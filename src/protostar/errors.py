@@ -81,9 +81,13 @@ class InvalidUsageError(ProtostarError):
     """Raised when the user provides unrecognized or invalid CLI arguments."""
 
     def __init__(
-        self, message: str, *, docs_path: DocsPage | str | None = DocsPage.CLI_REFERENCE
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        docs_path: DocsPage | str | None = DocsPage.CLI_REFERENCE,
     ) -> None:
-        super().__init__(message, docs_path=docs_path)
+        super().__init__(message, hint=hint, docs_path=docs_path)
 
 
 class NetworkFetchError(ProtostarError):

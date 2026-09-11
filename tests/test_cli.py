@@ -175,7 +175,7 @@ def test_handle_config_reset_aborted(mocker, tmp_path):
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = None
 
-    args = argparse.Namespace(reset=True, force_merge=False, force_replace=False)
+    args = argparse.Namespace(reset=True, force=False)
     with pytest.raises(ExecutionAbortedError, match=r"Configuration reset aborted\."):
         handle_config(args)
 
@@ -188,7 +188,7 @@ def test_handle_config_reset_force(mocker, tmp_path):
     mock_confirm = mocker.patch("questionary.confirm")
     mock_run = mocker.patch("subprocess.run")
 
-    args = argparse.Namespace(reset=True, force_replace=True)
+    args = argparse.Namespace(reset=True, force=True)
     handle_config(args)
 
     assert mock_config_file.exists()
@@ -197,13 +197,25 @@ def test_handle_config_reset_force(mocker, tmp_path):
     mock_confirm.assert_not_called()
 
 
+def test_handle_config_force_without_reset():
+    """Test that handle_config raises InvalidUsageError if --force is passed without --reset."""
+    args = argparse.Namespace(reset=False, force=True)
+    with pytest.raises(
+        InvalidUsageError, match=r"--force can only be used with --reset"
+    ):
+        handle_config(args)
+
+
 def test_build_parser_config_reset():
     """Test that the parser correctly parses the --reset and --force flags for config."""
     parser = build_parser()
-    args = parser.parse_args(["config", "--reset", "--force-replace"])
+    args = parser.parse_args(["config", "--reset", "--force"])
     assert args.command == "config"
     assert args.reset is True
-    assert args.force_replace is True
+    assert args.force is True
+
+    args_short = parser.parse_args(["config", "--reset", "-f"])
+    assert args_short.force is True
 
 
 def test_handle_config_errors(mocker, tmp_path):

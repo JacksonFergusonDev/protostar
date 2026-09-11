@@ -18,10 +18,10 @@ To restore your configuration to the factory defaults:
 protostar config --reset
 ```
 
-To bypass the confirmation prompt (e.g., in automated scripts), append `--force-replace`:
+To bypass the confirmation prompt (e.g., in automated scripts), append `--force` (or `-f`):
 
 ```bash
-protostar config --reset --force-replace
+protostar config --reset --force
 ```
 
 ---

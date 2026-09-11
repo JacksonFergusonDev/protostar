@@ -528,7 +528,7 @@ def generate_capability_tables() -> None:
             "Resets configuration to factory defaults (prompts for confirmation).",
         ],
         [
-            "`--force-replace`",
+            "`-f`, `--force`",
             "Bypasses the confirmation prompt when used with `--reset`.",
         ],
     ]

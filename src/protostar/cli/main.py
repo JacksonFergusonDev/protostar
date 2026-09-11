@@ -21,6 +21,7 @@ from protostar.config import (
     TemplateBlueprint,
     UserConfig,
 )
+from protostar.docs_registry import DocsPage
 from protostar.errors import (
     AggregatedDependencyError,
     CommandExecutionError,
@@ -243,10 +244,15 @@ def handle_config(args: argparse.Namespace) -> None:
         logger.debug("Creating configuration parent directory: %s", CONFIG_FILE.parent)
         CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
+    if getattr(args, "force", False) and not getattr(args, "reset", False):
+        raise InvalidUsageError(
+            "--force can only be used with --reset.",
+            hint="Run 'protostar config --reset --force' to reset configuration without prompting.",
+            docs_path=DocsPage.CONFIGURATION,
+        )
+
     if getattr(args, "reset", False):
-        if not getattr(args, "force_merge", False) and not getattr(
-            args, "force_replace", False
-        ):
+        if not getattr(args, "force", False):
             confirmed = confirm(
                 "Warning: this will erase your current configuration, are you sure you want to do this?",
                 default=False,

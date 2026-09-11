@@ -405,7 +405,8 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[suppressed_base_parser],
     )
     config_parser.add_argument(
-        "--force-replace",
+        "-f",
+        "--force",
         action="store_true",
         help="Bypass confirmation prompt when resetting configuration.",
     )

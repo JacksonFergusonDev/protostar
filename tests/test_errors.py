@@ -80,8 +80,9 @@ def test_configuration_error_defaults():
 
 
 def test_invalid_usage_error_defaults():
-    err = InvalidUsageError("Invalid flag")
+    err = InvalidUsageError("Invalid flag", hint="Try checking your syntax")
     assert str(err) == "Invalid flag"
+    assert err.hint == "Try checking your syntax"
     assert err.docs_url == f"{DOCS_BASE_URL}usage/cli-reference/"
 
 
