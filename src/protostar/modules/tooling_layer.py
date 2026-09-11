@@ -112,7 +112,7 @@ class MarkdownLintModule(BootstrapModule):
             "    elif command -v npx >/dev/null 2>&1; then \\\n"
             '        npx --yes markdownlint-cli2 "**/*.md"; \\\n'
             "    else \\\n"
-            '        printf "{{ yellow }}⚠ markdownlint-cli2 not found. Skipping markdown linting.{{ nc }}\\n"; \\\n'
+            '        printf "⚠ markdownlint-cli2 not found. Skipping markdown linting.\\n"; \\\n'
             "    fi"
         )
         manifest.tooling.just_lint_commands.append(lint_cmd)

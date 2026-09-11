@@ -498,7 +498,6 @@ def generate_justfile(spec: JustfileSpec) -> str:
         "",
         "blue := '\\033[1;34m'",
         "green := '\\033[1;32m'",
-        "yellow := '\\033[1;33m'",
         "nc := '\\033[0m'",
         "",
         "# Show available commands",

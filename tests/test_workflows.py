@@ -277,6 +277,7 @@ def test_generate_justfile():
     assert "htmlcov" in content
     assert "serve: sync" in content
     assert "uv run zensical serve -o" in content
+    assert "yellow :=" not in content
 
 
 def test_generate_workflows_with_ciflag_enum():
