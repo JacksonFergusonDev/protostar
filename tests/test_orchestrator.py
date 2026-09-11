@@ -311,7 +311,7 @@ def test_plan_metadata_injected_into_manifest(mocker, mock_config):
     assert manifest.metadata.get("author_name") == "Ada Lovelace"
 
 
-def test_plan_does_not_mutate_filesystem(mocker, tmp_path, mock_config):
+def test_plan_does_not_mutate_filesystem(mocker, mock_config):
     """plan() must produce a purely declarative blueprint without disk writes."""
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)

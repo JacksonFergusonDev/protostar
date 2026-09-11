@@ -2,6 +2,12 @@
 # Protostar Template Specification Schema
 # ==============================================================================
 
+# Human-readable display name of the template.
+name = "FastAPI"
+
+# Short explanation of the template stack and purpose.
+description = "FastAPI web application scaffold with Uvicorn and Pydantic"
+
 # --- Dependencies ---
 # Core runtime packages installed into the project environment.
 dependencies = [

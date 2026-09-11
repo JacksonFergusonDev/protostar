@@ -301,9 +301,6 @@ def build_parser() -> argparse.ArgumentParser:
         "-t",
         "--template",
         type=str,
-        nargs="?",  # Allow 0 or 1 arguments
-        const="",  # Value if flag is present but no argument is provided
-        default=None,  # Value if flag is omitted entirely
         dest="template_name",
         help="Name of a template to apply (run with --list-templates to view available).",
         metavar="NAME",
@@ -562,6 +559,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             metadata=selections.project_metadata,
             is_external=selections.is_external,
             is_user_aliased=selections.is_user_aliased,
+            is_trusted=selections.is_trusted,
         )
         engine = Orchestrator(modules, user_config, request=request)
         ui._run_engine(engine, request)

@@ -91,7 +91,7 @@ def test_atomic_write_text_cleans_up_temp_file_on_keyboard_interrupt(
 
 
 def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
-    tmp_path: Path, mocker: MockerFixture
+    mocker: MockerFixture,
 ) -> None:
     user_config = UserConfig()
     orchestrator = Orchestrator(modules=[], user_config=user_config)
@@ -113,12 +113,12 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
 
 
 def test_orchestrator_raises_execution_aborted_error_when_no_files_touched(
-    tmp_path: Path, mocker: MockerFixture
+    mocker: MockerFixture,
 ) -> None:
     user_config = UserConfig()
     orchestrator = Orchestrator(modules=[], user_config=user_config)
 
-    def fake_execute(self_executor: SystemExecutor) -> None:
+    def fake_execute(_self_executor: SystemExecutor) -> None:
         raise KeyboardInterrupt
 
     mocker.patch.object(SystemExecutor, "execute", fake_execute)

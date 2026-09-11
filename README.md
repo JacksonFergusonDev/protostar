@@ -134,6 +134,16 @@ pip install protostar
 
 > **Note:** If you install Protostar into an existing Python environment with `pip`, it will bring in `questionary` and `prompt_toolkit` for the interactive wizard. For guaranteed isolation and to avoid dependency conflicts, prefer `uv tool` or Homebrew.
 
+### Shell Autocompletion
+
+Protostar includes built-in autocompletion for `bash`, `zsh`, `fish`, and `powershell`. Run:
+
+```bash
+protostar completion
+```
+
+This detects your current shell and outputs a zero-overhead one-liner to enable tab completion for subcommands, flags, and templates.
+
 ---
 
 ## Quick Start
@@ -198,16 +208,24 @@ If you want to enforce team-wide standards across multiple repositories, you can
 protostar init --from https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml
 ```
 
-**Global Aliases:** Instead of typing long URLs, you can register templates in your global configuration (`~/.config/protostar/config.toml`):
+**Global Aliases & Explicit Trust:** Instead of typing long URLs, you can register templates in your global configuration (`~/.config/protostar/config.toml`) with shorthand strings or rich metadata tables:
 
 ```toml
+# Shorthand string alias:
 [templates]
-backend = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
+simple-api = "https://raw.githubusercontent.com/YourOrg/standards/main/api.toml"
+
+# Rich metadata table with explicit trust:
+[templates.backend]
+name = "Enterprise Backend"
+source = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
+description = "Internal microservice standard with FastAPI and tracing"
+trusted = true
 ```
 
-Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in your interactive wizard.
+Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in `protostar init --list-templates`, shell auto-completion, and your interactive wizard.
 
-*Note: To prevent unauthorized remote code execution, external templates containing shell tasks are secured behind an explicit Interactive Trust Dialog. Templates mapped as global aliases bypass this prompt automatically.*
+*Note: To prevent unauthorized remote code execution, external templates containing shell tasks prompt for user confirmation. Templates explicitly configured with `trusted = true` bypass this prompt automatically.*
 
 ### Authoring Custom Templates & Schema Validation
 

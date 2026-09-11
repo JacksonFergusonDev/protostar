@@ -1,3 +1,6 @@
+name = "Embedded"
+description = "Embedded Python development and microcontroller setup"
+
 # --- Dependencies ---
 dependencies = ["pyserial", "mpremote"]
 

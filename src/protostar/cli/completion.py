@@ -50,37 +50,14 @@ def get_available_templates() -> dict[str, str]:
     Returns:
         A dictionary mapping template names to human-readable descriptions.
     """
-    import importlib.resources
+    from protostar.templates import discover_templates
 
-    from protostar.config import UserConfig
-
-    descriptions: dict[str, str] = {
-        "api": "FastAPI web application scaffold",
-        "astro": "Astro web framework integration",
-        "cli": "Rich & Typer command-line application",
-        "dsp": "Digital signal processing scaffold",
-        "embedded": "Embedded Python development setup",
-        "ml": "Machine learning & data science scaffold",
-    }
-
-    templates: dict[str, str] = {}
-    try:
-        template_dir = importlib.resources.files("protostar.templates")
-        for item in sorted(template_dir.iterdir(), key=lambda x: x.name):
-            if item.is_file() and item.name.endswith(".toml"):
-                name = item.name[:-5]
-                templates[name] = descriptions.get(name, "Built-in template")
-    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
-        pass
-
-    try:
-        user_config = UserConfig.load()
-        for alias, source in user_config.templates.items():
-            templates[alias] = f"Global alias ({source})"
-    except (OSError, TypeError, ValueError, KeyError, AttributeError):
-        pass
-
-    return templates
+    mapping: dict[str, str] = {}
+    for t in discover_templates():
+        mapping[t.alias] = t.description
+        if t.name.lower() != t.alias.lower():
+            mapping[t.name.lower()] = t.description
+    return mapping
 
 
 def template_completer(prefix: str, **kwargs: object) -> dict[str, str]:

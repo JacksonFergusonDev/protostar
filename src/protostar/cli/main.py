@@ -57,18 +57,12 @@ def handle_init(args: argparse.Namespace) -> None:
 
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
-
-    # Intercept a dangling --template flag
-    if template_name == "":
-        ui._print_templates_and_exit(
-            "The '--template' flag requires a name argument. Choose from the list below:"
-        )
-
     template_context = getattr(args, "template_context", {})
 
     user_config = UserConfig.load()
     is_external = False
     is_user_aliased = False
+    is_trusted = False
 
     if override_target and template_name:
         raise ConfigurationError(
@@ -79,17 +73,36 @@ def handle_init(args: argparse.Namespace) -> None:
         is_external = True
 
     if template_name:
-        # 1. Check built-ins
-        target = importlib.resources.files("protostar.templates").joinpath(
-            f"{template_name}.toml"
-        )
-        if target.is_file():
-            override_target = str(target)
-        # 2. Check user aliases
-        elif template_name in user_config.templates:
-            override_target = user_config.templates[template_name]
-            is_external = True
-            is_user_aliased = True
+        from protostar.templates import TemplateType, discover_templates
+
+        matched_info = None
+        # 1. Match by alias (case-insensitive)
+        for tmpl in discover_templates(user_config):
+            if tmpl.alias.lower() == template_name.lower():
+                matched_info = tmpl
+                break
+
+        # 2. Match by display name (case-insensitive)
+        if matched_info is None:
+            for tmpl in discover_templates(user_config):
+                if tmpl.name.lower() == template_name.lower():
+                    matched_info = tmpl
+                    break
+
+        if matched_info:
+            if matched_info.type == TemplateType.BUILT_IN:
+                override_target = str(
+                    importlib.resources.files("protostar.templates").joinpath(
+                        f"{matched_info.alias}.toml"
+                    )
+                )
+                is_trusted = True
+            else:
+                alias_cfg = user_config.templates[matched_info.alias]
+                override_target = alias_cfg.source
+                is_external = True
+                is_user_aliased = True
+                is_trusted = alias_cfg.trusted
         else:
             raise ConfigurationError(
                 f"Template '{template_name}' not found in built-ins or global configuration aliases."
@@ -183,6 +196,7 @@ def handle_init(args: argparse.Namespace) -> None:
         metadata=resolved_metadata,
         is_external=is_external,
         is_user_aliased=is_user_aliased,
+        is_trusted=is_trusted,
     )
     engine = Orchestrator(modules, user_config, request=request)
 

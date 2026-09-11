@@ -36,7 +36,7 @@ from protostar.system_deps import GlobalExecutable
 from protostar.wizard import WizardSelections
 
 
-def test_proto_help_formatter_usage(mocker):
+def test_proto_help_formatter_usage():
     """Test that the custom formatter correctly overrides the usage prefix."""
     parser = argparse.ArgumentParser(formatter_class=ProtoHelpFormatter)
     parser.add_argument("--foo", help="Foo argument")
@@ -698,7 +698,7 @@ def test_parse_dynamic_kwargs_rejects_positional():
         _parse_dynamic_kwargs(args)
 
 
-def test_handle_init_template_resolution(mocker, tmp_path):
+def test_handle_init_template_resolution(mocker):
     """Test that passing --template resolves the internal template."""
     import importlib.resources
 
@@ -780,8 +780,14 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     """Verifies that --template successfully resolves keys from the global config alias table."""
 
     # Mock the global config to contain a custom alias
+    from protostar.config import TemplateAliasConfig
+
     mock_config = UserConfig(
-        templates={"my-custom-org": "https://example.com/template.toml"}
+        templates={
+            "my-custom-org": TemplateAliasConfig(
+                source="https://example.com/template.toml"
+            )
+        }
     )
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=mock_config)
 
@@ -817,11 +823,31 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     assert request is not None
     assert request.is_external is True
     assert request.is_user_aliased is True
+    assert request.is_trusted is False
+
+    # Now verify trusted alias sets is_trusted to True
+    from protostar.config import TemplateAliasConfig
+
+    mock_config.templates["trusted-corp"] = TemplateAliasConfig(
+        source="https://example.com/corp.toml", trusted=True
+    )
+    args.template_name = "trusted-corp"
+    handle_init(args)
+    _, kwargs = mock_orchestrator.call_args
+    trusted_request = kwargs.get("request")
+    assert trusted_request is not None
+    assert trusted_request.is_external is True
+    assert trusted_request.is_user_aliased is True
+    assert trusted_request.is_trusted is True
 
 
 def test_cli_rejects_unknown_templates(mocker) -> None:
     """Verifies that a template not in built-ins or aliases raises a ConfigurationError."""
-    mock_config = UserConfig(templates={"valid-alias": "..."})
+    from protostar.config import TemplateAliasConfig
+
+    mock_config = UserConfig(
+        templates={"valid-alias": TemplateAliasConfig(source="...")}
+    )
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=mock_config)
 
     args = argparse.Namespace(
@@ -860,6 +886,62 @@ def test_list_templates_json_mode(capsys, monkeypatch):
     assert payload["status"] == "success"
     assert "templates" in payload
     assert isinstance(payload["templates"], list)
+    assert len(payload["templates"]) >= 6
+    sample = payload["templates"][0]
+    for key in ("alias", "name", "description", "type", "source", "trusted"):
+        assert key in sample
+
+
+def test_list_templates_table_output(capsys, monkeypatch):
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "Available Templates" in captured.out
+    assert "FastAPI" in captured.out
+    assert "(api)" not in captured.out
+    assert "Built-in" in captured.out
+
+
+def test_list_templates_table_output_with_external(capsys, monkeypatch):
+    from protostar.config import TemplateAliasConfig, UserConfig
+
+    fake_cfg = UserConfig(
+        templates={
+            "custom-app": TemplateAliasConfig(
+                source="https://github.com/org/template",
+                name="Custom App",
+                description="Custom company application",
+                trusted=True,
+            )
+        }
+    )
+    monkeypatch.setattr("protostar.config.UserConfig.load", lambda: fake_cfg)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates"])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "Custom App" in captured.out
+    assert "External" in captured.out
+    assert "Built-in" in captured.out
+
+
+def test_init_resolves_template_by_display_name(capsys, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", False)
+    monkeypatch.setattr(
+        "sys.argv", ["protostar", "init", "--template", "FastAPI", "--dry-run"]
+    )
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert "Summary" in captured.out
+    assert "fastapi" in captured.out
 
 
 def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):

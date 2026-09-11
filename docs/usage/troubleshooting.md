@@ -88,14 +88,17 @@ Do you trust this source to modify your system? [y/N]
 To permanently trust a remote or team template and bypass security prompts:
 
 1. Run `protostar config` to open your global settings.
-1. Register the template under the `[templates]` table:
+1. Register the template under the `[templates.<alias>]` table with `trusted = true`:
 
 ```toml
-[templates]
-team-backend = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
+[templates.team-backend]
+source = "https://raw.githubusercontent.com/YourOrg/standards/main/backend.toml"
+name = "Team Backend"
+description = "Internal FastAPI microservice template"
+trusted = true
 ```
 
-1. Invoke it via shorthand: `protostar init --template team-backend`.
+1. Invoke it via shorthand: `protostar init --template team-backend`. External templates configured with `trusted = true` bypass interactive confirmation dialogs and execute cleanly in non-interactive CI/CD pipelines.
 
 ---
 

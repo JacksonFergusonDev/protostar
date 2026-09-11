@@ -1,3 +1,6 @@
+name = "Astro"
+description = "Astrophysics and astronomy data analysis scaffold with Astropy"
+
 # --- Dependencies ---
 dependencies = [
     "numpy",

@@ -61,7 +61,30 @@ python_version = "3.13"
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
 # data-science-base = "~/Developer/templates/ds_base.toml"
+#
+# [templates.enterprise-api]
+# name = "Enterprise API"
+# source = "https://github.com/myorg/enterprise-template.git"
+# description = "Internal enterprise microservice scaffold with auth & tracing"
+# trusted = true
 """
+
+
+@dataclass(frozen=True)
+class TemplateAliasConfig:
+    """Configuration metadata for an external or custom template alias.
+
+    Attributes:
+        source: Remote URL or local filesystem path to the template.
+        name: Human-readable display name for the template.
+        description: Brief description of the template stack and purpose.
+        trusted: If True, bypasses interactive execution prompts for remote templates.
+    """
+
+    source: str
+    name: str | None = None
+    description: str = ""
+    trusted: bool = False
 
 
 @dataclass
@@ -121,7 +144,17 @@ class UserConfig:
     ci: bool = False
     release: bool = False
     just: bool = False
-    templates: dict[str, str] = field(default_factory=dict)
+    templates: dict[str, TemplateAliasConfig] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Normalizes template configuration dictionary."""
+        normalized: dict[str, TemplateAliasConfig] = {}
+        for k, v in self.templates.items():
+            if isinstance(v, str):
+                normalized[k] = TemplateAliasConfig(source=v, name=k)
+            else:
+                normalized[k] = v
+        self.templates = normalized
 
     # In-memory cache to prevent repeated disk I/O
     _instance: ClassVar["UserConfig | None"] = None
@@ -243,13 +276,54 @@ class UserConfig:
                     f"Type mismatch in {source} for '[templates]'.\n"
                     f"Expected a table, but got {type(templates_data).__name__}."
                 )
+            parsed_templates: dict[str, TemplateAliasConfig] = {}
             for k, v in templates_data.items():
-                if not isinstance(v, str):
+                if isinstance(v, str):
+                    parsed_templates[k] = TemplateAliasConfig(source=v, name=k)
+                elif isinstance(v, dict):
+                    unknown_keys = set(v.keys()) - {
+                        "source",
+                        "name",
+                        "description",
+                        "trusted",
+                    }
+                    if unknown_keys:
+                        raise ConfigurationError(
+                            f"Unrecognized fields in '[templates.{k}]': {', '.join(sorted(unknown_keys))}.\n"
+                            "Allowed fields are: source, name, description, trusted."
+                        )
+                    if "source" not in v or not isinstance(v["source"], str):
+                        raise ConfigurationError(
+                            f"Missing or invalid required field 'source' in '[templates.{k}'].\n"
+                            "Expected a string path or URL."
+                        )
+                    name_val = v.get("name")
+                    if name_val is not None and not isinstance(name_val, str):
+                        raise ConfigurationError(
+                            f"Type mismatch in '[templates.{k}].name'. Expected string, got {type(name_val).__name__}."
+                        )
+                    desc_val = v.get("description", "")
+                    if not isinstance(desc_val, str):
+                        raise ConfigurationError(
+                            f"Type mismatch in '[templates.{k}].description'. Expected string, got {type(desc_val).__name__}."
+                        )
+                    trusted_val = v.get("trusted", False)
+                    if not isinstance(trusted_val, bool):
+                        raise ConfigurationError(
+                            f"Type mismatch in '[templates.{k}].trusted'. Expected boolean, got {type(trusted_val).__name__}."
+                        )
+                    parsed_templates[k] = TemplateAliasConfig(
+                        source=v["source"],
+                        name=name_val or k,
+                        description=desc_val,
+                        trusted=trusted_val,
+                    )
+                else:
                     raise ConfigurationError(
                         f"Type mismatch in {source} for '[templates].{k}'.\n"
-                        f"Expected string, but got {type(v).__name__}."
+                        f"Expected string or table, but got {type(v).__name__}."
                     )
-            updates["templates"] = templates_data
+            updates["templates"] = parsed_templates
 
         return replace(instance, **updates)
 
@@ -258,6 +332,20 @@ class UserConfig:
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
 
+    name: str = field(
+        default="",
+        metadata={
+            "description": "Human-readable display name of the template.",
+            "example": "FastAPI",
+        },
+    )
+    description: str = field(
+        default="",
+        metadata={
+            "description": "Short explanation of the template stack and purpose.",
+            "example": "FastAPI web application scaffold with Uvicorn and Pydantic",
+        },
+    )
     dependencies: list[str] = field(
         default_factory=list,
         metadata={
@@ -455,6 +543,10 @@ class TemplateBlueprint:
         instance = cls()
 
         # Extract structural fields
+        if "name" in data and isinstance(data["name"], str):
+            instance.name = data["name"]
+        if "description" in data and isinstance(data["description"], str):
+            instance.description = data["description"]
         if "dependencies" in data:
             instance.dependencies = data["dependencies"]
         if "directories" in data:

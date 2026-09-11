@@ -23,8 +23,9 @@ class InitRequest:
         force_merge: If True, bypasses collision prompts and forces a merge strategy.
         force_replace: If True, bypasses collision prompts and forces an overwrite strategy.
         metadata: Pre-resolved metadata dictionary to inject into the manifest.
-        is_external: If True, the template was loaded from an external (untrusted) source.
-        is_user_aliased: If True, the template was resolved via a trusted global config alias.
+        is_external: If True, the template was loaded from an external source.
+        is_user_aliased: If True, the template was resolved via a global config alias.
+        is_trusted: If True, the template source is explicitly trusted to execute tasks.
     """
 
     template_blueprint: TemplateBlueprint | None = None
@@ -35,6 +36,7 @@ class InitRequest:
     metadata: dict[str, Any] | None = field(default=None)
     is_external: bool = False
     is_user_aliased: bool = False
+    is_trusted: bool = False
 
 
 @dataclass(frozen=True)
