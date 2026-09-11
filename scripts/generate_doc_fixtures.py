@@ -1060,9 +1060,6 @@ def _render_and_write_svg(
 def generate_cli_help_svgs() -> None:
     """Captures isolated SVG snapshots of the Protostar CLI help menus via Rich."""
     original_global_console = protostar.cli.ui.console
-    original_formatter_console = getattr(
-        protostar.cli.parser.ProtoHelpFormatter, "console", None
-    )
 
     def _render_svg(
         target_parser: argparse.ArgumentParser, prompt_cmd: str, filename: str
@@ -1084,24 +1081,9 @@ def generate_cli_help_svgs() -> None:
         )
         record_console.print(prompt)
 
-        # Dispatch based on the parser's structure to handle custom table
-        # rendering versus standard rich-argparse string formatting.
-        is_custom_table = isinstance(
-            target_parser, protostar.cli.parser.JsonAwareParser
-        ) or (
-            hasattr(target_parser, "print_help")
-            and hasattr(target_parser.print_help, "__func__")
-            and target_parser.print_help.__func__.__name__
-            in ("print_table_help", "print_help")
-        )
-
-        if is_custom_table:
-            protostar.cli.ui.console = record_console
-            target_parser.print_help()
-        else:
-            protostar.cli.parser.ProtoHelpFormatter.console = record_console  # type: ignore[method-assign, assignment]
-            ansi_str = target_parser.format_help()
-            record_console.print(Text.from_ansi(ansi_str, no_wrap=True))
+        # All parsers are JsonAwareParser instances; route directly to print_table_help.
+        protostar.cli.ui.console = record_console
+        target_parser.print_help()
 
         _render_and_write_svg(
             record_console,
@@ -1130,12 +1112,8 @@ def generate_cli_help_svgs() -> None:
             _render_svg(config_parser, "help config", "cli_config_help.svg")
 
     finally:
-        # Restore the native consoles
+        # Restore the native console
         protostar.cli.ui.console = original_global_console
-        if original_formatter_console is None:
-            protostar.cli.parser.ProtoHelpFormatter.console = None  # type: ignore[assignment]
-        else:
-            protostar.cli.parser.ProtoHelpFormatter.console = original_formatter_console  # type: ignore[method-assign]
 
 
 def generate_cli_dry_run_svg() -> None:

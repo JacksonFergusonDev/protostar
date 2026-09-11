@@ -15,7 +15,6 @@ from protostar.cli.main import (
 )
 from protostar.cli.parser import (
     JsonAwareParser,
-    ProtoHelpFormatter,
     _resolve_usage_doc_path,
     build_parser,
     intercept_interactive_wizards,
@@ -36,16 +35,19 @@ from protostar.system_deps import GlobalExecutable
 from protostar.wizard import WizardSelections
 
 
-def test_proto_help_formatter_usage():
-    """Test that the custom formatter correctly overrides the usage prefix."""
-    parser = argparse.ArgumentParser(formatter_class=ProtoHelpFormatter)
+def test_json_aware_parser_print_help_uses_table_renderer(mocker):
+    """Test that JsonAwareParser.print_help delegates to print_table_help."""
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
+
+    parser = JsonAwareParser(description="Test description")
     parser.add_argument("--foo", help="Foo argument")
 
-    help_output = parser.format_help()
+    parser.print_help()
 
-    # Ensure the capitalized 'Usage:' prefix is applied
-    assert "Usage:" in help_output
-    assert "usage:" not in help_output
+    # Description and at least one table row should have been printed
+    assert mock_print.called
+    printed_args = [call.args[0] for call in mock_print.call_args_list if call.args]
+    assert any("Test description" in str(a) for a in printed_args)
 
 
 def test_build_parser_package_not_found(mocker):

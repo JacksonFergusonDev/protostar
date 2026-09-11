@@ -1,15 +1,13 @@
 import argparse
 import difflib
 import sys
-from collections.abc import Iterable, Sequence
-from typing import Any, ClassVar, cast
+from collections.abc import Sequence
+from typing import Any, cast
 
 import argcomplete
 from rich import box
 from rich.console import Console
-from rich.style import Style
 from rich.table import Table
-from rich_argparse import RawTextRichHelpFormatter
 
 from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
@@ -75,34 +73,6 @@ class JsonAwareParser(argparse.ArgumentParser):
     def print_help(self, file: Any = None) -> None:
         """Prints help output formatted as bordered Rich tables."""
         print_table_help(self, file)
-
-
-class ProtoHelpFormatter(RawTextRichHelpFormatter):
-    """Custom help formatter for Protostar CLI using rich-argparse.
-
-    Inherits from RawTextRichHelpFormatter to leverage native rich styling
-    while respecting explicit line breaks in docstrings and argument parameters.
-    """
-
-    # Establish global syntactic styling identifiers
-    styles: ClassVar[dict[str, str | Style]] = {
-        "argparse.args": "cyan",
-        "argparse.groups": "bold blue",
-        "argparse.help": "default",
-        "argparse.metavar": "dark_orange",
-    }
-
-    def add_usage(
-        self,
-        usage: str | None,
-        actions: Iterable[argparse.Action],
-        groups: Iterable[argparse._MutuallyExclusiveGroup],
-        prefix: str | None = None,
-    ) -> None:
-        """Overrides the default 'usage: ' prefix for a cleaner aesthetic."""
-        if prefix is None:
-            prefix = "Usage: "
-        super().add_usage(usage, actions, groups, prefix)
 
 
 def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
@@ -249,9 +219,7 @@ class _VersionAction(argparse.Action):
         values: str | Sequence[Any] | None,
         option_string: str | None = None,
     ) -> None:
-        formatter = parser._get_formatter()
-        formatter.add_text(f"%(prog)s {_get_version()}")
-        parser._print_message(formatter.format_help(), sys.stdout)
+        ui.console.print(f"{parser.prog} {_get_version()}")
         parser.exit()
 
 
@@ -291,7 +259,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser = JsonAwareParser(
         description="High-velocity, zero-friction Python environment scaffolding.",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
-        formatter_class=ProtoHelpFormatter,
         add_help=False,
         usage=argparse.SUPPRESS,
         parents=[base_parser],
@@ -322,7 +289,6 @@ def build_parser() -> argparse.ArgumentParser:
         "init",
         help="Initialize a new Python environment and aggregate manifest configurations.",
         description="Scaffolds base Python configurations, dependencies, and environment files.",
-        formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         epilog="[bold]Example:[/bold]\n  protostar init --template astro --mypy",
         parents=[base_parser],
@@ -415,7 +381,6 @@ def build_parser() -> argparse.ArgumentParser:
         "export-schema",
         help="Export the JSON Schema for the TOML template format.",
         description="Generates and prints the JSON Schema representing the layout of Protostar template files. Intended for IDE tooling and programmatic interrogation.",
-        formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
     )
@@ -426,7 +391,6 @@ def build_parser() -> argparse.ArgumentParser:
         "config",
         help="Manage global Protostar configuration.",
         description="Opens the global configuration file in your system's default $EDITOR.",
-        formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
     )
@@ -448,7 +412,6 @@ def build_parser() -> argparse.ArgumentParser:
         "completion",
         help="Generate shell autocompletion scripts.",
         description="Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).",
-        formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         epilog=(
             "[bold]Examples:[/bold]\n"
@@ -481,7 +444,6 @@ def build_parser() -> argparse.ArgumentParser:
         "help",
         help="Show this help message or a subcommand's manual.",
         description="Displays the CLI help manual.",
-        formatter_class=ProtoHelpFormatter,
         usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
     )
