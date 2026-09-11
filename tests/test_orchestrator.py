@@ -15,7 +15,7 @@ from protostar.manifest import (
     Severity,
 )
 from protostar.models import ExecutionResult, InitRequest
-from protostar.modules import BootstrapModule, PreCommitModule, PrekModule
+from protostar.modules import BootstrapModule, PreCommitModule, PrekModule, PythonCore
 from protostar.orchestrator import Orchestrator
 
 
@@ -338,3 +338,71 @@ def test_plan_raises_on_conflicting_hook_runners(mock_config, mocker):
         match=r"Cannot use both '--pre-commit' and '--prek' simultaneously",
     ):
         engine.plan()
+
+
+def test_plan_detects_docker_collision_without_force_flag(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() raises WorkspaceCollisionError when req.docker is True and Dockerfile exists."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "Dockerfile").touch()
+    engine = Orchestrator([], mock_config, request=InitRequest(docker=True))
+
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path("Dockerfile") in exc_info.value.paths
+
+
+def test_plan_detects_dockerignore_collision_without_force_flag(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() raises WorkspaceCollisionError when req.docker is True and .dockerignore exists."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".dockerignore").touch()
+    engine = Orchestrator([], mock_config, request=InitRequest(docker=True))
+
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path(".dockerignore") in exc_info.value.paths
+
+
+def test_plan_ignores_docker_collision_when_docker_disabled(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() ignores Dockerfile collision when req.docker is False."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "Dockerfile").touch()
+    engine = Orchestrator([], mock_config, request=InitRequest(docker=False))
+
+    manifest = engine.plan()
+    assert manifest.collision_strategy == CollisionStrategy.MERGE
+
+
+def test_plan_resolves_docker_collision_with_force_merge(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() resolves Docker collision to MERGE when force_merge=True."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "Dockerfile").touch()
+    engine = Orchestrator(
+        [], mock_config, request=InitRequest(docker=True, force_merge=True)
+    )
+
+    manifest = engine.plan()
+    assert manifest.collision_strategy == CollisionStrategy.MERGE
+
+
+def test_plan_detects_license_collision_from_python_core(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() raises WorkspaceCollisionError when LICENSE exists and PythonCore is in modules."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "LICENSE").touch()
+    engine = Orchestrator([PythonCore()], mock_config)
+
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path("LICENSE") in exc_info.value.paths

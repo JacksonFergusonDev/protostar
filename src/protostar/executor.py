@@ -458,13 +458,27 @@ class SystemExecutor:
         if not self.docker:
             return
 
+        dockerfile = Path("Dockerfile")
         dockerignore = Path(".dockerignore")
+        enforce_path_jail(dockerfile, Path.cwd())
         enforce_path_jail(dockerignore, Path.cwd())
+
+        if self.manifest.should_skip_file(dockerfile):
+            self.add_diagnostic(
+                phase=DiagnosticPhase.DOCKER,
+                message=f"Skipping {dockerfile.name} and {dockerignore.name} generation; {dockerfile.name} already exists.",
+                severity=Severity.SKIP,
+            )
+            return
+
         try:
             existing_content = (
-                dockerignore.read_text(encoding="utf-8")
-                if dockerignore.exists()
-                else ""
+                ""
+                if (
+                    self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
+                    or not dockerignore.exists()
+                )
+                else dockerignore.read_text(encoding="utf-8")
             )
             has_uv_init = any(
                 task.command[:2] == ["uv", "init"]
@@ -475,12 +489,6 @@ class SystemExecutor:
                 has_uv_init=has_uv_init,
                 existing_content=existing_content,
             )
-            if new_dockerignore is not None:
-                atomic_write_text(dockerignore, new_dockerignore)
-                self.record_touch(dockerignore)
-                logger.debug(
-                    "Scaffolded container runtime ignore configurations (.dockerignore)"
-                )
         except OSError as e:
             raise FileSystemError(
                 "scaffold container runtime ignore configurations",
@@ -488,42 +496,42 @@ class SystemExecutor:
                 e,
             ) from e
 
-        dockerfile = Path("Dockerfile")
-        enforce_path_jail(dockerfile, Path.cwd())
-        if self.manifest.should_skip_file(dockerfile):
-            self.add_diagnostic(
-                phase=DiagnosticPhase.DOCKER,
-                message=f"Skipping {dockerfile.name} generation; file already exists.",
-                severity=Severity.SKIP,
+        context = self.interpolation_context
+        is_script_or_typer = "typer" in self.manifest.dependencies.dependencies or any(
+            "project.scripts" in app
+            for app in self.manifest.filesystem.file_appends.get("pyproject.toml", [])
+        )
+        docker_port = (
+            str(self.manifest.metadata.get("docker_port"))
+            if self.manifest.metadata.get("docker_port")
+            else None
+        )
+        dockerfile_content = generate_dockerfile(
+            DockerfileSpec(
+                python_version=context["PYTHON_VERSION"],
+                project_name=context["PROJECT_NAME"],
+                package_name=context["PACKAGE_NAME"],
+                dependencies=self.manifest.dependencies.dependencies,
+                docker_port=docker_port,
+                is_script_or_typer=is_script_or_typer,
             )
-            return
+        )
+
+        if new_dockerignore is not None:
+            try:
+                atomic_write_text(dockerignore, new_dockerignore)
+                self.record_touch(dockerignore)
+                logger.debug(
+                    "Scaffolded container runtime ignore configurations (.dockerignore)"
+                )
+            except OSError as e:
+                raise FileSystemError(
+                    "scaffold container runtime ignore configurations",
+                    str(dockerignore),
+                    e,
+                ) from e
 
         try:
-            context = self.interpolation_context
-            is_script_or_typer = (
-                "typer" in self.manifest.dependencies.dependencies
-                or any(
-                    "project.scripts" in app
-                    for app in self.manifest.filesystem.file_appends.get(
-                        "pyproject.toml", []
-                    )
-                )
-            )
-            docker_port = (
-                str(self.manifest.metadata.get("docker_port"))
-                if self.manifest.metadata.get("docker_port")
-                else None
-            )
-            dockerfile_content = generate_dockerfile(
-                DockerfileSpec(
-                    python_version=context["PYTHON_VERSION"],
-                    project_name=context["PROJECT_NAME"],
-                    package_name=context["PACKAGE_NAME"],
-                    dependencies=self.manifest.dependencies.dependencies,
-                    docker_port=docker_port,
-                    is_script_or_typer=is_script_or_typer,
-                )
-            )
             atomic_write_text(dockerfile, dockerfile_content)
             self.record_touch(dockerfile)
             logger.debug("Scaffolded Dockerfile")

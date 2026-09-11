@@ -372,8 +372,8 @@ def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
     assert 'ENTRYPOINT ["protostar"]' in dockerfile_content
 
 
-def test_executor_skips_dockerfile_on_collision(mocker, mock_config):
-    """Test that existing Dockerfile is skipped when collision strategy is not overwrite."""
+def test_executor_skips_docker_artifacts_on_collision(mocker, mock_config):
+    """Test that existing Dockerfile causes both Dockerfile and .dockerignore to be skipped when merging."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config, docker=True)
@@ -385,11 +385,35 @@ def test_executor_skips_dockerfile_on_collision(mocker, mock_config):
     executor._write_docker_artifacts()
 
     written_paths = [call[0][0] for call in mock_write.call_args_list]
-    assert Path(".dockerignore") in written_paths
+    assert Path(".dockerignore") not in written_paths
     assert Path("Dockerfile") not in written_paths
     assert any(
-        "Skipping Dockerfile generation" in d.message for d in executor.diagnostics
+        "Skipping Dockerfile and .dockerignore generation; Dockerfile already exists."
+        in d.message
+        for d in executor.diagnostics
     )
+
+
+def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_config):
+    """Test that OVERWRITE collision strategy generates .dockerignore without reading disk."""
+    manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    executor = SystemExecutor(manifest, mock_config, docker=True)
+
+    mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mock_read = mocker.patch(
+        "protostar.executor.Path.read_text", return_value="old_ignored_file\n"
+    )
+    mock_generate = mocker.patch(
+        "protostar.executor.generate_dockerignore", return_value="new_ignore"
+    )
+    mocker.patch("protostar.executor.generate_dockerfile", return_value="FROM python")
+    mocker.patch("protostar.executor.atomic_write_text")
+
+    executor._write_docker_artifacts()
+
+    mock_read.assert_not_called()
+    assert mock_generate.call_args.kwargs["existing_content"] == ""
 
 
 def test_write_dockerfile_handles_os_error(mocker, mock_config):
@@ -984,6 +1008,7 @@ def test_write_ignores_handles_os_error(mocker):
 
 def test_write_docker_artifacts_handles_os_error(mocker):
     manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.filesystem.add_vcs_ignore(".venv/")
     # Force docker attribute to true to enter the block
     executor = SystemExecutor(manifest, UserConfig(), docker=True)

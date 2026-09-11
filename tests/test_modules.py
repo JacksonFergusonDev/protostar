@@ -4,7 +4,7 @@ import pytest
 
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError, MissingDependencyError
-from protostar.manifest import EnvironmentManifest, HookRunner
+from protostar.manifest import CollisionStrategy, EnvironmentManifest, HookRunner
 from protostar.modules import (
     CodecovModule,
     CommitizenModule,
@@ -654,3 +654,62 @@ def test_readthedocs_module_skips_when_file_exists(mocker):
     module.build(manifest)
 
     assert ".readthedocs.yaml" not in manifest.filesystem.file_injections
+
+
+def test_python_core_collision_markers():
+    """Verify that PythonCore registers both pyproject.toml and LICENSE as collision markers."""
+    assert PythonCore().collision_markers == [Path("pyproject.toml"), Path("LICENSE")]
+
+
+def test_python_core_skips_license_and_classifier_on_merge(
+    tmp_path, monkeypatch, mocker
+):
+    """Test that existing LICENSE prevents license overwrite and classifier drift under MERGE."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "LICENSE").write_text("Existing Custom License")
+
+    mocker.patch(
+        "protostar.modules.lang_layer.UserConfig.load",
+        return_value=UserConfig(ide=None),
+    )
+
+    manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.MERGE
+    manifest.metadata["license"] = "MIT"
+
+    module = PythonCore()
+    module.build(manifest)
+
+    pyproject_appends = "".join(
+        manifest.filesystem.file_appends.get("pyproject.toml", [])
+    )
+    assert 'license = { file = "LICENSE" }' not in pyproject_appends
+    assert "License :: OSI Approved :: MIT License" not in pyproject_appends
+    assert "LICENSE" in manifest.filesystem.file_injections
+
+
+def test_python_core_injects_license_and_classifier_on_overwrite(
+    tmp_path, monkeypatch, mocker
+):
+    """Test that existing LICENSE allows license injection and classifier under OVERWRITE."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "LICENSE").write_text("Existing Custom License")
+
+    mocker.patch(
+        "protostar.modules.lang_layer.UserConfig.load",
+        return_value=UserConfig(ide=None),
+    )
+
+    manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    manifest.metadata["license"] = "MIT"
+
+    module = PythonCore()
+    module.build(manifest)
+
+    pyproject_appends = "".join(
+        manifest.filesystem.file_appends.get("pyproject.toml", [])
+    )
+    assert 'license = { file = "LICENSE" }' in pyproject_appends
+    assert "License :: OSI Approved :: MIT License" in pyproject_appends
+    assert "LICENSE" in manifest.filesystem.file_injections

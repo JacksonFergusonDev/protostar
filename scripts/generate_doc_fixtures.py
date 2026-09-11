@@ -710,34 +710,42 @@ def generate_manifest_state() -> None:
 
 def generate_agent_payloads() -> None:
     """Generates JSON payloads for the Agent & Machine Interface documentation."""
-    # 1. Planned payload computed dynamically from an EnvironmentManifest
-    manifest = EnvironmentManifest(
-        metadata={
-            "description": "High-velocity CLI application.",
-            "author_name": "Demo Author",
-            "license": "MIT",
-        }
-    )
-    bootstrap_mods: list[BootstrapModule] = [
-        SystemWorkspaceModule(),
-        PythonCore(),
-        RuffModule(),
-    ]
-    for b_mod in bootstrap_mods:
-        b_mod.build(manifest)
+    orig_cwd = Path.cwd()
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        try:
+            os.chdir(tmp_dir)
+            # 1. Planned payload computed dynamically from an EnvironmentManifest
+            manifest = EnvironmentManifest(
+                metadata={
+                    "description": "High-velocity CLI application.",
+                    "author_name": "Demo Author",
+                    "license": "MIT",
+                }
+            )
+            bootstrap_mods: list[BootstrapModule] = [
+                SystemWorkspaceModule(),
+                PythonCore(),
+                RuffModule(),
+            ]
+            for b_mod in bootstrap_mods:
+                b_mod.build(manifest)
 
-    # Set mock IDE settings for stable deterministic fixtures
-    manifest.ide_settings = {
-        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-        "python.terminal.activateEnvironment": True,
-    }
+            # Set mock IDE settings for stable deterministic fixtures
+            manifest.ide_settings = {
+                "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+                "python.terminal.activateEnvironment": True,
+            }
 
-    planned_payload = {
-        "api_version": protostar.cli.schema.CLI_API_VERSION,
-        "status": "planned",
-        "manifest": manifest.to_dict(),
-    }
-    _write_fixture("agent_payload_planned.json", json.dumps(planned_payload, indent=2))
+            planned_payload = {
+                "api_version": protostar.cli.schema.CLI_API_VERSION,
+                "status": "planned",
+                "manifest": manifest.to_dict(),
+            }
+            _write_fixture(
+                "agent_payload_planned.json", json.dumps(planned_payload, indent=2)
+            )
+        finally:
+            os.chdir(orig_cwd)
 
     # 2. Success payload generated dynamically using ExecutionResult
     result = ExecutionResult(

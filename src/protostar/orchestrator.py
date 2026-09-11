@@ -87,6 +87,11 @@ class Orchestrator:
                 if marker.exists():
                     collision_targets.add(marker)
 
+        if req.docker:
+            for marker in (Path("Dockerfile"), Path(".dockerignore")):
+                if marker.exists():
+                    collision_targets.add(marker)
+
         if collision_targets:
             if req.force_replace:
                 logger.debug(

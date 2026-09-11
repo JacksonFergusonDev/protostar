@@ -69,7 +69,7 @@ class PythonCore(BootstrapModule):
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for a Python environment."""
-        return [Path("pyproject.toml")]
+        return [Path("pyproject.toml"), Path("LICENSE")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues initialization, ignores artifacts, and handles IDE configuration bindings.
@@ -109,6 +109,7 @@ authors = [{{ name = "{name}", email = "{email}" }}]
 """
         project_license = manifest.metadata.get("license")
         license_classifier = None
+        skip_license_scaffolding = manifest.should_skip_file(Path("LICENSE"))
         if (
             project_license
             and project_license != "None"
@@ -121,7 +122,10 @@ authors = [{{ name = "{name}", email = "{email}" }}]
                 .read_text(encoding="utf-8")
             )
             manifest.filesystem.add_file_injection("LICENSE", license_content)
-            project_metadata_payload += 'license = { file = "LICENSE" }\n'
+            if not skip_license_scaffolding:
+                project_metadata_payload += 'license = { file = "LICENSE" }\n'
+            else:
+                license_classifier = None
 
         classifiers = []
         if min_python:
