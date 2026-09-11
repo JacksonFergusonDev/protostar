@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789102001421,
+  "lastUpdate": 1789102792570,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11565,6 +11565,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.49,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9154354e227712de1ccc198d40b7c65e84d988c9",
+          "message": "feat(cli): unify help formatting with Rich tables across all commands\n\n- Add print_help() to JsonAwareParser delegating to print_table_help,\n  eliminating the need for per-parser monkey-patches\n- Support argparse._SubParsersAction in print_table_help by unpacking\n  _choices_actions to render each subcommand name/description as a row\n- Normalize group titles (options, positional arguments, subcommands)\n  to Title Case\n- Guard table rendering with row_count > 0 to avoid empty boxes\n  for commands without options (e.g. export-schema)\n- Use file-aware console so print_help(file=...) routes to the right\n  output stream\n- Add usage=argparse.SUPPRESS and metavar='<command>' to help_parser\n  for consistent display with other subcommands\n- Update generate_doc_fixtures.py is_custom_table check to recognise\n  JsonAwareParser instances directly\n- Regenerate cli_help.svg and cli_config_help.svg fixtures and update\n  expected shrinkwrapped widths in test_doc_fixtures.py",
+          "timestamp": "2026-09-10T21:55:17-07:00",
+          "tree_id": "58e3672dd869c6f1d04509efe6134e07d5b3d516",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9154354e227712de1ccc198d40b7c65e84d988c9"
+        },
+        "date": 1789102791818,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.07,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 205.65,
             "unit": "ms"
           }
         ]
