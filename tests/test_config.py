@@ -410,3 +410,16 @@ def test_blueprint_extracts_tooling_overrides() -> None:
 
     # Structural keys must NOT bleed into tooling_overrides
     assert "dependencies" not in blueprint.tooling_overrides
+
+
+def test_template_blueprint_parses_name_and_description() -> None:
+    """Verifies that TemplateBlueprint correctly extracts top-level name and description."""
+    content = """
+    name = "Custom Stack"
+    description = "Custom microservice stack description"
+    dependencies = ["fastapi"]
+    """
+    blueprint = TemplateBlueprint._parse(content, source="custom.toml")
+    assert blueprint.name == "Custom Stack"
+    assert blueprint.description == "Custom microservice stack description"
+    assert blueprint.dependencies == ["fastapi"]

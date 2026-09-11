@@ -1,3 +1,6 @@
+name = "CLI"
+description = "Rich & Typer command-line application"
+
 # --- Dependencies ---
 dependencies = ["typer", "rich"]
 

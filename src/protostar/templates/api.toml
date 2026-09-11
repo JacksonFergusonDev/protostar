@@ -1,3 +1,6 @@
+name = "FastAPI"
+description = "FastAPI web application scaffold with Uvicorn and Pydantic"
+
 # --- Dependencies ---
 dependencies = ["fastapi", "uvicorn", "pydantic-settings"]
 

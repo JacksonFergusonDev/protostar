@@ -258,6 +258,20 @@ class UserConfig:
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
 
+    name: str = field(
+        default="",
+        metadata={
+            "description": "Human-readable display name of the template.",
+            "example": "FastAPI",
+        },
+    )
+    description: str = field(
+        default="",
+        metadata={
+            "description": "Short explanation of the template stack and purpose.",
+            "example": "FastAPI web application scaffold with Uvicorn and Pydantic",
+        },
+    )
     dependencies: list[str] = field(
         default_factory=list,
         metadata={
@@ -455,6 +469,10 @@ class TemplateBlueprint:
         instance = cls()
 
         # Extract structural fields
+        if "name" in data and isinstance(data["name"], str):
+            instance.name = data["name"]
+        if "description" in data and isinstance(data["description"], str):
+            instance.description = data["description"]
         if "dependencies" in data:
             instance.dependencies = data["dependencies"]
         if "directories" in data:

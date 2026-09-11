@@ -1,3 +1,6 @@
+name = "ML"
+description = "Machine learning & data science scaffold with PyTorch and Jupyter"
+
 # --- Dependencies ---
 dependencies = [
     "torch",
