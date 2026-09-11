@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789109024152,
+  "lastUpdate": 1789150632085,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11735,6 +11735,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 178.07,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "69ceb7735cfc1670e436637984e113178a2a2cc7",
+          "message": "fix(executor): sanitize subprocess environment and guard post-install tasks (#232)",
+          "timestamp": "2026-09-11T11:16:10-07:00",
+          "tree_id": "8737a59c42bfc9654cf6b652e25fc10efbd49c2c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/69ceb7735cfc1670e436637984e113178a2a2cc7"
+        },
+        "date": 1789150631306,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.93,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 226.25,
             "unit": "ms"
           }
         ]
