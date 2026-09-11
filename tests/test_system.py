@@ -17,14 +17,44 @@ def test_execute_subprocess_with_timeout(mocker):
 
     execute_subprocess(["sleep", "1"], timeout=15)
 
-    mock_run.assert_called_once_with(
-        ["sleep", "1"],
-        check=True,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=15,
+    assert mock_run.call_count == 1
+    call_args, call_kwargs = mock_run.call_args
+    assert call_args[0] == ["sleep", "1"]
+    assert call_kwargs["check"] is True
+    assert call_kwargs["capture_output"] is True
+    assert call_kwargs["text"] is True
+    assert call_kwargs["encoding"] == "utf-8"
+    assert call_kwargs["timeout"] == 15
+    assert "VIRTUAL_ENV" not in call_kwargs["env"]
+    assert "PYTHONHOME" not in call_kwargs["env"]
+
+
+def test_execute_subprocess_sanitizes_environment(mocker, monkeypatch):
+    """Test that VIRTUAL_ENV and PYTHONHOME are stripped from child subprocess environments."""
+    monkeypatch.setenv("VIRTUAL_ENV", "/some/caller/.venv")
+    monkeypatch.setenv("PYTHONHOME", "/some/python/home")
+    monkeypatch.setenv("KEEP_VAR", "preserved")
+
+    mock_run = mocker.patch("protostar.system.subprocess.run")
+    execute_subprocess(["uv", "--version"])
+
+    call_env = mock_run.call_args.kwargs["env"]
+    assert "VIRTUAL_ENV" not in call_env
+    assert "PYTHONHOME" not in call_env
+    assert call_env["KEEP_VAR"] == "preserved"
+
+
+def test_execute_subprocess_custom_env_override(mocker):
+    """Test that caller-provided env overrides take precedence."""
+    mock_run = mocker.patch("protostar.system.subprocess.run")
+    execute_subprocess(
+        ["uv", "--version"],
+        env={"CUSTOM_KEY": "custom_val", "VIRTUAL_ENV": "/explicit/venv"},
     )
+
+    call_env = mock_run.call_args.kwargs["env"]
+    assert call_env["CUSTOM_KEY"] == "custom_val"
+    assert call_env["VIRTUAL_ENV"] == "/explicit/venv"
 
 
 def test_execute_subprocess_timeout_expired(mocker):
@@ -60,14 +90,12 @@ def test_execute_subprocess_failure(mocker):
 def test_execute_subprocess_success(mocker):
     mock_run = mocker.patch("subprocess.run")
     execute_subprocess(["uv", "version"])
-    mock_run.assert_called_once_with(
-        ["uv", "version"],
-        check=True,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=None,
-    )
+    assert mock_run.call_count == 1
+    call_args, call_kwargs = mock_run.call_args
+    assert call_args[0] == ["uv", "version"]
+    assert call_kwargs["check"] is True
+    assert call_kwargs["timeout"] is None
+    assert "VIRTUAL_ENV" not in call_kwargs["env"]
 
 
 def test_execute_subprocess_timeout(mocker):

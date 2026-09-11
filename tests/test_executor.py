@@ -6,6 +6,7 @@ from typing import cast
 import pytest
 
 from protostar.config import UserConfig
+from protostar.dependencies import DependencyGroup
 from protostar.errors import (
     ConfigurationError,
     FileSystemError,
@@ -762,6 +763,104 @@ def test_executor_task_description_fallback(mocker):
 
     # Verify the fallback logic stripped the path and grabbed the binary name
     mock_info.assert_called_once_with("Running: pre-commit")
+
+
+def test_executor_skips_hook_install_when_not_a_git_repo(
+    mocker, mock_config, tmp_path, monkeypatch
+):
+    """Test that git hook installation is skipped when workspace is not a Git repository."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_post_install_task(
+        ["uv", "run", "prek", "install"], description="Installing prek git hooks"
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+
+    executor._run_tasks(manifest.tasks.post_install_tasks)
+
+    mock_execute.assert_not_called()
+    assert any(
+        d.phase == DiagnosticPhase.PRE_COMMIT
+        and d.severity == Severity.SKIP
+        and "not a Git repository" in d.message
+        for d in executor.diagnostics
+    )
+
+
+def test_executor_skips_hook_install_when_dev_dependencies_fail(
+    mocker, mock_config, tmp_path, monkeypatch
+):
+    """Test that git hook installation is skipped when dev dependency resolution fails."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".git").mkdir()
+
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_post_install_task(
+        ["uv", "run", "prek", "install"], description="Installing prek git hooks"
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    executor._failed_dependency_groups = {DependencyGroup.DEV}
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+
+    executor._run_tasks(manifest.tasks.post_install_tasks)
+
+    mock_execute.assert_not_called()
+    assert any(
+        d.phase == DiagnosticPhase.PRE_COMMIT
+        and d.severity == Severity.SKIP
+        and "development dependencies failed to resolve" in d.message
+        for d in executor.diagnostics
+    )
+
+
+def test_executor_skips_uv_run_tasks_when_dev_dependencies_fail(
+    mocker, mock_config, tmp_path, monkeypatch
+):
+    """Test that arbitrary uv run tasks are skipped when dev dependencies fail to resolve."""
+    monkeypatch.chdir(tmp_path)
+
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_post_install_task(
+        ["uv", "run", "custom-linter", "check"], description="Running custom linter"
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    executor._failed_dependency_groups = {DependencyGroup.DEV}
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+
+    executor._run_tasks(manifest.tasks.post_install_tasks)
+
+    mock_execute.assert_not_called()
+    assert any(
+        d.phase == DiagnosticPhase.EXECUTOR
+        and d.severity == Severity.SKIP
+        and "development dependencies failed to resolve" in d.message
+        for d in executor.diagnostics
+    )
+
+
+def test_executor_runs_hook_install_when_git_and_dev_succeed(
+    mocker, mock_config, tmp_path, monkeypatch
+):
+    """Test that git hook installation runs when both .git exists and dev dependencies succeeded."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".git").mkdir()
+
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_post_install_task(
+        ["uv", "run", "prek", "install"], description="Installing prek git hooks"
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+
+    executor._run_tasks(manifest.tasks.post_install_tasks)
+
+    mock_execute.assert_called_once_with(["uv", "run", "prek", "install"], timeout=30)
+    assert not any(d.severity == Severity.SKIP for d in executor.diagnostics)
 
 
 def test_executor_handles_write_permission_denied(mocker):
