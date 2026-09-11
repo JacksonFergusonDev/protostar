@@ -46,8 +46,8 @@ def test_protostar_error_hint_and_docs_url():
     err = ProtostarError("Failure summary", hint="Try turning it off and on again")
     assert err.hint == "Try turning it off and on again"
     assert str(err) == "Failure summary"
-    # Default docs_path fallback
-    assert err.docs_url == f"{DOCS_BASE_URL}getting-started/"
+    # When docs_path is not set, docs_url should be None
+    assert err.docs_url is None
 
     # Custom DocsPage enum
     err_page = ProtostarError("Failure", docs_path=DocsPage.CONFIGURATION)
@@ -181,10 +181,12 @@ def test_filesystem_error_unwraps_os_error_and_generic():
 def test_execution_aborted_error():
     err = ExecutionAbortedError()
     assert str(err) == "Execution aborted by user."
+    assert err.docs_url is None
 
     custom = ExecutionAbortedError("Custom abort", hint="Run again with --yes")
     assert str(custom) == "Custom abort"
     assert custom.hint == "Run again with --yes"
+    assert custom.docs_url is None
 
 
 def test_partial_execution_aborted_error():
@@ -194,10 +196,12 @@ def test_partial_execution_aborted_error():
     assert "- path/to/a.txt" in str(err)
     assert "- path/to/b.txt" in str(err)
     assert "Inspect the modified paths" in (err.hint or "")
+    assert err.docs_url is None
 
     empty_err = PartialExecutionAbortedError(touched_paths=frozenset())
     assert "The following paths were modified" not in str(empty_err)
     assert "Execution was interrupted before Protostar could finish" in str(empty_err)
+    assert empty_err.docs_url is None
 
 
 def test_workspace_collision_error():

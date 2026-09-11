@@ -48,11 +48,14 @@ class ProtostarError(Exception):
     @property
     def docs_url(self) -> str | None:
         """Returns the full URL to the documentation page, or None if not set."""
-        path = self.docs_path
-        if path is None or path == "":
-            path = DocsPage.GETTING_STARTED.value
-        elif isinstance(path, DocsPage):
-            path = path.value
+        if not self.docs_path:
+            return None
+
+        path = (
+            self.docs_path.value
+            if isinstance(self.docs_path, DocsPage)
+            else self.docs_path
+        )
 
         base = DOCS_BASE_URL if DOCS_BASE_URL.endswith("/") else f"{DOCS_BASE_URL}/"
         url = urllib.parse.urljoin(base, path.lstrip("/"))
