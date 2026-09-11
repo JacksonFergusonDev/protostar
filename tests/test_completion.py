@@ -70,13 +70,10 @@ def test_completion_subcommand_guide(capsys: pytest.CaptureFixture[str]) -> None
     captured = capsys.readouterr()
     assert "Shell Autocompletion Setup" in captured.out
     assert "Detected Environment:" in captured.out
-    assert 'eval "$(protostar completion zsh)"' in captured.out
-    assert 'eval "$(protostar completion bash)"' in captured.out
-    assert "protostar completion fish | source" in captured.out
-    assert (
-        "protostar completion powershell | Out-String | Invoke-Expression"
-        in captured.out
-    )
+    assert ".protostar-completion.zsh" in captured.out
+    assert ".protostar-completion.bash" in captured.out
+    assert "protostar.fish" in captured.out
+    assert "protostar-completion.ps1" in captured.out
 
 
 def test_completion_subcommand_json_mode(mocker: Any) -> None:
@@ -109,6 +106,7 @@ def test_completion_subcommand_json_mode(mocker: Any) -> None:
         assert "detected_os" in bare_payload
         assert "detected_shell" in bare_payload
         assert "recommended_profile" in bare_payload
+        assert "completion_file" in bare_payload
         assert "recommended_hook" in bare_payload
         assert "quick_setup_command" in bare_payload
         assert bare_payload["supported_shells"] == [s.value for s in Shell]
@@ -127,6 +125,7 @@ def test_detect_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     env_zsh = detect_environment()
     assert env_zsh.shell == Shell.ZSH
     assert env_zsh.profile_path == "~/.zshrc"
+    assert env_zsh.completion_file == "~/.protostar-completion.zsh"
 
     # 2. Explicit BASH_VERSION on Linux
     monkeypatch.delenv("ZSH_VERSION", raising=False)
@@ -135,6 +134,7 @@ def test_detect_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     env_bash = detect_environment()
     assert env_bash.shell == Shell.BASH
     assert env_bash.profile_path == "~/.bashrc"
+    assert env_bash.completion_file == "~/.protostar-completion.bash"
 
     # 3. Explicit FISH_VERSION
     monkeypatch.delenv("BASH_VERSION", raising=False)
@@ -142,6 +142,7 @@ def test_detect_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     env_fish = detect_environment()
     assert env_fish.shell == Shell.FISH
     assert env_fish.profile_path == "~/.config/fish/config.fish"
+    assert env_fish.completion_file == "~/.config/fish/completions/protostar.fish"
 
     # 4. Windows default fallback
     monkeypatch.delenv("FISH_VERSION", raising=False)
@@ -150,6 +151,7 @@ def test_detect_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     env_win = detect_environment()
     assert env_win.shell == Shell.POWERSHELL
     assert env_win.profile_path == "$PROFILE"
+    assert "protostar-completion.ps1" in env_win.completion_file
     assert "Add-Content" in env_win.quick_setup_cmd
 
 

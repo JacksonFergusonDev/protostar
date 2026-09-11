@@ -81,57 +81,53 @@ To speed up your workflow, you can enable CLI autocompletion and set up a shorte
 
 Protostar provides native dynamic completion script generation for **Zsh**, **Bash**, **Fish**, and **PowerShell** via `protostar completion`. No external packages or separate installations are required.
 
+To guarantee zero impact on your terminal startup latency (0ms overhead), Protostar generates a static completion script that connects directly to the fast dynamic completer.
+
 === "Zsh (macOS / Linux)"
-    Add the evaluation hook to your `~/.zshrc`:
+    Generate the static completion script and source it in `~/.zshrc`:
 
     ```bash
-    eval "$(protostar completion zsh)"
-    ```
-
-    Then reload your configuration:
-    ```bash
+    protostar completion zsh > ~/.protostar-completion.zsh
+    echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc
     source ~/.zshrc
     ```
 
+    !!! tip "Using Custom Completion Directories (`$fpath`)"
+        If you manage completions via `~/.zsh/completions` and call `compinit`, you can save the file directly to your completions directory instead:
+        ```bash
+        protostar completion zsh > ~/.zsh/completions/_protostar
+        ```
+
 === "Bash (Linux / macOS)"
-    Add the evaluation hook to your `~/.bashrc` (or `~/.bash_profile` on macOS):
+    Generate the static completion script and source it in your bash profile (`~/.bashrc` on Linux, `~/.bash_profile` on macOS):
 
     ```bash
-    eval "$(protostar completion bash)"
-    ```
-
-    Then reload your configuration:
-    ```bash
+    protostar completion bash > ~/.protostar-completion.bash
+    echo 'source ~/.protostar-completion.bash' >> ~/.bashrc
     source ~/.bashrc
     ```
 
 === "Fish (macOS / Linux)"
-    Save the completion script to Fish's completions directory:
+    Save the completion script to Fish's native completions directory for instant autoloading (no config edits required):
 
     ```fish
+    mkdir -p ~/.config/fish/completions
     protostar completion fish > ~/.config/fish/completions/protostar.fish
     ```
 
-    Or dynamically evaluate it within `~/.config/fish/config.fish`:
-    ```fish
-    protostar completion fish | source
-    ```
-
 === "PowerShell (Windows / Cross-platform)"
-    Add the completer registration to your PowerShell `$PROFILE`:
+    Save the completion script and source it in your PowerShell `$PROFILE`:
 
     ```powershell
-    protostar completion powershell | Out-String | Invoke-Expression
+    protostar completion powershell > "$HOME\protostar-completion.ps1"
+    Add-Content -Path $PROFILE -Value '. "$HOME\protostar-completion.ps1"'
+    . $PROFILE
     ```
 
     !!! tip "PowerShell Profile Setup"
         If your profile script does not exist yet, create it:
         ```powershell
         if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }
-        ```
-        Then append the one-liner directly to the profile:
-        ```powershell
-        Add-Content -Path $PROFILE -Value 'protostar completion powershell | Out-String | Invoke-Expression'
         ```
         If script execution is restricted on Windows, allow signed local scripts by running:
         ```powershell

@@ -26,6 +26,7 @@ class ShellEnvironment:
     shell: Shell
     os_name: str
     profile_path: str
+    completion_file: str
     eval_hook: str
     quick_setup_cmd: str
     description: str
@@ -131,8 +132,9 @@ def detect_environment() -> ShellEnvironment:
             shell=Shell.ZSH,
             os_name=os_display,
             profile_path="~/.zshrc",
-            eval_hook='eval "$(protostar completion zsh)"',
-            quick_setup_cmd="echo 'eval \"$(protostar completion zsh)\"' >> ~/.zshrc && source ~/.zshrc",
+            completion_file="~/.protostar-completion.zsh",
+            eval_hook="source ~/.protostar-completion.zsh",
+            quick_setup_cmd="protostar completion zsh > ~/.protostar-completion.zsh && echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc && source ~/.zshrc",
             description=f"{os_display} (Zsh)",
         )
     if shell == Shell.BASH:
@@ -141,8 +143,9 @@ def detect_environment() -> ShellEnvironment:
             shell=Shell.BASH,
             os_name=os_display,
             profile_path=profile,
-            eval_hook='eval "$(protostar completion bash)"',
-            quick_setup_cmd=f"echo 'eval \"$(protostar completion bash)\"' >> {profile} && source {profile}",
+            completion_file="~/.protostar-completion.bash",
+            eval_hook="source ~/.protostar-completion.bash",
+            quick_setup_cmd=f"protostar completion bash > ~/.protostar-completion.bash && echo 'source ~/.protostar-completion.bash' >> {profile} && source {profile}",
             description=f"{os_display} (Bash)",
         )
     if shell == Shell.FISH:
@@ -150,8 +153,9 @@ def detect_environment() -> ShellEnvironment:
             shell=Shell.FISH,
             os_name=os_display,
             profile_path="~/.config/fish/config.fish",
-            eval_hook="protostar completion fish | source",
-            quick_setup_cmd="protostar completion fish > ~/.config/fish/completions/protostar.fish",
+            completion_file="~/.config/fish/completions/protostar.fish",
+            eval_hook="Built-in autoload (no config edits needed)",
+            quick_setup_cmd="mkdir -p ~/.config/fish/completions && protostar completion fish > ~/.config/fish/completions/protostar.fish",
             description=f"{os_display} (Fish)",
         )
     # Shell.POWERSHELL
@@ -159,8 +163,9 @@ def detect_environment() -> ShellEnvironment:
         shell=Shell.POWERSHELL,
         os_name=os_display,
         profile_path="$PROFILE",
-        eval_hook="protostar completion powershell | Out-String | Invoke-Expression",
-        quick_setup_cmd="Add-Content -Path $PROFILE -Value 'protostar completion powershell | Out-String | Invoke-Expression'",
+        completion_file="$HOME\\protostar-completion.ps1",
+        eval_hook='. "$HOME\\protostar-completion.ps1"',
+        quick_setup_cmd='protostar completion powershell > "$HOME\\protostar-completion.ps1"; Add-Content -Path $PROFILE -Value \'. "$HOME\\protostar-completion.ps1"\'',
         description=f"{os_display} (PowerShell)",
     )
 
@@ -173,27 +178,44 @@ def print_completion_guide() -> None:
         pwsh_setup = (
             "  [bold cyan]1. Create profile if it does not exist:[/bold cyan]\n"
             "     [green]if (!(Test-Path -Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force }[/green]\n\n"
-            "  [bold cyan]2. Append completion hook to profile:[/bold cyan]\n"
-            "     [green]Add-Content -Path $PROFILE -Value 'protostar completion powershell | Out-String | Invoke-Expression'[/green]\n\n"
-            "  [bold cyan]3. Reload profile in current session:[/bold cyan]\n"
+            "  [bold cyan]2. Generate static completion script:[/bold cyan]\n"
+            '     [green]protostar completion powershell > "$HOME\\protostar-completion.ps1"[/green]\n\n'
+            "  [bold cyan]3. Source completion script in profile:[/bold cyan]\n"
+            "     [green]Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'[/green]\n\n"
+            "  [bold cyan]4. Reload profile in current session:[/bold cyan]\n"
             "     [green]. $PROFILE[/green]"
         )
         body = (
             f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n\n"
-            "[bold]Recommended Setup (Run in PowerShell):[/bold]\n"
+            "[bold]Recommended Setup (Zero Startup Overhead):[/bold]\n"
             f"{pwsh_setup}\n\n"
             "[dim]Manual Configuration:[/dim]\n"
             f"  Add this line to [cyan]{env.profile_path}[/cyan]:\n"
             f"    [yellow]{env.eval_hook}[/yellow]"
         )
-    else:
+    elif env.shell == Shell.FISH:
         body = (
             f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n\n"
-            "[bold]Recommended One-Liner (Run to enable and reload):[/bold]\n"
+            "[bold]Recommended Setup (Native Lazy Loading, 0ms startup overhead):[/bold]\n"
             f"  [green]{env.quick_setup_cmd}[/green]\n\n"
-            "[dim]Manual Configuration:[/dim]\n"
-            f"  Add this line to [cyan]{env.profile_path}[/cyan]:\n"
-            f"    [yellow]{env.eval_hook}[/yellow]"
+            "[dim]Fish automatically loads completions from ~/.config/fish/completions on demand.[/dim]"
+        )
+    else:
+        tip = ""
+        if env.shell == Shell.ZSH:
+            tip = (
+                "\n\n[dim]Tip: If you use an $fpath completions folder, you can alternatively run:\n"
+                "     protostar completion zsh > ~/.zsh/completions/_protostar[/dim]"
+            )
+        body = (
+            f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n\n"
+            "[bold]Recommended One-Liner (Zero Startup Overhead):[/bold]\n"
+            f"  [green]{env.quick_setup_cmd}[/green]\n\n"
+            "[dim]Manual Steps:[/dim]\n"
+            f"  1. Generate static file: [cyan]protostar completion {env.shell.value} > {env.completion_file}[/cyan]\n"
+            f"  2. Add to [cyan]{env.profile_path}[/cyan]:  [yellow]{env.eval_hook}[/yellow]\n"
+            f"  3. Reload:              [cyan]source {env.profile_path}[/cyan]"
+            f"{tip}"
         )
 
     other_shells = [s for s in Shell if s != env.shell]
@@ -202,22 +224,25 @@ def print_completion_guide() -> None:
         if s == Shell.ZSH:
             other_lines.append(
                 "  • [bold]Zsh[/bold] [dim](~/.zshrc)[/dim]:\n"
-                '    [dim]eval "$(protostar completion zsh)"[/dim]'
+                "    [dim]protostar completion zsh > ~/.protostar-completion.zsh\n"
+                "    echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc && source ~/.zshrc[/dim]"
             )
         elif s == Shell.BASH:
             other_lines.append(
                 "  • [bold]Bash[/bold] [dim](~/.bashrc)[/dim]:\n"
-                '    [dim]eval "$(protostar completion bash)"[/dim]'
+                "    [dim]protostar completion bash > ~/.protostar-completion.bash\n"
+                "    echo 'source ~/.protostar-completion.bash' >> ~/.bashrc && source ~/.bashrc[/dim]"
             )
         elif s == Shell.FISH:
             other_lines.append(
-                "  • [bold]Fish[/bold] [dim](~/.config/fish/config.fish)[/dim]:\n"
-                "    [dim]protostar completion fish | source[/dim]"
+                "  • [bold]Fish[/bold] [dim](~/.config/fish/completions/)[/dim]:\n"
+                "    [dim]mkdir -p ~/.config/fish/completions && protostar completion fish > ~/.config/fish/completions/protostar.fish[/dim]"
             )
         elif s == Shell.POWERSHELL:
             other_lines.append(
                 "  • [bold]PowerShell[/bold] [dim]($PROFILE)[/dim]:\n"
-                "    [dim]protostar completion powershell | Out-String | Invoke-Expression[/dim]"
+                '    [dim]protostar completion powershell > "$HOME\\protostar-completion.ps1"\n'
+                "    Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'[/dim]"
             )
 
     body += (
@@ -257,6 +282,7 @@ def handle_completion(args: argparse.Namespace) -> None:
                     "detected_os": env.os_name.lower(),
                     "detected_shell": env.shell.value,
                     "recommended_profile": env.profile_path,
+                    "completion_file": env.completion_file,
                     "recommended_hook": env.eval_hook,
                     "quick_setup_command": env.quick_setup_cmd,
                     "supported_shells": [s.value for s in Shell],

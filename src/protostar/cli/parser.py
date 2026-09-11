@@ -412,10 +412,18 @@ def build_parser() -> argparse.ArgumentParser:
         usage=argparse.SUPPRESS,
         epilog=(
             "[bold]Examples:[/bold]\n"
-            '  # Zsh (macOS/Linux):\n  eval "$(protostar completion zsh)"\n\n'
-            '  # Bash (Linux/macOS):\n  eval "$(protostar completion bash)"\n\n'
-            "  # Fish:\n  protostar completion fish | source\n\n"
-            "  # PowerShell (Windows):\n  protostar completion powershell | Out-String | Invoke-Expression"
+            "  # Zsh (macOS/Linux):\n"
+            "  protostar completion zsh > ~/.protostar-completion.zsh\n"
+            "  echo 'source ~/.protostar-completion.zsh' >> ~/.zshrc\n\n"
+            "  # Bash (Linux/macOS):\n"
+            "  protostar completion bash > ~/.protostar-completion.bash\n"
+            "  echo 'source ~/.protostar-completion.bash' >> ~/.bashrc\n\n"
+            "  # Fish:\n"
+            "  mkdir -p ~/.config/fish/completions\n"
+            "  protostar completion fish > ~/.config/fish/completions/protostar.fish\n\n"
+            "  # PowerShell (Windows):\n"
+            '  protostar completion powershell > "$HOME\\protostar-completion.ps1"\n'
+            "  Add-Content -Path $PROFILE -Value '. \"$HOME\\protostar-completion.ps1\"'"
         ),
         parents=[base_parser],
     )
