@@ -32,56 +32,25 @@ The flow below illustrates how errors propagate from deep pipeline operations (p
 
 ```mermaid
 flowchart TD
-    %%{init: {'flowchart': {'useMaxWidth': false}}}%%
-    %% Styling
-    classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
-    classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef phase fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
     classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
+    classDef core fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
 
-    Start([CLI Invocation]) --> PreFlight
+    Start([CLI Invocation]):::core --> P1["1. Pre-Flight Checks"]:::phase
+    P1 -->|Pass| P2["2. Config & Manifest Parsing"]:::phase
+    P2 -->|Pass| P3["3. Side-Effect Realization"]:::phase
+    P3 -->|Success| End([Environment Stabilized]):::success
 
-    subgraph PreFlight [1. Pre-Flight Checks]
-        direction TB
-        PF{Missing Dependency?}:::phase
-        PF -- Yes --> E_Dep["Missing<br/>DependencyError"]:::error
-        PF -- No --> Config["2. Config &<br/>Manifest Parsing"]:::phase
-    end
+    P1 -.->|Missing binary| E1["MissingDependencyError"]:::error
+    P2 -.->|Invalid TOML / Network / Zip| E2["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
+    P3 -.->|I/O fault / Subprocess failure| E3["FileSystemError<br/>CommandExecutionError<br/>CommandTimeoutError"]:::error
 
-    subgraph Parsing [2. Configuration & AST]
-        direction TB
-        Config{Malformed TOML / Spec?}:::phase
-        Config -- Yes --> E_Cfg["Configuration<br/>Error"]:::error
-        Config -- No --> Net{"Remote Template<br/>/ Network?"}:::phase
-        Net -- "Network Drop<br/>/ Insecure" --> E_Net["Network<br/>FetchError"]:::error
-        Net -- "Bad Zip<br/>/ Missing Vars" --> E_Tmpl["Template<br/>ResolutionError"]:::error
-        Net -- Success --> Execution["3. Side-Effect<br/>Realization"]:::phase
-    end
-
-    subgraph SideEffects [3. Disk & Subprocess Execution]
-        direction TB
-        Execution --> Disk{Disk I/O Fault?}:::phase
-        Disk -- Yes --> E_FS["FileSystem<br/>Error"]:::error
-        Disk -- No --> Sub{Subprocess Fault?}:::phase
-        Sub -- Exit != 0 --> E_Exec["Command<br/>ExecutionError"]:::error
-        Sub -- Timeout --> E_Time["Command<br/>TimeoutError"]:::error
-        Sub -- Success --> End([Environment Stabilized]):::success
-    end
-
-    E_Dep & E_Cfg & E_Net & E_Tmpl & E_FS & E_Exec & E_Time --> Handler[cli.py :: main Trap]:::core
-
-    Handler --> Panel[Format Rich Error Panel & Output Detail]
-    Panel --> POSIX{POSIX Exit Code Router}
-
-    POSIX -- ConfigurationError --> EX78([os.EX_CONFIG: 78]):::error
-    POSIX -- NetworkFetchError --> EX75([os.EX_TEMPFAIL: 75]):::error
-    POSIX -- TemplateResolutionError --> EX65([os.EX_DATAERR: 65]):::error
-    POSIX -- MissingDependencyError --> EX69([os.EX_UNAVAILABLE: 69]):::error
-    POSIX -- FileSystemError --> EX74([os.EX_IOERR: 74]):::error
-    POSIX -- SecurityViolationError --> EX77([os.EX_NOPERM: 77]):::error
-    POSIX -- ExecutionAbortedError --> EX130([Exit Code 130]):::error
-    POSIX -- Other ProtostarError --> EX1([Exit Code 1]):::error
+    E1 & E2 & E3 --> Trap["CLI Top-Level Trap<br/>(Rich Panel / JSON Envelope)"]:::core
+    Trap --> Exit([Route POSIX Exit Code]):::core
 ```
+
+For the complete exit code mapping for each exception type, see the [POSIX Exit Code Matrix](#posix-exit-code-matrix) below.
 
 ---
 

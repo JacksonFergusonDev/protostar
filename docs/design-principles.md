@@ -91,12 +91,12 @@ flowchart TD
 The engine's public surface — `Orchestrator.plan()` and `Orchestrator.execute()` — takes and returns pure data objects (`InitRequest` → `EnvironmentManifest` → `ExecutionResult`). It has no knowledge of terminal colors, interactive prompts, spinners, or `--json` formatting. Those concerns belong entirely to `cli.py`.
 
 ```mermaid
-flowchart TD
+flowchart LR
     classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
     classDef engine fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
 
     subgraph CLI ["CLI Presentation Layer (cli.py)"]
-        direction TB
+        direction LR
         TUI["Interactive Wizard"]:::cli
         Spinner["Rich Progress Spinner"]:::cli
         Collision["Collision Prompts"]:::cli
@@ -104,9 +104,9 @@ flowchart TD
     end
 
     subgraph Engine ["Headless Engine (orchestrator.py)"]
-        direction TB
-        Plan["plan(InitRequest) → Manifest"]:::engine
-        Exec["execute(Manifest) → ExecutionResult"]:::engine
+        direction LR
+        Plan["<span style='white-space:nowrap'>plan(InitRequest) → Manifest</span>"]:::engine
+        Exec["<span style='white-space:nowrap'>execute(Manifest) → ExecutionResult</span>"]:::engine
     end
 
     CLI --> Engine

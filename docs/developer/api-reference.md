@@ -51,19 +51,10 @@ classDiagram
         +add_ci_step(step_yaml: str)
     }
 
-    class BootstrapModule {
-        <<Abstract>>
-        +tuple cli_flags
-        +str config_key
-        +pre_flight()*
-        +build(manifest: EnvironmentManifest)*
-    }
-
     EnvironmentManifest *-- DependencyManifest : contains
     EnvironmentManifest *-- FilesystemManifest : contains
     EnvironmentManifest *-- TaskManifest : contains
     EnvironmentManifest *-- ToolingManifest : contains
-    BootstrapModule ..> EnvironmentManifest : Mutates state via build()
 ```
 
 ## Class Definitions
@@ -169,6 +160,16 @@ classDiagram
             separate_signature: true
 
 !!! abstract "Core Interface: `BootstrapModule`"
+
+    Each module implements the lifecycle stages to validate system prerequisites before mutating the shared manifest.
+
+    ```mermaid
+    flowchart LR
+    M[BootstrapModule] -->|pre_flight| C{Valid?}
+    C -->|Yes| B["build(manifest)"]
+    C -->|No| E[ProtostarError]
+    B -->|Mutates state| EM[(EnvironmentManifest)]
+    ```
 
     ::: protostar.modules.base.BootstrapModule
         options:
