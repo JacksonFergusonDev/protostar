@@ -242,5 +242,5 @@ Ready to get started or dive deeper into the architecture?
 
 - **[Getting Started](./getting-started.md):** Install Protostar and scaffold your first project in seconds.
 - **[Environment Initialization](./usage/init.md):** Learn how to run Protostar interactively via the TUI wizard or headlessly via CLI flags.
-- **[Templates & Portable Configs](./usage/templates.md):** Explore declarative TOML blueprints, remote templates, and dynamic variable interpolation.
+- **[Templates](./usage/templates.md):** Explore declarative TOML blueprints, remote templates, and dynamic variable interpolation.
 - **[The Orchestrator](./mechanics/orchestrator.md):** Understand the two-phase execution engine that guarantees atomicity and safe configuration merges.

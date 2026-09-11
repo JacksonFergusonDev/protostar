@@ -1,8 +1,8 @@
 ---
-description: "Discover, load, and configure declarative templates and portable blueprints in Protostar."
+description: "Discover, load, and configure declarative templates in Protostar."
 ---
 
-# Templates & Portable Configurations
+# Templates
 
 Protostar's template engine allows you to define declarative, reusable environment blueprints. Whether you are using built-in domain presets, fetching team standards from remote Git repositories, or defining custom local setups, templates eliminate boilerplate and ensure consistent repository architecture.
 
@@ -12,7 +12,7 @@ Protostar's template engine allows you to define declarative, reusable environme
 
     Turnkey environment matrices for common domains (e.g., `astro`, `cli`, `ml`, `dsp`) shipped natively with Protostar.
 
-- :material-web: __Portable & Remote (`--from`)__
+- :material-web: __External & Remote (`--from`)__
 
     Fetch raw TOML blueprints directly from GitHub, GitLab, Codeberg, or local files with dynamic URL translation and archive unpacking.
 
@@ -40,7 +40,7 @@ protostar init -t astro
 # 2. Listing all available built-in templates and global aliases
 protostar init --list-templates
 
-# 3. Using a portable configuration directly from a file or URL
+# 3. Using an external template directly from a file or URL
 protostar init --from https://github.com/YourOrg/standards/blob/main/backend.toml
 ```
 
@@ -70,7 +70,7 @@ protostar init -t astro --no-direnv --mypy
 
 ---
 
-## Portable Configurations (`--from`)
+## External & Remote Templates (`--from`)
 
 The `--from` flag accepts local filesystem paths, direct raw TOML URLs, and repository web links.
 

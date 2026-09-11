@@ -84,5 +84,5 @@ Templates declared here can be invoked directly with `protostar init --template 
 ## Next Steps
 
 - **[Environment Initialization](./init.md):** Test your configured global defaults with `protostar init`.
-- **[Templates & Portable Configurations](./templates.md):** Discover how template aliases streamline custom template consumption and bypass remote security prompts.
+- **[Templates](./templates.md):** Discover how template aliases streamline custom template consumption and bypass remote security prompts.
 - **[CLI Reference](./cli-reference.md):** Review all command-line options and runtime flag overrides.

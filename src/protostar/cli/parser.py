@@ -332,7 +332,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--from",
         type=str,
         dest="from_path",
-        help="Path to a portable configuration TOML file to apply.",
+        help="Path or URL to an external template (TOML file, directory, or archive).",
         metavar="PATH",
     )
     from_action.completer = argcomplete.completers.FilesCompleter(  # type: ignore[attr-defined]

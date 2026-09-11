@@ -42,7 +42,7 @@ Every tooling option supports tri-state evaluation. You can load a template's ba
 protostar init -t astro --no-direnv --mypy
 ```
 
-To explore all built-in templates, load remote team standards (`--from`), supply dynamic parameters, or register global aliases, see the complete __[Templates & Portable Configurations Guide](./templates.md)__.
+To explore all built-in templates, load remote team standards (`--from`), supply dynamic parameters, or register global aliases, see the complete __[Templates Guide](./templates.md)__.
 
 ---
 
@@ -301,7 +301,7 @@ To view all supported subcommands and flags in your terminal, run `protostar hel
 
 ## Next Steps
 
-- __[Templates & Portable Configs](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
+- __[Templates](./templates.md):__ Learn how to create and share custom TOML blueprints, fetch remote templates, and interpolate variables.
 - __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
 - __[Global Configuration](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
 - __[Troubleshooting & FAQ](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.

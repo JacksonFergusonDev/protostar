@@ -169,6 +169,6 @@ When building templates for your team or the open-source community, keep the fol
 
 ## Next Steps
 
-- **[Templates & Portable Configs](./templates.md):** Learn about CLI options, URL translation, and template consumption.
+- **[Templates](./templates.md):** Learn about CLI options, URL translation, and template consumption.
 - **[Global Configuration](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
 - **[Extending Protostar](../developer/extending-protostar.md):** Implement custom Python bootstrap modules if your project requires engine-level integrations.

@@ -200,7 +200,7 @@ protostar init --template cli --force-merge --json
 
 See the **[Agent & Machine Interface Guide](https://protostar.readthedocs.io/stable/usage/agent-interface/)** for complete protocol documentation.
 
-### Portable Templates & Global Aliases
+### Custom Templates & Global Aliases
 
 If you want to enforce team-wide standards across multiple repositories, you can host your own custom template TOML files remotely (or store them locally). Use the `--from` flag to dynamically fetch and inject them. Protostar automatically translates web UI links into raw text links for GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut, and natively supports unpacking `.zip`/`.tar.gz` repository archives.
 
