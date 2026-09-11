@@ -45,10 +45,14 @@ def _install_group(
     packages: list[str],
     group: DependencyGroup,
     on_diagnostic: Callable[[str, Severity, str | None], None],
-) -> None:
-    """Installs a specific group of packages using uv add."""
+) -> bool:
+    """Installs a specific group of packages using uv add.
+
+    Returns:
+        True if installation succeeded or no packages were queued, False on failure.
+    """
     if not packages:
-        return
+        return True
 
     cmd = ["uv", "add", *group.cli_args, *packages]
     try:
@@ -56,6 +60,7 @@ def _install_group(
             f"Resolving and installing {len(packages)} {group.label} dependencies"
         )
         execute_subprocess(cmd, timeout=600)
+        return True
     except (CommandExecutionError, CommandTimeoutError) as e:
         detail = e.output_detail if isinstance(e, CommandExecutionError) else None
         on_diagnostic(
@@ -63,31 +68,41 @@ def _install_group(
             Severity.WARNING,
             detail,
         )
+        return False
 
 
 def install_dependencies(
     dependencies_manifest: DependencyManifest,
     on_diagnostic: Callable[[str, Severity, str | None], None],
-) -> None:
+) -> set[DependencyGroup]:
     """Installs queued dependencies using uv.
 
     Args:
         dependencies_manifest: Domain slice containing standard, dev, and docs dependencies.
         on_diagnostic: Callback invoked with (message, severity, detail) on error.
+
+    Returns:
+        A set of DependencyGroup instances that failed resolution.
     """
+    failed_groups: set[DependencyGroup] = set()
     if (
         not dependencies_manifest.dependencies
         and not dependencies_manifest.dev_dependencies
         and not dependencies_manifest.docs_dependencies
     ):
-        return
+        return failed_groups
 
-    _install_group(
+    if not _install_group(
         dependencies_manifest.dependencies, DependencyGroup.MAIN, on_diagnostic
-    )
-    _install_group(
+    ):
+        failed_groups.add(DependencyGroup.MAIN)
+    if not _install_group(
         dependencies_manifest.dev_dependencies, DependencyGroup.DEV, on_diagnostic
-    )
-    _install_group(
+    ):
+        failed_groups.add(DependencyGroup.DEV)
+    if not _install_group(
         dependencies_manifest.docs_dependencies, DependencyGroup.DOCS, on_diagnostic
-    )
+    ):
+        failed_groups.add(DependencyGroup.DOCS)
+
+    return failed_groups

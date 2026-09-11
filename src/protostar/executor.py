@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .appends import append_marker_blocks
 from .config import UserConfig
-from .dependencies import install_dependencies
+from .dependencies import DependencyGroup, install_dependencies
 from .errors import (
     ConfigurationError,
     FileSystemError,
@@ -69,6 +69,7 @@ class SystemExecutor:
         self.docker = docker
         self.touched_paths: set[str] = set()
         self.diagnostics: list[DiagnosticEvent] = []
+        self._failed_dependency_groups: set[DependencyGroup] = set()
 
     def record_touch(self, path: Path | str) -> None:
         """Records a path as having been modified or created during execution."""
@@ -258,6 +259,42 @@ class SystemExecutor:
             enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Running: {binary_name}"
+
+            # Prerequisite guards for post-install commands
+            is_hook_install = (
+                any(tool in task.command for tool in ("pre-commit", "prek"))
+                and "install" in task.command
+            )
+            if is_hook_install:
+                if not (Path.cwd() / ".git").exists():
+                    self.add_diagnostic(
+                        phase=DiagnosticPhase.PRE_COMMIT,
+                        message="Skipping git hook installation; workspace is not a Git repository.",
+                        severity=Severity.SKIP,
+                    )
+                    continue
+
+                if DependencyGroup.DEV in self._failed_dependency_groups:
+                    self.add_diagnostic(
+                        phase=DiagnosticPhase.PRE_COMMIT,
+                        message="Skipping git hook installation; development dependencies failed to resolve.",
+                        severity=Severity.SKIP,
+                    )
+                    continue
+
+            if (
+                len(task.command) >= 2
+                and task.command[0] == "uv"
+                and task.command[1] == "run"
+                and DependencyGroup.DEV in self._failed_dependency_groups
+            ):
+                self.add_diagnostic(
+                    phase=DiagnosticPhase.EXECUTOR,
+                    message=f"Skipping task '{msg}'; development dependencies failed to resolve.",
+                    severity=Severity.SKIP,
+                )
+                continue
+
             logger.info(msg)
             execute_subprocess(task.command, timeout=task.timeout)
 
@@ -514,7 +551,7 @@ class SystemExecutor:
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
-        install_dependencies(
+        self._failed_dependency_groups = install_dependencies(
             dependencies_manifest=self.manifest.dependencies,
             on_diagnostic=lambda msg, sev, detail: self.add_diagnostic(
                 phase=DiagnosticPhase.EXECUTOR,

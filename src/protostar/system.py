@@ -11,12 +11,21 @@ from .errors import CommandExecutionError, CommandTimeoutError
 logger = logging.getLogger("protostar")
 
 
-def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
+def execute_subprocess(
+    cmd: list[str],
+    timeout: int | None = None,
+    env: dict[str, str] | None = None,
+) -> None:
     """Executes a subprocess silently and captures diagnostic output on failure.
+
+    Sanitizes environment variables (such as VIRTUAL_ENV and PYTHONHOME) so target
+    workspace subprocesses execute in clean isolation from caller environments, while
+    allowing intentional caller-supplied env overrides.
 
     Args:
         cmd: The command and its arguments as a list of strings.
         timeout: The maximum execution time in seconds. Defaults to None.
+        env: Optional environment dictionary override.
 
     Raises:
         CommandTimeoutError: If the execution time limit is exceeded.
@@ -27,6 +36,12 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
     if exe:
         resolved_cmd[0] = exe
 
+    clean_env = dict(os.environ)
+    clean_env.pop("VIRTUAL_ENV", None)
+    clean_env.pop("PYTHONHOME", None)
+    if env is not None:
+        clean_env.update(env)
+
     try:
         subprocess.run(
             resolved_cmd,
@@ -35,6 +50,7 @@ def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
             text=True,
             encoding="utf-8",
             timeout=timeout,
+            env=clean_env,
         )
     except subprocess.TimeoutExpired as e:
         logger.debug(f"Task timed out after {timeout} seconds: {' '.join(cmd)}")
