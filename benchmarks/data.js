@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789108268972,
+  "lastUpdate": 1789109024152,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11701,6 +11701,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 204.66,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "88a13007d333c28a9cf0c2cea88a674e9dab219d",
+          "message": "fix(tooling): protect dependency groups during AST overwrite and declare docs group in wiring",
+          "timestamp": "2026-09-10T23:42:11-07:00",
+          "tree_id": "602517241e33355982f90a29e4cbde07c3a9fc3f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/88a13007d333c28a9cf0c2cea88a674e9dab219d"
+        },
+        "date": 1789109022696,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 109.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 178.07,
             "unit": "ms"
           }
         ]
