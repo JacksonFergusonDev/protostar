@@ -234,6 +234,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                 metadata=request.metadata,
                 is_external=request.is_external,
                 is_user_aliased=request.is_user_aliased,
+                is_trusted=request.is_trusted,
             )
         else:
             request = InitRequest(
@@ -245,23 +246,24 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                 metadata=request.metadata,
                 is_external=request.is_external,
                 is_user_aliased=request.is_user_aliased,
+                is_trusted=request.is_trusted,
             )
         engine = Orchestrator(engine.modules, engine.user_config, request=request)
         manifest = engine.plan()
 
     # --- Trust Boundary ---
-    if request.is_external and not request.is_user_aliased:
+    if request.is_external and not request.is_trusted:
         tasks = [*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks]
         if tasks:
             # JSON mode: reject immediately without prompting to avoid blocking agents.
             if is_json_mode:
                 raise SecurityViolationError(
                     "Execution aborted: Untrusted external template contains "
-                    "executable tasks. To trust this source, add its URL to the "
-                    "[templates] block in your global configuration.",
+                    "executable tasks. To trust this source, configure it with "
+                    "'trusted = true' in your global configuration.",
                     hint=(
-                        "Add the URL to the [templates] section of "
-                        f"{CONFIG_FILE} and re-run with --from."
+                        f"Configure the template in {CONFIG_FILE} with 'trusted = true' "
+                        "and re-run."
                     ),
                 )
 

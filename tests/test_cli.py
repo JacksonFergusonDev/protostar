@@ -780,8 +780,14 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     """Verifies that --template successfully resolves keys from the global config alias table."""
 
     # Mock the global config to contain a custom alias
+    from protostar.config import TemplateAliasConfig
+
     mock_config = UserConfig(
-        templates={"my-custom-org": "https://example.com/template.toml"}
+        templates={
+            "my-custom-org": TemplateAliasConfig(
+                source="https://example.com/template.toml"
+            )
+        }
     )
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=mock_config)
 
@@ -817,11 +823,31 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     assert request is not None
     assert request.is_external is True
     assert request.is_user_aliased is True
+    assert request.is_trusted is False
+
+    # Now verify trusted alias sets is_trusted to True
+    from protostar.config import TemplateAliasConfig
+
+    mock_config.templates["trusted-corp"] = TemplateAliasConfig(
+        source="https://example.com/corp.toml", trusted=True
+    )
+    args.template_name = "trusted-corp"
+    handle_init(args)
+    _, kwargs = mock_orchestrator.call_args
+    trusted_request = kwargs.get("request")
+    assert trusted_request is not None
+    assert trusted_request.is_external is True
+    assert trusted_request.is_user_aliased is True
+    assert trusted_request.is_trusted is True
 
 
 def test_cli_rejects_unknown_templates(mocker) -> None:
     """Verifies that a template not in built-ins or aliases raises a ConfigurationError."""
-    mock_config = UserConfig(templates={"valid-alias": "..."})
+    from protostar.config import TemplateAliasConfig
+
+    mock_config = UserConfig(
+        templates={"valid-alias": TemplateAliasConfig(source="...")}
+    )
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=mock_config)
 
     args = argparse.Namespace(

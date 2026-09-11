@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -88,3 +89,42 @@ def test_safe_extract_zip_denies_traversal(tmp_path: Path):
 
     with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
         safe_extract_zip(zip_path, target_dir)
+
+
+def test_trust_boundary_bypassed_when_trusted_true(mocker: Any) -> None:
+    """Verifies that external templates marked trusted=True bypass confirmation warnings."""
+    from protostar.cli.ui import _run_engine
+    from protostar.manifest import EnvironmentManifest
+    from protostar.models import ExecutionResult, InitRequest
+    from protostar.orchestrator import Orchestrator
+
+    mock_engine = mocker.MagicMock(spec=Orchestrator)
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_system_task(["uv", "run", "setup"])
+    mock_engine.plan.return_value = manifest
+    mock_engine.execute.return_value = ExecutionResult(
+        touched_paths=frozenset(), diagnostics=()
+    )
+
+    request = InitRequest(is_external=True, is_trusted=True)
+    res = _run_engine(mock_engine, request)
+    assert res is not None
+    mock_engine.execute.assert_called_once()
+
+
+def test_trust_boundary_rejects_untrusted_in_json_mode(mocker: Any) -> None:
+    """Verifies that untrusted external templates with tasks abort in JSON mode."""
+    from protostar.cli.ui import _run_engine
+    from protostar.manifest import EnvironmentManifest
+    from protostar.models import InitRequest
+    from protostar.orchestrator import Orchestrator
+
+    mock_engine = mocker.MagicMock(spec=Orchestrator)
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_system_task(["uv", "run", "setup"])
+    mock_engine.plan.return_value = manifest
+
+    mocker.patch("protostar.cli.ui.is_json_mode", True)
+    request = InitRequest(is_external=True, is_trusted=False)
+    with pytest.raises(SecurityViolationError, match="Untrusted external template"):
+        _run_engine(mock_engine, request)

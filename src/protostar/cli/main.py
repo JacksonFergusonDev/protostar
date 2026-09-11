@@ -69,6 +69,7 @@ def handle_init(args: argparse.Namespace) -> None:
     user_config = UserConfig.load()
     is_external = False
     is_user_aliased = False
+    is_trusted = False
 
     if override_target and template_name:
         raise ConfigurationError(
@@ -85,12 +86,14 @@ def handle_init(args: argparse.Namespace) -> None:
         )
         if target.is_file():
             override_target = str(target)
+            is_trusted = True
         # 2. Check user aliases
         elif template_name in user_config.templates:
             alias_cfg = user_config.templates[template_name]
             override_target = alias_cfg.source
             is_external = True
             is_user_aliased = True
+            is_trusted = alias_cfg.trusted
         else:
             raise ConfigurationError(
                 f"Template '{template_name}' not found in built-ins or global configuration aliases."
@@ -184,6 +187,7 @@ def handle_init(args: argparse.Namespace) -> None:
         metadata=resolved_metadata,
         is_external=is_external,
         is_user_aliased=is_user_aliased,
+        is_trusted=is_trusted,
     )
     engine = Orchestrator(modules, user_config, request=request)
 

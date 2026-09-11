@@ -26,7 +26,8 @@ class WizardSelections:
         project_metadata: Resolved project metadata key-value mappings.
         blueprint: The loaded template blueprint, if any.
         is_external: If True, the template was loaded from an external source.
-        is_user_aliased: If True, the template was resolved via a trusted global alias.
+        is_user_aliased: If True, the template was resolved via a global alias.
+        is_trusted: If True, the template is explicitly trusted to run system tasks.
     """
 
     modules: list[BootstrapModule] = field(default_factory=list)
@@ -35,6 +36,7 @@ class WizardSelections:
     blueprint: TemplateBlueprint | None = None
     is_external: bool = False
     is_user_aliased: bool = False
+    is_trusted: bool = False
 
 
 def _should_run_wizard() -> bool:
@@ -96,6 +98,7 @@ def run_init_wizard() -> WizardSelections | None:
     blueprint = None
     is_external = False
     is_user_aliased = False
+    is_trusted = False
 
     if answer != "None":
         config = UserConfig.load(force_reload=True)
@@ -105,11 +108,13 @@ def run_init_wizard() -> WizardSelections | None:
                     f"{answer}.toml"
                 )
             )
+            is_trusted = True
         elif answer in config.templates:
             alias_cfg = config.templates[answer]
             target = alias_cfg.source
             is_external = True
             is_user_aliased = True
+            is_trusted = alias_cfg.trusted
         else:
             raise ExecutionAbortedError(
                 f"Template selection '{answer}' could not be resolved."
@@ -193,6 +198,7 @@ def run_init_wizard() -> WizardSelections | None:
         blueprint=blueprint,
         is_external=is_external,
         is_user_aliased=is_user_aliased,
+        is_trusted=is_trusted,
     )
 
 
