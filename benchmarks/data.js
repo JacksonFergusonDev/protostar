@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789153502142,
+  "lastUpdate": 1789155405702,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11905,6 +11905,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 232.58,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b6285be40fc3ecf310d9e34ad7a73e41ad1c9373",
+          "message": "fix(executor): enforce collision strategy and error wrapping for CI and release workflows (#235)",
+          "timestamp": "2026-09-11T12:35:42-07:00",
+          "tree_id": "4a6ddbc3c9c3ef8796caa5805b5444ee0835d831",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b6285be40fc3ecf310d9e34ad7a73e41ad1c9373"
+        },
+        "date": 1789155404389,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 220.5,
             "unit": "ms"
           }
         ]
