@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789083727590,
+  "lastUpdate": 1789085270996,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11157,6 +11157,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "032b2fbb3949b00332814d5eff8dffd0dcc7f3a0",
+          "message": "docs: tidy README headings and formatting\n\n- Remove emojis from section headings for a cleaner look\n- Drop redundant `---` dividers around the demo image\n- Add a divider before the Contact section\n- Minor punctuation fix in the License section",
+          "timestamp": "2026-09-10T16:58:02-07:00",
+          "tree_id": "6a4795da1027f62b1a8054b5daeedfea74572e1e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/032b2fbb3949b00332814d5eff8dffd0dcc7f3a0"
+        },
+        "date": 1789085270279,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.58,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.29,
             "unit": "ms"
           }
         ]
