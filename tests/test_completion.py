@@ -68,7 +68,8 @@ def test_completion_subcommand_guide(capsys: pytest.CaptureFixture[str]) -> None
     args = parser.parse_args(["completion"])
     args.func(args)
     captured = capsys.readouterr()
-    assert "Protostar Shell Autocompletion Setup" in captured.out
+    assert "Shell Autocompletion Setup" in captured.out
+    assert "Detected Environment:" in captured.out
     assert 'eval "$(protostar completion zsh)"' in captured.out
     assert 'eval "$(protostar completion bash)"' in captured.out
     assert "protostar completion fish | source" in captured.out
@@ -99,15 +100,57 @@ def test_completion_subcommand_json_mode(mocker: Any) -> None:
 
         emit_mock.reset_mock()
 
-        # 2. Bare completion command (listing supported shells)
+        # 2. Bare completion command (listing supported shells with detection)
         args_bare = parser.parse_args(["completion"])
         args_bare.func(args_bare)
         emit_mock.assert_called_once()
         bare_payload = emit_mock.call_args[0][0]
         assert bare_payload["status"] == "success"
+        assert "detected_os" in bare_payload
+        assert "detected_shell" in bare_payload
+        assert "recommended_profile" in bare_payload
+        assert "recommended_hook" in bare_payload
+        assert "quick_setup_command" in bare_payload
         assert bare_payload["supported_shells"] == [s.value for s in Shell]
     finally:
         ui.is_json_mode = False
+
+
+def test_detect_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test environment detection heuristics across different shells and operating systems."""
+    from protostar.cli.completion import detect_environment
+
+    # 1. Explicit ZSH_VERSION
+    monkeypatch.setenv("ZSH_VERSION", "5.9")
+    monkeypatch.delenv("BASH_VERSION", raising=False)
+    monkeypatch.delenv("FISH_VERSION", raising=False)
+    env_zsh = detect_environment()
+    assert env_zsh.shell == Shell.ZSH
+    assert env_zsh.profile_path == "~/.zshrc"
+
+    # 2. Explicit BASH_VERSION on Linux
+    monkeypatch.delenv("ZSH_VERSION", raising=False)
+    monkeypatch.setenv("BASH_VERSION", "5.2")
+    monkeypatch.setattr("sys.platform", "linux")
+    env_bash = detect_environment()
+    assert env_bash.shell == Shell.BASH
+    assert env_bash.profile_path == "~/.bashrc"
+
+    # 3. Explicit FISH_VERSION
+    monkeypatch.delenv("BASH_VERSION", raising=False)
+    monkeypatch.setenv("FISH_VERSION", "3.6.1")
+    env_fish = detect_environment()
+    assert env_fish.shell == Shell.FISH
+    assert env_fish.profile_path == "~/.config/fish/config.fish"
+
+    # 4. Windows default fallback
+    monkeypatch.delenv("FISH_VERSION", raising=False)
+    monkeypatch.delenv("SHELL", raising=False)
+    monkeypatch.setattr("sys.platform", "win32")
+    env_win = detect_environment()
+    assert env_win.shell == Shell.POWERSHELL
+    assert env_win.profile_path == "$PROFILE"
+    assert "Add-Content" in env_win.quick_setup_cmd
 
 
 def test_template_completer(mocker: Any) -> None:
