@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789085270996,
+  "lastUpdate": 1789085280595,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11191,6 +11191,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.29,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "9b54ce905ef777459b2f4b30a6e9d66ddd95d68e",
+          "message": "docs: add quick links to README header\n\nAdd a row of navigation links to key documentation pages (Get Started,\nDocs, Why Protostar?, Design Principles, Authoring Templates,\nTroubleshooting) below the badge row for faster access.",
+          "timestamp": "2026-09-10T17:06:50-07:00",
+          "tree_id": "216bc11a3156c72f7b34de684b197412740e7879",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9b54ce905ef777459b2f4b30a6e9d66ddd95d68e"
+        },
+        "date": 1789085279626,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 107.19,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 167.2,
             "unit": "ms"
           }
         ]
