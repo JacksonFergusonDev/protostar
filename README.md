@@ -83,7 +83,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses deterministic AST modification to deep-merge TOML configurations, and safely aborts if generated files already exist.
 
-1. **Actionable Telemetry:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment details to make debugging painless. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
+1. **Actionable Diagnostics:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment details to make debugging painless. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
 
 ---
 

@@ -59,7 +59,7 @@ classDiagram
 
 ## Class Definitions
 
-!!! abstract "Telemetry & Error Handling: `protostar.errors`"
+!!! abstract "Diagnostics & Error Handling: `protostar.errors`"
 
     Strictly typed operational errors that halt the execution pipeline safely and return POSIX-compliant exit codes.
 

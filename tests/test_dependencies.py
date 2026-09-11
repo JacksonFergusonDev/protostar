@@ -92,8 +92,8 @@ def test_install_dependencies_timeout_degradation(mocker):
     assert diagnostics[0][1] == Severity.WARNING
 
 
-def test_install_dependencies_adds_warning_with_telemetry_on_failure(mocker):
-    """Test that stderr telemetry is forwarded to diagnostic detail."""
+def test_install_dependencies_adds_warning_with_diagnostics_on_failure(mocker):
+    """Test that stderr diagnostics are forwarded to diagnostic detail."""
     diagnostics = []
 
     error = CommandExecutionError(

@@ -8,7 +8,7 @@ from .workflows import CIFlag, TargetOS
 
 
 class DiagnosticPhase(enum.StrEnum):
-    """Enumeration of execution phases for diagnostic telemetry events."""
+    """Enumeration of execution phases for diagnostic events."""
 
     CONFIG = "Config"
     DIRENV = "Direnv"

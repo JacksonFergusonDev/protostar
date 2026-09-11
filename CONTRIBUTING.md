@@ -13,7 +13,7 @@ If the answer to either of the first two is "maybe not", the feature probably do
 
 Modules declare intent into the manifest during `build()`. The orchestrator executes all side effects afterward in a single, ordered phase. Never call `subprocess.run` or write to disk inside a module's `build()` method.
 
-### 2. The Engine Bulkhead (State vs. Execution)
+### 2. The Headless Core (CLI vs. Engine Separation)
 
 Protostar's core engine (`Orchestrator`, `SystemExecutor`, `BootstrapModule`) is strictly headless and deterministic:
 
@@ -73,7 +73,7 @@ To guarantee that the workspace remains deterministic, error management follows 
 | `130` | Shell Signal | `ExecutionAbortedError` | You aborted interactive wizard prompt (Ctrl+C) |
 
 <!-- END_EXIT_CODES -->
-- **Enforce Cause Chains:** When wrapping secondary background subprocess tracking or physical system calls, always retain stack telemetry history using the `raise NewException(...) from e` syntax.
+- **Enforce Exception Chaining:** When catching lower-level subprocess or OS errors and raising domain exceptions, always preserve the original traceback using the `raise NewException(...) from e` syntax.
 - **Isolate Actionable Hints:** Keep description fields focused on *what* broke. Place direct system installation fix guidelines or instructions inside the decoupled `hint` keyword configuration parameter so they can be parsed and formatted cleanly on their own visual tier in the terminal.
 
 ### 8. Machine & Agent Interface Invariants (`--json` & `--dry-run`)

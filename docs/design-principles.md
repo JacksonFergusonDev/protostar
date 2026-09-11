@@ -50,7 +50,7 @@ The contrasting model is **imperative scripting**: a sequence of shell commands 
     ```
 
 !!! note "Dry-running only works cleanly on declarative interfaces"
-    Because Protostar operates on declared intent rather than an imperative list of shell calls, `--dry-run` produces the *exact same manifest* that a live execution would use — not a best-guess simulation. The plan is real; only the side-effect realization is withheld.
+    Because Protostar operates on declared intent rather than an imperative list of shell calls, `--dry-run` produces the *exact same manifest* that a live execution would use — not a best-guess simulation. The plan is real; only the side-effect execution is withheld.
 
 ---
 
@@ -84,7 +84,7 @@ flowchart TD
 
 ---
 
-## Engine Bulkhead
+## The Headless Core
 
 **The core execution engine is completely headless. All terminal interaction lives outside it.**
 
@@ -197,7 +197,7 @@ No file has been created. No directory has been staged. The workspace is exactly
     ```
 
 !!! note "Fail loud"
-    The word "loud" is deliberate. Protostar doesn't swallow errors into a generic "something failed" message. Domain-specific exceptions carry structured context — which binary is missing, what it's used for, and what command will fix it. When things fail unexpectedly (internal bugs), the crash report surfaces your full environment vector and opens a pre-filled GitHub issue automatically.
+    The word "loud" is deliberate. Protostar doesn't swallow errors into a generic "something failed" message. Domain-specific exceptions carry structured context — which binary is missing, what it's used for, and what command will fix it. When things fail unexpectedly (internal bugs), the crash report surfaces your system environment details and opens a pre-filled GitHub issue automatically.
 
 ---
 
@@ -262,11 +262,11 @@ The same principle applies to `.gitignore` — Protostar appends deduplicated pa
 
 ---
 
-## Actionable Telemetry
+## Actionable Diagnostics
 
 **When something breaks, Protostar gives you the information you need to fix it — not just that it broke.**
 
-Telemetry in Protostar operates at three levels:
+Diagnostics in Protostar operate at three levels:
 
 **1. Subprocess capture.** Every shell command Protostar executes (via `uv`, `git`, `pre-commit`, etc.) is run with full `stdout` / `stderr` capture. On non-zero exit, the raw streams are surfaced in the terminal panel. You see exactly what `uv sync` printed when it failed — not a generic "installation failed."
 
@@ -283,7 +283,7 @@ Telemetry in Protostar operates at three levels:
 
 ![Protostar Diagnostic Summary](./fixtures/diagnostic_panel.svg)
 
-**3. Automated crash reports.** When Protostar encounters an unexpected internal exception (a genuine bug, not an operational error), it collects a non-sensitive environment vector — OS, Python version, command invocation, full traceback — and encodes it into a pre-populated GitHub issue URL. You get one link to click. The debugging back-and-forth doesn't happen.
+**3. Automated crash reports.** When Protostar encounters an unexpected internal exception (a genuine bug, not an operational error), it collects non-sensitive system environment details — OS, Python version, command invocation, full traceback — and encodes it into a pre-populated GitHub issue URL. You get one link to click. The debugging back-and-forth doesn't happen.
 
 !!! note "Expected failures vs. unexpected crashes"
     These are explicitly separated. `ProtostarError` subclasses (missing dependency, network drop, config parse error) are *expected operational failures* — clean, formatted, hinted. Unhandled Python exceptions are *unexpected crashes* — they trigger the crash report URL and exit with `os.EX_SOFTWARE`. You are never shown a raw Python traceback unless you explicitly ask for it with `--verbose`.
@@ -324,6 +324,6 @@ The same structured information is available programmatically via `--json`, wher
 
 - **[Why Protostar?](./why-protostar.md):** How these principles compare against generic templaters like Copier in practice.
 - **[The Environment Manifest](./mechanics/manifest.md):** Deep dive into the state object that enforces manifest-first execution.
-- **[The Orchestrator](./mechanics/orchestrator.md):** How the engine bulkhead and two-phase lifecycle are implemented.
+- **[The Orchestrator](./mechanics/orchestrator.md):** How the headless core and two-phase lifecycle are implemented.
 - **[Error Handling Architecture](./mechanics/error_handling.md):** The full exception hierarchy, POSIX routing table, and crash report pipeline.
 - **[Agent & Machine Interface](./usage/agent-interface.md):** Driving Protostar programmatically via `--json` and `--dry-run`.

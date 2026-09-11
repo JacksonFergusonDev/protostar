@@ -14,7 +14,7 @@ During standard CLI usage, operational errors are caught at the top level of the
 
     All operational failures inherit from `ProtostarError`. The CLI entry point traps these exceptions and renders them as styled Rich panels with explicit titles, captured subprocess output, and decoupled remediation hints.
 
-- :material-code-json: __Subprocess Telemetry__
+- :material-code-json: __Subprocess Diagnostics__
 
     Subprocess calls executed by `system.run_command` capture both `stdout` and `stderr`. On non-zero exits or timeouts, detailed output streams are preserved in `CommandExecutionError` or `CommandTimeoutError` without flattening diagnostic context.
 
@@ -39,7 +39,7 @@ flowchart TD
 
     Start([CLI Invocation]):::core --> P1["1. Pre-Flight Checks"]:::phase
     P1 -->|Pass| P2["2. Config & Manifest Parsing"]:::phase
-    P2 -->|Pass| P3["3. Side-Effect Realization"]:::phase
+    P2 -->|Pass| P3["3. Side-Effect Execution"]:::phase
     P3 -->|Success| End([Environment Stabilized]):::success
 
     P1 -.->|Missing binary| E1["MissingDependencyError"]:::error
@@ -152,7 +152,7 @@ Protostar routes operational exceptions to standard UNIX exit codes (defined in 
 
 ---
 
-## Crash Diagnostics and Telemetry
+## Crash Diagnostics and Issue Reporting
 
 Protostar cleanly separates expected operational failures from unexpected internal crashes:
 
@@ -180,4 +180,4 @@ For detailed docstrings and class signatures, see the [Error Handling API Refere
 
 - __[Troubleshooting & FAQ](../usage/troubleshooting.md):__ Remediation steps for missing dependencies, collisions, and editor setups.
 - __[Agent & Machine Interface](../usage/agent-interface.md):__ Learn how AI coding agents and CI runners parse machine error envelopes.
-- __[The Orchestrator](./orchestrator.md):__ Understand the top-level exception trap and diagnostic telemetry gathering.
+- __[The Orchestrator](./orchestrator.md):__ Understand the top-level exception trap and diagnostic gathering.

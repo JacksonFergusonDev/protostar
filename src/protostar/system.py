@@ -12,7 +12,7 @@ logger = logging.getLogger("protostar")
 
 
 def execute_subprocess(cmd: list[str], timeout: int | None = None) -> None:
-    """Executes a subprocess silently and captures telemetry on failure.
+    """Executes a subprocess silently and captures diagnostic output on failure.
 
     Args:
         cmd: The command and its arguments as a list of strings.

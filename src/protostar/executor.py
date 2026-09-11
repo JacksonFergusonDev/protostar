@@ -112,7 +112,7 @@ class SystemExecutor:
     #   3. System Tasks: Git initialization must occur before pre-commit/nbdime post-install tasks.
     #   4. Dependency Resolution: `uv add` runs before post-install tasks so installed binaries
     #      are present in `.venv/bin`.
-    #   5. IDE Diagnostics: Runs last as non-blocking telemetry warnings.
+    #   5. IDE Diagnostics: Runs last as non-blocking diagnostic warnings.
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
         self._validate_targets()

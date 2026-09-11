@@ -146,11 +146,11 @@ protostar init --template cli --verbose
 
 ### Automated Crash Reporting
 
-If Protostar encounters an unexpected internal error or AST collapse:
+If Protostar encounters an unexpected internal error or AST parse failure:
 
 1. It traps the exception to prevent incomplete disk operations.
-1. It collects non-sensitive system environment vectors (OS, Python version, command invocation).
-1. It outputs a URL-encoded link that opens a pre-formatted GitHub issue ticket with the exact telemetry attached.
+1. It collects non-sensitive system environment details (OS, Python version, command invocation).
+1. It outputs a URL-encoded link that opens a pre-formatted GitHub issue ticket with the exact crash details attached.
 
 ### Filing Bugs & Asking Questions
 
@@ -164,6 +164,6 @@ If you encounter an issue or behavior not covered in this guide:
 
 ## Related Resources
 
-- **[Error Handling Architecture](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, POSIX exit codes, and subprocess telemetry.
+- **[Error Handling Architecture](../mechanics/error_handling.md):** Deep dive into the domain exception hierarchy, POSIX exit codes, and subprocess diagnostics.
 - **[Environment Initialization](./init.md):** Review collision handling, AST injection, and `--force-merge` behavior.
 - **[Global Configuration](./configuration.md):** Learn how to view, modify, or reset your global settings with `protostar config --reset`.

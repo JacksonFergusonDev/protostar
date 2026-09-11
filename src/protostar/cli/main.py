@@ -505,10 +505,10 @@ def main() -> None:
         issue_url = f"https://github.com/jacksonfergusondev/protostar/issues/new?title=Crash+Report&body={encoded_body}"
 
         ui.console.print(
-            "\nThis looks like a bug. Please help us fix it by submitting an issue with your telemetry:"
+            "\nThis looks like a bug. Please help us fix it by submitting an issue with your system details:"
         )
         ui.console.print(
-            f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with your telemetry[/link][/bold cyan]"
+            f"[bold cyan][link={issue_url}]Click here to open a GitHub issue with pre-filled crash details[/link][/bold cyan]"
         )
 
         sys.exit(ExitCode.SOFTWARE)  # 70: Internal software malfunction code

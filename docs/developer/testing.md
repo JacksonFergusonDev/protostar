@@ -1,6 +1,6 @@
 # Testing Architecture & Philosophy
 
-Protostar enforces a strict separation between state definition (the `EnvironmentManifest`) and state execution (the `SystemExecutor`). This decoupling allows the test suite to validate complex environment topologies rapidly without incurring the I/O penalty of actual disk writes or network requests.
+Protostar enforces a strict separation between state definition (the `EnvironmentManifest`) and state execution (the `SystemExecutor`). This decoupling allows the test suite to validate complex environment configurations rapidly without incurring the I/O penalty of actual disk writes or network requests.
 
 As a contributor, you must adhere to our strict isolation boundaries. Tests that leak state to the host filesystem or execute unmocked system binaries outside of explicit integration markers will fail in CI.
 
@@ -83,9 +83,9 @@ We use the custom `run_cli` fixture in `conftest.py` to spawn the `uv` toolchain
 
 Found in `tests/test_exhaustive.py`, these tests validate the declarative template engine. They guarantee that every built-in template scaffolds cleanly in isolation, and that sequentially merging templates (e.g., scaffolding `--template astro` and merging `--template ml` with `--force-merge`) correctly deep-merges ASTs without corrupting previously injected dependencies.
 
-### Telemetry Testing (`--crash-test`)
+### Crash Reporter Testing (`--crash-test`)
 
-If you are working on the orchestrator's exception handling or the GitHub issue telemetry generation, you can simulate a catastrophic failure without having to manually break the codebase. Pass the hidden `--crash-test` flag to the `init` command to raise an intentional exception at the end of the module evaluation phase:
+If you are working on the orchestrator's exception handling or the GitHub issue crash report generation, you can simulate a catastrophic failure without having to manually break the codebase. Pass the hidden `--crash-test` flag to the `init` command to raise an intentional exception at the end of the module evaluation phase:
 
 ```bash
 protostar init --crash-test
@@ -189,4 +189,4 @@ The `justfile` includes predefined recipes leveraging [hyperfine](https://github
 
 - **[Developer Overview & Contributing](./overview.md):** Setup instructions, coding standards, and PR workflows.
 - **[Extending Protostar](./extending-protostar.md):** Build new tooling or preset modules to accompany your tests.
-- **[The Orchestrator](../mechanics/orchestrator.md):** Understand the engine bulkhead and execution lifecycle under test.
+- **[The Orchestrator](../mechanics/orchestrator.md):** Understand the headless core and execution lifecycle under test.

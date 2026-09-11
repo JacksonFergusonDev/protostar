@@ -1117,7 +1117,7 @@ def generate_cli_help_svgs() -> None:
 
 
 def generate_cli_dry_run_svg() -> None:
-    """Captures an SVG snapshot of the dry-run CLI telemetry preview via Rich."""
+    """Captures an SVG snapshot of the dry-run CLI diagnostics preview via Rich."""
     original_global_console = protostar.cli.ui.console
 
     record_console = Console(
@@ -1236,7 +1236,7 @@ def generate_diagnostic_panel_svg() -> None:
 
     _render_and_write_svg(
         record_console,
-        title="Diagnostic Telemetry",
+        title="Diagnostic Summary",
         filename="diagnostic_panel.svg",
         unique_id="diagnostic_panel",
     )

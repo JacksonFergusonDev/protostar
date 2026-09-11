@@ -492,7 +492,7 @@ def test_main_handles_expected_operational_errors(mocker):
 
 
 def test_main_handles_unexpected_bugs(mocker):
-    """Test that unknown exceptions trigger the traceback and GitHub telemetry payload."""
+    """Test that unknown exceptions trigger the traceback and GitHub crash report payload."""
     from protostar.cli import main
 
     mocker.patch("protostar.cli.main.parser.build_parser")

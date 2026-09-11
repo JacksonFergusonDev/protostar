@@ -28,7 +28,7 @@ flowchart LR
     end
 ```
 
-### 1. The Thin Orchestrator (`executor.py`)
+### 1. The Execution Coordinator (`executor.py`)
 
 **Role:** Stateful execution sequencing and disk I/O.
 The `SystemExecutor` class acts as a thin coordinator. It iterates over the manifest, gathers necessary parameters, invokes the pure content generators, and writes the output to disk using atomic operations. It strictly enforces the chronological order of execution to prevent race conditions (e.g., ensuring `uv init` completes before attempting to merge `pyproject.toml` payloads).
@@ -47,7 +47,7 @@ These modules interact with external boundaries, but do so predictably.
 
 - **`security.py`**: Enforces strict boundaries (Pure). Validates that no filesystem operations escape the workspace root (`enforce_path_jail`) and that no unauthorized shell commands are executed (`enforce_binary_safelist`).
 - **`dependencies.py`** (Stateful): Orchestrates `uv add` commands to resolve and install Python packages into their appropriate dependency groups (main, dev, docs).
-- **`ide.py`** (Stateful): Verifies the presence of recommended extensions via the IDE's CLI (e.g., `code --list-extensions`) and deep-merges telemetry diagnostics and settings into `.vscode/settings.json`.
+- **`ide.py`** (Stateful): Verifies the presence of recommended extensions via the IDE's CLI (e.g., `code --list-extensions`) and deep-merges diagnostics and settings into `.vscode/settings.json`.
 - **`registry.py`**: Interacts with the asynchronous static registry to fetch the latest pre-commit hook versions during the execution phase, falling back gracefully to a static mapping (`_fallbacks.py`) if network access is unavailable. These fallbacks are automatically kept in sync with the live edge CDN prior to every release via `scripts/sync_registry_fallbacks.py`.
 
 ---
@@ -96,13 +96,13 @@ The merge behavior is governed by the resolved `CollisionStrategy`:
 
 ---
 
-## Subprocess Telemetry
+## Subprocess Diagnostics
 
 Directly calling `subprocess.run` in a CLI tool often leads to silent failures or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `protostar.system.execute_subprocess`.
 
 This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts. If the process returns a non-zero exit code, the executor raises a strictly typed `CommandExecutionError`. These exceptions preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to you without destructively flattening the context.
 
-!!! example "Simulated Subprocess Telemetry Output"
+!!! example "Simulated Subprocess Diagnostic Output"
     When a shell execution fails, the captured streams are formatted to pinpoint the exact failure mechanism:
 
     ```text
@@ -142,6 +142,6 @@ This wrapper executes the command silently while capturing both `stdout` and `st
 
 ## Related Mechanics & Guides
 
-- **[The Orchestrator](./orchestrator.md):** See how the state machine coordinates the planning phase and passes the manifest to the executor.
+- **[The Orchestrator](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
 - **[The Environment Manifest](./manifest.md):** Review the structured state container evaluated by the executor.
 - **[The Module Architecture](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.

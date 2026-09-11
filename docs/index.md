@@ -51,7 +51,7 @@ It is designed to automate environment setup while staying out of your way.
     <p>Modern Python tools composed dynamically via tri-state CLI flags and declarative blueprints.</p>
   </div>
   <div class="protostar-card">
-    <h3>Actionable telemetry</h3>
+    <h3>Actionable diagnostics</h3>
     <p>Errors surface clearly, with useful diagnostics instead of opaque setup failures.</p>
   </div>
 </div>

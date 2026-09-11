@@ -72,7 +72,7 @@ class PythonCore(BootstrapModule):
         return [Path("pyproject.toml")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
-        """Queues initialization, ignores artifacts, and handles IDE telemetry bindings.
+        """Queues initialization, ignores artifacts, and handles IDE configuration bindings.
 
         Args:
             manifest: The centralized state object.

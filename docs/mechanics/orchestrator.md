@@ -1,18 +1,18 @@
 ---
-description: "Deep dive into Protostar's Orchestrator: the primary deterministic state machine for environment generation."
+description: "Deep dive into Protostar's Orchestrator: the two-phase lifecycle coordinator for environment generation."
 ---
 
 # The Orchestrator
 
-The `Orchestrator` operates as the primary deterministic state machine for Protostar. It is responsible for bridging the gap between declarative module configurations and imperative disk/shell mutations, ensuring the local filesystem is manipulated safely and predictably.
+The `Orchestrator` coordinates the two-phase execution lifecycle for Protostar. It is responsible for bridging the gap between declarative module configurations and imperative disk/shell mutations, ensuring the local filesystem is manipulated safely and predictably.
 
-To guarantee idempotency and prevent partial initialization states (e.g., half-written configuration files following a pre-flight failure), the Orchestrator enforces a strict, multi-phase execution topology.
+To guarantee idempotency and prevent partial initialization states (e.g., half-written configuration files following a pre-flight failure), the Orchestrator enforces a strict, multi-phase execution lifecycle.
 
 ---
 
-## Execution Lifecycle & Topology
+## Execution Lifecycle
 
-The `Orchestrator` enforces a strict separation between read-only state aggregation and physical side effects (the [Engine Bulkhead](../design-principles.md#engine-bulkhead)). The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
+The `Orchestrator` enforces a strict separation between read-only state aggregation and physical side effects (the [Headless Core](../design-principles.md#the-headless-core)). The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
 
 All terminal interaction (collision prompts, remote trust confirmations, progress spinners) is isolated in the CLI presentation layer (`cli.py`).
 
@@ -66,13 +66,13 @@ flowchart TD
 
 ---
 
-## Telemetry & Diagnostics
+## Diagnostics & Crash Reporting
 
 During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv` or skipped optional tasks) are recorded into `ExecutionResult.diagnostics`. The CLI presentation layer renders these events in a structured summary panel upon completion:
 
 ![Protostar Diagnostic Summary](../fixtures/diagnostic_panel.svg)
 
-For unexpected internal exceptions or AST parsing failures, the runtime traps errors at the CLI boundary to generate pre-filled GitHub crash reports without corrupting the workspace. For complete details on the exception hierarchy, POSIX exit code mappings, and crash issue generation, see the [Error Handling Architecture](./error_handling.md#crash-diagnostics-and-telemetry).
+For unexpected internal exceptions or AST parsing failures, the runtime traps errors at the CLI boundary to generate pre-filled GitHub crash reports without corrupting the workspace. For complete details on the exception hierarchy, POSIX exit code mappings, and crash issue generation, see the [Error Handling Architecture](./error_handling.md#crash-diagnostics-and-issue-reporting).
 
 ---
 
@@ -114,4 +114,4 @@ For unexpected internal exceptions or AST parsing failures, the runtime traps er
 
 - __[The Environment Manifest](./manifest.md):__ Deep dive into the structured state container generated during the `plan()` phase.
 - __[The System Executor](./executor.md):__ See how the executor applies atomic AST deep-merges, file injections, and subprocess execution.
-- __[Error Handling Architecture](./error_handling.md):__ Learn how the orchestrator traps exceptions and routes them to POSIX exit codes and telemetry reports.
+- __[Error Handling Architecture](./error_handling.md):__ Learn how the orchestrator traps exceptions and routes them to POSIX exit codes and crash reports.
