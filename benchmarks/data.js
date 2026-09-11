@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789094876663,
+  "lastUpdate": 1789099002347,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11327,6 +11327,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 205.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b46766643b3536a22f2d91e4642d5b57adfaefc9",
+          "message": "feat(templates): centralized metadata discovery, explicit trust boundary, and CLI UX improvements (#231)\n\n* feat(config): add name and description metadata to templates and blueprint\n\n* feat(config): support rich template alias metadata and trust flag in user config\n\n* feat(templates): implement centralized zero-network template discovery engine\n\n* feat(cli): enforce explicit template trust boundary and warning bypass\n\n* feat(cli): wire centralized template discovery into list-templates, completion, and wizard\n\n* docs: update documentation and README for template metadata, trust configuration, and autocompletion\n\n* feat(wizard): format template choices with display name, aligned columns, and middle dot separator\n\n* feat(cli): optimize list-templates table layout and dual name resolution\n\n* feat(cli): display template names directly without alias annotations in table\n\n* fix(cli): eliminate nargs=? on template option to scope tab completion to templates\n\n* chore(tests): remove unused fixtures and parameters",
+          "timestamp": "2026-09-10T20:55:43-07:00",
+          "tree_id": "1f9dd3ae8551ce4efb99e660171bc89b98d9fabc",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b46766643b3536a22f2d91e4642d5b57adfaefc9"
+        },
+        "date": 1789099001419,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.85,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.23,
             "unit": "ms"
           }
         ]
