@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789155405702,
+  "lastUpdate": 1789155882164,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -11939,6 +11939,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 220.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c92e093ccd0c8a4ab6c05e7c3ec7d92f17e1f58",
+          "message": "refactor(orchestrator): enforce cross-module contract in plan phase and guard file injections (#236)",
+          "timestamp": "2026-09-11T12:43:46-07:00",
+          "tree_id": "c1c1cffee77082e4c77634943b1682638b8de7e4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8c92e093ccd0c8a4ab6c05e7c3ec7d92f17e1f58"
+        },
+        "date": 1789155881413,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.73,
             "unit": "ms"
           }
         ]
