@@ -71,6 +71,12 @@ def _instantiate_with_sentinels(cls: type) -> object:
     sig = inspect.signature(cls.__init__)  # type: ignore[misc]
     kwargs: dict[str, object] = {}
 
+    from protostar.errors import MissingDependencyError
+    from protostar.journal import RollbackResult
+    from protostar.system_deps import GlobalExecutable
+
+    sentinel_dep = MissingDependencyError(GlobalExecutable.GIT, purpose="git")
+
     sentinel_map: dict[type, object] = {
         str: "_sentinel_",
         int: 0,
@@ -79,6 +85,10 @@ def _instantiate_with_sentinels(cls: type) -> object:
         list: [],
         dict: {},
         set: set(),
+        tuple: (sentinel_dep,),
+        BaseException: Exception("sentinel"),
+        GlobalExecutable: GlobalExecutable.GIT,
+        RollbackResult: RollbackResult(succeeded=False, failed_paths=(), errors=()),
     }
 
     for param_name, param in sig.parameters.items():
@@ -95,6 +105,22 @@ def _instantiate_with_sentinels(cls: type) -> object:
         if isinstance(annotation, types_module.UnionType):
             args = [a for a in annotation.__args__ if a is not type(None)]
             annotation = args[0] if args else str
+
+        if isinstance(annotation, str):
+            if "RollbackResult" in annotation:
+                kwargs[param_name] = RollbackResult(
+                    succeeded=False, failed_paths=(), errors=()
+                )
+                continue
+            if "GlobalExecutable" in annotation:
+                kwargs[param_name] = GlobalExecutable.GIT
+                continue
+            if "MissingDependencyError" in annotation:
+                kwargs[param_name] = (sentinel_dep,)
+                continue
+            if "BaseException" in annotation or "Exception" in annotation:
+                kwargs[param_name] = Exception("sentinel")
+                continue
 
         sentinel = sentinel_map.get(annotation, "_sentinel_")
         kwargs[param_name] = sentinel

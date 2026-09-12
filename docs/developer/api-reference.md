@@ -103,6 +103,14 @@ classDiagram
             show_root_toc_entry: true
             separate_signature: true
 
+    ::: protostar.errors.AggregatedDependencyError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
     ::: protostar.errors.CommandExecutionError
         options:
             show_source: true
@@ -119,7 +127,31 @@ classDiagram
             show_root_toc_entry: true
             separate_signature: true
 
+    ::: protostar.errors.ProcessTerminationError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
     ::: protostar.errors.FileSystemError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.UnsupportedFilesystemNodeError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.TransactionStateError
         options:
             show_source: true
             show_bases: true
@@ -144,6 +176,14 @@ classDiagram
             separate_signature: true
 
     ::: protostar.errors.PartialExecutionAbortedError
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+
+    ::: protostar.errors.RollbackFailedError
         options:
             show_source: true
             show_bases: true

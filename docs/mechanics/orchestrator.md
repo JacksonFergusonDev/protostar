@@ -53,16 +53,18 @@ flowchart TD
     * **Headless Contexts:** In non-interactive environments (CI/CD), `cli.py` aborts safely with an error message instructing you to supply `--force-merge` or `--force-replace`.
 
 === "3. Execution (`execute(manifest)`)"
-    The `execute()` phase hands the calculated manifest to `SystemExecutor` to apply all side effects in a deterministic sequence:
+    The `execute()` phase hands the calculated manifest to `SystemExecutor` to apply all side effects in a deterministic, transaction-managed sequence:
 
     1. Validates existing TOML files for syntax errors.
-    1. Creates directories and injects base files.
+    1. Scaffolds directories and writes files via `TransactionAwareFS`.
     1. Modifies configurations via AST deep-merging.
     1. Writes deduplicated ignore files and Docker artifacts.
+    1. Pre-journals `pyproject.toml` and `uv.lock`, then resolves dependencies via `uv add` (failures are fatal).
     1. Writes local IDE settings.
-    1. Executes sequential subprocesses (package resolution, git hooks).
+    1. Executes system tasks and post-install subprocesses via `ProcessRunner`.
+    1. Verifies IDE extensions and commits the transaction journal.
 
-    Interrupting this phase via `KeyboardInterrupt` raises `PartialExecutionAbortedError`, recording all paths modified so far.
+    If an exception occurs or the user interrupts execution (`KeyboardInterrupt`), the executor cleanly terminates managed subprocesses and rolls back all journaled workspace paths to their pre-transaction state. If rollback succeeds after an interruption, `PartialExecutionAbortedError` is raised reporting the restored paths. If rollback encounters filesystem errors, `RollbackFailedError` is raised. (Note: rollback reliably restores Protostar-managed files and declared dependency targets, but does not promise reverting undeclared side effects from arbitrary external commands).
 
 ---
 

@@ -9,9 +9,17 @@ Protostar has one job: save you time on setup you would have done anyway. When e
 
 If the answer to either of the first two is "maybe not", the feature probably doesn't belong in the tool.
 
-### 1. Manifest-first, side-effects-last
+### 1. Manifest-first, side-effects-last & Transactional Execution
 
 Modules declare intent into the manifest during `build()`. The orchestrator executes all side effects afterward in a single, ordered phase. Never call `subprocess.run` or write to disk inside a module's `build()` method.
+
+The execution phase (`SystemExecutor`) operates under strict transactional guarantees:
+
+- **Mutation Journaling:** Every transaction-managed file or directory is recorded by `MutationJournal` before Protostar mutates it.
+- **Transaction-Aware Filesystem:** All direct filesystem writes, text appends, and directory creations route through `TransactionAwareFS`.
+- **Bounded Subprocess Side Effects:** Subprocesses are managed by `ProcessRunner` in isolated process groups. External mutations that Protostar is expected to produce (such as `uv add` modifying `pyproject.toml` and `uv.lock`) are pre-journaled before invoking the tool.
+- **Fatal Dependency Policy:** Package installation failures are fatal rather than soft diagnostics. A failed `uv add` triggers rollback of declared dependency files and workspace mutations.
+- **Automated Rollback:** If an execution fails or is interrupted (`SIGINT`), Protostar terminates and reaps active subprocesses, shields against secondary signals, and rolls back journaled paths in reverse order to their original bytes and modes.
 
 ### 2. The Headless Core (CLI vs. Engine Separation)
 
@@ -28,7 +36,7 @@ All system dependency checks happen in `pre_flight()`, before the manifest is bu
 
 ### 4. Non-destructive by default
 
-Protostar never overwrites existing work. `.gitignore` entries are appended and deduplicated. IDE settings are merged. It must be safe to run against a repo that is already partially configured.
+Protostar never overwrites existing work. `.gitignore` entries are appended and deduplicated. IDE settings are merged. It must be safe to run against a repo that is already partially configured. In addition, the transactional execution engine guarantees that if an execution fails or is interrupted midway, all journaled workspace modifications (direct file writes, AST merges, and declared dependency files) are rolled back to their pre-run bytes and modes. Note that Protostar reliably reverts tracked changes, but does not promise reverting undeclared side effects produced by external commands (such as `.git/` created by `git init`).
 
 ### 5. Modules are composable, not coupled
 
@@ -47,13 +55,18 @@ To guarantee that the workspace remains deterministic, error management follows 
   - `NetworkFetchError`: For remote template downloads, network timeouts, or insecure protocol violations.
   - `TemplateResolutionError`: For template archive extraction failures, unsupported formats, or missing template variables.
   - `WorkspaceCollisionError`: For detected collisions with existing workspace configuration markers during `plan()`.
-  - `MissingDependencyError`: For pre-flight binary checks when required system tools are absent.
+  - `MissingDependencyError`: For pre-flight binary checks when a required system tool is absent.
+  - `AggregatedDependencyError`: For pre-flight checks when multiple required system tools are absent.
   - `CommandExecutionError`: For non-zero return codes from managed subprocesses.
   - `CommandTimeoutError`: For subprocesses exceeding allocated runtime limits.
+  - `ProcessTerminationError`: For failures when stopping or reaping an active managed subprocess tree before rollback.
   - `FileSystemError`: For local disk I/O, file writing, or directory creation failures.
+  - `UnsupportedFilesystemNodeError`: For transaction targets that are unsupported node types such as symbolic links or special files.
+  - `TransactionStateError`: For invalid lifecycle transitions on a mutation journal (e.g. attempting writes after commit or rollback).
   - `SecurityViolationError`: For unauthorized path traversal attempts (e.g. Zip Slip).
   - `ExecutionAbortedError`: For explicit cancellations during interactive wizard prompts.
-  - `PartialExecutionAbortedError`: For interruptions occurring mid-execution after disk mutations have begun (stores immutable `frozenset[str]` of touched paths).
+  - `PartialExecutionAbortedError`: For interruptions occurring mid-execution when Protostar successfully rolls back tracked workspace changes (stores immutable `frozenset[str]` of touched paths; notes that external commands may have also modified files).
+  - `RollbackFailedError`: For interrupted or failed executions where automated rollback was only partially successful (stores failed paths and chains the root exception).
 - **Respect POSIX Exit Code Mappings:**
 
 <!-- BEGIN_EXIT_CODES -->
@@ -64,7 +77,7 @@ To guarantee that the workspace remains deterministic, error management follows 
 | `1` | Generic Exit | `CommandExecutionError`<br>`CommandTimeoutError` | Subprocess failure or command timeout |
 | `64` | `os.EX_USAGE` | `InvalidUsageError` | Invalid CLI arguments or command usage syntax |
 | `65` | `os.EX_DATAERR` | `TemplateResolutionError` | Template resolution error (corrupted archive, missing variables) |
-| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError` | Missing required system binary (`uv`, `git`, etc.) |
+| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError`<br>`AggregatedDependencyError` | Missing required system binary (`uv`, `git`, etc.) |
 | `70` | `os.EX_SOFTWARE` | *(Unhandled exception)* | Unhandled internal Python bug (prompts automated bug report) |
 | `74` | `os.EX_IOERR` | `FileSystemError` | Local filesystem read/write or permission failure |
 | `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` | Transient network failure during remote template download |
@@ -85,6 +98,7 @@ Protostar exposes an experimental machine-readable CLI interface for AI agents, 
 - **Zero Interactive Trapping in Machine Mode:** When `is_json_mode` is active, the CLI must **never** block on terminal-interactive prompts (such as `questionary` wizards, collision resolution prompts, or external template trust dialogs). Instead, the CLI must either bypass the prompt deterministically (if explicit override flags like `--force-merge` are present) or raise a domain exception immediately so that a structured JSON error envelope is returned.
 - **Deterministic State Serialization (`.to_dict()`):** All manifest domain slices and execution models exposed to agents must implement deterministic `.to_dict()` methods:
   - Mathematical sets (such as `directories`, `vcs_ignores`, `workspace_hides`) must serialize to alphabetically sorted lists.
+  - `ExecutionResult` serializes `created_paths`, `mutated_paths`, and the derived union `touched_paths` to alphabetically sorted lists, alongside diagnostic events.
   - Insertion-ordered lists (such as `dependencies`, `dev_dependencies`, `system_tasks`) must preserve their exact declaration order.
   - Enums (such as `CollisionStrategy`) must serialize as their string `.value`.
   - File system paths must be normalized to POSIX string format.
