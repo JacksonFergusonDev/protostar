@@ -11,8 +11,11 @@ import traceback
 import urllib.parse
 from typing import Any
 
+from rich.columns import Columns
+from rich.console import Group
 from rich.logging import RichHandler
 from rich.panel import Panel
+from rich.text import Text
 
 from protostar.cli import parser, schema, ui
 from protostar.config import (
@@ -400,8 +403,9 @@ def main() -> None:
             }
             if e.hint:
                 error_dict["hint"] = e.hint
-            if getattr(e, "rollback_message", None):
-                error_dict["rollback_message"] = e.rollback_message
+            ctx = getattr(e, "rollback_context", None)
+            if ctx is not None:
+                error_dict["rollback_context"] = ctx.to_dict()
             if e.docs_url:
                 error_dict["docs_url"] = e.docs_url
             if isinstance(e, WorkspaceCollisionError):
@@ -422,14 +426,82 @@ def main() -> None:
                 body += f"\n\n[dim]{e.output_detail}[/dim]"
             if e.hint:
                 body += f"\n\n[dim]Hint: {e.hint}[/dim]"
-            if getattr(e, "rollback_message", None):
-                body += f"\n\n[bold green]Rollback Successful[/bold green]\n{e.rollback_message}"
+            ctx = getattr(e, "rollback_context", None)
+            from rich.console import RenderableType
+
+            body_renderable: RenderableType
+            if ctx is not None:
+                rb_group: list[RenderableType] = []
+                if ctx.touched_paths:
+                    paths = sorted(ctx.touched_paths)
+                    if len(paths) > 15:
+                        display_paths = [f"[dim]{p}[/dim]" for p in paths[:15]]
+                        display_paths.append(
+                            f"[dim]...and {len(paths) - 15} more paths[/dim]"
+                        )
+                    else:
+                        display_paths = [f"[dim]{p}[/dim]" for p in paths]
+
+                    rb_group.append(
+                        Text.from_markup(
+                            "[bold green]✓ Protostar successfully rolled back all tracked workspace changes:[/bold green]\n"
+                        )
+                    )
+                    rb_group.append(Columns(display_paths, padding=(0, 2)))
+                    rb_group.append(Text(""))
+
+                if ctx.is_external:
+                    rb_group.append(
+                        Text.from_markup(
+                            "[yellow]Note: Protostar could not clean up side effects from external subprocesses.[/yellow]"
+                        )
+                    )
+                    if ctx.completed_tasks or ctx.interrupted_task:
+                        rb_group.append(
+                            Text(
+                                "The following commands were run before execution aborted:\n"
+                            )
+                        )
+                        for t in ctx.completed_tasks:
+                            desc = (
+                                t.command[0] if not t.command else " ".join(t.command)
+                            )
+                            rb_group.append(
+                                Text.from_markup(f"[dim]• [Completed]   {desc}[/dim]")
+                            )
+                        if ctx.interrupted_task:
+                            t = ctx.interrupted_task
+                            desc = (
+                                t.command[0] if not t.command else " ".join(t.command)
+                            )
+                            rb_group.append(
+                                Text.from_markup(f"[dim]• [Interrupted] {desc}[/dim]")
+                            )
+                else:
+                    docs_url = (
+                        e.docs_url
+                        or "https://protostar.readthedocs.io/en/stable/usage/rollback/"
+                    )
+                    rb_group.append(
+                        Text.from_markup(
+                            f"Note: Some standard artifacts (like the .venv/ directory) remain but are safe\nto ignore. For details, see: {docs_url}"
+                        )
+                    )
+
+                # Create a Group to render multiple items seamlessly
+                body_renderable = (
+                    Group(Text.from_markup(body), Text(""), *rb_group)
+                    if body.strip()
+                    else Group(*rb_group)
+                )
+            else:
+                body_renderable = Text.from_markup(body)
             if e.docs_url:
                 body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
 
             ui.console.print(
                 Panel(
-                    body,
+                    body_renderable,
                     title="[bold red]Execution Aborted",
                     border_style="red",
                     expand=False,
