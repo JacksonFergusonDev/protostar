@@ -28,8 +28,6 @@ By preventing modules from writing to disk directly during planning, Protostar k
 
 </div>
 
----
-
 ## State Architecture
 
 Rather than storing all state in a monolithic structure, `EnvironmentManifest` delegates state management to specialized domain classes: `DependencyManifest`, `FilesystemManifest`, `ToolingManifest`, and `TaskManifest`.
@@ -74,8 +72,6 @@ During the `build()` phase, modules route their state declarations through these
     * `collision_strategy`: Active `CollisionStrategy` (`MERGE`, `OVERWRITE`, `ABORT`).
     * `target_files()`: Pure method returning the complete set of concrete `Path` objects Protostar intends to create or mutate (file injections, TOML targets, Dockerfiles, lockfiles, `.gitignore`, and templated blueprint files). Used by the Orchestrator for dynamic collision detection.
 
----
-
 ## State Serialization
 
 Every sub-manifest (`DependencyManifest`, `FilesystemManifest`, `ToolingManifest`, `TaskManifest`) as well as the root `EnvironmentManifest` implements a deterministic `.to_dict()` serialization method.
@@ -95,8 +91,6 @@ Below is an example JSON representation of an aggregate state during a dry-run o
 !!! tip "Deduplication & Order"
     Notice how lists are utilized for task ordering (which must be executed sequentially), while sets are utilized internally for structural artifacts (like ignores and directories) to prevent redundant I/O requests.
 
----
-
 ## Collision Strategies
 
 When the Orchestrator detects that files in the target workspace collide with the manifest's planned targets (`manifest.target_files()`, e.g., an existing `pyproject.toml` or blueprint template file), it alters the manifest's `collision_strategy` attribute based on your input or `--force-merge` / `--force-replace` flags.
@@ -106,8 +100,6 @@ The `SystemExecutor` reads this enum to govern its AST mutation logic:
 - __`MERGE` (Default):__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Missing arrays are appended, but existing scalar values are respected.
 - __`OVERWRITE`:__ Forces Protostar's configuration onto the AST. Keys conflicting with Protostar's payload will be updated to match the tool's baseline.
 - __`ABORT`:__ Halts execution completely.
-
----
 
 ## API Reference
 
@@ -122,8 +114,6 @@ If you are extending Protostar with custom domains or tooling layers, your `Boot
             show_root_toc_entry: false
             separate_signature: true
             members_order: source
-
----
 
 ## Related Mechanics & Guides
 

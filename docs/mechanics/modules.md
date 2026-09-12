@@ -4,8 +4,6 @@ Protostar is built around modular plugins. When you run a command, Protostar tur
 
 These modules act as autonomous, stateless plugins that interact strictly with the `EnvironmentManifest`. They do not inspect sibling modules, do not read the host filesystem, and do not execute system commands directly.
 
----
-
 ## The Layering Model
 
 If multiple modules touch the same configuration space, the Orchestrator relies on sequence order to determine precedence.
@@ -47,8 +45,6 @@ The core runtime environment (`PythonCore`). Establishes the primary package man
 
 Ancillary development tools. Tools like `ruff`, `mypy`, `pytest`, and `prek` evaluate the manifest to inject configuration blocks into the project files.
 
----
-
 ## The Module Contract
 
 ### `pre_flight()`
@@ -85,8 +81,6 @@ warn_return_any = true
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
-
----
 
 ## Next Steps & Developer Guides
 

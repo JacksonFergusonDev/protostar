@@ -4,8 +4,6 @@ While the Orchestrator plans the environment, the execution engine carries it ou
 
 To keep the codebase maintainable, secure, and testable, Protostar separates **content generation** and **security checks** from **stateful transaction management** and **command execution**.
 
----
-
 ## Modular Architecture & Transactional Execution
 
 ```mermaid
@@ -83,8 +81,6 @@ These modules interact with external boundaries, but do so predictably.
 - **`ide.py`** (Stateful): Verifies the presence of recommended extensions via the IDE's CLI (e.g., `code --list-extensions`) and deep-merges diagnostics and settings into `.vscode/settings.json`.
 - **`registry.py`**: Interacts with the asynchronous static registry to fetch the latest pre-commit hook versions during the execution phase, falling back gracefully to a static mapping (`_fallbacks.py`) if network access is unavailable. These fallbacks are automatically kept in sync with the live edge CDN prior to every release via `scripts/sync_registry_fallbacks.py`.
 
----
-
 ## Pipeline Transactionality & Rollback
 
 The `SystemExecutor` wraps the entire execution sequence in an explicit transaction. Every path Protostar touches is journaled before mutation, and any failure or `Ctrl+C` interrupt triggers automatic restoration of all journaled paths in reverse order.
@@ -92,16 +88,12 @@ The `SystemExecutor` wraps the entire execution sequence in an explicit transact
 !!! info "Dedicated rollback documentation"
     For the full breakdown of what is and isn't restored, the `MutationJournal` / `TransactionAwareFS` / `ProcessRunner` architecture, and design decisions like "Bytes Over Intent", see the dedicated [Rollback Internals](./rollback.md) page.
 
----
-
 ## Security & Path Isolation
 
 All disk writes and subprocess calls pass through security checks in `security.py`:
 
 - **Path Jailing**: Before the executor writes any artifact, it asserts that the `target` path is physically bounded within `Path.cwd()`. This structurally prevents malicious blueprint templates from triggering directory traversal attacks (e.g., writing to `/etc/passwd`).
 - **Binary Safelisting**: Before any shell task is executed (whether pre-install or post-install), the executable command name is verified against `ALLOWED_BINARIES` (e.g., `uv`, `git`, `npm`).
-
----
 
 ## AST Deep Merging & Collision Strategies
 
@@ -136,8 +128,6 @@ The merge behavior is governed by the resolved `CollisionStrategy`:
 - **Merge (Default):** The engine walks the AST, appending missing keys and extending tables. Existing scalar values or sibling tables that are not explicitly targeted by the payload are safely ignored and preserved.
 - **Overwrite:** The engine aggressively prunes the target. If the payload defines a specific table (e.g., `[tool.ruff]`), any existing scalar keys within that table on the host that *do not* exist in the payload are purged, forcing strict parity with Protostar's baseline.
 
----
-
 ## Subprocess Diagnostics & Process Ownership
 
 Directly calling `subprocess.run` in a CLI tool often leads to silent failures, leaked background processes, or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `ProcessRunner` (`src/protostar/system.py`).
@@ -163,8 +153,6 @@ Directly calling `subprocess.run` in a CLI tool often leads to silent failures, 
 
 For one-off isolated commands outside the main executor loop, `protostar.system.execute_subprocess` provides a convenience wrapper around `ProcessRunner().run(...)`.
 
----
-
 ## API Reference
 
 ??? abstract "Core Interface: `SystemExecutor`"
@@ -176,8 +164,6 @@ For one-off isolated commands outside the main executor loop, `protostar.system.
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
-
----
 
 ## Related Mechanics & Guides
 

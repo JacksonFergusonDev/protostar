@@ -20,8 +20,6 @@ Protostar is designed to be run on Day 1 to build your repository foundation, bu
 
 </div>
 
----
-
 ## Opinionated Templates
 
 While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in __Opinionated Templates__ that bundle domain-specific tools, directories, and AST configurations.
@@ -43,8 +41,6 @@ protostar init -t astro --no-direnv --mypy
 ```
 
 To explore all built-in templates, load remote team standards (`--from`), supply dynamic parameters, or register global aliases, see the complete __[Templates Guide](./templates.md)__.
-
----
 
 ## Example Setups
 
@@ -219,8 +215,6 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - __Host Mock Testing:__ Scaffolds a `tests/host_mocks/` harness to validate hardware interaction logic locally without physical microcontrollers connected.
     - __MicroPython Device Tooling:__ Bundles `mpremote` and `pyserial` for device communication, flashing, and interactive REPL sessions.
 
----
-
 ## Task Runner Orchestration (`justfile`)
 
 Every initialized repository includes a turnkey `justfile` generated from your active tooling configuration. Recipes dynamically adapt to your selected linters, test frameworks, and documentation engines:
@@ -237,8 +231,6 @@ Running `just` in your project root provides standard developer workflows immedi
 - __`just test` / `just test-cov`__: Executes the test suite with coverage reporting.
 - __`just ci`__: Emulates the GitHub Actions CI pipeline locally.
 
----
-
 ## Interactive Wizard & Metadata
 
 When running `protostar init` without a `--template` flag, Protostar launches an interactive prompt wizard to configure your environment.
@@ -246,8 +238,6 @@ When running `protostar init` without a `--template` flag, Protostar launches an
 The following metadata fields are prompted during initialization or automatically resolved from your global configuration and git environment:
 
 --8<-- "table_metadata.md"
-
----
 
 ## Progressive Scaffolding & Collisions
 
@@ -296,8 +286,6 @@ Selecting __Merge__ executes an AST injection:
 To view all supported subcommands and flags in your terminal, run `protostar help init`.
 
 ![Protostar Help Init](../fixtures/cli_init_help.svg)
-
----
 
 ## Next Steps
 

@@ -8,13 +8,9 @@ Protostar provides a modular matrix of tooling modules and built-in templates. T
 !!! tip "Design Decision: Markdown Tooling Architecture"
     Protostar adopts `rumdl` as the default markdown linter and formatter for production templates (`cli`, `api`, `ml`). Because `rumdl` is a fast Rust binary, it installs cleanly as a dev dependency via `uv` (tracked in `uv.lock`) and keeps all configuration consolidated inside `pyproject.toml` (`[tool.rumdl]`). This avoids external Node.js/npx runtime requirements and prevents configuration file sprawl. For projects requiring legacy MarkdownLint tooling, `--markdownlint` remains available as an optional module.
 
----
-
 ## Available Tooling Modules
 
 --8<-- "table_tooling.md"
-
----
 
 ## Built-in Templates
 
@@ -24,8 +20,6 @@ Built-in templates act as high-level macros that execute on top of a base langua
     Templates do not hardcode package versions. They pass the library requirements directly to the package manager (`uv`), allowing your environment to resolve the latest compatible machine learning, astrophysics, or API packages at runtime.
 
 --8<-- "table_templates.md"
-
----
 
 ## Related Guides
 

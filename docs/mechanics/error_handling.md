@@ -24,8 +24,6 @@ During standard CLI usage, operational errors are caught at the top level of the
 
 </div>
 
----
-
 ## How Errors Propagate
 
 The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, transactional side-effects) up to the top-level CLI boundary in `cli.py`:
@@ -55,8 +53,6 @@ flowchart TD
 ```
 
 For the complete exit code mapping for each exception type, see the [POSIX Exit Code Matrix](#posix-exit-code-matrix) below.
-
----
 
 ## The Exception Hierarchy
 
@@ -155,8 +151,6 @@ Raised when you explicitly abort execution via an interactive prompt.
 
 Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun and Protostar has successfully rolled back all tracked workspace changes. Reports the set of rolled-back paths via its immutable `touched_paths: frozenset[str]` attribute.
 
----
-
 ## Machine-Readable Error Envelopes (`--json`)
 
 When running in `--json` mode, Protostar suppresses all terminal UI formatting, spinners, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to `stdout`:
@@ -171,15 +165,11 @@ The error envelope guarantees:
 - __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`, and `paths` for collisions).
 - __POSIX Status Codes:__ The process exits with the exact same POSIX exit code defined in the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
 
----
-
 ## POSIX Exit Code Matrix
 
 Protostar routes operational exceptions to standard UNIX exit codes (defined in `os`), allowing automation tooling and CI pipelines to programmatically identify failure causes:
 
 --8<-- "table_exit_codes.md"
-
----
 
 ## Crash Diagnostics and Issue Reporting
 
@@ -197,13 +187,9 @@ protostar init --verbose
 
 When Protostar encounters an unhandled internal exception (an unexpected bug or crash), it captures the traceback, gathers basic system details (OS, Python version, command run), generates a pre-filled GitHub issue URL, and exits with `os.EX_SOFTWARE` (`70`). Clicking the link opens a pre-formatted issue so bugs can be reported instantly.
 
----
-
 ## API Reference
 
 For detailed docstrings and class signatures, see the [Error Handling API Reference](../developer/api-reference.md#class-definitions).
-
----
 
 ## Related Guides & References
 

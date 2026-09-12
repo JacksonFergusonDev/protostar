@@ -24,8 +24,6 @@ To bypass the confirmation prompt (e.g., in automated scripts), append `--force`
 protostar config --reset --force
 ```
 
----
-
 ## The Default Baseline
 
 When you first run `protostar config` a configuration file is created and opened at `~/.config/protostar/config.toml`:
@@ -33,8 +31,6 @@ When you first run `protostar config` a configuration file is created and opened
 ```toml
 --8<-- "default_config.toml"
 ```
-
----
 
 ## Configuration Reference
 
@@ -78,8 +74,6 @@ When declaring a template using the `[templates.<alias>]` table format:
 - **`trusted`** *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning prompt.
 
 Templates declared here can be invoked directly with `protostar init --template <alias>`, appear automatically in the interactive wizard, and are dynamically surfaced in shell completions.
-
----
 
 ## Next Steps
 

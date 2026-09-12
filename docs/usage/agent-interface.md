@@ -28,8 +28,6 @@ By passing the position-independent `--json` flag and utilizing the `--dry-run` 
 
 </div>
 
----
-
 ## The Machine Protocol
 
 Protostar marks its machine interface with an explicit `api_version` field in all JSON payloads (`"api_version": 0` during the experimental phase).
@@ -60,8 +58,6 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
     ```json
     --8<-- "agent_payload_error.json"
     ```
-
----
 
 ## The Agent Scaffolding Lifecycle
 
@@ -136,8 +132,6 @@ lists. The `touched_paths` list is their derived union.
 
 If execution is interrupted or fails, Protostar automatically rolls back all tracked workspace changes. See [Automatic Rollback](./rollback.md) for the full guarantee model.
 
----
-
 ## Template Schema Export
 
 When agents generate custom Protostar template TOML files dynamically, they can validate their syntax against the official schema.
@@ -153,8 +147,6 @@ protostar export-schema --json > protostar-template.schema.json
 ```
 
 Agents can use standard JSON Schema validators (e.g., `jsonschema` in Python or `ajv` in JavaScript) to verify their generated blueprints before invoking `protostar init --from <file>`.
-
----
 
 ## Related Architecture & Next Steps
 

@@ -8,8 +8,6 @@ Protostar templates allow platform engineers, team leads, and open-source mainta
 
 Templates scale gracefully from a single declarative TOML file to complex, multi-file repository archives.
 
----
-
 ## Level 1: The Single-File Blueprint
 
 At its simplest, a template is a single TOML file containing the configuration state. You can host this file remotely or keep it on your local machine.
@@ -54,8 +52,6 @@ Protostar's true power lies in its ability to safely mutate existing files via A
 - **`[dev.pyproject]`**: Any table defined here is parsed via `tomlkit` and deeply merged into the target workspace's `pyproject.toml`. This allows you to inject custom linter configurations (e.g., specific Ruff rules) without overwriting your existing dependencies or project metadata.
 - **`[appends]`**: For non-TOML files (like `justfile`, `Makefile`, or `.envrc`), you can define generic string payloads. Protostar wraps these payloads in language-aware comment markers (e.g., `# --- Protostar Injection ---`) and safely appends them to the target file.
 
----
-
 ## Level 2: The Multi-File Repository
 
 While the `[files]` table in a single TOML file is excellent for small injections (like a standard `LICENSE` or a minimal `main.py`), complex scaffolds—such as a full FastAPI architecture or a PyTorch training pipeline—require physical files.
@@ -84,8 +80,6 @@ my-org-fastapi-template/
 ```
 
 *Note: Protostar automatically ignores compilation artifacts (`__pycache__`) and `.DS_Store` files inside the `template/` directory during extraction.*
-
----
 
 ## Level 3: Variable Interpolation
 
@@ -117,8 +111,6 @@ protostar init --from https://github.com/Org/template --DATABASE_URL="sqlite:///
 ```
 
 If you *omit* the flag, Protostar parses the AST, detects the unresolved `<% DATABASE_URL %>` placeholder, and automatically halts to prompt you via the interactive terminal wizard before any disk mutations occur.
-
----
 
 ## Level 4: Testing & Distribution
 
@@ -154,8 +146,6 @@ Protostar enforces an **Informed Consent Security Model**. If your template defi
 
 Templates registered in your global `config.toml` aliases bypass this prompt. For a complete breakdown of how the runtime evaluates trust boundaries, see the [Remote Trust Model](templates.md#security-model-the-remote-trust-dialog).
 
----
-
 ## Best Practices
 
 When building templates for your team or the open-source community, keep the following guidelines in mind:
@@ -164,8 +154,6 @@ When building templates for your team or the open-source community, keep the fol
 - **Descriptive Variable Names:** Use clear, self-explanatory names for custom placeholders (e.g., `<% AWS_REGION %>` instead of `<% REG %>`). Since Protostar automatically generates interactive terminal prompts for unresolved variables, descriptive names provide a better user experience.
 - **Minimize Shell Scripts:** Be cautious with `system_tasks` and `post_install_tasks`. Heavy reliance on shell commands can compromise cross-platform compatibility (e.g., failing on Windows). It also triggers the Informed Consent Security Model for remote URLs, which might alarm users.
 - **Test Locally:** Always test your template locally against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
-
----
 
 ## Next Steps
 

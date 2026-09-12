@@ -8,8 +8,6 @@ Protostar's automatic rollback is implemented as a three-layer stack that collab
 
 For the user-facing guide covering what rollback restores, what it doesn't, and how to remediate failures, see [Automatic Rollback](../usage/rollback.md).
 
----
-
 ## The Three-Layer Stack
 
 ```mermaid
@@ -33,8 +31,6 @@ flowchart TD
 - **`MutationJournal`** is the ledger. Before Protostar writes or modifies any path, it records that path's original state (bytes, mode, or absence). On rollback, it replays the journal in reverse, restoring each entry.
 - **`TransactionAwareFS`** is the gated write interface. All filesystem mutations in the execution phase route through this class, which calls into the journal before performing any disk operation.
 - **`ProcessRunner`** owns the active subprocess. When an error or interrupt fires, the executor calls `terminate_active_process_tree()` first — before touching the journal — ensuring no process is still writing to disk while rollback is in progress.
-
----
 
 ## Transactional Execution Flow
 
@@ -75,8 +71,6 @@ flowchart TD
     Check -- "Yes" --> ReRaise["Re-raise original error\n(PartialExecutionAbortedError on Ctrl+C)"]:::error
     Check -- "Partial failure" --> RFE["Raise RollbackFailedError\n(failed_paths attached)"]:::error
 ```
-
----
 
 ## `MutationJournal`
 
@@ -124,8 +118,6 @@ Any path that cannot be restored is collected into a `RollbackFailure` tuple. If
 
 Before recording any path, `normalize_path()` resolves it to an absolute path **without dereferencing its final component** (so symlinks are caught rather than followed). It then asserts the resolved path is within `workspace_root`, preventing any transaction-managed operation from escaping the workspace boundary.
 
----
-
 ## `TransactionAwareFS`
 
 `TransactionAwareFS` (`src/protostar/fs_transaction.py`) is the gated write interface. The executor never calls `Path.write_text()` or `Path.mkdir()` directly — all filesystem mutations flow through this class, which calls into the `MutationJournal` first.
@@ -142,8 +134,6 @@ Before recording any path, `normalize_path()` resolves it to an absolute path **
 ### Implicit Parent Tracking
 
 When writing a file at a path like `src/myproject/__init__.py`, any parent directories that don't yet exist (`src/`, `src/myproject/`) are also recorded in the journal before `mkdir -p` creates them. This ensures that a partially-created directory tree is correctly removed on rollback — in reverse order, deepest first.
-
----
 
 ## `ProcessRunner` & Subprocess Termination
 
@@ -167,15 +157,11 @@ This sequence ensures no subprocess is still writing to disk while rollback is i
 
 `ProcessRunner.run()` strips `VIRTUAL_ENV` and `PYTHONHOME` from the inherited environment before launching any subprocess. This prevents an ambient Python virtual environment from contaminating the subprocess's interpreter resolution (e.g., `uv` resolving the wrong Python).
 
----
-
 ## `shield_sigint`
 
 Rollback itself is wrapped in the `shield_sigint()` context manager (`src/protostar/system.py`). This temporarily replaces the `SIGINT` handler with a no-op for the duration of `journal.rollback()`.
 
 **Why this is necessary:** If the user presses `Ctrl+C` a second time while the journal is replaying, an unshielded `KeyboardInterrupt` would interrupt the rollback mid-stream — potentially leaving the workspace in a partially-restored state that is worse than the original failure. Shielding defers the second interrupt until cleanup finishes, then reinstates the original handler.
-
----
 
 ## Design Decisions
 
@@ -194,8 +180,6 @@ This is a deliberate safety trade-off: risking a non-empty directory being left 
 ### Fatal Dependency Policy
 
 `uv add` is not treated as a best-effort step. If dependency installation fails or times out, the error (`CommandExecutionError` or `CommandTimeoutError`) propagates immediately to the executor's exception handler, which triggers full rollback of all journaled paths including the pre-journaled `pyproject.toml` and `uv.lock`. Dependency failures are never downgraded to diagnostic warnings.
-
----
 
 ## API Reference
 
@@ -228,8 +212,6 @@ This is a deliberate safety trade-off: risking a non-empty directory being left 
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
-
----
 
 ## Related Pages
 

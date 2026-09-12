@@ -2,8 +2,6 @@
 
 This guide provides remediation steps for common operational errors, environment constraints, and editor integrations when using Protostar.
 
----
-
 ## Missing Dependencies & Environment Checks
 
 Protostar verifies system-level dependencies during its `pre_flight()` phase before writing files or modifying configurations. If a required binary is missing, execution halts with a `MissingDependencyError`.
@@ -37,8 +35,6 @@ Protostar strongly recommends [uv](https://docs.astral.sh/uv/) for high-velocity
 
 If an optional tool (such as `direnv` or `just`) is not installed on your system when requested, Protostar logs a non-fatal diagnostic warning and safely skips subprocess initialization without aborting repository creation.
 
----
-
 ## Workspace Collisions
 
 When Protostar detects pre-existing files (such as an existing `pyproject.toml` or `README.md`) matching planned manifest targets in the target workspace, it raises a `WorkspaceCollisionError` to protect your existing work.
@@ -67,8 +63,6 @@ protostar init --template cli --force-merge
 # Forcefully overwrite existing configs:
 protostar init --template cli --force-replace
 ```
-
----
 
 ## Remote Template Security Alerts
 
@@ -100,8 +94,6 @@ trusted = true
 
 1. Invoke it via shorthand: `protostar init --template team-backend`. External templates configured with `trusted = true` bypass interactive confirmation dialogs and execute cleanly in non-interactive CI/CD pipelines.
 
----
-
 ## Editor Schema Setup for Custom Templates
 
 Protostar templates are pure TOML files validated against a JSON Schema. Configuring your editor provides instant autocompletion, hover tooltips, and real-time schema validation.
@@ -132,16 +124,12 @@ protostar export-schema --json > protostar-template.schema.json
 1. Set the schema URL to `https://raw.githubusercontent.com/jacksonfergusondev/protostar/main/schemas/template.schema.json`.
 1. Add the file pattern `*protostar*.toml`.
 
----
-
 ## Execution Interruptions & Rollback
 
 If an error occurs or you press `Ctrl+C` mid-run, Protostar automatically restores your workspace.
 
 !!! info "Dedicated rollback guide"
     Full documentation on what gets restored, what might remain, `RollbackFailedError` remediation, and `Ctrl+C` behavior is in the [Automatic Rollback](./rollback.md) guide.
-
----
 
 ## Debugging & Bug Reporting
 
@@ -168,8 +156,6 @@ If you encounter an issue or behavior not covered in this guide:
 - **Search Existing Issues:** Check the [GitHub Issues tracker](https://github.com/jacksonfergusondev/protostar/issues) to see if a workaround or fix already exists.
 - **Open a Bug Report:** If you've found a bug or unexpected behavior, [open a new issue](https://github.com/jacksonfergusondev/protostar/issues/new) with your environment details and `--verbose` output attached.
 - **Community Support:** For general questions, configuration help, or workflow ideas, start a thread in [GitHub Discussions](https://github.com/jacksonfergusondev/protostar/discussions).
-
----
 
 ## Related Resources
 

@@ -4,8 +4,6 @@ Protostar enforces a strict separation between state definition (the `Environmen
 
 As a contributor, you must adhere to our strict isolation boundaries. Tests that leak state to the host filesystem or execute unmocked system binaries outside of explicit integration markers will fail in CI.
 
----
-
 ## Core Principles
 
 ### 1. Disk I/O Isolation
@@ -63,8 +61,6 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
 
 ```
 
----
-
 ## Test Categories
 
 We divide the test suite into three architectural tiers to balance coverage confidence with execution latency.
@@ -92,8 +88,6 @@ protostar init --crash-test
 ```
 
 This guarantees the crash reporter is invoked, allowing you to inspect the URL-encoded GitHub issue generation.
-
----
 
 ## Running the Suite
 
@@ -159,8 +153,6 @@ module = "tests.*"
 ignore_errors = true
 ```
 
----
-
 ## Performance & Latency Testing
 
 Because Protostar is designed for high-velocity initialization, we enforce a strict performance budget to prevent Python's startup overhead from degrading the CLI experience.
@@ -182,8 +174,6 @@ The `justfile` includes predefined recipes leveraging [hyperfine](https://github
     ```bash
     just test-benchmark-slower
     ```
-
----
 
 ## Related Developer Guides
 

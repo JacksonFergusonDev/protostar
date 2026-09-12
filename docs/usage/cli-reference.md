@@ -10,15 +10,11 @@ Protostar provides a composable, deterministic command-line interface. Commands 
 protostar [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
 ```
 
----
-
 ## Global Options
 
 Global options can be passed to any command or evaluated independently:
 
 --8<-- "table_cli_global.md"
-
----
 
 ## Commands
 
@@ -48,8 +44,6 @@ Any template containing placeholders (e.g., `<% DATABASE_URL %>`) can receive va
 protostar init --from ./api.toml --DATABASE_URL="postgresql://localhost:5432/db"
 ```
 
----
-
 ### `protostar config`
 
 Manages your default preferences stored in `~/.config/protostar/config.toml`.
@@ -59,8 +53,6 @@ protostar config [OPTIONS]
 ```
 
 --8<-- "table_cli_config.md"
-
----
 
 ### `protostar export-schema`
 
@@ -72,8 +64,6 @@ protostar export-schema [OPTIONS]
 
 --8<-- "table_cli_export_schema.md"
 
----
-
 ### `protostar completion`
 
 Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).
@@ -84,8 +74,6 @@ protostar completion [SHELL]
 
 --8<-- "table_cli_completion.md"
 
----
-
 ### `protostar help`
 
 Displays comprehensive help panels and usage instructions.
@@ -93,8 +81,6 @@ Displays comprehensive help panels and usage instructions.
 ```bash
 protostar help [COMMAND]
 ```
-
----
 
 ## POSIX Exit Codes
 

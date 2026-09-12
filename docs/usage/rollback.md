@@ -26,8 +26,6 @@ If something goes wrong during `protostar init` — a failed dependency installa
 
 </div>
 
----
-
 ## When Rollback Fires
 
 Rollback triggers on **any** of the following conditions during the execution phase:
@@ -37,8 +35,6 @@ Rollback triggers on **any** of the following conditions during the execution ph
 - You press `Ctrl+C` to interrupt the run.
 
 The trigger is automatic. You will always see a clear error message explaining what happened and whether the workspace was fully restored.
-
----
 
 ## What Gets Restored
 
@@ -50,8 +46,6 @@ Protostar's rollback guarantee applies to **transaction-managed paths** — ever
 - **Files Protostar modified:** Any pre-existing file that Protostar edited (e.g., an AST merge into your `pyproject.toml`) is restored to its exact pre-run bytes and file permissions.
 - **Directories Protostar scaffolded:** Empty directories created by Protostar are removed. See [Non-Empty Directories](#partial-rollback-failures-rollbackfailederror) below.
 - **Declared dependency targets:** `pyproject.toml` and `uv.lock` are explicitly journaled *before* `uv add` runs, so they are reliably restored if dependency installation fails.
-
----
 
 ## What Might Remain
 
@@ -65,8 +59,6 @@ Protostar deliberately does not attempt to guess what arbitrary external command
 !!! note "Why the boundary exists"
     Protostar tracks paths by journaling them before mutation. External subprocesses can write to arbitrary locations that are structurally impossible to enumerate in advance. Rather than guessing — and risking deleting files it shouldn't — Protostar makes its guarantee explicit and bounded.
 
----
-
 ## Partial Rollback Failures (`RollbackFailedError`)
 
 In rare cases, Protostar may be unable to fully restore all tracked paths. When this happens, it raises `RollbackFailedError` and lists every path it could not restore. The most common causes:
@@ -76,8 +68,6 @@ In rare cases, Protostar may be unable to fully restore all tracked paths. When 
 **Filesystem permission changes:** If file permissions or ownership were altered during the run (by a subprocess or the OS), Protostar may be unable to write back the original bytes.
 
 **Remediation:** Inspect the paths listed in the `RollbackFailedError` message and remove or restore them manually before re-running `protostar init`.
-
----
 
 ## Interrupting with Ctrl+C (`PartialExecutionAbortedError`)
 
@@ -90,15 +80,11 @@ Pressing `Ctrl+C` during execution triggers rollback immediately. If the rollbac
 !!! tip "Ctrl+C is safe to use"
     Cancelling a Protostar run mid-execution is designed to be safe. The SIGINT signal is briefly shielded during the rollback itself to prevent a second `Ctrl+C` from interrupting the cleanup.
 
----
-
 ## Unsupported Filesystem Nodes (`UnsupportedFilesystemNodeError`)
 
 If a path targeted by Protostar turns out to be a symbolic link, FIFO, socket, or device file, Protostar raises `UnsupportedFilesystemNodeError` and halts *before* writing anything to that path. This prevents Protostar from following a symlink into an unexpected location or overwriting a target it cannot safely restore.
 
 **Remediation:** Replace the symbolic link or special node with a regular file or directory, then re-run `protostar init`.
-
----
 
 ## Related Pages
 

@@ -29,8 +29,6 @@ If you've ever wrestled with complex Jinja conditionals just to toggle a linter,
 
 </div>
 
----
-
 ## The Authoring Experience: TOML vs. Jinja2
 
 The biggest maintenance burden in generic scaffolding engines is writing and maintaining the templates themselves. Protostar replaces brittle string templating with declarative configuration.
@@ -79,8 +77,6 @@ In Copier, Jinja syntax (`{{ variable }}`) is embedded directly into source file
 !!! tip "Full IDE Autocomplete & Schema Validation"
     Because Protostar templates are pure TOML validated against a JSON Schema, you get instant autocomplete, hover tooltips, and real-time validation in editors like VS Code (*Even Better TOML*) and PyCharm.
 
----
-
 ### 2. Zero-Logic Templates vs. Combinatorial Explosion
 
 When building templates in Copier, supporting optional features (e.g., Docker, pre-commit, direnv, multiple linters) forces the author to write deeply nested `{% if %}` / `{% endif %}` conditionals across dozens of template files. Adding even a few optional tools causes the template's complexity to explode.
@@ -121,8 +117,6 @@ When building templates in Copier, supporting optional features (e.g., Docker, p
     {% endif %}
     ```
 
----
-
 ### 3. Built-in Domain Awareness
 
 Generic templaters know nothing about Python project structures. Authors must write and maintain boilerplate files from scratch for every template:
@@ -132,8 +126,6 @@ Generic templaters know nothing about Python project structures. Authors must wr
 - `pre-commit-config.yaml` versioning and hook wiring
 
 **With Protostar**, the engine is natively specialized for Python. When you toggle `docker = true` or `ruff = true`, Protostar automatically scaffolds battle-tested, best-practice artifacts without you having to write or maintain them.
-
----
 
 ### 4. Scalable Blueprint Distribution
 
@@ -146,8 +138,6 @@ Copier requires a complete Git repository containing a directory structure and c
     ```
 
 1. **The Multi-File Repository:** For complex architectures requiring boilerplate source code (e.g., full FastAPI or PyTorch project trees), use a standard Git repository containing a `protostar.toml` manifest and a `template/` directory with `<% VARIABLE_NAME %>` interpolation.
-
----
 
 ## Your Experience: Safe & Deterministic
 
@@ -183,8 +173,6 @@ When applying template updates or injecting tooling into an existing repository,
     >>>>>>> template/v2.0.0
     ```
 
----
-
 ### Manifest-First Pre-flight Execution & Transactional Rollback
 
 Generic scaffolding tools execute shell hooks imperatively. If a required tool (such as `uv`, `git`, or `docker`) is missing from your machine, or if a subprocess fails midway through, the script crashes and leaves behind a dirty, half-scaffolded workspace.
@@ -195,8 +183,6 @@ Protostar pairs a **two-phase headless architecture** with **pipeline transactio
 1. **`execute()` (Transactional Side-Effect Phase):** Disk mutations and subprocesses run only after the entire plan is validated. Direct file writes, AST merges, and declared dependency targets are tracked by a `MutationJournal`. If a step fails or is interrupted by the user (`Ctrl+C`), active managed processes are cleanly terminated and tracked workspace changes are automatically rolled back to their pre-run state. (External tools such as `git init` may still leave undeclared artifacts behind, as arbitrary external subprocess effects cannot be inferred).
 
 *(For a deeper visual breakdown of this two-phase execution, see [Design Principles](./design-principles.md)).*
-
----
 
 ## Comparison Matrix
 
@@ -212,8 +198,6 @@ Protostar pairs a **two-phase headless architecture** with **pipeline transactio
 | **Performance** | Clones repos & negotiates remote Git TLS | Sub-second edge JSON hook registry with offline fallbacks |
 
 *\* Cookiecutter is another popular tool in this space, but lacks native 3-way Git diff updates. Most of Copier's comparisons in this matrix apply to Cookiecutter as well.*
-
----
 
 ## Choosing the Right Tool
 
@@ -233,8 +217,6 @@ Protostar pairs a **two-phase headless architecture** with **pipeline transactio
   - You are building automated or AI-assisted scaffolding workflows using `--json` and `--dry-run`.
 
 </div>
-
----
 
 ## Next Steps
 

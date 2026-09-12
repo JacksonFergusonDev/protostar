@@ -26,8 +26,6 @@ Protostar's template engine allows you to define declarative, reusable environme
 
 </div>
 
----
-
 ## Using Templates
 
 Protostar provides flags for discovering and loading templates during `init`:
@@ -67,8 +65,6 @@ protostar init -t astro --no-direnv --mypy
     1. __CLI Flags__ – Explicit terminal arguments (e.g., `--mypy`).
     1. __Template Blueprint__ – Settings declared in your active template.
     1. __Global UserConfig__ – Your fallback defaults in `~/.config/protostar/config.toml`.
-
----
 
 ## External & Remote Templates (`--from`)
 
@@ -135,8 +131,6 @@ protostar init -t enterprise-api
 
 In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category with their custom descriptions. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
 
----
-
 ## Supplying Template Parameters
 
 Templates can define custom parameters (such as service names, database endpoints, or deployment settings).
@@ -159,8 +153,6 @@ Standard project variables—such as the human-readable project name, PEP 8 sani
 
 !!! tip "Defining Template Variables"
     If you are authoring your own template and want to embed `<% VARIABLE_NAME %>` placeholders or inspect all built-in late-binding variables, see the [Authoring Custom Templates: Variable Interpolation](authoring-templates.md#level-3-variable-interpolation) guide.
-
----
 
 ## Security Model: The Remote Trust Dialog
 
@@ -216,13 +208,9 @@ Do you trust this source to modify your system? [y/N]
 
 In non-interactive environments (e.g., CI/CD or `--json` mode), untrusted templates with executable tasks abort immediately with `SecurityViolationError` to prevent hanging or unauthorized execution. To run them headlessly, configure them with `trusted = true` in your global configuration aliases.
 
----
-
 ## Ready to Author Your Own Templates?
 
 If you want to build reusable blueprints for your team, inject custom configurations into `pyproject.toml`, or package full multi-file template repositories with dynamic variables, head over to the __[Authoring Custom Templates](./authoring-templates.md)__ guide.
-
----
 
 ## Related Guides & Next Steps
 

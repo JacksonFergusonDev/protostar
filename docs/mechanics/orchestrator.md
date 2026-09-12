@@ -8,8 +8,6 @@ The `Orchestrator` coordinates the two-phase execution lifecycle for Protostar. 
 
 To guarantee idempotency and prevent partial initialization states (e.g., half-written configuration files following a pre-flight failure), the Orchestrator enforces a strict, multi-phase execution lifecycle.
 
----
-
 ## Execution Lifecycle
 
 The `Orchestrator` enforces a strict separation between read-only state aggregation and physical side effects (the [Headless Core](../design-principles.md#the-headless-core)). The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
@@ -34,8 +32,6 @@ flowchart TD
 
     Exec --> Result([ExecutionResult]):::success
 ```
-
----
 
 ## The Lifecycle Phases
 
@@ -67,8 +63,6 @@ flowchart TD
 
     If an exception occurs or the user interrupts execution (`KeyboardInterrupt`), the executor automatically terminates managed subprocesses and rolls back all journaled workspace paths. See [Rollback Internals](./rollback.md) for the full guarantee model and failure semantics.
 
----
-
 ## Diagnostics & Crash Reporting
 
 During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv` or skipped optional tasks) are recorded into `ExecutionResult.diagnostics`. The CLI presentation layer renders these events in a structured summary panel upon completion:
@@ -76,8 +70,6 @@ During planning and execution, non-fatal skips and warnings (e.g., missing optio
 ![Protostar Diagnostic Summary](../fixtures/diagnostic_panel.svg)
 
 For unexpected internal exceptions or AST parsing failures, the runtime traps errors at the CLI boundary to generate pre-filled GitHub crash reports without corrupting the workspace. For complete details on the exception hierarchy, POSIX exit code mappings, and crash issue generation, see the [Error Handling Architecture](./error_handling.md#crash-diagnostics-and-issue-reporting).
-
----
 
 ## API Reference
 
@@ -110,8 +102,6 @@ For unexpected internal exceptions or AST parsing failures, the runtime traps er
             show_root_toc_entry: true
             separate_signature: true
             members_order: source
-
----
 
 ## Related Mechanics & Guides
 

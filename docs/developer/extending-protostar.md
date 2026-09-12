@@ -6,8 +6,6 @@ description: "Learn how to extend Protostar's architecture by adding new modules
 
 Protostar's architecture strictly isolates state definition from execution. This guarantees that you can add entirely new languages, tools, or domain workflows without altering the core orchestrator or the system executor.
 
----
-
 ## Building a Custom Bootstrap Module
 
 Bootstrap modules define the structural environment footprint. To create a new module, subclass `BootstrapModule` from `protostar.modules.base`.
@@ -69,8 +67,6 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
     - **`pre_flight()`**: Executes before *any* state changes occur. If `shutil.which("just")` fails here, the orchestrator immediately halts, guaranteeing the environment remains untouched.
     - **`build()`**: Only queues state changes. Notice how we use `manifest.filesystem.add_file_injection()` instead of `Path("justfile").write_text()`.
 
----
-
 ## The Manifest API
 
 !!! danger "No Direct Disk I/O"
@@ -92,8 +88,6 @@ The manifest exposes the following methods across its domain slices to queue sta
 | `manifest.filesystem.add_vcs_ignore(path: str)` | Appends a tracking exclusion entry to the version control ignore manifest (e.g., `.gitignore`). |
 | `manifest.tasks.add_system_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout and UI description. |
 | `manifest.tasks.add_post_install_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout and UI description. |
-
----
 
 ## Next Steps
 

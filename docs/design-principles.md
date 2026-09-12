@@ -9,8 +9,6 @@ Every architectural constraint — the two-phase engine, the AST merging, the PO
 
 This page explains the vocabulary: what each principle is called, exactly what problem it solves, and what goes wrong when you ignore it.
 
----
-
 ## Declarative over Imperative
 
 **You describe the environment you want. Protostar figures out how to produce it.**
@@ -52,8 +50,6 @@ The contrasting model is **imperative scripting**: a sequence of shell commands 
 !!! note "Dry-running only works cleanly on declarative interfaces"
     Because Protostar operates on declared intent rather than an imperative list of shell calls, `--dry-run` produces the *exact same manifest* that a live execution would use — not a best-guess simulation. The plan is real; only the side-effect execution is withheld.
 
----
-
 ## Manifest-First
 
 **All intended state changes are collected into a single `EnvironmentManifest` object before any side effect is permitted to occur.**
@@ -85,8 +81,6 @@ flowchart TD
 !!! tip "The manifest is the source of truth"
     The `--dry-run --json` output is a direct serialization of the `EnvironmentManifest`. What you see is exactly what would be written to disk — not an approximation.
 
----
-
 ## The Headless Core
 
 **The core execution engine is completely headless. All terminal interaction lives outside it.**
@@ -116,8 +110,6 @@ flowchart LR
 ```
 
 **Why this matters:** Headless separation is what makes Protostar usable as a library and as a subprocess target for AI agents and CI pipelines. Because the engine accepts `InitRequest` and returns `ExecutionResult` without ever touching a terminal, it can be called programmatically, tested in isolation, and driven headlessly without stripping out interactive assumptions. The `--json` flag doesn't "disable" prompts — there were never any prompts inside the engine to begin with.
-
----
 
 ## Modular & Decoupled
 
@@ -161,8 +153,6 @@ When you toggle `--no-direnv`, the `direnv` module simply isn't loaded. When you
 !!! note "Related: tri-state toggling"
     Because modules are independent, Protostar can offer `--<flag>` / `--no-<flag>` overrides for any module without the template author needing to write any conditional logic. See [Initialization](./usage/init.md) for the full flag matrix.
 
----
-
 ## Fail Loud, Fail Early
 
 **All system dependency checks run during `plan()` — before `execute()` is called and before any file is written.**
@@ -201,8 +191,6 @@ No file has been created. No directory has been staged. The workspace is exactly
 
 !!! note "Fail loud"
     The word "loud" is deliberate. Protostar doesn't swallow errors into a generic "something failed" message. Domain-specific exceptions carry structured context — which binary is missing, what it's used for, and what command will fix it. When things fail unexpectedly (internal bugs), the crash report surfaces your system environment details and opens a pre-filled GitHub issue automatically.
-
----
 
 ## Non-Destructive AST Merging
 
@@ -263,8 +251,6 @@ The same principle applies to `.gitignore` — Protostar appends deduplicated pa
 !!! tip "Collision strategies"
     The merge behavior is tunable. The default is `MERGE` (preserve your scalars, inject missing nodes). `--force-replace` switches to `OVERWRITE` (Protostar's baseline takes precedence on conflicts). See [The Environment Manifest](./mechanics/manifest.md#collision-strategies) for the full behavior matrix.
 
----
-
 ## Actionable Diagnostics
 
 **When something breaks, Protostar gives you the information you need to fix it — not just that it broke.**
@@ -290,8 +276,6 @@ Diagnostics in Protostar operate at three levels:
 
 !!! note "Expected failures vs. unexpected crashes"
     These are explicitly separated. `ProtostarError` subclasses (missing dependency, network drop, config parse error) are *expected operational failures* — clean, formatted, hinted. Unhandled Python exceptions are *unexpected crashes* — they trigger the crash report URL and exit with `os.EX_SOFTWARE`. You are never shown a raw Python traceback unless you explicitly ask for it with `--verbose`.
-
----
 
 ## POSIX Exit Codes
 
@@ -320,8 +304,6 @@ The same structured information is available programmatically via `--json`, wher
 
 !!! tip "For CI pipelines and AI agents"
     Exit codes and `--json` envelopes are designed to be consumed together. A CI pipeline can check the exit code to gate a build; an AI agent can parse the JSON envelope to understand the failure semantics and decide the next action without human intervention.
-
----
 
 ## Related Pages
 
