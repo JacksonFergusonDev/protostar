@@ -17,6 +17,7 @@ from protostar.manifest import (
 from protostar.models import ExecutionResult, InitRequest
 from protostar.modules import (
     BootstrapModule,
+    CommitizenModule,
     PreCommitModule,
     PrekModule,
     PythonCore,
@@ -429,12 +430,124 @@ def test_plan_resolves_docker_collision_with_force_merge(
 def test_plan_detects_license_collision_from_python_core(
     tmp_path, monkeypatch, mock_config
 ):
-    """plan() raises WorkspaceCollisionError when LICENSE exists and PythonCore is in modules."""
+    """plan() raises WorkspaceCollisionError when LICENSE exists and an active license is configured."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "LICENSE").touch()
-    engine = Orchestrator([PythonCore()], mock_config)
+    engine = Orchestrator(
+        [PythonCore(project_license="MIT")],
+        mock_config,
+        request=InitRequest(metadata={"license": "MIT"}),
+    )
 
     with pytest.raises(WorkspaceCollisionError) as exc_info:
         engine.plan()
 
     assert Path("LICENSE") in exc_info.value.paths
+
+
+def test_plan_ignores_license_collision_when_license_none(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() does not raise WorkspaceCollisionError when LICENSE exists but license is None."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "LICENSE").touch()
+    engine = Orchestrator(
+        [PythonCore(project_license=None)],
+        mock_config,
+        request=InitRequest(metadata={"license": "None"}),
+    )
+
+    manifest = engine.plan()
+    assert manifest.collision_strategy == CollisionStrategy.MERGE
+
+
+def test_plan_ignores_docs_directory_collision_when_index_absent(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() does not treat existing docs/ directory as collision if docs/index.md is absent."""
+    monkeypatch.chdir(tmp_path)
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "unrelated.md").touch()
+
+    engine = Orchestrator([ZensicalModule()], mock_config)
+    manifest = engine.plan()
+    assert manifest.collision_strategy == CollisionStrategy.MERGE
+
+
+def test_plan_detects_docs_index_collision_from_zensical(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() raises WorkspaceCollisionError when docs/index.md exists and Zensical is enabled."""
+    monkeypatch.chdir(tmp_path)
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "index.md").touch()
+
+    engine = Orchestrator([ZensicalModule()], mock_config)
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path("docs/index.md") in exc_info.value.paths
+
+
+def test_plan_detects_commitizen_changelog_collision(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() raises WorkspaceCollisionError when CHANGELOG.md exists and Commitizen is enabled."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "CHANGELOG.md").touch()
+
+    engine = Orchestrator([CommitizenModule()], mock_config)
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path("CHANGELOG.md") in exc_info.value.paths
+
+
+def test_plan_detects_blueprint_files_collision(tmp_path, monkeypatch, mock_config):
+    """plan() raises WorkspaceCollisionError when template blueprint files exist on disk."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "README.md").write_text("# Old Readme")
+
+    blueprint = TemplateBlueprint(
+        name="test",
+        description="test",
+        files={"README.md": "# New Readme"},
+    )
+    engine = Orchestrator(
+        [], mock_config, request=InitRequest(template_blueprint=blueprint)
+    )
+
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path("README.md") in exc_info.value.paths
+
+
+def test_plan_detects_blueprint_files_collision_with_interpolation(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() raises WorkspaceCollisionError for interpolated template blueprint filepaths."""
+    monkeypatch.chdir(tmp_path)
+    pkg_file = tmp_path / "src" / "my_pkg" / "main.py"
+    pkg_file.parent.mkdir(parents=True, exist_ok=True)
+    pkg_file.touch()
+
+    blueprint = TemplateBlueprint(
+        name="test",
+        description="test",
+        files={"src/<% PACKAGE_NAME %>/main.py": "print('hello')"},
+    )
+    engine = Orchestrator(
+        [],
+        mock_config,
+        request=InitRequest(
+            template_blueprint=blueprint, metadata={"package_name": "my_pkg"}
+        ),
+    )
+
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.plan()
+
+    assert Path("src/my_pkg/main.py") in exc_info.value.paths

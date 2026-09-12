@@ -14,6 +14,7 @@ from .errors import (
     WorkspaceCollisionError,
 )
 from .executor import SystemExecutor
+from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
 from .modules import (
@@ -23,7 +24,9 @@ from .modules import (
     ReadTheDocsModule,
     ZensicalModule,
 )
+from .modules.lang_layer import LICENSE_MAP
 from .system_deps import GlobalExecutable
+from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -88,8 +91,17 @@ class Orchestrator:
 
         # Phase 2: Collision intercept (raises instead of prompting)
         collision_targets: set[Path] = set()
+        req_license = req.metadata.get("license") if req.metadata else None
+        wants_license = (
+            req_license is not None
+            and req_license != "None"
+            and req_license in LICENSE_MAP
+        )
+
         for mod in self.modules:
             for marker in mod.collision_markers:
+                if marker == Path("LICENSE") and req.metadata and not wants_license:
+                    continue
                 if marker.exists():
                     collision_targets.add(marker)
 
@@ -97,6 +109,19 @@ class Orchestrator:
             for marker in (Path("Dockerfile"), Path(".dockerignore")):
                 if marker.exists():
                     collision_targets.add(marker)
+
+        if req.template_blueprint and req.template_blueprint.files:
+            interpolation_ctx = {
+                "PROJECT_NAME": resolve_project_name(req.metadata or {}),
+                "PACKAGE_NAME": resolve_package_name(req.metadata or {}),
+            }
+            for filepath in req.template_blueprint.files:
+                rendered_path = render_template(
+                    filepath, interpolation_ctx, escape_toml=False
+                )
+                target = Path(rendered_path)
+                if target.exists():
+                    collision_targets.add(target)
 
         if collision_targets:
             if req.force_replace:

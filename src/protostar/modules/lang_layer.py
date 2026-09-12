@@ -39,8 +39,10 @@ class PythonCore(BootstrapModule):
     def __init__(
         self,
         python_version: str | None = None,
+        project_license: str | None = None,
     ) -> None:
         self._python_version = python_version
+        self.license = project_license
 
     @property
     def python_version(self) -> str | None:
@@ -69,7 +71,10 @@ class PythonCore(BootstrapModule):
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for a Python environment."""
-        return [Path("pyproject.toml"), Path("LICENSE")]
+        markers = [Path("pyproject.toml")]
+        if self.license and self.license != "None" and self.license in LICENSE_MAP:
+            markers.append(Path("LICENSE"))
+        return markers
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues initialization, ignores artifacts, and handles IDE configuration bindings.

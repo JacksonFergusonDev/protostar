@@ -190,6 +190,8 @@ def handle_init(args: argparse.Namespace) -> None:
         required_keys.update(mod.required_metadata)
 
     resolved_metadata = resolve_auto_metadata(required_keys)
+    if "license" in resolved_metadata:
+        python_core.license = resolved_metadata["license"]
 
     request = InitRequest(
         template_blueprint=blueprint,

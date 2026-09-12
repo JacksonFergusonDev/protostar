@@ -10,10 +10,10 @@
 | Pytest | `--pytest` | Scaffold Pytest testing framework | *None* |
 | Pre-Commit | `--pre-commit` | Scaffold pre-commit hooks and configuration | `.pre-commit-config.yaml` |
 | Prek | `--prek` | Scaffold prek hooks and configuration (faster Rust alternative to pre-commit) | `.pre-commit-config.yaml` |
-| Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | *None* |
+| Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | `CHANGELOG.md` |
 | Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `renovate.json` |
 | Codecov | `--codecov` | Scaffold Codecov configuration | `codecov.yml` |
-| Zensical | `--zensical` | Scaffold Zensical documentation | `mkdocs.yml`, `docs` |
+| Zensical | `--zensical` | Scaffold Zensical documentation | `mkdocs.yml`, `index.md` |
 | Read the Docs | `--readthedocs` | Scaffold Read the Docs configuration | `.readthedocs.yaml` |
 | GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `ci.yml` |
 | GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `release.yml` |

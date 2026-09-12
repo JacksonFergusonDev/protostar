@@ -559,8 +559,12 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
         min_py = selections.project_metadata.get("minimum_python")
         min_py = str(min_py) if min_py else None
+        selected_license = selections.project_metadata.get("license")
+        selected_license = str(selected_license) if selected_license else None
 
-        modules.insert(1, PythonCore(python_version=min_py))
+        modules.insert(
+            1, PythonCore(python_version=min_py, project_license=selected_license)
+        )
 
         request = InitRequest(
             template_blueprint=selections.blueprint,
