@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import urllib.parse
 from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -31,9 +30,6 @@ class ExitCode(IntEnum):
     CONFIG = getattr(os, "EX_CONFIG", 78)
 
 
-DOCS_BASE_URL = "https://protostar.readthedocs.io/en/stable/"
-
-
 class ProtostarError(Exception):
     """Base class for all expected operational errors in Protostar."""
 
@@ -42,7 +38,7 @@ class ProtostarError(Exception):
         message: str,
         *,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = None,
+        docs_path: DocsPage | None = None,
         docs_anchor: str | None = None,
     ) -> None:
         super().__init__(message)
@@ -56,18 +52,7 @@ class ProtostarError(Exception):
         """Returns the full URL to the documentation page, or None if not set."""
         if not self.docs_path:
             return None
-
-        path = (
-            self.docs_path.value
-            if isinstance(self.docs_path, DocsPage)
-            else self.docs_path
-        )
-
-        base = DOCS_BASE_URL if DOCS_BASE_URL.endswith("/") else f"{DOCS_BASE_URL}/"
-        url = urllib.parse.urljoin(base, path.lstrip("/"))
-        if self.docs_anchor:
-            url = f"{url}#{self.docs_anchor.lstrip('#')}"
-        return url
+        return self.docs_path.build_url(self.docs_anchor)
 
 
 class ConfigurationError(ProtostarError):
@@ -78,7 +63,7 @@ class ConfigurationError(ProtostarError):
         message: str,
         *,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = DocsPage.CONFIGURATION,
+        docs_path: DocsPage | None = DocsPage.CONFIGURATION,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
 
@@ -91,7 +76,7 @@ class InvalidUsageError(ProtostarError):
         message: str,
         *,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = DocsPage.CLI_REFERENCE,
+        docs_path: DocsPage | None = DocsPage.CLI_REFERENCE,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
 
@@ -106,7 +91,7 @@ class NetworkFetchError(ProtostarError):
         *,
         message: str | None = None,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = DocsPage.TEMPLATES,
+        docs_path: DocsPage | None = DocsPage.TEMPLATES,
     ) -> None:
         default_message = (
             f"Network failure: Could not fetch remote configuration from '{url}'."
@@ -128,7 +113,7 @@ class TemplateResolutionError(ProtostarError):
         detail: str,
         *,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = DocsPage.AUTHORING_TEMPLATES,
+        docs_path: DocsPage | None = DocsPage.AUTHORING_TEMPLATES,
     ) -> None:
         message = f"Failed to resolve template '{target}': {detail}"
         super().__init__(message, hint=hint, docs_path=docs_path)
@@ -144,7 +129,7 @@ class MissingDependencyError(ProtostarError):
         dependency: GlobalExecutable,
         purpose: str,
         *,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
+        docs_path: DocsPage | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
         message = f"Missing dependency: '{dependency.value}' is required for {purpose}."
         super().__init__(message, hint=None, docs_path=docs_path)
@@ -162,7 +147,7 @@ class CommandExecutionError(ProtostarError):
         stdout: str = "",
         stderr: str = "",
         *,
-        docs_path: DocsPage | str | None = None,
+        docs_path: DocsPage | None = None,
     ) -> None:
         message = f"Protostar failed to execute command: {' '.join(command)}"
         super().__init__(message, docs_path=docs_path)
@@ -190,7 +175,7 @@ class CommandTimeoutError(ProtostarError):
         command: list[str],
         timeout: int,
         *,
-        docs_path: DocsPage | str | None = DocsPage.TEMPLATES,
+        docs_path: DocsPage | None = DocsPage.TEMPLATES,
     ) -> None:
         message = f"Command timed out after {timeout} seconds: {' '.join(command)}"
         hint = "This is often caused by a stalled network request or an unresponsive registry."
@@ -221,7 +206,7 @@ class FileSystemError(ProtostarError):
         path: str,
         original: Exception,
         *,
-        docs_path: DocsPage | str | None = None,
+        docs_path: DocsPage | None = None,
     ) -> None:
         err_msg = getattr(original, "strerror", None) or str(original)
         message = f"Failed to {operation} '{path}': {err_msg}"
@@ -239,7 +224,7 @@ class UnsupportedFilesystemNodeError(ProtostarError):
         path: Path,
         node_type: str,
         *,
-        docs_path: DocsPage | str | None = DocsPage.ROLLBACK,
+        docs_path: DocsPage | None = DocsPage.ROLLBACK,
     ) -> None:
         message = f"Cannot transactionally mutate unsupported {node_type}: {path}"
         hint = (
@@ -270,7 +255,7 @@ class ExecutionAbortedError(ProtostarError):
         message: str = "Execution aborted by user.",
         *,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = None,
+        docs_path: DocsPage | None = None,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
 
@@ -282,7 +267,7 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
         self,
         rollback_context: RollbackContext,
         *,
-        docs_path: DocsPage | str | None = None,
+        docs_path: DocsPage | None = None,
     ) -> None:
         """Initializes the exception with the structured rollback metadata.
 
@@ -327,7 +312,7 @@ class SecurityViolationError(ProtostarError):
         message: str,
         *,
         hint: str | None = None,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_SECURITY,
+        docs_path: DocsPage | None = DocsPage.TROUBLESHOOTING_SECURITY,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
 
@@ -339,7 +324,7 @@ class AggregatedDependencyError(ProtostarError):
         self,
         errors: tuple[MissingDependencyError, ...],
         *,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_DEPS,
+        docs_path: DocsPage | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
         if not errors:
             raise ValueError("AggregatedDependencyError requires at least one error.")
@@ -394,7 +379,7 @@ class RollbackFailedError(ProtostarError):
         rollback_result: RollbackResult,
         original_error: BaseException,
         *,
-        docs_path: DocsPage | str | None = DocsPage.ROLLBACK,
+        docs_path: DocsPage | None = DocsPage.ROLLBACK,
     ) -> None:
         failed_list = "\n".join(
             f"- {failure.path}: {failure.detail}" for failure in rollback_result.errors

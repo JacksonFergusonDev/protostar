@@ -21,7 +21,7 @@ from protostar.orchestrator import Orchestrator
 from protostar.wizard import run_init_wizard
 
 
-def _resolve_usage_doc_path() -> str:
+def _resolve_usage_doc_path() -> DocsPage:
     """Returns the docs_path for the active subcommand, or CLI reference for unknown.
 
     Iterates through sys.argv to identify the first non-flag subcommand.
@@ -35,17 +35,17 @@ def _resolve_usage_doc_path() -> str:
     for arg in sys.argv[1:]:
         if not arg.startswith("-"):
             if arg in _SUBCOMMAND_DOC_PATHS:
-                return _SUBCOMMAND_DOC_PATHS[arg].value
+                return _SUBCOMMAND_DOC_PATHS[arg]
 
             # Try to guess the command for typos (e.g. "initt" -> "init")
             matches = difflib.get_close_matches(
                 arg, _SUBCOMMAND_DOC_PATHS.keys(), n=1, cutoff=0.6
             )
             if matches:
-                return _SUBCOMMAND_DOC_PATHS[matches[0]].value
+                return _SUBCOMMAND_DOC_PATHS[matches[0]]
 
-            return DocsPage.CLI_REFERENCE.value
-    return DocsPage.CLI_REFERENCE.value
+            return DocsPage.CLI_REFERENCE
+    return DocsPage.CLI_REFERENCE
 
 
 class JsonAwareParser(argparse.ArgumentParser):

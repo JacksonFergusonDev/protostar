@@ -1,7 +1,10 @@
-from enum import StrEnum
+import urllib.parse
+from enum import Enum
+
+DOCS_BASE_URL = "https://protostar.readthedocs.io/en/stable/"
 
 
-class DocsPage(StrEnum):
+class DocsPage(Enum):
     """Registry of known documentation paths and anchors.
 
     Using a centralized registry prevents broken links if the documentation
@@ -9,18 +12,43 @@ class DocsPage(StrEnum):
     classes that need to link to specific remediation steps.
     """
 
-    GETTING_STARTED = "getting-started/"
-    CLI_REFERENCE = "usage/cli-reference/"
-    CONFIGURATION = "usage/configuration/"
-    TEMPLATES = "usage/templates/"
-    AUTHORING_TEMPLATES = "usage/authoring-templates/"
+    GETTING_STARTED = ("getting-started/", "Getting Started")
+    CLI_REFERENCE = ("usage/cli-reference/", "CLI Reference")
+    CONFIGURATION = ("usage/configuration/", "Configuration")
+    TEMPLATES = ("usage/templates/", "Templates")
+    AUTHORING_TEMPLATES = ("usage/authoring-templates/", "Authoring Templates")
 
     # Troubleshooting Anchors
     TROUBLESHOOTING_DEPS = (
-        "usage/troubleshooting/#missing-dependencies-environment-checks"
+        "usage/troubleshooting/#missing-dependencies-environment-checks",
+        "Troubleshooting Dependencies",
     )
-    TROUBLESHOOTING_COLLISIONS = "usage/troubleshooting/#workspace-collisions"
-    TROUBLESHOOTING_SECURITY = "usage/troubleshooting/#remote-template-security-alerts"
-    ROLLBACK = "usage/rollback/"
+    TROUBLESHOOTING_COLLISIONS = (
+        "usage/troubleshooting/#workspace-collisions",
+        "Workspace Collisions",
+    )
+    TROUBLESHOOTING_SECURITY = (
+        "usage/troubleshooting/#remote-template-security-alerts",
+        "Remote Template Security",
+    )
+    ROLLBACK = ("usage/rollback/", "Rollback")
 
-    INIT = "usage/init/"
+    INIT = ("usage/init/", "Init")
+
+    @property
+    def path(self) -> str:
+        """The relative path segment (including anchor if present)."""
+        return self.value[0]
+
+    @property
+    def label(self) -> str:
+        """The human-readable label for this page/section."""
+        return self.value[1]
+
+    def build_url(self, anchor: str | None = None) -> str:
+        """Builds the full ReadTheDocs URL for this documentation page."""
+        base = DOCS_BASE_URL if DOCS_BASE_URL.endswith("/") else f"{DOCS_BASE_URL}/"
+        url = urllib.parse.urljoin(base, self.path.lstrip("/"))
+        if anchor:
+            url = f"{url}#{anchor.lstrip('#')}"
+        return url

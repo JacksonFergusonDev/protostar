@@ -18,6 +18,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from protostar.cli import parser, schema, ui
+from protostar.cli.docs_links import format_docs_link
 from protostar.config import (
     CONFIG_FILE,
     DEFAULT_CONFIG_CONTENT,
@@ -406,9 +407,11 @@ def main() -> None:
             ctx = getattr(e, "rollback_context", None)
             if ctx is not None:
                 error_dict["rollback_context"] = ctx.to_dict()
-            docs_url = e.docs_url
-            if not docs_url and ctx is not None and not ctx.is_external:
-                docs_url = "https://protostar.readthedocs.io/en/stable/usage/rollback/"
+            docs_url = None
+            if e.docs_path:
+                docs_url = e.docs_path.build_url(e.docs_anchor)
+            elif ctx is not None and not ctx.is_external:
+                docs_url = DocsPage.ROLLBACK.build_url()
             if docs_url:
                 error_dict["docs_url"] = docs_url
             if isinstance(e, WorkspaceCollisionError):
@@ -433,7 +436,6 @@ def main() -> None:
             from rich.console import RenderableType
 
             body_renderable: RenderableType
-            docs_url = e.docs_url
             if ctx is not None:
                 rb_group: list[RenderableType] = []
                 if ctx.touched_paths:
@@ -487,18 +489,9 @@ def main() -> None:
                             "Note: Some standard artifacts (like the .venv/ directory) remain but are safe to ignore."
                         )
                     )
-                    docs_url = (
-                        e.docs_url
-                        or "https://protostar.readthedocs.io/en/stable/usage/rollback/"
-                    )
-
-                if docs_url:
+                    docs_page = e.docs_path or DocsPage.ROLLBACK
                     rb_group.append(Text(""))
-                    rb_group.append(
-                        Text.from_markup(
-                            f"[bold cyan][link={docs_url}]Read the documentation ↗[/link][/bold cyan]"
-                        )
-                    )
+                    rb_group.append(format_docs_link(docs_page, e.docs_anchor))
 
                 # Create a Group to render multiple items seamlessly
                 body_renderable = (
@@ -507,9 +500,14 @@ def main() -> None:
                     else Group(*rb_group)
                 )
             else:
-                if docs_url:
-                    body += f"\n\n[bold cyan][link={docs_url}]Read the documentation ↗[/link][/bold cyan]"
-                body_renderable = Text.from_markup(body)
+                if e.docs_path:
+                    body_renderable = Group(
+                        Text.from_markup(body),
+                        Text(""),
+                        format_docs_link(e.docs_path, e.docs_anchor),
+                    )
+                else:
+                    body_renderable = Text.from_markup(body)
 
             ui.console.print(
                 Panel(
