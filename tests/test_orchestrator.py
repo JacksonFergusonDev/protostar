@@ -218,7 +218,9 @@ def test_execute_raises_partial_abort_on_keyboard_interrupt(mocker, mock_config)
     with pytest.raises(PartialExecutionAbortedError) as exc_info:
         engine.execute(manifest)
 
-    assert "some_file.py" in exc_info.value.touched_paths
+    ctx = exc_info.value.rollback_context
+    assert ctx is not None
+    assert "some_file.py" in ctx.touched_paths
 
 
 def test_execute_does_not_rebuild_manifest(mocker, mock_config):
