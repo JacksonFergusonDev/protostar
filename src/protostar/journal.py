@@ -89,6 +89,7 @@ class MutationJournal:
         self._journal: dict[Path, OriginalState] = {}
         self._created_paths: set[Path] = set()
         self._mutated_paths: set[Path] = set()
+        self._touched_display_paths: set[str] = set()
         self._state = TransactionState.ACTIVE
         self._rollback_result: RollbackResult | None = None
 
@@ -112,26 +113,31 @@ class MutationJournal:
             )
         return normalized
 
-    def _display_path(self, path: Path) -> str:
+    def _format_display_path(self, path: Path, is_dir: bool = False) -> str:
         try:
-            return path.relative_to(self._workspace_root).as_posix()
+            display = path.relative_to(self._workspace_root).as_posix()
         except ValueError:
-            return path.as_posix()
+            display = path.as_posix()
+        return f"{display}/" if is_dir else display
 
     @property
     def created_paths(self) -> frozenset[str]:
         """Returns created paths."""
-        return frozenset(self._display_path(path) for path in self._created_paths)
+        return frozenset(
+            self._format_display_path(path) for path in self._created_paths
+        )
 
     @property
     def mutated_paths(self) -> frozenset[str]:
         """Returns mutated paths."""
-        return frozenset(self._display_path(path) for path in self._mutated_paths)
+        return frozenset(
+            self._format_display_path(path) for path in self._mutated_paths
+        )
 
     @property
     def touched_paths(self) -> frozenset[str]:
-        """Returns touched paths."""
-        return frozenset(self.created_paths | self.mutated_paths)
+        """Returns formatted touched paths with trailing slashes for directories."""
+        return frozenset(self._touched_display_paths)
 
     def record_tree_creation(self, path: Path) -> None:
         """Records a path as a newly created tree to be eradicated on rollback."""
@@ -148,6 +154,7 @@ class MutationJournal:
 
         self._journal[path] = OriginalState.absent(created_as_tree=True)
         self._created_paths.add(path)
+        self._touched_display_paths.add(self._format_display_path(path, is_dir=True))
 
     def record_mutation(self, path: Path) -> None:
         """Records a path."""
@@ -163,6 +170,9 @@ class MutationJournal:
         except FileNotFoundError:
             self._journal[path] = OriginalState.absent()
             self._created_paths.add(path)
+            self._touched_display_paths.add(
+                self._format_display_path(path, is_dir=False)
+            )
             return
         except OSError as e:
             from .errors import FileSystemError
@@ -170,10 +180,12 @@ class MutationJournal:
             raise FileSystemError("inspect path before mutation", str(path), e) from e
 
         mode = stat.S_IMODE(node_stat.st_mode)
+        is_dir = False
         if stat.S_ISLNK(node_stat.st_mode):
             raise UnsupportedFilesystemNodeError(path, "symbolic link")
         if stat.S_ISDIR(node_stat.st_mode):
             self._journal[path] = OriginalState.directory(mode)
+            is_dir = True
         elif stat.S_ISREG(node_stat.st_mode):
             try:
                 self._journal[path] = OriginalState.file(path.read_bytes(), mode)
@@ -185,7 +197,9 @@ class MutationJournal:
                 ) from e
         else:
             raise UnsupportedFilesystemNodeError(path, "special filesystem node")
+
         self._mutated_paths.add(path)
+        self._touched_display_paths.add(self._format_display_path(path, is_dir=is_dir))
 
     def commit(self) -> None:
         """Commits the journal."""
