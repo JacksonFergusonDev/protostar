@@ -191,21 +191,14 @@ def test_execution_aborted_error():
 
 
 def test_partial_execution_aborted_error():
-    paths = frozenset(["path/to/a.txt", "path/to/b.txt"])
-    err = PartialExecutionAbortedError(touched_paths=paths)
-    assert err.touched_paths == paths
-    assert "- path/to/a.txt" in str(err)
-    assert "- path/to/b.txt" in str(err)
-    assert "The managed workspace state has been restored." in (err.hint or "")
-    assert err.docs_url is None
+    from protostar.models import RollbackContext
 
-    empty_err = PartialExecutionAbortedError(touched_paths=frozenset())
-    assert "The following paths were modified" not in str(empty_err)
-    assert (
-        "Execution interrupted. Protostar rolled back all tracked workspace changes"
-        in str(empty_err)
-    )
-    assert empty_err.docs_url is None
+    paths = frozenset(["path/to/a.txt", "path/to/b.txt"])
+    context = RollbackContext(paths, (), None, False)
+    err = PartialExecutionAbortedError(context)
+    assert err.rollback_context == context
+    assert "Execution interrupted" in str(err)
+    assert err.docs_url is None
 
 
 def test_workspace_collision_error():

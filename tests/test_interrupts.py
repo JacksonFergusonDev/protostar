@@ -9,46 +9,8 @@ from protostar.errors import PartialExecutionAbortedError
 from protostar.executor import SystemExecutor
 from protostar.fs import atomic_write_text
 from protostar.manifest import EnvironmentManifest
+from protostar.models import RollbackContext
 from protostar.orchestrator import Orchestrator
-
-
-def test_partial_execution_aborted_error_formatting_with_paths() -> None:
-    touched = frozenset({"src/app.py", "pyproject.toml", ".github/workflows/ci.yml"})
-    err = PartialExecutionAbortedError(touched)
-
-    assert err.touched_paths == touched
-    err_str = str(err)
-    assert (
-        "Execution interrupted. Protostar rolled back all tracked workspace changes:"
-        in err_str
-    )
-    assert "- .github/workflows/ci.yml" in err_str
-    assert "- pyproject.toml" in err_str
-    assert "- src/app.py" in err_str
-    assert (
-        "Note: External commands (e.g., uv, git) may have also modified"
-        " workspace files." in err_str
-    )
-    assert err.hint is not None
-    assert "The managed workspace state has been restored." in err.hint
-
-
-def test_partial_execution_aborted_error_formatting_without_paths() -> None:
-    err = PartialExecutionAbortedError(frozenset())
-
-    assert err.touched_paths == frozenset()
-    err_str = str(err)
-    assert (
-        "Execution interrupted. Protostar rolled back all tracked workspace changes."
-        in err_str
-    )
-    assert "The following paths were modified" not in err_str
-    assert (
-        "Note: External commands (e.g., uv, git) may have also modified"
-        " workspace files." in err_str
-    )
-    assert err.hint is not None
-    assert "The managed workspace state has been restored." in err.hint
 
 
 def test_executor_record_touch_relative_resolution(
@@ -66,11 +28,13 @@ def test_executor_record_touch_relative_resolution(
     # String path
     executor.journal.record_mutation(Path(".github/workflows/ci.yml"))
 
-    assert executor.journal.touched_paths == {
-        "src/main.py",
-        "pyproject.toml",
-        ".github/workflows/ci.yml",
-    }
+    assert executor.journal.touched_paths == frozenset(
+        {
+            "src/main.py",
+            "pyproject.toml",
+            ".github/workflows/ci.yml",
+        }
+    )
 
 
 def test_atomic_write_text_cleans_up_temp_file_on_keyboard_interrupt(
@@ -92,8 +56,9 @@ def test_atomic_write_text_cleans_up_temp_file_on_keyboard_interrupt(
 
 
 def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
-    mocker: MockerFixture,
+    mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.chdir(tmp_path)
     user_config = UserConfig()
     orchestrator = Orchestrator(modules=[], user_config=user_config)
 
@@ -110,7 +75,10 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
     with pytest.raises(PartialExecutionAbortedError) as exc_info:
         orchestrator.execute(manifest)
 
-    assert exc_info.value.touched_paths == frozenset({"src", "pyproject.toml"})
+    assert exc_info.value.rollback_context is not None
+    assert exc_info.value.rollback_context.touched_paths == frozenset(
+        {"src", "pyproject.toml"}
+    )
 
 
 def test_orchestrator_raises_execution_aborted_error_when_no_files_touched(
@@ -136,7 +104,9 @@ def test_cli_routes_partial_execution_aborted_to_exit_130(
 ) -> None:
     mocker.patch(
         "protostar.cli.parser.intercept_interactive_wizards",
-        side_effect=PartialExecutionAbortedError(frozenset({"pyproject.toml"})),
+        side_effect=PartialExecutionAbortedError(
+            RollbackContext(frozenset({"pyproject.toml"}), (), None, False)
+        ),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 

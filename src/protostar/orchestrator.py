@@ -213,12 +213,31 @@ class Orchestrator:
             An ExecutionResult describing what was touched and any diagnostics.
         """
         executor = SystemExecutor(manifest, self.user_config, self.request.docker)
+
+        from .errors import ProtostarError
+        from .journal import TransactionState
+        from .models import RollbackContext
+
         try:
             executor.execute()
         except KeyboardInterrupt:
             raise PartialExecutionAbortedError(
-                frozenset(executor.journal.touched_paths)
+                RollbackContext(
+                    touched_paths=frozenset(executor.journal.touched_paths),
+                    completed_tasks=tuple(executor.completed_tasks),
+                    interrupted_task=executor.interrupted_task,
+                    is_external=self.request.is_external,
+                )
             ) from None
+        except ProtostarError as e:
+            if getattr(executor.journal, "state", None) == TransactionState.ROLLED_BACK:
+                e.rollback_context = RollbackContext(
+                    touched_paths=frozenset(executor.journal.touched_paths),
+                    completed_tasks=tuple(executor.completed_tasks),
+                    interrupted_task=executor.interrupted_task,
+                    is_external=self.request.is_external,
+                )
+            raise
 
         return ExecutionResult(
             created_paths=executor.journal.created_paths,

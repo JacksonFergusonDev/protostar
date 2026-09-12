@@ -72,6 +72,16 @@ class SystemTask:
         self.owned_files = owned_files or []
         self.owned_trees = owned_trees or []
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the task to a JSON-safe dictionary."""
+        return {
+            "command": self.command,
+            "description": self.description,
+            "timeout": self.timeout,
+            "owned_files": self.owned_files,
+            "owned_trees": self.owned_trees,
+        }
+
 
 class CollisionStrategy(enum.Enum):
     """Enumeration of execution routes for intersecting files."""

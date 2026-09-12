@@ -13,6 +13,7 @@ from protostar.system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
     from .journal import RollbackResult
+    from .models import RollbackContext
 
 
 class ExitCode(IntEnum):
@@ -48,6 +49,7 @@ class ProtostarError(Exception):
         self.hint = hint
         self.docs_path = docs_path
         self.docs_anchor = docs_anchor
+        self.rollback_context: RollbackContext | None = None
 
     @property
     def docs_url(self) -> str | None:
@@ -237,7 +239,7 @@ class UnsupportedFilesystemNodeError(ProtostarError):
         path: Path,
         node_type: str,
         *,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_ROLLBACK,
+        docs_path: DocsPage | str | None = DocsPage.ROLLBACK,
     ) -> None:
         message = f"Cannot transactionally mutate unsupported {node_type}: {path}"
         hint = (
@@ -277,29 +279,20 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
     """Raised when interrupted execution successfully rolls back tracked changes."""
 
     def __init__(
-        self, touched_paths: frozenset[str], *, docs_path: DocsPage | str | None = None
+        self,
+        rollback_context: RollbackContext,
+        *,
+        docs_path: DocsPage | str | None = None,
     ) -> None:
-        """Initializes the exception with the frozenset of paths modified before the interrupt.
+        """Initializes the exception with the structured rollback metadata.
 
         Args:
-            touched_paths: Immutable set of file and directory paths touched on disk.
+            rollback_context: The structured context detailing paths restored and tasks run.
             docs_path: Optional path to relevant documentation.
         """
-        if touched_paths:
-            paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
-            message = (
-                "Execution interrupted. Protostar rolled back all tracked workspace changes:\n"
-                f"{paths_bulleted}\n\n"
-                "Note: External commands (e.g., uv, git) may have also modified workspace files."
-            )
-        else:
-            message = (
-                "Execution interrupted. Protostar rolled back all tracked workspace changes.\n\n"
-                "Note: External commands (e.g., uv, git) may have also modified workspace files."
-            )
-        hint = "The managed workspace state has been restored."
-        super().__init__(message, hint=hint, docs_path=docs_path)
-        self.touched_paths = touched_paths
+        msg = "Execution interrupted."
+        super().__init__(msg, hint=None, docs_path=docs_path)
+        self.rollback_context = rollback_context
 
 
 class WorkspaceCollisionError(ProtostarError):
@@ -401,7 +394,7 @@ class RollbackFailedError(ProtostarError):
         rollback_result: RollbackResult,
         original_error: BaseException,
         *,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_ROLLBACK,
+        docs_path: DocsPage | str | None = DocsPage.ROLLBACK,
     ) -> None:
         failed_list = "\n".join(
             f"- {failure.path}: {failure.detail}" for failure in rollback_result.errors

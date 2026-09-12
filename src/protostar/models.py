@@ -6,9 +6,30 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .config import TemplateBlueprint
-from .manifest import DiagnosticEvent
+from .manifest import DiagnosticEvent, SystemTask
 
-__all__ = ["ExecutionResult", "InitRequest"]
+__all__ = ["ExecutionResult", "InitRequest", "RollbackContext"]
+
+
+@dataclass(frozen=True)
+class RollbackContext:
+    """Structured data payload describing a successful transactional rollback."""
+
+    touched_paths: frozenset[str]
+    completed_tasks: tuple[SystemTask, ...]
+    interrupted_task: SystemTask | None
+    is_external: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes the rollback context to a JSON-safe dictionary."""
+        return {
+            "touched_paths": sorted(self.touched_paths),
+            "completed_tasks": [t.to_dict() for t in self.completed_tasks],
+            "interrupted_task": self.interrupted_task.to_dict()
+            if self.interrupted_task
+            else None,
+            "is_external": self.is_external,
+        }
 
 
 @dataclass

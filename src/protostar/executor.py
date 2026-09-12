@@ -74,6 +74,8 @@ class SystemExecutor:
         self.fs = TransactionAwareFS(self.journal)
         self.process_runner = ProcessRunner()
         self.diagnostics: list[DiagnosticEvent] = []
+        self.completed_tasks: list[SystemTask] = []
+        self.interrupted_task: SystemTask | None = None
 
     def add_diagnostic(
         self,
@@ -285,7 +287,12 @@ class SystemExecutor:
                 continue
 
             logger.info(msg)
-            self.process_runner.run(task.command, timeout=task.timeout)
+            try:
+                self.process_runner.run(task.command, timeout=task.timeout)
+                self.completed_tasks.append(task)
+            except BaseException:
+                self.interrupted_task = task
+                raise
 
     def _write_ci_workflow(self) -> None:
         """Assembles and writes the .github/workflows/ci.yml file if requested."""
