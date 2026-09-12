@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789251388092,
+  "lastUpdate": 1789254954645,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12347,6 +12347,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 200.84,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e2cb6b65ae5833d992ae685eaa69eaf234d6ca3a",
+          "message": "refactor: centralize documentation linking and type safety (#248)\n\nThis commit centralizes all documentation URLs by upgrading DocsPage to a\nstandard Enum with path and label tuples. It introduces format_docs_link to\nensure all CLI doc links flow through this registry, eliminating hardcoded\nURLs in errors and the CLI. Check_doc_links.py was completely overhauled to\nstatically iterate the enum instead of relying on fragile dynamic instantiation.",
+          "timestamp": "2026-09-12T16:14:56-07:00",
+          "tree_id": "c7d7d7b1db6fd3471b8b513f2b439776251c35d5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e2cb6b65ae5833d992ae685eaa69eaf234d6ca3a"
+        },
+        "date": 1789254953850,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 139,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.96,
             "unit": "ms"
           }
         ]
