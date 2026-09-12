@@ -491,6 +491,88 @@ def test_main_handles_expected_operational_errors(mocker):
     assert "Execution Aborted" in str(panel_call.args[0].title)
 
 
+def test_main_handles_rollback_error_with_documentation_hyperlink(mocker):
+    """Test that rollback errors render styled documentation hyperlinks in the abort panel."""
+    import io
+
+    from rich.console import Console
+
+    from protostar.cli import main
+    from protostar.errors import ProtostarError
+    from protostar.models import RollbackContext
+
+    mocker.patch("protostar.cli.main.parser.build_parser")
+    err = ProtostarError("Command execution failed")
+    err.rollback_context = RollbackContext(
+        touched_paths=frozenset({"src/app.py"}),
+        completed_tasks=(),
+        interrupted_task=None,
+        is_external=False,
+    )
+    mocker.patch(
+        "protostar.cli.parser.intercept_interactive_wizards",
+        side_effect=err,
+    )
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
+    mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    panel_call = next(
+        call
+        for call in mock_print.call_args_list
+        if call.args and hasattr(call.args[0], "renderable")
+    )
+    panel = panel_call.args[0]
+    buf = io.StringIO()
+    string_console = Console(file=buf, force_terminal=True)
+    string_console.print(panel)
+    rendered_output = buf.getvalue()
+
+    assert "Read the documentation ↗" in rendered_output
+    assert (
+        "https://protostar.readthedocs.io/en/stable/usage/rollback/" in rendered_output
+    )
+    assert "Note: Some standard artifacts" in rendered_output
+
+
+def test_main_handles_rollback_error_json_mode(mocker, monkeypatch):
+    """Test that JSON mode properly emits rollback_context and docs_url."""
+    from protostar.cli import main
+    from protostar.errors import ProtostarError
+    from protostar.models import RollbackContext
+
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--json"])
+    mocker.patch("protostar.cli.main.parser.build_parser")
+    err = ProtostarError("Failure")
+    err.rollback_context = RollbackContext(
+        touched_paths=frozenset({"src/app.py"}),
+        completed_tasks=(),
+        interrupted_task=None,
+        is_external=False,
+    )
+    mocker.patch(
+        "protostar.cli.parser.intercept_interactive_wizards",
+        side_effect=err,
+    )
+    mock_emit = mocker.patch("protostar.cli.ui.emit_json")
+    mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    mock_emit.assert_called_once()
+    payload = mock_emit.call_args[0][0]
+    assert payload["status"] == "error"
+    assert (
+        payload["error"]["docs_url"]
+        == "https://protostar.readthedocs.io/en/stable/usage/rollback/"
+    )
+    assert "rollback_context" in payload["error"]
+
+
 def test_main_handles_unexpected_bugs(mocker):
     """Test that unknown exceptions trigger the traceback and GitHub crash report payload."""
     from protostar.cli import main

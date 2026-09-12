@@ -406,8 +406,11 @@ def main() -> None:
             ctx = getattr(e, "rollback_context", None)
             if ctx is not None:
                 error_dict["rollback_context"] = ctx.to_dict()
-            if e.docs_url:
-                error_dict["docs_url"] = e.docs_url
+            docs_url = e.docs_url
+            if not docs_url and ctx is not None and not ctx.is_external:
+                docs_url = "https://protostar.readthedocs.io/en/stable/usage/rollback/"
+            if docs_url:
+                error_dict["docs_url"] = docs_url
             if isinstance(e, WorkspaceCollisionError):
                 error_dict["paths"] = sorted(str(p) for p in e.paths)
             ui.emit_json(
@@ -430,6 +433,7 @@ def main() -> None:
             from rich.console import RenderableType
 
             body_renderable: RenderableType
+            docs_url = e.docs_url
             if ctx is not None:
                 rb_group: list[RenderableType] = []
                 if ctx.touched_paths:
@@ -478,13 +482,21 @@ def main() -> None:
                                 Text.from_markup(f"[dim]• [Interrupted] {desc}[/dim]")
                             )
                 else:
+                    rb_group.append(
+                        Text.from_markup(
+                            "Note: Some standard artifacts (like the .venv/ directory) remain but are safe to ignore."
+                        )
+                    )
                     docs_url = (
                         e.docs_url
                         or "https://protostar.readthedocs.io/en/stable/usage/rollback/"
                     )
+
+                if docs_url:
+                    rb_group.append(Text(""))
                     rb_group.append(
                         Text.from_markup(
-                            f"Note: Some standard artifacts (like the .venv/ directory) remain but are safe\nto ignore. For details, see: {docs_url}"
+                            f"[bold cyan][link={docs_url}]Read the documentation ↗[/link][/bold cyan]"
                         )
                     )
 
@@ -495,9 +507,9 @@ def main() -> None:
                     else Group(*rb_group)
                 )
             else:
+                if docs_url:
+                    body += f"\n\n[bold cyan][link={docs_url}]Read the documentation ↗[/link][/bold cyan]"
                 body_renderable = Text.from_markup(body)
-            if e.docs_url:
-                body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
 
             ui.console.print(
                 Panel(
