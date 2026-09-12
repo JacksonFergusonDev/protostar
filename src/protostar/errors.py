@@ -6,9 +6,13 @@ import os
 import urllib.parse
 from enum import IntEnum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from protostar.docs_registry import DocsPage
 from protostar.system_deps import GlobalExecutable
+
+if TYPE_CHECKING:
+    from .journal import RollbackResult
 
 
 class ExitCode(IntEnum):
@@ -193,6 +197,19 @@ class CommandTimeoutError(ProtostarError):
         self.timeout = timeout
 
 
+class ProcessTerminationError(ProtostarError):
+    """Raised when a managed process cannot be terminated and reaped safely."""
+
+    def __init__(self, process_id: int, detail: str) -> None:
+        message = f"Failed to terminate managed process tree {process_id}: {detail}"
+        hint = (
+            "Stop the reported process tree before modifying or retrying the workspace."
+        )
+        super().__init__(message, hint=hint)
+        self.process_id = process_id
+        self.detail = detail
+
+
 class FileSystemError(ProtostarError):
     """Raised when a local disk mutation (write, read, mkdir) fails via an OSError or serialization fault."""
 
@@ -212,6 +229,31 @@ class FileSystemError(ProtostarError):
         self.original = original
 
 
+class UnsupportedFilesystemNodeError(ProtostarError):
+    """Raised when a transaction targets a symlink or special filesystem node."""
+
+    def __init__(self, path: Path, node_type: str) -> None:
+        message = f"Cannot transactionally mutate unsupported {node_type}: {path}"
+        hint = (
+            "Replace the node with a regular file or directory and run Protostar again."
+        )
+        super().__init__(message, hint=hint)
+        self.path = path
+        self.node_type = node_type
+
+
+class TransactionStateError(ProtostarError):
+    """Raised when a transaction operation is invalid for its lifecycle state."""
+
+    def __init__(self, operation: str, state: str) -> None:
+        super().__init__(
+            f"Cannot {operation} a transaction while it is {state}.",
+            hint="Create a new executor for each execution attempt.",
+        )
+        self.operation = operation
+        self.state = state
+
+
 class ExecutionAbortedError(ProtostarError):
     """Raised when the user explicitly aborts the execution via an interactive prompt."""
 
@@ -226,7 +268,7 @@ class ExecutionAbortedError(ProtostarError):
 
 
 class PartialExecutionAbortedError(ExecutionAbortedError):
-    """Raised when execution is interrupted after disk mutations have begun."""
+    """Raised when interrupted execution successfully rolls back tracked changes."""
 
     def __init__(
         self, touched_paths: frozenset[str], *, docs_path: DocsPage | str | None = None
@@ -240,17 +282,16 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
         if touched_paths:
             paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
             message = (
-                "Execution was interrupted before Protostar could finish setting up the environment.\n\n"
-                "The following paths were modified or created before the abort:\n"
+                "Execution interrupted. Protostar rolled back all tracked workspace changes:\n"
                 f"{paths_bulleted}\n\n"
                 "Note: External commands (e.g., uv, git) may have also modified workspace files."
             )
         else:
             message = (
-                "Execution was interrupted before Protostar could finish setting up the environment.\n\n"
+                "Execution interrupted. Protostar rolled back all tracked workspace changes.\n\n"
                 "Note: External commands (e.g., uv, git) may have also modified workspace files."
             )
-        hint = "Inspect the modified paths or clean up the workspace before re-running Protostar."
+        hint = "The managed workspace state has been restored."
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.touched_paths = touched_paths
 
@@ -344,3 +385,30 @@ class AggregatedDependencyError(ProtostarError):
 
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.errors = errors
+
+
+class RollbackFailedError(ProtostarError):
+    """Raised when an interrupted execution fails to cleanly rollback to its original state."""
+
+    def __init__(
+        self,
+        rollback_result: RollbackResult,
+        original_error: BaseException,
+        *,
+        docs_path: DocsPage | str | None = None,
+    ) -> None:
+        failed_list = "\n".join(
+            f"- {failure.path}: {failure.detail}" for failure in rollback_result.errors
+        )
+        message = (
+            "Protostar execution failed and the automated rollback was only partially successful.\n\n"
+            "The following paths could not be restored to their original state:\n"
+            f"{failed_list}\n\n"
+            f"Original execution error: {original_error}"
+        )
+        hint = (
+            "Manual intervention is required to restore the workspace to a clean state."
+        )
+        super().__init__(message, hint=hint, docs_path=docs_path)
+        self.rollback_result = rollback_result
+        self.original_error = original_error

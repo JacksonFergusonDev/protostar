@@ -5,14 +5,15 @@ from pathlib import Path
 
 from .appends import append_marker_blocks
 from .config import UserConfig
-from .dependencies import DependencyGroup, install_dependencies
+from .dependencies import install_dependencies
 from .errors import (
     ConfigurationError,
     FileSystemError,
 )
-from .fs import atomic_write_text
+from .fs_transaction import TransactionAwareFS
 from .ide import check_ide_extensions, write_ide_settings
 from .interpolation import render_template
+from .journal import MutationJournal
 from .manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -23,7 +24,7 @@ from .manifest import (
 )
 from .registry import HookRegistry
 from .security import enforce_binary_safelist, enforce_path_jail
-from .system import execute_subprocess
+from .system import ProcessRunner, shield_sigint
 from .toml_ast import merge_toml_payloads
 from .workflows import (
     CIWorkflowSpec,
@@ -67,17 +68,10 @@ class SystemExecutor:
         self.manifest = manifest
         self.config = config
         self.docker = docker
-        self.touched_paths: set[str] = set()
+        self.journal = MutationJournal()
+        self.fs = TransactionAwareFS(self.journal)
+        self.process_runner = ProcessRunner()
         self.diagnostics: list[DiagnosticEvent] = []
-        self._failed_dependency_groups: set[DependencyGroup] = set()
-
-    def record_touch(self, path: Path | str) -> None:
-        """Records a path as having been modified or created during execution."""
-        try:
-            rel_path = Path(path).resolve().relative_to(Path.cwd().resolve())
-            self.touched_paths.add(rel_path.as_posix())
-        except (ValueError, RuntimeError):
-            self.touched_paths.add(str(path))
 
     def add_diagnostic(
         self,
@@ -116,21 +110,34 @@ class SystemExecutor:
     #   5. IDE Diagnostics: Runs last as non-blocking diagnostic warnings.
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
-        self._validate_targets()
-        self._create_directories()
-        self._write_injected_files()
-        self._write_pre_commit_config()
-        self._write_ci_workflow()
-        self._write_release_workflow()
-        self._write_justfile()
-        self._run_tasks(self.manifest.tasks.system_tasks)
-        self._install_dependencies()
-        self._append_files()
-        self._write_ignores()
-        self._write_docker_artifacts()
-        self._write_ide_settings()
-        self._run_tasks(self.manifest.tasks.post_install_tasks)
-        self._check_ide_extensions()
+        try:
+            self._validate_targets()
+            self._create_directories()
+            self._write_injected_files()
+            self._write_pre_commit_config()
+            self._write_ci_workflow()
+            self._write_release_workflow()
+            self._write_justfile()
+            self._run_tasks(self.manifest.tasks.system_tasks)
+            self._install_dependencies()
+            self._append_files()
+            self._write_ignores()
+            self._write_docker_artifacts()
+            self._write_ide_settings()
+            self._run_tasks(self.manifest.tasks.post_install_tasks)
+            self._check_ide_extensions()
+            self.journal.commit()
+        except BaseException as original_error:
+            self.process_runner.terminate_active_process_tree()
+            with shield_sigint():
+                rollback_result = self.journal.rollback()
+            if not rollback_result.succeeded:
+                from .errors import RollbackFailedError
+
+                raise RollbackFailedError(
+                    rollback_result, original_error
+                ) from original_error
+            raise
 
     def _check_ide_extensions(self) -> None:
         """Verifies that the configured IDE has the recommended extensions installed.
@@ -202,8 +209,7 @@ class SystemExecutor:
         full_yaml = HookRegistry.resolve_placeholders(full_yaml)
 
         try:
-            atomic_write_text(target, full_yaml)
-            self.record_touch(target)
+            self.fs.write_text(target, full_yaml)
         except OSError as e:
             raise FileSystemError("write configuration file", str(target), e) from e
         logger.debug("Scaffolded .pre-commit-config.yaml")
@@ -229,9 +235,7 @@ class SystemExecutor:
                 continue
 
             try:
-                target.parent.mkdir(parents=True, exist_ok=True)
-                atomic_write_text(target, content)
-                self.record_touch(target)
+                self.fs.write_text(target, content)
             except OSError as e:
                 raise FileSystemError("inject boilerplate file", str(target), e) from e
             logger.debug(f"Injected configuration file: {interpolated_filepath}")
@@ -246,8 +250,7 @@ class SystemExecutor:
             path = Path(interpolated_path)
             enforce_path_jail(path, Path.cwd())
             try:
-                path.mkdir(parents=True, exist_ok=True)
-                self.record_touch(path)
+                self.fs.ensure_directory(path)
             except OSError as e:
                 raise FileSystemError(
                     "create scaffolding directory", str(path), e
@@ -266,38 +269,16 @@ class SystemExecutor:
                 any(tool in task.command for tool in ("pre-commit", "prek"))
                 and "install" in task.command
             )
-            if is_hook_install:
-                if not (Path.cwd() / ".git").exists():
-                    self.add_diagnostic(
-                        phase=DiagnosticPhase.PRE_COMMIT,
-                        message="Skipping git hook installation; workspace is not a Git repository.",
-                        severity=Severity.SKIP,
-                    )
-                    continue
-
-                if DependencyGroup.DEV in self._failed_dependency_groups:
-                    self.add_diagnostic(
-                        phase=DiagnosticPhase.PRE_COMMIT,
-                        message="Skipping git hook installation; development dependencies failed to resolve.",
-                        severity=Severity.SKIP,
-                    )
-                    continue
-
-            if (
-                len(task.command) >= 2
-                and task.command[0] == "uv"
-                and task.command[1] == "run"
-                and DependencyGroup.DEV in self._failed_dependency_groups
-            ):
+            if is_hook_install and not (Path.cwd() / ".git").exists():
                 self.add_diagnostic(
-                    phase=DiagnosticPhase.EXECUTOR,
-                    message=f"Skipping task '{msg}'; development dependencies failed to resolve.",
+                    phase=DiagnosticPhase.PRE_COMMIT,
+                    message="Skipping git hook installation; workspace is not a Git repository.",
                     severity=Severity.SKIP,
                 )
                 continue
 
             logger.info(msg)
-            execute_subprocess(task.command, timeout=task.timeout)
+            self.process_runner.run(task.command, timeout=task.timeout)
 
     def _write_ci_workflow(self) -> None:
         """Assembles and writes the .github/workflows/ci.yml file if requested."""
@@ -323,9 +304,7 @@ class SystemExecutor:
             )
         )
         try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_text(target, workflow)
-            self.record_touch(target)
+            self.fs.write_text(target, workflow)
         except OSError as e:
             raise FileSystemError("write CI workflow", str(target), e) from e
 
@@ -346,9 +325,7 @@ class SystemExecutor:
 
         workflow = generate_release_workflow()
         try:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_text(target, workflow)
-            self.record_touch(target)
+            self.fs.write_text(target, workflow)
         except OSError as e:
             raise FileSystemError("write release workflow", str(target), e) from e
 
@@ -376,8 +353,7 @@ class SystemExecutor:
                 clean_paths=self.manifest.tooling.just_clean_paths,
             )
         )
-        atomic_write_text(target, full_content)
-        self.record_touch(target)
+        self.fs.write_text(target, full_content)
 
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
@@ -399,7 +375,6 @@ class SystemExecutor:
                     original_content = target.read_text(encoding="utf-8")
                 else:
                     original_content = ""
-                    target.parent.mkdir(parents=True, exist_ok=True)
             except OSError as e:
                 raise FileSystemError(
                     "read target append context", str(target), e
@@ -429,8 +404,7 @@ class SystemExecutor:
 
                 if new_content.strip() != original_content.strip():
                     try:
-                        atomic_write_text(target, new_content)
-                        self.record_touch(target)
+                        self.fs.write_text(target, new_content)
                     except OSError as e:
                         raise FileSystemError(
                             "mutate configuration AST", str(target), e
@@ -445,8 +419,7 @@ class SystemExecutor:
                 )
                 if appended_content is not None:
                     try:
-                        atomic_write_text(target, appended_content)
-                        self.record_touch(target)
+                        self.fs.write_text(target, appended_content)
                     except OSError as e:
                         raise FileSystemError(
                             "append configurations block", str(target), e
@@ -469,8 +442,7 @@ class SystemExecutor:
                 existing_content=existing_content,
             )
             if new_content is not None:
-                atomic_write_text(gitignore, new_content)
-                self.record_touch(gitignore)
+                self.fs.write_text(gitignore, new_content)
                 missing_count = len(
                     self.manifest.filesystem.vcs_ignores
                     - {line.strip() for line in existing_content.splitlines()}
@@ -547,8 +519,7 @@ class SystemExecutor:
 
         if new_dockerignore is not None:
             try:
-                atomic_write_text(dockerignore, new_dockerignore)
-                self.record_touch(dockerignore)
+                self.fs.write_text(dockerignore, new_dockerignore)
                 logger.debug(
                     "Scaffolded container runtime ignore configurations (.dockerignore)"
                 )
@@ -560,8 +531,7 @@ class SystemExecutor:
                 ) from e
 
         try:
-            atomic_write_text(dockerfile, dockerfile_content)
-            self.record_touch(dockerfile)
+            self.fs.write_text(dockerfile, dockerfile_content)
             logger.debug("Scaffolded Dockerfile")
         except OSError as e:
             raise FileSystemError(
@@ -579,17 +549,21 @@ class SystemExecutor:
                 message=msg,
                 severity=sev,
             ),
-            on_record_touch=self.record_touch,
+            fs=self.fs,
         )
 
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
-        self._failed_dependency_groups = install_dependencies(
-            dependencies_manifest=self.manifest.dependencies,
-            on_diagnostic=lambda msg, sev, detail: self.add_diagnostic(
-                phase=DiagnosticPhase.EXECUTOR,
-                message=msg,
-                severity=sev,
-                detail=detail,
-            ),
+        dependencies = self.manifest.dependencies
+        if (
+            dependencies.dependencies
+            or dependencies.dev_dependencies
+            or dependencies.docs_dependencies
+        ):
+            for path in (Path("pyproject.toml"), Path("uv.lock")):
+                enforce_path_jail(path, Path.cwd())
+                self.journal.record_mutation(path)
+        install_dependencies(
+            dependencies_manifest=dependencies,
+            process_runner=self.process_runner,
         )

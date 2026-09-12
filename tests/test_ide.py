@@ -6,7 +6,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from protostar.errors import FileSystemError
+from protostar.fs_transaction import TransactionAwareFS
 from protostar.ide import IDEType, check_ide_extensions, write_ide_settings
+from protostar.journal import MutationJournal
 from protostar.manifest import Severity
 
 
@@ -199,20 +201,19 @@ def test_ide_extension_check_fails_missing_tuple(mocker):
     assert "charliermarsh.ruff" not in msg
 
 
-def test_write_ide_settings_empty(mocker):
-    mock_write = mocker.patch("protostar.ide.atomic_write_text")
+def test_write_ide_settings_empty(mocker, tmp_path):
+    fs = TransactionAwareFS(MutationJournal(tmp_path))
+    mock_write = mocker.patch.object(fs, "write_text")
     diagnostics = []
-    touched = []
 
     write_ide_settings(
         ide_settings={},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=fs,
     )
 
     mock_write.assert_not_called()
     assert diagnostics == []
-    assert touched == []
 
 
 def test_write_ide_settings_merge(tmp_path: Path, monkeypatch):
@@ -230,7 +231,7 @@ def test_write_ide_settings_merge(tmp_path: Path, monkeypatch):
     )
 
     diagnostics = []
-    touched = []
+    journal = MutationJournal(tmp_path)
 
     write_ide_settings(
         ide_settings={  # type: ignore
@@ -238,12 +239,11 @@ def test_write_ide_settings_merge(tmp_path: Path, monkeypatch):
             "new.key": "new_value",
         },
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=TransactionAwareFS(journal),
     )
 
     assert diagnostics == []
-    assert len(touched) == 1
-    assert touched[0] == Path(".vscode/settings.json")
+    assert journal.mutated_paths == frozenset({".vscode/settings.json"})
 
     result = json.loads(settings_file.read_text())
     assert result["existing.key"] == "existing_value"
@@ -259,12 +259,12 @@ def test_write_ide_settings_empty_file(tmp_path: Path, monkeypatch):
     settings_file.write_text("   \n  \t")
 
     diagnostics = []
-    touched = []
+    journal = MutationJournal(tmp_path)
 
     write_ide_settings(
         ide_settings={"files.exclude": {"**/.venv": True}},  # type: ignore
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=TransactionAwareFS(journal),
     )
 
     assert diagnostics == []
@@ -282,19 +282,19 @@ def test_write_ide_settings_skips_malformed_json(tmp_path: Path, monkeypatch):
     )
 
     diagnostics = []
-    touched = []
+    journal = MutationJournal(tmp_path)
 
     write_ide_settings(
         ide_settings={"python.defaultInterpreterPath": "/fake/path"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=TransactionAwareFS(journal),
     )
 
     assert len(diagnostics) == 1
     msg, sev = diagnostics[0]
     assert sev == Severity.WARNING
     assert "Skipping IDE settings injection" in msg
-    assert touched == []
+    assert journal.touched_paths == frozenset()
 
 
 def test_write_ide_settings_skips_non_dict_json(tmp_path: Path, monkeypatch):
@@ -305,20 +305,20 @@ def test_write_ide_settings_skips_non_dict_json(tmp_path: Path, monkeypatch):
     settings_file.write_text("['not', 'a', 'dict']")
 
     diagnostics = []
-    touched = []
+    journal = MutationJournal(tmp_path)
 
     write_ide_settings(
         ide_settings={"python.defaultInterpreterPath": "/fake/path"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
-        on_record_touch=lambda p: touched.append(p),
+        fs=TransactionAwareFS(journal),
     )
 
     assert len(diagnostics) == 1
     assert "Skipping IDE settings injection" in diagnostics[0][0]
-    assert touched == []
+    assert journal.touched_paths == frozenset()
 
 
-def test_write_ide_settings_handles_read_os_error(mocker):
+def test_write_ide_settings_handles_read_os_error(mocker, tmp_path):
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", side_effect=OSError(5, "Input/output error"))
 
@@ -326,26 +326,23 @@ def test_write_ide_settings_handles_read_os_error(mocker):
         write_ide_settings(
             ide_settings={"foo": "bar"},  # type: ignore
             on_diagnostic=lambda msg, sev: None,
-            on_record_touch=lambda p: None,
+            fs=TransactionAwareFS(MutationJournal(tmp_path)),
         )
 
     assert "inspect active IDE settings files" in exc_info.value.operation
     assert "settings.json" in exc_info.value.path
 
 
-def test_write_ide_settings_handles_write_os_error(mocker):
-    mocker.patch.object(Path, "exists", return_value=False)
-    mocker.patch.object(Path, "mkdir")
-    mocker.patch(
-        "protostar.ide.atomic_write_text",
-        side_effect=OSError(13, "Permission denied"),
-    )
+def test_write_ide_settings_handles_write_os_error(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    fs = TransactionAwareFS(MutationJournal(tmp_path))
+    mocker.patch.object(fs, "write_text", side_effect=OSError(13, "Permission denied"))
 
     with pytest.raises(FileSystemError) as exc_info:
         write_ide_settings(
             ide_settings={"foo": "bar"},  # type: ignore
             on_diagnostic=lambda msg, sev: None,
-            on_record_touch=lambda p: None,
+            fs=fs,
         )
 
     assert "synchronize IDE workspace preferences" in exc_info.value.operation

@@ -213,10 +213,11 @@ class Orchestrator:
             executor.execute()
         except KeyboardInterrupt:
             raise PartialExecutionAbortedError(
-                frozenset(executor.touched_paths)
+                frozenset(executor.journal.touched_paths)
             ) from None
 
         return ExecutionResult(
-            touched_paths=frozenset(executor.touched_paths),
+            created_paths=executor.journal.created_paths,
+            mutated_paths=executor.journal.mutated_paths,
             diagnostics=tuple(executor.diagnostics),
         )

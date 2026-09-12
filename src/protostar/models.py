@@ -44,12 +44,19 @@ class ExecutionResult:
     """Observed outcome returned by Orchestrator.execute().
 
     Attributes:
-        touched_paths: Immutable set of relative paths written or created on disk.
+        created_paths: Immutable set of relative paths created on disk.
+        mutated_paths: Immutable set of relative paths modified on disk.
         diagnostics: Ordered tuple of non-fatal diagnostic events emitted during execution.
     """
 
-    touched_paths: frozenset[str]
+    created_paths: frozenset[str]
+    mutated_paths: frozenset[str]
     diagnostics: tuple[DiagnosticEvent, ...]
+
+    @property
+    def touched_paths(self) -> frozenset[str]:
+        """Returns the union of created and mutated paths."""
+        return self.created_paths | self.mutated_paths
 
     def to_dict(self) -> dict[str, Any]:
         """Serializes the execution result to a JSON-safe dictionary.
@@ -73,6 +80,8 @@ class ExecutionResult:
             diagnostics.append(entry)
 
         return {
+            "created_paths": sorted(self.created_paths),
+            "mutated_paths": sorted(self.mutated_paths),
             "touched_paths": sorted(self.touched_paths),
             "diagnostics": diagnostics,
         }

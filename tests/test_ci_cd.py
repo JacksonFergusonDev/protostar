@@ -32,8 +32,8 @@ def test_executor_ci_assembly(
         "      - name: Run Ruff\\n        run: uv run ruff check"
     ]
 
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
+    mock_write = mocker.patch.object(executor.fs, "write_text")
     executor._write_ci_workflow()
 
     mock_write.assert_called_once()
@@ -69,8 +69,8 @@ def test_executor_ci_assembly_no_codecov(
         "      - name: Run Ruff\\n        run: uv run ruff check"
     ]
 
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
+    mock_write = mocker.patch.object(executor.fs, "write_text")
     executor._write_ci_workflow()
 
     mock_write.assert_called_once()
@@ -96,8 +96,8 @@ def test_executor_ci_assembly_no_pytest(
         "      - name: Run Ruff\\n        run: uv run ruff check"
     ]
 
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
+    mock_write = mocker.patch.object(executor.fs, "write_text")
     executor._write_ci_workflow()
 
     mock_write.assert_called_once()
@@ -111,8 +111,8 @@ def test_executor_release_assembly(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     manifest.tooling.wants_release = True
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
     executor = SystemExecutor(manifest, UserConfig())
+    mock_write = mocker.patch.object(executor.fs, "write_text")
     executor._write_release_workflow()
 
     mock_write.assert_called_once()

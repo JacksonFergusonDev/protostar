@@ -196,12 +196,15 @@ def test_partial_execution_aborted_error():
     assert err.touched_paths == paths
     assert "- path/to/a.txt" in str(err)
     assert "- path/to/b.txt" in str(err)
-    assert "Inspect the modified paths" in (err.hint or "")
+    assert "The managed workspace state has been restored." in (err.hint or "")
     assert err.docs_url is None
 
     empty_err = PartialExecutionAbortedError(touched_paths=frozenset())
     assert "The following paths were modified" not in str(empty_err)
-    assert "Execution was interrupted before Protostar could finish" in str(empty_err)
+    assert (
+        "Execution interrupted. Protostar rolled back all tracked workspace changes"
+        in str(empty_err)
+    )
     assert empty_err.docs_url is None
 
 

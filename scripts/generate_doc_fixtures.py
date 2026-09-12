@@ -748,15 +748,17 @@ def generate_agent_payloads() -> None:
             os.chdir(orig_cwd)
 
     # 2. Success payload generated dynamically using ExecutionResult
+    paths = frozenset(
+        [
+            ".gitignore",
+            "pyproject.toml",
+            "src/my_app/__init__.py",
+            "tests/test_cli.py",
+        ]
+    )
     result = ExecutionResult(
-        touched_paths=frozenset(
-            [
-                ".gitignore",
-                "pyproject.toml",
-                "src/my_app/__init__.py",
-                "tests/test_cli.py",
-            ]
-        ),
+        created_paths=paths,
+        mutated_paths=frozenset(),
         diagnostics=(),
     )
     success_payload = {
@@ -1080,6 +1082,7 @@ def generate_cli_help_svgs() -> None:
             color_system="truecolor",
             legacy_windows=False,
             file=io.StringIO(),
+            _environ={},
         )
 
         prompt = Text.assemble(
@@ -1135,6 +1138,7 @@ def generate_cli_dry_run_svg() -> None:
         color_system="truecolor",
         legacy_windows=False,
         file=io.StringIO(),
+        _environ={},
     )
 
     prompt = Text.assemble(
@@ -1193,6 +1197,7 @@ def generate_diagnostic_panel_svg() -> None:
         color_system="truecolor",
         legacy_windows=False,
         file=io.StringIO(),
+        _environ={},
     )
 
     events = [

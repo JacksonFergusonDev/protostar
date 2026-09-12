@@ -1,128 +1,162 @@
+import signal
 import subprocess
 
 import pytest
 
-from protostar.errors import CommandExecutionError, CommandTimeoutError
-from protostar.system import execute_subprocess
+from protostar.errors import (
+    CommandExecutionError,
+    CommandTimeoutError,
+    ProcessTerminationError,
+)
+from protostar.system import ProcessRunner, execute_subprocess, shield_sigint
 
 
-@pytest.fixture(autouse=True)
-def mock_shutil_which(mocker):
-    mocker.patch("protostar.system.shutil.which", side_effect=lambda x: x)
+def _mock_process(mocker, *, returncode=0, output=("out", "err")):
+    process = mocker.MagicMock()
+    process.communicate.return_value = output
+    process.returncode = returncode
+    process.poll.return_value = returncode
+    return process
 
 
-def test_execute_subprocess_with_timeout(mocker):
-    """Test that explicitly provided timeouts are passed down to the subprocess layer."""
-    mock_run = mocker.patch("protostar.system.subprocess.run")
+def test_process_runner_success(mocker):
+    process = _mock_process(mocker)
+    popen = mocker.patch("protostar.system.subprocess.Popen", return_value=process)
 
-    execute_subprocess(["sleep", "1"], timeout=15)
+    runner = ProcessRunner()
+    runner.run(["uv", "sync"])
 
-    assert mock_run.call_count == 1
-    call_args, call_kwargs = mock_run.call_args
-    assert call_args[0] == ["sleep", "1"]
-    assert call_kwargs["check"] is True
-    assert call_kwargs["capture_output"] is True
-    assert call_kwargs["text"] is True
-    assert call_kwargs["encoding"] == "utf-8"
-    assert call_kwargs["timeout"] == 15
-    assert "VIRTUAL_ENV" not in call_kwargs["env"]
-    assert "PYTHONHOME" not in call_kwargs["env"]
+    assert runner.active_process is None
+    assert popen.call_args.kwargs["start_new_session"] is True
+    assert popen.call_args.kwargs["encoding"] == "utf-8"
 
 
-def test_execute_subprocess_sanitizes_environment(mocker, monkeypatch):
-    """Test that VIRTUAL_ENV and PYTHONHOME are stripped from child subprocess environments."""
-    monkeypatch.setenv("VIRTUAL_ENV", "/some/caller/.venv")
-    monkeypatch.setenv("PYTHONHOME", "/some/python/home")
-    monkeypatch.setenv("KEEP_VAR", "preserved")
-
-    mock_run = mocker.patch("protostar.system.subprocess.run")
-    execute_subprocess(["uv", "--version"])
-
-    call_env = mock_run.call_args.kwargs["env"]
-    assert "VIRTUAL_ENV" not in call_env
-    assert "PYTHONHOME" not in call_env
-    assert call_env["KEEP_VAR"] == "preserved"
-
-
-def test_execute_subprocess_custom_env_override(mocker):
-    """Test that caller-provided env overrides take precedence."""
-    mock_run = mocker.patch("protostar.system.subprocess.run")
-    execute_subprocess(
-        ["uv", "--version"],
-        env={"CUSTOM_KEY": "custom_val", "VIRTUAL_ENV": "/explicit/venv"},
-    )
-
-    call_env = mock_run.call_args.kwargs["env"]
-    assert call_env["CUSTOM_KEY"] == "custom_val"
-    assert call_env["VIRTUAL_ENV"] == "/explicit/venv"
-
-
-def test_execute_subprocess_timeout_expired(mocker):
-    """Test that execution timeouts are intercepted and raise a contextual CommandTimeoutError."""
-    mock_run = mocker.patch("protostar.system.subprocess.run")
-    mock_run.side_effect = subprocess.TimeoutExpired(
-        cmd=["uv", "add", "heavy-pkg"], timeout=600
-    )
-
-    with pytest.raises(CommandTimeoutError) as exc_info:
-        execute_subprocess(["uv", "add", "heavy-pkg"], timeout=600)
-
-    assert exc_info.value.command == ["uv", "add", "heavy-pkg"]
-    assert exc_info.value.timeout == 600
-
-
-def test_execute_subprocess_failure(mocker):
-    """Test that execute_subprocess intercepts subprocess errors and preserves diagnostic metadata."""
-    mock_run = mocker.patch("protostar.system.subprocess.run")
-    # Simulate a command failure with captured stderr
-    mock_run.side_effect = subprocess.CalledProcessError(
-        returncode=1, cmd=["false"], stderr="Network timeout during package resolution"
-    )
+def test_process_runner_failure_preserves_output(mocker):
+    process = _mock_process(mocker, returncode=1, output=("out", "err"))
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
 
     with pytest.raises(CommandExecutionError) as exc_info:
-        execute_subprocess(["false"])
+        ProcessRunner().run(["uv", "add", "nonexistent"])
 
-    assert exc_info.value.command == ["false"]
-    assert exc_info.value.returncode == 1
-    assert "Network timeout" in exc_info.value.stderr
-
-
-def test_execute_subprocess_success(mocker):
-    mock_run = mocker.patch("subprocess.run")
-    execute_subprocess(["uv", "version"])
-    assert mock_run.call_count == 1
-    call_args, call_kwargs = mock_run.call_args
-    assert call_args[0] == ["uv", "version"]
-    assert call_kwargs["check"] is True
-    assert call_kwargs["timeout"] is None
-    assert "VIRTUAL_ENV" not in call_kwargs["env"]
-
-
-def test_execute_subprocess_timeout(mocker):
-    mocker.patch(
-        "subprocess.run",
-        side_effect=subprocess.TimeoutExpired(cmd=["uv", "sync"], timeout=5),
-    )
-
-    with pytest.raises(CommandTimeoutError) as exc_info:
-        execute_subprocess(["uv", "sync"], timeout=5)
-
-    assert exc_info.value.command == ["uv", "sync"]
-    assert exc_info.value.timeout == 5
-
-
-def test_execute_subprocess_failed_execution(mocker):
-    mocker.patch(
-        "subprocess.run",
-        side_effect=subprocess.CalledProcessError(
-            returncode=1, cmd=["uv", "add", "nonexistent"], output="out", stderr="err"
-        ),
-    )
-
-    with pytest.raises(CommandExecutionError) as exc_info:
-        execute_subprocess(["uv", "add", "nonexistent"])
-
-    assert exc_info.value.command == ["uv", "add", "nonexistent"]
-    assert exc_info.value.returncode == 1
     assert exc_info.value.stdout == "out"
     assert exc_info.value.stderr == "err"
+    assert exc_info.value.returncode == 1
+
+
+def test_process_runner_sanitizes_environment(mocker, monkeypatch):
+    monkeypatch.setenv("VIRTUAL_ENV", "/caller/.venv")
+    monkeypatch.setenv("PYTHONHOME", "/caller/python")
+    monkeypatch.setenv("KEEP_ME", "yes")
+    process = _mock_process(mocker)
+    popen = mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+
+    ProcessRunner().run(["uv", "sync"], env={"VIRTUAL_ENV": "/target/.venv"})
+
+    child_env = popen.call_args.kwargs["env"]
+    assert child_env["VIRTUAL_ENV"] == "/target/.venv"
+    assert "PYTHONHOME" not in child_env
+    assert child_env["KEEP_ME"] == "yes"
+
+
+def test_process_runner_timeout_terminates_escalates_and_reaps(mocker):
+    process = _mock_process(mocker)
+    process.pid = 123
+    process.communicate.side_effect = subprocess.TimeoutExpired(["uv"], 10)
+    process.poll.return_value = None
+    process.wait.side_effect = [subprocess.TimeoutExpired(["uv"], 2), None]
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+    mocker.patch("protostar.system.os.getpgid", return_value=456)
+    kill_group = mocker.patch("protostar.system.os.killpg")
+
+    with pytest.raises(CommandTimeoutError):
+        ProcessRunner(termination_grace_seconds=2).run(["uv", "sync"], timeout=10)
+
+    assert kill_group.call_args_list == [
+        mocker.call(456, signal.SIGTERM),
+        mocker.call(456, signal.SIGKILL),
+    ]
+    assert process.wait.call_args_list == [
+        mocker.call(timeout=2),
+        mocker.call(timeout=2),
+    ]
+
+
+def test_process_runner_keyboard_interrupt_terminates_before_reraising(mocker):
+    process = _mock_process(mocker)
+    process.pid = 123
+    process.communicate.side_effect = KeyboardInterrupt
+    process.poll.return_value = None
+    process.wait.return_value = None
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+    mocker.patch("protostar.system.os.getpgid", return_value=456)
+    kill_group = mocker.patch("protostar.system.os.killpg")
+
+    runner = ProcessRunner()
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(["uv", "sync"])
+
+    kill_group.assert_called_once_with(456, signal.SIGTERM)
+    process.wait.assert_called_once_with(timeout=2.0)
+    assert runner.active_process is None
+
+
+def test_process_runner_retains_unreaped_process_after_termination_failure(mocker):
+    process = _mock_process(mocker)
+    process.pid = 123
+    process.communicate.side_effect = KeyboardInterrupt
+    process.poll.return_value = None
+    process.terminate.side_effect = OSError("cannot terminate")
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+    mocker.patch("protostar.system.os.getpgid", return_value=456)
+    mocker.patch("protostar.system.os.killpg", side_effect=OSError("no group"))
+
+    runner = ProcessRunner()
+    with pytest.raises(ProcessTerminationError):
+        runner.run(["uv", "sync"])
+
+    assert runner.active_process is process
+
+
+def test_process_runner_windows_process_group(mocker, monkeypatch):
+    monkeypatch.setattr("protostar.system.sys.platform", "win32")
+    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    monkeypatch.setattr(
+        "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
+    )
+    process = _mock_process(mocker)
+    popen = mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+
+    ProcessRunner().run(["uv", "sync"])
+
+    assert popen.call_args.kwargs["creationflags"] == 512
+
+
+def test_shield_sigint_restores_previous_handler(mocker):
+    original = object()
+    mocker.patch("protostar.system.signal.getsignal", return_value=original)
+    set_handler = mocker.patch("protostar.system.signal.signal")
+
+    with shield_sigint():
+        pass
+
+    assert set_handler.call_args_list[0].args[0] == signal.SIGINT
+    assert set_handler.call_args_list[-1] == mocker.call(signal.SIGINT, original)
+
+
+def test_shield_sigint_ignores_reentrant_interrupt(mocker):
+    mocker.patch(
+        "protostar.system.signal.getsignal", return_value=signal.default_int_handler
+    )
+    set_handler = mocker.patch("protostar.system.signal.signal")
+
+    with shield_sigint():
+        installed_handler = set_handler.call_args_list[0].args[1]
+        installed_handler(signal.SIGINT, None)
+
+
+def test_execute_subprocess_uses_short_lived_runner(mocker):
+    run = mocker.patch("protostar.system.ProcessRunner.run")
+
+    execute_subprocess(["uv", "sync"], timeout=30)
+
+    run.assert_called_once_with(["uv", "sync"], timeout=30, env=None)

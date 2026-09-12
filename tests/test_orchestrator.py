@@ -209,7 +209,8 @@ def test_execute_returns_touched_paths_and_diagnostics(mocker, mock_config):
     """execute() wraps touched_paths and diagnostics into an ExecutionResult."""
     mock_executor_cls = mocker.patch("protostar.orchestrator.SystemExecutor")
     mock_executor_instance = mock_executor_cls.return_value
-    mock_executor_instance.touched_paths = {"pyproject.toml"}
+    mock_executor_instance.journal.created_paths = frozenset({"pyproject.toml"})
+    mock_executor_instance.journal.mutated_paths = frozenset()
     mock_executor_instance.diagnostics = [
         DiagnosticEvent(phase="Test", message="something", severity=Severity.INFO)
     ]
@@ -228,8 +229,10 @@ def test_execute_raises_partial_abort_on_keyboard_interrupt(mocker, mock_config)
     """execute() converts KeyboardInterrupt to PartialExecutionAbortedError."""
     mock_executor_cls = mocker.patch("protostar.orchestrator.SystemExecutor")
     mock_executor_instance = mock_executor_cls.return_value
+    mock_executor_instance.journal.created_paths = frozenset({"pyproject.toml"})
+    mock_executor_instance.journal.mutated_paths = frozenset()
     mock_executor_instance.execute.side_effect = KeyboardInterrupt
-    mock_executor_instance.touched_paths = {"some_file.py"}
+    mock_executor_instance.journal.touched_paths = {"some_file.py"}
 
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)

@@ -131,7 +131,13 @@ Once the plan is verified, the agent executes initialization:
 protostar init --template astro --force-merge --json
 ```
 
-Upon completion, the agent receives a list of all `touched_paths` that were created or modified on disk.
+Upon completion, the agent receives deterministic `created_paths` and `mutated_paths`
+lists. The `touched_paths` list is their derived union.
+
+Rollback covers paths written directly through Protostar's transaction-aware
+filesystem layer and explicitly declared regular-file subprocess effects. Protostar
+terminates and reaps managed subprocesses before rollback, but it cannot restore
+undeclared filesystem effects produced by arbitrary external commands.
 
 ---
 

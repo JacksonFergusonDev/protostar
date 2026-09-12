@@ -103,7 +103,9 @@ def test_trust_boundary_bypassed_when_trusted_true(mocker: Any) -> None:
     manifest.tasks.add_system_task(["uv", "run", "setup"])
     mock_engine.plan.return_value = manifest
     mock_engine.execute.return_value = ExecutionResult(
-        touched_paths=frozenset(), diagnostics=()
+        created_paths=frozenset(),
+        mutated_paths=frozenset(),
+        diagnostics=(),
     )
 
     request = InitRequest(is_external=True, is_trusted=True)

@@ -6,10 +6,11 @@ from typing import cast
 import pytest
 
 from protostar.config import UserConfig
-from protostar.dependencies import DependencyGroup
 from protostar.errors import (
+    CommandExecutionError,
     ConfigurationError,
     FileSystemError,
+    RollbackFailedError,
 )
 from protostar.executor import SystemExecutor
 from protostar.manifest import (
@@ -38,12 +39,10 @@ def test_executor_writes_injected_files(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_mkdir = mocker.patch("protostar.executor.Path.mkdir")
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_injected_files()
 
-    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "mock content")
 
 
@@ -86,7 +85,7 @@ def test_executor_writes_pre_commit_config(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
 
@@ -132,7 +131,7 @@ def test_executor_writes_pre_commit_config_local_toolchain(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
 
@@ -160,7 +159,7 @@ def test_executor_writes_prek_config(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
 
@@ -195,7 +194,7 @@ def test_executor_writes_pre_commit_config_local_and_remote_hooks(mocker, mock_c
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
 
@@ -225,7 +224,7 @@ def test_executor_write_pre_commit_config_empty_deps(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
     written_data = mock_write.call_args[0][1]
@@ -293,7 +292,7 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
@@ -309,7 +308,7 @@ def test_executor_writes_dockerfile_default(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
@@ -338,7 +337,7 @@ def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
@@ -362,7 +361,7 @@ def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
@@ -380,7 +379,7 @@ def test_executor_skips_docker_artifacts_on_collision(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value="")
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
@@ -408,7 +407,7 @@ def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_c
         "protostar.executor.generate_dockerignore", return_value="new_ignore"
     )
     mocker.patch("protostar.executor.generate_dockerfile", return_value="FROM python")
-    mocker.patch("protostar.executor.atomic_write_text")
+    mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
@@ -427,7 +426,7 @@ def test_write_dockerfile_handles_os_error(mocker, mock_config):
         if path == Path("Dockerfile"):
             raise OSError(13, "Permission denied")
 
-    mocker.patch("protostar.executor.atomic_write_text", side_effect=write_side_effect)
+    mocker.patch.object(executor.fs, "write_text", side_effect=write_side_effect)
 
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_docker_artifacts()
@@ -447,7 +446,7 @@ def test_executor_writes_injected_files_overwrite(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_injected_files()
     mock_write.assert_called_once_with(Path(".test_config.yaml"), "new content")
@@ -475,8 +474,9 @@ def test_executor_write_text_permission_error_propagation(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mocker.patch("protostar.executor.Path.mkdir")
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=PermissionError("Permission denied"),
     )
 
@@ -498,7 +498,7 @@ def test_executor_append_files_ast_no_op_write(
     manifest.filesystem.add_file_append("pyproject.toml", original_content)
     executor = SystemExecutor(manifest, mock_config)
 
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._append_files()
 
@@ -572,7 +572,7 @@ def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_conf
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
     mock_write.assert_not_called()
@@ -661,7 +661,7 @@ def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._append_files()
     mock_write.assert_not_called()
@@ -690,7 +690,7 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_text", return_value="existing_data")
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._append_files()
 
@@ -764,7 +764,7 @@ def test_executor_run_tasks(mocker, mock_config):
 
     executor = SystemExecutor(manifest, mock_config)
 
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+    mock_execute = mocker.patch.object(executor.process_runner, "run")
 
     executor._run_tasks(manifest.tasks.post_install_tasks)
 
@@ -776,7 +776,6 @@ def test_executor_run_tasks(mocker, mock_config):
 def test_executor_uses_custom_task_description(mocker):
     # Mock the logger and subprocess
     mock_info = mocker.patch("protostar.executor.logger.info")
-    mocker.patch("protostar.executor.execute_subprocess")
 
     manifest = EnvironmentManifest()
     manifest.tasks.add_system_task(["git", "init"], description="Initializing git repo")
@@ -784,6 +783,7 @@ def test_executor_uses_custom_task_description(mocker):
     # We only need a dummy config to init the executor
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
+    mocker.patch.object(executor.process_runner, "run")
 
     executor._run_tasks(manifest.tasks.system_tasks)
 
@@ -792,7 +792,6 @@ def test_executor_uses_custom_task_description(mocker):
 
 def test_executor_task_description_fallback(mocker):
     mock_info = mocker.patch("protostar.executor.logger.info")
-    mocker.patch("protostar.executor.execute_subprocess")
 
     manifest = EnvironmentManifest()
     # Provide a command with a path, but NO description
@@ -800,6 +799,7 @@ def test_executor_task_description_fallback(mocker):
 
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
+    mocker.patch.object(executor.process_runner, "run")
 
     executor._run_tasks(manifest.tasks.system_tasks)
 
@@ -818,7 +818,7 @@ def test_executor_skips_hook_install_when_not_a_git_repo(
     )
 
     executor = SystemExecutor(manifest, mock_config)
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+    mock_execute = mocker.patch.object(executor.process_runner, "run")
 
     executor._run_tasks(manifest.tasks.post_install_tasks)
 
@@ -827,59 +827,6 @@ def test_executor_skips_hook_install_when_not_a_git_repo(
         d.phase == DiagnosticPhase.PRE_COMMIT
         and d.severity == Severity.SKIP
         and "not a Git repository" in d.message
-        for d in executor.diagnostics
-    )
-
-
-def test_executor_skips_hook_install_when_dev_dependencies_fail(
-    mocker, mock_config, tmp_path, monkeypatch
-):
-    """Test that git hook installation is skipped when dev dependency resolution fails."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / ".git").mkdir()
-
-    manifest = EnvironmentManifest()
-    manifest.tasks.add_post_install_task(
-        ["uv", "run", "prek", "install"], description="Installing prek git hooks"
-    )
-
-    executor = SystemExecutor(manifest, mock_config)
-    executor._failed_dependency_groups = {DependencyGroup.DEV}
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
-
-    executor._run_tasks(manifest.tasks.post_install_tasks)
-
-    mock_execute.assert_not_called()
-    assert any(
-        d.phase == DiagnosticPhase.PRE_COMMIT
-        and d.severity == Severity.SKIP
-        and "development dependencies failed to resolve" in d.message
-        for d in executor.diagnostics
-    )
-
-
-def test_executor_skips_uv_run_tasks_when_dev_dependencies_fail(
-    mocker, mock_config, tmp_path, monkeypatch
-):
-    """Test that arbitrary uv run tasks are skipped when dev dependencies fail to resolve."""
-    monkeypatch.chdir(tmp_path)
-
-    manifest = EnvironmentManifest()
-    manifest.tasks.add_post_install_task(
-        ["uv", "run", "custom-linter", "check"], description="Running custom linter"
-    )
-
-    executor = SystemExecutor(manifest, mock_config)
-    executor._failed_dependency_groups = {DependencyGroup.DEV}
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
-
-    executor._run_tasks(manifest.tasks.post_install_tasks)
-
-    mock_execute.assert_not_called()
-    assert any(
-        d.phase == DiagnosticPhase.EXECUTOR
-        and d.severity == Severity.SKIP
-        and "development dependencies failed to resolve" in d.message
         for d in executor.diagnostics
     )
 
@@ -897,7 +844,7 @@ def test_executor_runs_hook_install_when_git_and_dev_succeed(
     )
 
     executor = SystemExecutor(manifest, mock_config)
-    mock_execute = mocker.patch("protostar.executor.execute_subprocess")
+    mock_execute = mocker.patch.object(executor.process_runner, "run")
 
     executor._run_tasks(manifest.tasks.post_install_tasks)
 
@@ -917,8 +864,9 @@ def test_executor_handles_write_permission_denied(mocker):
     mocker.patch.object(Path, "exists", return_value=False)
 
     # Force atomic write helper to crash out mimicking a blocked access request
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=PermissionError(13, "Permission denied"),
     )
 
@@ -949,14 +897,13 @@ def test_executor_handles_mkdir_io_failure(mocker):
     assert "core" in str(exc_info.value.path)
 
 
-def test_append_files_handles_read_or_mkdir_failure(mocker):
+def test_append_files_handles_read_failure(mocker):
     manifest = EnvironmentManifest()
     manifest.filesystem.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
     executor = SystemExecutor(manifest, UserConfig())
 
-    # Mock target.exists to return False so it hits the parent directory creation path
-    mocker.patch.object(Path, "exists", return_value=False)
-    mocker.patch.object(Path, "mkdir", side_effect=OSError(13, "Permission denied"))
+    mocker.patch.object(Path, "exists", return_value=True)
+    mocker.patch.object(Path, "read_text", side_effect=OSError(13, "Permission denied"))
 
     with pytest.raises(FileSystemError) as exc_info:
         executor._append_files()
@@ -973,8 +920,9 @@ def test_append_files_handles_toml_write_failure(mocker):
     # Simulate an existing valid pyproject.toml on disk
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="[project]\nname = 'test'")
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=OSError(28, "No space left on device"),
     )
 
@@ -992,8 +940,9 @@ def test_append_files_handles_string_block_write_failure(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=OSError(5, "Input/output error"),
     )
 
@@ -1011,8 +960,9 @@ def test_write_ignores_handles_os_error(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=OSError(13, "Permission denied"),
     )
 
@@ -1032,8 +982,9 @@ def test_write_docker_artifacts_handles_os_error(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=OSError(13, "Permission denied"),
     )
 
@@ -1280,7 +1231,7 @@ def test_executor_skips_pre_commit_when_file_exists(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
 
@@ -1301,7 +1252,7 @@ def test_executor_skips_injected_files_when_file_exists(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_injected_files()
 
@@ -1320,7 +1271,7 @@ def test_executor_skips_justfile_when_file_exists(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_justfile()
 
@@ -1346,7 +1297,7 @@ def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_co
 
     executor = SystemExecutor(manifest, mock_config)
     mocker.patch("protostar.executor.Path.exists", return_value=False)
-    mock_write = mocker.patch("protostar.executor.atomic_write_text")
+    mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_pre_commit_config()
 
@@ -1467,8 +1418,9 @@ def test_executor_write_ci_workflow_handles_os_error(
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=PermissionError(13, "Permission denied"),
     )
 
@@ -1490,8 +1442,9 @@ def test_executor_write_release_workflow_handles_os_error(
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch(
-        "protostar.executor.atomic_write_text",
+    mocker.patch.object(
+        executor.fs,
+        "write_text",
         side_effect=PermissionError(13, "Permission denied"),
     )
 
@@ -1501,3 +1454,94 @@ def test_executor_write_release_workflow_handles_os_error(
     assert "write release workflow" in exc_info.value.operation
     assert "release.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
+
+
+def _workspace_snapshot(root: Path) -> dict[str, tuple[str, bytes | None, int]]:
+    snapshot: dict[str, tuple[str, bytes | None, int]] = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        mode = path.lstat().st_mode & 0o777
+        if path.is_symlink():
+            snapshot[relative] = ("symlink", str(path.readlink()).encode(), mode)
+        elif path.is_dir():
+            snapshot[relative] = ("directory", None, mode)
+        else:
+            snapshot[relative] = ("file", path.read_bytes(), mode)
+    return snapshot
+
+
+def test_executor_early_failure_restores_workspace_snapshot(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """An early failure restores files and removes nested generated paths."""
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "existing.txt"
+    existing.write_text("original")
+    existing.chmod(0o744)
+    before = _workspace_snapshot(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
+    manifest.filesystem.add_directory("generated/nested")
+    manifest.filesystem.add_file_injection("existing.txt", "changed")
+    manifest.filesystem.add_file_injection("generated/nested/new.txt", "new")
+    executor = SystemExecutor(manifest, mock_config)
+    mocker.patch.object(
+        executor, "_write_pre_commit_config", side_effect=OSError("stop")
+    )
+
+    with pytest.raises(OSError, match="stop"):
+        executor.execute()
+
+    assert _workspace_snapshot(tmp_path) == before
+
+
+def test_executor_dependency_failure_restores_bounded_uv_files(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """Fatal uv failures restore explicitly journaled project metadata files."""
+    monkeypatch.chdir(tmp_path)
+    pyproject = tmp_path / "pyproject.toml"
+    lockfile = tmp_path / "uv.lock"
+    pyproject.write_text("[project]\nname = 'original'\n")
+    lockfile.write_text("original lock")
+    before = _workspace_snapshot(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.dependencies.add("example")
+    executor = SystemExecutor(manifest, mock_config)
+
+    def fail_uv(_command, *, timeout):
+        pyproject.write_text("changed")
+        lockfile.write_text("changed")
+        raise CommandExecutionError(["uv", "add", "example"], 1)
+
+    mocker.patch.object(executor.process_runner, "run", side_effect=fail_uv)
+
+    with pytest.raises(CommandExecutionError):
+        executor.execute()
+
+    assert _workspace_snapshot(tmp_path) == before
+
+
+def test_executor_surfaces_non_destructive_rollback_failure(
+    tmp_path, monkeypatch, mocker, mock_config
+):
+    """Rollback reports a non-empty generated directory without deleting it."""
+    monkeypatch.chdir(tmp_path)
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_directory("generated")
+    executor = SystemExecutor(manifest, mock_config)
+
+    def create_untracked_file() -> None:
+        (tmp_path / "generated" / "external.txt").write_text("external")
+        raise OSError("stop")
+
+    mocker.patch.object(
+        executor, "_write_injected_files", side_effect=create_untracked_file
+    )
+
+    with pytest.raises(RollbackFailedError) as exc_info:
+        executor.execute()
+
+    assert (tmp_path / "generated" / "external.txt").read_text() == "external"
+    assert exc_info.value.__cause__ is not None
+    assert exc_info.value.rollback_result.failed_paths == (tmp_path / "generated",)
