@@ -50,7 +50,9 @@ class SystemWorkspaceModule(BootstrapModule):
 
         if not self._git_already_initialized:
             manifest.tasks.add_system_task(
-                ["git", "init"], description="Initializing git repository"
+                ["git", "init"],
+                description="Initializing git repository",
+                owned_trees=[".git"],
             )
 
         universal_artifacts = [

@@ -2,6 +2,7 @@
 
 import dataclasses
 import enum
+import shutil
 import stat
 from pathlib import Path
 
@@ -45,11 +46,12 @@ class OriginalState:
     kind: NodeKind
     file_content: bytes | None = None
     mode: int | None = None
+    created_as_tree: bool = False
 
     @classmethod
-    def absent(cls) -> "OriginalState":
+    def absent(cls, created_as_tree: bool = False) -> "OriginalState":
         """Absent state."""
-        return cls(kind=NodeKind.ABSENT)
+        return cls(kind=NodeKind.ABSENT, created_as_tree=created_as_tree)
 
     @classmethod
     def directory(cls, mode: int) -> "OriginalState":
@@ -131,6 +133,22 @@ class MutationJournal:
         """Returns touched paths."""
         return frozenset(self.created_paths | self.mutated_paths)
 
+    def record_tree_creation(self, path: Path) -> None:
+        """Records a path as a newly created tree to be eradicated on rollback."""
+        if self._state is not TransactionState.ACTIVE:
+            raise TransactionStateError("record a tree creation in", self._state.value)
+
+        path = self.normalize_path(path)
+        if path in self._journal:
+            return
+
+        if path.exists():
+            self.record_mutation(path)
+            return
+
+        self._journal[path] = OriginalState.absent(created_as_tree=True)
+        self._created_paths.add(path)
+
     def record_mutation(self, path: Path) -> None:
         """Records a path."""
         if self._state is not TransactionState.ACTIVE:
@@ -189,7 +207,9 @@ class MutationJournal:
             try:
                 if state.kind is NodeKind.ABSENT:
                     if path.exists() or path.is_symlink():
-                        if path.is_dir() and not path.is_symlink():
+                        if state.created_as_tree:
+                            shutil.rmtree(path, ignore_errors=True)
+                        elif path.is_dir() and not path.is_symlink():
                             path.rmdir()
                         else:
                             path.unlink()

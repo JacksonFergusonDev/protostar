@@ -491,9 +491,14 @@ class PreCommitModule(BootstrapModule):
 
         # `autoupdate` pulls remote git repositories to update hook definitions,
         # requiring a wider time window than a local install.
+        hook_files = [".git/hooks/pre-commit"]
+        for hook_type in manifest.tooling.pre_commit_install_hook_types:
+            hook_files.append(f".git/hooks/{hook_type}")
+
         manifest.tasks.add_post_install_task(
             ["uv", "run", "pre-commit", "install"],
             description="Installing pre-commit git hooks",
+            owned_files=hook_files,
         )
 
 
@@ -531,9 +536,14 @@ class PrekModule(BootstrapModule):
         manifest.tooling.set_hook_runner(HookRunner.PREK)
         manifest.dependencies.add_dev("prek")
 
+        hook_files = [".git/hooks/pre-commit"]
+        for hook_type in manifest.tooling.pre_commit_install_hook_types:
+            hook_files.append(f".git/hooks/{hook_type}")
+
         manifest.tasks.add_post_install_task(
             ["uv", "run", "prek", "install"],
             description="Installing prek git hooks",
+            owned_files=hook_files,
         )
 
 
