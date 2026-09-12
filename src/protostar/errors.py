@@ -260,8 +260,8 @@ class ExecutionAbortedError(ProtostarError):
         super().__init__(message, hint=hint, docs_path=docs_path)
 
 
-class PartialExecutionAbortedError(ExecutionAbortedError):
-    """Raised when interrupted execution successfully rolls back tracked changes."""
+class ExecutionInterruptedError(ProtostarError):
+    """Raised when the user interrupts execution (Ctrl+C) and rollback succeeds."""
 
     def __init__(
         self,
@@ -275,8 +275,9 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
             rollback_context: The structured context detailing paths restored and tasks run.
             docs_path: Optional path to relevant documentation.
         """
-        msg = "Execution interrupted."
-        super().__init__(msg, hint=None, docs_path=docs_path)
+        super().__init__(
+            "Execution interrupted by user.", hint=None, docs_path=docs_path
+        )
         self.rollback_context = rollback_context
 
 

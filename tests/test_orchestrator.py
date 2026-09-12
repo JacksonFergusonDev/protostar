@@ -5,7 +5,7 @@ import pytest
 from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import (
     ConfigurationError,
-    PartialExecutionAbortedError,
+    ExecutionInterruptedError,
     WorkspaceCollisionError,
 )
 from protostar.manifest import (
@@ -202,8 +202,8 @@ def test_execute_returns_touched_paths_and_diagnostics(mocker, mock_config):
     assert result.diagnostics[0].message == "something"
 
 
-def test_execute_raises_partial_abort_on_keyboard_interrupt(mocker, mock_config):
-    """execute() converts KeyboardInterrupt to PartialExecutionAbortedError."""
+def test_execute_raises_interrupted_error_on_keyboard_interrupt(mocker, mock_config):
+    """execute() converts KeyboardInterrupt to ExecutionInterruptedError."""
     mock_executor_cls = mocker.patch("protostar.orchestrator.SystemExecutor")
     mock_executor_instance = mock_executor_cls.return_value
     mock_executor_instance.journal.created_paths = frozenset({"pyproject.toml"})
@@ -215,7 +215,7 @@ def test_execute_raises_partial_abort_on_keyboard_interrupt(mocker, mock_config)
     mocker.patch.object(Path, "exists", return_value=False)
     manifest = engine.plan()
 
-    with pytest.raises(PartialExecutionAbortedError) as exc_info:
+    with pytest.raises(ExecutionInterruptedError) as exc_info:
         engine.execute(manifest)
 
     ctx = exc_info.value.rollback_context

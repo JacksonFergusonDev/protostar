@@ -5,7 +5,7 @@ from pytest_mock import MockerFixture
 
 from protostar.cli import main
 from protostar.config import UserConfig
-from protostar.errors import PartialExecutionAbortedError
+from protostar.errors import ExecutionInterruptedError
 from protostar.executor import SystemExecutor
 from protostar.fs import atomic_write_text
 from protostar.manifest import EnvironmentManifest
@@ -55,7 +55,7 @@ def test_atomic_write_text_cleans_up_temp_file_on_keyboard_interrupt(
     )
 
 
-def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
+def test_orchestrator_raises_execution_interrupted_error_when_files_touched(
     mocker: MockerFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
@@ -72,7 +72,7 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
 
     manifest = orchestrator.plan()
 
-    with pytest.raises(PartialExecutionAbortedError) as exc_info:
+    with pytest.raises(ExecutionInterruptedError) as exc_info:
         orchestrator.execute(manifest)
 
     assert exc_info.value.rollback_context is not None
@@ -81,7 +81,7 @@ def test_orchestrator_raises_partial_execution_aborted_error_when_files_touched(
     )
 
 
-def test_orchestrator_raises_execution_aborted_error_when_no_files_touched(
+def test_orchestrator_raises_execution_interrupted_error_when_no_files_touched(
     mocker: MockerFixture,
 ) -> None:
     user_config = UserConfig()
@@ -95,16 +95,16 @@ def test_orchestrator_raises_execution_aborted_error_when_no_files_touched(
 
     manifest = orchestrator.plan()
 
-    with pytest.raises(PartialExecutionAbortedError):
+    with pytest.raises(ExecutionInterruptedError):
         orchestrator.execute(manifest)
 
 
-def test_cli_routes_partial_execution_aborted_to_exit_130(
+def test_cli_routes_execution_interrupted_to_exit_130(
     mocker: MockerFixture,
 ) -> None:
     mocker.patch(
         "protostar.cli.parser.intercept_interactive_wizards",
-        side_effect=PartialExecutionAbortedError(
+        side_effect=ExecutionInterruptedError(
             RollbackContext(frozenset({"pyproject.toml"}), (), None, False)
         ),
     )

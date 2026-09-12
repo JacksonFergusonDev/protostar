@@ -655,8 +655,8 @@ def generate_capability_tables() -> None:
         [
             "`130`",
             "Shell Signal",
-            "`ExecutionAbortedError`",
-            "You aborted interactive wizard prompt (Ctrl+C)",
+            "`ExecutionAbortedError`<br>`ExecutionInterruptedError`",
+            "You aborted interactive wizard prompt or interrupted execution (Ctrl+C)",
         ],
     ]
     _write_fixture(

@@ -68,7 +68,7 @@ flowchart TD
     end
 
     R3 --> Check{Rollback\nsucceeded?}:::decision
-    Check -- "Yes" --> ReRaise["Re-raise original error\n(PartialExecutionAbortedError on Ctrl+C)"]:::error
+    Check -- "Yes" --> ReRaise["Re-raise original error\n(ExecutionInterruptedError on Ctrl+C)"]:::error
     Check -- "Partial failure" --> RFE["Raise RollbackFailedError\n(failed_paths attached)"]:::error
 ```
 
@@ -217,4 +217,4 @@ This is a deliberate safety trade-off: risking a non-empty directory being left 
 
 - **[Automatic Rollback](../usage/rollback.md):** User-facing guide — what gets restored, what might remain, and how to remediate failures.
 - **[The System Executor](./executor.md):** How `SystemExecutor` sequences the execution phases and invokes the rollback stack.
-- **[Error Handling Architecture](./error_handling.md):** How `RollbackFailedError`, `PartialExecutionAbortedError`, and `ProcessTerminationError` propagate and map to POSIX exit codes.
+- **[Error Handling Architecture](./error_handling.md):** How `RollbackFailedError`, `ExecutionInterruptedError`, and `ProcessTerminationError` propagate and map to POSIX exit codes.

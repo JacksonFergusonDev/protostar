@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, cast
 from .errors import (
     AggregatedDependencyError,
     ConfigurationError,
+    ExecutionInterruptedError,
     MissingDependencyError,
-    PartialExecutionAbortedError,
     WorkspaceCollisionError,
 )
 from .executor import SystemExecutor
@@ -206,7 +206,7 @@ class Orchestrator:
             manifest: The populated EnvironmentManifest to execute.
 
         Raises:
-            PartialExecutionAbortedError: If the user interrupts execution after
+            ExecutionInterruptedError: If the user interrupts execution after
                 disk mutations have already begun.
 
         Returns:
@@ -221,7 +221,7 @@ class Orchestrator:
         try:
             executor.execute()
         except KeyboardInterrupt:
-            raise PartialExecutionAbortedError(
+            raise ExecutionInterruptedError(
                 RollbackContext(
                     touched_paths=frozenset(executor.journal.touched_paths),
                     completed_tasks=tuple(executor.completed_tasks),

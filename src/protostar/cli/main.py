@@ -31,6 +31,7 @@ from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
     ExecutionAbortedError,
+    ExecutionInterruptedError,
     ExitCode,
     FileSystemError,
     InvalidUsageError,
@@ -509,10 +510,15 @@ def main() -> None:
                 else:
                     body_renderable = Text.from_markup(body)
 
+            panel_title = (
+                "[bold red]Execution Interrupted"
+                if isinstance(e, ExecutionInterruptedError)
+                else "[bold red]Execution Aborted"
+            )
             ui.console.print(
                 Panel(
                     body_renderable,
-                    title="[bold red]Execution Aborted",
+                    title=panel_title,
                     border_style="red",
                     expand=False,
                     padding=(1, 2),
@@ -538,8 +544,10 @@ def main() -> None:
             )  # 69: Expected background tool executable missing
         if isinstance(e, FileSystemError):
             sys.exit(ExitCode.IOERR)  # 74: Critical disk access or storage write faults
-        if isinstance(e, ExecutionAbortedError):
-            sys.exit(130)  # User aborted via interactive prompt
+        if isinstance(e, (ExecutionAbortedError, ExecutionInterruptedError)):
+            sys.exit(
+                130
+            )  # User aborted via interactive prompt or interrupted execution
 
         sys.exit(1)  # Generic operational failure fallback
 

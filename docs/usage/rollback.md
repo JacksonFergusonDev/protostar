@@ -69,9 +69,9 @@ In rare cases, Protostar may be unable to fully restore all tracked paths. When 
 
 **Remediation:** Inspect the paths listed in the `RollbackFailedError` message and remove or restore them manually before re-running `protostar init`.
 
-## Interrupting with Ctrl+C (`PartialExecutionAbortedError`)
+## Interrupting with Ctrl+C (`ExecutionInterruptedError`)
 
-Pressing `Ctrl+C` during execution triggers rollback immediately. If the rollback completes successfully, Protostar raises `PartialExecutionAbortedError` — a specific signal that:
+Pressing `Ctrl+C` during execution triggers rollback immediately. If the rollback completes successfully, Protostar raises `ExecutionInterruptedError` — a specific signal that:
 
 1. The run was interrupted by you (not an internal error).
 1. All tracked workspace changes have been successfully restored.

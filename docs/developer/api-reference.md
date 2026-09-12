@@ -177,7 +177,7 @@ classDiagram
             show_root_toc_entry: true
             separate_signature: true
 
-    ::: protostar.errors.PartialExecutionAbortedError
+    ::: protostar.errors.ExecutionInterruptedError
         options:
             show_source: true
             show_bases: true

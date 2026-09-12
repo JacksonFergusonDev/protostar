@@ -45,7 +45,7 @@ flowchart TD
     P2 -.->|Invalid TOML / Network / Zip| E2["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
     P3 -.->|Failure / Interrupt| RB["ProcessRunner Cleanup<br/>& MutationJournal Rollback"]:::rollback
 
-    RB -.->|Rollback Succeeded| E3["FileSystemError / CommandExecutionError<br/>PartialExecutionAbortedError"]:::error
+    RB -.->|Rollback Succeeded| E3["FileSystemError / CommandExecutionError<br/>ExecutionInterruptedError"]:::error
     RB -.->|Rollback Failed| E4["RollbackFailedError"]:::error
 
     E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Trap<br/>(Rich Panel / JSON Envelope)"]:::core
@@ -74,8 +74,8 @@ ProtostarError (Exception)
  ├── TransactionStateError
  ├── SecurityViolationError
  ├── RollbackFailedError
- └── ExecutionAbortedError
-      └── PartialExecutionAbortedError
+ ├── ExecutionAbortedError
+ └── ExecutionInterruptedError
 ```
 
 ### `ProtostarError`
@@ -147,9 +147,9 @@ Raised when an execution error or interruption occurs and the automated rollback
 
 Raised when you explicitly abort execution via an interactive prompt.
 
-### `PartialExecutionAbortedError`
+### `ExecutionInterruptedError`
 
-Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun and Protostar has successfully rolled back all tracked workspace changes. Reports the set of rolled-back paths via its immutable `touched_paths: frozenset[str]` attribute.
+Raised when execution is interrupted by the user (`Ctrl+C`) after disk mutations have begun and Protostar has successfully rolled back all tracked workspace changes. Reports the set of rolled-back paths via its immutable `touched_paths: frozenset[str]` attribute.
 
 ## Machine-Readable Error Envelopes (`--json`)
 

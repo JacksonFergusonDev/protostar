@@ -12,12 +12,12 @@ from protostar.errors import (
     CommandTimeoutError,
     ConfigurationError,
     ExecutionAbortedError,
+    ExecutionInterruptedError,
     ExitCode,
     FileSystemError,
     InvalidUsageError,
     MissingDependencyError,
     NetworkFetchError,
-    PartialExecutionAbortedError,
     ProtostarError,
     SecurityViolationError,
     TemplateResolutionError,
@@ -182,14 +182,14 @@ def test_execution_aborted_error():
     assert custom.docs_url is None
 
 
-def test_partial_execution_aborted_error():
+def test_execution_interrupted_error():
     from protostar.models import RollbackContext
 
     paths = frozenset(["path/to/a.txt", "path/to/b.txt"])
     context = RollbackContext(paths, (), None, False)
-    err = PartialExecutionAbortedError(context)
+    err = ExecutionInterruptedError(context)
     assert err.rollback_context == context
-    assert "Execution interrupted" in str(err)
+    assert str(err) == "Execution interrupted by user."
     assert err.docs_url is None
 
 

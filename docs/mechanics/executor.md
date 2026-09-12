@@ -60,7 +60,7 @@ FAILURE / INTERRUPT
   Terminate and reap active managed subprocess tree
   Shield against subsequent SIGINT signals
   Roll back journaled paths in reverse order of mutation
-  If rollback succeeds: re-raise original error (or PartialExecutionAbortedError on Ctrl+C)
+  If rollback succeeds: re-raise original error (or ExecutionInterruptedError on Ctrl+C)
   If rollback partially fails: raise RollbackFailedError
 ```
 
