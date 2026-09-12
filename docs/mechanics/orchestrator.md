@@ -65,7 +65,7 @@ flowchart TD
     1. Executes system tasks and post-install subprocesses via `ProcessRunner`.
     1. Verifies IDE extensions and commits the transaction journal.
 
-    If an exception occurs or the user interrupts execution (`KeyboardInterrupt`), the executor cleanly terminates managed subprocesses and rolls back all journaled workspace paths to their pre-transaction state. If rollback succeeds after an interruption, `PartialExecutionAbortedError` is raised reporting the restored paths. If rollback encounters filesystem errors, `RollbackFailedError` is raised. (Note: rollback reliably restores Protostar-managed files and declared dependency targets, but does not promise reverting undeclared side effects from arbitrary external commands).
+    If an exception occurs or the user interrupts execution (`KeyboardInterrupt`), the executor automatically terminates managed subprocesses and rolls back all journaled workspace paths. See [Rollback Internals](./rollback.md) for the full guarantee model and failure semantics.
 
 ---
 

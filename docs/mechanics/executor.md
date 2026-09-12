@@ -85,53 +85,12 @@ These modules interact with external boundaries, but do so predictably.
 
 ---
 
-## Pipeline Transactionality & Automated Rollback
+## Pipeline Transactionality & Rollback
 
-Scaffolding failures should never leave a repository in a corrupt, half-merged, or partially written state. Protostar implements an explicit transaction model governed by the following invariant:
+The `SystemExecutor` wraps the entire execution sequence in an explicit transaction. Every path Protostar touches is journaled before mutation, and any failure or `Ctrl+C` interrupt triggers automatic restoration of all journaled paths in reverse order.
 
-> **Core Invariant:** Every transaction-managed path is journaled before Protostar first mutates it, and rollback restores that path to its supported pre-transaction state.
-
-### The Transaction Boundary
-
-The rollback guarantee applies specifically to **transaction-managed paths**:
-
-- Paths mutated directly by Protostar through `TransactionAwareFS` (`src/protostar/fs_transaction.py`).
-- Explicitly bounded subprocess mutations declared and journaled prior to running an external tool (specifically `pyproject.toml` and `uv.lock` for `uv add`).
-
-Arbitrary, untracked side effects from external commands that escape these boundaries cannot be magically inferred. Therefore, Protostar strictly bounds subprocess modifications and terminates managed subprocess trees before beginning rollback.
-
-### What Protostar Reliably Reverts (and What Might Remain)
-
-To avoid overpromising, Protostar makes a clear distinction between what its transactional engine can guarantee and the inherent limits of managing external subprocesses:
-
-**What is reliably reverted:**
-
-- **Direct File Mutations:** Any pre-existing file modified by Protostar (such as `pyproject.toml` AST merging or marker block appends) is restored to its exact pre-run bytes and file mode.
-- **Created Files:** Any file generated directly by Protostar's template/workflow engine is removed.
-- **Created Directories:** Directories scaffolded by Protostar are removed, provided they remain empty.
-- **Declared Subprocess Targets:** Explicitly bounded subprocess files—specifically `pyproject.toml` and `uv.lock` modified during `uv add`—are journaled before the subprocess runs and restored if installation fails.
-
-**What might remain afterwards:**
-
-- **Undeclared Subprocess Side Effects:** External commands executed via system tasks (such as `git init` initializing a `.git/` database, or custom linters creating local caches) modify paths that are not declared in advance. Protostar stops the process, but cannot infer or delete files created outside the declared boundary.
-- **Non-Empty Generated Directories:** If an external process, editor, or compiler drops files into a Protostar-generated directory, Protostar will not recursively delete it on rollback, preserving unknown files and raising `RollbackFailedError`.
-
-### Rollback Semantics
-
-When execution encounters a runtime error, unhandled exception, or user cancellation (`KeyboardInterrupt`):
-
-- **Bytes Over Intent:** For regular files, rollback restores the exact original bytes and POSIX file mode captured before first mutation. It does not attempt to reverse TOML AST merges semantically; byte restoration is deterministic, instantaneous, and auditable.
-- **Empty-Directory Removal:** Directories created during the transaction are unlinked during rollback *only if they are empty*. If unrelated files were created inside the directory externally, Protostar aborts deletion of that directory and reports a partial rollback failure rather than risking recursive data loss.
-- **Unsupported Filesystem Nodes:** Symlinks and special nodes (FIFOs, sockets, device files) are rejected prior to transaction mutation (`UnsupportedFilesystemNodeError`), preventing symlink targets from being overwritten or restored incorrectly.
-- **Signal Shielding (`shield_sigint`):** Rollback execution is wrapped in a signal-shielding context manager to defer secondary `SIGINT` delivery, ensuring cleanup completes without interruption.
-
-### Fatal Dependency Policy
-
-Package installation via `uv add` is treated as a critical pipeline operation rather than an optional diagnostic. If `uv add` fails or times out:
-
-1. The failure raises `CommandExecutionError` or `CommandTimeoutError` immediately.
-1. Execution halts and triggers automated rollback.
-1. Journaled `pyproject.toml` and `uv.lock` files are restored along with all preceding workspace modifications.
+!!! info "Dedicated rollback documentation"
+    For the full breakdown of what is and isn't restored, the `MutationJournal` / `TransactionAwareFS` / `ProcessRunner` architecture, and design decisions like "Bytes Over Intent", see the dedicated [Rollback Internals](./rollback.md) page.
 
 ---
 
@@ -218,46 +177,6 @@ For one-off isolated commands outside the main executor loop, `protostar.system.
             separate_signature: true
             members_order: source
 
-??? abstract "Transaction Journal: `MutationJournal`"
-    ::: protostar.journal.MutationJournal
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-            members_order: source
-
-??? abstract "Transactional Filesystem: `TransactionAwareFS`"
-    ::: protostar.fs_transaction.TransactionAwareFS
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-            members_order: source
-
-??? abstract "Process Runner: `ProcessRunner`"
-    ::: protostar.system.ProcessRunner
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-            members_order: source
-
-??? abstract "Subprocess Wrapper: `execute_subprocess`"
-    ::: protostar.system.execute_subprocess
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-            members_order: source
-
 ---
 
 ## Related Mechanics & Guides
@@ -265,4 +184,5 @@ For one-off isolated commands outside the main executor loop, `protostar.system.
 - **[The Orchestrator](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
 - **[The Environment Manifest](./manifest.md):** Review the structured state container evaluated by the executor.
 - **[The Module Architecture](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.
+- **[Rollback Internals](./rollback.md):** Deep dive into `MutationJournal`, `TransactionAwareFS`, and `ProcessRunner` — the three-layer rollback stack.
 - **[Error Handling Architecture](./error_handling.md):** Review how rollback errors and process failures are mapped to domain exceptions.
