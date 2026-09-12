@@ -63,10 +63,14 @@ class SystemTask:
         command: list[str],
         description: str | None = None,
         timeout: int | None = None,
+        owned_files: list[str] | None = None,
+        owned_trees: list[str] | None = None,
     ) -> None:
         self.command = command
         self.description = description
         self.timeout = timeout
+        self.owned_files = owned_files or []
+        self.owned_trees = owned_trees or []
 
 
 class CollisionStrategy(enum.Enum):
@@ -324,12 +328,20 @@ class TaskManifest:
         command: list[str],
         timeout: int | None = 30,
         description: str | None = None,
+        owned_files: list[str] | None = None,
+        owned_trees: list[str] | None = None,
     ) -> None:
         """Queues a shell command for execution during the realization phase."""
         if any(task.command == command for task in self.system_tasks):
             return
         self.system_tasks.append(
-            SystemTask(command=command, timeout=timeout, description=description)
+            SystemTask(
+                command=command,
+                timeout=timeout,
+                description=description,
+                owned_files=owned_files,
+                owned_trees=owned_trees,
+            )
         )
 
     def add_post_install_task(
@@ -337,12 +349,20 @@ class TaskManifest:
         command: list[str],
         timeout: int | None = 30,
         description: str | None = None,
+        owned_files: list[str] | None = None,
+        owned_trees: list[str] | None = None,
     ) -> None:
         """Queues a shell command for execution after dependencies are fully installed."""
         if any(task.command == command for task in self.post_install_tasks):
             return
         self.post_install_tasks.append(
-            SystemTask(command=command, timeout=timeout, description=description)
+            SystemTask(
+                command=command,
+                timeout=timeout,
+                description=description,
+                owned_files=owned_files,
+                owned_trees=owned_trees,
+            )
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -361,6 +381,8 @@ class TaskManifest:
                 "command": task.command,
                 "description": task.description,
                 "timeout": task.timeout,
+                "owned_files": task.owned_files,
+                "owned_trees": task.owned_trees,
             }
 
         return {

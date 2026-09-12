@@ -262,6 +262,11 @@ class SystemExecutor:
     def _run_tasks(self, tasks: list[SystemTask]) -> None:
         """Runs a sequence of system tasks (e.g., initialization or post-install commands)."""
         for task in tasks:
+            for f in task.owned_files:
+                self.journal.record_mutation(Path(f))
+            for t in task.owned_trees:
+                self.journal.record_tree_creation(Path(t))
+
             enforce_binary_safelist(task.command)
             binary_name = Path(task.command[0]).name
             msg = task.description or f"Running: {binary_name}"

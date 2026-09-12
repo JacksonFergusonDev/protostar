@@ -196,3 +196,38 @@ def test_journal_continues_after_one_path_fails(tmp_path: Path) -> None:
     assert not result.succeeded
     assert result.failed_paths == (blocked_directory,)
     assert existing.read_text() == "original"
+
+
+def test_record_tree_creation_absent(tmp_path: Path) -> None:
+    """Tests that record_tree_creation uses rmtree for new trees."""
+    journal = MutationJournal(workspace_root=tmp_path)
+    target = tmp_path / ".git"
+
+    # Record tree creation
+    journal.record_tree_creation(target)
+
+    # Simulate git init creating a nested structure
+    target.mkdir()
+    (target / "hooks").mkdir()
+    (target / "hooks" / "pre-commit").write_text("echo test")
+
+    assert target.exists()
+
+    journal.rollback()
+
+    # The entire tree should be removed
+    assert not target.exists()
+
+
+def test_record_tree_creation_existing(tmp_path: Path) -> None:
+    """Tests that record_tree_creation falls back to mutation for existing trees."""
+    journal = MutationJournal(workspace_root=tmp_path)
+    target = tmp_path / ".git"
+
+    # Pre-create the tree
+    target.mkdir()
+    journal.record_tree_creation(target)
+
+    # Check that it recorded as a directory, not a created tree
+    state = journal._journal[target]
+    assert state.kind == "directory"

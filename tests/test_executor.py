@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+from pytest_mock import MockerFixture
 
 from protostar.config import UserConfig
 from protostar.errors import (
@@ -21,6 +22,7 @@ from protostar.manifest import (
     HookRunner,
     ProjectMetadata,
     Severity,
+    SystemTask,
 )
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -1545,3 +1547,27 @@ def test_executor_surfaces_non_destructive_rollback_failure(
     assert (tmp_path / "generated" / "external.txt").read_text() == "external"
     assert exc_info.value.__cause__ is not None
     assert exc_info.value.rollback_result.failed_paths == (tmp_path / "generated",)
+
+
+def test_executor_run_tasks_records_footprints(
+    manifest: EnvironmentManifest,
+    mock_config: UserConfig,
+    mocker: MockerFixture,
+) -> None:
+    """Tests that executor pre-journals explicitly owned files and trees."""
+    task1 = SystemTask(command=["git", "init"], owned_trees=[".git"])
+    task2 = SystemTask(
+        command=["pre-commit", "install"], owned_files=[".git/hooks/pre-commit"]
+    )
+
+    executor = SystemExecutor(manifest, mock_config)
+    mocker.patch.object(executor.process_runner, "run")
+    mock_record_mutation = mocker.patch.object(executor.journal, "record_mutation")
+    mock_record_tree_creation = mocker.patch.object(
+        executor.journal, "record_tree_creation"
+    )
+
+    executor._run_tasks([task1, task2])
+
+    mock_record_tree_creation.assert_any_call(Path(".git"))
+    mock_record_mutation.assert_any_call(Path(".git/hooks/pre-commit"))
