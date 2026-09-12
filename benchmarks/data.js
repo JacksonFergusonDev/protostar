@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789180722151,
+  "lastUpdate": 1789183621070,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12211,6 +12211,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.72,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3d35f33fbfa839993bf6a15097b05c1a1be6bda",
+          "message": "refactor(orchestrator): implement manifest-first collision detection (#244)\n\n* refactor(orchestrator): implement manifest-first collision detection\n\nRefactor workspace collision detection to inspect the fully assembled\nEnvironmentManifest instead of relying on static, pre-manifest guesswork\nvia module collision_markers. This aligns the engine with Architectural\n\nInvariant #1 (Manifest-First, Side-Effects-Last).\n\nKey changes:\n- Add wants_docker to ToolingManifest and target_files() query to\n  EnvironmentManifest to compute all files intended to be written.\n- Reorder Orchestrator.plan() lifecycle: run pre-flight, instantiate and\n  populate manifest (module builds + blueprint injections), and evaluate\n  collisions against manifest.target_files().\n- Eliminate collision_markers property cleanly from BootstrapModule and\n  all module subclasses across lang_layer, tooling_layer, and ci_layer.\n- Purge premature should_skip_file checks from module build() methods so\n  modules remain 100% pure and declarative.\n- Dynamically derive scaffolded files in generate_doc_fixtures.py and\n  update tooling table fixtures and documentation.\n- Update module and orchestrator unit tests to verify manifest-first\n  declarative execution.\n\n* docs: document manifest-first collision detection in mechanics and developer docs",
+          "timestamp": "2026-09-11T20:26:04-07:00",
+          "tree_id": "3d4d530ee452923a025d4b3132acf48234c17504",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f3d35f33fbfa839993bf6a15097b05c1a1be6bda"
+        },
+        "date": 1789183620378,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.09,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 205.63,
             "unit": "ms"
           }
         ]
