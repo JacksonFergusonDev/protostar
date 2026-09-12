@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789249095494,
+  "lastUpdate": 1789251388092,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12313,6 +12313,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 206.17,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d4183c16fcecc41008608d518685637719fbfd1e",
+          "message": "feat(cli): conditionally render rich formatted rollback checklist based on template origin (#247)\n\n* feat(executor): centralize rollback messaging and clarify subprocess boundary\n\n* docs: rename rollback registry entry to reflect dedicated page\n\n* feat(journal): cache formatted display paths for rollback UI rendering\n\n* refactor(orchestrator): decouple rollback presentation from engine logic\n\nIntroduce RollbackContext to transport execution history from SystemExecutor\n\nto CLI, removing string formatting from Domain and Execution layers.\n\n* feat(cli): conditionally render rich formatted rollback checklist based on template origin\n\nDisplays explicitly tracked paths and executed task history.\n\n* test(orchestrator): fix failing test for rollback context\n\n* fix(cli): render documentation links as rich OSC 8 hyperlinks\n\nFormats rollback documentation links with bold cyan OSC 8 hyperlink\n\nmarkup so they are clickable without requiring modifier keys.",
+          "timestamp": "2026-09-12T15:15:28-07:00",
+          "tree_id": "ffb5a6fa8f7db032a70cc92701b445f7f73347c1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/d4183c16fcecc41008608d518685637719fbfd1e"
+        },
+        "date": 1789251386819,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 130.53,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 200.84,
             "unit": "ms"
           }
         ]
