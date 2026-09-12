@@ -214,7 +214,7 @@ sandbox *args: sync
     else
         # Interactive shell mode: drop into sub-shell where 'protostar' points to the sandbox build
         printf "{{ blue }}Entering interactive sandbox shell (type 'exit' or Ctrl+D when done):{{ nc }}\n\n"
-        HOME="$MOCK_HOME" UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" PROTOSANDBOX=1 $SHELL -i
+        HOME="$MOCK_HOME" UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" PROTOSANDBOX=1 $SHELL -i || true
     fi
 
 # Build the local test container with inspection CLI tools, runtime dependencies, and shell aliases
@@ -296,6 +296,6 @@ sandbox-linux *args: sync
                 protostar $RAW_ARGS
             else
                 printf '{{ blue }}Entering interactive Linux sandbox shell (type \"exit\" or Ctrl+D when done):{{ nc }}\n\n'
-                PROTOSANDBOX=1 bash --rcfile /root/.bashrc -i
+                PROTOSANDBOX=1 bash --rcfile /root/.bashrc -i || true
             fi
         "
