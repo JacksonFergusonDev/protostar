@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789183621070,
+  "lastUpdate": 1789187497473,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12245,6 +12245,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 205.63,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c489b15d23186eb9118f01f66d833d85e7ea1e89",
+          "message": "feat: extend rollback boundary to explicitly owned subprocess footprints (#245)\n\n* feat: extend rollback boundary to explicitly owned subprocess footprints\n\n* chore: update documentation fixtures for new task footprints",
+          "timestamp": "2026-09-11T21:30:47-07:00",
+          "tree_id": "d1da0285ba3b1d0594d1bcba7475c4d271b82c69",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c489b15d23186eb9118f01f66d833d85e7ea1e89"
+        },
+        "date": 1789187496467,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 109.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 169.94,
             "unit": "ms"
           }
         ]
