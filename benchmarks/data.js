@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789255848734,
+  "lastUpdate": 1789256289989,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12415,6 +12415,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 164.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "3e344fd89ae9fcf0e3a0916240c1937c56a2a5f9",
+          "message": "refactor(errors): replace PartialExecutionAbortedError with ExecutionInterruptedError",
+          "timestamp": "2026-09-12T16:35:25-07:00",
+          "tree_id": "1f0c11f835109b3bb4e69d13e3bec26d01d61592",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3e344fd89ae9fcf0e3a0916240c1937c56a2a5f9"
+        },
+        "date": 1789256289042,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 208.44,
             "unit": "ms"
           }
         ]
