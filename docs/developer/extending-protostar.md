@@ -12,7 +12,7 @@ Protostar's architecture strictly isolates state definition from execution. This
 
 Bootstrap modules define the structural environment footprint. To create a new module, subclass `BootstrapModule` from `protostar.modules.base`.
 
-You must define its CLI flags, a human-readable name, and the `build` method. You can also optionally define `pre_flight` checks, `collision_markers`, and `required_languages` to enforce strict footprint constraints.
+You must define its CLI flags, a human-readable name, and the `build` method. You can also optionally define `pre_flight` checks and `required_languages` to enforce strict footprint constraints.
 
 !!! tip "Dynamic CLI Registration"
     The CLI parser dynamically reads the `cli_flags` and `cli_help` attributes at runtime. Once you append your module to the `TOOLING_MODULES` tuple in `protostar/modules/__init__.py`, it will automatically appear in the `protostar init --help` output.
@@ -21,7 +21,6 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 
 === "Example Implementation"
     ```python
-    from pathlib import Path
     from protostar.modules import BootstrapModule
     from protostar.manifest import EnvironmentManifest
 
@@ -35,10 +34,6 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
         @property
         def name(self) -> str:
             return "Just"
-
-        @property
-        def collision_markers(self) -> list[Path]:
-            return [Path("justfile")]
 
         def pre_flight(self) -> None:
             import shutil

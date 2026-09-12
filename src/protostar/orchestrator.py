@@ -14,7 +14,6 @@ from .errors import (
     WorkspaceCollisionError,
 )
 from .executor import SystemExecutor
-from .interpolation import render_template
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
 from .modules import (
@@ -24,9 +23,7 @@ from .modules import (
     ReadTheDocsModule,
     ZensicalModule,
 )
-from .modules.lang_layer import LICENSE_MAP
 from .system_deps import GlobalExecutable
-from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -67,6 +64,17 @@ class Orchestrator:
         self.user_config = user_config
         self.request = request or InitRequest()
 
+    def _detect_collisions(self, manifest: EnvironmentManifest) -> set[Path]:
+        """Detects workspace collision targets declared by the populated manifest.
+
+        Args:
+            manifest: The populated EnvironmentManifest.
+
+        Returns:
+            A set of existing Path objects that collide with planned files.
+        """
+        return {target for target in manifest.target_files() if target.exists()}
+
     def plan(self) -> EnvironmentManifest:
         """Evaluates workspace state and assembles a declarative EnvironmentManifest.
 
@@ -74,72 +82,17 @@ class Orchestrator:
         that retries (e.g. after a collision resolution) start from a clean slate.
 
         Raises:
-            WorkspaceCollisionError: If collision markers exist on disk and no
+            WorkspaceCollisionError: If collision targets exist on disk and no
                 force flag (force_merge / force_replace) was provided in the request.
-            MissingDependencyError: If a module pre-flight check fails.
+            ConfigurationError: If conflicting modules or missing prerequisites are detected.
+            AggregatedDependencyError: If a module pre-flight check fails.
 
         Returns:
             A populated EnvironmentManifest ready to be passed to execute().
         """
         req = self.request
 
-        # Phase 1: Instantiate a fresh manifest for every plan() call
-        manifest = EnvironmentManifest(
-            force_merge=req.force_merge,
-            force_replace=req.force_replace,
-        )
-
-        # Phase 2: Collision intercept (raises instead of prompting)
-        collision_targets: set[Path] = set()
-        req_license = req.metadata.get("license") if req.metadata else None
-        wants_license = (
-            req_license is not None
-            and req_license != "None"
-            and req_license in LICENSE_MAP
-        )
-
-        for mod in self.modules:
-            for marker in mod.collision_markers:
-                if marker == Path("LICENSE") and req.metadata and not wants_license:
-                    continue
-                if marker.exists():
-                    collision_targets.add(marker)
-
-        if req.docker:
-            for marker in (Path("Dockerfile"), Path(".dockerignore")):
-                if marker.exists():
-                    collision_targets.add(marker)
-
-        if req.template_blueprint and req.template_blueprint.files:
-            interpolation_ctx = {
-                "PROJECT_NAME": resolve_project_name(req.metadata or {}),
-                "PACKAGE_NAME": resolve_package_name(req.metadata or {}),
-            }
-            for filepath in req.template_blueprint.files:
-                rendered_path = render_template(
-                    filepath, interpolation_ctx, escape_toml=False
-                )
-                target = Path(rendered_path)
-                if target.exists():
-                    collision_targets.add(target)
-
-        if collision_targets:
-            if req.force_replace:
-                logger.debug(
-                    "--force-replace flag provided. Defaulting to OVERWRITE collision strategy."
-                )
-                manifest.collision_strategy = CollisionStrategy.OVERWRITE
-            elif req.force_merge:
-                logger.debug(
-                    "--force-merge flag provided. Defaulting to MERGE collision strategy."
-                )
-                manifest.collision_strategy = CollisionStrategy.MERGE
-            else:
-                raise WorkspaceCollisionError(
-                    paths=frozenset(collision_targets),
-                )
-
-        # Phase 3: Pre-flight verification
+        # Phase 1: Pre-flight verification
         has_pre_commit = any(isinstance(m, PreCommitModule) for m in self.modules)
         has_prek = any(isinstance(m, PrekModule) for m in self.modules)
         if has_pre_commit and has_prek:
@@ -166,14 +119,22 @@ class Orchestrator:
         if missing_deps:
             raise AggregatedDependencyError(tuple(missing_deps.values()))
 
-        # Phase 4: Manifest aggregation
+        # Phase 2: Manifest instantiation & initialization
+        manifest = EnvironmentManifest(
+            force_merge=req.force_merge,
+            force_replace=req.force_replace,
+        )
         if req.metadata:
             manifest.metadata.update(cast(ProjectMetadata, req.metadata))
 
+        if req.docker:
+            manifest.tooling.wants_docker = True
+
+        # Phase 3: Module aggregation
         for mod in self.modules:
             mod.build(manifest)
 
-        # Phase 5: Blueprint injection
+        # Phase 4: Blueprint injection
         blueprint = req.template_blueprint
         if blueprint:
             logger.debug("Injecting blueprint structural fields into manifest.")
@@ -214,6 +175,24 @@ class Orchestrator:
                 logger.debug("Injecting static files from configuration.")
                 for filepath, content in blueprint.files.items():
                     manifest.filesystem.add_file_injection(filepath, content)
+
+        # Phase 5: Manifest-First Collision Intercept
+        collision_targets = self._detect_collisions(manifest)
+        if collision_targets:
+            if req.force_replace:
+                logger.debug(
+                    "--force-replace flag provided. Defaulting to OVERWRITE collision strategy."
+                )
+                manifest.collision_strategy = CollisionStrategy.OVERWRITE
+            elif req.force_merge:
+                logger.debug(
+                    "--force-merge flag provided. Defaulting to MERGE collision strategy."
+                )
+                manifest.collision_strategy = CollisionStrategy.MERGE
+            else:
+                raise WorkspaceCollisionError(
+                    paths=frozenset(collision_targets),
+                )
 
         return manifest
 

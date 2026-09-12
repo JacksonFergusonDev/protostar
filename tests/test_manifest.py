@@ -1,4 +1,6 @@
 import re
+from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -7,6 +9,7 @@ from protostar.manifest import (
     CollisionStrategy,
     EnvironmentManifest,
     HookRunner,
+    ProjectMetadata,
 )
 
 
@@ -273,3 +276,46 @@ def test_manifest_accepts_mixed_ide_extensions():
         "ms-python.mypy-type-checker",
         "matangover.mypy",
     ) in manifest.tooling.ide_extensions
+
+
+def test_tooling_manifest_wants_docker():
+    """Verifies wants_docker defaults to False and serializes correctly in to_dict."""
+    manifest = EnvironmentManifest()
+    assert manifest.tooling.wants_docker is False
+    assert manifest.tooling.to_dict()["wants_docker"] is False
+
+    manifest.tooling.wants_docker = True
+    assert manifest.tooling.to_dict()["wants_docker"] is True
+
+
+def test_manifest_target_files_comprehensive():
+    """Verifies target_files aggregates injected files, appends, and tooling files with interpolation."""
+    manifest = EnvironmentManifest()
+    manifest.metadata.update(cast(ProjectMetadata, {"package_name": "my_pkg"}))
+
+    manifest.filesystem.add_file_injection("src/<% PACKAGE_NAME %>/main.py", "content")
+    manifest.filesystem.add_file_append("pyproject.toml", "[tool.foo]\nbar = 1")
+    manifest.filesystem.add_directory("docs")
+    manifest.filesystem.add_vcs_ignore(".DS_Store")
+
+    manifest.tooling.set_hook_runner(HookRunner.PREK)
+    manifest.tooling.wants_ci = True
+    manifest.tooling.wants_release = True
+    manifest.tooling.wants_just = True
+    manifest.tooling.wants_docker = True
+
+    targets = manifest.target_files()
+
+    assert Path("src/my_pkg/main.py") in targets
+    assert Path("pyproject.toml") in targets
+    assert Path(".pre-commit-config.yaml") in targets
+    assert Path(".github/workflows/ci.yml") in targets
+    assert Path(".github/workflows/release.yml") in targets
+    assert Path("justfile") in targets
+    assert Path("Dockerfile") in targets
+    assert Path(".dockerignore") in targets
+
+    # Non-destructive directories and VCS ignores must NOT be target files
+    assert Path("docs") not in targets
+    assert Path(".DS_Store") not in targets
+    assert Path(".gitignore") not in targets

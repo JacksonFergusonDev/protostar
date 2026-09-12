@@ -4,9 +4,11 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
 from .errors import ConfigurationError
+from .interpolation import render_template
 from .metadata import LicenseType
 from .workflows import CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
+from .workspace import resolve_package_name, resolve_project_name
 
 
 class DiagnosticPhase(enum.StrEnum):
@@ -222,6 +224,7 @@ class ToolingManifest:
     pre_commit_install_hook_types: set[str] = field(default_factory=set)
     wants_ci: bool = False
     wants_release: bool = False
+    wants_docker: bool = False
     ci_flags: set[CIFlag | str] = field(default_factory=set)
     ci_steps: list[str] = field(default_factory=list)
     wants_just: bool = False
@@ -292,6 +295,7 @@ class ToolingManifest:
             "pre_commit_local_hooks": list(self.pre_commit_local_hooks),
             "wants_ci": self.wants_ci,
             "wants_release": self.wants_release,
+            "wants_docker": self.wants_docker,
             "ci_flags": sorted(
                 f.value if isinstance(f, CIFlag) else str(f) for f in self.ci_flags
             ),
@@ -387,6 +391,47 @@ class EnvironmentManifest:
     def add_ide_setting(self, key: IDESettingKey, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
+
+    def target_files(self) -> set[Path]:
+        """Returns all concrete workspace file paths that this manifest intends to create or mutate.
+
+        Excludes directory scaffolding (handled safely via ensure_directory) and
+        .gitignore updates (deduplicated and non-destructive).
+
+        Returns:
+            A set of Path objects representing target files.
+        """
+        targets: set[Path] = set()
+        ctx = {
+            "PROJECT_NAME": resolve_project_name(self.metadata),
+            "PACKAGE_NAME": resolve_package_name(self.metadata),
+        }
+
+        for filepath in self.filesystem.file_injections:
+            rendered = render_template(filepath, ctx, escape_toml=False)
+            targets.add(Path(rendered))
+
+        for filepath in self.filesystem.file_appends:
+            rendered = render_template(filepath, ctx, escape_toml=False)
+            targets.add(Path(rendered))
+
+        if self.tooling.wants_hooks:
+            targets.add(Path(".pre-commit-config.yaml"))
+
+        if self.tooling.wants_ci:
+            targets.add(Path(".github/workflows/ci.yml"))
+
+        if self.tooling.wants_release:
+            targets.add(Path(".github/workflows/release.yml"))
+
+        if self.tooling.wants_just:
+            targets.add(Path("justfile"))
+
+        if self.tooling.wants_docker:
+            targets.add(Path("Dockerfile"))
+            targets.add(Path(".dockerignore"))
+
+        return targets
 
     def should_skip_file(self, target: Path) -> bool:
         """Returns True if the file exists and collision strategy is not OVERWRITE."""

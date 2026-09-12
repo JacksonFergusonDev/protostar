@@ -1,10 +1,8 @@
-from pathlib import Path
-
 import pytest
 
 from protostar.config import UserConfig
 from protostar.errors import MissingDependencyError
-from protostar.manifest import CollisionStrategy, EnvironmentManifest, HookRunner
+from protostar.manifest import EnvironmentManifest, HookRunner
 from protostar.modules import (
     CodecovModule,
     CommitizenModule,
@@ -149,14 +147,8 @@ def test_direnv_pre_flight_missing(mocker):
     assert "direnv integration" in exc_info.value.purpose
 
 
-def test_direnv_collision_markers():
-    assert DirenvModule().collision_markers == [Path(".envrc")]
-
-
-def test_direnv_build(manifest, mocker):
+def test_direnv_build(manifest):
     """Test DirenvModule generates the `.envrc` injection and queues evaluation."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
     mod = DirenvModule()
     mod.build(manifest)
 
@@ -168,14 +160,6 @@ def test_direnv_build(manifest, mocker):
     )
 
 
-def test_direnv_build_file_exists(manifest, mocker):
-    """Test DirenvModule skips `.envrc` injection if it already exists."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-    mod = DirenvModule()
-    mod.build(manifest)
-    assert ".envrc" not in manifest.filesystem.file_injections
-
-
 # --- MarkdownLintModule Tests ---
 
 
@@ -184,15 +168,9 @@ def test_markdownlint_module_properties():
     assert module.name == "MarkdownLint"
     assert module.cli_flags == ("--markdownlint",)
     assert module.config_key == "markdownlint"
-    assert module.collision_markers == [Path(".markdownlint-cli2.yaml")]
 
 
-def test_markdownlint_collision_markers():
-    assert MarkdownLintModule().collision_markers == [Path(".markdownlint-cli2.yaml")]
-
-
-def test_markdownlint_build(manifest, mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+def test_markdownlint_build(manifest):
     mod = MarkdownLintModule()
     mod.build(manifest)
 
@@ -200,13 +178,6 @@ def test_markdownlint_build(manifest, mocker):
     assert any(
         "markdownlint-cli2" in hook for hook in manifest.tooling.pre_commit_hooks
     )
-
-
-def test_markdownlint_build_file_exists(manifest, mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-    mod = MarkdownLintModule()
-    mod.build(manifest)
-    assert ".markdownlint-cli2.yaml" not in manifest.filesystem.file_injections
 
 
 # --- PytestModule Tests ---
@@ -323,14 +294,8 @@ def test_pre_commit_pre_flight_missing(mocker):
     assert "pre-commit hooks" in exc_info.value.purpose
 
 
-def test_pre_commit_collision_markers():
-    assert PreCommitModule().collision_markers == [Path(".pre-commit-config.yaml")]
-
-
-def test_pre_commit_build_uv(manifest, mocker):
+def test_pre_commit_build_uv(manifest):
     """Test PreCommitModule configures standard hooks routing via uv."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
     mod = PreCommitModule()
     mod.build(manifest)
 
@@ -356,14 +321,8 @@ def test_prek_pre_flight_missing(mocker):
     assert "prek hooks" in exc_info.value.purpose
 
 
-def test_prek_collision_markers():
-    assert PrekModule().collision_markers == [Path(".pre-commit-config.yaml")]
-
-
-def test_prek_build_uv(manifest, mocker):
+def test_prek_build_uv(manifest):
     """Test PrekModule configures standard hooks routing via uv."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
-
     mod = PrekModule()
     mod.build(manifest)
 
@@ -373,28 +332,6 @@ def test_prek_build_uv(manifest, mocker):
         t.command == ["uv", "run", "prek", "install"]
         for t in manifest.tasks.post_install_tasks
     )
-
-
-def test_direnv_skips_when_file_exists(tmp_path, monkeypatch) -> None:
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / ".envrc").touch()
-
-    manifest = EnvironmentManifest()
-    mod = DirenvModule()
-    mod.build(manifest)
-
-    assert ".envrc" not in manifest.filesystem.file_injections
-
-
-def test_markdownlint_skips_when_file_exists(tmp_path, monkeypatch) -> None:
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / ".markdownlint-cli2.yaml").touch()
-
-    manifest = EnvironmentManifest()
-    mod = MarkdownLintModule()
-    mod.build(manifest)
-
-    assert ".markdownlint-cli2.yaml" not in manifest.filesystem.file_injections
 
 
 def test_markdownlint_module_injects_ide_extension():
@@ -515,11 +452,9 @@ def test_renovate_module_properties():
     assert module.name == "Renovate"
     assert module.cli_flags == ("--renovate",)
     assert module.config_key == "renovate"
-    assert module.collision_markers == [Path(".github/renovate.json")]
 
 
-def test_renovate_module_injects_file(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+def test_renovate_module_injects_file():
     manifest = EnvironmentManifest()
     module = RenovateModule()
     module.build(manifest)
@@ -544,25 +479,14 @@ def test_renovate_module_adds_pre_commit_hook():
     )
 
 
-def test_renovate_module_skips_when_file_exists(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-    manifest = EnvironmentManifest()
-    module = RenovateModule()
-    module.build(manifest)
-
-    assert ".github/renovate.json" not in manifest.filesystem.file_injections
-
-
 def test_codecov_module_properties():
     module = CodecovModule()
     assert module.name == "Codecov"
     assert module.cli_flags == ("--codecov",)
     assert module.config_key == "codecov"
-    assert module.collision_markers == [Path(".github/codecov.yml")]
 
 
-def test_codecov_module_injects_file(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+def test_codecov_module_injects_file():
     manifest = EnvironmentManifest()
     module = CodecovModule()
     module.build(manifest)
@@ -575,30 +499,14 @@ def test_codecov_module_injects_file(mocker):
     assert "tests/**" in content
 
 
-def test_codecov_module_skips_when_file_exists(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-    manifest = EnvironmentManifest()
-    module = CodecovModule()
-    module.build(manifest)
-
-    assert ".github/codecov.yml" not in manifest.filesystem.file_injections
-
-
 def test_zensical_module_properties():
     module = ZensicalModule()
     assert module.name == "Zensical"
     assert module.cli_flags == ("--zensical",)
     assert module.config_key == "zensical"
-    assert module.collision_markers == [Path("mkdocs.yml"), Path("docs/index.md")]
 
 
-def test_commitizen_module_collision_markers():
-    module = CommitizenModule()
-    assert module.collision_markers == [Path("CHANGELOG.md")]
-
-
-def test_zensical_module_build(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+def test_zensical_module_build():
     manifest = EnvironmentManifest()
     module = ZensicalModule()
     module.build(manifest)
@@ -614,28 +522,14 @@ def test_zensical_module_build(mocker):
     assert any("docs = []" in w and '{ include-group = "docs" }' in w for w in wiring)
 
 
-def test_zensical_module_skips_when_files_exist(mocker):
-    """Verify that ZensicalModule skips docs/index.md and mkdocs.yml when they already exist."""
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-    manifest = EnvironmentManifest()
-    manifest.collision_strategy = CollisionStrategy.MERGE
-    module = ZensicalModule()
-    module.build(manifest)
-
-    assert "docs/index.md" not in manifest.filesystem.file_injections
-    assert "mkdocs.yml" not in manifest.filesystem.file_injections
-
-
 def test_readthedocs_module_properties():
     module = ReadTheDocsModule()
     assert module.name == "Read the Docs"
     assert module.cli_flags == ("--readthedocs",)
     assert module.config_key == "readthedocs"
-    assert module.collision_markers == [Path(".readthedocs.yaml")]
 
 
-def test_readthedocs_module_injects_file(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=False)
+def test_readthedocs_module_injects_file():
     manifest = EnvironmentManifest()
     module = ReadTheDocsModule()
     module.build(manifest)
@@ -659,68 +553,14 @@ def test_readthedocs_module_injects_file(mocker):
     assert 'cp -r site/* "$READTHEDOCS_OUTPUT/html/"' in content
 
 
-def test_readthedocs_module_skips_when_file_exists(mocker):
-    mocker.patch("protostar.modules.tooling_layer.Path.exists", return_value=True)
-    manifest = EnvironmentManifest()
-    module = ReadTheDocsModule()
-    module.build(manifest)
-
-    assert ".readthedocs.yaml" not in manifest.filesystem.file_injections
-
-
-def test_python_core_collision_markers():
-    """Verify that PythonCore conditionally registers LICENSE based on configured license."""
-    assert PythonCore().collision_markers == [Path("pyproject.toml")]
-    assert PythonCore(project_license="MIT").collision_markers == [
-        Path("pyproject.toml"),
-        Path("LICENSE"),
-    ]
-    assert PythonCore(project_license="None").collision_markers == [
-        Path("pyproject.toml")
-    ]
-
-
-def test_python_core_skips_license_and_classifier_on_merge(
-    tmp_path, monkeypatch, mocker
-):
-    """Test that existing LICENSE prevents license overwrite and classifier drift under MERGE."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "LICENSE").write_text("Existing Custom License")
-
+def test_python_core_declarative_license_injection(mocker):
+    """Test that PythonCore declaratively registers LICENSE injection and metadata."""
     mocker.patch(
         "protostar.modules.lang_layer.UserConfig.load",
         return_value=UserConfig(ide=None),
     )
 
     manifest = EnvironmentManifest()
-    manifest.collision_strategy = CollisionStrategy.MERGE
-    manifest.metadata["license"] = "MIT"
-
-    module = PythonCore()
-    module.build(manifest)
-
-    pyproject_appends = "".join(
-        manifest.filesystem.file_appends.get("pyproject.toml", [])
-    )
-    assert 'license = { file = "LICENSE" }' not in pyproject_appends
-    assert "License :: OSI Approved :: MIT License" not in pyproject_appends
-    assert "LICENSE" in manifest.filesystem.file_injections
-
-
-def test_python_core_injects_license_and_classifier_on_overwrite(
-    tmp_path, monkeypatch, mocker
-):
-    """Test that existing LICENSE allows license injection and classifier under OVERWRITE."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "LICENSE").write_text("Existing Custom License")
-
-    mocker.patch(
-        "protostar.modules.lang_layer.UserConfig.load",
-        return_value=UserConfig(ide=None),
-    )
-
-    manifest = EnvironmentManifest()
-    manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.metadata["license"] = "MIT"
 
     module = PythonCore()
@@ -738,7 +578,6 @@ def test_system_workspace_module_properties():
     """Verify SystemWorkspaceModule properties."""
     module = SystemWorkspaceModule()
     assert module.name == "System Workspace"
-    assert module.collision_markers == []
 
 
 def test_system_workspace_pre_flight_raises_on_missing_git(

@@ -295,14 +295,28 @@ def generate_capability_tables() -> None:
     def _format_flags(flags: tuple[str, ...]) -> str:
         return ", ".join(f"`{f}`" for f in flags) if flags else "*None*"
 
+    def _get_module_scaffolded_files(mod: BootstrapModule) -> str:
+        test_manifest = EnvironmentManifest()
+        mod.build(test_manifest)
+        files = sorted(test_manifest.filesystem.file_injections)
+        if test_manifest.tooling.wants_hooks:
+            files.append(".pre-commit-config.yaml")
+        if test_manifest.tooling.wants_ci:
+            files.append(".github/workflows/ci.yml")
+        if test_manifest.tooling.wants_release:
+            files.append(".github/workflows/release.yml")
+        if test_manifest.tooling.wants_just:
+            files.append("justfile")
+        return ", ".join(f"`{f}`" for f in files) if files else "*None*"
+
     # Tooling integration matrix
-    tool_headers = ["Tooling Module", "CLI Flags", "Description", "Collision Markers"]
+    tool_headers = ["Tooling Module", "CLI Flags", "Description", "Scaffolded Files"]
     tool_rows = [
         [
             mod.name,
             _format_flags(mod.cli_flags),
             mod.cli_help,
-            ", ".join(f"`{m.name}`" for m in mod.collision_markers) or "*None*",
+            _get_module_scaffolded_files(mod),
         ]
         for mod in TOOLING_MODULES
     ]
