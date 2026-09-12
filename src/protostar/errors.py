@@ -13,6 +13,7 @@ from protostar.system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
     from .journal import RollbackResult
+    from .models import RollbackContext
 
 
 class ExitCode(IntEnum):
@@ -48,7 +49,7 @@ class ProtostarError(Exception):
         self.hint = hint
         self.docs_path = docs_path
         self.docs_anchor = docs_anchor
-        self.rollback_message: str | None = None
+        self.rollback_context: RollbackContext | None = None
 
     @property
     def docs_url(self) -> str | None:
@@ -67,22 +68,6 @@ class ProtostarError(Exception):
         if self.docs_anchor:
             url = f"{url}#{self.docs_anchor.lstrip('#')}"
         return url
-
-
-def format_rollback_message(touched_paths: frozenset[str]) -> str:
-    """Standardizes the successful rollback explanation and subprocess disclaimer."""
-    disclaimer = "Note: Unbounded external state (e.g., .venv/ or global caches) modified by subprocesses falls outside the transacted boundary and may remain."
-    if touched_paths:
-        paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
-        return (
-            "Protostar successfully rolled back all tracked workspace changes:\n"
-            f"{paths_bulleted}\n\n"
-            f"{disclaimer}"
-        )
-    return (
-        "Protostar successfully rolled back all tracked workspace changes.\n\n"
-        f"{disclaimer}"
-    )
 
 
 class ConfigurationError(ProtostarError):
@@ -294,18 +279,20 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
     """Raised when interrupted execution successfully rolls back tracked changes."""
 
     def __init__(
-        self, touched_paths: frozenset[str], *, docs_path: DocsPage | str | None = None
+        self,
+        rollback_context: RollbackContext,
+        *,
+        docs_path: DocsPage | str | None = None,
     ) -> None:
-        """Initializes the exception with the frozenset of paths modified before the interrupt.
+        """Initializes the exception with the structured rollback metadata.
 
         Args:
-            touched_paths: Immutable set of file and directory paths touched on disk.
+            rollback_context: The structured context detailing paths restored and tasks run.
             docs_path: Optional path to relevant documentation.
         """
-        msg = f"Execution interrupted.\n\n{format_rollback_message(touched_paths)}"
-        hint = "The managed workspace state has been restored."
-        super().__init__(msg, hint=hint, docs_path=docs_path)
-        self.touched_paths = touched_paths
+        msg = "Execution interrupted."
+        super().__init__(msg, hint=None, docs_path=docs_path)
+        self.rollback_context = rollback_context
 
 
 class WorkspaceCollisionError(ProtostarError):
