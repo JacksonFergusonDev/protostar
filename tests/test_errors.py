@@ -5,9 +5,8 @@ from unittest.mock import patch
 
 import pytest
 
-from protostar.docs_registry import DocsPage
+from protostar.docs_registry import DOCS_BASE_URL, DocsPage
 from protostar.errors import (
-    DOCS_BASE_URL,
     AggregatedDependencyError,
     CommandExecutionError,
     CommandTimeoutError,
@@ -53,23 +52,16 @@ def test_protostar_error_hint_and_docs_url():
     err_page = ProtostarError("Failure", docs_path=DocsPage.CONFIGURATION)
     assert err_page.docs_url == f"{DOCS_BASE_URL}usage/configuration/"
 
-    # String docs_path (with and without leading slash)
-    err_str = ProtostarError("Failure", docs_path="usage/advanced/")
-    assert err_str.docs_url == f"{DOCS_BASE_URL}usage/advanced/"
-
-    err_slash = ProtostarError("Failure", docs_path="/usage/advanced/")
-    assert err_slash.docs_url == f"{DOCS_BASE_URL}usage/advanced/"
-
-    # Docs anchor (with and without leading #)
+    # Docs anchor
     err_anchor = ProtostarError(
-        "Failure", docs_path="usage/advanced/", docs_anchor="section-1"
+        "Failure", docs_path=DocsPage.CONFIGURATION, docs_anchor="section-1"
     )
-    assert err_anchor.docs_url == f"{DOCS_BASE_URL}usage/advanced/#section-1"
+    assert err_anchor.docs_url == f"{DOCS_BASE_URL}usage/configuration/#section-1"
 
     err_hash_anchor = ProtostarError(
-        "Failure", docs_path="usage/advanced/", docs_anchor="#section-2"
+        "Failure", docs_path=DocsPage.CONFIGURATION, docs_anchor="#section-2"
     )
-    assert err_hash_anchor.docs_url == f"{DOCS_BASE_URL}usage/advanced/#section-2"
+    assert err_hash_anchor.docs_url == f"{DOCS_BASE_URL}usage/configuration/#section-2"
 
 
 def test_configuration_error_defaults():

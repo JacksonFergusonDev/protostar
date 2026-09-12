@@ -3,25 +3,26 @@ from protostar.docs_registry import DocsPage
 
 def test_docs_page_enum_members():
     """Verify that all core documentation pages are defined in the registry."""
-    assert DocsPage.GETTING_STARTED.value == "getting-started/"
-    assert DocsPage.CLI_REFERENCE.value == "usage/cli-reference/"
-    assert DocsPage.CONFIGURATION.value == "usage/configuration/"
-    assert DocsPage.TEMPLATES.value == "usage/templates/"
-    assert DocsPage.AUTHORING_TEMPLATES.value == "usage/authoring-templates/"
-    assert DocsPage.INIT.value == "usage/init/"
+    assert DocsPage.GETTING_STARTED.path == "getting-started/"
+    assert DocsPage.CLI_REFERENCE.path == "usage/cli-reference/"
+    assert DocsPage.CLI_REFERENCE.label == "CLI Reference"
+    assert DocsPage.CONFIGURATION.path == "usage/configuration/"
+    assert DocsPage.TEMPLATES.path == "usage/templates/"
+    assert DocsPage.AUTHORING_TEMPLATES.path == "usage/authoring-templates/"
+    assert DocsPage.INIT.path == "usage/init/"
 
 
 def test_docs_page_troubleshooting_anchors():
     """Verify troubleshooting anchors have valid URI fragment structure."""
-    assert "#" in DocsPage.TROUBLESHOOTING_DEPS.value
-    assert "#" in DocsPage.TROUBLESHOOTING_COLLISIONS.value
-    assert "#" in DocsPage.TROUBLESHOOTING_SECURITY.value
+    assert "#" in DocsPage.TROUBLESHOOTING_DEPS.path
+    assert "#" in DocsPage.TROUBLESHOOTING_COLLISIONS.path
+    assert "#" in DocsPage.TROUBLESHOOTING_SECURITY.path
 
 
 def test_docs_page_values_format():
     """Verify all docs pages conform to path standards (no leading slash, valid suffix)."""
     for page in DocsPage:
-        val = page.value
+        val = page.path
         assert not val.startswith("/"), (
             f"Page {page.name} must not start with leading slash"
         )

@@ -20,6 +20,7 @@ from protostar.cli.parser import (
     intercept_interactive_wizards,
 )
 from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
+from protostar.docs_registry import DocsPage
 from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
@@ -530,7 +531,7 @@ def test_main_handles_rollback_error_with_documentation_hyperlink(mocker):
     string_console.print(panel)
     rendered_output = buf.getvalue()
 
-    assert "Read the documentation ↗" in rendered_output
+    assert "Docs: Rollback ↗" in rendered_output
     assert (
         "https://protostar.readthedocs.io/en/stable/usage/rollback/" in rendered_output
     )
@@ -631,17 +632,17 @@ def test_main_routes_invalid_usage_error_to_posix_status(mocker):
 
 def test_resolve_usage_doc_path_known_subcommand(mocker):
     mocker.patch.object(sys, "argv", ["protostar", "init", "--bad"])
-    assert _resolve_usage_doc_path() == "usage/init/"
+    assert _resolve_usage_doc_path() == DocsPage.INIT
 
 
 def test_resolve_usage_doc_path_unknown_subcommand_falls_back_to_root(mocker):
     mocker.patch.object(sys, "argv", ["protostar", "deploy", "--bad"])
-    assert _resolve_usage_doc_path() == "usage/cli-reference/"
+    assert _resolve_usage_doc_path() == DocsPage.CLI_REFERENCE
 
 
 def test_resolve_usage_doc_path_no_subcommand_falls_back_to_root(mocker):
     mocker.patch.object(sys, "argv", ["protostar"])
-    assert _resolve_usage_doc_path() == "usage/cli-reference/"
+    assert _resolve_usage_doc_path() == DocsPage.CLI_REFERENCE
 
 
 def test_main_routes_configuration_error_to_posix_status(mocker):
@@ -1065,7 +1066,7 @@ def test_collision_bubbles_in_json_mode(capsys, monkeypatch, tmp_path):
 def test_resolve_usage_doc_path_with_leading_flags(mocker):
     """Test that doc path resolution extracts the subcommand even if flags precede it."""
     mocker.patch.object(sys, "argv", ["protostar", "-v", "init", "--bad"])
-    assert _resolve_usage_doc_path() == "usage/init/"
+    assert _resolve_usage_doc_path() == DocsPage.INIT
 
 
 def test_json_aware_parser_raises_invalid_usage_error():
@@ -1096,8 +1097,12 @@ def test_main_invalid_subcommand_human_mode(mocker):
         if call.args and isinstance(call.args[0], Panel)
     ]
     assert len(panels) == 1
-    assert "invalid choice" in str(panels[0].renderable)
-    assert "wrong-command" in str(panels[0].renderable)
+    from rich.console import Group
+
+    r = panels[0].renderable
+    assert isinstance(r, Group)
+    assert "invalid choice" in str(r.renderables[0])
+    assert "wrong-command" in str(r.renderables[0])
 
 
 def test_main_invalid_subcommand_json_mode(capsys, monkeypatch):
@@ -1135,7 +1140,11 @@ def test_main_missing_argument_human_mode(mocker):
         if call.args and isinstance(call.args[0], Panel)
     ]
     assert len(panels) == 1
-    assert "expected one argument" in str(panels[0].renderable)
+    from rich.console import Group
+
+    r = panels[0].renderable
+    assert isinstance(r, Group)
+    assert "expected one argument" in str(r.renderables[0])
 
 
 def test_main_missing_argument_json_mode(capsys, monkeypatch):
