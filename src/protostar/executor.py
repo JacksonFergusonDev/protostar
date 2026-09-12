@@ -67,7 +67,9 @@ class SystemExecutor:
         """
         self.manifest = manifest
         self.config = config
-        self.docker = docker
+        self.docker = docker or manifest.tooling.wants_docker
+        if self.docker:
+            manifest.tooling.wants_docker = True
         self.journal = MutationJournal()
         self.fs = TransactionAwareFS(self.journal)
         self.process_runner = ProcessRunner()

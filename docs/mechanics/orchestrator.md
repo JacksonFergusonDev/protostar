@@ -24,7 +24,7 @@ flowchart TD
     classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
 
-    Req([InitRequest]):::boundary --> Plan["Phase 1: plan()<br/>• Workspace collision checks<br/>• Pre-flight binary verification<br/>• Manifest aggregation"]:::phase
+    Req([InitRequest]):::boundary --> Plan["Phase 1: plan()<br/>• Pre-flight binary verification<br/>• Manifest aggregation<br/>• Manifest-first collision checks"]:::phase
 
     Plan -->|Validation Failure| Err["Raise ProtostarError<br/>(Caught by CLI Presentation Layer)"]:::error
     Plan -->|Plan Validated| Manifest[(EnvironmentManifest)]:::state
@@ -40,11 +40,12 @@ flowchart TD
 ## The Lifecycle Phases
 
 === "1. Planning (`plan()`)"
-    The `plan()` phase calculates the target state without performing disk mutations:
+    The `plan()` phase calculates the target state and verifies safety without performing disk mutations:
 
-    * **Collision Check:** Scans the workspace for existing configuration markers (e.g., `pyproject.toml`). If collisions exist and no force flag is active, raises `WorkspaceCollisionError(paths=...)`.
-    * **Pre-Flight Verification:** Runs `pre_flight()` across all loaded modules to assert that required binaries (`uv`, `git`, etc.) exist in `$PATH`.
-    * **Manifest Aggregation:** Evaluates language, tooling, and preset modules to populate an `EnvironmentManifest` with file injections, AST merge payloads, ignore patterns, and system tasks.
+    1. **Pre-Flight Verification:** Asserts workspace accessibility, clean/git repository status, and runs `pre_flight()` across all loaded modules to assert that required binaries (`uv`, `git`, etc.) exist in `$PATH`.
+    2. **Manifest Aggregation:** Evaluates language, tooling, and preset modules to populate an `EnvironmentManifest` with file injections, AST merge payloads, ignore patterns, and system tasks.
+    3. **Blueprint Injection:** Injects any template blueprint files and configurations into the manifest with variable interpolation.
+    4. **Manifest-First Collision Check:** Derives all planned target files dynamically via `manifest.target_files()` and inspects the workspace. If collisions exist and no force flag is active, raises `WorkspaceCollisionError(paths=...)`.
 
 === "2. Interactive Resolution (CLI Layer)"
     When `WorkspaceCollisionError` or untrusted external templates are encountered:

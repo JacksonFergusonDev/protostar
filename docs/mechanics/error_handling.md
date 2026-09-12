@@ -105,7 +105,7 @@ Raised when a template target is found but cannot be parsed, extracted, or resol
 
 ### `WorkspaceCollisionError`
 
-Raised during the engine's `plan()` phase when existing workspace configuration markers (such as `pyproject.toml`) are detected and no explicit `--force-merge` or `--force-replace` flag is active. Exposes structured collision data via its `paths: frozenset[Path]` attribute.
+Raised during the engine's `plan()` phase when existing workspace files collide with planned manifest targets (derived via `manifest.target_files()`) and no explicit `--force-merge` or `--force-replace` flag is active. Exposes structured collision data via its `paths: frozenset[Path]` attribute.
 
 ### `MissingDependencyError`
 

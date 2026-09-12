@@ -16,6 +16,7 @@ classDiagram
         +ProjectMetadata metadata
         +CollisionStrategy collision_strategy
         +add_ide_setting(key: IDESettingKey, value: Any)
+        +target_files() set~Path~
     }
 
     class DependencyManifest {
@@ -47,6 +48,7 @@ classDiagram
     class ToolingManifest {
         +HookRunner hook_runner
         +bool wants_ci
+        +bool wants_docker
         +add_pre_commit_hook(payload: str)
         +add_ci_step(step_yaml: str)
     }

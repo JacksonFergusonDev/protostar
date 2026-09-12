@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.metadata import MetadataKey
@@ -27,11 +26,6 @@ class CIModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "GitHub Actions CI"
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for the CI workflow."""
-        return [Path(".github/workflows/ci.yml")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags the manifest to trigger CI generation in the orchestrator/executor."""
         logger.debug("Building CI tooling layer.")
@@ -50,11 +44,6 @@ class ReleaseModule(BootstrapModule):
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "GitHub Actions Release"
-
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for the release workflow."""
-        return [Path(".github/workflows/release.yml")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags the manifest to trigger release generation in the orchestrator/executor."""

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.errors import MissingDependencyError
@@ -38,19 +37,11 @@ class DirenvModule(BootstrapModule):
                 purpose="direnv integration",
             )
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for direnv tooling."""
-        return [Path(".envrc")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Appends direnv context ignores, injects the .envrc, and queues evaluation."""
         logger.debug("Building direnv tooling layer.")
         manifest.filesystem.add_vcs_ignore(".envrc.local")
         manifest.filesystem.add_vcs_ignore(".direnv/")
-
-        if manifest.should_skip_file(Path(".envrc")):
-            return
 
         content = (
             "# Ensure the venv exists\n"
@@ -82,11 +73,6 @@ class MarkdownLintModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "MarkdownLint"
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for markdownlint."""
-        return [Path(".markdownlint-cli2.yaml")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Injects the .markdownlint-cli2.yaml boilerplate file and pre-commit hook."""
         logger.debug("Building MarkdownLint tooling layer.")
@@ -116,9 +102,6 @@ class MarkdownLintModule(BootstrapModule):
             "    fi"
         )
         manifest.tooling.just_lint_commands.append(lint_cmd)
-
-        if manifest.should_skip_file(Path(".markdownlint-cli2.yaml")):
-            return
 
         content = """gitignore: true
 
@@ -494,11 +477,6 @@ class PreCommitModule(BootstrapModule):
                 purpose="pre-commit hooks",
             )
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for pre-commit."""
-        return [Path(".pre-commit-config.yaml")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags pre-commit activation, queues dependencies, and sets up git hooks.
 
@@ -541,11 +519,6 @@ class PrekModule(BootstrapModule):
                 purpose="prek hooks",
             )
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for prek."""
-        return [Path(".pre-commit-config.yaml")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags prek activation, queues dependencies, and sets up git hooks.
 
@@ -575,11 +548,6 @@ class CommitizenModule(BootstrapModule):
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "Commitizen"
-
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for commitizen."""
-        return [Path("CHANGELOG.md")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues commitizen dev dependency, gitignore entry, pre-commit hook, and pyproject config.
@@ -669,11 +637,6 @@ class RenovateModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Renovate"
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for Renovate."""
-        return [Path(".github/renovate.json")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Renovate configuration file and pre-commit validator hook.
 
@@ -689,9 +652,6 @@ class RenovateModule(BootstrapModule):
       - id: renovate-config-validator
         files: '.github/renovate.json'"""
         manifest.tooling.add_pre_commit_hook(hook_payload)
-
-        if manifest.should_skip_file(Path(".github/renovate.json")):
-            return
 
         config = """{
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
@@ -758,11 +718,6 @@ class CodecovModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Codecov"
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for Codecov."""
-        return [Path(".github/codecov.yml")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Codecov configuration file injection.
 
@@ -771,9 +726,6 @@ class CodecovModule(BootstrapModule):
         """
         logger.debug("Building Codecov tooling layer.")
         manifest.tooling.add_ci_flag(CIFlag.CODECOV)
-
-        if manifest.should_skip_file(Path(".github/codecov.yml")):
-            return
 
         config = """coverage:
   precision: 2
@@ -821,11 +773,6 @@ class ZensicalModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Zensical"
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for Zensical."""
-        return [Path("mkdocs.yml"), Path("docs/index.md")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Zensical dependencies, scaffolding, and ignore rules."""
         logger.debug("Building Zensical tooling layer.")
@@ -845,15 +792,13 @@ dev = [
 """
         manifest.filesystem.add_file_append("pyproject.toml", pyproject_wiring)
 
-        if not manifest.should_skip_file(Path("docs/index.md")):
-            index_content = """# Welcome to <% PROJECT_NAME %>
+        index_content = """# Welcome to <% PROJECT_NAME %>
 
 Add your project overview and documentation here.
 """
-            manifest.filesystem.add_file_injection("docs/index.md", index_content)
+        manifest.filesystem.add_file_injection("docs/index.md", index_content)
 
-        if not manifest.should_skip_file(Path("mkdocs.yml")):
-            mkdocs_content = """site_name: <% PROJECT_NAME %>
+        mkdocs_content = """site_name: <% PROJECT_NAME %>
 site_description: Add your project description here.
 
 nav:
@@ -890,7 +835,7 @@ plugins:
 extra:
   generator: false
 """
-            manifest.filesystem.add_file_injection("mkdocs.yml", mkdocs_content)
+        manifest.filesystem.add_file_injection("mkdocs.yml", mkdocs_content)
 
 
 class ReadTheDocsModule(BootstrapModule):
@@ -905,11 +850,6 @@ class ReadTheDocsModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Read the Docs"
 
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for Read the Docs."""
-        return [Path(".readthedocs.yaml")]
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues .readthedocs.yaml file injection.
 
@@ -917,9 +857,6 @@ class ReadTheDocsModule(BootstrapModule):
             manifest: The centralized state object.
         """
         logger.debug("Building Read the Docs tooling layer.")
-
-        if manifest.should_skip_file(Path(".readthedocs.yaml")):
-            return
 
         config = """version: 2
 
@@ -954,11 +891,6 @@ class JustModule(BootstrapModule):
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "Just"
-
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns the primary collision markers for just."""
-        return [Path("justfile")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags justfile activation for execution."""

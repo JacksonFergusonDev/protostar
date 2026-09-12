@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from protostar.metadata import MetadataKey
@@ -36,16 +35,6 @@ class BootstrapModule(abc.ABC):
     def name(self) -> str:
         """Returns the human-readable identifier for the module."""
         pass
-
-    @property
-    def collision_markers(self) -> list[Path]:
-        """Returns a list of critical filesystem paths to evaluate for collisions during pre-flight.
-
-        Returns:
-            A list of Path objects representing critical configuration files or directories
-            managed by this module. Defaults to an empty list.
-        """
-        return []
 
     def pre_flight(self) -> None:  # noqa: B027
         """Verifies system prerequisites before manifest building begins.

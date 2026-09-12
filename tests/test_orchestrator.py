@@ -37,15 +37,12 @@ class DummyModule(BootstrapModule):
     def name(self):
         return "Dummy"
 
-    @property
-    def collision_markers(self):
-        return [Path("dummy_marker.txt")]
-
     def pre_flight(self):
         self.pre_flight_called = True
 
     def build(self, manifest):
         manifest.filesystem.add_vcs_ignore("dummy_file.txt")
+        manifest.filesystem.add_file_injection("dummy_marker.txt", "dummy payload")
         manifest.tasks.add_system_task(["echo", "dummy"])
         manifest.dependencies.add("dummy-pkg")
 
@@ -55,13 +52,11 @@ class DummyModule(BootstrapModule):
 # ---------------------------------------------------------------------------
 
 
-def test_plan_calls_pre_flight_and_build(mocker, mock_config):
+def test_plan_calls_pre_flight_and_build(tmp_path, monkeypatch, mock_config):
     """plan() should invoke pre_flight and build on each module."""
+    monkeypatch.chdir(tmp_path)
     dummy_mod = DummyModule()
     engine = Orchestrator([dummy_mod], mock_config)
-
-    # No collision markers exist — plan should succeed
-    mocker.patch.object(Path, "exists", return_value=False)
 
     manifest = engine.plan()
 
@@ -69,70 +64,51 @@ def test_plan_calls_pre_flight_and_build(mocker, mock_config):
     assert "dummy-pkg" in manifest.dependencies.dependencies
 
 
-def test_plan_raises_on_collision_without_force_flag(mocker, mock_config):
+def test_plan_raises_on_collision_without_force_flag(
+    tmp_path, monkeypatch, mock_config
+):
     """plan() raises WorkspaceCollisionError when markers exist and no force flag is set."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "dummy_marker.txt").write_text("existing content")
     dummy_mod = DummyModule()
     engine = Orchestrator([dummy_mod], mock_config)
-
-    marker = mocker.MagicMock(spec=Path)
-    marker.exists.return_value = True
-    mocker.patch.object(
-        DummyModule,
-        "collision_markers",
-        new_callable=mocker.PropertyMock,
-        return_value=[marker],
-    )
 
     with pytest.raises(WorkspaceCollisionError) as exc_info:
         engine.plan()
 
-    assert marker in exc_info.value.paths
+    assert Path("dummy_marker.txt") in exc_info.value.paths
 
 
-def test_plan_force_replace_sets_overwrite_strategy(mocker, mock_config):
+def test_plan_force_replace_sets_overwrite_strategy(tmp_path, monkeypatch, mock_config):
     """plan() resolves collisions to OVERWRITE when force_replace=True."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "dummy_marker.txt").write_text("existing content")
     dummy_mod = DummyModule()
     engine = Orchestrator(
         [dummy_mod], mock_config, request=InitRequest(force_replace=True)
-    )
-
-    marker = mocker.MagicMock(spec=Path)
-    marker.exists.return_value = True
-    mocker.patch.object(
-        DummyModule,
-        "collision_markers",
-        new_callable=mocker.PropertyMock,
-        return_value=[marker],
     )
 
     manifest = engine.plan()
     assert manifest.collision_strategy == CollisionStrategy.OVERWRITE
 
 
-def test_plan_force_merge_sets_merge_strategy(mocker, mock_config):
+def test_plan_force_merge_sets_merge_strategy(tmp_path, monkeypatch, mock_config):
     """plan() resolves collisions to MERGE when force_merge=True."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "dummy_marker.txt").write_text("existing content")
     dummy_mod = DummyModule()
     engine = Orchestrator(
         [dummy_mod], mock_config, request=InitRequest(force_merge=True)
-    )
-
-    marker = mocker.MagicMock(spec=Path)
-    marker.exists.return_value = True
-    mocker.patch.object(
-        DummyModule,
-        "collision_markers",
-        new_callable=mocker.PropertyMock,
-        return_value=[marker],
     )
 
     manifest = engine.plan()
     assert manifest.collision_strategy == CollisionStrategy.MERGE
 
 
-def test_plan_returns_fresh_manifest_on_each_call(mocker, mock_config):
+def test_plan_returns_fresh_manifest_on_each_call(tmp_path, monkeypatch, mock_config):
     """Calling plan() twice must return independent EnvironmentManifest instances."""
+    monkeypatch.chdir(tmp_path)
     engine = Orchestrator([], mock_config)
-    mocker.patch.object(Path, "exists", return_value=False)
 
     m1 = engine.plan()
     m2 = engine.plan()

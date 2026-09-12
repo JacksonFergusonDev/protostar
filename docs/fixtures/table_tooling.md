@@ -1,4 +1,4 @@
-| Tooling Module | CLI Flags | Description | Collision Markers |
+| Tooling Module | CLI Flags | Description | Scaffolded Files |
 | :--- | :--- | :--- | :--- |
 | direnv | `--direnv` | Scaffold a .envrc and evaluate the virtual environment | `.envrc` |
 | MarkdownLint | `--markdownlint` | Scaffold a relaxed .markdownlint-cli2.yaml configuration | `.markdownlint-cli2.yaml` |
@@ -11,11 +11,11 @@
 | Pre-Commit | `--pre-commit` | Scaffold pre-commit hooks and configuration | `.pre-commit-config.yaml` |
 | Prek | `--prek` | Scaffold prek hooks and configuration (faster Rust alternative to pre-commit) | `.pre-commit-config.yaml` |
 | Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | `CHANGELOG.md` |
-| Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `renovate.json` |
-| Codecov | `--codecov` | Scaffold Codecov configuration | `codecov.yml` |
-| Zensical | `--zensical` | Scaffold Zensical documentation | `mkdocs.yml`, `index.md` |
+| Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `.github/renovate.json` |
+| Codecov | `--codecov` | Scaffold Codecov configuration | `.github/codecov.yml` |
+| Zensical | `--zensical` | Scaffold Zensical documentation | `docs/index.md`, `mkdocs.yml` |
 | Read the Docs | `--readthedocs` | Scaffold Read the Docs configuration | `.readthedocs.yaml` |
-| GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `ci.yml` |
-| GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `release.yml` |
+| GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `.github/workflows/ci.yml` |
+| GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `.github/workflows/release.yml` |
 | Just | `--just` | Scaffold a justfile for command execution | `justfile` |
 | Docker | `--docker` | Multi-stage `Dockerfile` and `.dockerignore` container scaffolding | `Dockerfile`, `.dockerignore` |

@@ -41,7 +41,7 @@ If an optional tool (such as `direnv` or `just`) is not installed on your system
 
 ## Workspace Collisions
 
-When Protostar detects pre-existing configuration markers (such as an existing `pyproject.toml` or `README.md`) in the target workspace, it raises a `WorkspaceCollisionError` to protect your existing work.
+When Protostar detects pre-existing files (such as an existing `pyproject.toml` or `README.md`) matching planned manifest targets in the target workspace, it raises a `WorkspaceCollisionError` to protect your existing work.
 
 ```text
 Workspace Collision: Protostar detected existing configuration files in the workspace.
