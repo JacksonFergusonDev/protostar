@@ -75,9 +75,12 @@ flowchart TD
 
 **Phase 1 — `plan()`** is read-only. Every module declares what it needs — files to write, TOML payloads to inject, packages to install, subprocesses to run — into the manifest. Nothing touches disk. Pre-flight checks verify that required system binaries (`uv`, `git`, `direnv`) are present. If any check fails, the process aborts cleanly before the workspace is touched.
 
-**Phase 2 — `execute(manifest)`** is the *only* place side effects are permitted. The `SystemExecutor` reads the validated manifest and applies mutations in a strict deterministic order.
+**Phase 2 — `execute(manifest)`** is the *only* place side effects are permitted. The `SystemExecutor` reads the validated manifest and applies mutations in a strict deterministic order within an atomic transaction boundary.
 
-**Why this matters:** Most bootstrapping tools execute imperatively — a sequence of operations where each step may depend on the previous one having succeeded. If step 6 fails, steps 1–5 have already mutated your filesystem. Manifest-first guarantees that either the plan is fully valid *before* you commit, or you get a clean abort. There is no middle state.
+**Why this matters:** Most bootstrapping tools execute imperatively — a sequence of operations where each step may depend on the previous one having succeeded. If step 6 fails, steps 1–5 have already mutated your filesystem. Manifest-first guarantees that the plan is fully valid *before* committing. Furthermore, Protostar's transactional execution engine wraps Phase 2 in a mutation journal: if a write fails, dependency resolution aborts, or the process is interrupted via `Ctrl+C`, managed subprocesses are stopped and all journaled filesystem changes are automatically rolled back.
+
+!!! note "The Transaction Boundary"
+    Protostar's automated rollback guarantees byte-accurate restoration for all **transaction-managed paths**—including files and directories created or modified via `TransactionAwareFS` and declared subprocess side effects (`pyproject.toml` and `uv.lock`). Subprocesses are managed in isolated process groups and reaped before rollback begins. However, Protostar does not promise reverting undeclared filesystem side effects created by arbitrary external commands (such as a `.git` repository created by `git init`).
 
 !!! tip "The manifest is the source of truth"
     The `--dry-run --json` output is a direct serialization of the `EnvironmentManifest`. What you see is exactly what would be written to disk — not an approximation.

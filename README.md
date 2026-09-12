@@ -75,7 +75,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, establishing your dependency managers and directory structures.
 
-1. **Plan First, Write Later:** Many setup scripts run a sequence of shell commands and fail unpredictably midway through, leaving behind half-configured files. Protostar plans all changes upfront in memory during the read-only `plan()` phase before touching disk or running subprocesses in `execute()`. This guarantees clean dry-runs and zero partial failures.
+1. **Plan First, Write Later:** Many setup scripts run a sequence of shell commands and fail unpredictably midway through, leaving behind half-configured files. Protostar plans all changes upfront in memory during the read-only `plan()` phase before touching disk or running subprocesses in `execute()`. Furthermore, execution is transaction-managed: if an error or interruption occurs, managed subprocesses are stopped and all Protostar-tracked workspace modifications (direct file writes, AST merges, and declared dependency files) are automatically rolled back. (Note: Protostar reliably reverts tracked workspace mutations, but cannot infer or revert arbitrary, undeclared side effects produced by external shell commands).
 
 1. **AI & Agent Ready:** With position-independent `--json` flags and atomic dry-running, AI agents and automation scripts can programmatically interrogate the CLI, plan workspace changes, resolve collisions, and execute headless scaffolding without hanging on interactive prompts.
 

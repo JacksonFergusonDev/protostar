@@ -16,7 +16,7 @@ During standard CLI usage, operational errors are caught at the top level of the
 
 - :material-code-json: __Subprocess Diagnostics__
 
-    Subprocess calls executed by `system.run_command` capture both `stdout` and `stderr`. On non-zero exits or timeouts, detailed output streams are preserved in `CommandExecutionError` or `CommandTimeoutError` without flattening diagnostic context.
+    Subprocess calls managed by `ProcessRunner` capture both `stdout` and `stderr`. On non-zero exits or timeouts, detailed output streams are preserved in `CommandExecutionError` or `CommandTimeoutError` without flattening diagnostic context.
 
 - :material-numeric: __POSIX Exit Code Compliance__
 
@@ -28,7 +28,7 @@ During standard CLI usage, operational errors are caught at the top level of the
 
 ## How Errors Propagate
 
-The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, shell subprocesses) up to the top-level CLI boundary in `cli.py`:
+The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, transactional side-effects) up to the top-level CLI boundary in `cli.py`:
 
 ```mermaid
 flowchart TD
@@ -36,17 +36,21 @@ flowchart TD
     classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
     classDef core fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#e2e8f0;
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
+    classDef rollback fill:#854d0e,stroke:#facc15,stroke-width:1px,color:#fff;
 
     Start([CLI Invocation]):::core --> P1["1. Pre-Flight Checks"]:::phase
     P1 -->|Pass| P2["2. Config & Manifest Parsing"]:::phase
     P2 -->|Pass| P3["3. Side-Effect Execution"]:::phase
     P3 -->|Success| End([Environment Stabilized]):::success
 
-    P1 -.->|Missing binary| E1["MissingDependencyError"]:::error
+    P1 -.->|Missing binaries| E1["MissingDependencyError<br/>AggregatedDependencyError"]:::error
     P2 -.->|Invalid TOML / Network / Zip| E2["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
-    P3 -.->|I/O fault / Subprocess failure| E3["FileSystemError<br/>CommandExecutionError<br/>CommandTimeoutError"]:::error
+    P3 -.->|Failure / Interrupt| RB["ProcessRunner Cleanup<br/>& MutationJournal Rollback"]:::rollback
 
-    E1 & E2 & E3 --> Trap["CLI Top-Level Trap<br/>(Rich Panel / JSON Envelope)"]:::core
+    RB -.->|Rollback Succeeded| E3["FileSystemError / CommandExecutionError<br/>PartialExecutionAbortedError"]:::error
+    RB -.->|Rollback Failed| E4["RollbackFailedError"]:::error
+
+    E1 & E2 & E3 & E4 --> Trap["CLI Top-Level Trap<br/>(Rich Panel / JSON Envelope)"]:::core
     Trap --> Exit([Route POSIX Exit Code]):::core
 ```
 
@@ -65,10 +69,15 @@ ProtostarError (Exception)
  ├── TemplateResolutionError
  ├── WorkspaceCollisionError
  ├── MissingDependencyError
+ ├── AggregatedDependencyError
  ├── CommandExecutionError
  ├── CommandTimeoutError
+ ├── ProcessTerminationError
  ├── FileSystemError
+ ├── UnsupportedFilesystemNodeError
+ ├── TransactionStateError
  ├── SecurityViolationError
+ ├── RollbackFailedError
  └── ExecutionAbortedError
       └── PartialExecutionAbortedError
 ```
@@ -102,6 +111,10 @@ Raised during the engine's `plan()` phase when existing workspace configuration 
 
 Raised during pre-flight checks when a system-level binary (such as `uv`, `cargo`, `git`, `direnv`, or `just`) is missing from `$PATH`. Stores the missing dependency name, its operational purpose, and an installation hint.
 
+### `AggregatedDependencyError`
+
+Raised during pre-flight checks when multiple required system tools are absent from `$PATH`. Aggregates all missing binary failures into a single actionable shell command installation hint tailored to the host operating system.
+
 ### `CommandExecutionError`
 
 Raised when a managed shell subprocess returns a non-zero exit code. Captures the command line list, return code, `stdout`, and `stderr`. Provides a display-ready `output_detail` property for terminal rendering.
@@ -110,13 +123,29 @@ Raised when a managed shell subprocess returns a non-zero exit code. Captures th
 
 Raised when a subprocess exceeds its allotted execution window. Automatically attaches a remediation hint regarding network stalls or unresponsive package registries.
 
+### `ProcessTerminationError`
+
+Raised when an active managed subprocess tree cannot be safely stopped or reaped by `ProcessRunner` prior to transaction rollback.
+
 ### `FileSystemError`
 
 Raised when a local disk operation (read, write, directory creation, or serialization) fails due to an `OSError` or encoding exception. Preserves the operation name, target file path, and original cause.
 
+### `UnsupportedFilesystemNodeError`
+
+Raised when a transactional filesystem operation targets an unsupported node kind, such as a symbolic link or special device file.
+
+### `TransactionStateError`
+
+Raised when an invalid transaction lifecycle operation is requested on a `MutationJournal`, such as attempting to record mutations after the journal has already been committed or rolled back.
+
 ### `SecurityViolationError`
 
-Raised when a template or archive attempts an unauthorized filesystem operation (such as Zip Slip path traversal).
+Raised when a template or archive attempts an unauthorized filesystem operation (such as Zip Slip path traversal) or un-safelisted shell execution.
+
+### `RollbackFailedError`
+
+Raised when an execution error or interruption occurs and the automated rollback procedure fails to fully restore one or more workspace paths. Preserves the list of failed paths and chains the root operational error.
 
 ### `ExecutionAbortedError`
 
@@ -124,7 +153,7 @@ Raised when you explicitly abort execution via an interactive prompt.
 
 ### `PartialExecutionAbortedError`
 
-Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun, formatting and reporting all touched/scaffolded workspace paths via an immutable `frozenset[str]`.
+Subclass of `ExecutionAbortedError`. Raised when execution is interrupted after disk mutations have begun and Protostar has successfully rolled back all tracked workspace changes. Reports the set of rolled-back paths via its immutable `touched_paths: frozenset[str]` attribute.
 
 ---
 

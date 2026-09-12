@@ -1,37 +1,70 @@
 # The System Executor & Modular Execution Engine
 
-While the Orchestrator plans the environment, the execution engine carries it out—writing files, updating configurations, and running shell commands.
+While the Orchestrator plans the environment, the execution engine carries it out—writing files, updating configurations, and running shell commands under transactional rollback guarantees.
 
-To keep the codebase maintainable, secure, and testable, Protostar breaks execution logic into seven focused modules. This separates **content generation** and **security checks** from **command execution**.
+To keep the codebase maintainable, secure, and testable, Protostar separates **content generation** and **security checks** from **stateful transaction management** and **command execution**.
 
 ---
 
-## The 7-Module Architecture
+## Modular Architecture & Transactional Execution
 
 ```mermaid
-flowchart LR
+flowchart TD
     classDef pure fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
     classDef stateful fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
     classDef coordinator fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef transaction fill:#14532d,stroke:#4ade80,stroke-width:2px,color:#fff;
 
     M[(Environment\nManifest)] --> E(executor.py):::coordinator
 
-    subgraph Execution Engine
+    subgraph Transaction Management
+        E --> J(journal.py\nMutationJournal):::transaction
+        E --> FS(fs_transaction.py\nTransactionAwareFS):::transaction
+        E --> P(system.py\nProcessRunner):::transaction
+    end
+
+    subgraph Content Generators
         E --> S(security.py):::pure
         E --> T(toml_ast.py):::pure
         E --> A(appends.py):::pure
         E --> W(workflows.py):::pure
-        E --> R(registry.py):::stateful
+    end
 
+    subgraph System Integrations
         E --> D(dependencies.py):::stateful
         E --> I(ide.py):::stateful
+        E --> R(registry.py):::stateful
     end
 ```
 
 ### 1. The Execution Coordinator (`executor.py`)
 
-**Role:** Stateful execution sequencing and disk I/O.
-The `SystemExecutor` class acts as a thin coordinator. It iterates over the manifest, gathers necessary parameters, invokes the pure content generators, and writes the output to disk using atomic operations. It strictly enforces the chronological order of execution to prevent race conditions (e.g., ensuring `uv init` completes before attempting to merge `pyproject.toml` payloads).
+**Role:** Stateful execution sequencing, transactional boundary management, and disk I/O.
+
+The `SystemExecutor` class acts as the central coordinator. It owns the `MutationJournal`, wraps disk writes with `TransactionAwareFS`, manages subprocesses via `ProcessRunner`, and enforces a strict execution sequence:
+
+```text
+BEGIN
+  1. Pre-flight Validation: Fast TOML syntax checks before writing to disk
+  2. Directory Scaffolding & Base Injections: Transactionally created via TransactionAwareFS
+  3. CI/CD & Configuration Artifacts: Workflows, pre-commit config, and Justfile
+  4. System Tasks: Initial setup commands (e.g., git init) via ProcessRunner
+  5. Dependency Resolution: Pre-journals pyproject.toml & uv.lock, runs uv add (fatal on failure)
+  6. Configuration Appends & Merging: AST merges for TOML and hash-delimited marker blocks
+  7. Ignores & Containers: .gitignore deduplication and Docker artifacts
+  8. IDE Configuration: Writes .vscode settings and verifies extensions
+
+SUCCESS
+  Commit journal (releases backup state)
+  Return ExecutionResult(created_paths, mutated_paths, diagnostics)
+
+FAILURE / INTERRUPT
+  Terminate and reap active managed subprocess tree
+  Shield against subsequent SIGINT signals
+  Roll back journaled paths in reverse order of mutation
+  If rollback succeeds: re-raise original error (or PartialExecutionAbortedError on Ctrl+C)
+  If rollback partially fails: raise RollbackFailedError
+```
 
 ### 2. Pure Content Generation
 
@@ -49,6 +82,56 @@ These modules interact with external boundaries, but do so predictably.
 - **`dependencies.py`** (Stateful): Orchestrates `uv add` commands to resolve and install Python packages into their appropriate dependency groups (main, dev, docs).
 - **`ide.py`** (Stateful): Verifies the presence of recommended extensions via the IDE's CLI (e.g., `code --list-extensions`) and deep-merges diagnostics and settings into `.vscode/settings.json`.
 - **`registry.py`**: Interacts with the asynchronous static registry to fetch the latest pre-commit hook versions during the execution phase, falling back gracefully to a static mapping (`_fallbacks.py`) if network access is unavailable. These fallbacks are automatically kept in sync with the live edge CDN prior to every release via `scripts/sync_registry_fallbacks.py`.
+
+---
+
+## Pipeline Transactionality & Automated Rollback
+
+Scaffolding failures should never leave a repository in a corrupt, half-merged, or partially written state. Protostar implements an explicit transaction model governed by the following invariant:
+
+> **Core Invariant:** Every transaction-managed path is journaled before Protostar first mutates it, and rollback restores that path to its supported pre-transaction state.
+
+### The Transaction Boundary
+
+The rollback guarantee applies specifically to **transaction-managed paths**:
+
+- Paths mutated directly by Protostar through `TransactionAwareFS` (`src/protostar/fs_transaction.py`).
+- Explicitly bounded subprocess mutations declared and journaled prior to running an external tool (specifically `pyproject.toml` and `uv.lock` for `uv add`).
+
+Arbitrary, untracked side effects from external commands that escape these boundaries cannot be magically inferred. Therefore, Protostar strictly bounds subprocess modifications and terminates managed subprocess trees before beginning rollback.
+
+### What Protostar Reliably Reverts (and What Might Remain)
+
+To avoid overpromising, Protostar makes a clear distinction between what its transactional engine can guarantee and the inherent limits of managing external subprocesses:
+
+**What is reliably reverted:**
+
+- **Direct File Mutations:** Any pre-existing file modified by Protostar (such as `pyproject.toml` AST merging or marker block appends) is restored to its exact pre-run bytes and file mode.
+- **Created Files:** Any file generated directly by Protostar's template/workflow engine is removed.
+- **Created Directories:** Directories scaffolded by Protostar are removed, provided they remain empty.
+- **Declared Subprocess Targets:** Explicitly bounded subprocess files—specifically `pyproject.toml` and `uv.lock` modified during `uv add`—are journaled before the subprocess runs and restored if installation fails.
+
+**What might remain afterwards:**
+
+- **Undeclared Subprocess Side Effects:** External commands executed via system tasks (such as `git init` initializing a `.git/` database, or custom linters creating local caches) modify paths that are not declared in advance. Protostar stops the process, but cannot infer or delete files created outside the declared boundary.
+- **Non-Empty Generated Directories:** If an external process, editor, or compiler drops files into a Protostar-generated directory, Protostar will not recursively delete it on rollback, preserving unknown files and raising `RollbackFailedError`.
+
+### Rollback Semantics
+
+When execution encounters a runtime error, unhandled exception, or user cancellation (`KeyboardInterrupt`):
+
+- **Bytes Over Intent:** For regular files, rollback restores the exact original bytes and POSIX file mode captured before first mutation. It does not attempt to reverse TOML AST merges semantically; byte restoration is deterministic, instantaneous, and auditable.
+- **Empty-Directory Removal:** Directories created during the transaction are unlinked during rollback *only if they are empty*. If unrelated files were created inside the directory externally, Protostar aborts deletion of that directory and reports a partial rollback failure rather than risking recursive data loss.
+- **Unsupported Filesystem Nodes:** Symlinks and special nodes (FIFOs, sockets, device files) are rejected prior to transaction mutation (`UnsupportedFilesystemNodeError`), preventing symlink targets from being overwritten or restored incorrectly.
+- **Signal Shielding (`shield_sigint`):** Rollback execution is wrapped in a signal-shielding context manager to defer secondary `SIGINT` delivery, ensuring cleanup completes without interruption.
+
+### Fatal Dependency Policy
+
+Package installation via `uv add` is treated as a critical pipeline operation rather than an optional diagnostic. If `uv add` fails or times out:
+
+1. The failure raises `CommandExecutionError` or `CommandTimeoutError` immediately.
+1. Execution halts and triggers automated rollback.
+1. Journaled `pyproject.toml` and `uv.lock` files are restored along with all preceding workspace modifications.
 
 ---
 
@@ -86,7 +169,7 @@ flowchart TD
     MergeLogic --> Formatter
     OverwriteLogic --> Formatter[Deterministic Formatter\nApply Headers & Sorting]:::format
 
-    Formatter --> Write[(Atomic Disk Write)]:::artifact
+    Formatter --> Write[(Atomic Disk Write via TransactionAwareFS)]:::artifact
 ```
 
 The merge behavior is governed by the resolved `CollisionStrategy`:
@@ -96,11 +179,16 @@ The merge behavior is governed by the resolved `CollisionStrategy`:
 
 ---
 
-## Subprocess Diagnostics
+## Subprocess Diagnostics & Process Ownership
 
-Directly calling `subprocess.run` in a CLI tool often leads to silent failures or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `protostar.system.execute_subprocess`.
+Directly calling `subprocess.run` in a CLI tool often leads to silent failures, leaked background processes, or messy interleaved terminal output. Protostar routes all system tasks and dependency resolutions through `ProcessRunner` (`src/protostar/system.py`).
 
-This wrapper executes the command silently while capturing both `stdout` and `stderr`, and enforces granular task-level timeouts. If the process returns a non-zero exit code, the executor raises a strictly typed `CommandExecutionError`. These exceptions preserve the exact upstream streams, ensuring the Orchestrator can catch the failure and present the raw diagnostics to you without destructively flattening the context.
+`ProcessRunner` provides:
+
+- **Process Group Isolation:** Subprocesses are launched in their own session (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows) so child trees can be reliably signaled and reaped.
+- **Two-Stage Graceful Termination:** When execution is interrupted or aborted, `ProcessRunner` sends `SIGTERM` (or `CTRL_BREAK_EVENT`), waits for a configurable grace period, and escalates to `SIGKILL` if the process tree fails to exit. If a process cannot be reaped, it raises `ProcessTerminationError`.
+- **Environment Sanitization:** Strips active virtual environment variables (`VIRTUAL_ENV`, `PYTHONHOME`) to prevent ambient interpreter contamination while accepting explicit caller overrides.
+- **Structured Diagnostic Capture:** Captures `stdout` and `stderr` silently during execution, attaching raw diagnostic streams to `CommandExecutionError` if a process returns a non-zero exit code.
 
 !!! example "Simulated Subprocess Diagnostic Output"
     When a shell execution fails, the captured streams are formatted to pinpoint the exact failure mechanism:
@@ -113,6 +201,8 @@ This wrapper executes the command silently while capturing both `stdout` and `st
     error: Failed to download python 3.99
     Caused by: No downloadable Python versions matching: 3.99
     ```
+
+For one-off isolated commands outside the main executor loop, `protostar.system.execute_subprocess` provides a convenience wrapper around `ProcessRunner().run(...)`.
 
 ---
 
@@ -128,7 +218,37 @@ This wrapper executes the command silently while capturing both `stdout` and `st
             separate_signature: true
             members_order: source
 
-??? abstract "Core Interface: `execute_subprocess`"
+??? abstract "Transaction Journal: `MutationJournal`"
+    ::: protostar.journal.MutationJournal
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+            members_order: source
+
+??? abstract "Transactional Filesystem: `TransactionAwareFS`"
+    ::: protostar.fs_transaction.TransactionAwareFS
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+            members_order: source
+
+??? abstract "Process Runner: `ProcessRunner`"
+    ::: protostar.system.ProcessRunner
+        options:
+            show_source: true
+            show_bases: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            separate_signature: true
+            members_order: source
+
+??? abstract "Subprocess Wrapper: `execute_subprocess`"
     ::: protostar.system.execute_subprocess
         options:
             show_source: true
@@ -145,3 +265,4 @@ This wrapper executes the command silently while capturing both `stdout` and `st
 - **[The Orchestrator](./orchestrator.md):** See how the orchestrator coordinates the planning phase and passes the manifest to the executor.
 - **[The Environment Manifest](./manifest.md):** Review the structured state container evaluated by the executor.
 - **[The Module Architecture](./modules.md):** Explore the polymorphic modules that generate the requirements processed by the executor.
+- **[Error Handling Architecture](./error_handling.md):** Review how rollback errors and process failures are mapped to domain exceptions.

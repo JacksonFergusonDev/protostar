@@ -232,12 +232,18 @@ class FileSystemError(ProtostarError):
 class UnsupportedFilesystemNodeError(ProtostarError):
     """Raised when a transaction targets a symlink or special filesystem node."""
 
-    def __init__(self, path: Path, node_type: str) -> None:
+    def __init__(
+        self,
+        path: Path,
+        node_type: str,
+        *,
+        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_ROLLBACK,
+    ) -> None:
         message = f"Cannot transactionally mutate unsupported {node_type}: {path}"
         hint = (
             "Replace the node with a regular file or directory and run Protostar again."
         )
-        super().__init__(message, hint=hint)
+        super().__init__(message, hint=hint, docs_path=docs_path)
         self.path = path
         self.node_type = node_type
 
@@ -395,7 +401,7 @@ class RollbackFailedError(ProtostarError):
         rollback_result: RollbackResult,
         original_error: BaseException,
         *,
-        docs_path: DocsPage | str | None = None,
+        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_ROLLBACK,
     ) -> None:
         failed_list = "\n".join(
             f"- {failure.path}: {failure.detail}" for failure in rollback_result.errors
