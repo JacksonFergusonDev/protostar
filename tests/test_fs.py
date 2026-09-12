@@ -1,10 +1,11 @@
+import os
 from pathlib import Path
 
 import pytest
 from pytest_mock import MockerFixture
 
 from protostar.errors import FileSystemError
-from protostar.fs import atomic_write_text
+from protostar.fs import atomic_write_bytes, atomic_write_text
 
 
 def test_atomic_write_text_creates_new_file(tmp_path: Path) -> None:
@@ -35,6 +36,19 @@ def test_atomic_write_text_respects_encoding(tmp_path: Path) -> None:
 
     # Bypassing the wrapper to ensure physical bytes on disk match the encoding
     assert target_file.read_text(encoding="utf-16") == payload
+
+
+def test_atomic_write_bytes_uses_chmod_when_fchmod_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target_file = tmp_path / "state.bin"
+    if hasattr(os, "fchmod"):
+        monkeypatch.delattr("os.fchmod")
+
+    atomic_write_bytes(target_file, b"updated", mode=0o640)
+
+    assert target_file.read_bytes() == b"updated"
+    assert target_file.stat().st_mode & 0o777 == 0o640
 
 
 def test_atomic_write_text_cleans_up_temp_file_on_failure(

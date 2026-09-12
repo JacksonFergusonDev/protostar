@@ -759,7 +759,6 @@ def generate_agent_payloads() -> None:
     result = ExecutionResult(
         created_paths=paths,
         mutated_paths=frozenset(),
-        touched_paths=paths,
         diagnostics=(),
     )
     success_payload = {
@@ -1083,6 +1082,7 @@ def generate_cli_help_svgs() -> None:
             color_system="truecolor",
             legacy_windows=False,
             file=io.StringIO(),
+            _environ={},
         )
 
         prompt = Text.assemble(
@@ -1138,6 +1138,7 @@ def generate_cli_dry_run_svg() -> None:
         color_system="truecolor",
         legacy_windows=False,
         file=io.StringIO(),
+        _environ={},
     )
 
     prompt = Text.assemble(
@@ -1196,6 +1197,7 @@ def generate_diagnostic_panel_svg() -> None:
         color_system="truecolor",
         legacy_windows=False,
         file=io.StringIO(),
+        _environ={},
     )
 
     events = [

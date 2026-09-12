@@ -46,14 +46,17 @@ class ExecutionResult:
     Attributes:
         created_paths: Immutable set of relative paths created on disk.
         mutated_paths: Immutable set of relative paths modified on disk.
-        touched_paths: Immutable set of relative paths written or created on disk.
         diagnostics: Ordered tuple of non-fatal diagnostic events emitted during execution.
     """
 
     created_paths: frozenset[str]
     mutated_paths: frozenset[str]
-    touched_paths: frozenset[str]
     diagnostics: tuple[DiagnosticEvent, ...]
+
+    @property
+    def touched_paths(self) -> frozenset[str]:
+        """Returns the union of created and mutated paths."""
+        return self.created_paths | self.mutated_paths
 
     def to_dict(self) -> dict[str, Any]:
         """Serializes the execution result to a JSON-safe dictionary.

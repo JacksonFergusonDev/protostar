@@ -219,6 +219,5 @@ class Orchestrator:
         return ExecutionResult(
             created_paths=executor.journal.created_paths,
             mutated_paths=executor.journal.mutated_paths,
-            touched_paths=executor.journal.touched_paths,
             diagnostics=tuple(executor.diagnostics),
         )

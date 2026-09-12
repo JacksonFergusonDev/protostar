@@ -2,6 +2,7 @@
 
 import enum
 import os
+import stat
 import tempfile
 from contextlib import suppress
 from pathlib import Path
@@ -10,11 +11,70 @@ from .errors import FileSystemError
 
 __all__ = [
     "ArchiveFormat",
+    "atomic_write_bytes",
     "atomic_write_text",
     "safe_extract_archive",
     "safe_extract_tar",
     "safe_extract_zip",
 ]
+
+
+def atomic_write_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:
+    """Atomically writes bytes to a regular file.
+
+    Args:
+        path: Destination file path.
+        content: Byte payload to write.
+        mode: Optional permission bits to apply before promoting the temporary file.
+
+    Raises:
+        FileSystemError: If file creation, writing, syncing, or replacement fails.
+    """
+    effective_mode = mode
+    if effective_mode is None:
+        try:
+            target_stat = path.lstat()
+        except FileNotFoundError:
+            target_stat = None
+        except OSError as e:
+            raise FileSystemError("inspect file mode", str(path), e) from e
+        if target_stat is not None:
+            effective_mode = stat.S_IMODE(target_stat.st_mode)
+
+    file_descriptor = -1
+    temp_path: Path | None = None
+    try:
+        file_descriptor, temp_name = tempfile.mkstemp(
+            dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
+        )
+        temp_path = Path(temp_name)
+        with os.fdopen(file_descriptor, "wb") as temp_file:
+            file_descriptor = -1
+            temp_file.write(content)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            if effective_mode is not None and hasattr(os, "fchmod"):
+                os.fchmod(temp_file.fileno(), effective_mode)
+        if (
+            effective_mode is not None
+            and not hasattr(os, "fchmod")
+            and temp_path is not None
+        ):
+            os.chmod(temp_path, effective_mode)
+        os.replace(temp_path, path)
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except Exception as e:
+        if isinstance(e, FileSystemError):
+            raise
+        raise FileSystemError("write file", str(path), e) from e
+    finally:
+        if file_descriptor >= 0:
+            with suppress(OSError):
+                os.close(file_descriptor)
+        if temp_path is not None and temp_path.exists():
+            with suppress(OSError):
+                temp_path.unlink()
 
 
 class ArchiveFormat(enum.StrEnum):
@@ -73,25 +133,11 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
     Raises:
         FileSystemError: If file creation, encoding, writing, syncing, or renaming fails.
     """
-    file_descriptor, temp_name = tempfile.mkstemp(
-        dir=path.parent, prefix=f".{path.name}.", suffix=".tmp"
-    )
-    temp_path = Path(temp_name)
-
     try:
-        with os.fdopen(file_descriptor, "w", encoding=encoding) as temp_file:
-            temp_file.write(content)
-            temp_file.flush()
-            os.fsync(temp_file.fileno())
-        os.replace(temp_path, path)
-    except Exception as e:
-        if isinstance(e, FileSystemError):
-            raise
+        payload = content.encode(encoding)
+    except UnicodeError as e:
         raise FileSystemError("write file", str(path), e) from e
-    finally:
-        if temp_path.exists():
-            with suppress(OSError):
-                temp_path.unlink()
+    atomic_write_bytes(path, payload)
 
 
 def safe_extract_zip(zip_path: Path, target_dir: Path) -> None:

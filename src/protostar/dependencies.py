@@ -4,7 +4,7 @@ import enum
 import logging
 
 from .manifest import DependencyManifest
-from .system import execute_subprocess
+from .system import ProcessRunner
 
 logger = logging.getLogger("protostar")
 
@@ -42,6 +42,7 @@ class DependencyGroup(enum.StrEnum):
 def _install_group(
     packages: list[str],
     group: DependencyGroup,
+    process_runner: ProcessRunner,
 ) -> None:
     """Installs a specific group of packages using uv add.
 
@@ -53,11 +54,12 @@ def _install_group(
 
     cmd = ["uv", "add", *group.cli_args, *packages]
     logger.info(f"Resolving and installing {len(packages)} {group.label} dependencies")
-    execute_subprocess(cmd, timeout=600)
+    process_runner.run(cmd, timeout=600)
 
 
 def install_dependencies(
     dependencies_manifest: DependencyManifest,
+    process_runner: ProcessRunner,
 ) -> None:
     """Installs queued dependencies using uv.
 
@@ -71,6 +73,12 @@ def install_dependencies(
     ):
         return
 
-    _install_group(dependencies_manifest.dependencies, DependencyGroup.MAIN)
-    _install_group(dependencies_manifest.dev_dependencies, DependencyGroup.DEV)
-    _install_group(dependencies_manifest.docs_dependencies, DependencyGroup.DOCS)
+    _install_group(
+        dependencies_manifest.dependencies, DependencyGroup.MAIN, process_runner
+    )
+    _install_group(
+        dependencies_manifest.dev_dependencies, DependencyGroup.DEV, process_runner
+    )
+    _install_group(
+        dependencies_manifest.docs_dependencies, DependencyGroup.DOCS, process_runner
+    )

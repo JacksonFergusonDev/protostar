@@ -105,7 +105,6 @@ def test_trust_boundary_bypassed_when_trusted_true(mocker: Any) -> None:
     mock_engine.execute.return_value = ExecutionResult(
         created_paths=frozenset(),
         mutated_paths=frozenset(),
-        touched_paths=frozenset(),
         diagnostics=(),
     )
 

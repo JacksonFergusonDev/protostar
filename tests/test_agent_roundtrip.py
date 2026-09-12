@@ -21,7 +21,7 @@ def test_agent_capabilities_discovery(capsys, monkeypatch):
 
 
 def test_agent_dry_run_and_execute(capsys, monkeypatch, mocker, tmp_path):
-    mocker.patch("protostar.executor.execute_subprocess")
+    mocker.patch("protostar.executor.ProcessRunner.run")
     mocker.patch("protostar.executor.install_dependencies")
 
     monkeypatch.chdir(tmp_path)
