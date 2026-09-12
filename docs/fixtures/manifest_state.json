@@ -95,7 +95,9 @@
                     "--enable"
                 ],
                 "description": null,
-                "timeout": 30
+                "timeout": 30,
+                "owned_files": [],
+                "owned_trees": []
             }
         ]
     },
