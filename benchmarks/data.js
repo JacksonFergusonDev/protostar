@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789176499586,
+  "lastUpdate": 1789180722151,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12177,6 +12177,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 203.41,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "350012ca1f70208411a0c8eca784dcaa39c45bbf",
+          "message": "fix(orchestrator): resolve false collisions and close detection gaps (#243)\n\n- Update ZensicalModule collision_markers to target docs/index.md rather\n  than the entire docs/ directory, preventing phantom collisions in\n  workspaces with existing doc directories.\n- Make PythonCore collision_markers conditionally include LICENSE only when\n  an active license is configured, preventing collisions when selecting\n  'None'.\n- Add CHANGELOG.md to CommitizenModule collision_markers.\n- Inspect req.template_blueprint.files during Phase 2 collision checks\n  with placeholder interpolation (e.g., README.md and source scaffolding).\n- Synchronize CLI entry points (interactive wizard and main parser) to pass\n  resolved license into PythonCore.\n- Update tests and synchronize documentation fixture tables.",
+          "timestamp": "2026-09-11T19:37:41-07:00",
+          "tree_id": "b06463761f4677814b8eff75675da5052967bfbd",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/350012ca1f70208411a0c8eca784dcaa39c45bbf"
+        },
+        "date": 1789180720815,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 131.26,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 202.72,
             "unit": "ms"
           }
         ]
