@@ -254,7 +254,7 @@ class UnsupportedFilesystemNodeError(ProtostarError):
         path: Path,
         node_type: str,
         *,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_ROLLBACK,
+        docs_path: DocsPage | str | None = DocsPage.ROLLBACK,
     ) -> None:
         message = f"Cannot transactionally mutate unsupported {node_type}: {path}"
         hint = (
@@ -407,7 +407,7 @@ class RollbackFailedError(ProtostarError):
         rollback_result: RollbackResult,
         original_error: BaseException,
         *,
-        docs_path: DocsPage | str | None = DocsPage.TROUBLESHOOTING_ROLLBACK,
+        docs_path: DocsPage | str | None = DocsPage.ROLLBACK,
     ) -> None:
         failed_list = "\n".join(
             f"- {failure.path}: {failure.detail}" for failure in rollback_result.errors

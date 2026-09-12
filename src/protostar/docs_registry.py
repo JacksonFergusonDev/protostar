@@ -21,6 +21,6 @@ class DocsPage(StrEnum):
     )
     TROUBLESHOOTING_COLLISIONS = "usage/troubleshooting/#workspace-collisions"
     TROUBLESHOOTING_SECURITY = "usage/troubleshooting/#remote-template-security-alerts"
-    TROUBLESHOOTING_ROLLBACK = "usage/troubleshooting/#execution-interruptions-rollback"
+    ROLLBACK = "usage/rollback/"
 
     INIT = "usage/init/"
