@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789157389306,
+  "lastUpdate": 1789174544528,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12109,6 +12109,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 225.71,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "030928ee0fddfcbce68c2dfdd82714bbb8c1cb24",
+          "message": "feat: implement pipeline transactionality and rollback (#241)\n\n* feat: implement transactional execution pipeline with MutationJournal and rollback\n\n* fix: remove trailing comma returning tuple in orchestrator execution\n\n* test: fix legacy tests for journal architecture\n\n* test: remove last failing legacy string matches\n\n* fix(ci): update fixtures, fix types, and adapt tests to journal execution\n\n* test(integration): dynamically resolve python version for direnv and isolation tests\n\n* fix: correct transaction rollback semantics",
+          "timestamp": "2026-09-11T17:54:48-07:00",
+          "tree_id": "76cedaa02867fd9f5506af9c2d4774a036dcaaaf",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/030928ee0fddfcbce68c2dfdd82714bbb8c1cb24"
+        },
+        "date": 1789174543205,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 110.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 175.14,
             "unit": "ms"
           }
         ]
