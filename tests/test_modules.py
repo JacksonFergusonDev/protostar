@@ -589,7 +589,12 @@ def test_zensical_module_properties():
     assert module.name == "Zensical"
     assert module.cli_flags == ("--zensical",)
     assert module.config_key == "zensical"
-    assert module.collision_markers == [Path("mkdocs.yml"), Path("docs/")]
+    assert module.collision_markers == [Path("mkdocs.yml"), Path("docs/index.md")]
+
+
+def test_commitizen_module_collision_markers():
+    module = CommitizenModule()
+    assert module.collision_markers == [Path("CHANGELOG.md")]
 
 
 def test_zensical_module_build(mocker):
@@ -664,8 +669,15 @@ def test_readthedocs_module_skips_when_file_exists(mocker):
 
 
 def test_python_core_collision_markers():
-    """Verify that PythonCore registers both pyproject.toml and LICENSE as collision markers."""
-    assert PythonCore().collision_markers == [Path("pyproject.toml"), Path("LICENSE")]
+    """Verify that PythonCore conditionally registers LICENSE based on configured license."""
+    assert PythonCore().collision_markers == [Path("pyproject.toml")]
+    assert PythonCore(project_license="MIT").collision_markers == [
+        Path("pyproject.toml"),
+        Path("LICENSE"),
+    ]
+    assert PythonCore(project_license="None").collision_markers == [
+        Path("pyproject.toml")
+    ]
 
 
 def test_python_core_skips_license_and_classifier_on_merge(

@@ -579,7 +579,7 @@ class CommitizenModule(BootstrapModule):
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for commitizen."""
-        return []
+        return [Path("CHANGELOG.md")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues commitizen dev dependency, gitignore entry, pre-commit hook, and pyproject config.
@@ -824,7 +824,7 @@ class ZensicalModule(BootstrapModule):
     @property
     def collision_markers(self) -> list[Path]:
         """Returns the primary collision markers for Zensical."""
-        return [Path("mkdocs.yml"), Path("docs/")]
+        return [Path("mkdocs.yml"), Path("docs/index.md")]
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues Zensical dependencies, scaffolding, and ignore rules."""
