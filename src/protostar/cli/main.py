@@ -400,6 +400,8 @@ def main() -> None:
             }
             if e.hint:
                 error_dict["hint"] = e.hint
+            if getattr(e, "rollback_message", None):
+                error_dict["rollback_message"] = e.rollback_message
             if e.docs_url:
                 error_dict["docs_url"] = e.docs_url
             if isinstance(e, WorkspaceCollisionError):
@@ -420,6 +422,8 @@ def main() -> None:
                 body += f"\n\n[dim]{e.output_detail}[/dim]"
             if e.hint:
                 body += f"\n\n[dim]Hint: {e.hint}[/dim]"
+            if getattr(e, "rollback_message", None):
+                body += f"\n\n[bold green]Rollback Successful[/bold green]\n{e.rollback_message}"
             if e.docs_url:
                 body += f"\n\n[bold cyan][link={e.docs_url}]Read the documentation ↗[/link][/bold cyan]"
 

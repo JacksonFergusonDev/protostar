@@ -48,6 +48,7 @@ class ProtostarError(Exception):
         self.hint = hint
         self.docs_path = docs_path
         self.docs_anchor = docs_anchor
+        self.rollback_message: str | None = None
 
     @property
     def docs_url(self) -> str | None:
@@ -66,6 +67,22 @@ class ProtostarError(Exception):
         if self.docs_anchor:
             url = f"{url}#{self.docs_anchor.lstrip('#')}"
         return url
+
+
+def format_rollback_message(touched_paths: frozenset[str]) -> str:
+    """Standardizes the successful rollback explanation and subprocess disclaimer."""
+    disclaimer = "Note: Unbounded external state (e.g., .venv/ or global caches) modified by subprocesses falls outside the transacted boundary and may remain."
+    if touched_paths:
+        paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
+        return (
+            "Protostar successfully rolled back all tracked workspace changes:\n"
+            f"{paths_bulleted}\n\n"
+            f"{disclaimer}"
+        )
+    return (
+        "Protostar successfully rolled back all tracked workspace changes.\n\n"
+        f"{disclaimer}"
+    )
 
 
 class ConfigurationError(ProtostarError):
@@ -285,20 +302,9 @@ class PartialExecutionAbortedError(ExecutionAbortedError):
             touched_paths: Immutable set of file and directory paths touched on disk.
             docs_path: Optional path to relevant documentation.
         """
-        if touched_paths:
-            paths_bulleted = "\n".join(f"- {p}" for p in sorted(touched_paths))
-            message = (
-                "Execution interrupted. Protostar rolled back all tracked workspace changes:\n"
-                f"{paths_bulleted}\n\n"
-                "Note: External commands (e.g., uv, git) may have also modified workspace files."
-            )
-        else:
-            message = (
-                "Execution interrupted. Protostar rolled back all tracked workspace changes.\n\n"
-                "Note: External commands (e.g., uv, git) may have also modified workspace files."
-            )
+        msg = f"Execution interrupted.\n\n{format_rollback_message(touched_paths)}"
         hint = "The managed workspace state has been restored."
-        super().__init__(message, hint=hint, docs_path=docs_path)
+        super().__init__(msg, hint=hint, docs_path=docs_path)
         self.touched_paths = touched_paths
 
 

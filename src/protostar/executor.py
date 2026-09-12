@@ -139,6 +139,14 @@ class SystemExecutor:
                 raise RollbackFailedError(
                     rollback_result, original_error
                 ) from original_error
+
+            from .errors import ProtostarError, format_rollback_message
+
+            if isinstance(original_error, ProtostarError):
+                original_error.rollback_message = format_rollback_message(
+                    frozenset(self.journal.touched_paths)
+                )
+
             raise
 
     def _check_ide_extensions(self) -> None:
