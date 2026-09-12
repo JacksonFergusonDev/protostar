@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789187497473,
+  "lastUpdate": 1789249095494,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12279,6 +12279,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 169.94,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fce62a3070f508f6356173d60c3cacbfa0bb2856",
+          "message": "docs(rollback): add dedicated user & mechanics rollback pages (#246)\n\n- Add docs/usage/rollback.md: user-facing guide covering what rollback\n  protects, what might remain, Ctrl+C behavior, RollbackFailedError\n  remediation, and UnsupportedFilesystemNodeError handling. Includes\n  a mermaid sequence diagram of the interrupt → terminate → restore flow.\n\n- Add docs/mechanics/rollback.md: developer-facing deep dive into the\n  MutationJournal / TransactionAwareFS / ProcessRunner three-layer stack.\n  Covers record-before-mutate semantics, OriginalState data model,\n  reversed-order replay, two-stage subprocess termination, shield_sigint,\n  Bytes Over Intent, empty-directory-only removal, and the fatal\n  dependency policy. Includes two mermaid diagrams (architecture and\n  full transactional flow). Moves the MutationJournal, TransactionAwareFS,\n  and ProcessRunner API reference blocks here from executor.md.\n\n- Trim docs/mechanics/executor.md: extract the 49-line rollback section\n  into an 8-line callout pointing to mechanics/rollback.md; remove the\n  now-redundant API reference blocks for MutationJournal, TransactionAwareFS,\n  ProcessRunner, and execute_subprocess; add rollback.md to related links.\n\n- Trim docs/mechanics/orchestrator.md: replace the long rollback parenthetical\n  in Phase 3 with a single sentence linking to mechanics/rollback.md.\n\n- Trim docs/usage/troubleshooting.md: replace the 30-line Execution\n  Interruptions & Rollback section with a 5-line info callout pointing to\n  usage/rollback.md; add rollback.md to related resources.\n\n- Trim docs/usage/agent-interface.md: replace 4-line inline rollback paragraph\n  with a single sentence linking to usage/rollback.md.\n\n- Update docs/design-principles.md: tighten the Transaction Boundary note\n  block and add see-also links to both new rollback pages.\n\n- Update zensical.toml: add 'Automatic Rollback' to the User Guide nav\n  (between Agent & Machine Interface and CLI Reference) and 'Rollback\n  Internals' to the Mechanics nav (between Executor and Modules).",
+          "timestamp": "2026-09-12T14:37:14-07:00",
+          "tree_id": "1f8db56533349dd6c446f3aa79d3d6ab88658bc5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fce62a3070f508f6356173d60c3cacbfa0bb2856"
+        },
+        "date": 1789249094189,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 133.98,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 206.17,
             "unit": "ms"
           }
         ]
