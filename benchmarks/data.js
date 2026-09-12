@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789174544528,
+  "lastUpdate": 1789176499586,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12143,6 +12143,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 175.14,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "35c28fa6bda2d4658b39088c6033d9b47a0fa086",
+          "message": "docs: document pipeline transactionality, mutation journal, and rollback architecture (#242)\n\nAlign repository documentation, guides, error references, and fixtures with the\ntransactional execution model introduced in PR #241:\n\n- Document MutationJournal, TransactionAwareFS, and ProcessRunner in executor mechanics\n- Delineate honest rollback boundaries (what is reliably reverted vs. what may remain)\n- Document fatal dependency installation policy for uv add\n- Document new domain exceptions: RollbackFailedError, ProcessTerminationError,\n  UnsupportedFilesystemNodeError, TransactionStateError, and AggregatedDependencyError\n- Update PartialExecutionAbortedError documentation to clarify tracked change rollback\n- Add execution interruptions and rollback recovery section to troubleshooting guide\n- Wire DocsPage.TROUBLESHOOTING_ROLLBACK to rollback and unsupported node errors\n- Update check_doc_links.py sentinel reflection to validate all domain error doc links\n- Update exit code fixture table generator and synchronize doc fixtures",
+          "timestamp": "2026-09-11T18:27:21-07:00",
+          "tree_id": "3080a00bc2d1a2427980e402cec94a87b9ed4ccf",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/35c28fa6bda2d4658b39088c6033d9b47a0fa086"
+        },
+        "date": 1789176498512,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 132.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 203.41,
             "unit": "ms"
           }
         ]
