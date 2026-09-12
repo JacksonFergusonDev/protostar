@@ -20,7 +20,7 @@ By preventing modules from writing to disk directly during planning, Protostar k
 
 - :material-merge: __Collision Safety__
 
-    The manifest aggregates all requested files, ignores, and configuration injections in one place, allowing the Orchestrator to detect and resolve target collisions before any destructive operations occur.
+    The manifest aggregates all requested files, ignores, and configuration injections in one place, allowing the Orchestrator to dynamically derive planned file paths via `manifest.target_files()` and detect workspace collisions before any disk operations occur.
 
 - :material-play-speed: __Deterministic Simulation__
 
@@ -58,6 +58,7 @@ During the `build()` phase, modules route their state declarations through these
     * `pre_commit_hooks` / `pre_commit_local_hooks` / `pre_commit_install_hook_types`: Hook configurations and Git lifecycle hook types (e.g., `commit-msg`) registered via `manifest.tooling.add_pre_commit_hook()`, `manifest.tooling.add_pre_commit_local_hook()`, and `manifest.tooling.add_pre_commit_hook_type()`.
     * `ci_steps` / `ci_flags`: Continuous integration steps and workflow flags (`manifest.tooling.add_ci_step()`, `manifest.tooling.add_ci_flag()`).
     * `ide_extensions`: Recommended IDE extensions queued for workspace configuration (`manifest.tooling.add_ide_extension()`).
+    * `wants_docker`: Boolean flag indicating whether Docker containerization artifacts should be scaffolded.
 
 === "System Execution (`manifest.tasks`)"
     Managed by `TaskManifest`. Maintains ordered queues of `SystemTask` objects for imperative shell execution, combining commands with explicit timeout boundaries.
@@ -65,12 +66,13 @@ During the `build()` phase, modules route their state declarations through these
     * `system_tasks`: Pre-installation shell commands executed after filesystem scaffolding (e.g., `git init`, `uv init` queued via `manifest.tasks.add_system_task()`).
     * `post_install_tasks`: Commands that strictly require the virtual environment or installed dependencies to be present (e.g., `pre-commit install` queued via `manifest.tasks.add_post_install_task()`).
 
-=== "Root Settings"
-    Attributes directly bound to the root `EnvironmentManifest` instance.
+=== "Root Settings & Footprint"
+    Attributes and inspection methods directly bound to the root `EnvironmentManifest` instance.
 
     * `metadata`: Structured `ProjectMetadata` dictionary defining author, licensing, and package specs.
     * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs via `manifest.add_ide_setting()`.
     * `collision_strategy`: Active `CollisionStrategy` (`MERGE`, `OVERWRITE`, `ABORT`).
+    * `target_files()`: Pure method returning the complete set of concrete `Path` objects Protostar intends to create or mutate (file injections, TOML targets, Dockerfiles, lockfiles, `.gitignore`, and templated blueprint files). Used by the Orchestrator for dynamic collision detection.
 
 ---
 
@@ -97,7 +99,7 @@ Below is an example JSON representation of an aggregate state during a dry-run o
 
 ## Collision Strategies
 
-When the Orchestrator detects that a collision marker (e.g., an existing `pyproject.toml`) is present in the target workspace, it alters the manifest's `collision_strategy` attribute based on your input or `--force-merge` / `--force-replace` flags.
+When the Orchestrator detects that files in the target workspace collide with the manifest's planned targets (`manifest.target_files()`, e.g., an existing `pyproject.toml` or blueprint template file), it alters the manifest's `collision_strategy` attribute based on your input or `--force-merge` / `--force-replace` flags.
 
 The `SystemExecutor` reads this enum to govern its AST mutation logic:
 

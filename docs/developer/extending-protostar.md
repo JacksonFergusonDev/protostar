@@ -76,6 +76,9 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 !!! danger "No Direct Disk I/O"
     Never call `subprocess.run` or write to disk inside a module's `build()` method. Modules must strictly communicate via the `EnvironmentManifest` to ensure the Orchestrator maintains atomicity.
 
+!!! tip "Automated Collision Detection"
+    Modules do not need to register collision markers manually. Any files queued via `manifest.filesystem.add_file_injection()`, `manifest.filesystem.add_file_append()`, or manifest tooling flags are automatically derived by `EnvironmentManifest.target_files()` for workspace collision detection.
+
 The manifest exposes the following methods across its domain slices to queue state changes:
 
 | Method Signature | Execution Behavior |
