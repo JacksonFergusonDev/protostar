@@ -82,7 +82,7 @@ accent = "cyan"
 toggle = { icon = "material/weather-night", name = "Switch to dark mode" }
 
 [project.theme.icon]
-repo = "fontawesome/brands/space-awesome"
+repo = "fontawesome/brands/github"
 
 [project.theme.icon.admonition]
 note = "material/telescope"
