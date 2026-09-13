@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789325786492,
+  "lastUpdate": 1789325994965,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12687,6 +12687,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 202.78,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "07f333eb4feebe10f73101196ae1aa7c8841b2ef",
+          "message": "docs: add bottom padding to README logo SVGs and remove br",
+          "timestamp": "2026-09-13T11:58:30-07:00",
+          "tree_id": "96c9978f4f243e403063e95fe2fb8f3e684dca91",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/07f333eb4feebe10f73101196ae1aa7c8841b2ef"
+        },
+        "date": 1789325993632,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 143.53,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 222.97,
             "unit": "ms"
           }
         ]
