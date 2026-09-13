@@ -1,6 +1,6 @@
 ---
 title: Protostar
-description: "High-velocity, zero-friction Python environment scaffolding."
+description: "Safe, predictable, and clean Python environment scaffolding."
 icon: material/home
 hide:
   - navigation
@@ -17,7 +17,7 @@ hide:
 
 <div class="protostar-hero">
   <div class="hero-content">
-    <h1>Modular. Declarative. Fast.</h1>
+    <h1>Safe. Predictable. Clean.</h1>
     <p class="protostar-lede">
       Protostar sets up Python development environments cleanly and predictably—without overwriting existing work or leaving half-finished setups.
     </p>

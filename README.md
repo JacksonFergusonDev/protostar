@@ -12,8 +12,6 @@
 
 <br>
 
-**High-velocity, zero-friction Python environment scaffolding.**
-
 [![PyPI Version](https://img.shields.io/pypi/v/protostar?color=22d3ee&labelColor=0A0A0A&logo=pypi&logoColor=white)](https://pypi.org/project/protostar/)
 [![CI](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/ci.yml?color=22d3ee&labelColor=0A0A0A&label=CI)](https://github.com/jacksonfergusondev/protostar/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
@@ -21,6 +19,8 @@
 [![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![Documentation](https://img.shields.io/readthedocs/protostar/stable?color=22d3ee&labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/stable/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
+
+## Safe. Predictable. Clean
 
 | [**Get Started**](https://protostar.readthedocs.io/stable/getting-started/)
 | [**Docs**](https://protostar.readthedocs.io/stable/)
