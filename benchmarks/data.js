@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789360603895,
+  "lastUpdate": 1789364840311,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12755,6 +12755,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 212.89,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "fc6f1cdca1c12ec6026d6a6954657499b97b52f9",
+          "message": "ci(release): update reusable workflow ref and justfile to ci-cd-release-infrastructure",
+          "timestamp": "2026-09-13T22:46:05-07:00",
+          "tree_id": "5340a72eb8823f19eff19f93e0e478a7a3bf66c1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fc6f1cdca1c12ec6026d6a6954657499b97b52f9"
+        },
+        "date": 1789364839268,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 117.14,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 178.06,
             "unit": "ms"
           }
         ]
