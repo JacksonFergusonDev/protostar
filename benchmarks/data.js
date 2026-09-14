@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789325994965,
+  "lastUpdate": 1789360603895,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12721,6 +12721,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 222.97,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "adbb710394106ab6332cf6af07da3299107bc24a",
+          "message": "docs: update linter ignore rule in README and fix RTD URL\n\n- Switch markdownlint file-disable comment to rumdl first-line-heading syntax in README.md.\n- Update documentation URL in pyproject.toml to point directly to /stable/.",
+          "timestamp": "2026-09-13T21:33:23-07:00",
+          "tree_id": "9e53f1211f1ee4cecdb515e22cd15f9ee474d7d4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/adbb710394106ab6332cf6af07da3299107bc24a"
+        },
+        "date": 1789360603052,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 137.29,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 212.89,
             "unit": "ms"
           }
         ]
