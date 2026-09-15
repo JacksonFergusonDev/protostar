@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789515814136,
+  "lastUpdate": 1789516436556,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12925,6 +12925,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 213.74,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "23869e713693dfb8cce5986d5a45718279bf3ab1",
+          "message": "feat(merge): add state codec and pure reconciliation kernel (#251)\n\nTrack only applied contributions in deterministic schema-v1 state.\nPreserve user edits and deletions with typed three-way decisions and\ncomposite baselines, without wiring the executor before PR C.",
+          "timestamp": "2026-09-15T16:52:58-07:00",
+          "tree_id": "4be20f92f98610460455db0f93262f771a1f8894",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/23869e713693dfb8cce5986d5a45718279bf3ab1"
+        },
+        "date": 1789516435538,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 136.67,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 206.66,
             "unit": "ms"
           }
         ]
