@@ -140,7 +140,10 @@ def run_init_wizard() -> WizardSelections | None:
             )
 
         blueprint = TemplateBlueprint.load(
-            target, variable_resolver=resolve_missing_variables
+            target,
+            variable_resolver=resolve_missing_variables,
+            built_in=answer if not is_external else None,
+            display_name=answer,
         )
 
     choices: list[Choice | Separator] = []

@@ -2,6 +2,7 @@
   "api_version": 0,
   "status": "planned",
   "manifest": {
+    "template_reference": null,
     "collision_strategy": "merge",
     "force_merge": false,
     "force_replace": false,
@@ -19,19 +20,38 @@
       "dev_dependencies": [
         "ruff"
       ],
-      "docs_dependencies": []
+      "docs_dependencies": [],
+      "includes": [],
+      "resolver_footprint": {
+        "paths": [
+          "pyproject.toml",
+          "uv.lock"
+        ]
+      }
     },
     "filesystem": {
       "directories": [],
       "file_injections": {
         "LICENSE": "MIT License\n\nCopyright (c) <% CURRENT_YEAR %> <% AUTHOR_NAME %>\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
       },
-      "file_appends": {
+      "structured": {
         "pyproject.toml": [
-          "[project]\ndescription = \"High-velocity CLI application.\"\nreadme = \"README.md\"\nauthors = [{ name = \"Demo Author\", email = \"your-email\" }]\nlicense = { file = \"LICENSE\" }\nclassifiers = [\n    \"License :: OSI Approved :: MIT License\",\n]\n",
-          "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n"
+          {
+            "producer": "module:PythonCore",
+            "content": "[project]\ndescription = \"High-velocity CLI application.\"\nreadme = \"README.md\"\nauthors = [{ name = \"Demo Author\", email = \"your-email\" }]\nlicense = { file = \"LICENSE\" }\nclassifiers = [\n    \"License :: OSI Approved :: MIT License\",\n]\n",
+            "policy": "seed-only",
+            "resolver_footprint": null
+          },
+          {
+            "producer": "module:RuffModule",
+            "content": "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
+            "policy": "managed",
+            "resolver_footprint": null
+          }
         ]
       },
+      "regions": {},
+      "file_policy": "seed-only",
       "vcs_ignores": [
         "*~",
         ".DS_Store",
@@ -113,7 +133,10 @@
           ],
           "description": "Scaffolding uv virtual environment",
           "timeout": 30,
-          "owned_files": [],
+          "owned_files": [
+            "pyproject.toml",
+            ".python-version"
+          ],
           "owned_trees": []
         }
       ],

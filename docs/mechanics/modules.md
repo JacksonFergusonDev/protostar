@@ -63,11 +63,11 @@ class MyPyModule(BootstrapModule):
         manifest.dependencies.add_dev("mypy")
 
         # Inject the AST payload for pyproject.toml
-        manifest.filesystem.add_file_append("pyproject.toml", """
+        manifest.filesystem.add_structured("pyproject.toml", """
 [tool.mypy]
 strict = true
 warn_return_any = true
-        """)
+        """, producer="module:MyPyModule")
 ```
 
 ## API Reference

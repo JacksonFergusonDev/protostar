@@ -418,7 +418,9 @@ def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
         tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
         all_paths = set(manifest.filesystem.directories)
         all_paths.update(manifest.filesystem.file_injections.keys())
-        all_paths.update(manifest.filesystem.file_appends.keys())
+        all_paths.update(
+            manifest.filesystem.structured.keys() | manifest.filesystem.regions.keys()
+        )
 
         sorted_paths = sorted(all_paths)
         nodes: dict[str, Tree] = {"": tree}

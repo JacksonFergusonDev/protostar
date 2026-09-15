@@ -249,3 +249,85 @@ def resolve_package_name(
         metadata=metadata, pyproject_path=pyproject_path, default=default
     )
     return sanitize_package_name(raw_name)
+
+
+def validate_resolver_workspace(root: Path) -> None:
+    """Rejects resolver ownership outside the declared transaction workspace.
+
+    An ancestor uv workspace is unsupported when it includes this project. Its
+    resolver lock belongs to the ancestor and cannot be journaled locally.
+    """
+    import fnmatch
+    import tomllib
+
+    from .errors import ConfigurationError, FileSystemError
+
+    root = root.resolve()
+    for ancestor in root.parents:
+        pyproject = ancestor / "pyproject.toml"
+        if not pyproject.is_file():
+            continue
+        try:
+            data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        except OSError as e:
+            raise FileSystemError(
+                "inspect resolver workspace", str(pyproject), e
+            ) from e
+        except tomllib.TOMLDecodeError as e:
+            raise ConfigurationError(
+                "Malformed ancestor project configuration.",
+                hint="Correct the ancestor pyproject.toml before resolving this project.",
+            ) from e
+        tool = data.get("tool", {})
+        uv = tool.get("uv", {}) if isinstance(tool, dict) else {}
+        workspace = uv.get("workspace") if isinstance(uv, dict) else None
+        if workspace is None:
+            continue
+        if not isinstance(workspace, dict):
+            raise ConfigurationError(
+                "Malformed ancestor uv workspace.",
+                hint="Correct the ancestor tool.uv.workspace table.",
+            )
+        relative = root.relative_to(ancestor).as_posix()
+        members, excluded = workspace.get("members", []), workspace.get("exclude", [])
+        if (
+            not isinstance(members, list)
+            or not isinstance(excluded, list)
+            or not all(isinstance(p, str) for p in [*members, *excluded])
+        ):
+            raise ConfigurationError(
+                "Invalid ancestor workspace membership.",
+                hint="Use arrays of relative glob strings for workspace members and exclude.",
+            )
+
+        def matches(relative: str, pattern: str) -> bool:
+            if "{" in pattern or "}" in pattern:
+                raise ConfigurationError(
+                    "Unsupported ancestor workspace glob.",
+                    hint="Use explicit member paths or standard *, ?, [], and ** glob patterns.",
+                )
+
+            def match_parts(parts: list[str], patterns: list[str]) -> bool:
+                if not patterns:
+                    return not parts
+                if patterns[0] == "**":
+                    return match_parts(parts, patterns[1:]) or (
+                        bool(parts) and match_parts(parts[1:], patterns)
+                    )
+                return (
+                    bool(parts)
+                    and fnmatch.fnmatchcase(parts[0], patterns[0])
+                    and match_parts(parts[1:], patterns[1:])
+                )
+
+            return match_parts(
+                relative.split("/"), pattern.removeprefix("./").rstrip("/").split("/")
+            )
+
+        if any(matches(relative, pattern) for pattern in members) and not any(
+            matches(relative, pattern) for pattern in excluded
+        ):
+            raise ConfigurationError(
+                "The uv resolver workspace lies outside the transaction boundary.",
+                hint="Initialize from the owning workspace root or exclude this project from the ancestor uv workspace.",
+            )

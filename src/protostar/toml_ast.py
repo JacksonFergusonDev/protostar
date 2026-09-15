@@ -10,6 +10,15 @@ import tomlkit
 import tomlkit.items
 from tomlkit.items import AoT, Table
 
+from .errors import ConfigurationError
+from .intent import (
+    ContributionPolicy,
+    DependencyInclude,
+    ResolverFootprint,
+    StructuredContribution,
+    validate_configuration,
+)
+from .interpolation import extract_variables, render_template
 from .manifest import Severity
 
 logger = logging.getLogger("protostar")
@@ -70,6 +79,21 @@ def deep_merge_tomlkit(
         path: The tuple of keys representing the current path in the document.
         on_conflict: Callback invoked with (message, severity) when a type collision occurs.
     """
+
+    def reject_controls(value: Any) -> None:
+        if hasattr(value, "items"):
+            for key, child in value.items():
+                if key in ("__replace__", "__remove__"):
+                    raise ConfigurationError(
+                        "Template control sentinels are unsupported.",
+                        hint="Remove __replace__/__remove__ and declare configuration directly.",
+                    )
+                reject_controls(child)
+        elif isinstance(value, (list, AoT)):
+            for child in value:
+                reject_controls(child)
+
+    reject_controls(payload)
     # Purge scalar/array keys in base that are missing from the payload
     # to enforce strict AST overwriting, while preserving sibling tables.
     # We explicitly protect the root document and the [project] and [dependency-groups] tables from being purged.
@@ -86,11 +110,6 @@ def deep_merge_tomlkit(
     for key, value in payload.items():
         if key in base:
             if isinstance(value, tomlkit.items.Table):
-                if value.get("__replace__") is True:
-                    del value["__replace__"]
-                    base[key] = value
-                    continue
-
                 # Type Parity Guard
                 if not isinstance(base[key], tomlkit.items.Table):
                     if on_conflict:
@@ -307,3 +326,116 @@ def merge_toml_payloads(
     if is_pyproject:
         return format_pyproject_toml(doc)
     return tomlkit.dumps(doc)
+
+
+def declare_structured_contributions(
+    path: str, content: str, producer: str, policy: ContributionPolicy
+) -> tuple[StructuredContribution, ...]:
+    """Separates personal pyproject seeds from managed tooling/build intent.
+
+    Placeholder substitution is temporary and reversible: declaration must retain
+    late-bound values for execution, rather than persisting dummy interpolation.
+    """
+    variables = {v: f"PROTOSTAR_LATE_{v}" for v in extract_variables(content)}
+    data = validate_configuration(render_template(content, variables))
+    project_data = data.get("project")
+    footprint = (
+        ResolverFootprint()
+        if path == "pyproject.toml"
+        and isinstance(project_data, dict)
+        and "requires-python" in project_data
+        else None
+    )
+    personal = {
+        "name",
+        "version",
+        "description",
+        "authors",
+        "maintainers",
+        "license",
+        "license-files",
+        "readme",
+        "urls",
+        "classifiers",
+        "keywords",
+    }
+    if (
+        path != "pyproject.toml"
+        or policy != ContributionPolicy.MANAGED
+        or not isinstance(project_data, dict)
+        or not personal.intersection(project_data)
+    ):
+        return (StructuredContribution(producer, content, policy, footprint),)
+    doc = tomlkit.parse(render_template(content, variables))
+    project = doc["project"]
+    seed = tomlkit.document()
+    seed_project = tomlkit.table()
+    for key in list(project):
+        if key in personal:
+            seed_project[key] = project.pop(key)
+    seed["project"] = seed_project
+    if not project:
+        del doc["project"]
+
+    def restore(text: str) -> str:
+        for variable, token in variables.items():
+            text = text.replace(token, f"<% {variable} %>")
+        return text
+
+    result = [
+        StructuredContribution(
+            producer, restore(tomlkit.dumps(seed)), ContributionPolicy.SEED_ONLY
+        )
+    ]
+    if doc:
+        result.append(
+            StructuredContribution(
+                producer, restore(tomlkit.dumps(doc)), policy, footprint
+            )
+        )
+    return tuple(result)
+
+
+def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:
+    """Returns an AST-preserving additive application of typed group includes."""
+    try:
+        doc = tomlkit.parse(original)
+    except tomlkit.exceptions.ParseError as e:
+        raise ConfigurationError(
+            "Invalid dependency configuration.",
+            hint="Correct pyproject.toml before applying dependency includes.",
+        ) from e
+    groups = doc.get("dependency-groups")
+    if groups is not None and not isinstance(groups, tomlkit.items.AbstractTable):
+        raise ConfigurationError(
+            "dependency-groups must be a TOML table.",
+            hint="Correct the dependency-groups table.",
+        )
+    if groups is None:
+        groups = tomlkit.table()
+        doc["dependency-groups"] = groups
+    changed = False
+    for edge in edges:
+        if edge.group not in groups:
+            groups[edge.group] = tomlkit.array()
+            changed = True
+        if edge.include not in groups:
+            groups[edge.include] = tomlkit.array()
+            changed = True
+        entries = groups[edge.group]
+        if not isinstance(entries, tomlkit.items.Array) or not isinstance(
+            groups[edge.include], tomlkit.items.Array
+        ):
+            raise ConfigurationError(
+                "Dependency-group entries must be arrays.",
+                hint="Use requirement strings and include-group records inside each group array.",
+            )
+        if not any(
+            isinstance(e, dict) and e.get("include-group") == edge.include
+            for e in entries
+        ):
+            item = tomlkit.inline_table()
+            item["include-group"] = edge.include.value
+            entries.append(item)
+            changed = True
+    return tomlkit.dumps(doc) if changed else original

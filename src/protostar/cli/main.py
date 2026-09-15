@@ -117,12 +117,19 @@ def handle_init(args: argparse.Namespace) -> None:
             )
 
     blueprint = None
+    built_in = (
+        matched_info.alias
+        if template_name and matched_info and not is_external
+        else None
+    )
 
     if override_target:
         blueprint = TemplateBlueprint.load(
             override_target,
             template_context=template_context,
             variable_resolver=resolve_missing_variables,
+            built_in=built_in,
+            display_name=template_name,
         )
 
     modules: list[BootstrapModule] = []
@@ -200,6 +207,7 @@ def handle_init(args: argparse.Namespace) -> None:
 
     request = InitRequest(
         template_blueprint=blueprint,
+        template_reference=blueprint.reference if blueprint else None,
         docker=args.docker,
         force_merge=getattr(args, "force_merge", False),
         force_replace=getattr(args, "force_replace", False),

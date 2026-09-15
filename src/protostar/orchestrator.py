@@ -121,6 +121,8 @@ class Orchestrator:
 
         # Phase 2: Manifest instantiation & initialization
         manifest = EnvironmentManifest(
+            template_reference=req.template_reference
+            or (req.template_blueprint.reference if req.template_blueprint else None),
             force_merge=req.force_merge,
             force_replace=req.force_replace,
         )
@@ -137,7 +139,15 @@ class Orchestrator:
         # Phase 4: Blueprint injection
         blueprint = req.template_blueprint
         if blueprint:
+            template_id = (
+                manifest.template_reference.identity
+                if manifest.template_reference
+                else "unresolved"
+            )
             logger.debug("Injecting blueprint structural fields into manifest.")
+
+            for edge in blueprint.dependency_includes:
+                manifest.dependencies.add_include(edge.group, edge.include)
 
             for dep in blueprint.dependencies:
                 manifest.dependencies.add(dep)
@@ -162,14 +172,22 @@ class Orchestrator:
 
             if blueprint.pyproject_injections:
                 logger.debug("Injecting pyproject.toml payloads from configuration.")
-                for payload in blueprint.pyproject_injections.values():
-                    manifest.filesystem.add_file_append("pyproject.toml", payload)
+                for identity, payload in blueprint.pyproject_injections.items():
+                    manifest.filesystem.add_structured(
+                        "pyproject.toml",
+                        payload,
+                        producer=f"template:{template_id}:{identity}",
+                    )
 
             if blueprint.appends:
                 logger.debug("Injecting generic file appends from configuration.")
                 for filepath, payloads in blueprint.appends.items():
-                    for payload in payloads:
-                        manifest.filesystem.add_file_append(filepath, payload)
+                    for identity, record in payloads.items():
+                        manifest.filesystem.add_region(
+                            filepath,
+                            record.content,
+                            identity=f"template:{template_id}:{identity}",
+                        )
 
             if blueprint.files:
                 logger.debug("Injecting static files from configuration.")

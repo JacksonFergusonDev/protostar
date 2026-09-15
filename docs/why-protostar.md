@@ -50,8 +50,11 @@ In Copier, Jinja syntax (`{{ variable }}`) is embedded directly into source file
     pytest = true
     docker = true
 
-    [dev.pyproject.tool.ruff.lint]
+    [dev.pyproject]
+    linting = '''
+    [tool.ruff.lint]
     select = ["E", "F", "I", "UP"]
+    '''
     ```
 
 === "Copier Template (`pyproject.toml.jinja`)"

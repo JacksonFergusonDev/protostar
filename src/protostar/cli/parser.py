@@ -568,6 +568,9 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
         request = InitRequest(
             template_blueprint=selections.blueprint,
+            template_reference=selections.blueprint.reference
+            if selections.blueprint
+            else None,
             docker=selections.docker,
             force_merge=False,
             force_replace=False,

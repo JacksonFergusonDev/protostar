@@ -4,6 +4,17 @@ from pathlib import Path
 from typing import Any, Literal, TypedDict, cast
 
 from .errors import ConfigurationError
+from .intent import (
+    AppendContribution,
+    ContributionPolicy,
+    DependencyGroup,
+    DependencyInclude,
+    ResolverFootprint,
+    StructuredContribution,
+    TemplateReference,
+    validate_region_id,
+    validate_target,
+)
 from .interpolation import render_template
 from .metadata import LicenseType
 from .workflows import CIFlag, TargetOS
@@ -126,6 +137,28 @@ class DependencyManifest:
     dependencies: list[str] = field(default_factory=list)
     dev_dependencies: list[str] = field(default_factory=list)
     docs_dependencies: list[str] = field(default_factory=list)
+    includes: list[DependencyInclude] = field(default_factory=list)
+    resolver_footprint: ResolverFootprint = field(default_factory=ResolverFootprint)
+
+    def add_include(self, group: DependencyGroup, include: DependencyGroup) -> None:
+        """Declares a supported dependency-group include without generic TOML."""
+        if (
+            group not in (DependencyGroup.DEV, DependencyGroup.DOCS)
+            or include not in (DependencyGroup.DEV, DependencyGroup.DOCS)
+            or group == include
+        ):
+            raise ConfigurationError(
+                "Unsupported dependency include edge.",
+                hint="Include docs in dev or dev in docs without cycles.",
+            )
+        edge = DependencyInclude(group, include)
+        if DependencyInclude(include, group) in self.includes:
+            raise ConfigurationError(
+                "Cyclic dependency includes.",
+                hint="Remove the cyclic include-group declaration.",
+            )
+        if edge not in self.includes:
+            self.includes.append(edge)
 
     def add(self, package: str) -> None:
         """Queues a dependency for installation, preventing duplicates."""
@@ -155,6 +188,11 @@ class DependencyManifest:
             "dependencies": list(self.dependencies),
             "dev_dependencies": list(self.dev_dependencies),
             "docs_dependencies": list(self.docs_dependencies),
+            "includes": [
+                e.to_dict()
+                for e in sorted(self.includes, key=lambda e: (e.group, e.include))
+            ],
+            "resolver_footprint": self.resolver_footprint.to_dict(),
         }
 
 
@@ -164,13 +202,15 @@ class FilesystemManifest:
 
     directories: set[str] = field(default_factory=set)
     file_injections: dict[str, str] = field(default_factory=dict)
-    file_appends: dict[str, list[str]] = field(default_factory=dict)
+    structured: dict[str, list[StructuredContribution]] = field(default_factory=dict)
+    regions: dict[str, list[AppendContribution]] = field(default_factory=dict)
     vcs_ignores: set[str] = field(default_factory=set)
     workspace_hides: set[str] = field(default_factory=set)
 
     def add_directory(self, path: str) -> None:
         """Queues a relative directory path to be scaffolded."""
-        self.directories.add(path)
+        validate_target(path)
+        self.directories.add(Path(path).as_posix())
 
     def add_file_injection(self, path: str, content: str) -> None:
         """Queues a file path and its string content to be written to disk.
@@ -183,6 +223,13 @@ class FilesystemManifest:
             ConfigurationError: If the path has already been registered with
                 conflicting file content.
         """
+        validate_target(path)
+        path = Path(path).as_posix()
+        if path in self.structured or path in self.regions:
+            raise ConfigurationError(
+                f"Ambiguous contributions for '{path}'.",
+                hint="Do not combine free-form files with structured configuration or regions.",
+            )
         if path in self.file_injections and self.file_injections[path] != content:
             raise ConfigurationError(
                 f"Conflicting file injections for '{path}': multiple sources registered different content.",
@@ -190,11 +237,55 @@ class FilesystemManifest:
             )
         self.file_injections[path] = content
 
-    def add_file_append(self, path: str, content: str) -> None:
-        """Queues a string payload to be appended to a file during late-binding."""
-        if path not in self.file_appends:
-            self.file_appends[path] = []
-        self.file_appends[path].append(content)
+    def add_structured(
+        self,
+        path: str,
+        content: str,
+        *,
+        producer: str,
+        policy: ContributionPolicy = ContributionPolicy.MANAGED,
+    ) -> None:
+        """Declares TOML intent, separating personal project metadata from tooling."""
+        from .toml_ast import declare_structured_contributions
+
+        validate_target(path)
+        path = Path(path).as_posix()
+        if path in self.file_injections or path in self.regions:
+            raise ConfigurationError(
+                f"Ambiguous contributions for '{path}'.",
+                hint="Use one contribution policy per target.",
+            )
+        if not path.endswith(".toml"):
+            raise ConfigurationError(
+                "Structured contributions require TOML targets.",
+                hint="Use a named append region for non-TOML files.",
+            )
+        self.structured.setdefault(path, []).extend(
+            declare_structured_contributions(path, content, producer, policy)
+        )
+
+    def add_region(self, path: str, content: str, *, identity: str) -> None:
+        """Declares one uniquely identified non-TOML text region."""
+        validate_target(path)
+        path = Path(path).as_posix()
+        validate_region_id(identity)
+        if path.endswith(".toml"):
+            raise ConfigurationError(
+                "TOML append regions are unsupported.",
+                hint="Use dev.pyproject structured configuration.",
+            )
+        if path in self.file_injections or path in self.structured:
+            raise ConfigurationError(
+                f"Ambiguous contributions for '{path}'.",
+                hint="Use one contribution policy per target.",
+            )
+        regions = self.regions.setdefault(path, [])
+        if any(r.id == identity for r in regions):
+            raise ConfigurationError(
+                f"Duplicate append identity '{identity}' for '{path}'.",
+                hint="Give every region a unique stable ID.",
+            )
+        regions.append(AppendContribution(identity, content))
 
     def add_vcs_ignore(self, path: str) -> None:
         """Appends a file or directory pattern to the VCS ignore list (.gitignore)."""
@@ -222,7 +313,14 @@ class FilesystemManifest:
         return {
             "directories": sorted(self.directories),
             "file_injections": dict(self.file_injections),
-            "file_appends": {k: list(v) for k, v in self.file_appends.items()},
+            "structured": {
+                k: [c.to_dict() for c in self.structured[k]]
+                for k in sorted(self.structured)
+            },
+            "regions": {
+                k: [c.to_dict() for c in self.regions[k]] for k in sorted(self.regions)
+            },
+            "file_policy": ContributionPolicy.SEED_ONLY.value,
             "vcs_ignores": sorted(self.vcs_ignores),
             "workspace_hides": sorted(self.workspace_hides),
         }
@@ -409,6 +507,7 @@ class EnvironmentManifest:
     subsequently reads this object to execute the unified system changes.
     """
 
+    template_reference: TemplateReference | None = None
     dependencies: DependencyManifest = field(default_factory=DependencyManifest)
     filesystem: FilesystemManifest = field(default_factory=FilesystemManifest)
     tooling: ToolingManifest = field(default_factory=ToolingManifest)
@@ -443,9 +542,14 @@ class EnvironmentManifest:
             rendered = render_template(filepath, ctx, escape_toml=False)
             targets.add(Path(rendered))
 
-        for filepath in self.filesystem.file_appends:
+        for filepath in (
+            self.filesystem.structured.keys() | self.filesystem.regions.keys()
+        ):
             rendered = render_template(filepath, ctx, escape_toml=False)
             targets.add(Path(rendered))
+
+        if self.dependencies.includes:
+            targets.add(Path("pyproject.toml"))
 
         if self.tooling.wants_hooks:
             targets.add(Path(".pre-commit-config.yaml"))
@@ -483,6 +587,9 @@ class EnvironmentManifest:
             A JSON-serializable dictionary representation of the full manifest.
         """
         return {
+            "template_reference": self.template_reference.to_dict()
+            if self.template_reference
+            else None,
             "collision_strategy": self.collision_strategy.value,
             "force_merge": self.force_merge,
             "force_replace": self.force_replace,

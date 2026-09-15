@@ -23,7 +23,7 @@ def test_manifest_initialization(manifest):
     assert isinstance(manifest.tasks.system_tasks, list)
     assert isinstance(manifest.filesystem.directories, set)
     assert isinstance(manifest.filesystem.file_injections, dict)
-    assert isinstance(manifest.filesystem.file_appends, dict)
+    assert isinstance(manifest.filesystem.structured, dict)
     assert manifest.tooling.hook_runner == HookRunner.NONE
     assert manifest.tooling.wants_hooks is False
     assert isinstance(manifest.tooling.pre_commit_hooks, list)
@@ -185,12 +185,16 @@ def test_add_file_injection_raises_on_conflict(manifest):
 
 def test_add_file_append(manifest):
     """Test that file appends queue successfully to the target path list."""
-    manifest.filesystem.add_file_append("pyproject.toml", "[tool.ruff]")
-    manifest.filesystem.add_file_append("pyproject.toml", "[tool.mypy]")
+    manifest.filesystem.add_structured(
+        "pyproject.toml", "[tool.ruff]", producer="module:test_manifest"
+    )
+    manifest.filesystem.add_structured(
+        "pyproject.toml", "[tool.mypy]", producer="module:test_manifest"
+    )
 
-    assert len(manifest.filesystem.file_appends) == 1
-    assert len(manifest.filesystem.file_appends["pyproject.toml"]) == 2
-    assert manifest.filesystem.file_appends["pyproject.toml"] == [
+    assert len(manifest.filesystem.structured) == 1
+    assert len(manifest.filesystem.structured["pyproject.toml"]) == 2
+    assert [c.content for c in manifest.filesystem.structured["pyproject.toml"]] == [
         "[tool.ruff]",
         "[tool.mypy]",
     ]
@@ -294,7 +298,9 @@ def test_manifest_target_files_comprehensive():
     manifest.metadata.update(cast(ProjectMetadata, {"package_name": "my_pkg"}))
 
     manifest.filesystem.add_file_injection("src/<% PACKAGE_NAME %>/main.py", "content")
-    manifest.filesystem.add_file_append("pyproject.toml", "[tool.foo]\nbar = 1")
+    manifest.filesystem.add_structured(
+        "pyproject.toml", "[tool.foo]\nbar = 1", producer="module:test_manifest"
+    )
     manifest.filesystem.add_directory("docs")
     manifest.filesystem.add_vcs_ignore(".DS_Store")
 

@@ -191,7 +191,7 @@ def test_pytest_build(manifest):
     assert "pytest-mock" in manifest.dependencies.dev_dependencies
     assert "pytest-cov" not in manifest.dependencies.dev_dependencies
     assert "tests" in manifest.filesystem.directories
-    assert "pyproject.toml" in manifest.filesystem.file_appends
+    assert "pyproject.toml" in manifest.filesystem.structured
 
 
 def test_ruff_module_base_config():
@@ -199,8 +199,8 @@ def test_ruff_module_base_config():
     mod = RuffModule()
     mod.build(manifest)
 
-    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
-    combined = "\n".join(appends)
+    appends = manifest.filesystem.structured.get("pyproject.toml", [])
+    combined = "\n".join(c.content for c in appends)
     assert '"A",' in combined
     assert '"C4",' in combined
     assert '"RUF",' in combined
@@ -226,8 +226,8 @@ def test_mypy_module_base_config():
     mod = MypyModule()
     mod.build(manifest)
 
-    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
-    combined = "\n".join(appends)
+    appends = manifest.filesystem.structured.get("pyproject.toml", [])
+    combined = "\n".join(c.content for c in appends)
     assert "pretty = true" in combined
     assert "check_untyped_defs = true" in combined
     assert "strict = true" not in combined
@@ -404,8 +404,8 @@ def test_commitizen_module_appends_pyproject_config():
     module = CommitizenModule()
     module.build(manifest)
 
-    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
-    assert any("[tool.commitizen]" in block for block in appends)
+    appends = manifest.filesystem.structured.get("pyproject.toml", [])
+    assert any("[tool.commitizen]" in block.content for block in appends)
 
 
 def test_commitizen_module_appends_pyproject_version_provider():
@@ -413,8 +413,8 @@ def test_commitizen_module_appends_pyproject_version_provider():
     module = CommitizenModule()
     module.build(manifest)
 
-    appends = manifest.filesystem.file_appends.get("pyproject.toml", [])
-    combined = "\n".join(appends)
+    appends = manifest.filesystem.structured.get("pyproject.toml", [])
+    combined = "\n".join(c.content for c in appends)
     assert 'version_provider = "pep621"' in combined
     assert 'version_scheme = "semver2"' in combined
     assert 'tag_format = "v$version"' in combined
@@ -517,9 +517,9 @@ def test_zensical_module_build():
     assert "docs" in manifest.filesystem.directories
     assert "docs/index.md" in manifest.filesystem.file_injections
     assert "mkdocs.yml" in manifest.filesystem.file_injections
-    assert "pyproject.toml" in manifest.filesystem.file_appends
-    wiring = manifest.filesystem.file_appends["pyproject.toml"]
-    assert any("docs = []" in w and '{ include-group = "docs" }' in w for w in wiring)
+    assert [e.to_dict() for e in manifest.dependencies.includes] == [
+        {"group": "dev", "include": "docs"}
+    ]
 
 
 def test_readthedocs_module_properties():
@@ -567,7 +567,7 @@ def test_python_core_declarative_license_injection(mocker):
     module.build(manifest)
 
     pyproject_appends = "".join(
-        manifest.filesystem.file_appends.get("pyproject.toml", [])
+        c.content for c in manifest.filesystem.structured.get("pyproject.toml", [])
     )
     assert 'license = { file = "LICENSE" }' in pyproject_appends
     assert "License :: OSI Approved :: MIT License" in pyproject_appends

@@ -1,6 +1,7 @@
 import datetime
 import logging
 import tomllib
+from functools import partial
 from pathlib import Path
 
 from .appends import append_marker_blocks
@@ -12,6 +13,12 @@ from .errors import (
 )
 from .fs_transaction import TransactionAwareFS
 from .ide import check_ide_extensions, write_ide_settings
+from .intent import (
+    AppendContribution,
+    ContributionPolicy,
+    ResolverFootprint,
+    validate_target,
+)
 from .interpolation import render_template
 from .journal import MutationJournal
 from .manifest import (
@@ -25,7 +32,7 @@ from .manifest import (
 from .registry import HookRegistry
 from .security import enforce_binary_safelist, enforce_path_jail
 from .system import ProcessRunner, shield_sigint
-from .toml_ast import merge_toml_payloads
+from .toml_ast import apply_dependency_includes, merge_toml_payloads
 from .workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
@@ -42,6 +49,7 @@ from .workspace import (
     resolve_package_name,
     resolve_project_name,
     resolve_python_version,
+    validate_resolver_workspace,
 )
 
 logger = logging.getLogger("protostar")
@@ -123,6 +131,7 @@ class SystemExecutor:
             self._write_release_workflow()
             self._write_justfile()
             self._run_tasks(self.manifest.tasks.system_tasks)
+            self._apply_dependency_includes()
             self._install_dependencies()
             self._append_files()
             self._write_ignores()
@@ -169,12 +178,34 @@ class SystemExecutor:
         Raises:
             ConfigurationError: If an existing target TOML file contains syntax errors.
         """
+        for path in (
+            self.manifest.filesystem.file_injections.keys()
+            | self.manifest.filesystem.structured.keys()
+            | self.manifest.filesystem.regions.keys()
+            | self.manifest.filesystem.directories
+        ):
+            validate_target(render_template(path, self.interpolation_context))
+        deps = self.manifest.dependencies
+        if (
+            deps.dependencies
+            or deps.dev_dependencies
+            or deps.docs_dependencies
+            or deps.includes
+            or any(
+                c.resolver_footprint
+                for cs in self.manifest.filesystem.structured.values()
+                for c in cs
+            )
+        ):
+            validate_resolver_workspace(self.journal.workspace_root)
         toml_targets = {
-            *self.manifest.filesystem.file_appends.keys(),
+            *self.manifest.filesystem.structured.keys(),
             *self.manifest.filesystem.file_injections.keys(),
         }
+        if deps.includes:
+            toml_targets.add("pyproject.toml")
         for filepath in sorted(toml_targets):
-            target = Path(filepath)
+            target = Path(render_template(filepath, self.interpolation_context))
             if target.suffix == ".toml" and target.exists():
                 try:
                     with target.open("rb") as f:
@@ -375,70 +406,117 @@ class SystemExecutor:
     # Rationale:
     def _append_files(self) -> None:
         """Appends late-binding configuration payloads to their target files."""
-        if not self.manifest.filesystem.file_appends:
-            return
-
         is_overwrite = self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
-
-        for filepath, contents in self.manifest.filesystem.file_appends.items():
-            target = Path(filepath)
+        for filepath, contributions in self.manifest.filesystem.structured.items():
+            target = Path(render_template(filepath, self.interpolation_context))
+            validate_target(target.as_posix())
             enforce_path_jail(target, Path.cwd())
-
             try:
-                if target.exists():
-                    original_content = target.read_text(encoding="utf-8")
-                else:
-                    original_content = ""
+                original = target.read_text(encoding="utf-8") if target.exists() else ""
+            except OSError as e:
+                raise FileSystemError(
+                    "read structured configuration", str(target), e
+                ) from e
+            payloads = [
+                render_template(c.content, self.interpolation_context)
+                for c in contributions
+                if c.policy != ContributionPolicy.SEED_ONLY
+                or is_overwrite
+                or not self.journal.was_present(target)
+            ]
+            if not payloads:
+                continue
+            new_content = merge_toml_payloads(
+                original,
+                payloads,
+                is_pyproject=target.name == "pyproject.toml",
+                overwrite=is_overwrite,
+                on_conflict=lambda msg, sev: self.add_diagnostic(
+                    DiagnosticPhase.EXECUTOR, msg, sev
+                ),
+            )
+            if new_content.strip() != original.strip():
+                try:
+                    self.fs.write_text(target, new_content)
+                except OSError as e:
+                    raise FileSystemError(
+                        "mutate configuration AST", str(target), e
+                    ) from e
+                if any(c.resolver_footprint for c in contributions) and tomllib.loads(
+                    original
+                ).get("project", {}).get("requires-python") != tomllib.loads(
+                    new_content
+                ).get("project", {}).get("requires-python"):
+                    self._run_lock(self.manifest.dependencies.resolver_footprint)
+        for filepath, regions in self.manifest.filesystem.regions.items():
+            target = Path(render_template(filepath, self.interpolation_context))
+            validate_target(target.as_posix())
+            enforce_path_jail(target, Path.cwd())
+            try:
+                original = target.read_text(encoding="utf-8") if target.exists() else ""
             except OSError as e:
                 raise FileSystemError(
                     "read target append context", str(target), e
                 ) from e
-
-            interpolated_payloads = [
-                render_template(p, self.interpolation_context) for p in contents
+            region_payloads = [
+                AppendContribution(
+                    c.id, render_template(c.content, self.interpolation_context)
+                )
+                for c in regions
             ]
-
-            if target.suffix == ".toml":
+            result = append_marker_blocks(
+                original,
+                region_payloads,
+                target,
+                overwrite=is_overwrite,
+                on_conflict=partial(self._warn_region_conflict, target),
+            )
+            if result is not None:
                 try:
-                    new_content = merge_toml_payloads(
-                        original_content=original_content,
-                        payloads=interpolated_payloads,
-                        is_pyproject=(target.name == "pyproject.toml"),
-                        overwrite=is_overwrite,
-                        on_conflict=lambda msg, sev: self.add_diagnostic(
-                            phase=DiagnosticPhase.EXECUTOR,
-                            message=msg,
-                            severity=sev,
-                        ),
-                    )
-                except Exception as e:
-                    raise ConfigurationError(
-                        f"Failed to parse injected TOML payload for {filepath}.\nDetails: {e}"
+                    self.fs.write_text(target, result)
+                except OSError as e:
+                    raise FileSystemError(
+                        "append configurations block", str(target), e
                     ) from e
 
-                if new_content.strip() != original_content.strip():
-                    try:
-                        self.fs.write_text(target, new_content)
-                    except OSError as e:
-                        raise FileSystemError(
-                            "mutate configuration AST", str(target), e
-                        ) from e
-                    logger.debug(f"Updated configuration AST in {filepath}")
-            else:
-                appended_content = append_marker_blocks(
-                    original_content=original_content,
-                    payloads=interpolated_payloads,
-                    filepath=target,
-                    overwrite=is_overwrite,
-                )
-                if appended_content is not None:
-                    try:
-                        self.fs.write_text(target, appended_content)
-                    except OSError as e:
-                        raise FileSystemError(
-                            "append configurations block", str(target), e
-                        ) from e
-                    logger.debug(f"Updated configuration string block in {filepath}")
+    def _warn_region_conflict(self, target: Path, identity: str) -> None:
+        """Reports a preserved existing region until checksum ownership is available."""
+        self.add_diagnostic(
+            DiagnosticPhase.EXECUTOR,
+            f"Preserving existing append region in {target}: {identity}.",
+            Severity.WARNING,
+            "Checksum ownership is not available yet; explicit overwrite is required for region updates.",
+        )
+
+    def _apply_dependency_includes(self) -> None:
+        """Applies typed include edges before uv add observes dependency metadata."""
+        if not self.manifest.dependencies.includes:
+            return
+        target = Path("pyproject.toml")
+        enforce_path_jail(target, Path.cwd())
+        try:
+            original = target.read_text(encoding="utf-8") if target.exists() else ""
+            updated = apply_dependency_includes(
+                original, self.manifest.dependencies.includes
+            )
+            if updated != original:
+                self.fs.write_text(target, updated)
+        except OSError as e:
+            raise FileSystemError("apply dependency includes", str(target), e) from e
+        if updated != original:
+            deps = self.manifest.dependencies
+            if not (
+                deps.dependencies or deps.dev_dependencies or deps.docs_dependencies
+            ):
+                self._run_lock(deps.resolver_footprint)
+
+    def _run_lock(self, footprint: ResolverFootprint) -> None:
+        """Journals declared resolver files before a conditional lock-only action."""
+        validate_resolver_workspace(self.journal.workspace_root)
+        for path in footprint.paths:
+            enforce_path_jail(Path(path), Path.cwd())
+            self.journal.record_mutation(Path(path))
+        self.process_runner.run(["uv", "lock"], timeout=600)
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
@@ -512,8 +590,8 @@ class SystemExecutor:
 
         context = self.interpolation_context
         is_script_or_typer = "typer" in self.manifest.dependencies.dependencies or any(
-            "project.scripts" in app
-            for app in self.manifest.filesystem.file_appends.get("pyproject.toml", [])
+            "project.scripts" in app.content
+            for app in self.manifest.filesystem.structured.get("pyproject.toml", [])
         )
         docker_port = (
             str(self.manifest.metadata.get("docker_port"))
@@ -574,7 +652,8 @@ class SystemExecutor:
             or dependencies.dev_dependencies
             or dependencies.docs_dependencies
         ):
-            for path in (Path("pyproject.toml"), Path("uv.lock")):
+            for declared_path in dependencies.resolver_footprint.paths:
+                path = Path(declared_path)
                 enforce_path_jail(path, Path.cwd())
                 self.journal.record_mutation(path)
         install_dependencies(
