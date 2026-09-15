@@ -1,6 +1,6 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: PR-A complete; PR-B is next.
+Status: PR-A and PR-B complete; PR-C is next.
 Updated: 2026-09-15.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
@@ -40,14 +40,14 @@ Protostar is pre-1.0 with no external users. Break APIs and template schemas cle
 
 ### Implementation status
 
-This checklist records which milestones have landed on `main`. It is limited to
-the implementation covered by this plan; a completed milestone does not imply
-that later reconciliation behavior is available.
+This checklist records implementation progress, including the completed PR-B
+implementation submitted for review. It is limited to this plan; a completed
+milestone does not imply that later reconciliation behavior is available.
 
 | Milestone | Status | Landed scope | Verification |
 | --- | --- | --- | --- |
 | PR-A: Typed intent, identity, and schema boundaries | **Complete** | Template provenance through CLI/wizard request and manifest serialization; typed structured TOML contributions; stable named append regions; seed-only personal metadata; typed dependency-group includes and resolver footprints; reserved-path and unsafe-injection validation; built-in templates, schema, fixtures, and documentation updated. | Merged implementation commit `be0be97`; targeted tests and commit/pre-push hooks passed. |
-| PR-B: State codec and pure reconciliation kernel | Planned | — | — |
+| PR-B: State codec and pure reconciliation kernel | **Complete** | Deterministic schema-v1 codec and frozen candidate state; owned TOML document snapshots; generated/seed/region/dependency/hook-pin records; identity/path/schema validation; pure three-way decisions, explicit set-like policy, deletion protection, and composite baselines. Executor integration remains PR-C; YAML snapshots require PR-D’s adapter. | `uv run pytest tests/test_merge.py tests/test_sync_state.py tests/test_intent.py tests/test_toml_ast.py`: 201 passed; separate read-only milestone review and regression fixes. |
 | PR-C: Transactional state integration and TOML reconciliation | Planned | — | — |
 | PR-D through PR-H | Planned | — | — |
 
@@ -303,7 +303,7 @@ Goal: declare what can be managed without introducing side effects.
 
 Gate: **Complete.** Targeted config/schema/manifest/orchestrator/CLI/wizard tests prove stable identities, deterministic serialization, reserved-path checks, clear errors, and zero planning mutations/subprocesses. Built-in templates and the exported schema use the new typed declarations; newly supported declarations are applied or rejected explicitly. Merged implementation commit `be0be97` contains the implementation and verification updates.
 
-### PR-B: State codec and pure reconciliation kernel
+### PR-B: State codec and pure reconciliation kernel — **Complete**
 
 Depends on PR-A.
 
@@ -312,7 +312,7 @@ Depends on PR-A.
 - Add pure tests for every truth-table branch, unknown/atomic sequences, foreign ownership, and partial conflicts.
 - Do not wire an unsafe two-way adapter as a temporary executor implementation.
 
-Gate: state round trips supported baseline values, rejects corrupt/unsupported/escaping records, has no timestamps, and remains byte-stable. Kernel is filesystem/subprocess/UI-free and does not mutate its desired/base inputs.
+Gate: **Complete.** State round trips supported TOML baseline values, rejects corrupt/unsupported/escaping records, has no timestamps, and remains byte-stable. Kernel is filesystem/subprocess/UI-free and does not mutate its desired/base inputs. Set-like identity validation runs before no-op shortcuts, including through unchanged ancestor mappings. Persisted dependencies validate PEP 508 syntax and stored name/marker identity using direct `packaging`; resolver acceptance remains downstream. See [PR-B contracts](docs/development/semantic-reconciliation.md) for the PR-C handoff.
 
 ### PR-C: Transactional state integration and TOML reconciliation
 

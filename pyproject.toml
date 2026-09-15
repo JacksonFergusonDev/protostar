@@ -7,6 +7,7 @@ authors = [{ name = "Jackson Ferguson", email = "jackson.ferguson0@gmail.com" }]
 requires-python = ">=3.12"
 dependencies = [
     "argcomplete>=3.6.3",
+    "packaging>=26.3",
     "questionary>=2.1.1",
     "rich>=14.2.0",
     "rich-argparse>=1.7.2",
