@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from protostar.appends import append_marker_blocks, get_comment_markers
+from protostar.intent import AppendContribution
 
 
 def test_get_comment_markers_hash_family():
@@ -42,28 +43,28 @@ def test_get_comment_markers_fallback():
 
 def test_append_marker_blocks_fresh():
     orig = ""
-    payloads = ["export FOO=bar"]
+    payloads = [AppendContribution("template:environment", "export FOO=bar")]
     result = append_marker_blocks(orig, payloads, Path(".envrc"))
 
     assert result is not None
-    assert "# --- Protostar Injection:" in result
+    assert "# --- Protostar Region:" in result
     assert "export FOO=bar" in result
-    assert "# --- End Protostar Injection ---" in result
+    assert "# --- End Protostar Region: template:environment ---" in result
     assert result.endswith("\n")
 
 
 def test_append_marker_blocks_existing_file():
     orig = "export EXISTING=1\n"
-    payloads = ["export FOO=bar"]
+    payloads = [AppendContribution("template:environment", "export FOO=bar")]
     result = append_marker_blocks(orig, payloads, Path(".envrc"))
 
     assert result is not None
-    assert result.startswith("export EXISTING=1\n\n# --- Protostar Injection:")
+    assert result.startswith("export EXISTING=1\n\n# --- Protostar Region:")
     assert "export FOO=bar" in result
 
 
 def test_append_marker_blocks_deduplication():
-    payloads = ["export FOO=bar"]
+    payloads = [AppendContribution("template:environment", "export FOO=bar")]
     first_pass = append_marker_blocks("", payloads, Path(".envrc"))
     assert first_pass is not None
 
@@ -75,7 +76,7 @@ def test_append_marker_blocks_deduplication():
 
 
 def test_append_marker_blocks_overwrite():
-    payloads = ["export FOO=bar"]
+    payloads = [AppendContribution("template:environment", "export FOO=bar")]
     first_pass = append_marker_blocks("", payloads, Path(".envrc"))
     assert first_pass is not None
 
@@ -83,14 +84,13 @@ def test_append_marker_blocks_overwrite():
     second_pass = append_marker_blocks(
         first_pass, payloads, Path(".envrc"), overwrite=True
     )
-    assert second_pass is not None
-    assert second_pass.count("export FOO=bar") == 2
+    assert second_pass is None
 
 
 def test_append_marker_blocks_html_comment_syntax():
-    payloads = ["<div>Injected Block</div>"]
+    payloads = [AppendContribution("template:html", "<div>Injected Block</div>")]
     result = append_marker_blocks("", payloads, Path("index.html"))
 
     assert result is not None
-    assert "<!-- --- Protostar Injection:" in result
-    assert "--- End Protostar Injection --- -->" in result
+    assert "<!-- --- Protostar Region:" in result
+    assert "--- End Protostar Region: template:html --- -->" in result

@@ -40,13 +40,15 @@ During the `build()` phase, modules route their state declarations through these
     * `dependencies`: Core application or scientific libraries (`manifest.dependencies.add()`).
     * `dev_dependencies`: Tooling, linters, and testing frameworks (`manifest.dependencies.add_dev()`).
     * `docs_dependencies`: Documentation toolchains and themes (`manifest.dependencies.add_docs()`).
+    * `includes`: Typed dev/docs group include edges (`manifest.dependencies.add_include()`). Resolver-owned files are declared by `resolver_footprint`.
 
 === "Filesystem Operations (`manifest.filesystem`)"
-    Managed by `FilesystemManifest`. Manages physical directory scaffolding, file injections, AST appends, and ignore configurations.
+    Managed by `FilesystemManifest`. Manages physical directory scaffolding, seed-only file injections, structured contributions, named regions, and ignore configurations.
 
     * `directories`: A mathematical set of directories to be scaffolded via `mkdir -p` (`manifest.filesystem.add_directory()`).
     * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping configuration files like `renovate.json` or `mkdocs.yml` via `manifest.filesystem.add_file_injection()`).
-    * `file_appends`: A mapping of file paths to lists of configuration blocks used primarily for late-binding AST deep-merges into files like `pyproject.toml` (`manifest.filesystem.add_file_append()`).
+    * `structured`: Path-keyed typed TOML contributions with a stable producer, content, and managed or seed-only policy (`manifest.filesystem.add_structured()`). Dependency-affecting metadata declares a resolver footprint.
+    * `regions`: Path-keyed non-TOML append contributions with stable IDs and content (`manifest.filesystem.add_region()`). IDs remain unchanged across payload revisions.
     * `vcs_ignores`: Deduplicated patterns for `.gitignore` and `.dockerignore` (`manifest.filesystem.add_vcs_ignore()`).
     * `workspace_hides`: Patterns hidden from IDE workspace file explorers (`manifest.filesystem.add_workspace_hide()`).
 
@@ -92,6 +94,8 @@ Below is an example JSON representation of an aggregate state during a dry-run o
     Notice how lists are utilized for task ordering (which must be executed sequentially), while sets are utilized internally for structural artifacts (like ignores and directories) to prevent redundant I/O requests.
 
 ## Collision Strategies
+
+Template references retain source identity and raw-template SHA-256 through request and manifest serialization. Tooling-only runs carry no template reference. Template secrets and trust authorization are excluded.
 
 When the Orchestrator detects that files in the target workspace collide with the manifest's planned targets (`manifest.target_files()`, e.g., an existing `pyproject.toml` or blueprint template file), it alters the manifest's `collision_strategy` attribute based on your input or `--force-merge` / `--force-replace` flags.
 

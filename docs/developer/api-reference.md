@@ -31,11 +31,13 @@ classDiagram
     class FilesystemManifest {
         +set[str] directories
         +dict[str, str] file_injections
-        +dict[str, list[str]] file_appends
+        +dict structured
+        +dict regions
         +set[str] vcs_ignores
         +add_directory(path: str)
         +add_file_injection(path: str, content: str)
-        +add_file_append(path: str, content: str)
+        +add_structured(path: str, content: str, producer: str)
+        +add_region(path: str, content: str, identity: str)
     }
 
     class TaskManifest {

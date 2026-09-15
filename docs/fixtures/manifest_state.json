@@ -1,4 +1,12 @@
 {
+    "template_reference": {
+        "origin": "built-in",
+        "locator": "astro",
+        "digest": "560668b6d2e28e431d4c330788d1e86986f8a9229b9372c5df2dbdd6c39e94fc",
+        "display_name": null,
+        "version": null,
+        "source_revision": null
+    },
     "dependencies": {
         "dependencies": [
             "numpy",
@@ -14,7 +22,14 @@
         "dev_dependencies": [
             "ruff"
         ],
-        "docs_dependencies": []
+        "docs_dependencies": [],
+        "includes": [],
+        "resolver_footprint": {
+            "paths": [
+                "pyproject.toml",
+                "uv.lock"
+            ]
+        }
     },
     "filesystem": {
         "directories": [
@@ -26,13 +41,29 @@
         "file_injections": {
             ".gitattributes": "# Astrophysics binary safety\n*.fits binary\n*.fit  binary\n*.fts  binary\n\n# Improve Jupyter Notebook diffs\n*.ipynb text eol=lf\n"
         },
-        "file_appends": {
+        "structured": {
             "pyproject.toml": [
-                "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\nauthors = [{ name = \"your-name\", email = \"your-email\" }]\n",
-                "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
-                "[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\n"
+                {
+                    "producer": "module:PythonCore",
+                    "content": "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\nauthors = [{ name = \"your-name\", email = \"your-email\" }]\n",
+                    "policy": "seed-only",
+                    "resolver_footprint": null
+                },
+                {
+                    "producer": "module:RuffModule",
+                    "content": "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
+                    "policy": "managed",
+                    "resolver_footprint": null
+                },
+                {
+                    "producer": "template:e7602f867c2c0e0437b62e809cb4c64a65838a6c865742a1a164fe7c6c420335:data_science_linting",
+                    "content": "[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\n",
+                    "policy": "managed",
+                    "resolver_footprint": null
+                }
             ]
         },
+        "regions": {},
         "vcs_ignores": [
             "*.csv",
             "*.fit",

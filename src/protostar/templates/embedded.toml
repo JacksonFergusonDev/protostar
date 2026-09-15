@@ -42,8 +42,8 @@ if __name__ == "__main__":
 '''
 
 # --- Append dynamic recipes to the bottom of the justfile ---
-[appends]
-"justfile" = '''
+[appends."justfile".microcontroller_recipes]
+content = '''
 port := "/dev/ttyACM0" # Default Linux port, update for macOS (/dev/tty.usbmodem*) or Windows (COM*)
 
 # Copy the board directory to the microcontroller

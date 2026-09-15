@@ -138,7 +138,7 @@ def test_plan_injects_blueprint_fields(mocker, mock_config):
 def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
     """plan() injects pyproject.toml payloads from blueprint.pyproject_injections."""
     blueprint = TemplateBlueprint(dev_dependencies=["test-global-dep"])
-    blueprint.pyproject_injections = {"custom_key": "custom_payload"}
+    blueprint.pyproject_injections = {"custom_key": "[tool.custom]\nvalue = true"}
 
     engine = Orchestrator(
         [], mock_config, request=InitRequest(template_blueprint=blueprint)
@@ -148,8 +148,9 @@ def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
     manifest = engine.plan()
 
     assert "test-global-dep" in manifest.dependencies.dev_dependencies
-    assert "custom_payload" in manifest.filesystem.file_appends.get(
-        "pyproject.toml", []
+    assert any(
+        "[tool.custom]" in c.content
+        for c in manifest.filesystem.structured["pyproject.toml"]
     )
 
 

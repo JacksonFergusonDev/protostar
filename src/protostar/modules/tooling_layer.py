@@ -5,6 +5,7 @@ import shutil
 from typing import TYPE_CHECKING
 
 from protostar.errors import MissingDependencyError
+from protostar.intent import DependencyGroup
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag, HookRunner
@@ -256,7 +257,9 @@ style = "one"
     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:RumdlModule"
+        )
 
 
 class RuffModule(BootstrapModule):
@@ -328,7 +331,9 @@ ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:RuffModule"
+        )
 
 
 class MypyModule(BootstrapModule):
@@ -378,7 +383,9 @@ warn_unused_configs = true
 check_untyped_defs = true
 explicit_package_bases = true
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:MypyModule"
+        )
 
 
 class TyModule(BootstrapModule):
@@ -414,7 +421,9 @@ missing-type-argument = "error"
 redundant-cast = "warn"
 unused-ignore-comment = "warn"
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:TyModule"
+        )
 
 
 class PytestModule(BootstrapModule):
@@ -454,7 +463,9 @@ pythonpath = [
     ".",
 ]
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:PytestModule"
+        )
 
 
 class PreCommitModule(BootstrapModule):
@@ -595,7 +606,9 @@ tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:CommitizenModule"
+        )
 
 
 class PyreflyModule(BootstrapModule):
@@ -632,7 +645,9 @@ class PyreflyModule(BootstrapModule):
 # "strict" enables the full suite of type error diagnostics
 type-checking-mode = "strict"
 """
-        manifest.filesystem.add_file_append("pyproject.toml", config)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer="module:PyreflyModule"
+        )
 
 
 class RenovateModule(BootstrapModule):
@@ -794,13 +809,7 @@ class ZensicalModule(BootstrapModule):
         manifest.filesystem.add_environment_artifact("site/")
         manifest.filesystem.add_directory("docs")
 
-        pyproject_wiring = """[dependency-groups]
-docs = []
-dev = [
-    { include-group = "docs" },
-]
-"""
-        manifest.filesystem.add_file_append("pyproject.toml", pyproject_wiring)
+        manifest.dependencies.add_include(DependencyGroup.DEV, DependencyGroup.DOCS)
 
         index_content = """# Welcome to <% PROJECT_NAME %>
 

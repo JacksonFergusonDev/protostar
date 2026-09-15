@@ -692,7 +692,7 @@ def generate_manifest_state() -> None:
     # Load and apply the built-in astro template
     target = importlib.resources.files("protostar.templates").joinpath("astro.toml")
     if target.is_file():
-        blueprint = TemplateBlueprint.load(str(target))
+        blueprint = TemplateBlueprint.load(str(target), built_in="astro")
         for dep in blueprint.dependencies:
             manifest.dependencies.add(dep)
         for dep in blueprint.dev_dependencies:
@@ -709,8 +709,13 @@ def generate_manifest_state() -> None:
             manifest.tasks.add_post_install_task(cmd)
         for filepath, content in blueprint.files.items():
             manifest.filesystem.add_file_injection(filepath, content)
-        for payload in blueprint.pyproject_injections.values():
-            manifest.filesystem.add_file_append("pyproject.toml", payload)
+        manifest.template_reference = blueprint.reference
+        for identity, payload in blueprint.pyproject_injections.items():
+            manifest.filesystem.add_structured(
+                "pyproject.toml",
+                payload,
+                producer=f"template:{blueprint.reference.identity if blueprint.reference else 'unresolved'}:{identity}",
+            )
 
     # Override machine-specific IDE paths to guarantee stable JSON diffs in CI
     manifest.ide_settings = {
@@ -1172,7 +1177,7 @@ def generate_cli_dry_run_svg() -> None:
                 target = importlib.resources.files("protostar.templates").joinpath(
                     "cli.toml"
                 )
-                blueprint = TemplateBlueprint.load(str(target))
+                blueprint = TemplateBlueprint.load(str(target), built_in="cli")
                 user_config = UserConfig()
                 modules: list[BootstrapModule] = [
                     SystemWorkspaceModule(),

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .config import TemplateBlueprint
+from .intent import TemplateReference
 from .manifest import DiagnosticEvent, SystemTask
 
 __all__ = ["ExecutionResult", "InitRequest", "RollbackContext"]
@@ -50,6 +51,7 @@ class InitRequest:
     """
 
     template_blueprint: TemplateBlueprint | None = None
+    template_reference: TemplateReference | None = None
     python_version: str | None = None
     docker: bool = False
     force_merge: bool = False
@@ -58,6 +60,19 @@ class InitRequest:
     is_external: bool = False
     is_user_aliased: bool = False
     is_trusted: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serializes caller intent without trust or secret metadata."""
+        reference = self.template_reference or (
+            self.template_blueprint.reference if self.template_blueprint else None
+        )
+        return {
+            "template_reference": reference.to_dict() if reference else None,
+            "python_version": self.python_version,
+            "docker": self.docker,
+            "force_merge": self.force_merge,
+            "force_replace": self.force_replace,
+        }
 
 
 @dataclass(frozen=True)

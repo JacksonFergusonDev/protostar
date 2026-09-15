@@ -540,7 +540,7 @@ def test_user_config_caching_and_cache_clear(mocker) -> None:
         ('appends = { "pyproject.toml" = 123 }', "for '[appends].pyproject.toml'"),
         (
             'appends = { "pyproject.toml" = [123] }',
-            "for '[appends].pyproject.toml' elements",
+            "for '[appends].pyproject.toml'",
         ),
     ],
 )

@@ -1,6 +1,7 @@
 """Configuration management and schema definitions for Protostar."""
 
 import functools
+import hashlib
 import logging
 import os
 import tempfile
@@ -14,8 +15,18 @@ from typing import Any
 
 from .errors import ConfigurationError, TemplateResolutionError
 from .ide import IDEType
+from .intent import (
+    AppendContribution,
+    DependencyGroup,
+    DependencyInclude,
+    TemplateOrigin,
+    TemplateReference,
+    validate_configuration,
+    validate_region_id,
+    validate_target,
+)
 from .interpolation import extract_variables, render_template
-from .network import resolve_remote_template
+from .network import resolve_remote_source, resolve_remote_template
 
 logger = logging.getLogger("protostar")
 
@@ -354,6 +365,19 @@ def clear_user_config_cache() -> None:
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
 
+    reference: TemplateReference | None = field(default=None, repr=False)
+    version: str = field(
+        default="",
+        metadata={"description": "Informational template version.", "example": "1.0.0"},
+    )
+    dependency_includes: list[DependencyInclude] = field(
+        default_factory=list,
+        metadata={
+            "description": "Typed dependency-group include edges.",
+            "example": [{"group": "dev", "include": "docs"}],
+        },
+    )
+
     name: str = field(
         default="",
         metadata={
@@ -430,20 +454,18 @@ class TemplateBlueprint:
     pyproject_injections: dict[str, str] = field(
         default_factory=dict,
         metadata={
-            "description": "Arbitrary tables deep-merged into target pyproject.toml.",
+            "description": "Managed TOML configuration; personal metadata is seed-only and dependency tables are forbidden.",
             "example": {
                 "custom_linting": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]'
             },
         },
     )
-    appends: dict[str, list[str]] = field(
+    appends: dict[str, dict[str, AppendContribution]] = field(
         default_factory=dict,
         metadata={
-            "description": "Lines appended to existing files, creating them if necessary.",
+            "description": "Named non-TOML regions with stable IDs and content.",
             "example": {
-                "pyproject.toml": [
-                    "# Custom comment appended to bottom of pyproject.toml"
-                ]
+                ".envrc": {"project_environment": {"content": "export PROJECT=example"}}
             },
         },
     )
@@ -461,17 +483,24 @@ class TemplateBlueprint:
         target: str,
         template_context: dict[str, str] | None = None,
         variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
+        *,
+        built_in: str | None = None,
+        display_name: str | None = None,
     ) -> "TemplateBlueprint":
         """Loads and parses a template blueprint."""
         temp_dir: tempfile.TemporaryDirectory[str] | None = None
+        remote_source = None
 
         try:
             if target.startswith("http://") or target.startswith("https://"):
+                remote_source = resolve_remote_source(target)
                 temp_dir = tempfile.TemporaryDirectory()
                 temp_workspace = Path(temp_dir.name)
-                target_path = resolve_remote_template(target, temp_workspace)
+                target_path = resolve_remote_template(
+                    remote_source.locator, temp_workspace
+                )
             else:
-                target_path = Path(target)
+                target_path = Path(target).expanduser()
                 if not target_path.exists():
                     raise TemplateResolutionError(
                         target, f"Configuration file not found: {target_path}"
@@ -488,7 +517,8 @@ class TemplateBlueprint:
                     )
                 base_dir = target_path
 
-            toml_content = toml_path.read_text(encoding="utf-8")
+            template_bytes = toml_path.read_bytes()
+            toml_content = template_bytes.decode("utf-8")
 
             raw_files: dict[str, str] = {}
             template_dir = base_dir / "template"
@@ -541,6 +571,25 @@ class TemplateBlueprint:
                 interpolated_files[new_path] = new_content
 
             blueprint.files.update(interpolated_files)
+            origin = (
+                TemplateOrigin.BUILT_IN
+                if built_in
+                else (TemplateOrigin.REMOTE if temp_dir else TemplateOrigin.LOCAL)
+            )
+            locator = built_in or (
+                remote_source.locator
+                if remote_source
+                else toml_path.expanduser().resolve().as_posix()
+            )
+            blueprint.reference = TemplateReference(
+                origin,
+                locator,
+                hashlib.sha256(template_bytes).hexdigest(),
+                display_name,
+                blueprint.version or None,
+                remote_source.revision if remote_source else None,
+            )
+            blueprint._validate_declarations()
             return blueprint
         finally:
             if temp_dir is not None:
@@ -687,37 +736,74 @@ class TemplateBlueprint:
                     )
             instance.files = data["files"]
 
-        # Extract generalized file appends
         if "appends" in data:
             appends_data = data["appends"]
             if not isinstance(appends_data, dict):
                 raise ConfigurationError(
-                    f"Type mismatch in configuration source '{source}' for '[appends]'.\n"
-                    f"Expected table, but got {type(appends_data).__name__}.",
-                    hint="Define appends as a table: [appends]",
+                    "Expected a table for '[appends]'.",
+                    hint='Use [appends.".envrc".stable_id] with a content field.',
                 )
-            for k, v in appends_data.items():
-                if isinstance(v, str):
-                    instance.appends.setdefault(k, []).append(v)
-                elif isinstance(v, list):
-                    for item in v:
-                        if not isinstance(item, str):
-                            raise ConfigurationError(
-                                f"Type mismatch in configuration source '{source}' for '[appends].{k}' elements.\n"
-                                f"Expected string, but got {type(item).__name__}.",
-                                hint=f"Ensure all lines in '[appends].{k}' are strings.",
-                            )
-                        instance.appends.setdefault(k, []).append(item)
-                else:
+            for path, records in appends_data.items():
+                if not isinstance(records, dict):
                     raise ConfigurationError(
-                        f"Type mismatch in configuration source '{source}' for '[appends].{k}'.\n"
-                        f"Expected string or array of strings, but got {type(v).__name__}.",
-                        hint=f"Define '[appends].{k}' as a string or array of strings.",
+                        f"Anonymous append schema is unsupported for '[appends].{path}'.",
+                        hint='Use [appends.".envrc".stable_id] with content = "...".',
                     )
+                for identity, record in records.items():
+                    validate_region_id(identity)
+                    if (
+                        not isinstance(record, dict)
+                        or set(record) != {"content"}
+                        or not isinstance(record["content"], str)
+                    ):
+                        raise ConfigurationError(
+                            f"Invalid named append record for '[appends].{path}'.",
+                            hint="Each stable ID must contain exactly one string content field.",
+                        )
+                    instance.appends.setdefault(path, {})[identity] = (
+                        AppendContribution(identity, record["content"])
+                    )
+
+        if "version" in data:
+            if not isinstance(data["version"], str):
+                raise ConfigurationError(
+                    "Template version must be a string.", hint='Use version = "1.0.0".'
+                )
+            instance.version = data["version"]
+        if "dependency_includes" in data:
+            edges = data["dependency_includes"]
+            if not isinstance(edges, list):
+                raise ConfigurationError(
+                    "dependency_includes must be an array of records.",
+                    hint='Use dependency_includes = [{group = "dev", include = "docs"}].',
+                )
+            for edge in edges:
+                if (
+                    not isinstance(edge, dict)
+                    or set(edge) != {"group", "include"}
+                    or not all(isinstance(v, str) for v in edge.values())
+                ):
+                    raise ConfigurationError(
+                        "Invalid dependency include record.",
+                        hint="Declare string group and include fields.",
+                    )
+                try:
+                    group, include = (
+                        DependencyGroup(edge["group"]),
+                        DependencyGroup(edge["include"]),
+                    )
+                except ValueError as e:
+                    raise ConfigurationError(
+                        "Unsupported dependency include group.",
+                        hint="Use dev or docs groups.",
+                    ) from e
+                instance.dependency_includes.append(DependencyInclude(group, include))
 
         # Extract tooling overrides dynamically (root-level boolean flags)
         structural_keys = {
             "name",
+            "version",
+            "dependency_includes",
             "description",
             "dependencies",
             "directories",
@@ -733,4 +819,53 @@ class TemplateBlueprint:
             if key not in structural_keys and isinstance(value, bool):
                 instance.tooling_overrides[key] = value
 
+        instance._validate_declarations()
         return instance
+
+    def _validate_declarations(self) -> None:
+        """Validates schema boundaries even before the manifest is assembled."""
+        from .manifest import DependencyManifest
+
+        deps = DependencyManifest()
+        for edge in self.dependency_includes:
+            deps.add_include(edge.group, edge.include)
+        for path in self.files.keys() | self.appends.keys():
+            validate_target(path)
+
+        def normalize_keys(mapping: dict[str, Any]) -> dict[str, Any]:
+            normalized: dict[str, Any] = {}
+            for path, value in mapping.items():
+                key = Path(path).as_posix()
+                if key in normalized:
+                    raise ConfigurationError(
+                        f"Duplicate normalized target '{key}'.",
+                        hint="Use one relative spelling for each target.",
+                    )
+                normalized[key] = value
+            return normalized
+
+        self.files = normalize_keys(self.files)
+        self.appends = normalize_keys(self.appends)
+        if self.files.keys() & self.appends.keys() or (
+            "pyproject.toml" in self.files and self.pyproject_injections
+        ):
+            raise ConfigurationError(
+                "Ambiguous free-form and managed targets.",
+                hint="Do not combine files with structured or region contributions at the same path.",
+            )
+        for path in self.appends:
+            if path.endswith(".toml"):
+                raise ConfigurationError(
+                    "TOML append regions are unsupported.",
+                    hint="Use dev.pyproject for TOML configuration.",
+                )
+        for content in self.pyproject_injections.values():
+            if not isinstance(content, str):
+                raise ConfigurationError(
+                    "Structured payloads must be TOML strings.",
+                    hint="Use named string payloads in dev.pyproject.",
+                )
+            rendered = render_template(
+                content, dict.fromkeys(extract_variables(content), "placeholder")
+            )
+            validate_configuration(rendered)

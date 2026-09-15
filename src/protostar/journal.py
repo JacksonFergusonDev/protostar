@@ -139,6 +139,11 @@ class MutationJournal:
         """Returns formatted touched paths with trailing slashes for directories."""
         return frozenset(self._touched_display_paths)
 
+    def was_present(self, path: Path) -> bool:
+        """Returns whether a path existed before its first managed mutation."""
+        original = self._journal.get(self.normalize_path(path))
+        return original.kind != NodeKind.ABSENT if original else path.exists()
+
     def record_tree_creation(self, path: Path) -> None:
         """Records a path as a newly created tree to be eradicated on rollback."""
         if self._state is not TransactionState.ACTIVE:

@@ -3,9 +3,11 @@
 import enum
 import re
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.error import URLError
+from urllib.parse import urlsplit
 
 if TYPE_CHECKING:
     from urllib.request import OpenerDirector
@@ -213,6 +215,36 @@ def fetch_template_archive(url: str, dest_dir: Path, timeout: int = 10) -> Path:
     )
 
 
+@dataclass(frozen=True)
+class RemoteTemplateSource:
+    """Canonical download locator and immutable revision when recognizable."""
+
+    locator: str
+    revision: str | None = None
+
+
+def resolve_remote_source(url: str) -> RemoteTemplateSource:
+    """Normalizes supported blob/repository sources without fetching bytes."""
+    parsed = urlsplit(url)
+    if parsed.username is not None or parsed.password is not None or parsed.query:
+        from .errors import ConfigurationError
+
+        raise ConfigurationError(
+            "Template source URLs cannot contain credentials or query parameters.",
+            hint="Select a credential-free canonical HTTPS template URL; provenance must not persist secrets.",
+        )
+    locator = url
+    for pattern, replacement in _BLOB_TRANSLATORS:
+        locator = pattern.sub(replacement, locator)
+    for pattern, replacement in _ARCHIVE_TRANSLATORS:
+        locator = pattern.sub(replacement, locator)
+    revision_match = re.search(
+        r"/([0-9a-f]{40}|[0-9a-f]{64})(?:/|\.tar\.gz|\.zip|$)", locator
+    )
+    revision = revision_match.group(1) if revision_match else None
+    return RemoteTemplateSource(locator, revision)
+
+
 def resolve_remote_template(url: str, temp_workspace: Path, timeout: int = 10) -> Path:
     """Resolves a remote template URL, downloading and extracting it if necessary.
 
@@ -224,16 +256,13 @@ def resolve_remote_template(url: str, temp_workspace: Path, timeout: int = 10) -
     Returns:
         The path to the directory containing the resolved protostar.toml.
     """
-    # Archive translators
-    archive_url = url
-    for pattern, replacement in _ARCHIVE_TRANSLATORS:
-        archive_url = pattern.sub(replacement, archive_url)
+    archive_url = resolve_remote_source(url).locator
 
     if ArchiveFormat.from_path(archive_url) is not None:
         return fetch_template_archive(archive_url, temp_workspace, timeout=timeout)
 
     # Otherwise it's treated as a raw file URL.
-    raw_content = fetch_remote_config(url, timeout=timeout)
+    raw_content = fetch_remote_config(archive_url, timeout=timeout)
     toml_path = temp_workspace / "protostar.toml"
     toml_path.write_text(raw_content, encoding="utf-8")
     return temp_workspace

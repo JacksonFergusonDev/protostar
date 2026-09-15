@@ -2,6 +2,14 @@
 # Protostar Template Specification Schema
 # ==============================================================================
 
+# Informational template version.
+version = "1.0.0"
+
+# Typed dependency-group include edges.
+dependency_includes = [
+    {group = "dev",include = "docs"},
+]
+
 # Human-readable display name of the template.
 name = "FastAPI"
 
@@ -93,7 +101,7 @@ __version__ = "0.1.0"
 '''
 
 # --- pyproject.toml AST Injections ---
-# Arbitrary tables deep-merged into target pyproject.toml.
+# Managed TOML configuration; personal metadata is seed-only and dependency tables are forbidden.
 
 [dev.pyproject]
 custom_linting = '''
@@ -102,7 +110,7 @@ extend-select = ["I", "UP", "B"]
 '''
 
 # --- File Appends ---
-# Lines appended to existing files, creating them if necessary.
+# Named non-TOML regions with stable IDs and content.
 
-[appends]
-"pyproject.toml" = ["# Custom comment appended to bottom of pyproject.toml"]
+[appends.".envrc".project_environment]
+content = "export PROJECT=example"

@@ -89,7 +89,9 @@ class PythonCore(BootstrapModule):
             if self.python_version:
                 cmd.extend(["--python", self.python_version])
             manifest.tasks.add_system_task(
-                cmd, description="Scaffolding uv virtual environment"
+                cmd,
+                description="Scaffolding uv virtual environment",
+                owned_files=["pyproject.toml", ".python-version"],
             )
 
         desc = manifest.metadata.get("description") or "Add your description here."
@@ -167,7 +169,9 @@ Repository = "https://github.com/{github}/{repo_name}"
 Issues = "https://github.com/{github}/{repo_name}/issues"
 """
 
-        manifest.filesystem.add_file_append("pyproject.toml", project_metadata_payload)
+        manifest.filesystem.add_structured(
+            "pyproject.toml", project_metadata_payload, producer="module:PythonCore"
+        )
 
         # --- IDE Injection ---
         config = UserConfig.load()

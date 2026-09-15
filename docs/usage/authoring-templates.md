@@ -47,10 +47,32 @@ Protostar's zero-network template discovery engine reads these top-level fields 
 
 ### AST Injections & Appends
 
-Protostar's true power lies in its ability to safely mutate existing files via Abstract Syntax Tree (AST) deep-merging and marker blocks.
+Declare named TOML payloads under `[dev.pyproject]`. Tooling and build configuration are managed contributions; personal project fields such as description, authors, license, classifiers, keywords, and repository URLs are seed-only during merge initialization. Existing free-form `[files]` content is preserved unless explicit overwrite is selected.
 
-- **`[dev.pyproject]`**: Any table defined here is parsed via `tomlkit` and deeply merged into the target workspace's `pyproject.toml`. This allows you to inject custom linter configurations (e.g., specific Ruff rules) without overwriting your existing dependencies or project metadata.
-- **`[appends]`**: For non-TOML files (like `justfile`, `Makefile`, or `.envrc`), you can define generic string payloads. Protostar wraps these payloads in language-aware comment markers (e.g., `# --- Protostar Injection ---`) and safely appends them to the target file.
+```toml
+[dev.pyproject]
+linting = '''
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B"]
+'''
+
+[appends.".envrc".project_environment]
+content = "export PROJECT=example"
+```
+
+Non-TOML appends use a stable named record containing exactly one string `content` field. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing named region and warns when its desired content differs; explicit overwrite replaces only that region while retaining surrounding bytes. Automatic checksum-gated updates are a later reconciliation milestone.
+
+Anonymous strings/arrays under `[appends]`, TOML append regions, and the `__replace__`/`__remove__` control keys are rejected. Do not combine `[files]` with structured configuration or named regions targeting the same path. `.protostar.lock.toml` is reserved for engine state; `uv.lock` belongs to the resolver. Neither filename nor its descendants can be a template target.
+
+Dependency declarations belong in `dependencies`, `[dev].dev_dependencies`, and `docs_dependencies`. Generic TOML payloads cannot write `project.dependencies`, `project.optional-dependencies`, `dependency-groups`, or `tool.uv.sources`. Declare supported group wiring explicitly at the root:
+
+```toml
+dependency_includes = [{ group = "dev", include = "docs" }]
+```
+
+Includes support the `dev` and `docs` groups and reject cycles. Execution applies them before `uv add`; include-only changes declare a conditional `uv lock` action. Dependency resolver writes are bounded to `pyproject.toml` and `uv.lock` and journaled before invocation. Ordinary dependency additions need no extra lock action.
+
+Templates may declare an informational root `version` string. CLI and wizard resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and remote locators retain the canonical resolved download URL rather than temporary extraction paths. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Recognizable immutable commit locators also retain their source revision. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance. State and three-way reconciliation are subsequent milestones.
 
 ## Level 2: The Multi-File Repository
 

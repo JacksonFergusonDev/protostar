@@ -1,7 +1,11 @@
 """Generic marker-block file append engine."""
 
-import hashlib
+import re
+from collections.abc import Callable
 from pathlib import Path
+
+from .errors import ConfigurationError
+from .intent import AppendContribution, validate_region_id
 
 __all__ = ["append_marker_blocks", "get_comment_markers"]
 
@@ -65,45 +69,86 @@ def get_comment_markers(filepath: Path) -> tuple[str, str]:
 
 def append_marker_blocks(
     original_content: str,
-    payloads: list[str],
+    payloads: list[AppendContribution],
     filepath: Path,
     overwrite: bool = False,
+    on_conflict: Callable[[str], None] | None = None,
 ) -> str | None:
-    """Appends configuration payloads wrapped in hash-delimited marker blocks.
+    """Applies named regions conservatively until checksum state lands in PR F.
 
-    Args:
-        original_content: Existing file contents.
-        payloads: Raw string payloads to append.
-        filepath: Target filepath used to determine comment syntax.
-        overwrite: If True, appends payloads even if their boundary markers exist.
-
-    Returns:
-        The updated file content string, or None if all payloads are already present.
+    Existing regions are preserved in merge mode. Explicit overwrite replaces
+    only the declared region and retains surrounding bytes. Legacy or malformed
+    markers fail rather than guessing ownership.
     """
     c_start, c_end = get_comment_markers(filepath)
 
-    existing_clean = original_content.rstrip()
-    missing_payloads = []
+    def marker(identity: str, end: bool = False) -> str:
+        return f"{c_start} --- {'End ' if end else ''}Protostar Region: {identity} --- {c_end}".strip()
 
-    for payload in payloads:
-        # Generate a deterministic boundary marker based on the payload content
-        payload_hash = hashlib.md5(
-            payload.encode("utf-8"), usedforsecurity=False
-        ).hexdigest()[:8]
-        marker_begin = (
-            f"{c_start} --- Protostar Injection: {payload_hash} --- {c_end}".strip()
+    if "Protostar Injection" in original_content:
+        raise ConfigurationError(
+            "Legacy anonymous append markers are unsupported.",
+            hint="Remove the legacy block before applying a named region; automatic adoption is unavailable.",
         )
-        marker_end = f"{c_start} --- End Protostar Injection --- {c_end}".strip()
-
-        if marker_begin in original_content and not overwrite:
+    active: str | None = None
+    seen: set[str] = set()
+    for line in original_content.splitlines():
+        match = re.fullmatch(
+            r".*--- (End )?Protostar Region: ([A-Za-z0-9_][A-Za-z0-9_.:/-]*) ---.*",
+            line,
+        )
+        if not match:
+            if "Protostar Region:" in line:
+                raise ConfigurationError(
+                    "Malformed append boundary.",
+                    hint="Repair the named region markers.",
+                )
             continue
-
-        framed_payload = f"{marker_begin}\n{payload.strip()}\n{marker_end}"
-        missing_payloads.append(framed_payload)
-
-    if not missing_payloads:
-        return None
-
-    combined_content = "\n\n".join(missing_payloads)
-    prefix = "\n\n" if existing_clean and combined_content else ""
-    return existing_clean + prefix + combined_content + "\n"
+        ending, identity = match.groups()
+        if (
+            line != marker(identity, bool(ending))
+            or (ending and active != identity)
+            or (not ending and (active is not None or identity in seen))
+        ):
+            raise ConfigurationError(
+                "Duplicate, nested, or mismatched append boundaries.",
+                hint="Give each region one unique matching begin/end pair.",
+            )
+        if ending:
+            active = None
+        else:
+            active = identity
+            seen.add(identity)
+    if active:
+        raise ConfigurationError(
+            "Unclosed append region.", hint="Restore the matching end marker."
+        )
+    identities = [c.id for c in payloads]
+    if len(set(identities)) != len(identities):
+        raise ConfigurationError(
+            "Duplicate desired region identities.", hint="Use unique stable IDs."
+        )
+    for identity in identities:
+        validate_region_id(identity)
+    result = original_content
+    for contribution in payloads:
+        begin, end = marker(contribution.id), marker(contribution.id, True)
+        framed = f"{begin}\n{contribution.content}"
+        if not framed.endswith("\n"):
+            framed += "\n"
+        framed += end
+        if contribution.id in seen:
+            start = result.index(begin)
+            stop = result.index(end, start) + len(end)
+            if not overwrite:
+                if result[start:stop] != framed and on_conflict:
+                    on_conflict(contribution.id)
+                continue
+            result = result[:start] + framed + result[stop:]
+        else:
+            separator = (
+                "" if not result else ("\n" if result.endswith("\n") else "\n\n")
+            )
+            result += separator + framed + "\n"
+            seen.add(contribution.id)
+    return result if result != original_content else None

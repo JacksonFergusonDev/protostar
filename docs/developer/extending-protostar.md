@@ -73,7 +73,7 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
     Never call `subprocess.run` or write to disk inside a module's `build()` method. Modules must strictly communicate via the `EnvironmentManifest` to ensure the Orchestrator maintains atomicity.
 
 !!! tip "Automated Collision Detection"
-    Modules do not need to register collision markers manually. Any files queued via `manifest.filesystem.add_file_injection()`, `manifest.filesystem.add_file_append()`, or manifest tooling flags are automatically derived by `EnvironmentManifest.target_files()` for workspace collision detection.
+    Modules do not need to register collision markers manually. Any files queued via `manifest.filesystem.add_file_injection()`, `manifest.filesystem.add_structured()`, `manifest.filesystem.add_region()`, or manifest tooling flags are automatically derived by `EnvironmentManifest.target_files()` for workspace collision detection.
 
 The manifest exposes the following methods across its domain slices to queue state changes:
 
@@ -84,7 +84,9 @@ The manifest exposes the following methods across its domain slices to queue sta
 | `manifest.dependencies.add_docs(package: str)` | Queues a documentation dependency for installation. |
 | `manifest.filesystem.add_directory(path: str)` | Queues a relative directory path to be scaffolded. |
 | `manifest.filesystem.add_file_injection(path: str, content: str)` | Queues a complete file write. Fails if the file exists unless explicitly marked for overwrite. |
-| `manifest.filesystem.add_file_append(path: str, content: str)` | Queues a string payload for late-binding concatenation or TOML AST deep-merging. |
+| `manifest.filesystem.add_structured(path: str, content: str, *, producer: str)` | Queues typed TOML contributions, separating personal metadata seeds from managed configuration. |
+| `manifest.filesystem.add_region(path: str, content: str, *, identity: str)` | Queues one uniquely named non-TOML text region. Use a stable module namespace. |
+| `manifest.dependencies.add_include(group: DependencyGroup, include: DependencyGroup)` | Declares an include edge between dev/docs groups and its resolver footprint. |
 | `manifest.filesystem.add_vcs_ignore(path: str)` | Appends a tracking exclusion entry to the version control ignore manifest (e.g., `.gitignore`). |
 | `manifest.tasks.add_system_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* the disk scaffolding phase is complete. Allows an optional execution timeout and UI description. |
 | `manifest.tasks.add_post_install_task(command: list[str], timeout: int | None = 30, description: str | None = None)` | Queues a subprocess command to execute *after* all dependencies have been installed. Allows an optional execution timeout and UI description. |

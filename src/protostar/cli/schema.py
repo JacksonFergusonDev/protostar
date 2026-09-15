@@ -20,6 +20,8 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     dev_properties: dict[str, Any] = {}
 
     for f in dataclasses.fields(TemplateBlueprint):
+        if f.name == "reference":
+            continue
         desc = f.metadata.get("description", "")
         if f.name == "tooling_overrides":
             for mod in TOOLING_MODULES:
@@ -31,7 +33,34 @@ def handle_export_schema(args: argparse.Namespace) -> None:
             continue
 
         type_str = str(f.type)
-        if "list[list[str]]" in type_str:
+        if f.name == "appends":
+            prop = {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "propertyNames": {"pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:/-]*$"},
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {"content": {"type": "string"}},
+                        "required": ["content"],
+                        "additionalProperties": False,
+                    },
+                },
+            }
+        elif f.name == "dependency_includes":
+            prop = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "group": {"enum": ["dev", "docs"]},
+                        "include": {"enum": ["dev", "docs"]},
+                    },
+                    "required": ["group", "include"],
+                    "additionalProperties": False,
+                },
+            }
+        elif "list[list[str]]" in type_str:
             prop = {
                 "type": "array",
                 "items": {"type": "array", "items": {"type": "string"}},
@@ -52,6 +81,15 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         else:
             prop = {"type": "string"}
 
+        target_pattern = r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))(?!.*(?:^|/)(?:\.protostar\.lock\.toml|uv\.lock)(?:/|$)).+$"
+        if f.name in ("files", "appends"):
+            prop["propertyNames"] = {"pattern": target_pattern}
+        if f.name == "appends":
+            prop["propertyNames"] = {
+                "allOf": [{"pattern": target_pattern}, {"not": {"pattern": r"\.toml$"}}]
+            }
+        if f.name == "directories":
+            prop["items"] = {"type": "string", "pattern": target_pattern}
         if desc:
             prop["description"] = desc
 

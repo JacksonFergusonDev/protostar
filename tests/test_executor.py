@@ -1,4 +1,3 @@
-import hashlib
 import tomllib
 from pathlib import Path
 from typing import cast
@@ -14,6 +13,7 @@ from protostar.errors import (
     RollbackFailedError,
 )
 from protostar.executor import SystemExecutor
+from protostar.intent import DependencyGroup
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -56,8 +56,10 @@ def test_executor_append_files_late_binding(tmp_path, monkeypatch, mock_config):
     )
 
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", 'python_version = "<% PYTHON_VERSION %>"'
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        'python_version = "<% PYTHON_VERSION %>"',
+        producer="module:test_executor",
     )
     executor = SystemExecutor(manifest, mock_config)
     executor._append_files()
@@ -357,8 +359,10 @@ def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
     """Test that the executor writes a CLI-tailored Dockerfile when typer/project.scripts is present."""
     manifest = EnvironmentManifest()
     manifest.dependencies.dependencies = ["typer"]
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", "[project.scripts]\nmy-cli = 'my_cli.cli:app'\n"
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        "[project.scripts]\nmy-cli = 'my_cli.cli:app'\n",
+        producer="module:test_executor",
     )
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
@@ -497,7 +501,9 @@ def test_executor_append_files_ast_no_op_write(
 
     manifest = EnvironmentManifest()
     # Queue a payload that is perfectly identical to the existing base document
-    manifest.filesystem.add_file_append("pyproject.toml", original_content)
+    manifest.filesystem.add_structured(
+        "pyproject.toml", original_content, producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, mock_config)
 
     mock_write = mocker.patch.object(executor.fs, "write_text")
@@ -518,7 +524,9 @@ def test_executor_append_files_ast_merge(tmp_path, monkeypatch, mock_config):
 
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
-    manifest.filesystem.add_file_append("pyproject.toml", payload_content)
+    manifest.filesystem.add_structured(
+        "pyproject.toml", payload_content, producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, mock_config)
 
     executor._append_files()
@@ -545,7 +553,9 @@ def test_executor_append_files_ast_overwrite(tmp_path, monkeypatch, mock_config)
 
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    manifest.filesystem.add_file_append("pyproject.toml", payload_content)
+    manifest.filesystem.add_structured(
+        "pyproject.toml", payload_content, producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, mock_config)
 
     executor._append_files()
@@ -584,7 +594,9 @@ def test_executor_validate_targets_success(mocker, mock_config):
     """Test that pre-execution validation passes silently on valid TOML files."""
 
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("pyproject.toml", "[tool.ruff]")
+    manifest.filesystem.add_structured(
+        "pyproject.toml", "[tool.ruff]", producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -599,7 +611,9 @@ def test_executor_validate_targets_success(mocker, mock_config):
 def test_executor_validate_targets_malformed_toml(mocker, mock_config):
     """Test that malformed existing TOML triggers a ConfigurationError during pre-execution."""
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("test.toml", "[section]\nkey = 'val'\n")
+    manifest.filesystem.add_structured(
+        "test.toml", "[section]\nkey = 'val'\n", producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
@@ -633,31 +647,19 @@ def test_executor_validate_targets_malformed_injected_toml(mocker, mock_config):
 def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
     """Test that malformed payload TOML triggers a ConfigurationError during execution."""
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("test.toml", "[invalid payload == \n")
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch(
-        "protostar.executor.Path.read_text", return_value="[existing]\nval = 1\n"
-    )
-
-    mock_file = mocker.mock_open(read_data=b"[project]\n")
-    mocker.patch("protostar.executor.Path.open", mock_file)
-
-    with pytest.raises(
-        ConfigurationError, match="Failed to parse injected TOML payload"
-    ):
-        executor._append_files()
+    with pytest.raises(ConfigurationError, match="Invalid structured TOML"):
+        manifest.filesystem.add_structured(
+            "test.toml", "[invalid payload == ", producer="module:test"
+        )
 
 
 def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
     """Test that the string fallback skips writing if the payload hash is already in the file."""
     payload = "line1\nline2"
-    payload_hash = hashlib.md5(payload.encode("utf-8")).hexdigest()[:8]
-    existing_content = f"existing\n# --- Protostar Injection: {payload_hash} ---\n{payload}\n# --- End Protostar Injection ---"
+    existing_content = f"existing\n# --- Protostar Region: test:region660 ---\n{payload}\n# --- End Protostar Region: test:region660 ---"
 
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("test.txt", payload)
+    manifest.filesystem.add_region("test.txt", payload, identity="test:region660")
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -685,8 +687,12 @@ def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
 def test_executor_append_files_string_fallback_append(mocker, mock_config):
     """Test that the string fallback successfully appends missing payloads wrapped in hash markers."""
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("config.ini", "new_payload_1")
-    manifest.filesystem.add_file_append("config.ini", "new_payload_2")
+    manifest.filesystem.add_region(
+        "config.ini", "new_payload_1", identity="test:region688"
+    )
+    manifest.filesystem.add_region(
+        "config.ini", "new_payload_2", identity="test:region689"
+    )
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
@@ -696,12 +702,10 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
 
     executor._append_files()
 
-    hash1 = hashlib.md5(b"new_payload_1").hexdigest()[:8]
-    hash2 = hashlib.md5(b"new_payload_2").hexdigest()[:8]
     expected_data = (
         "existing_data\n\n"
-        f"# --- Protostar Injection: {hash1} ---\nnew_payload_1\n# --- End Protostar Injection ---\n\n"
-        f"# --- Protostar Injection: {hash2} ---\nnew_payload_2\n# --- End Protostar Injection ---\n"
+        "# --- Protostar Region: test:region688 ---\nnew_payload_1\n# --- End Protostar Region: test:region688 ---\n\n"
+        "# --- Protostar Region: test:region689 ---\nnew_payload_2\n# --- End Protostar Region: test:region689 ---\n"
     )
 
     written_data = mock_write.call_args[0][1]
@@ -901,7 +905,9 @@ def test_executor_handles_mkdir_io_failure(mocker):
 
 def test_append_files_handles_read_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
+    manifest.filesystem.add_structured(
+        "pyproject.toml", '[tool.custom]\nkey = "val"', producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
@@ -910,13 +916,15 @@ def test_append_files_handles_read_failure(mocker):
     with pytest.raises(FileSystemError) as exc_info:
         executor._append_files()
 
-    assert "read target append context" in exc_info.value.operation
+    assert "read structured configuration" in exc_info.value.operation
     assert "pyproject.toml" in exc_info.value.path
 
 
 def test_append_files_handles_toml_write_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append("pyproject.toml", '[tool.custom]\nkey = "val"')
+    manifest.filesystem.add_structured(
+        "pyproject.toml", '[tool.custom]\nkey = "val"', producer="module:test_executor"
+    )
     executor = SystemExecutor(manifest, UserConfig())
 
     # Simulate an existing valid pyproject.toml on disk
@@ -937,7 +945,9 @@ def test_append_files_handles_toml_write_failure(mocker):
 
 def test_append_files_handles_string_block_write_failure(mocker):
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append(".envrc", "export FOO=bar")
+    manifest.filesystem.add_region(
+        ".envrc", "export FOO=bar", identity="test:region940"
+    )
     executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
@@ -1039,13 +1049,15 @@ def test_executor_interpolates_package_name_in_file_appends(
     monkeypatch.chdir(tmp_path)
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"project_name": "my-cool-tool"})
-    manifest.filesystem.add_file_append(
+    manifest.filesystem.add_structured(
         "pyproject.toml",
         '[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"\n',
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
+    manifest.filesystem.add_region(
         "script.sh",
         'echo "Running <% PROJECT_NAME %> from <% PACKAGE_NAME %>"\n',
+        identity="test:region1046",
     )
     executor = SystemExecutor(manifest, mock_config)
     executor._append_files()
@@ -1069,37 +1081,48 @@ def test_executor_append_files_cli_template_full_lifecycle(
 
     manifest = EnvironmentManifest()
     # Tooling modules append baseline configurations
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", "[tool.ruff]\nline-length = 88\n"
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        "[tool.ruff]\nline-length = 88\n",
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", '[tool.mypy]\nmypy_path = "src"\n'
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        '[tool.mypy]\nmypy_path = "src"\n',
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
+    manifest.filesystem.add_structured(
         "pyproject.toml",
         '[tool.pytest.ini_options]\naddopts = "--strict-markers"\ntestpaths = ["tests"]\n',
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", '[tool.commitizen]\nname = "cz_conventional_commits"\n'
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        '[tool.commitizen]\nname = "cz_conventional_commits"\n',
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", '[dependency-groups]\ndev = [{ include-group = "docs" }]\n'
-    )
+    manifest.dependencies.add_include(DependencyGroup.DEV, DependencyGroup.DOCS)
 
     # CLI Template appends late-binding injections
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", '[tool.ruff.lint]\nselect = ["A", "B"]\n'
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        '[tool.ruff.lint]\nselect = ["A", "B"]\n',
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
+    manifest.filesystem.add_structured(
         "pyproject.toml",
         '[[tool.mypy.overrides]]\nmodule = ["tests.*"]\ndisallow_untyped_defs = false\n',
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
+    manifest.filesystem.add_structured(
         "pyproject.toml",
         "[tool.coverage.run]\nbranch = true\n\n[tool.coverage.report]\nshow_missing = true\n",
+        producer="module:test_executor",
     )
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", '[project.scripts]\ndemo-project = "demo_project.cli:app"\n'
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        '[project.scripts]\ndemo-project = "demo_project.cli:app"\n',
+        producer="module:test_executor",
     )
 
     executor = SystemExecutor(manifest, mock_config)
@@ -1160,8 +1183,10 @@ line-length = 88
     pyproject.write_text(existing)
 
     manifest = EnvironmentManifest()
-    manifest.filesystem.add_file_append(
-        "pyproject.toml", '[tool.pytest.ini_options]\naddopts = "-v"\n'
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        '[tool.pytest.ini_options]\naddopts = "-v"\n',
+        producer="module:test_executor",
     )
 
     executor = SystemExecutor(manifest, mock_config)

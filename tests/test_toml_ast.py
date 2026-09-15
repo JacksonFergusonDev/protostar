@@ -1,8 +1,10 @@
 import tomllib
 from pathlib import Path
 
+import pytest
 import tomlkit
 
+from protostar.errors import ConfigurationError
 from protostar.manifest import Severity
 from protostar.toml_ast import (
     deep_merge_tomlkit,
@@ -124,11 +126,10 @@ new_key = 2
 """
     payload = tomlkit.parse(payload_toml)
 
-    deep_merge_tomlkit(base, payload)
-
-    assert base["tool"]["example"]["nested"]["new_key"] == 2
-    assert "old_key" not in base["tool"]["example"]["nested"]
-    assert "__replace__" not in base["tool"]["example"]["nested"]
+    with pytest.raises(ConfigurationError, match="control sentinels"):
+        deep_merge_tomlkit(base, payload)
+    assert base["tool"]["example"]["nested"]["old_key"] == 1
+    assert payload["tool"]["example"]["nested"]["__replace__"] is True
 
 
 def test_deep_merge_tomlkit_replace_nested_hierarchy():
@@ -150,14 +151,9 @@ convention = "google"
     base_doc = tomlkit.parse(base_toml)
     payload_doc = tomlkit.parse(payload_toml)
 
-    deep_merge_tomlkit(base_doc, payload_doc)
-
-    assert base_doc["tool"]["ruff"]["line-length"] == 88
-    lint = base_doc["tool"]["ruff"]["lint"]
-    assert lint["select"] == ["A", "B", "C4", "D"]
-    assert lint["ignore"] == ["D100"]
-    assert lint["pydocstyle"]["convention"] == "google"
-    assert "__replace__" not in lint
+    with pytest.raises(ConfigurationError, match="control sentinels"):
+        deep_merge_tomlkit(base_doc, payload_doc)
+    assert base_doc["tool"]["ruff"]["lint"]["select"] == ["A", "B"]
 
 
 def test_deep_merge_tomlkit_aot_append_vs_overwrite():

@@ -834,6 +834,8 @@ def test_handle_init_template_resolution(mocker):
         expected_path,
         template_context={},
         variable_resolver=mocker.ANY,
+        built_in="astro",
+        display_name="astro",
     )
     assert mock_load.call_count >= 1
 
