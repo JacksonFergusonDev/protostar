@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789515189867,
+  "lastUpdate": 1789515814136,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12891,6 +12891,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 219.73,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "b385ddb0e8e0dd8b7f67a3a682c32e62e9021cd3",
+          "message": "docs(plan): mark semantic merge PR A complete",
+          "timestamp": "2026-09-15T23:37:27Z",
+          "tree_id": "5c0580f32e6c4ae628f8496ba0c992f129bd2da3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b385ddb0e8e0dd8b7f67a3a682c32e62e9021cd3"
+        },
+        "date": 1789515812745,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 138.96,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 213.74,
             "unit": "ms"
           }
         ]
