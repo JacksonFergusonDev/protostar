@@ -671,6 +671,7 @@ version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "argcomplete" },
+    { name = "packaging" },
     { name = "questionary" },
     { name = "rich" },
     { name = "rich-argparse" },
@@ -705,6 +706,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "argcomplete", specifier = ">=3.6.3" },
+    { name = "packaging", specifier = ">=26.3" },
     { name = "questionary", specifier = ">=2.1.1" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "rich-argparse", specifier = ">=1.7.2" },
