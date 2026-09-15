@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789364840311,
+  "lastUpdate": 1789513823638,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12789,6 +12789,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 178.06,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "b95b79f0245fa6c0eef192829c4c1e3e1b0f16c8",
+          "message": "docs: add Stage 1 safe semantic reconciliation plan\n\nIntroduce `SEMANTIC_MERGE_PLAN.md` defining the architecture, state\nschema, artifact-specific policies, and phased PR rollout for safe\nsemantic reconciliation under `protostar init --force-merge`.\n\nKey decisions established:\n- Implement three-way semantic reconciliation for managed TOML/YAML\n  configurations using `.protostar.lock.toml` (schema v1) baselines.\n- Establish strict non-destructive merge rules: preserve user edits/deletions,\n  prevent implicit adoption, and emit machine-readable conflict warnings.\n- Apply checksum-gated replacement for generated files (Renovate, workflows,\n  Dockerfile, justfile) and stable-ID managed append regions.\n- Gate dependency updates via PEP 508 requirement normalization and\n  targeted `uv add` operations, avoiding redundant `uv lock` invocations.\n- Break implementation into 8 bounded, gated phases (PR-A through PR-H).",
+          "timestamp": "2026-09-15T16:08:39-07:00",
+          "tree_id": "dc6f8827d9c04af4db055bd7198d91cb29b5a025",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b95b79f0245fa6c0eef192829c4c1e3e1b0f16c8"
+        },
+        "date": 1789513822243,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 106.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 165.75,
             "unit": "ms"
           }
         ]
