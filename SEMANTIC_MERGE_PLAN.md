@@ -1,6 +1,6 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: approved direction; ready for incremental implementation.
+Status: PR-A complete; PR-B is next.
 Updated: 2026-09-15.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
@@ -37,6 +37,19 @@ Protostar is pre-1.0 with no external users. Break APIs and template schemas cle
 - `deep_merge_tomlkit()` overwrites declared scalars, appends arrays of tables without deduplication, and has path-specific overwrite behavior. Do not treat it as an already-correct universal merge policy.
 - Generic append markers currently derive identity from payload content. Changed payloads create new identities and can duplicate old contributions.
 - Dockerfile collision gating currently also skips `.dockerignore` processing. Decouple these paths so a preserved Dockerfile does not prevent additive ignore updates.
+
+### Implementation status
+
+This checklist records which milestones have landed on `main`. It is limited to
+the implementation covered by this plan; a completed milestone does not imply
+that later reconciliation behavior is available.
+
+| Milestone | Status | Landed scope | Verification |
+| --- | --- | --- | --- |
+| PR-A: Typed intent, identity, and schema boundaries | **Complete** | Template provenance through CLI/wizard request and manifest serialization; typed structured TOML contributions; stable named append regions; seed-only personal metadata; typed dependency-group includes and resolver footprints; reserved-path and unsafe-injection validation; built-in templates, schema, fixtures, and documentation updated. | Merged implementation commit `be0be97`; targeted tests and commit/pre-push hooks passed. |
+| PR-B: State codec and pure reconciliation kernel | Planned | — | — |
+| PR-C: Transactional state integration and TOML reconciliation | Planned | — | — |
+| PR-D through PR-H | Planned | — | — |
 
 ## 2. Scope and per-artifact policy
 
@@ -278,7 +291,7 @@ Do not introduce a blanket "write all dependencies via AST, then uv sync" rewrit
 
 Use one bounded implementation PR at a time until the kernel/state contracts land. Every PR includes tests and any affected documentation/schema/fixture changes. The bullets below are implementation gates, not permission to commit or push without the maintainer's authorization.
 
-### PR-A: Typed intent, identity, and schema boundaries
+### PR-A: Typed intent, identity, and schema boundaries — **Complete**
 
 Goal: declare what can be managed without introducing side effects.
 
@@ -288,7 +301,7 @@ Goal: declare what can be managed without introducing side effects.
 - Replace/reject legacy control sentinels and anonymous append schema; update built-in templates, schema export, fixtures, and docs directly.
 - Move dependency table/include-group contributions into the typed dependency model; reject unsafe generic injections.
 
-Gate: targeted config/schema/manifest/orchestrator/CLI/wizard tests prove stable identities, deterministic serialization, reserved-path checks, clear errors, and zero planning mutations/subprocesses. Keep existing behavior safe while the application paths are introduced; do not leave newly supported declarations silently ignored.
+Gate: **Complete.** Targeted config/schema/manifest/orchestrator/CLI/wizard tests prove stable identities, deterministic serialization, reserved-path checks, clear errors, and zero planning mutations/subprocesses. Built-in templates and the exported schema use the new typed declarations; newly supported declarations are applied or rejected explicitly. Merged implementation commit `be0be97` contains the implementation and verification updates.
 
 ### PR-B: State codec and pure reconciliation kernel
 
