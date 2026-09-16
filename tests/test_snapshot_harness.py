@@ -10,7 +10,13 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
-from scripts.run_snapshots import check_snapshot_drift
+from scripts.generate_docs_assets import DOCS_GENERATED_DIR
+from scripts.run_snapshots import (
+    SNAPSHOTS_DIR,
+    _extract_and_write_targets,
+    check_snapshot_drift,
+    main,
+)
 
 
 def _mock_subprocess_run_factory(
@@ -57,11 +63,59 @@ def _mock_subprocess_run_factory(
     return mock_run
 
 
-def test_check_snapshot_drift_empty_targets(tmp_path: Path) -> None:
-    """Verifies that non-existent or empty target sequences pass immediately."""
-    non_existent = tmp_path / "does_not_exist"
-    assert check_snapshot_drift([non_existent]) is True
+def test_check_snapshot_drift_empty_targets() -> None:
+    """Verifies that an empty target sequence passes immediately without running subprocesses."""
     assert check_snapshot_drift([]) is True
+
+
+def test_check_snapshot_drift_untracked_nonexistent_target(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """Verifies that an untracked, non-existent target reports clean when Git knows nothing about it."""
+    monkeypatch.chdir(tmp_path)
+    non_existent = tmp_path / "never_tracked"
+
+    mocker.patch(
+        "subprocess.run",
+        side_effect=_mock_subprocess_run_factory(
+            ls_files=[],
+            diff_name_status=[],
+        ),
+    )
+
+    assert check_snapshot_drift([non_existent]) is True
+
+
+def test_check_snapshot_drift_deleted_tracked_target_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Verifies that a deleted tracked target directory fails drift check even if absent from disk."""
+    monkeypatch.chdir(tmp_path)
+    cli_dir = tmp_path / "tests" / "snapshots" / "cli"
+    # Note: cli_dir is NOT created on disk, simulating it being deleted while tracked
+
+    rel_path = "tests/snapshots/cli/pyproject.toml"
+
+    mocker.patch(
+        "subprocess.run",
+        side_effect=_mock_subprocess_run_factory(
+            ls_files=[rel_path],
+            diff_name_status=[f"D\t{rel_path}"],
+            diff_head="deleted file mode 100644",
+        ),
+    )
+
+    result = check_snapshot_drift([cli_dir])
+    assert result is False
+
+    captured = capsys.readouterr()
+    assert "SNAPSHOT REGRESSION DETECTED" in captured.err
+    assert f"D {rel_path}" in captured.err
 
 
 def test_check_snapshot_drift_clean(
@@ -317,3 +371,153 @@ def test_check_snapshot_drift_filtered_scope(
     assert "docs/generated/tree_cli.txt" in ls_call
     # Other scenarios like ml or dsp should not be present in the command
     assert "tests/snapshots/ml" not in ls_call
+
+
+def test_extract_and_write_targets_preserves_exact_bytes(
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    """Verifies that target extraction preserves exact bytes including CRLF, whitespace, and binary data."""
+    source_dir = tmp_path / "source"
+    source_dir.mkdir(parents=True)
+
+    # 1. CRLF line endings
+    crlf_bytes = b"first_line\r\nsecond_line\r\n"
+    (source_dir / "crlf.txt").write_bytes(crlf_bytes)
+
+    # 2. Trailing whitespace without rstrip
+    ws_bytes = b"trailing_space   \ntrailing_tabs\t\t\n"
+    (source_dir / "trailing_ws.txt").write_bytes(ws_bytes)
+
+    # 3. 0-byte empty file
+    empty_bytes = b""
+    (source_dir / "empty.txt").write_bytes(empty_bytes)
+
+    # 4. Arbitrary binary bytes
+    bin_bytes = bytes([0x00, 0xFF, 0xFE, 0x80, 0x12, 0x34])
+    (source_dir / "binary.bin").write_bytes(bin_bytes)
+
+    # 5. Pre-commit config fixture renaming
+    precommit_bytes = (
+        b"repos:\n  - repo: https://github.com/astral-sh/ruff-pre-commit\n"
+    )
+    (source_dir / ".pre-commit-config.yaml").write_bytes(precommit_bytes)
+
+    # 6. Excluded cache directories and lockfiles
+    cache_file = source_dir / "__pycache__" / "temp.cpython-313.pyc"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_bytes(b"cache")
+
+    venv_file = source_dir / ".venv" / "bin" / "python"
+    venv_file.parent.mkdir(parents=True)
+    venv_file.write_bytes(b"venv")
+
+    lock_file = source_dir / "uv.lock"
+    lock_file.write_bytes(b"lock")
+
+    fake_snapshots_dir = tmp_path / "snapshots"
+    fake_docs_dir = tmp_path / "docs_generated"
+    mocker.patch("scripts.run_snapshots.SNAPSHOTS_DIR", fake_snapshots_dir)
+    mocker.patch("scripts.run_snapshots.DOCS_GENERATED_DIR", fake_docs_dir)
+    mocker.patch("scripts.run_snapshots.generate_tree", return_value="mock tree\n")
+
+    fixture_root = fake_snapshots_dir / "my_fixture"
+    fixture_root.mkdir(parents=True)
+    obsolete_file = fixture_root / "obsolete.txt"
+    obsolete_file.write_bytes(b"old")
+
+    _extract_and_write_targets(source_dir, "my_fixture")
+
+    # Assert exact byte preservation
+    assert (fixture_root / "crlf.txt").read_bytes() == crlf_bytes
+    assert (fixture_root / "trailing_ws.txt").read_bytes() == ws_bytes
+    assert (fixture_root / "empty.txt").read_bytes() == empty_bytes
+    assert (fixture_root / "binary.bin").read_bytes() == bin_bytes
+    assert (
+        fixture_root / "pre-commit-config.fixture.yaml"
+    ).read_bytes() == precommit_bytes
+    assert not (fixture_root / ".pre-commit-config.yaml").exists()
+
+    # Assert excluded caches were omitted
+    assert not (fixture_root / "__pycache__").exists()
+    assert not (fixture_root / ".venv").exists()
+    assert not (fixture_root / "uv.lock").exists()
+
+    # Assert obsolete file was pruned
+    assert not obsolete_file.exists()
+
+    # Assert tree file written
+    assert (fake_docs_dir / "tree_my_fixture.txt").read_text(
+        encoding="utf-8"
+    ) == "mock tree\n"
+
+
+def test_harness_main_filtered_scenario_scope(
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """Verifies that running the main entrypoint with --scenario targets only that scenario."""
+    monkeypatch.setattr("sys.argv", ["run_snapshots.py", "--scenario", "cli"])
+    mock_build = mocker.patch("scripts.run_snapshots.build_snapshots")
+    mock_docs = mocker.patch("scripts.run_snapshots.generate_docs_assets")
+    mock_diff = mocker.patch("scripts.run_snapshots.generate_diff_fixtures")
+    mock_check = mocker.patch(
+        "scripts.run_snapshots.check_snapshot_drift", return_value=True
+    )
+
+    main()
+
+    mock_build.assert_called_once_with(scenario_name="cli")
+    mock_docs.assert_not_called()
+    mock_diff.assert_not_called()
+    mock_check.assert_called_once_with(
+        [
+            SNAPSHOTS_DIR / "cli",
+            DOCS_GENERATED_DIR / "tree_cli.txt",
+        ]
+    )
+
+
+def test_harness_main_nonzero_exit_on_drift(
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """Verifies that the main entrypoint exits with code 1 when drift is detected."""
+    monkeypatch.setattr("sys.argv", ["run_snapshots.py", "--scenario", "cli"])
+    mocker.patch("scripts.run_snapshots.build_snapshots")
+    mocker.patch("scripts.run_snapshots.check_snapshot_drift", return_value=False)
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 1
+
+
+def test_harness_main_scenario_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """Verifies that a failure during snapshot generation propagates."""
+    monkeypatch.setattr("sys.argv", ["run_snapshots.py", "--scenario", "cli"])
+    mocker.patch(
+        "scripts.run_snapshots.build_snapshots",
+        side_effect=RuntimeError("Subprocess failed"),
+    )
+
+    with pytest.raises(RuntimeError, match="Subprocess failed"):
+        main()
+
+
+def test_harness_main_no_check_flag(
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """Verifies that --no-check skips git drift verification."""
+    monkeypatch.setattr(
+        "sys.argv", ["run_snapshots.py", "--scenario", "cli", "--no-check"]
+    )
+    mocker.patch("scripts.run_snapshots.build_snapshots")
+    mock_check = mocker.patch("scripts.run_snapshots.check_snapshot_drift")
+
+    main()
+
+    mock_check.assert_not_called()

@@ -8,6 +8,7 @@ reconciliation lock state across consecutive runs.
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,33 @@ from protostar.orchestrator import Orchestrator
 from protostar.system import ProcessRunner
 
 BUILTIN_TEMPLATES = ("cli", "astro", "ml", "api", "dsp", "embedded")
+
+
+@pytest.fixture(autouse=True)
+def setup_repeatability_test_environment(
+    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    """Enforces offline operation, forbids network calls, and mocks executables."""
+    # 1. Enforce offline registry mode
+    monkeypatch.setenv("PROTOSTAR_OFFLINE_HOOK_REGISTRY", "1")
+
+    # 2. Assert zero external network calls occur
+    def forbid_network(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError(
+            "Unexpected network access attempt during unit test via urllib.request.urlopen"
+        )
+
+    mocker.patch("urllib.request.urlopen", side_effect=forbid_network)
+
+    # 3. Mock executable availability so tests do not depend on host installation
+    real_which = shutil.which
+
+    def mock_which(cmd: str, *args: Any, **kwargs: Any) -> str | None:
+        if cmd in ("git", "uv", "direnv"):
+            return f"/usr/local/bin/{cmd}"
+        return real_which(cmd, *args, **kwargs)
+
+    mocker.patch("shutil.which", side_effect=mock_which)
 
 
 def _mock_process_runner(cmd: list[str], *args: Any, **kwargs: Any) -> None:
@@ -256,9 +284,18 @@ def test_template_merge_preserves_foreign_content_and_local_modifications(
     )
     handle_init(merge_args)
 
-    # Verify foreign content is completely preserved
+    # Verify foreign content is completely preserved in pyproject.toml
     updated_doc = tomlkit.parse(pyproject_path.read_text(encoding="utf-8"))
     updated_deps = updated_doc["project"]["dependencies"]
     assert any("foreign-package>=2.0.0" in d for d in updated_deps)
     assert foreign_file.exists()
     assert foreign_file.read_text(encoding="utf-8") == "id,val\n1,100\n"
+
+    # Verify foreign dependency was not adopted into Protostar state tracking
+    lock_doc = tomlkit.parse(
+        (tmp_path / ".protostar.lock.toml").read_text(encoding="utf-8")
+    )
+    owned_deps = lock_doc.get("dependencies", [])
+    assert isinstance(owned_deps, list)
+    owned_dep_names = {r["name"] for r in owned_deps if isinstance(r, dict)}
+    assert "foreign-package" not in owned_dep_names

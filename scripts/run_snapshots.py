@@ -305,7 +305,6 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     rel_targets = [
         str(t.relative_to(Path.cwd())) if t.is_relative_to(Path.cwd()) else str(t)
         for t in targets
-        if t.exists()
     ]
     if not rel_targets:
         return True
