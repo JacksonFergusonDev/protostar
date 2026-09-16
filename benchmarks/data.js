@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789574839955,
+  "lastUpdate": 1789584425296,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12993,6 +12993,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 249.7,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c79f0278c6a9ba70cb6362751234e690ad4ba6f1",
+          "message": "fix(merge): preserve deleted projects and local TOML trivia (#253)",
+          "timestamp": "2026-09-16T11:46:11-07:00",
+          "tree_id": "bc2d11588c940c7e2475d7cde53908d1b33bf96f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c79f0278c6a9ba70cb6362751234e690ad4ba6f1"
+        },
+        "date": 1789584424227,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 114.58,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 173.02,
             "unit": "ms"
           }
         ]
