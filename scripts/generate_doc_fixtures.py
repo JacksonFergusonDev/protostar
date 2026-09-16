@@ -8,9 +8,9 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, fields, is_dataclass
+from dataclasses import asdict, dataclass, fields, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -43,6 +43,42 @@ from protostar.modules import (
 )
 from protostar.orchestrator import Orchestrator
 
+
+@dataclass(frozen=True)
+class RegressionScenario:
+    """Declarative specification for an end-to-end template regression scenario."""
+
+    name: str
+    commands: tuple[tuple[str, ...], ...]
+    description: str
+    seed_fn: Callable[[Path, dict[str, str]], None] | None = None
+
+
+def _seed_ml_merged_foreign_content(cwd: Path, env: dict[str, str]) -> None:
+    """Adds representative unowned content before the tracked ML rerun."""
+    subprocess.run(
+        [
+            "uv",
+            "add",
+            "astropy",
+            "astroquery",
+            "nbdime",
+            "photutils",
+            "scipy",
+            "specutils",
+        ],
+        cwd=cwd,
+        check=True,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    for directory in ("data/catalogs", "data/fits"):
+        (cwd / directory).mkdir(parents=True, exist_ok=True)
+    with (cwd / ".gitignore").open("a", encoding="utf-8") as stream:
+        stream.write("*.csv\n*.fit\n*.fits\n*.fts\n*.parquet\n")
+
+
 # Define matrices for combinatorial CLI execution scenarios
 # NOTE FOR MAINTAINERS:
 # Template scenario fixtures should generally have NO flags other than `["--template", "<name>"]`
@@ -52,17 +88,50 @@ from protostar.orchestrator import Orchestrator
 # the resulting `ml/Dockerfile` and `ml/.dockerignore` snippets into the documentation.
 # `ml_merged` exercises same-template reinitialization with foreign workspace
 # additions and newly managed tooling.
-FIXTURES = {
-    "cli": [["--template", "cli"]],
-    "astro": [["--template", "astro"]],
-    "ml": [["--template", "ml", "--docker"]],
-    "ml_merged": [
-        ["--template", "ml", "--docker"],
-        ["--template", "ml", "--mypy", "--docker", "--force-merge"],
-    ],
-    "api": [["--template", "api"]],
-    "dsp": [["--template", "dsp"]],
-    "embedded": [["--template", "embedded"]],
+SCENARIOS: dict[str, RegressionScenario] = {
+    "cli": RegressionScenario(
+        name="cli",
+        commands=(("--template", "cli"),),
+        description="Default CLI application template with Typer and Rich.",
+    ),
+    "astro": RegressionScenario(
+        name="astro",
+        commands=(("--template", "astro"),),
+        description="Astronomy template with scientific python dependencies and ASDF/FITS gitattributes.",
+    ),
+    "ml": RegressionScenario(
+        name="ml",
+        commands=(("--template", "ml", "--docker"),),
+        description="Machine learning template with Docker containerization.",
+    ),
+    "ml_merged": RegressionScenario(
+        name="ml_merged",
+        commands=(
+            ("--template", "ml", "--docker"),
+            ("--template", "ml", "--mypy", "--docker", "--force-merge"),
+        ),
+        description="Same-template reinitialization exercising foreign workspace preservation and tooling adoption.",
+        seed_fn=_seed_ml_merged_foreign_content,
+    ),
+    "api": RegressionScenario(
+        name="api",
+        commands=(("--template", "api"),),
+        description="FastAPI application template.",
+    ),
+    "dsp": RegressionScenario(
+        name="dsp",
+        commands=(("--template", "dsp"),),
+        description="Digital Signal Processing template with audio data sample layouts.",
+    ),
+    "embedded": RegressionScenario(
+        name="embedded",
+        commands=(("--template", "embedded"),),
+        description="Embedded systems template with hardware board layout.",
+    ),
+}
+
+FIXTURES: dict[str, list[list[str]]] = {
+    name: [list(c) for c in s.commands] for name, s in SCENARIOS.items()
 }
 
 # Resolve absolute path to prevent os.chdir() related pathing errors
@@ -890,31 +959,6 @@ def _execute_fixture_scenario(
             raise
 
 
-def _seed_ml_merged_foreign_content(cwd: Path, env: dict[str, str]) -> None:
-    """Adds representative unowned content before the tracked ML rerun."""
-    subprocess.run(
-        [
-            "uv",
-            "add",
-            "astropy",
-            "astroquery",
-            "nbdime",
-            "photutils",
-            "scipy",
-            "specutils",
-        ],
-        cwd=cwd,
-        check=True,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-    for directory in ("data/catalogs", "data/fits"):
-        (cwd / directory).mkdir(parents=True, exist_ok=True)
-    with (cwd / ".gitignore").open("a", encoding="utf-8") as stream:
-        stream.write("*.csv\n*.fit\n*.fits\n*.fts\n*.parquet\n")
-
-
 def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     """Extracts target files from a completed execution scenario and writes them to disk.
 
@@ -1013,8 +1057,7 @@ def _get_host_uv_cache_dir() -> Path:
 
 
 def _build_fixture_scenario(
-    name: str,
-    commands: list[list[str]],
+    scenario: RegressionScenario,
     clean_env: dict[str, str],
     host_cache_dir: str,
 ) -> None:
@@ -1032,17 +1075,23 @@ def _build_fixture_scenario(
         static_cwd = Path(tmpdir) / "demo_project"
         static_cwd.mkdir()
 
-        if name == "ml_merged":
-            _execute_fixture_scenario(commands[:1], static_cwd, isolated_env)
-            _seed_ml_merged_foreign_content(static_cwd, isolated_env)
-            _execute_fixture_scenario(commands[1:], static_cwd, isolated_env)
+        if scenario.seed_fn is not None:
+            _execute_fixture_scenario(
+                [list(c) for c in scenario.commands[:1]], static_cwd, isolated_env
+            )
+            scenario.seed_fn(static_cwd, isolated_env)
+            _execute_fixture_scenario(
+                [list(c) for c in scenario.commands[1:]], static_cwd, isolated_env
+            )
         else:
-            _execute_fixture_scenario(commands, static_cwd, isolated_env)
-        _extract_and_write_targets(static_cwd, name)
-        print(f"  ✔ Scenario [{name}] fixtures generated")
+            _execute_fixture_scenario(
+                [list(c) for c in scenario.commands], static_cwd, isolated_env
+            )
+        _extract_and_write_targets(static_cwd, scenario.name)
+        print(f"  ✔ Scenario [{scenario.name}] fixtures generated")
 
 
-def build_fixtures() -> None:
+def build_fixtures(scenario_name: str | None = None) -> None:
     """Iterates through predefined scenarios concurrently and extracts artifacts."""
     clean_env = os.environ.copy()
     clean_env.pop("VIRTUAL_ENV", None)
@@ -1051,12 +1100,22 @@ def build_fixtures() -> None:
     cache_path.mkdir(parents=True, exist_ok=True)
     host_cache_dir = str(cache_path)
 
+    if scenario_name is not None:
+        if scenario_name not in SCENARIOS:
+            valid = ", ".join(sorted(SCENARIOS.keys()))
+            raise ValueError(
+                f"Unknown scenario '{scenario_name}'. Valid options: {valid}"
+            )
+        target_scenarios = [SCENARIOS[scenario_name]]
+    else:
+        target_scenarios = list(SCENARIOS.values())
+
     with ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(
-                _build_fixture_scenario, name, commands, clean_env, host_cache_dir
+                _build_fixture_scenario, scenario, clean_env, host_cache_dir
             )
-            for name, commands in FIXTURES.items()
+            for scenario in target_scenarios
         ]
         for future in futures:
             future.result()
@@ -1373,6 +1432,77 @@ def generate_diff_fixtures() -> None:
                 _write_fixture(output_name, clean_diff)
 
 
+def check_snapshot_drift(target_dir: Path) -> bool:
+    """Verifies that the target fixture directory matches git HEAD.
+
+    If drift is detected, prints the exact formatted diff and deterministic
+    action instructions for LLM agents and human developers, then returns False.
+
+    Args:
+        target_dir: Directory to verify against git status and diff.
+
+    Returns:
+        True if target_dir has no drift against git HEAD, False otherwise.
+    """
+    rel_target = (
+        target_dir.relative_to(Path.cwd())
+        if target_dir.is_relative_to(Path.cwd())
+        else target_dir
+    )
+
+    status_result = subprocess.run(
+        ["git", "status", "--porcelain", str(rel_target)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    status_output = status_result.stdout.strip()
+    if not status_output:
+        print(f"✔ All snapshots in {rel_target} match expected state.")
+        return True
+
+    diff_result = subprocess.run(
+        ["git", "diff", "--color=never", str(rel_target)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    diff_output = diff_result.stdout.strip()
+
+    print("\n" + "=" * 80, file=sys.stderr)
+    print(
+        f"❌ SNAPSHOT REGRESSION DETECTED (Drift found in {rel_target}/)",
+        file=sys.stderr,
+    )
+    print("=" * 80, file=sys.stderr)
+    print("\nModified or untracked snapshot files:", file=sys.stderr)
+    for line in status_output.splitlines():
+        print(f"  {line}", file=sys.stderr)
+
+    if diff_output:
+        print("\n--- Unified Diff ---", file=sys.stderr)
+        print(diff_output, file=sys.stderr)
+
+    print("\n" + "=" * 80, file=sys.stderr)
+    print("AGENT INSTRUCTIONS:", file=sys.stderr)
+    print(
+        "- If this diff is INTENDED (you updated templates, flags, or opinions):",
+        file=sys.stderr,
+    )
+    print("    Stage the updated snapshots and commit:", file=sys.stderr)
+    print(f"    git add {rel_target}/", file=sys.stderr)
+    print(
+        "- If this diff is an UNINTENDED REGRESSION:",
+        file=sys.stderr,
+    )
+    print("    Discard modifications and fix your code:", file=sys.stderr)
+    print(f"    git restore {rel_target}/", file=sys.stderr)
+    print(f"    git clean -fd {rel_target}/", file=sys.stderr)
+    print("=" * 80 + "\n", file=sys.stderr)
+
+    return False
+
+
 def main() -> None:
     """Primary execution pipeline for documentation artifact generation."""
     parser = argparse.ArgumentParser(description="Generate documentation fixtures.")
@@ -1380,6 +1510,17 @@ def main() -> None:
         "--fast",
         action="store_true",
         help="Skip slow combinatorial subprocess executions (e.g., Protostar init).",
+    )
+    parser.add_argument(
+        "--scenario",
+        type=str,
+        default=None,
+        help="Target a specific scenario name (e.g., 'cli', 'ml').",
+    )
+    parser.add_argument(
+        "--no-check",
+        action="store_true",
+        help="Skip automatic git drift verification after generation.",
     )
     args = parser.parse_args()
 
@@ -1396,27 +1537,34 @@ def main() -> None:
     try:
         FIXTURES_DIR.mkdir(parents=True, exist_ok=True)
 
-        print("Generating static documentation fixtures...")
-        generate_cli_help_svgs()
-        generate_cli_dry_run_svg()
-        generate_default_config()
-        generate_capability_tables()
-        generate_manifest_state()
-        generate_agent_payloads()
-        generate_template_schema_fixture()
-        generate_diagnostic_panel_svg()
-        print("✔ Static fixtures generated.\n")
+        if not args.scenario:
+            print("Generating static documentation fixtures...")
+            generate_cli_help_svgs()
+            generate_cli_dry_run_svg()
+            generate_default_config()
+            generate_capability_tables()
+            generate_manifest_state()
+            generate_agent_payloads()
+            generate_template_schema_fixture()
+            generate_diagnostic_panel_svg()
+            print("✔ Static fixtures generated.\n")
 
         # Slow executions (disk I/O and subprocess isolation)
         if not args.fast:
-            print("Generating scenario fixtures...")
-            build_fixtures()
+            scenario_msg = f" [{args.scenario}]" if args.scenario else "s"
+            print(f"Generating scenario fixture{scenario_msg}...")
+            build_fixtures(scenario_name=args.scenario)
             generate_diff_fixtures()
             print("✔ Scenario fixtures generated.")
         else:
             print("Skipping scenario fixture builds (--fast enabled).")
 
         print("\nDocumentation fixtures updated successfully!")
+
+        if not args.no_check:
+            print("\nVerifying snapshot drift against git HEAD...")
+            if not check_snapshot_drift(FIXTURES_DIR):
+                sys.exit(1)
 
     except KeyboardInterrupt:
         print("\n\nOperation cancelled by user. Exiting gracefully.")
