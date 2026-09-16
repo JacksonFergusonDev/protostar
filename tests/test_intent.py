@@ -17,7 +17,7 @@ from protostar.intent import (
     DependencyGroup,
     TemplateOrigin,
 )
-from protostar.manifest import EnvironmentManifest
+from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
 
@@ -226,7 +226,7 @@ def test_typed_include_applied_before_resolver_and_rolls_back(
     executor = SystemExecutor(manifest, UserConfig())
 
     def run(command, timeout=None):
-        assert command[:2] == ["uv", "add"]
+        assert command == ["uv", "lock"]
         assert {"include-group": "docs"} in tomllib.loads(pyproject.read_text())[
             "dependency-groups"
         ]["dev"]
@@ -399,6 +399,7 @@ def test_requires_python_declares_and_executes_conditional_lock(
     source = tmp_path / "pyproject.toml"
     source.write_text('[project]\nrequires-python = ">=3.12"')
     manifest = EnvironmentManifest()
+    manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.filesystem.add_structured(
         "pyproject.toml",
         '[project]\nrequires-python = ">=3.13"',

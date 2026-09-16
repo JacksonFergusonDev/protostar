@@ -101,7 +101,10 @@ When the Orchestrator detects that files in the target workspace collide with th
 
 The `SystemExecutor` reads this enum to govern its AST mutation logic:
 
-- __`MERGE` (Default):__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Missing arrays are appended, but existing scalar values are respected.
+- __`MERGE` (Default):__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Previously applied tooling values can update when local content still matches
+  the owned baseline in `.protostar.lock.toml`. Local edits and deletions survive;
+  conflicts produce structured warnings. Known lint lists accept new members,
+  while other arrays are atomic. Personal project metadata remains seed-only.
 - __`OVERWRITE`:__ Forces Protostar's configuration onto the AST. Keys conflicting with Protostar's payload will be updated to match the tool's baseline.
 - __`ABORT`:__ Halts execution completely.
 
