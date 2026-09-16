@@ -8,19 +8,14 @@ dependencies = [
 ]
 description = "Add your description here."
 readme = "README.md"
-authors = [{ name = "your-name", email = "your-email" }]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Operating System :: MacOS",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: Microsoft :: Windows",
-]
+classifiers = ["Programming Language :: Python :: 3", "Programming Language :: Python :: 3.13", "Programming Language :: Python :: 3.14", "Operating System :: MacOS", "Operating System :: POSIX :: Linux", "Operating System :: Microsoft :: Windows"]
+
+[[project.authors]]
+name = "your-name"
+email = "your-email"
 
 [project.scripts]
 demo-project = "demo_project.cli:app"
-
 [dependency-groups]
 dev = [
     {include-group = "docs"},
@@ -38,46 +33,40 @@ docs = [
     "zensical>=0.0.57",
 ]
 
-# ==================================================
-# Tool Configuration
-# ==================================================
+[tool.rumdl]
+disable = ["MD013", "MD033", "MD077"]
 
-# ---- Ruff ---- #
+[tool.rumdl.MD003]
+style = "atx"
+
+[tool.rumdl.MD004]
+style = "dash"
+
+[tool.rumdl.MD009]
+br-spaces = 2
+strict = false
+
+[tool.rumdl.MD024]
+siblings-only = true
+
+[tool.rumdl.MD029]
+style = "one"
+
+[tool.rumdl.per-file-ignores]
+"docs/**/*.md" = ["MD041", "MD046"]
 
 [tool.ruff]
 line-length = 88
 
 [tool.ruff.lint]
-select = [
-    "A",   # flake8-builtins
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "E",   # pycodestyle errors
-    "F",   # Pyflakes
-    "I",   # isort
-    "RUF", # Ruff-specific
-    "UP",  # pyupgrade
-    "D",
-    "N",
-    "PT",
-    "RET",
-    "SIM",
-    "T20",
-]
-ignore = [
-    "E501", # Line too long - handled automatically by `ruff format`
-    "D100",
-    "D104",
-    "D107",
-]
+select = ["A", "B", "C4", "D", "E", "F", "I", "N", "PT", "RET", "RUF", "SIM", "T20", "UP"]
+ignore = ["D100", "D104", "D107", "E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["T201", "D"]
-
-# ---- Mypy ---- #
 
 [tool.mypy]
 mypy_path = "src"
@@ -89,7 +78,6 @@ warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
 explicit_package_bases = true
-
 strict = true
 
 [[tool.mypy.overrides]]
@@ -99,27 +87,10 @@ disallow_incomplete_defs = false
 disallow_untyped_calls = false
 warn_return_any = false
 
-# ---- Pytest ---- #
-
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
-testpaths = [
-    "tests",
-]
-pythonpath = [
-    ".",
-]
-
-[tool.coverage.run]
-branch = true
-
-[tool.coverage.report]
-omit = ["**/__init__.py"]
-show_missing = true
-skip_covered = true
-fail_under = 90
-
-# ---- Commitizen ---- #
+testpaths = ["tests"]
+pythonpath = ["."]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
@@ -129,45 +100,11 @@ tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
 
-# ---- rumdl ---- #
+[tool.coverage.run]
+branch = true
 
-[tool.rumdl]
-disable = [
-    "MD013", # line length - creates unnecessary diff churn
-    "MD033", # inline HTML - required for readme and parts of documentation
-    "MD077", # continuation line indentation - 4-space visual indent is intentional
-]
-
-# --- Heading style ---
-# Enforce ATX style (# Heading) exclusively
-[tool.rumdl.MD003]
-style = "atx"
-
-# --- Unordered list style ---
-# Use dash (-) for list markers for consistency and reduced diff noise
-[tool.rumdl.MD004]
-style = "dash"
-
-# --- Trailing spaces ---
-# Allow exactly 2 spaces for hard line breaks; flag other stray whitespace
-[tool.rumdl.MD009]
-br-spaces = 2
-strict = false
-
-# --- Duplicate headings ---
-# Allow identical subheadings under different parent headings
-[tool.rumdl.MD024]
-siblings-only = true
-
-# --- Ordered list numbering ---
-# Use "one" style (1., 1., 1.) to minimize Git diff churn on reorders
-[tool.rumdl.MD029]
-style = "one"
-
-# --- Per-directory overrides for docs/ ---
-# Relax rules that conflict with MkDocs / Zensical extensions
-[tool.rumdl.per-file-ignores]
-"docs/**/*.md" = [
-    "MD041", # first line need not be a top-level heading in doc pages
-    "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
-]
+[tool.coverage.report]
+omit = ["**/__init__.py"]
+show_missing = true
+skip_covered = true
+fail_under = 90

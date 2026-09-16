@@ -7,6 +7,7 @@
 │       └── ci.yml
 ├── .gitignore
 ├── .pre-commit-config.yaml
+├── .protostar.lock.toml
 ├── .python-version
 ├── CHANGELOG.md
 ├── justfile

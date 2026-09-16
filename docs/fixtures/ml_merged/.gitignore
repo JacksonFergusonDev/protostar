@@ -25,9 +25,4 @@ data/03_features/*
 mlruns/
 runs/
 wandb/
-*.csv
-*.fit
-*.fits
-*.fts
-*.parquet
 .mypy_cache/

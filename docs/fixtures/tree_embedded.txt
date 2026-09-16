@@ -1,6 +1,7 @@
 .
 ├── .envrc
 ├── .gitignore
+├── .protostar.lock.toml
 ├── .python-version
 ├── justfile
 ├── pyproject.toml

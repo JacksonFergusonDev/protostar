@@ -3,6 +3,7 @@
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
+├── .protostar.lock.toml
 ├── .python-version
 ├── Dockerfile
 ├── data
@@ -10,10 +11,8 @@
 │   │   └── .gitkeep
 │   ├── 02_processed
 │   │   └── .gitkeep
-│   ├── 03_features
-│   │   └── .gitkeep
-│   ├── catalogs
-│   └── fits
+│   └── 03_features
+│       └── .gitkeep
 ├── justfile
 ├── models
 │   └── weights

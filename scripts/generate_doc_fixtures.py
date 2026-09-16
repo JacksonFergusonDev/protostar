@@ -48,14 +48,14 @@ from protostar.orchestrator import Orchestrator
 # The `ml` fixture is a purposeful exception to this rule: it includes `--docker` because
 # `docs/usage/init.md` specifically showcases containerization for the ML stack and embeds
 # the resulting `ml/Dockerfile` and `ml/.dockerignore` snippets into the documentation.
-# `ml_merged` similarly exercises combinatorial multi-template merging with container support.
+# `ml_merged` exercises same-template reinitialization with added tooling.
 FIXTURES = {
     "cli": [["--template", "cli"]],
     "astro": [["--template", "astro"]],
     "ml": [["--template", "ml", "--docker"]],
     "ml_merged": [
         ["--template", "ml", "--docker"],
-        ["--template", "astro", "--mypy", "--docker", "--force-merge"],
+        ["--template", "ml", "--mypy", "--docker", "--force-merge"],
     ],
     "api": [["--template", "api"]],
     "dsp": [["--template", "dsp"]],
@@ -879,7 +879,9 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
             continue
 
         rel_path = file_path.relative_to(source_dir)
-        # Exclude VCS internal databases, ephemeral cache artifacts, and lockfiles
+        # Exclude VCS databases, caches, and resolver/provenance lockfiles.
+        # Ownership/state behavior has dedicated deterministic in-process tests;
+        # scenario snapshots freeze dependencies independently of live resolution.
         if any(
             part
             in (
@@ -891,6 +893,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 ".mypy_cache",
                 ".rumdl_cache",
                 "uv.lock",
+                ".protostar.lock.toml",
             )
             for part in rel_path.parts
         ):
