@@ -18,6 +18,7 @@ import enum
 import functools
 import json
 import logging
+import os
 from urllib.error import URLError
 
 from ._fallbacks import DEFAULT_REVISIONS
@@ -50,6 +51,10 @@ _REGISTRY_URL = (
 @functools.cache
 def _fetch_hook_registry() -> dict[str, str]:
     """Performs a single HTTP GET to the static registry CDN, cached in-memory."""
+    if os.environ.get("PROTOSTAR_OFFLINE_HOOK_REGISTRY") == "1":
+        logger.debug("Offline hook registry mode active, using fallback revisions.")
+        return {}
+
     try:
         import urllib.request
 

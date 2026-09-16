@@ -1,25 +1,18 @@
 import argparse
 import os
-import re
 import subprocess
 import sys
 import tempfile
-import tomllib
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-import tomlkit
-
 _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
-from packaging.requirements import Requirement
-from packaging.utils import canonicalize_name
-
-from protostar.fs import atomic_write_text
+from protostar.fs import atomic_write_bytes, atomic_write_text
 from scripts.generate_docs_assets import (
     DOCS_GENERATED_DIR,
     DOCS_TERMINALS_DIR,
@@ -28,6 +21,7 @@ from scripts.generate_docs_assets import (
 )
 
 SNAPSHOTS_DIR = Path("tests/snapshots").resolve()
+CONSTRAINTS_FILE = SNAPSHOTS_DIR / "constraints.txt"
 
 
 @dataclass(frozen=True)
@@ -112,66 +106,10 @@ FIXTURES: dict[str, list[list[str]]] = {
 }
 
 
-def _write_snapshot_file(filepath: Path, content: str) -> None:
-    """Writes content to a snapshot file ensuring trailing newline and directory existence."""
-    content = content.rstrip() + "\n"
+def _write_snapshot_file(filepath: Path, content: bytes) -> None:
+    """Writes raw bytes to a snapshot file ensuring directory existence."""
     filepath.parent.mkdir(parents=True, exist_ok=True)
-    atomic_write_text(filepath, content)
-
-
-def _freeze_pyproject_deps(old_content: str, new_content: str) -> str:
-    """Preserves dependency versions from an existing pyproject.toml."""
-    frozen_deps: dict[str, str] = dict(
-        re.findall(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', old_content)
-    )
-
-    def repl_deps(match: re.Match[str]) -> str:
-        package_name = match.group(1)
-        new_version = match.group(2)
-        frozen_version = frozen_deps.get(package_name, new_version)
-        return f'"{package_name}>={frozen_version}"'
-
-    return re.sub(r'"([a-zA-Z0-9_-]+)>=([^"]+)"', repl_deps, new_content)
-
-
-def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
-    """Preserves Git hook revisions from an existing .pre-commit-config.yaml."""
-    frozen_hooks: dict[str, str] = dict(
-        re.findall(r"repo:\s*([^\n]+)\n\s*rev:\s*([^\n]+)", old_content)
-    )
-
-    def repl_hooks(match: re.Match[str]) -> str:
-        repo_url = match.group(1)
-        indentation = match.group(2)
-        new_rev = match.group(3)
-        frozen_rev = frozen_hooks.get(repo_url, new_rev)
-        return f"repo: {repo_url}\n{indentation}rev: {frozen_rev}"
-
-    return re.sub(r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)", repl_hooks, new_content)
-
-
-def _align_state_dependencies(state_content: str, pyproject_content: str) -> str:
-    """Aligns state materializations with dependency versions frozen in a fixture."""
-    project = tomllib.loads(pyproject_content)
-    requirements: dict[tuple[str, str, str], str] = {}
-    groups = {
-        "main": project.get("project", {}).get("dependencies", []),
-        **project.get("dependency-groups", {}),
-    }
-    for group, entries in groups.items():
-        for entry in entries:
-            if not isinstance(entry, str):
-                continue
-            requirement = Requirement(entry)
-            marker = str(requirement.marker) if requirement.marker is not None else ""
-            requirements[(group, canonicalize_name(requirement.name), marker)] = entry
-
-    state = tomlkit.parse(state_content)
-    for record in state.get("dependencies", []):
-        identity = (record["group"], record["name"], record["marker"])
-        if materialized := requirements.get(identity):
-            record["materialized"] = materialized
-    return tomlkit.dumps(state)
+    atomic_write_bytes(filepath, content)
 
 
 def generate_tree(dir_path: Path) -> str:
@@ -229,16 +167,6 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     tree_file.parent.mkdir(parents=True, exist_ok=True)
     atomic_write_text(tree_file, tree_output.rstrip() + "\n")
 
-    generated_pyproject = source_dir / "pyproject.toml"
-    fixture_pyproject = SNAPSHOTS_DIR / fixture_name / "pyproject.toml"
-    frozen_pyproject: str | None = None
-    if generated_pyproject.exists():
-        frozen_pyproject = generated_pyproject.read_text(encoding="utf-8")
-        if fixture_pyproject.exists():
-            frozen_pyproject = _freeze_pyproject_deps(
-                fixture_pyproject.read_text(encoding="utf-8"), frozen_pyproject
-            )
-
     written_targets: set[Path] = set()
     for file_path in sorted(source_dir.rglob("*")):
         if not file_path.is_file():
@@ -267,18 +195,7 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
 
         target_path = SNAPSHOTS_DIR / fixture_name / target_rel_path
         written_targets.add(target_path.resolve())
-        content = file_path.read_text(encoding="utf-8")
-        if rel_path.name == "pyproject.toml" and frozen_pyproject is not None:
-            content = frozen_pyproject
-        elif rel_path.name == ".protostar.lock.toml" and frozen_pyproject is not None:
-            content = _align_state_dependencies(content, frozen_pyproject)
-
-        if target_path.exists():
-            old_content = target_path.read_text(encoding="utf-8")
-            if target_rel_path.name == "pre-commit-config.fixture.yaml":
-                content = _freeze_pre_commit_hooks(old_content, content)
-
-        _write_snapshot_file(target_path, content)
+        _write_snapshot_file(target_path, file_path.read_bytes())
 
     fixture_root = SNAPSHOTS_DIR / fixture_name
     if fixture_root.exists():
@@ -320,6 +237,8 @@ def _build_fixture_scenario(
         isolated_env["XDG_CONFIG_HOME"] = tmpdir
         isolated_env["UV_CACHE_DIR"] = host_cache_dir
         isolated_env["UV_NO_PROGRESS"] = "1"
+        isolated_env["UV_CONSTRAINT"] = str(CONSTRAINTS_FILE.resolve())
+        isolated_env["PROTOSTAR_OFFLINE_HOOK_REGISTRY"] = "1"
 
         static_cwd = Path(tmpdir) / "demo_project"
         static_cwd.mkdir()
@@ -386,7 +305,6 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     rel_targets = [
         str(t.relative_to(Path.cwd())) if t.is_relative_to(Path.cwd()) else str(t)
         for t in targets
-        if t.exists()
     ]
     if not rel_targets:
         return True
