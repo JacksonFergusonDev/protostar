@@ -5,6 +5,9 @@
 | `64` | `os.EX_USAGE` | `InvalidUsageError` | Invalid CLI arguments or command usage syntax |
 | `65` | `os.EX_DATAERR` | `TemplateResolutionError` | Template resolution error (corrupted archive, missing variables) |
 | `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError`<br>`AggregatedDependencyError` | Missing required system binary (`uv`, `git`, etc.) |
-| `70` | `os.EX_SOFTWARE` | `ConfigurationError`<br>`InvalidRollbackStateError` | Internal logic invariant breach, corrupt manifest, or failed rollback |
-| `73` | `os.EX_CANTCREAT` | `WorkspaceCollisionError`<br>`UnsupportedFilesystemNodeError` | Target files exist, symlinks/special nodes encountered, or unwriteable disk |
-| `130` | POSIX SIGINT | `KeyboardInterrupt` | Interactive execution cancelled by user (`Ctrl+C`) |
+| `70` | `os.EX_SOFTWARE` | *(Unhandled exception)* | Unhandled internal Python bug (prompts automated bug report) |
+| `74` | `os.EX_IOERR` | `FileSystemError` | Local filesystem read/write or permission failure |
+| `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` | Transient network failure during remote template download |
+| `77` | `os.EX_NOPERM` | `SecurityViolationError` | Security violation (e.g., path traversal Zip Slip) |
+| `78` | `os.EX_CONFIG` | `ConfigurationError` | Invalid TOML syntax or conflicting CLI configuration |
+| `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You aborted interactive wizard prompt or interrupted execution (Ctrl+C) |

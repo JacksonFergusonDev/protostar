@@ -370,33 +370,111 @@ def build_snapshots(scenario_name: str | None = None) -> None:
             future.result()
 
 
-def check_snapshot_drift(directories: Sequence[Path]) -> bool:
-    """Verifies that the target snapshot/doc directories match git HEAD."""
-    rel_targets = [
-        str(d.relative_to(Path.cwd())) if d.is_relative_to(Path.cwd()) else str(d)
-        for d in directories
-        if d.exists()
-    ]
+def check_snapshot_drift(targets: Sequence[Path]) -> bool:
+    """Verifies that the target snapshot/doc paths match git HEAD without uncommitted drift.
 
-    status_result = subprocess.run(
-        ["git", "status", "--porcelain", *rel_targets],
+    Inspects the disk inventory directly against Git's tracked index to prevent local or
+    nested .gitignore rules from hiding untracked artifacts, captures staged and unstaged
+    diffs against HEAD, and renders unified diffs for newly created files.
+
+    Args:
+        targets: Sequence of directory or file paths to verify.
+
+    Returns:
+        True if zero uncommitted changes exist; False otherwise.
+    """
+    rel_targets = [
+        str(t.relative_to(Path.cwd())) if t.is_relative_to(Path.cwd()) else str(t)
+        for t in targets
+        if t.exists()
+    ]
+    if not rel_targets:
+        return True
+
+    # 1. Collect disk file inventory directly (independent of Git's ignore rules)
+    disk_files: set[Path] = set()
+    for target in targets:
+        if not target.exists():
+            continue
+        if target.is_file():
+            disk_files.add(target.resolve())
+        else:
+            for file_path in target.rglob("*"):
+                if not file_path.is_file():
+                    continue
+                # Exclude runtime caches that are not snapshot artifacts
+                if any(
+                    part
+                    in (
+                        "__pycache__",
+                        ".DS_Store",
+                        ".pytest_cache",
+                        ".ruff_cache",
+                        ".mypy_cache",
+                    )
+                    for part in file_path.parts
+                ):
+                    continue
+                disk_files.add(file_path.resolve())
+
+    # 2. Collect Git tracked files for the target paths
+    ls_result = subprocess.run(
+        ["git", "ls-files", "--", *rel_targets],
         capture_output=True,
         text=True,
         check=True,
     )
-    status_output = status_result.stdout.strip()
-    if not status_output:
+    tracked_files = {
+        (Path.cwd() / line).resolve()
+        for line in ls_result.stdout.splitlines()
+        if line.strip()
+    }
+
+    # Identify untracked and deleted files independently of .gitignore
+    untracked_disk_files = disk_files - tracked_files
+    deleted_tracked_files = tracked_files - disk_files
+
+    # 3. Check for modified tracked files against HEAD (covers both staged and unstaged changes)
+    diff_stat_result = subprocess.run(
+        ["git", "diff", "HEAD", "--name-status", "--", *rel_targets],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    head_diff_lines = [
+        line.strip() for line in diff_stat_result.stdout.splitlines() if line.strip()
+    ]
+
+    has_drift = bool(untracked_disk_files or deleted_tracked_files or head_diff_lines)
+    if not has_drift:
         targets_str = ", ".join(rel_targets)
         print(f"✔ All snapshots and assets in [{targets_str}] match expected state.")
         return True
 
+    # 4. Generate unified diff for tracked changes against HEAD
     diff_result = subprocess.run(
-        ["git", "diff", "--color=never", *rel_targets],
+        ["git", "diff", "HEAD", "--color=never", "--", *rel_targets],
         capture_output=True,
         text=True,
         check=True,
     )
     diff_output = diff_result.stdout.strip()
+
+    # 5. Generate unified diff for untracked files
+    untracked_diff_blocks: list[str] = []
+    for untracked_path in sorted(untracked_disk_files):
+        rel_untracked = (
+            str(untracked_path.relative_to(Path.cwd()))
+            if untracked_path.is_relative_to(Path.cwd())
+            else str(untracked_path)
+        )
+        untracked_diff = subprocess.run(
+            ["git", "diff", "--no-index", "--color=never", "/dev/null", rel_untracked],
+            capture_output=True,
+            text=True,
+        )
+        if untracked_diff.stdout.strip():
+            untracked_diff_blocks.append(untracked_diff.stdout.strip())
 
     targets_display = " ".join(rel_targets)
     print("\n" + "=" * 80, file=sys.stderr)
@@ -406,12 +484,44 @@ def check_snapshot_drift(directories: Sequence[Path]) -> bool:
     )
     print("=" * 80, file=sys.stderr)
     print("\nModified or untracked snapshot files:", file=sys.stderr)
-    for line in status_output.splitlines():
-        print(f"  {line}", file=sys.stderr)
 
+    reported_paths: set[str] = set()
+    for line in head_diff_lines:
+        parts = line.split(maxsplit=1)
+        if len(parts) == 2:
+            status_code, diff_path_str = parts
+            print(f"  {status_code} {diff_path_str}", file=sys.stderr)
+            reported_paths.add(diff_path_str)
+        else:
+            print(f"  {line}", file=sys.stderr)
+
+    for untracked_path in sorted(untracked_disk_files):
+        rel = (
+            str(untracked_path.relative_to(Path.cwd()))
+            if untracked_path.is_relative_to(Path.cwd())
+            else str(untracked_path)
+        )
+        if rel not in reported_paths:
+            print(f"  ?? {rel}", file=sys.stderr)
+
+    for deleted_path in sorted(deleted_tracked_files):
+        rel = (
+            str(deleted_path.relative_to(Path.cwd()))
+            if deleted_path.is_relative_to(Path.cwd())
+            else str(deleted_path)
+        )
+        if rel not in reported_paths:
+            print(f"  D  {rel}", file=sys.stderr)
+
+    all_diffs: list[str] = []
     if diff_output:
+        all_diffs.append(diff_output)
+    if untracked_diff_blocks:
+        all_diffs.extend(untracked_diff_blocks)
+
+    if all_diffs:
         print("\n--- Unified Diff ---", file=sys.stderr)
-        print(diff_output, file=sys.stderr)
+        print("\n".join(all_diffs), file=sys.stderr)
 
     print("\n" + "=" * 80, file=sys.stderr)
     print("AGENT INSTRUCTIONS:", file=sys.stderr)
@@ -482,10 +592,17 @@ def main() -> None:
 
         if not args.no_check:
             print("\nVerifying snapshot drift against git HEAD...")
-            dirs_to_check = [SNAPSHOTS_DIR]
-            if not args.scenario and not args.skip_docs:
-                dirs_to_check.extend([DOCS_GENERATED_DIR, DOCS_TERMINALS_DIR])
-            if not check_snapshot_drift(dirs_to_check):
+            if args.scenario:
+                targets_to_check = [
+                    SNAPSHOTS_DIR / args.scenario,
+                    DOCS_GENERATED_DIR / f"tree_{args.scenario}.txt",
+                ]
+            else:
+                targets_to_check = [SNAPSHOTS_DIR, DOCS_GENERATED_DIR]
+                if not args.skip_docs:
+                    targets_to_check.append(DOCS_TERMINALS_DIR)
+
+            if not check_snapshot_drift(targets_to_check):
                 sys.exit(1)
 
     except KeyboardInterrupt:

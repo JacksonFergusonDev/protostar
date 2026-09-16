@@ -613,26 +613,59 @@ def generate_capability_tables() -> None:
         [
             "`70`",
             "`os.EX_SOFTWARE`",
-            "`ConfigurationError`<br>`InvalidRollbackStateError`",
-            "Internal logic invariant breach, corrupt manifest, or failed rollback",
+            "*(Unhandled exception)*",
+            "Unhandled internal Python bug (prompts automated bug report)",
         ],
         [
-            "`73`",
-            "`os.EX_CANTCREAT`",
-            "`WorkspaceCollisionError`<br>`UnsupportedFilesystemNodeError`",
-            "Target files exist, symlinks/special nodes encountered, or unwriteable disk",
+            "`74`",
+            "`os.EX_IOERR`",
+            "`FileSystemError`",
+            "Local filesystem read/write or permission failure",
+        ],
+        [
+            "`75`",
+            "`os.EX_TEMPFAIL`",
+            "`NetworkFetchError`",
+            "Transient network failure during remote template download",
+        ],
+        [
+            "`77`",
+            "`os.EX_NOPERM`",
+            "`SecurityViolationError`",
+            "Security violation (e.g., path traversal Zip Slip)",
+        ],
+        [
+            "`78`",
+            "`os.EX_CONFIG`",
+            "`ConfigurationError`",
+            "Invalid TOML syntax or conflicting CLI configuration",
         ],
         [
             "`130`",
-            "POSIX SIGINT",
-            "`KeyboardInterrupt`",
-            "Interactive execution cancelled by user (`Ctrl+C`)",
+            "Shell Signal",
+            "`ExecutionAbortedError`<br>`ExecutionInterruptedError`",
+            "You aborted interactive wizard prompt or interrupted execution (Ctrl+C)",
         ],
     ]
     _write_generated_doc(
         "table_exit_codes.md",
         _format_markdown_table(exit_code_headers, exit_code_rows),
     )
+
+    # Sync table into CONTRIBUTING.md if present
+    contributing_path = Path("CONTRIBUTING.md")
+    if contributing_path.exists():
+        contrib_content = contributing_path.read_text(encoding="utf-8")
+        markdown_table = _format_markdown_table(exit_code_headers, exit_code_rows)
+        import re
+
+        new_content = re.sub(
+            r"<!-- BEGIN_EXIT_CODES -->.*<!-- END_EXIT_CODES -->",
+            f"<!-- BEGIN_EXIT_CODES -->\n\n{markdown_table}\n\n<!-- END_EXIT_CODES -->",
+            contrib_content,
+            flags=re.DOTALL,
+        )
+        atomic_write_text(contributing_path, new_content)
 
 
 def generate_manifest_state() -> None:

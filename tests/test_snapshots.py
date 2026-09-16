@@ -202,3 +202,26 @@ def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
     owned_names = {record["name"] for record in state["dependencies"]}
     assert "mypy" in owned_names
     assert "astropy" not in owned_names
+
+
+def test_exit_codes_documentation_matches_cli_behavior():
+    """Verifies that table_exit_codes.md accurately documents CLI exit code mappings."""
+    table_path = Path("docs/generated/table_exit_codes.md")
+    assert table_path.exists()
+    content = table_path.read_text(encoding="utf-8")
+
+    # Assert accurate exit code mappings
+    assert "| `78` | `os.EX_CONFIG` | `ConfigurationError` |" in content
+    assert "| `65` | `os.EX_DATAERR` | `TemplateResolutionError` |" in content
+    assert (
+        "| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError`<br>`AggregatedDependencyError` |"
+        in content
+    )
+    assert "| `74` | `os.EX_IOERR` | `FileSystemError` |" in content
+    assert "| `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` |" in content
+    assert "| `77` | `os.EX_NOPERM` | `SecurityViolationError` |" in content
+    assert "| `70` | `os.EX_SOFTWARE` | *(Unhandled exception)* |" in content
+
+    # Ensure stale / inaccurate errors are absent
+    assert "InvalidRollbackStateError" not in content
+    assert "`73`" not in content
