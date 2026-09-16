@@ -25,10 +25,11 @@
      "pytest>=9.1.1",
      "pytest-mock>=3.15.1",
      "ruff>=0.16.5",
-@@ -53,6 +60,19 @@
+@@ -106,3 +113,16 @@
+     "MD041", # first line need not be a top-level heading in doc pages
+     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
  ]
- extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
-
++
 +# ---- Mypy ---- #
 +
 +[tool.mypy]
@@ -41,7 +42,3 @@
 +warn_unused_configs = true
 +check_untyped_defs = true
 +explicit_package_bases = true
-+
- # ---- Pytest ---- #
-
- [tool.pytest.ini_options]

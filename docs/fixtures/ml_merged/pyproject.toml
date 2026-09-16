@@ -60,19 +60,6 @@ ignore = [
 ]
 extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
 
-# ---- Mypy ---- #
-
-[tool.mypy]
-mypy_path = "src"
-python_version = "3.13"
-pretty = true
-show_error_codes = true
-show_error_context = true
-warn_return_any = true
-warn_unused_configs = true
-check_untyped_defs = true
-explicit_package_bases = true
-
 # ---- Pytest ---- #
 
 [tool.pytest.ini_options]
@@ -126,3 +113,16 @@ style = "one"
     "MD041", # first line need not be a top-level heading in doc pages
     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]
+
+# ---- Mypy ---- #
+
+[tool.mypy]
+mypy_path = "src"
+python_version = "3.13"
+pretty = true
+show_error_codes = true
+show_error_context = true
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+explicit_package_bases = true

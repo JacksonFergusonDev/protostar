@@ -176,10 +176,6 @@ def reconcile_toml(
             hint="Correct the target TOML syntax before retrying.",
         ) from e
     local = cast(dict[str, Value], doc.unwrap())
-    clean_managed_tools = isinstance(base, dict) and semantic_equal(
-        local.get("tool", MISSING), base.get("tool", MISSING)
-    )
-    inserted_tool_section = False
     if overwrite or initializing:
         # Explicit target authorization owns declared leaves, never foreign siblings.
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
@@ -226,7 +222,6 @@ def reconcile_toml(
         after: dict[str, Value],
         keys: tuple[str, ...] = (),
     ) -> None:
-        nonlocal inserted_tool_section
         for key, value in after.items():
             previous = before.get(key, MISSING)
             if semantic_equal(previous, value):
@@ -265,15 +260,21 @@ def reconcile_toml(
                     prior.add(tomlkit.comment(f"---- {first_section} ---- #"))
                 ast[key] = tomlkit.table(is_super_table=True)
                 patch(ast[key], {}, value, path)
+            elif (
+                isinstance(previous, list)
+                and isinstance(value, list)
+                and path in SET_LIKE_TOML_PATHS
+                and value[: len(previous)] == previous
+            ):
+                # Preserve local member trivia before considering desired AST replacement.
+                for member in value[len(previous) :]:
+                    ast[key].append(tomlkit.item(member))
             elif styled is not None and semantic_equal(styled_value, value):
                 if previous is MISSING:
                     section: str | None = None
                     banner = False
                     if len(path) == 2 and path[0] == "tool":
                         section = TOOL_SECTION_NAMES.get(key)
-                        inserted_tool_section = (
-                            inserted_tool_section or section is not None
-                        )
                     elif path == ("tool",) and hasattr(styled, "keys"):
                         first_tool = cast(str | None, next(iter(styled.keys()), None))
                         if first_tool is not None:
@@ -300,23 +301,13 @@ def reconcile_toml(
                             if marker not in original:
                                 prior.add(tomlkit.comment(f"---- {section} ---- #"))
                 ast[key] = deepcopy(styled)
-            elif (
-                isinstance(previous, list)
-                and isinstance(value, list)
-                and path in SET_LIKE_TOML_PATHS
-                and value[: len(previous)] == previous
-            ):
-                for member in value[len(previous) :]:
-                    ast[key].append(tomlkit.item(member))
             else:
                 ast[key] = tomlkit.item(value)
 
     patch(doc, local, value)
     if semantic_equal(local, value):
         content = original
-    elif location.file == "pyproject.toml" and (
-        initializing or (clean_managed_tools and inserted_tool_section)
-    ):
+    elif location.file == "pyproject.toml" and initializing:
         content = format_pyproject_toml(doc)
     else:
         content = tomlkit.dumps(doc)
