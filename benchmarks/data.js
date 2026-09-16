@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789597527304,
+  "lastUpdate": 1789601698148,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13095,6 +13095,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 230.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8dc20d1d324a4fa1b17aa4420ad7411173a388b2",
+          "message": "test(snapshots): harden regression testing with input pinning and repeatability suites (#255)\n\n* test(snapshots): harden regression testing with input pinning and repeatability suites\n\n* fix(snapshots): isolate repeatability network calls and fix missing target drift",
+          "timestamp": "2026-09-16T16:33:53-07:00",
+          "tree_id": "522231912d7ec09587485e5cbc7b7d8af6a8e22e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8dc20d1d324a4fa1b17aa4420ad7411173a388b2"
+        },
+        "date": 1789601697338,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 164.74,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 237.04,
             "unit": "ms"
           }
         ]
