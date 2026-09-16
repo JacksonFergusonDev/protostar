@@ -270,7 +270,7 @@ Diagnostics in Protostar operate at three levels:
 
 **2. Structured diagnostics.** Non-fatal events during scaffolding (optional binaries not found, skipped steps) are collected into `ExecutionResult.diagnostics` and rendered in a summary panel at the end of the run. Nothing is silently dropped.
 
-![Protostar Diagnostic Summary](./fixtures/diagnostic_panel.svg)
+![Protostar Diagnostic Summary](./assets/terminals/diagnostic_panel.svg)
 
 **3. Automated crash reports.** When Protostar encounters an unexpected internal exception (a genuine bug, not an operational error), it collects non-sensitive system environment details — OS, Python version, command invocation, full traceback — and encodes it into a pre-populated GitHub issue URL. You get one link to click. The debugging back-and-forth doesn't happen.
 

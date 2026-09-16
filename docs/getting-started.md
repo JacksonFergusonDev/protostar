@@ -65,7 +65,7 @@ In a fraction of a second, Protostar:
 
 Protostar is self-documenting. You can view the full capabilities matrix and subcommand details directly from your terminal at any time.
 
-![Protostar Help](./fixtures/cli_help.svg)
+![Protostar Help](./assets/terminals/cli_help.svg)
 
 !!! tip "Command-Specific Help"
     You can also get localized help for specific subcommands by running:

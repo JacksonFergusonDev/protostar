@@ -57,10 +57,8 @@ jobs:
     - name: Mock direnv
       uses: ./.github/actions/mock-direnv
 
-    - name: Verify documentation fixtures are up-to-date
-      run: |
-        uv run python scripts/generate_doc_fixtures.py
-        git diff --exit-code docs/fixtures/ || (echo "::error::Docs are out of date! Run 'uv run python scripts/generate_doc_fixtures.py' locally and commit the changes." && exit 1)
+    - name: Verify snapshots and documentation assets are up-to-date
+      run: uv run python scripts/run_snapshots.py
 
     - name: Validate embedded documentation links
       run: uv run python scripts/check_doc_links.py

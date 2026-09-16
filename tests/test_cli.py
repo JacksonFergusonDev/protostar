@@ -527,7 +527,7 @@ def test_main_handles_rollback_error_with_documentation_hyperlink(mocker):
     )
     panel = panel_call.args[0]
     buf = io.StringIO()
-    string_console = Console(file=buf, force_terminal=True)
+    string_console = Console(file=buf, force_terminal=True, color_system="standard")
     string_console.print(panel)
     rendered_output = buf.getvalue()
 
@@ -1243,7 +1243,7 @@ def test_cli_reference_fixture_tables():
 
     from protostar.modules import TOOLING_MODULES
 
-    fixtures_dir = Path("docs/fixtures")
+    fixtures_dir = Path("docs/generated")
     assert fixtures_dir.exists()
 
     # Verify Global Options fixture

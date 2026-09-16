@@ -1,0 +1,94 @@
+schema_version = 1
+producer_version = "0.9.0"
+hook_pins = []
+
+[template]
+origin = "built-in"
+locator = "astro"
+digest = "560668b6d2e28e431d4c330788d1e86986f8a9229b9372c5df2dbdd6c39e94fc"
+display_name = "astro"
+
+[[files]]
+path = "pyproject.toml"
+policy = "structured-toml"
+baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "ruff"
+marker = ""
+declared = "ruff"
+materialized = "ruff>=0.16.8"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "astropy"
+marker = ""
+declared = "astropy"
+materialized = "astropy>=8.0.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "astroquery"
+marker = ""
+declared = "astroquery"
+materialized = "astroquery>=0.4.11"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "matplotlib"
+marker = ""
+declared = "matplotlib"
+materialized = "matplotlib>=3.11.2"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "nbdime"
+marker = ""
+declared = "nbdime"
+materialized = "nbdime>=4.0.4"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "numpy"
+marker = ""
+declared = "numpy"
+materialized = "numpy>=2.5.3"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "pandas"
+marker = ""
+declared = "pandas"
+materialized = "pandas>=3.0.5"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "photutils"
+marker = ""
+declared = "photutils"
+materialized = "photutils>=3.0.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "scipy"
+marker = ""
+declared = "scipy"
+materialized = "scipy>=1.18.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "specutils"
+marker = ""
+declared = "specutils"
+materialized = "specutils>=2.4.0"

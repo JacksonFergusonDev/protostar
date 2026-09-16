@@ -487,7 +487,7 @@ def test_cli_resolution_passes_builtin_reference_to_request(mocker):
 
 
 def test_generated_schema_example_parses_without_legacy_declarations():
-    fixture = Path(__file__).parents[1] / "docs" / "fixtures" / "template_schema.toml"
+    fixture = Path(__file__).parents[1] / "docs" / "generated" / "template_schema.toml"
     blueprint = TemplateBlueprint._parse(fixture.read_text())
     assert (
         blueprint.appends[".envrc"]["project_environment"].id == "project_environment"

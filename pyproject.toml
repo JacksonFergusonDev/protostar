@@ -110,7 +110,7 @@ section-order = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["T201", "D", "S"]
-"scripts/*.py" = ["T201", "D", "S", "SIM"]
+"scripts/*.py" = ["T201", "D", "S", "SIM", "E402"]
 
 # ---- mypy ---- #
 
@@ -122,7 +122,7 @@ pretty = true
 show_error_codes = true
 show_error_context = true
 explicit_package_bases = true
-exclude = ["^docs/", "^site/"]
+exclude = ["^docs/", "^site/", "^tests/snapshots/"]
 
 [[tool.mypy.overrides]]
 module = ["tests.*", "scripts.*"]
@@ -136,6 +136,7 @@ warn_return_any = false
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 testpaths = ["tests"]
+norecursedirs = ["snapshots", ".*", "build", "dist", "venv"]
 pythonpath = ["."]
 markers = [
     "integration: marks tests that perform actual disk I/O and subprocess calls",

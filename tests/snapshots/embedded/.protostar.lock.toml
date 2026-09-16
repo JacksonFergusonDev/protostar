@@ -1,0 +1,38 @@
+schema_version = 1
+producer_version = "0.9.0"
+hook_pins = []
+
+[template]
+origin = "built-in"
+locator = "embedded"
+digest = "a5821920ff0285d484d03db7f8ba22b35013395acded3758653d460ceca09cf7"
+display_name = "embedded"
+
+[[files]]
+path = "pyproject.toml"
+policy = "structured-toml"
+baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "ruff"
+marker = ""
+declared = "ruff"
+materialized = "ruff>=0.16.8"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "mpremote"
+marker = ""
+declared = "mpremote"
+materialized = "mpremote>=1.29.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "pyserial"
+marker = ""
+declared = "pyserial"
+materialized = "pyserial>=3.5"

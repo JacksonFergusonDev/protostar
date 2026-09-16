@@ -44,9 +44,9 @@ def set_winsize(fd: int, rows: int, cols: int) -> None:
 def get_fixture_line_count(
     fixture_preset: str, relative_path: str = "pyproject.toml"
 ) -> int:
-    """Extracts the exact line count of a generated file from docs/fixtures."""
+    """Extracts the exact line count of a generated file from tests/snapshots."""
     repo_root = Path(__file__).resolve().parent.parent
-    fixture_file = repo_root / "docs" / "fixtures" / fixture_preset / relative_path
+    fixture_file = repo_root / "tests" / "snapshots" / fixture_preset / relative_path
     if fixture_file.exists():
         return len(fixture_file.read_text(encoding="utf-8").splitlines())
     return 60
@@ -266,7 +266,7 @@ def inspect_project_file(
     """Executes the standard post-initialization inspection with eza and bat.
 
     Dynamically calculates the exact number of lines to scroll through bat
-    based on the total line count in docs/fixtures/<preset>/<target_file>,
+    based on the total line count in tests/snapshots/<preset>/<target_file>,
     capped at max_scroll for demo brevity and pacing.
     """
     session.sleep(0.4)

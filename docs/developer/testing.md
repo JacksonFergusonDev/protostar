@@ -102,15 +102,15 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
     just ci
     ```
 
-=== "Documentation Verification"
-    Generates all fixtures for the documentation in `docs/fixtures/` and verifies there is no snapshot drift.
+=== "Snapshot Regression & Verification"
+    Generates scenario regression snapshots in `tests/snapshots/` and documentation presentation assets in `docs/generated/` and `docs/assets/terminals/`, verifying there is no snapshot drift.
 
-    Scenario fixture directories include `.protostar.lock.toml` alongside the
+    Scenario snapshot directories include `.protostar.lock.toml` alongside the
     generated workspace files. Dependency versions are frozen consistently across
-    the state record and `pyproject.toml`, so fixture review covers ownership changes
+    the state record and `pyproject.toml`, so snapshot review covers ownership changes
     as well as user-visible output.
     ```bash
-    just check-fixtures
+    just check-snapshots
     ```
 
 === "Local Server"

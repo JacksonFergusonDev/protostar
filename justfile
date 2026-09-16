@@ -81,7 +81,7 @@ test-benchmark-slower: sync
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test-unit check-fixtures check-doc-links
+ci: lint typecheck test-unit check-snapshots check-doc-links
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -110,14 +110,10 @@ clean:
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
 
-# Generate and verify documentation fixtures are up-to-date
-check-fixtures: sync
-    @printf "\n{{ blue }}=== Generating All Documentation Fixtures ==={{ nc }}\n"
-    uv run python scripts/generate_doc_fixtures.py
-    @printf "{{ green }}✔ Documentation fixtures generated in docs/fixtures/{{ nc }}\n"
-    @printf "\n{{ blue }}=== Checking Snapshot Drift ==={{ nc }}\n"
-    @git diff --exit-code docs/fixtures/ > /dev/null || (printf "{{ yellow }}⚠ Snapshot drift detected. The generator modified files in docs/fixtures/. Review the diff and commit the changes.{{ nc }}\n" && exit 1)
-    @printf "{{ green }}✔ Snapshots are up-to-date{{ nc }}\n"
+# Generate and verify scenario regression snapshots and documentation assets
+check-snapshots: sync
+    @printf "\n{{ blue }}=== Verifying Regression Snapshots & Documentation Assets ==={{ nc }}\n"
+    uv run python scripts/run_snapshots.py
 
 # Validate that embedded documentation links in errors resolve to real files
 check-doc-links: sync
@@ -133,7 +129,7 @@ prewarm-demo: sync
         mypy pytest pytest-cov pytest-mock ruff rumdl typer rich commitizen prek zensical \
         --quiet 2>/dev/null || true
     @python3 -m compileall -q src/
-    @uv run --with prek prek --config docs/fixtures/cli/pre-commit-config.fixture.yaml prepare-hooks 2>/dev/null || true
+    @uv run --with prek prek --config tests/snapshots/cli/pre-commit-config.fixture.yaml prepare-hooks 2>/dev/null || true
     @printf "{{ green }}✔ Demo environment warmed{{ nc }}\n"
 
 # Helper recipe to record and render demo using asciinema + agg

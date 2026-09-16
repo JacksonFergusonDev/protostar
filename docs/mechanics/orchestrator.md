@@ -67,7 +67,7 @@ flowchart TD
 
 During planning and execution, non-fatal skips and warnings (e.g., missing optional binaries like `direnv` or skipped optional tasks) are recorded into `ExecutionResult.diagnostics`. The CLI presentation layer renders these events in a structured summary panel upon completion:
 
-![Protostar Diagnostic Summary](../fixtures/diagnostic_panel.svg)
+![Protostar Diagnostic Summary](../assets/terminals/diagnostic_panel.svg)
 
 For unexpected internal exceptions or AST parsing failures, the runtime traps errors at the CLI boundary to generate pre-filled GitHub crash reports without corrupting the workspace. For complete details on the exception hierarchy, POSIX exit code mappings, and crash issue generation, see the [Error Handling Architecture](./error_handling.md#crash-diagnostics-and-issue-reporting).
 

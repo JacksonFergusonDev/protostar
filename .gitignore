@@ -22,3 +22,6 @@ site/
 .ruff_cache/
 .venv/
 *.log
+
+# Explicitly track .envrc in test snapshots (prevent host ~/.gitignore_global masking)
+!tests/snapshots/**/.envrc

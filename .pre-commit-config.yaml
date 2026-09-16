@@ -40,7 +40,7 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
-        exclude: ^docs/
+        exclude: ^tests/snapshots/
         require_serial: true
 
       - id: ruff-format
@@ -48,7 +48,7 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
-        exclude: ^docs/
+        exclude: ^tests/snapshots/
         require_serial: true
 
       - id: mypy
@@ -56,7 +56,7 @@ repos:
         entry: uv run mypy
         language: system
         types: [python]
-        exclude: ^docs/
+        exclude: ^tests/snapshots/
         require_serial: true
 
       - id: rumdl-check
@@ -96,9 +96,9 @@ repos:
         pass_filenames: false
         stages: [pre-push]
 
-      - id: check-fixtures
-        name: check doc fixtures drift
-        entry: uv run python scripts/generate_doc_fixtures.py
+      - id: check-snapshots
+        name: check snapshot drift
+        entry: uv run python scripts/run_snapshots.py
         language: system
         pass_filenames: false
         stages: [pre-push]
