@@ -16,6 +16,7 @@ from .intent import (
     validate_target,
 )
 from .interpolation import render_template
+from .merge import MergeConflict
 from .metadata import LicenseType
 from .workflows import CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
@@ -58,6 +59,7 @@ class DiagnosticEvent:
     message: str
     severity: Severity
     detail: str | None = None
+    conflict: MergeConflict | None = None
 
 
 class SystemTask:

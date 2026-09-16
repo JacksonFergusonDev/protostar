@@ -1,21 +1,32 @@
 import datetime
 import logging
+import stat
 import tomllib
+from dataclasses import replace
 from functools import partial
 from pathlib import Path
+from typing import cast
 
 from .appends import append_marker_blocks
 from .config import UserConfig
-from .dependencies import install_dependencies
+from .dependencies import (
+    install_dependencies,
+    normalized_requirement,
+    requirement_entries,
+    requirement_identity,
+    select_dependencies,
+)
 from .errors import (
     ConfigurationError,
     FileSystemError,
+    UnsupportedFilesystemNodeError,
 )
 from .fs_transaction import TransactionAwareFS
 from .ide import check_ide_extensions, write_ide_settings
 from .intent import (
     AppendContribution,
     ContributionPolicy,
+    DependencyGroup,
     ResolverFootprint,
     validate_target,
 )
@@ -23,16 +34,34 @@ from .interpolation import render_template
 from .journal import MutationJournal
 from .manifest import (
     CollisionStrategy,
+    DependencyManifest,
     DiagnosticEvent,
     DiagnosticPhase,
     EnvironmentManifest,
     Severity,
     SystemTask,
 )
+from .merge import MISSING, ConflictReason, MergeConflict, MergeLocation, Value
 from .registry import HookRegistry
 from .security import enforce_binary_safelist, enforce_path_jail
+from .sync_state import (
+    DependencyState,
+    FilePolicy,
+    FileState,
+    SyncState,
+    check_template_identity,
+    decode_toml_baseline,
+    deserialize_state,
+    encode_toml_baseline,
+    serialize_state,
+)
 from .system import ProcessRunner, shield_sigint
-from .toml_ast import apply_dependency_includes, merge_toml_payloads
+from .toml_ast import (
+    aggregate_toml,
+    aggregate_toml_document,
+    apply_dependency_includes,
+    reconcile_toml,
+)
 from .workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
@@ -84,6 +113,11 @@ class SystemExecutor:
         self.diagnostics: list[DiagnosticEvent] = []
         self.completed_tasks: list[SystemTask] = []
         self.interrupted_task: SystemTask | None = None
+        from . import __version__
+
+        self.candidate_state = SyncState(__version__, manifest.template_reference)
+        self._state_bytes: bytes | None = None
+        self._includes_changed = False
 
     def add_diagnostic(
         self,
@@ -123,6 +157,7 @@ class SystemExecutor:
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
         try:
+            self._load_state()
             self._validate_targets()
             self._create_directories()
             self._write_injected_files()
@@ -139,6 +174,7 @@ class SystemExecutor:
             self._write_ide_settings()
             self._run_tasks(self.manifest.tasks.post_install_tasks)
             self._check_ide_extensions()
+            self._write_state()
             self.journal.commit()
         except BaseException as original_error:
             self.process_runner.terminate_active_process_tree()
@@ -185,6 +221,20 @@ class SystemExecutor:
             | self.manifest.filesystem.directories
         ):
             validate_target(render_template(path, self.interpolation_context))
+            self._validate_node(
+                Path(render_template(path, self.interpolation_context)),
+                directory=path in self.manifest.filesystem.directories,
+            )
+        for contributions in self.manifest.filesystem.structured.values():
+            aggregate_toml(
+                [
+                    replace(
+                        c,
+                        content=render_template(c.content, self.interpolation_context),
+                    )
+                    for c in contributions
+                ]
+            )
         deps = self.manifest.dependencies
         if (
             deps.dependencies
@@ -200,12 +250,24 @@ class SystemExecutor:
             validate_resolver_workspace(self.journal.workspace_root)
         toml_targets = {
             *self.manifest.filesystem.structured.keys(),
-            *self.manifest.filesystem.file_injections.keys(),
         }
-        if deps.includes:
+        if (
+            deps.includes
+            or deps.dependencies
+            or deps.dev_dependencies
+            or deps.docs_dependencies
+        ):
             toml_targets.add("pyproject.toml")
+        for _group, packages in (
+            (DependencyGroup.MAIN, deps.dependencies),
+            (DependencyGroup.DEV, deps.dev_dependencies),
+            (DependencyGroup.DOCS, deps.docs_dependencies),
+        ):
+            for package in packages:
+                requirement_identity(package)
         for filepath in sorted(toml_targets):
             target = Path(render_template(filepath, self.interpolation_context))
+            self._validate_node(target)
             if target.suffix == ".toml" and target.exists():
                 try:
                     with target.open("rb") as f:
@@ -412,41 +474,81 @@ class SystemExecutor:
             validate_target(target.as_posix())
             enforce_path_jail(target, Path.cwd())
             try:
-                original = target.read_text(encoding="utf-8") if target.exists() else ""
-            except OSError as e:
+                original = (
+                    target.read_bytes().decode("utf-8") if target.exists() else ""
+                )
+            except (OSError, UnicodeError) as e:
                 raise FileSystemError(
                     "read structured configuration", str(target), e
                 ) from e
+            record = next(
+                (r for r in self.candidate_state.files if r.path == target.as_posix()),
+                None,
+            )
+            if record is not None and record.policy is not FilePolicy.TOML:
+                raise ConfigurationError(
+                    "Conflicting structured ownership policy.",
+                    hint="Keep the tracked file policy unchanged.",
+                )
+            initializing = not self.journal.was_present(target) and record is None
             payloads = [
-                render_template(c.content, self.interpolation_context)
+                replace(
+                    c, content=render_template(c.content, self.interpolation_context)
+                )
                 for c in contributions
-                if c.policy != ContributionPolicy.SEED_ONLY
+                if c.policy is not ContributionPolicy.SEED_ONLY
                 or is_overwrite
-                or not self.journal.was_present(target)
+                or initializing
             ]
             if not payloads:
                 continue
-            new_content = merge_toml_payloads(
+            aggregated = aggregate_toml_document(payloads)
+            result = reconcile_toml(
                 original,
-                payloads,
-                is_pyproject=target.name == "pyproject.toml",
+                aggregated.value,
+                decode_toml_baseline(record.baseline)
+                if record and record.baseline is not None
+                else MISSING,
+                MergeLocation(target.as_posix()),
                 overwrite=is_overwrite,
-                on_conflict=lambda msg, sev: self.add_diagnostic(
-                    DiagnosticPhase.EXECUTOR, msg, sev
-                ),
+                initializing=initializing,
+                missing_file=not target.exists(),
+                desired_ast=aggregated.document,
             )
-            if new_content.strip() != original.strip():
+            for conflict in result.conflicts:
+                self._merge_warning(conflict)
+            if result.baseline is not MISSING:
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        target.as_posix(),
+                        FilePolicy.TOML,
+                        encode_toml_baseline(cast(dict[str, Value], result.baseline)),
+                    )
+                )
+            new_content = result.content
+            if new_content != original:
                 try:
                     self.fs.write_text(target, new_content)
                 except OSError as e:
                     raise FileSystemError(
                         "mutate configuration AST", str(target), e
                     ) from e
-                if any(c.resolver_footprint for c in contributions) and tomllib.loads(
-                    original
-                ).get("project", {}).get("requires-python") != tomllib.loads(
-                    new_content
-                ).get("project", {}).get("requires-python"):
+                original_project = tomllib.loads(original).get("project", {})
+                updated_project = tomllib.loads(new_content).get("project", {})
+                original_python = (
+                    original_project.get("requires-python")
+                    if isinstance(original_project, dict)
+                    else None
+                )
+                updated_python = (
+                    updated_project.get("requires-python")
+                    if isinstance(updated_project, dict)
+                    else None
+                )
+                if (
+                    any(c.resolver_footprint for c in contributions)
+                    and original_python != updated_python
+                ):
                     self._run_lock(self.manifest.dependencies.resolver_footprint)
         for filepath, regions in self.manifest.filesystem.regions.items():
             target = Path(render_template(filepath, self.interpolation_context))
@@ -464,16 +566,16 @@ class SystemExecutor:
                 )
                 for c in regions
             ]
-            result = append_marker_blocks(
+            region_result = append_marker_blocks(
                 original,
                 region_payloads,
                 target,
                 overwrite=is_overwrite,
                 on_conflict=partial(self._warn_region_conflict, target),
             )
-            if result is not None:
+            if region_result is not None:
                 try:
-                    self.fs.write_text(target, result)
+                    self.fs.write_text(target, region_result)
                 except OSError as e:
                     raise FileSystemError(
                         "append configurations block", str(target), e
@@ -493,6 +595,21 @@ class SystemExecutor:
         if not self.manifest.dependencies.includes:
             return
         target = Path("pyproject.toml")
+        if (
+            not target.exists()
+            and self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE
+            and (
+                any(r.path == "pyproject.toml" for r in self.candidate_state.files)
+                or self.candidate_state.dependencies
+            )
+        ):
+            self._merge_warning(
+                MergeConflict(
+                    MergeLocation("pyproject.toml", ("dependency-groups",)),
+                    ConflictReason.DELETED_ANCESTOR,
+                )
+            )
+            return
         enforce_path_jail(target, Path.cwd())
         try:
             original = target.read_text(encoding="utf-8") if target.exists() else ""
@@ -504,6 +621,7 @@ class SystemExecutor:
         except OSError as e:
             raise FileSystemError("apply dependency includes", str(target), e) from e
         if updated != original:
+            self._includes_changed = True
             deps = self.manifest.dependencies
             if not (
                 deps.dependencies or deps.dev_dependencies or deps.docs_dependencies
@@ -647,16 +765,246 @@ class SystemExecutor:
     def _install_dependencies(self) -> None:
         """Installs queued dependencies using uv."""
         dependencies = self.manifest.dependencies
-        if (
+        if not (
             dependencies.dependencies
             or dependencies.dev_dependencies
             or dependencies.docs_dependencies
         ):
+            return
+        target = Path("pyproject.toml")
+        data = (
+            tomllib.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+        )
+        groups = (
+            (DependencyGroup.MAIN, dependencies.dependencies),
+            (DependencyGroup.DEV, dependencies.dev_dependencies),
+            (DependencyGroup.DOCS, dependencies.docs_dependencies),
+        )
+        selected: dict[DependencyGroup, list[str]] = {}
+        blocked: set[DependencyGroup] = set()
+        for group, desired in groups:
+            tracked_file = any(
+                r.path == "pyproject.toml" for r in self.candidate_state.files
+            ) or bool(self.candidate_state.dependencies)
+            table = data.get(
+                "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
+            )
+            owned_group = any(
+                r.group is group for r in self.candidate_state.dependencies
+            )
+            file_record = next(
+                (
+                    r
+                    for r in self.candidate_state.files
+                    if r.path == "pyproject.toml" and r.baseline is not None
+                ),
+                None,
+            )
+            baseline = (
+                decode_toml_baseline(file_record.baseline)
+                if file_record and file_record.baseline is not None
+                else {}
+            )
+            ancestor_key = (
+                "project" if group is DependencyGroup.MAIN else "dependency-groups"
+            )
+            owned_ancestor = ancestor_key in baseline
+            ancestor_deleted = owned_ancestor and (
+                ancestor_key not in data or not isinstance(data[ancestor_key], dict)
+            )
+            deleted = (
+                (tracked_file and not target.exists())
+                or ancestor_deleted
+                or (
+                    owned_group
+                    and (
+                        not isinstance(table, dict)
+                        or (
+                            "dependencies"
+                            if group is DependencyGroup.MAIN
+                            else group.value
+                        )
+                        not in table
+                    )
+                )
+            )
+            if (
+                deleted
+                and self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE
+            ):
+                selected[group] = []
+                blocked.add(group)
+                for package in desired:
+                    identity = requirement_identity(package)
+                    previous = next(
+                        (
+                            r
+                            for r in self.candidate_state.dependencies
+                            if r.group is group and (r.name, r.marker) == identity
+                        ),
+                        None,
+                    )
+                    if previous and normalized_requirement(
+                        previous.declared
+                    ) == normalized_requirement(package):
+                        continue
+                    self._merge_warning(
+                        MergeConflict(
+                            MergeLocation(
+                                "pyproject.toml",
+                                ("dependencies", group.value),
+                                ":".join(requirement_identity(package)),
+                            ),
+                            ConflictReason.DELETED_ANCESTOR,
+                        )
+                    )
+                continue
+            result = select_dependencies(
+                desired,
+                requirement_entries(data, group),
+                self.candidate_state.dependencies,
+                group,
+                overwrite=self.manifest.collision_strategy
+                is CollisionStrategy.OVERWRITE,
+            )
+            selected[group] = list(result.packages)
+            for conflict in result.conflicts:
+                self._merge_warning(conflict)
+        accepted = DependencyManifest(
+            dependencies=selected[DependencyGroup.MAIN],
+            dev_dependencies=selected[DependencyGroup.DEV],
+            docs_dependencies=selected[DependencyGroup.DOCS],
+            resolver_footprint=dependencies.resolver_footprint,
+        )
+        if any(selected.values()):
+            validate_resolver_workspace(self.journal.workspace_root)
             for declared_path in dependencies.resolver_footprint.paths:
                 path = Path(declared_path)
                 enforce_path_jail(path, Path.cwd())
                 self.journal.record_mutation(path)
+        if self._includes_changed and not any(selected.values()):
+            self._run_lock(dependencies.resolver_footprint)
         install_dependencies(
-            dependencies_manifest=dependencies,
-            process_runner=self.process_runner,
+            dependencies_manifest=accepted, process_runner=self.process_runner
         )
+        materialized = (
+            tomllib.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
+        )
+        records = list(self.candidate_state.dependencies)
+        for group, desired in groups:
+            if group in blocked:
+                continue
+            for package in desired:
+                identity = requirement_identity(package)
+                record = next(
+                    (
+                        r
+                        for r in records
+                        if r.group is group and (r.name, r.marker) == identity
+                    ),
+                    None,
+                )
+                entries = [
+                    e
+                    for e in requirement_entries(materialized, group)
+                    if requirement_identity(e) == identity
+                ]
+                if (
+                    record
+                    and len(entries) == 1
+                    and normalized_requirement(record.declared)
+                    != normalized_requirement(package)
+                    and normalized_requirement(entries[0])
+                    == normalized_requirement(package)
+                ):
+                    records = [
+                        replace(r, declared=package, materialized=entries[0])
+                        if r.identity == record.identity
+                        else r
+                        for r in records
+                    ]
+        for group, packages in selected.items():
+            for package in packages:
+                name, marker = requirement_identity(package)
+                entries = [
+                    entry
+                    for entry in requirement_entries(materialized, group)
+                    if requirement_identity(entry) == (name, marker)
+                ]
+                if len(entries) == 1:
+                    record = DependencyState(
+                        "pyproject.toml", group, name, marker, package, entries[0]
+                    )
+                    records = [r for r in records if r.identity != record.identity]
+                    records.append(record)
+        self.candidate_state = replace(
+            self.candidate_state, dependencies=tuple(records)
+        )
+
+    def _merge_warning(self, conflict: MergeConflict) -> None:
+        """Exposes a concrete preserved conflict to headless callers."""
+        self.diagnostics.append(
+            DiagnosticEvent(
+                DiagnosticPhase.EXECUTOR,
+                f"Preserving local contribution in {conflict.location.file}: {'.'.join(conflict.location.keys)}.",
+                Severity.WARNING,
+                conflict=conflict,
+            )
+        )
+
+    def _validate_node(self, target: Path, *, directory: bool = False) -> None:
+        """Rejects unsafe nodes before reads or transaction mutations."""
+        target = self.journal.normalize_path(target)
+        for node in (target, *target.parents):
+            if node == self.journal.workspace_root:
+                break
+            try:
+                mode = node.lstat().st_mode
+            except FileNotFoundError:
+                continue
+            if stat.S_ISLNK(mode) or not (
+                stat.S_ISREG(mode)
+                if node == target and not directory
+                else stat.S_ISDIR(mode)
+            ):
+                raise UnsupportedFilesystemNodeError(
+                    node, "unsupported transaction target"
+                )
+
+    def _load_state(self) -> None:
+        """Validates committed ownership before any mutation."""
+        target = Path(".protostar.lock.toml")
+        self._validate_node(target)
+        try:
+            self._state_bytes = target.read_bytes() if target.exists() else None
+            if self._state_bytes is not None:
+                state = deserialize_state(self._state_bytes.decode("utf-8"))
+                check_template_identity(state, self.manifest.template_reference)
+                self.candidate_state = replace(
+                    state,
+                    producer_version=self.candidate_state.producer_version,
+                    template=self.manifest.template_reference,
+                )
+                paths = (
+                    {r.path for r in state.files}
+                    | {r.path for r in state.dependencies}
+                    | {r.path for r in state.hook_pins}
+                )
+                for path in paths:
+                    self._validate_node(Path(path))
+        except (OSError, UnicodeError) as e:
+            raise ConfigurationError(
+                "Cannot read Protostar state.",
+                hint="Correct the state file encoding and permissions.",
+            ) from e
+
+    def _write_state(self) -> None:
+        """Writes candidate ownership last, before committing the journal."""
+        content = serialize_state(self.candidate_state)
+        if content.encode("utf-8") != self._state_bytes:
+            try:
+                self.fs.write_text(Path(".protostar.lock.toml"), content)
+            except OSError as e:
+                raise FileSystemError(
+                    "write reconciliation state", ".protostar.lock.toml", e
+                ) from e

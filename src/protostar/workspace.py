@@ -138,7 +138,12 @@ def resolve_python_version(
         try:
             with target_pyproject.open("rb") as f:
                 data = tomllib.load(f)
-                req_python = data.get("project", {}).get("requires-python", "")
+                project = data.get("project", {})
+                req_python = (
+                    project.get("requires-python", "")
+                    if isinstance(project, dict)
+                    else ""
+                )
                 match = re.search(r"(\d+\.\d+)", req_python)
                 if match:
                     return str(PythonVersion.from_string(match.group(1)))
@@ -215,7 +220,8 @@ def resolve_project_name(
         try:
             with target_pyproject.open("rb") as f:
                 data = tomllib.load(f)
-                name = data.get("project", {}).get("name")
+                project = data.get("project", {})
+                name = project.get("name") if isinstance(project, dict) else None
                 if name:
                     return str(ProjectName(str(name)))
         except (OSError, tomllib.TOMLDecodeError, TypeError, ValueError, KeyError):

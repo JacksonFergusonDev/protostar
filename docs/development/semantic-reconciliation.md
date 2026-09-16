@@ -1,8 +1,8 @@
 # Semantic reconciliation contracts
 
-PR B provides the pure kernel and schema-v1 state codec. Execution does not use
-these helpers yet. PR C adds transactional integration and TOML AST application;
-PR D adds the YAML codec and validated YAML snapshots.
+PR B provides the pure kernel and schema-v1 state codec. PR C connects them to
+transactional execution and TOML AST application, with early dependency selection
+guards. PR D adds the YAML codec and validated YAML snapshots.
 
 ## Kernel and ownership
 
@@ -79,8 +79,9 @@ through JSON or a tagged cross-format value system.
 Dependencies retain path/group/canonical-name/normalized-marker identity plus
 exact declared and materialized requirement strings. The codec validates PEP 508
 syntax and that both requirements match the stored identity. Extras, specifiers,
-and direct references remain values. Resolver selection, materialized capture,
-and regression checks are downstream. Hook pins retain exact repository identity,
+and direct references remain values. PR C selects accepted resolver requests before `uv add`, captures uniquely
+materialized accepted requirements, and guards known regressions and ambiguous
+constraint changes. PR G completes resolver ordering and derived-artifact handling. Hook pins retain exact repository identity,
 revision, and registry/template/fallback provenance; hook fields need the YAML
 adapter's owned baseline, not adoption from a pin record.
 
@@ -104,5 +105,32 @@ composite baselines in a candidate, and write state only after all declared writ
 and resolver actions succeed. Skip writes when resulting bytes match. Commit
 state before journal commit so failure restores exact original file/state bytes
 and modes. Expected merge conflicts preserve affected values and become structured
-warnings; malformed state remains fatal. This milestone introduces no executor
-adapter, resolver calls, YAML dependency, adoption, pruning, or migration layer.
+warnings; malformed state remains fatal. The executor aggregates module contributions in declared sequence order, then
+applies template opinions once. Unclassified conflicting producers fail before
+mutations. The TOML adapter keeps semantic intent separate from a desired
+`tomlkit` AST: the kernel decides ownership using plain values, while accepted
+nodes retain authored comments, array layout, and inline-table style from that
+AST. It patches the existing local AST and does not globally format an existing
+document. Newly initialized `pyproject.toml` files retain the standard tool
+banner and section markers. Explicit overwrite owns declared values
+while retaining undeclared siblings. Personal project fields are seed-only in
+merge mode; defaults written by a journaled initializer are eligible for initial
+ownership, while pre-existing user metadata is preserved.
+
+Conflict diagnostics include file, key path, optional identity, and an enum reason
+in `ExecutionResult.to_dict()`. Safe siblings can apply despite other conflicts.
+Existing equal values remain unowned. A tracked deleted file cannot be recreated
+by new dependency requests or include-group wiring.
+
+Unchanged declared dependency intent skips `uv add`, even when the materialized
+requirement gained resolver bounds or the user later edited/deleted it. Changed
+intent needs an unchanged materialized baseline; unowned existing constraints,
+duplicate identities, known version regressions, and ambiguous constraint changes
+are preserved with warnings. Converged previously owned intent advances its
+record without a resolver call. Resolver failures remain fatal and restore the
+journaled project, lock, and state bytes and modes.
+
+PR G still owns complete include-group reconciliation and final TOML/resolver
+ordering. YAML, generated-file digests, free-form seed ledgers, and managed-region
+checksum application remain the later adapter milestones. This boundary adds no
+adoption, pruning, migration layer, or new command.

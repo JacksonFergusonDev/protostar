@@ -536,7 +536,7 @@ def test_executor_append_files_ast_merge(tmp_path, monkeypatch, mock_config):
 
     # Verify structural merge logic via the AST
     assert parsed_toml["tool"]["mypy"]["strict"] is True
-    assert parsed_toml["tool"]["ruff"]["line-length"] == 88
+    assert parsed_toml["tool"]["ruff"]["line-length"] == 120
     assert parsed_toml["tool"]["ruff"]["target-version"] == "py310"  # Preserved!
 
     # Verify the late-binding variable <% PYTHON_VERSION %> was interpolated correctly
@@ -545,7 +545,7 @@ def test_executor_append_files_ast_merge(tmp_path, monkeypatch, mock_config):
 
 
 def test_executor_append_files_ast_overwrite(tmp_path, monkeypatch, mock_config):
-    """Test that the OVERWRITE strategy completely replaces colliding TOML tables."""
+    """Test that OVERWRITE replaces declared values and preserves unrelated keys."""
     monkeypatch.chdir(tmp_path)
     base_content = (FIXTURES_DIR / "base_complex.toml").read_text()
     payload_content = (FIXTURES_DIR / "payload_complex.toml").read_text()
@@ -567,9 +567,8 @@ def test_executor_append_files_ast_overwrite(tmp_path, monkeypatch, mock_config)
     assert parsed_toml["tool"]["mypy"]["strict"] is True
     assert parsed_toml["tool"]["ruff"]["line-length"] == 88
 
-    # Under OVERWRITE, target-version should have been purged because it existed
-    # in the old [tool.ruff] table but not in the payload [tool.ruff] table.
-    assert "target-version" not in parsed_toml["tool"]["ruff"]
+    # Explicit overwrite changes declared values and retains unrelated siblings.
+    assert parsed_toml["tool"]["ruff"]["target-version"] == "py310"
 
     # Under OVERWRITE, the original [[tool.mypy.overrides]] should be wiped
     assert len(parsed_toml["tool"]["mypy"]["overrides"]) == 1
@@ -627,21 +626,16 @@ def test_executor_validate_targets_malformed_toml(mocker, mock_config):
         executor._validate_targets()
 
 
-def test_executor_validate_targets_malformed_injected_toml(mocker, mock_config):
-    """Test that malformed existing TOML targeted by file_injections triggers ConfigurationError."""
+def test_executor_validate_targets_does_not_parse_free_form_toml(
+    tmp_path, monkeypatch, mock_config
+):
+    """Free-form TOML files remain seed-only, without extension-based parsing."""
+    monkeypatch.chdir(tmp_path)
+    Path("custom.toml").write_bytes(b"[broken toml :::\n")
     manifest = EnvironmentManifest()
     manifest.filesystem.add_file_injection("custom.toml", "[tool.custom]\n")
     executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-
-    mock_file = mocker.mock_open(read_data=b"[broken toml ::: \n")
-    mocker.patch("protostar.executor.Path.open", mock_file)
-
-    with pytest.raises(
-        ConfigurationError, match="Syntax error in existing workspace file"
-    ):
-        executor._validate_targets()
+    executor._validate_targets()
 
 
 def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
@@ -723,9 +717,12 @@ def test_executor_append_files_early_return(mocker, mock_config):
     mock_exists.assert_not_called()
 
 
-def test_executor_lifecycle_ordering(mocker, mock_config):
+def test_executor_lifecycle_ordering(tmp_path, monkeypatch, mocker, mock_config):
     """Test that the executor strictly adheres to the execution DAG order."""
     manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, mock_config)
+
+    monkeypatch.chdir(tmp_path)
     executor = SystemExecutor(manifest, mock_config)
 
     # Use a parent mock to track chronological execution sequence across methods
@@ -911,7 +908,9 @@ def test_append_files_handles_read_failure(mocker):
     executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
-    mocker.patch.object(Path, "read_text", side_effect=OSError(13, "Permission denied"))
+    mocker.patch.object(
+        Path, "read_bytes", side_effect=OSError(13, "Permission denied")
+    )
 
     with pytest.raises(FileSystemError) as exc_info:
         executor._append_files()
@@ -929,7 +928,7 @@ def test_append_files_handles_toml_write_failure(mocker):
 
     # Simulate an existing valid pyproject.toml on disk
     mocker.patch.object(Path, "exists", return_value=True)
-    mocker.patch.object(Path, "read_text", return_value="[project]\nname = 'test'")
+    mocker.patch.object(Path, "read_bytes", return_value=b"[project]\nname = 'test'")
     mocker.patch.object(
         executor.fs,
         "write_text",
@@ -1134,30 +1133,22 @@ def test_executor_append_files_cli_template_full_lifecycle(
     assert not result.endswith("\n\n")
     assert tomllib.loads(result)
 
-    banner_pos = result.find("# Tool Configuration")
-    ruff_pos = result.find("# ---- Ruff ---- #")
-    mypy_pos = result.find("# ---- Mypy ---- #")
-    pytest_pos = result.find("# ---- Pytest ---- #")
-    cov_run_pos = result.find("[tool.coverage.run]")
-    cov_rep_pos = result.find("[tool.coverage.report]")
-    cz_pos = result.find("# ---- Commitizen ---- #")
-
-    assert (
-        0
-        < banner_pos
-        < ruff_pos
-        < mypy_pos
-        < pytest_pos
-        < cov_run_pos
-        < cov_rep_pos
-        < cz_pos
+    assert "# Tool Configuration" in result
+    assert result.index("# ---- Ruff ---- #") < result.index("# ---- Mypy ---- #")
+    assert result.index("# ---- Mypy ---- #") < result.index("# ---- Pytest ---- #")
+    assert result.index("# ---- Pytest ---- #") < result.index(
+        "# ---- Commitizen ---- #"
     )
+    parsed = tomllib.loads(result)
+    assert parsed["tool"]["ruff"]["line-length"] == 88
+    assert parsed["tool"]["coverage"]["run"]["branch"] is True
+    assert parsed["project"]["scripts"]["demo-project"] == "demo_project.cli:app"
 
 
 def test_executor_append_files_recleans_existing_managed_headers(
     tmp_path, monkeypatch, mock_config
 ):
-    """Test that existing managed banners are stripped and cleanly regenerated without duplication."""
+    """Test that existing banners and comments retain their exact representation."""
     monkeypatch.chdir(tmp_path)
     pyproject = tmp_path / "pyproject.toml"
 
@@ -1203,11 +1194,11 @@ line-length = 88
     # User comment preserved
     assert "# Keep this user comment" in result
 
-    # Order maintained
+    # Existing order is preserved; the new managed section is appended.
     ruff_pos = result.find("# ---- Ruff ---- #")
     pytest_pos = result.find("# ---- Pytest ---- #")
     cz_pos = result.find("# ---- Commitizen ---- #")
-    assert ruff_pos < pytest_pos < cz_pos
+    assert cz_pos < ruff_pos < pytest_pos
     assert result.endswith("\n")
     assert not result.endswith("\n\n")
 

@@ -113,6 +113,14 @@ class ExecutionResult:
             }
             if event.detail is not None:
                 entry["detail"] = event.detail
+            if event.conflict is not None:
+                location = event.conflict.location
+                entry["conflict"] = {
+                    "file": location.file,
+                    "keys": list(location.keys),
+                    "identity": location.identity,
+                    "reason": event.conflict.reason.value,
+                }
             diagnostics.append(entry)
 
         return {

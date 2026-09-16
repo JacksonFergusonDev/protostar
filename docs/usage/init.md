@@ -255,11 +255,18 @@ Workspace Collision: Protostar detected existing configuration files in the work
     Abort      (Safely exit without modifying the environment)
 ```
 
-Selecting __Merge__ executes an AST injection:
+Selecting __Merge__ reconciles declared TOML configuration against
+`.protostar.lock.toml`. A tracked project requires the same explicitly selected
+template source; switching templates or adding a template to tracked tooling-only
+state is unsupported.
 
-- Leaves your existing dependencies untouched.
-- Alphabetically inserts new template dependencies.
-- Merges tooling configuration tables into `pyproject.toml`.
+The example below starts from a tracked ML workspace, adds representative
+astronomy dependencies, ignore rules, and data directories as foreign local
+content, then repeats the ML template with `--mypy --docker --force-merge`:
+
+- Leaves the existing foreign dependencies, ignores, and directories untouched.
+- Adds accepted new dependencies through `uv add`.
+- Updates unchanged owned tooling values and preserves local edits/deletions with structured warnings.
 - Appends new file patterns to `.gitignore` without duplicating existing rules.
 
     ??? abstract "See the injected changes"

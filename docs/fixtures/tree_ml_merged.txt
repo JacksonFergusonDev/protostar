@@ -3,6 +3,7 @@
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
+├── .protostar.lock.toml
 ├── .python-version
 ├── Dockerfile
 ├── data
