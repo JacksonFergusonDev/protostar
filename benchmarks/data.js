@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789516436556,
+  "lastUpdate": 1789574839955,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -12959,6 +12959,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 206.66,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a7ce1b9accbc06bf38263f4a3a719503ba188f57",
+          "message": "feat(merge): integrate transactional TOML ownership state (#252)\n\n* feat(merge): integrate transactional TOML ownership state\n\n* docs(merge): align fixtures with tracked template identity\n\n* docs(plan): mark semantic merge PR C complete\n\n* fix(deps): normalize requirement values before selection\n\n* fix(merge): preserve authored TOML presentation\n\nKeep semantic values separate from their tomlkit AST.\n\nAccepted updates now retain comments, array layout, inline tables, and generated tool markers.\n\nRestore the documentation fixtures and cover overlapping module and template contributions.\n\n* fix(fixtures): preserve merged workspace state\n\nKeep foreign ML workspace additions visible across the tracked template rerun.\n\nSnapshot reconciliation state for every scenario and keep managed tool headers in canonical order.",
+          "timestamp": "2026-09-16T09:06:07-07:00",
+          "tree_id": "ee5e38fdce122c73a33ac115594e8a651bc56e72",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a7ce1b9accbc06bf38263f4a3a719503ba188f57"
+        },
+        "date": 1789574838292,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 168.89,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 249.7,
             "unit": "ms"
           }
         ]
