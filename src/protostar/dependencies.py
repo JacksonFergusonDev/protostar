@@ -86,6 +86,15 @@ def requirement_identity(content: str) -> tuple[str, str]:
     ) if requirement.marker else ""
 
 
+def normalized_requirement(content: str) -> str:
+    """Normalizes requirement values without discarding extras, constraints, or sources."""
+    requirement_identity(content)
+    requirement = Requirement(content)
+    requirement.name = canonicalize_name(requirement.name)
+    requirement.extras = {canonicalize_name(extra) for extra in requirement.extras}
+    return str(requirement)
+
+
 def requirement_entries(data: dict[str, object], group: DependencyGroup) -> list[str]:
     """Reads supported groups, preserving include records outside selection."""
     table = data.get(
@@ -136,16 +145,19 @@ def select_dependencies(
         if len(requests) != 1 or len(entries) > 1:
             pass
         elif overwrite:
-            if not entries or str(Requirement(entries[0])) != str(
-                Requirement(requests[0])
-            ):
+            if not entries or normalized_requirement(
+                entries[0]
+            ) != normalized_requirement(requests[0]):
                 accepted.append(requests[0])
             continue
         elif (
             record
-            and str(Requirement(requests[0])) == str(Requirement(record.declared))
+            and normalized_requirement(requests[0])
+            == normalized_requirement(record.declared)
         ) or (
-            entries and str(Requirement(entries[0])) == str(Requirement(requests[0]))
+            entries
+            and normalized_requirement(entries[0])
+            == normalized_requirement(requests[0])
         ):
             continue
         elif record is None and not entries:
@@ -154,7 +166,8 @@ def select_dependencies(
         elif (
             record
             and entries
-            and str(Requirement(entries[0])) == str(Requirement(record.materialized))
+            and normalized_requirement(entries[0])
+            == normalized_requirement(record.materialized)
         ):
             old = Requirement(record.materialized)
             new = Requirement(requests[0])

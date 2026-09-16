@@ -7,12 +7,11 @@ from functools import partial
 from pathlib import Path
 from typing import cast
 
-from packaging.requirements import Requirement
-
 from .appends import append_marker_blocks
 from .config import UserConfig
 from .dependencies import (
     install_dependencies,
+    normalized_requirement,
     requirement_entries,
     requirement_identity,
     select_dependencies,
@@ -838,9 +837,9 @@ class SystemExecutor:
                         ),
                         None,
                     )
-                    if previous and str(Requirement(previous.declared)) == str(
-                        Requirement(package)
-                    ):
+                    if previous and normalized_requirement(
+                        previous.declared
+                    ) == normalized_requirement(package):
                         continue
                     self._merge_warning(
                         MergeConflict(
@@ -906,8 +905,10 @@ class SystemExecutor:
                 if (
                     record
                     and len(entries) == 1
-                    and str(Requirement(record.declared)) != str(Requirement(package))
-                    and str(Requirement(entries[0])) == str(Requirement(package))
+                    and normalized_requirement(record.declared)
+                    != normalized_requirement(package)
+                    and normalized_requirement(entries[0])
+                    == normalized_requirement(package)
                 ):
                     records = [
                         replace(r, declared=package, materialized=entries[0])

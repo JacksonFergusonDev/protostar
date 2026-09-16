@@ -303,6 +303,7 @@ def test_dependency_materialized_bounds_repeat_edit_and_update(
     repeated, runner = execute_requirement("requests")
     runner.assert_not_called()
     assert repeated.journal.touched_paths == frozenset()
+    assert not repeated.diagnostics
     Path("pyproject.toml").write_text(
         Path("pyproject.toml").read_text().replace("requests>=2.0", "requests>=5.0")
     )
@@ -525,3 +526,28 @@ def test_owned_incompatible_project_table_preserved_with_warning(
     executor.process_runner.run.assert_not_called()
     assert tomllib.loads(Path("pyproject.toml").read_text())["project"] == "local"
     assert executor.diagnostics
+
+
+def test_dependency_values_normalize_name_and_extra_spelling():
+    from protostar.dependencies import normalized_requirement, select_dependencies
+    from protostar.sync_state import DependencyState
+
+    record = DependencyState(
+        "pyproject.toml",
+        DependencyGroup.MAIN,
+        "foo-bar",
+        "",
+        "Foo_Bar[Some_Extra]>=2",
+        "foo-bar[some-extra]>=2",
+    )
+    result = select_dependencies(
+        ["foo-bar[some-extra]>=2"],
+        ["foo-bar[some-extra]>=3"],
+        (record,),
+        DependencyGroup.MAIN,
+    )
+    assert not result.packages
+    assert not result.conflicts
+    assert normalized_requirement("Foo_Bar[Some_Extra]>=2") == normalized_requirement(
+        "foo-bar[some-extra]>=2"
+    )
