@@ -10,7 +10,7 @@ Your global configuration file acts as the baseline defaults for environment ini
 protostar config
 ```
 
-![Protostar Config Help](../fixtures/cli_config_help.svg)
+![Protostar Config Help](../assets/terminals/cli_config_help.svg)
 
 To restore your configuration to the factory defaults:
 

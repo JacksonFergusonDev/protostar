@@ -10,16 +10,18 @@ from rich.console import Console
 from rich.style import Style
 from rich.text import Text
 
-# Dynamically import generate_doc_fixtures script
-_scripts_path = Path(__file__).parent.parent / "scripts" / "generate_doc_fixtures.py"
-_spec = importlib.util.spec_from_file_location("generate_doc_fixtures", _scripts_path)
+# Dynamically import generate_docs_assets script
+_docs_script_path = Path(__file__).parent.parent / "scripts" / "generate_docs_assets.py"
+_spec = importlib.util.spec_from_file_location(
+    "generate_docs_assets", _docs_script_path
+)
 assert _spec
 assert _spec.loader
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
+_docs_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_docs_mod)
 
-_calculate_content_width = _mod._calculate_content_width
-_render_and_write_svg = _mod._render_and_write_svg
+_calculate_content_width = _docs_mod._calculate_content_width
+_render_and_write_svg = _docs_mod._render_and_write_svg
 
 SCENARIO_FIXTURES = ("api", "astro", "cli", "dsp", "embedded", "ml", "ml_merged")
 
@@ -81,7 +83,7 @@ def test_calculate_content_width_wide_characters():
 
 def test_render_and_write_svg_shrinkwraps(tmp_path, monkeypatch):
     """Verify that _render_and_write_svg shrinkwraps terminal width to content."""
-    monkeypatch.setattr(_mod, "FIXTURES_DIR", tmp_path)
+    monkeypatch.setattr(_docs_mod, "DOCS_TERMINALS_DIR", tmp_path)
 
     console = Console(record=True, width=100, file=io.StringIO())
     console.print("A" * 40)
@@ -110,7 +112,7 @@ def test_render_and_write_svg_shrinkwraps(tmp_path, monkeypatch):
 
 def test_render_and_write_svg_deterministic(tmp_path, monkeypatch):
     """Verify that SVG generation produces byte-for-byte identical output across runs."""
-    monkeypatch.setattr(_mod, "FIXTURES_DIR", tmp_path)
+    monkeypatch.setattr(_docs_mod, "DOCS_TERMINALS_DIR", tmp_path)
 
     def render_output():
         console = Console(record=True, width=100, file=io.StringIO())
@@ -138,7 +140,7 @@ def test_render_and_write_svg_deterministic(tmp_path, monkeypatch):
 
 def test_existing_svg_documentation_fixtures():
     """Verify that all generated SVG documentation fixtures exist and have shrinkwrapped widths."""
-    fixtures_dir = Path("docs/fixtures")
+    terminals_dir = Path("docs/assets/terminals")
     expected_fixtures = {
         "cli_config_help.svg": 933,  # 75 cols
         "cli_dry_run.svg": 1080,  # 80 cols
@@ -148,8 +150,8 @@ def test_existing_svg_documentation_fixtures():
     }
 
     for filename, expected_width in expected_fixtures.items():
-        svg_path = fixtures_dir / filename
-        assert svg_path.exists(), f"Missing documentation fixture {filename}"
+        svg_path = terminals_dir / filename
+        assert svg_path.exists(), f"Missing terminal SVG fixture {filename}"
         content = svg_path.read_text()
 
         # Must parse as valid XML
@@ -165,9 +167,9 @@ def test_existing_svg_documentation_fixtures():
 
 def test_scenario_fixtures_capture_consistent_reconciliation_state():
     """Verify scenario snapshots retain state and its materialized dependencies."""
-    fixtures = Path("docs/fixtures")
+    snapshots_dir = Path("tests/snapshots")
     for name in SCENARIO_FIXTURES:
-        root = fixtures / name
+        root = snapshots_dir / name
         state_path = root / ".protostar.lock.toml"
         assert state_path.exists(), f"Missing reconciliation state for {name}"
         state = tomllib.loads(state_path.read_text())
@@ -182,13 +184,13 @@ def test_scenario_fixtures_capture_consistent_reconciliation_state():
 
 def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
     """Verify the merged fixture exercises preservation without template switching."""
-    root = Path("docs/fixtures/ml_merged")
+    root = Path("tests/snapshots/ml_merged")
     pyproject_text = (root / "pyproject.toml").read_text()
     pyproject = tomllib.loads(pyproject_text)
     dependencies = pyproject["project"]["dependencies"]
     assert any(requirement.startswith("astropy>=") for requirement in dependencies)
     assert any(requirement.startswith("specutils>=") for requirement in dependencies)
-    original_text = Path("docs/fixtures/ml/pyproject.toml").read_text()
+    original_text = Path("tests/snapshots/ml/pyproject.toml").read_text()
     original_tools = original_text[original_text.index("# ---- Ruff ---- #") :]
     merged_tools = pyproject_text[pyproject_text.index("# ---- Ruff ---- #") :]
     assert merged_tools.startswith(original_tools)

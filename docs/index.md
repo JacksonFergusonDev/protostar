@@ -28,7 +28,7 @@ hide:
     </div>
   </div>
   <div class="hero-preview">
-    <img src="fixtures/cli_dry_run.svg" alt="Protostar CLI Dry Run" class="hero-preview__img" />
+    <img src="assets/terminals/cli_dry_run.svg" alt="Protostar CLI Dry Run" class="hero-preview__img" />
   </div>
 </div>
 

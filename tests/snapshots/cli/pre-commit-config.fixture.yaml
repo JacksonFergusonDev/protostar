@@ -69,20 +69,20 @@ repos:
 
   # Check for accidental commits of secrets
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks
 
   # Commit message validation
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.18.0
+    rev: v4.18.1
     hooks:
       - id: commitizen
         stages: [commit-msg]
 
   # Renovate config validation
   - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.24.3
+    rev: 44.65.5
     hooks:
       - id: renovate-config-validator
         files: '.github/renovate.json'

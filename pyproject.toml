@@ -110,7 +110,7 @@ section-order = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["T201", "D", "S"]
-"scripts/*.py" = ["T201", "D", "S", "SIM"]
+"scripts/*.py" = ["T201", "D", "S", "SIM", "E402"]
 
 # ---- mypy ---- #
 

@@ -3,15 +3,8 @@ name = "demo-project"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "astropy>=8.0.1",
-    "astroquery>=0.4.11",
-    "matplotlib>=3.11.1",
-    "nbdime>=4.0.4",
-    "numpy>=2.5.2",
-    "pandas>=3.0.5",
-    "photutils>=3.0.0",
-    "scipy>=1.18.1",
-    "specutils>=2.4.0",
+    "mpremote>=1.29.0",
+    "pyserial>=3.5",
 ]
 description = "Add your description here."
 readme = "README.md"
@@ -19,7 +12,7 @@ authors = [{ name = "your-name", email = "your-email" }]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.16.5",
+    "ruff>=0.16.8",
 ]
 
 # ==================================================
@@ -45,4 +38,3 @@ select = [
 ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
-extend-select = ["PD", "NPY"]

@@ -35,7 +35,7 @@ group = "dev"
 name = "ruff"
 marker = ""
 declared = "ruff"
-materialized = "ruff>=0.16.5"
+materialized = "ruff>=0.16.8"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -51,7 +51,7 @@ group = "main"
 name = "matplotlib"
 marker = ""
 declared = "matplotlib"
-materialized = "matplotlib>=3.11.1"
+materialized = "matplotlib>=3.11.2"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -59,7 +59,7 @@ group = "main"
 name = "numpy"
 marker = ""
 declared = "numpy"
-materialized = "numpy>=2.5.2"
+materialized = "numpy>=2.5.3"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -67,7 +67,7 @@ group = "main"
 name = "pedalboard"
 marker = ""
 declared = "pedalboard"
-materialized = "pedalboard>=0.9.24"
+materialized = "pedalboard>=0.9.25"
 
 [[dependencies]]
 path = "pyproject.toml"

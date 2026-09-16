@@ -1243,7 +1243,7 @@ def test_cli_reference_fixture_tables():
 
     from protostar.modules import TOOLING_MODULES
 
-    fixtures_dir = Path("docs/fixtures")
+    fixtures_dir = Path("docs/generated")
     assert fixtures_dir.exists()
 
     # Verify Global Options fixture

@@ -43,7 +43,7 @@ group = "dev"
 name = "ruff"
 marker = ""
 declared = "ruff"
-materialized = "ruff>=0.16.5"
+materialized = "ruff>=0.16.8"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -51,7 +51,7 @@ group = "dev"
 name = "rumdl"
 marker = ""
 declared = "rumdl"
-materialized = "rumdl>=0.2.64"
+materialized = "rumdl>=0.2.73"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -83,7 +83,7 @@ group = "main"
 name = "matplotlib"
 marker = ""
 declared = "matplotlib"
-materialized = "matplotlib>=3.11.1"
+materialized = "matplotlib>=3.11.2"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -91,7 +91,7 @@ group = "main"
 name = "numpy"
 marker = ""
 declared = "numpy"
-materialized = "numpy>=2.5.2"
+materialized = "numpy>=2.5.3"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -107,7 +107,7 @@ group = "main"
 name = "scikit-learn"
 marker = ""
 declared = "scikit-learn"
-materialized = "scikit-learn>=1.9.0"
+materialized = "scikit-learn>=1.9.1"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -115,7 +115,7 @@ group = "main"
 name = "torch"
 marker = ""
 declared = "torch"
-materialized = "torch>=2.13.0"
+materialized = "torch>=2.14.0"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -123,4 +123,4 @@ group = "main"
 name = "tqdm"
 marker = ""
 declared = "tqdm"
-materialized = "tqdm>=4.70.0"
+materialized = "tqdm>=4.70.1"

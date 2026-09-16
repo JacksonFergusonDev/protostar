@@ -19,7 +19,7 @@ group = "dev"
 name = "commitizen"
 marker = ""
 declared = "commitizen"
-materialized = "commitizen>=4.18.0"
+materialized = "commitizen>=4.18.1"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -35,7 +35,7 @@ group = "dev"
 name = "prek"
 marker = ""
 declared = "prek"
-materialized = "prek>=0.5.0"
+materialized = "prek>=0.5.3"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -67,7 +67,7 @@ group = "dev"
 name = "ruff"
 marker = ""
 declared = "ruff"
-materialized = "ruff>=0.16.5"
+materialized = "ruff>=0.16.8"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -75,7 +75,7 @@ group = "dev"
 name = "rumdl"
 marker = ""
 declared = "rumdl"
-materialized = "rumdl>=0.2.64"
+materialized = "rumdl>=0.2.73"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -91,7 +91,7 @@ group = "docs"
 name = "zensical"
 marker = ""
 declared = "zensical"
-materialized = "zensical>=0.0.57"
+materialized = "zensical>=0.0.62"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -107,4 +107,4 @@ group = "main"
 name = "typer"
 marker = ""
 declared = "typer"
-materialized = "typer>=0.27.1"
+materialized = "typer>=0.27.2"

@@ -19,7 +19,7 @@ group = "dev"
 name = "ruff"
 marker = ""
 declared = "ruff"
-materialized = "ruff>=0.16.5"
+materialized = "ruff>=0.16.8"
 
 [[dependencies]]
 path = "pyproject.toml"
