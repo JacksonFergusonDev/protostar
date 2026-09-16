@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789584425296,
+  "lastUpdate": 1789597378767,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13027,6 +13027,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 173.02,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ab2700f05c98a05519b6400ee49d44d73fe09d69",
+          "message": "refactor(testing): decouple snapshot regression testing from documentation assets (#254)\n\n* refactor(testing): add scenario modeling and inline drift detection to fixture generator\n\n* feat(testing): split fixture generator and migrate snapshots to tests/snapshots\n\n* test: exclude snapshots from pytest discovery and fix moved fixture path\n\n* ci: update snapshot and docs asset verification step in CI workflow\n\n* feat(snapshots): track generated .envrc in scenario snapshots\n\n* fix(testing): restore exit code docs, harden drift detection, and track gitkeep",
+          "timestamp": "2026-09-16T15:21:47-07:00",
+          "tree_id": "1e65deaab8745cc56533869b30d1558f087576b7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ab2700f05c98a05519b6400ee49d44d73fe09d69"
+        },
+        "date": 1789597377375,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 174.6,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 256.5,
             "unit": "ms"
           }
         ]
