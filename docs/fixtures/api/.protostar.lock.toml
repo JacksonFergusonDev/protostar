@@ -1,0 +1,110 @@
+schema_version = 1
+producer_version = "0.9.0"
+hook_pins = []
+
+[template]
+origin = "built-in"
+locator = "api"
+digest = "19bbe682c0abb9bef6ce49b70ccc62d8ec9c12068e82e086c1d18bcc6cadb2da"
+display_name = "api"
+
+[[files]]
+path = "pyproject.toml"
+policy = "structured-toml"
+baseline = "[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "commitizen"
+marker = ""
+declared = "commitizen"
+materialized = "commitizen>=4.18.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "httpx"
+marker = ""
+declared = "httpx"
+materialized = "httpx>=0.28.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "mypy"
+marker = ""
+declared = "mypy"
+materialized = "mypy>=2.3.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "prek"
+marker = ""
+declared = "prek"
+materialized = "prek>=0.5.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "pytest"
+marker = ""
+declared = "pytest"
+materialized = "pytest>=9.1.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "pytest-asyncio"
+marker = ""
+declared = "pytest-asyncio"
+materialized = "pytest-asyncio>=1.4.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "pytest-mock"
+marker = ""
+declared = "pytest-mock"
+materialized = "pytest-mock>=3.15.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "ruff"
+marker = ""
+declared = "ruff"
+materialized = "ruff>=0.16.5"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "rumdl"
+marker = ""
+declared = "rumdl"
+materialized = "rumdl>=0.2.64"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "fastapi"
+marker = ""
+declared = "fastapi"
+materialized = "fastapi>=0.141.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "pydantic-settings"
+marker = ""
+declared = "pydantic-settings"
+materialized = "pydantic-settings>=2.15.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "uvicorn"
+marker = ""
+declared = "uvicorn"
+materialized = "uvicorn>=0.52.4"

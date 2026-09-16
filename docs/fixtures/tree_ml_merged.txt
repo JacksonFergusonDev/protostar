@@ -11,8 +11,10 @@
 │   │   └── .gitkeep
 │   ├── 02_processed
 │   │   └── .gitkeep
-│   └── 03_features
-│       └── .gitkeep
+│   ├── 03_features
+│   │   └── .gitkeep
+│   ├── catalogs
+│   └── fits
 ├── justfile
 ├── models
 │   └── weights

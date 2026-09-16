@@ -260,9 +260,11 @@ Selecting __Merge__ reconciles declared TOML configuration against
 template source; switching templates or adding a template to tracked tooling-only
 state is unsupported.
 
-The example below repeats the ML template with `--mypy --docker --force-merge`:
+The example below starts from a tracked ML workspace, adds representative
+astronomy dependencies, ignore rules, and data directories as foreign local
+content, then repeats the ML template with `--mypy --docker --force-merge`:
 
-- Leaves your existing dependencies untouched.
+- Leaves the existing foreign dependencies, ignores, and directories untouched.
 - Adds accepted new dependencies through `uv add`.
 - Updates unchanged owned tooling values and preserves local edits/deletions with structured warnings.
 - Appends new file patterns to `.gitignore` without duplicating existing rules.

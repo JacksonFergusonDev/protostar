@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import re
+import tomllib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -19,6 +20,8 @@ _spec.loader.exec_module(_mod)
 
 _calculate_content_width = _mod._calculate_content_width
 _render_and_write_svg = _mod._render_and_write_svg
+
+SCENARIO_FIXTURES = ("api", "astro", "cli", "dsp", "embedded", "ml", "ml_merged")
 
 
 def test_calculate_content_width_plain_text():
@@ -158,3 +161,40 @@ def test_existing_svg_documentation_fixtures():
         assert viewbox is not None
         vb_width = float(viewbox.split()[2])
         assert vb_width == pytest.approx(expected_width, abs=1)
+
+
+def test_scenario_fixtures_capture_consistent_reconciliation_state():
+    """Verify scenario snapshots retain state and its materialized dependencies."""
+    fixtures = Path("docs/fixtures")
+    for name in SCENARIO_FIXTURES:
+        root = fixtures / name
+        state_path = root / ".protostar.lock.toml"
+        assert state_path.exists(), f"Missing reconciliation state for {name}"
+        state = tomllib.loads(state_path.read_text())
+        pyproject = tomllib.loads((root / "pyproject.toml").read_text())
+        groups = {
+            "main": pyproject.get("project", {}).get("dependencies", []),
+            **pyproject.get("dependency-groups", {}),
+        }
+        for record in state.get("dependencies", []):
+            assert record["materialized"] in groups[record["group"]]
+
+
+def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
+    """Verify the merged fixture exercises preservation without template switching."""
+    root = Path("docs/fixtures/ml_merged")
+    pyproject_text = (root / "pyproject.toml").read_text()
+    pyproject = tomllib.loads(pyproject_text)
+    dependencies = pyproject["project"]["dependencies"]
+    assert any(requirement.startswith("astropy>=") for requirement in dependencies)
+    assert any(requirement.startswith("specutils>=") for requirement in dependencies)
+    assert pyproject_text.index("# ---- Mypy ---- #") < pyproject_text.index(
+        "# ---- Pytest ---- #"
+    )
+    ignores = (root / ".gitignore").read_text()
+    assert all(pattern in ignores for pattern in ("*.csv", "*.fits", "*.parquet"))
+
+    state = tomllib.loads((root / ".protostar.lock.toml").read_text())
+    owned_names = {record["name"] for record in state["dependencies"]}
+    assert "mypy" in owned_names
+    assert "astropy" not in owned_names

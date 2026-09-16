@@ -1,6 +1,23 @@
 --- a/pyproject.toml
 +++ b/pyproject.toml
-@@ -16,6 +16,7 @@
+@@ -3,10 +3,16 @@
+ version = "0.1.0"
+ requires-python = ">=3.13"
+ dependencies = [
++    "astropy>=8.0.1",
++    "astroquery>=0.4.11",
+     "matplotlib>=3.11.1",
++    "nbdime>=4.0.4",
+     "numpy>=2.5.2",
+     "pandas>=3.0.5",
++    "photutils>=3.0.0",
+     "scikit-learn>=1.9.0",
++    "scipy>=1.18.1",
++    "specutils>=2.4.0",
+     "torch>=2.13.0",
+     "tqdm>=4.70.0",
+ ]
+@@ -16,6 +22,7 @@
 
  [dependency-groups]
  dev = [
@@ -8,11 +25,10 @@
      "pytest>=9.1.1",
      "pytest-mock>=3.15.1",
      "ruff>=0.16.5",
-@@ -106,3 +107,16 @@
-     "MD041", # first line need not be a top-level heading in doc pages
-     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
+@@ -53,6 +60,19 @@
  ]
-+
+ extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
+
 +# ---- Mypy ---- #
 +
 +[tool.mypy]
@@ -25,3 +41,7 @@
 +warn_unused_configs = true
 +check_untyped_defs = true
 +explicit_package_bases = true
++
+ # ---- Pytest ---- #
+
+ [tool.pytest.ini_options]

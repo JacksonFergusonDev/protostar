@@ -176,6 +176,10 @@ def reconcile_toml(
             hint="Correct the target TOML syntax before retrying.",
         ) from e
     local = cast(dict[str, Value], doc.unwrap())
+    clean_managed_tools = isinstance(base, dict) and semantic_equal(
+        local.get("tool", MISSING), base.get("tool", MISSING)
+    )
+    inserted_tool_section = False
     if overwrite or initializing:
         # Explicit target authorization owns declared leaves, never foreign siblings.
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
@@ -222,6 +226,7 @@ def reconcile_toml(
         after: dict[str, Value],
         keys: tuple[str, ...] = (),
     ) -> None:
+        nonlocal inserted_tool_section
         for key, value in after.items():
             previous = before.get(key, MISSING)
             if semantic_equal(previous, value):
@@ -266,6 +271,9 @@ def reconcile_toml(
                     banner = False
                     if len(path) == 2 and path[0] == "tool":
                         section = TOOL_SECTION_NAMES.get(key)
+                        inserted_tool_section = (
+                            inserted_tool_section or section is not None
+                        )
                     elif path == ("tool",) and hasattr(styled, "keys"):
                         first_tool = cast(str | None, next(iter(styled.keys()), None))
                         if first_tool is not None:
@@ -306,7 +314,9 @@ def reconcile_toml(
     patch(doc, local, value)
     if semantic_equal(local, value):
         content = original
-    elif initializing and location.file == "pyproject.toml":
+    elif location.file == "pyproject.toml" and (
+        initializing or (clean_managed_tools and inserted_tool_section)
+    ):
         content = format_pyproject_toml(doc)
     else:
         content = tomlkit.dumps(doc)
@@ -415,7 +425,14 @@ def format_pyproject_toml(doc: Any) -> str:
     new_content = tomlkit.dumps(doc)
     raw_dump = new_content
 
-    # 3. Apply visual separators safely using anchored regex
+    # 3. Rebuild managed visual separators after AST table ordering. Parsed
+    # comments are attached to the preceding table, so retaining old markers
+    # while moving tables can label the wrong section.
+    new_content = _TOOL_CONFIG_BANNER_RE.sub("", new_content)
+    for marker_re, _, _ in _COMPILED_TOOL_HEADERS:
+        new_content = marker_re.sub("", new_content)
+
+    # 4. Apply visual separators safely using anchored regex
     for marker_re, table_re, marker in _COMPILED_TOOL_HEADERS:
         if not marker_re.search(new_content):
             new_content = table_re.sub(
@@ -424,7 +441,7 @@ def format_pyproject_toml(doc: Any) -> str:
                 count=1,
             )
 
-    # 4. Add main Tool Configuration banner before the first tool header if not exists
+    # 5. Add main Tool Configuration banner before the first tool header if not exists
     if "# Tool Configuration" not in new_content:
         tool_match = _FIRST_TOOL_HEADER_RE.search(new_content)
         if tool_match:
@@ -440,7 +457,7 @@ def format_pyproject_toml(doc: Any) -> str:
                 + new_content[tool_match.start() :]
             )
 
-    # 5. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
+    # 6. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
     new_content = _MULTI_NEWLINE_RE.sub("\n\n", new_content).rstrip() + "\n"
     new_content = re.sub(
         r"\n+[ \t]*\[dependency-groups\]",
@@ -449,7 +466,7 @@ def format_pyproject_toml(doc: Any) -> str:
         count=1,
     )
 
-    # 6. Safety Parity Guard: Guarantee data integrity
+    # 7. Safety Parity Guard: Guarantee data integrity
     try:
         expected_data = tomllib.loads(raw_dump)
         parsed_check = tomllib.loads(new_content)

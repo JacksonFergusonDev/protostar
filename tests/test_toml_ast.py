@@ -56,6 +56,39 @@ line-length = 88
     assert pass1 == pass2
 
 
+def test_format_pyproject_toml_relabels_reordered_existing_sections():
+    """Keep managed headers attached to their tables after canonical ordering."""
+    doc = tomlkit.parse("""
+# ---- Ruff ---- #
+
+[tool.ruff]
+line-length = 88
+
+# ---- Pytest ---- #
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# ---- Mypy ---- #
+
+[tool.mypy]
+strict = true
+""")
+
+    formatted = format_pyproject_toml(doc)
+
+    assert formatted.count("# ---- Ruff ---- #") == 1
+    assert formatted.count("# ---- Mypy ---- #") == 1
+    assert formatted.count("# ---- Pytest ---- #") == 1
+    assert formatted.index("# ---- Ruff ---- #") < formatted.index("[tool.ruff]")
+    assert formatted.index("# ---- Mypy ---- #") < formatted.index("[tool.mypy]")
+    assert formatted.index("# ---- Pytest ---- #") < formatted.index(
+        "[tool.pytest.ini_options]"
+    )
+    assert formatted.index("[tool.ruff]") < formatted.index("[tool.mypy]")
+    assert formatted.index("[tool.mypy]") < formatted.index("[tool.pytest.ini_options]")
+
+
 def test_format_pyproject_toml_coverage_grouped_under_pytest():
     """Test that coverage tables are placed directly under Pytest and before Commitizen."""
     raw = """

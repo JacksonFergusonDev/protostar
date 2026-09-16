@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 
 import tomlkit
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 from rich.cells import cell_len
 from rich.console import Console
 from rich.panel import Panel
@@ -48,7 +50,8 @@ from protostar.orchestrator import Orchestrator
 # The `ml` fixture is a purposeful exception to this rule: it includes `--docker` because
 # `docs/usage/init.md` specifically showcases containerization for the ML stack and embeds
 # the resulting `ml/Dockerfile` and `ml/.dockerignore` snippets into the documentation.
-# `ml_merged` exercises same-template reinitialization with added tooling.
+# `ml_merged` exercises same-template reinitialization with foreign workspace
+# additions and newly managed tooling.
 FIXTURES = {
     "cli": [["--template", "cli"]],
     "astro": [["--template", "astro"]],
@@ -132,6 +135,30 @@ def _freeze_pre_commit_hooks(old_content: str, new_content: str) -> str:
         return f"repo: {repo_url}\n{indentation}rev: {frozen_rev}"
 
     return re.sub(r"repo:\s*([^\n]+)\n(\s*)rev:\s*([^\n]+)", repl_hooks, new_content)
+
+
+def _align_state_dependencies(state_content: str, pyproject_content: str) -> str:
+    """Aligns state materializations with dependency versions frozen in a fixture."""
+    project = tomllib.loads(pyproject_content)
+    requirements: dict[tuple[str, str, str], str] = {}
+    groups = {
+        "main": project.get("project", {}).get("dependencies", []),
+        **project.get("dependency-groups", {}),
+    }
+    for group, entries in groups.items():
+        for entry in entries:
+            if not isinstance(entry, str):
+                continue
+            requirement = Requirement(entry)
+            marker = str(requirement.marker) if requirement.marker is not None else ""
+            requirements[(group, canonicalize_name(requirement.name), marker)] = entry
+
+    state = tomlkit.parse(state_content)
+    for record in state.get("dependencies", []):
+        identity = (record["group"], record["name"], record["marker"])
+        if materialized := requirements.get(identity):
+            record["materialized"] = materialized
+    return tomlkit.dumps(state)
 
 
 def _format_markdown_table(
@@ -863,6 +890,31 @@ def _execute_fixture_scenario(
             raise
 
 
+def _seed_ml_merged_foreign_content(cwd: Path, env: dict[str, str]) -> None:
+    """Adds representative unowned content before the tracked ML rerun."""
+    subprocess.run(
+        [
+            "uv",
+            "add",
+            "astropy",
+            "astroquery",
+            "nbdime",
+            "photutils",
+            "scipy",
+            "specutils",
+        ],
+        cwd=cwd,
+        check=True,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    for directory in ("data/catalogs", "data/fits"):
+        (cwd / directory).mkdir(parents=True, exist_ok=True)
+    with (cwd / ".gitignore").open("a", encoding="utf-8") as stream:
+        stream.write("*.csv\n*.fit\n*.fits\n*.fts\n*.parquet\n")
+
+
 def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     """Extracts target files from a completed execution scenario and writes them to disk.
 
@@ -873,15 +925,23 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
     tree_output = generate_tree(source_dir)
     _write_fixture(f"tree_{fixture_name}.txt", tree_output)
 
+    generated_pyproject = source_dir / "pyproject.toml"
+    fixture_pyproject = FIXTURES_DIR / fixture_name / "pyproject.toml"
+    frozen_pyproject: str | None = None
+    if generated_pyproject.exists():
+        frozen_pyproject = generated_pyproject.read_text(encoding="utf-8")
+        if fixture_pyproject.exists():
+            frozen_pyproject = _freeze_pyproject_deps(
+                fixture_pyproject.read_text(encoding="utf-8"), frozen_pyproject
+            )
+
     written_targets: set[Path] = set()
     for file_path in sorted(source_dir.rglob("*")):
         if not file_path.is_file():
             continue
 
         rel_path = file_path.relative_to(source_dir)
-        # Exclude VCS databases, caches, and resolver/provenance lockfiles.
-        # Ownership/state behavior has dedicated deterministic in-process tests;
-        # scenario snapshots freeze dependencies independently of live resolution.
+        # Exclude VCS databases, caches, and the external resolver lockfile.
         if any(
             part
             in (
@@ -893,7 +953,6 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
                 ".mypy_cache",
                 ".rumdl_cache",
                 "uv.lock",
-                ".protostar.lock.toml",
             )
             for part in rel_path.parts
         ):
@@ -906,14 +965,16 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
         target_path = FIXTURES_DIR / fixture_name / target_rel_path
         written_targets.add(target_path.resolve())
         content = file_path.read_text(encoding="utf-8")
+        if rel_path.name == "pyproject.toml" and frozen_pyproject is not None:
+            content = frozen_pyproject
+        elif rel_path.name == ".protostar.lock.toml" and frozen_pyproject is not None:
+            content = _align_state_dependencies(content, frozen_pyproject)
 
         # Freeze mutable dependencies and VCS revisions if updating an existing file
         if target_path.exists():
             old_content = target_path.read_text(encoding="utf-8")
 
-            if rel_path.name == "pyproject.toml":
-                content = _freeze_pyproject_deps(old_content, content)
-            elif target_rel_path.name == "pre-commit-config.fixture.yaml":
+            if target_rel_path.name == "pre-commit-config.fixture.yaml":
                 content = _freeze_pre_commit_hooks(old_content, content)
         elif target_rel_path.name == "pre-commit-config.fixture.yaml":
             legacy_target = FIXTURES_DIR / fixture_name / rel_path
@@ -971,7 +1032,12 @@ def _build_fixture_scenario(
         static_cwd = Path(tmpdir) / "demo_project"
         static_cwd.mkdir()
 
-        _execute_fixture_scenario(commands, static_cwd, isolated_env)
+        if name == "ml_merged":
+            _execute_fixture_scenario(commands[:1], static_cwd, isolated_env)
+            _seed_ml_merged_foreign_content(static_cwd, isolated_env)
+            _execute_fixture_scenario(commands[1:], static_cwd, isolated_env)
+        else:
+            _execute_fixture_scenario(commands, static_cwd, isolated_env)
         _extract_and_write_targets(static_cwd, name)
         print(f"  ✔ Scenario [{name}] fixtures generated")
 
