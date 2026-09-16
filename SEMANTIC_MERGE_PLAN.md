@@ -1,6 +1,6 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: PR-A through PR-C complete; PR-D is next.
+Status: PR-A through PR-D complete; PR-E is next.
 Updated: 2026-09-16.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
@@ -40,7 +40,7 @@ Protostar is pre-1.0 with no external users. Break APIs and template schemas cle
 
 ### Implementation status
 
-This checklist records implementation progress, including the completed PR-C
+This checklist records implementation progress, including the completed PR-D
 implementation submitted for review. It is limited to this plan; a completed
 milestone does not imply that later reconciliation behavior is available.
 
@@ -49,7 +49,8 @@ milestone does not imply that later reconciliation behavior is available.
 | PR-A: Typed intent, identity, and schema boundaries | **Complete** | Template provenance through CLI/wizard request and manifest serialization; typed structured TOML contributions; stable named append regions; seed-only personal metadata; typed dependency-group includes and resolver footprints; reserved-path and unsafe-injection validation; built-in templates, schema, fixtures, and documentation updated. | Merged implementation commit `be0be97`; targeted tests and commit/pre-push hooks passed. |
 | PR-B: State codec and pure reconciliation kernel | **Complete** | Deterministic schema-v1 codec and frozen candidate state; owned TOML document snapshots; generated/seed/region/dependency/hook-pin records; identity/path/schema validation; pure three-way decisions, explicit set-like policy, deletion protection, and composite baselines. Executor integration remains PR-C; YAML snapshots require PR-D’s adapter. | `uv run pytest tests/test_merge.py tests/test_sync_state.py tests/test_intent.py tests/test_toml_ast.py`: 201 passed; separate read-only milestone review and regression fixes. |
 | PR-C: Transactional state integration and TOML reconciliation | **Complete** | Transactional state loading/final candidate writes; owned-only TOML AST reconciliation; module/template aggregation; seed metadata and deletion protection; structured conflicts; guarded dependency selection and accepted requirement capture. Complete resolver ordering/include reconciliation remains PR-G. | Implementation commit `71e0547`; fixture/documentation alignment `efd8dfd`; nine-file targeted suite: 349 passed; commit hooks passed; separate read-only boundary review found no remaining blockers. |
-| PR-D through PR-H | Planned | — | — |
+| PR-D: YAML codec and Codecov pilot | **Complete** | Bounded YAML 1.2 round-trip codec; explicit Codecov structured intent; validated YAML owned snapshots; three-way target and ignore-list reconciliation; shared-alias/merge-key protection; transactional writes and rollback. | Nine-file targeted suite: 372 passed, including 44 YAML/Codecov acceptance tests. |
+| PR-E through PR-H | Planned | — | — |
 
 ## 2. Scope and per-artifact policy
 
@@ -325,7 +326,7 @@ Depends on PR-B.
 
 Gate: **Complete.** Initial/merge/repeat/conflict/failure tests show exact file+state rollback, accurate touched paths, no adoption, seed-only metadata, and no live package-manager calls. The targeted command `uv run pytest tests/test_reconciliation_execution.py tests/test_executor.py tests/test_toml_ast.py tests/test_dependencies.py tests/test_merge.py tests/test_sync_state.py tests/test_orchestrator.py tests/test_intent.py tests/test_workspace.py -q` passed **349 tests**. Commit and pre-push hooks passed. A final package-name/extra-spelling regression verifies normalized unchanged intent stays silent. `uv run python scripts/generate_doc_fixtures.py` regenerated all seven scenarios successfully; each scenario includes its reconciliation state, and the same-template rerun preserves seeded foreign workspace additions. A separate read-only review challenged ownership, deleted/incompatible ancestors, dependency guards, and state transactionality; its final review of `71e0547` found no remaining concrete blockers. See [execution contracts](docs/development/semantic-reconciliation.md#pr-c-execution-boundary). Downstream generated/YAML/region policies and complete resolver ordering remain their later milestones.
 
-### PR-D: YAML codec and Codecov pilot
+### PR-D: YAML codec and Codecov pilot — **Complete**
 
 Depends on PR-C.
 
@@ -333,7 +334,7 @@ Depends on PR-C.
 - Implement Codecov managed three-way reconciliation and explicit ignore-list policy.
 - Add comments/styles/alias safety fixtures and malformed-input tests.
 
-Gate: untouched old target updates; user-edited target survives with a structured warning; custom/deleted ignore members survive; semantic no-op is byte-identical; parser failures cause no committed changes.
+Gate: **Complete.** Untouched old targets update; user-edited targets survive with structured warnings; custom/deleted ignore members survive; semantic no-ops are byte-identical; parser failures commit nothing. Shared aliases and merge-key edits preserve affected subtrees, while independent changes can apply. Failure tests restore exact YAML/state bytes and modes. The planned `ruamel.yaml>=0.19.1,<0.20` bound was retained and tested with 0.19.1. Verification: `uv run pytest tests/test_yaml_ast.py tests/test_codecov_execution.py tests/test_reconciliation_execution.py tests/test_executor.py tests/test_sync_state.py tests/test_intent.py tests/test_modules.py tests/test_orchestrator.py tests/test_manifest.py -q` passed **372 tests**. See [PR D contracts](docs/development/semantic-reconciliation.md#pr-d-yaml-and-codecov-boundary).
 
 ### PR-E: Identity-based pre-commit reconciliation
 

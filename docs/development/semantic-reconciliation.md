@@ -65,14 +65,15 @@ transaction attempt; file baselines remain authoritative after partial conflicts
 | File policy | Stored ownership |
 | --- | --- |
 | `structured-toml` | TOML document string containing only applied contributions |
+| `structured-yaml` | Validated YAML 1.2 document string containing only applied contributions |
 | `checksum` | Last applied lowercase SHA-256 hex digest |
 | `seed-only` | Path actually seeded; retained after deletion |
 | `regions` | Stable region IDs and last applied SHA-256 digests |
 
-Only TOML snapshots are supported at this milestone. YAML policy and snapshot
-validation arrive together with PR D's format adapter; unknown policies fail
-rather than accepting opaque unvalidated documents. Kernel null values cannot
-be persisted through TOML: the TOML snapshot encoder rejects them explicitly.
+TOML and YAML snapshots are validated by their respective codecs; unknown policies
+fail rather than accepting opaque documents. YAML snapshots preserve null values.
+Kernel null values cannot be persisted through TOML: its snapshot encoder rejects
+them explicitly.
 Native TOML scalars, arrays, and arrays of tables round trip without conversion
 through JSON or a tagged cross-format value system.
 
@@ -136,6 +137,49 @@ record without a resolver call. Resolver failures remain fatal and restore the
 journaled project, lock, and state bytes and modes.
 
 PR G still owns complete include-group reconciliation and final TOML/resolver
-ordering. YAML, generated-file digests, free-form seed ledgers, and managed-region
+ordering. Generated-file digests, free-form seed ledgers, and managed-region
 checksum application remain the later adapter milestones. This boundary adds no
 adoption, pruning, migration layer, or new command.
+
+## PR D YAML and Codecov boundary
+
+`yaml_ast.py` isolates `ruamel.yaml` typing and round-trip AST operations. The
+runtime dependency is `ruamel.yaml>=0.19.1,<0.20`, tested with 0.19.1 using the
+[instance API](https://yaml.dev/doc/ruamel.yaml/api/) in pure-Python round-trip
+mode, without C extras or custom constructors. YAML 1.2 is the default; explicit
+1.1 directives are rejected rather than silently reinterpreted. One mapping
+root, unique string keys, JSON-like scalar types, and finite acyclic collections
+are required. Timestamp/binary/set/custom tags and multiple documents fail with a
+domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 expanded
+nodes; graph validation precedes construction to reject recursive aliases.
+
+Codecov declares `StructuredFormat.YAML` explicitly through `add_structured()`.
+The pilot accepts one managed producer at `.github/codecov.yml`; it does not infer
+structured intent from free-form file extensions or expose arbitrary YAML template
+injections. TOML remains the default format. YAML baseline documents use the
+`structured-yaml` file policy in schema v1 and are canonically serialized from
+owned values only, never from the local round-trip document.
+
+The existing three-way kernel controls scalar ownership and mapping recursion.
+Only the root `ignore` list is set-like: retain custom members, preserve user
+removals, and append newly accepted members in desired order. Other sequences
+are atomic. Changed local targets are preserved with structured warnings;
+unchanged remote intent stays silent. Deleted tracked files/subtrees stay deleted.
+Equal pre-existing content is not adopted. Overwrite targets declared values and
+retains foreign siblings.
+
+The adapter patches accepted nodes in the local AST. Shared alias nodes and
+merge-key mappings are protected when an edit could change foreign content:
+retain their previous ownership and emit a `shared-structure` conflict, including
+under overwrite. Independent sibling changes can still apply. Existing comments,
+quotes, flow/block styles, and anchors are retained where supported by the
+[round-trip implementation](https://yaml.dev/doc/ruamel.yaml/detail/).
+Semantic no-ops return the original bytes without dumping. Accepted edits can
+normalize indentation or other emitter formatting; universal byte preservation
+is not promised for changed documents.
+
+The executor validates YAML before workspace writes, applies accepted content
+through `TransactionAwareFS`, and writes candidate state only at transaction
+completion. Parse errors commit nothing; later failures restore exact YAML/state
+bytes and POSIX modes. Acceptance tests use temporary workspaces and mocked
+processes. Identity-aware pre-commit editing remains PR E.

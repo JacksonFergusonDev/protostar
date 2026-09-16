@@ -491,8 +491,8 @@ def test_codecov_module_injects_file():
     module = CodecovModule()
     module.build(manifest)
 
-    assert ".github/codecov.yml" in manifest.filesystem.file_injections
-    content = manifest.filesystem.file_injections[".github/codecov.yml"]
+    assert ".github/codecov.yml" in manifest.filesystem.structured
+    content = manifest.filesystem.structured[".github/codecov.yml"][0].content
     assert 'range: "80...100"' in content
     assert "target: 80%" in content
     assert "require_changes: true" in content

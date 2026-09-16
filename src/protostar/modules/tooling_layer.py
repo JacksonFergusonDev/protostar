@@ -5,7 +5,7 @@ import shutil
 from typing import TYPE_CHECKING
 
 from protostar.errors import MissingDependencyError
-from protostar.intent import DependencyGroup
+from protostar.intent import DependencyGroup, StructuredFormat
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag, HookRunner
@@ -744,7 +744,7 @@ class CodecovModule(BootstrapModule):
         return "Codecov"
 
     def build(self, manifest: EnvironmentManifest) -> None:
-        """Queues Codecov configuration file injection.
+        """Declares managed Codecov YAML configuration.
 
         Args:
             manifest: The centralized state object.
@@ -783,7 +783,12 @@ ignore:
   - "scripts/**"
   - "**/__init__.py"
 """
-        manifest.filesystem.add_file_injection(".github/codecov.yml", config)
+        manifest.filesystem.add_structured(
+            ".github/codecov.yml",
+            config,
+            producer="module:codecov",
+            document_format=StructuredFormat.YAML,
+        )
 
 
 class ZensicalModule(BootstrapModule):

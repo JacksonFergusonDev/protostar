@@ -37,12 +37,14 @@
       "structured": {
         "pyproject.toml": [
           {
+            "format": "toml",
             "producer": "module:PythonCore",
             "content": "[project]\ndescription = \"High-velocity CLI application.\"\nreadme = \"README.md\"\nauthors = [{ name = \"Demo Author\", email = \"your-email\" }]\nlicense = { file = \"LICENSE\" }\nclassifiers = [\n    \"License :: OSI Approved :: MIT License\",\n]\n",
             "policy": "seed-only",
             "resolver_footprint": null
           },
           {
+            "format": "toml",
             "producer": "module:RuffModule",
             "content": "[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    \"A\",   # flake8-builtins\n    \"B\",   # flake8-bugbear\n    \"C4\",  # flake8-comprehensions\n    \"E\",   # pycodestyle errors\n    \"F\",   # Pyflakes\n    \"I\",   # isort\n    \"RUF\", # Ruff-specific\n    \"UP\",  # pyupgrade\n]\nignore = [\n    \"E501\", # Line too long - handled automatically by `ruff format`\n]\n",
             "policy": "managed",

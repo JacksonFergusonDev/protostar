@@ -22,6 +22,7 @@ from .intent import (
     validate_region_id,
 )
 from .merge import Value, validate_value
+from .yaml_ast import decode_yaml_baseline, encode_yaml_baseline
 
 SCHEMA_VERSION = 1
 
@@ -30,6 +31,7 @@ class FilePolicy(StrEnum):
     """Currently supported persisted ownership policies."""
 
     TOML = "structured-toml"
+    YAML = "structured-yaml"
     CHECKSUM = "checksum"
     SEED = "seed-only"
     REGIONS = "regions"
@@ -106,16 +108,19 @@ class FileState:
         validate_state_path(self.path)
         if not isinstance(self.policy, FilePolicy):
             raise _invalid("unknown file policy.")
-        if self.policy is FilePolicy.TOML:
+        if self.policy in (FilePolicy.TOML, FilePolicy.YAML):
             if (
                 type(self.baseline) is not str
                 or self.digest is not None
                 or self.regions
             ):
                 raise _invalid(
-                    "structured TOML requires only a baseline document string."
+                    "structured configuration requires only a baseline document string."
                 )
-            decode_toml_baseline(self.baseline)
+            if self.policy is FilePolicy.TOML:
+                decode_toml_baseline(self.baseline)
+            else:
+                decode_yaml_baseline(self.baseline)
         elif self.policy is FilePolicy.CHECKSUM:
             if self.digest is None or self.baseline is not None or self.regions:
                 raise _invalid("checksum policy requires only a digest.")
@@ -420,8 +425,10 @@ def serialize_state(state: SyncState) -> str:
     for record in sorted(state.files, key=lambda item: item.path):
         fields: dict[str, object] = {"path": record.path, "policy": record.policy.value}
         if record.baseline is not None:
-            fields["baseline"] = encode_toml_baseline(
-                decode_toml_baseline(record.baseline)
+            fields["baseline"] = (
+                encode_yaml_baseline(decode_yaml_baseline(record.baseline))
+                if record.policy is FilePolicy.YAML
+                else encode_toml_baseline(decode_toml_baseline(record.baseline))
             )
         if record.digest is not None:
             fields["digest"] = record.digest
