@@ -1,7 +1,7 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: PR-A and PR-B complete; PR-C is next.
-Updated: 2026-09-15.
+Status: PR-A through PR-C complete; PR-D is next.
+Updated: 2026-09-16.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
 
@@ -40,7 +40,7 @@ Protostar is pre-1.0 with no external users. Break APIs and template schemas cle
 
 ### Implementation status
 
-This checklist records implementation progress, including the completed PR-B
+This checklist records implementation progress, including the completed PR-C
 implementation submitted for review. It is limited to this plan; a completed
 milestone does not imply that later reconciliation behavior is available.
 
@@ -48,7 +48,7 @@ milestone does not imply that later reconciliation behavior is available.
 | --- | --- | --- | --- |
 | PR-A: Typed intent, identity, and schema boundaries | **Complete** | Template provenance through CLI/wizard request and manifest serialization; typed structured TOML contributions; stable named append regions; seed-only personal metadata; typed dependency-group includes and resolver footprints; reserved-path and unsafe-injection validation; built-in templates, schema, fixtures, and documentation updated. | Merged implementation commit `be0be97`; targeted tests and commit/pre-push hooks passed. |
 | PR-B: State codec and pure reconciliation kernel | **Complete** | Deterministic schema-v1 codec and frozen candidate state; owned TOML document snapshots; generated/seed/region/dependency/hook-pin records; identity/path/schema validation; pure three-way decisions, explicit set-like policy, deletion protection, and composite baselines. Executor integration remains PR-C; YAML snapshots require PR-D’s adapter. | `uv run pytest tests/test_merge.py tests/test_sync_state.py tests/test_intent.py tests/test_toml_ast.py`: 201 passed; separate read-only milestone review and regression fixes. |
-| PR-C: Transactional state integration and TOML reconciliation | Planned | — | — |
+| PR-C: Transactional state integration and TOML reconciliation | **Complete** | Transactional state loading/final candidate writes; owned-only TOML AST reconciliation; module/template aggregation; seed metadata and deletion protection; structured conflicts; guarded dependency selection and accepted requirement capture. Complete resolver ordering/include reconciliation remains PR-G. | Implementation commit `71e0547`; fixture/documentation alignment `efd8dfd`; nine-file targeted suite: 345 passed; commit hooks passed; separate read-only boundary review found no remaining blockers. |
 | PR-D through PR-H | Planned | — | — |
 
 ## 2. Scope and per-artifact policy
@@ -314,7 +314,7 @@ Depends on PR-A.
 
 Gate: **Complete.** State round trips supported TOML baseline values, rejects corrupt/unsupported/escaping records, has no timestamps, and remains byte-stable. Kernel is filesystem/subprocess/UI-free and does not mutate its desired/base inputs. Set-like identity validation runs before no-op shortcuts, including through unchanged ancestor mappings. Persisted dependencies validate PEP 508 syntax and stored name/marker identity using direct `packaging`; resolver acceptance remains downstream. See [PR-B contracts](docs/development/semantic-reconciliation.md) for the PR-C handoff.
 
-### PR-C: Transactional state integration and TOML reconciliation
+### PR-C: Transactional state integration and TOML reconciliation — **Complete**
 
 Depends on PR-B.
 
@@ -323,7 +323,7 @@ Depends on PR-B.
 - Aggregate producer contributions once and enforce precedence/collision rules.
 - Add dependency requirement selection guards early enough that existing `uv add` calls cannot bypass TOML ownership safety. PR-G completes resolver ordering, not an excuse to leave reset behavior until later.
 
-Gate: initial/merge/repeat/conflict/failure tests show exact file+state rollback, accurate touched paths, no adoption, seed-only metadata, and no live package-manager calls. Run an independent review of this boundary before building downstream file policies.
+Gate: **Complete.** Initial/merge/repeat/conflict/failure tests show exact file+state rollback, accurate touched paths, no adoption, seed-only metadata, and no live package-manager calls. The targeted command `uv run pytest tests/test_reconciliation_execution.py tests/test_executor.py tests/test_toml_ast.py tests/test_dependencies.py tests/test_merge.py tests/test_sync_state.py tests/test_orchestrator.py tests/test_intent.py tests/test_workspace.py -q` passed **345 tests**. Commit hooks passed. `uv run python scripts/generate_doc_fixtures.py` regenerated all seven scenarios successfully; the same-template rerun example and snapshots are committed in `efd8dfd`. A separate read-only review challenged ownership, deleted/incompatible ancestors, dependency guards, and state transactionality; its final review of `71e0547` found no remaining concrete blockers. See [execution contracts](docs/development/semantic-reconciliation.md#pr-c-execution-boundary). Downstream generated/YAML/region policies and complete resolver ordering remain their later milestones.
 
 ### PR-D: YAML codec and Codecov pilot
 
