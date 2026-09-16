@@ -188,9 +188,11 @@ def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
     dependencies = pyproject["project"]["dependencies"]
     assert any(requirement.startswith("astropy>=") for requirement in dependencies)
     assert any(requirement.startswith("specutils>=") for requirement in dependencies)
-    assert pyproject_text.index("# ---- Mypy ---- #") < pyproject_text.index(
-        "# ---- Pytest ---- #"
-    )
+    original_text = Path("docs/fixtures/ml/pyproject.toml").read_text()
+    original_tools = original_text[original_text.index("# ---- Ruff ---- #") :]
+    merged_tools = pyproject_text[pyproject_text.index("# ---- Ruff ---- #") :]
+    assert merged_tools.startswith(original_tools)
+    assert merged_tools[len(original_tools) :].lstrip().startswith("# ---- Mypy ---- #")
     ignores = (root / ".gitignore").read_text()
     assert all(pattern in ignores for pattern in ("*.csv", "*.fits", "*.parquet"))
 

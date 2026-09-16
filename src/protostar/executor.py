@@ -118,6 +118,7 @@ class SystemExecutor:
         self.candidate_state = SyncState(__version__, manifest.template_reference)
         self._state_bytes: bytes | None = None
         self._includes_changed = False
+        self._preserve_deleted_pyproject = False
 
     def add_diagnostic(
         self,
@@ -357,6 +358,13 @@ class SystemExecutor:
     def _run_tasks(self, tasks: list[SystemTask]) -> None:
         """Runs a sequence of system tasks (e.g., initialization or post-install commands)."""
         for task in tasks:
+            if self._preserve_deleted_pyproject and task.command[:2] == ["uv", "init"]:
+                self.add_diagnostic(
+                    DiagnosticPhase.EXECUTOR,
+                    "Skipping uv initialization; tracked pyproject.toml was deleted.",
+                    Severity.SKIP,
+                )
+                continue
             for f in task.owned_files:
                 self.journal.record_mutation(Path(f))
             for t in task.owned_trees:
@@ -490,7 +498,14 @@ class SystemExecutor:
                     "Conflicting structured ownership policy.",
                     hint="Keep the tracked file policy unchanged.",
                 )
-            initializing = not self.journal.was_present(target) and record is None
+            deleted_project = (
+                target == Path("pyproject.toml") and self._preserve_deleted_pyproject
+            )
+            initializing = (
+                not self.journal.was_present(target)
+                and record is None
+                and not deleted_project
+            )
             payloads = [
                 replace(
                     c, content=render_template(c.content, self.interpolation_context)
@@ -503,6 +518,14 @@ class SystemExecutor:
             if not payloads:
                 continue
             aggregated = aggregate_toml_document(payloads)
+            if deleted_project and record is None:
+                self._merge_warning(
+                    MergeConflict(
+                        MergeLocation(target.as_posix()),
+                        ConflictReason.DELETED_ANCESTOR,
+                    )
+                )
+                continue
             result = reconcile_toml(
                 original,
                 aggregated.value,
@@ -992,6 +1015,13 @@ class SystemExecutor:
                 )
                 for path in paths:
                     self._validate_node(Path(path))
+                # Capture deletion before initializer tasks can recreate the file.
+                self._preserve_deleted_pyproject = (
+                    "pyproject.toml" in paths
+                    and not Path("pyproject.toml").exists()
+                    and self.manifest.collision_strategy
+                    is not CollisionStrategy.OVERWRITE
+                )
         except (OSError, UnicodeError) as e:
             raise ConfigurationError(
                 "Cannot read Protostar state.",

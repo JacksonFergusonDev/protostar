@@ -228,3 +228,68 @@ disable = ["MD013"]
 
     assert "# ---- rumdl ---- #" in formatted
     assert "# ---- rumdl ---- #\n\n[tool.rumdl]" in formatted
+
+
+def test_set_extension_preserves_existing_member_comments():
+    """Accepted set additions retain the local array's nodes and presentation."""
+    from protostar.merge import MergeLocation
+    from protostar.toml_ast import reconcile_toml
+
+    original = (
+        "[tool.ruff.lint]\nselect = [\n"
+        '  "E", # user explanation\n'
+        '  "F", # another explanation\n'
+        "] # local array comment\n"
+    )
+    desired = tomlkit.parse('[tool.ruff.lint]\nselect = ["E", "F", "I"]\n')
+    result = reconcile_toml(
+        original,
+        desired.unwrap(),
+        tomlkit.parse(original).unwrap(),
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+    assert '  "E", # user explanation\n' in result.content
+    assert '  "F", # another explanation\n' in result.content
+    assert "] # local array comment\n" in result.content
+    assert tomlkit.parse(result.content).unwrap() == desired.unwrap()
+    repeated = reconcile_toml(
+        result.content,
+        desired.unwrap(),
+        result.baseline,
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+    assert repeated.content == result.content
+
+
+def test_adding_tool_preserves_existing_document_presentation():
+    """Semantic equality never authorizes reformatting pre-existing tables."""
+    from protostar.merge import MergeLocation
+    from protostar.toml_ast import reconcile_toml
+
+    original = (
+        '# Project rationale\n[project]\nname="demo"\n\n\n'
+        '# Pytest rationale\n[tool.pytest.ini_options]\ntestpaths=["tests"]\n\n\n'
+        "# Ruff rationale\n[tool.ruff]\nline-length=88\n"
+    )
+    desired = tomlkit.parse("[tool.ruff]\nline-length=88\n[tool.mypy]\nstrict=true\n")
+    base = tomlkit.parse(original).unwrap()
+    del base["project"]
+    result = reconcile_toml(
+        original,
+        desired.unwrap(),
+        base,
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+    assert result.content.startswith(original)
+    assert "[tool.mypy]\nstrict=true\n" in result.content
+    repeated = reconcile_toml(
+        result.content,
+        desired.unwrap(),
+        result.baseline,
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+    assert repeated.content == result.content

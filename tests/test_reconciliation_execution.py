@@ -597,3 +597,97 @@ def test_clean_toml_update_uses_desired_comments(tmp_path, monkeypatch, mocker):
     )
     run(changed, mocker)
     assert '"B", # new rule' in Path("config.toml").read_text()
+
+
+@pytest.mark.parametrize("value", [88, 100])
+@pytest.mark.parametrize("overwrite", [False, True])
+def test_python_initializer_respects_deleted_tracked_project(
+    tmp_path, monkeypatch, mocker, value, overwrite
+):
+    """Exercise the module's real initializer declaration on a tracked deletion."""
+    from protostar.modules.lang_layer import PythonCore
+
+    monkeypatch.chdir(tmp_path)
+    config = UserConfig()
+    mocker.patch.object(UserConfig, "load", return_value=config)
+
+    def execute(value, *, overwrite=False):
+        intent = manifest(value)
+        if overwrite:
+            intent.collision_strategy = CollisionStrategy.OVERWRITE
+        PythonCore(python_version="3.13").build(intent)
+        executor = SystemExecutor(intent, config)
+
+        def initialize(command, **kwargs):
+            assert command[:2] == ["uv", "init"]
+            Path("pyproject.toml").write_text(
+                '[project]\nname = "initializer"\nversion = "0.1.0"\n'
+            )
+            Path(".python-version").write_text("3.13\n")
+
+        runner = mocker.patch.object(
+            executor.process_runner, "run", side_effect=initialize
+        )
+        mocker.patch.object(executor, "_check_ide_extensions")
+        executor.execute()
+        return executor, runner
+
+    execute(88)
+    target = Path("pyproject.toml")
+    target.unlink()
+    state_bytes = Path(".protostar.lock.toml").read_bytes()
+    Path(".python-version").write_text("3.14\n")
+    for iteration in range(2):
+        executor, runner = execute(value, overwrite=overwrite)
+        if overwrite:
+            if iteration == 0:
+                runner.assert_called_once()
+            assert Path(".python-version").read_text() == "3.13\n"
+            assert (
+                tomllib.loads(target.read_text())["tool"]["ruff"]["line-length"]
+                == value
+            )
+        else:
+            runner.assert_not_called()
+            assert not target.exists()
+            assert Path(".python-version").read_text() == "3.14\n"
+            assert Path(".protostar.lock.toml").read_bytes() == state_bytes
+            assert not executor.journal.touched_paths
+            conflicts = [d.conflict for d in executor.diagnostics if d.conflict]
+            assert all(c.reason.value == "deleted-ancestor" for c in conflicts)
+
+
+def test_dependency_ownership_protects_deleted_project_from_new_tooling(
+    tmp_path, monkeypatch, mocker
+):
+    """A dependency record alone establishes that the missing project was tracked."""
+    from protostar import __version__
+    from protostar.modules.lang_layer import PythonCore
+    from protostar.sync_state import DependencyState, SyncState, serialize_state
+
+    monkeypatch.chdir(tmp_path)
+    state = SyncState(
+        __version__,
+        dependencies=(
+            DependencyState(
+                "pyproject.toml",
+                DependencyGroup.MAIN,
+                "httpx",
+                "",
+                "httpx",
+                "httpx>=0.28",
+            ),
+        ),
+    )
+    state_bytes = serialize_state(state).encode()
+    Path(".protostar.lock.toml").write_bytes(state_bytes)
+    intent = manifest()
+    PythonCore(python_version="3.13").build(intent)
+    intent.dependencies.add("httpx")
+    executor = run(intent, mocker)
+    executor.process_runner.run.assert_not_called()
+    assert not Path("pyproject.toml").exists()
+    assert Path(".protostar.lock.toml").read_bytes() == state_bytes
+    assert "pyproject.toml" not in executor.journal.touched_paths
+    assert ".protostar.lock.toml" not in executor.journal.touched_paths
+    assert any(d.conflict for d in executor.diagnostics)

@@ -110,8 +110,10 @@ applies template opinions once. Unclassified conflicting producers fail before
 mutations. The TOML adapter keeps semantic intent separate from a desired
 `tomlkit` AST: the kernel decides ownership using plain values, while accepted
 nodes retain authored comments, array layout, and inline-table style from that
-AST. It patches the existing local AST and does not globally format an existing
-document. Newly initialized `pyproject.toml` files retain the standard tool
+AST. Set-like additions retain existing local member nodes and their comments
+before considering desired-node replacement. It patches the existing local AST
+and does not globally format an existing document, even when adding a new tool
+to semantically unchanged managed configuration. Newly initialized `pyproject.toml` files retain the standard tool
 banner and section markers. Explicit overwrite owns declared values
 while retaining undeclared siblings. Personal project fields are seed-only in
 merge mode; defaults written by a journaled initializer are eligible for initial
@@ -120,7 +122,10 @@ ownership, while pre-existing user metadata is preserved.
 Conflict diagnostics include file, key path, optional identity, and an enum reason
 in `ExecutionResult.to_dict()`. Safe siblings can apply despite other conflicts.
 Existing equal values remain unowned. A tracked deleted file cannot be recreated
-by new dependency requests or include-group wiring.
+by initializer tasks, new dependency requests, include-group wiring, or newly
+requested tooling. The executor captures a deleted tracked `pyproject.toml` before
+running `uv init`, including projects tracked only through dependency records.
+Explicit overwrite can still initialize that file again.
 
 Unchanged declared dependency intent skips `uv add`, even when the materialized
 requirement gained resolver bounds or the user later edited/deleted it. Changed
