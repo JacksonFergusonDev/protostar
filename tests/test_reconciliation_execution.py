@@ -551,3 +551,49 @@ def test_dependency_values_normalize_name_and_extra_spelling():
     assert normalized_requirement("Foo_Bar[Some_Extra]>=2") == normalized_requirement(
         "foo-bar[some-extra]>=2"
     )
+
+
+def test_initial_pyproject_preserves_declared_comments_and_visual_formatting(
+    tmp_path, monkeypatch, mocker
+):
+    monkeypatch.chdir(tmp_path)
+    intent = EnvironmentManifest()
+    intent.collision_strategy = CollisionStrategy.MERGE
+    intent.filesystem.add_structured(
+        "pyproject.toml",
+        """[project]\nauthors = [{ name = "Ada", email = "ada@example.com" }]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nselect = [\n    "A",   # flake8-builtins\n    "B",   # flake8-bugbear\n    "RUF", # Ruff-specific\n]\n""",
+        producer="module:Ruff",
+    )
+    intent.filesystem.add_structured(
+        "pyproject.toml",
+        """[tool.ruff.lint]\nselect = [\n    "A",   # flake8-builtins\n    "B",   # flake8-bugbear\n    "D",   # pydocstyle\n    "RUF", # Ruff-specific\n]\n""",
+        producer="template:cli:ruff",
+    )
+    run(intent, mocker)
+    content = Path("pyproject.toml").read_text()
+    assert "# Tool Configuration" in content
+    assert "# ---- Ruff ---- #" in content
+    assert 'authors = [{ name = "Ada", email = "ada@example.com" }]' in content
+    assert '"A",   # flake8-builtins' in content
+    assert '"B",   # flake8-bugbear' in content
+    assert '"D",   # pydocstyle' in content
+    assert '"RUF", # Ruff-specific' in content
+
+
+def test_clean_toml_update_uses_desired_comments(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    first = EnvironmentManifest()
+    first.collision_strategy = CollisionStrategy.MERGE
+    first.filesystem.add_structured(
+        "config.toml", 'rules = [\n    "A", # original\n]\n', producer="module:test"
+    )
+    run(first, mocker)
+    changed = EnvironmentManifest()
+    changed.collision_strategy = CollisionStrategy.MERGE
+    changed.filesystem.add_structured(
+        "config.toml",
+        'rules = [\n    "A", # original\n    "B", # new rule\n]\n',
+        producer="module:test",
+    )
+    run(changed, mocker)
+    assert '"B", # new rule' in Path("config.toml").read_text()

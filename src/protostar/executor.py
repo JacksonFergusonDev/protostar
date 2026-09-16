@@ -56,7 +56,12 @@ from .sync_state import (
     serialize_state,
 )
 from .system import ProcessRunner, shield_sigint
-from .toml_ast import aggregate_toml, apply_dependency_includes, reconcile_toml
+from .toml_ast import (
+    aggregate_toml,
+    aggregate_toml_document,
+    apply_dependency_includes,
+    reconcile_toml,
+)
 from .workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
@@ -497,9 +502,10 @@ class SystemExecutor:
             ]
             if not payloads:
                 continue
+            aggregated = aggregate_toml_document(payloads)
             result = reconcile_toml(
                 original,
-                aggregate_toml(payloads),
+                aggregated.value,
                 decode_toml_baseline(record.baseline)
                 if record and record.baseline is not None
                 else MISSING,
@@ -507,6 +513,7 @@ class SystemExecutor:
                 overwrite=is_overwrite,
                 initializing=initializing,
                 missing_file=not target.exists(),
+                desired_ast=aggregated.document,
             )
             for conflict in result.conflicts:
                 self._merge_warning(conflict)

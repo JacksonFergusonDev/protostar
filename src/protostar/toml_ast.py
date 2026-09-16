@@ -32,6 +32,17 @@ from .merge import (
 
 logger = logging.getLogger("protostar")
 
+TOOL_SECTION_NAMES = {
+    "ruff": "Ruff",
+    "mypy": "Mypy",
+    "ty": "Ty",
+    "pyrefly": "Pyrefly",
+    "pytest": "Pytest",
+    "coverage": "Pytest",
+    "commitizen": "Commitizen",
+    "rumdl": "rumdl",
+}
+
 SET_LIKE_TOML_PATHS = frozenset(
     {
         ("tool", "ruff", "lint", "select"),
@@ -45,6 +56,14 @@ SET_LIKE_TOML_PATHS = frozenset(
 
 
 @dataclass(frozen=True)
+class AggregatedToml:
+    """Semantic desired value paired with its comment-preserving TOML AST."""
+
+    value: dict[str, Value]
+    document: Any
+
+
+@dataclass(frozen=True)
 class TomlReconciliation:
     """AST output, owned composite baseline, and concrete conflicts."""
 
@@ -53,15 +72,15 @@ class TomlReconciliation:
     conflicts: tuple[MergeConflict, ...]
 
 
-def aggregate_toml(contributions: list[StructuredContribution]) -> dict[str, Value]:
-    """Aggregates module sequence overrides followed by template opinions.
-
-    Unclassified producers cannot silently override another producer.
-    """
+def aggregate_toml_document(
+    contributions: list[StructuredContribution],
+) -> AggregatedToml:
+    """Aggregates semantic precedence and the corresponding desired TOML AST."""
     desired: dict[str, Value] = {}
+    desired_doc = tomlkit.document()
     owners: dict[tuple[str, ...], str] = {}
 
-    def add(
+    def add_semantic(
         target: dict[str, Value],
         incoming: dict[str, Value],
         producer: str,
@@ -71,38 +90,70 @@ def aggregate_toml(contributions: list[StructuredContribution]) -> dict[str, Val
             keys = (*path, key)
             current = target.get(key, MISSING)
             if isinstance(value, dict) and isinstance(current, dict):
-                add(current, value, producer, keys)
+                add_semantic(current, value, producer, keys)
+                continue
+            old = owners.get(keys)
+            if (
+                current is not MISSING
+                and not semantic_equal(current, value)
+                and old != producer
+                and not (
+                    producer.startswith("template:")
+                    or (
+                        producer.startswith("module:")
+                        and old is not None
+                        and old.startswith("module:")
+                    )
+                )
+            ):
+                raise ConfigurationError(
+                    f"Ambiguous TOML producers at {'.'.join(keys)}.",
+                    hint="Use documented module sequence/template precedence or remove conflicting declarations.",
+                )
+            target[key] = deepcopy(value)
+            owners[keys] = producer
+            if isinstance(value, dict):
+                target[key] = {}
+                add_semantic(cast(dict[str, Value], target[key]), value, producer, keys)
+
+    def overlay_ast(target: Any, incoming: Any) -> None:
+        overlap_seen = False
+        separator_added = False
+        for key, value in incoming.items():
+            existed = key in target
+            if (
+                existed
+                and isinstance(target[key], tomlkit.items.AbstractTable)
+                and isinstance(value, tomlkit.items.AbstractTable)
+                and not isinstance(target[key], AoT)
+                and not isinstance(value, AoT)
+            ):
+                overlay_ast(target[key], value)
             else:
-                old = owners.get(keys)
                 if (
-                    current is not MISSING
-                    and not semantic_equal(current, value)
-                    and old != producer
-                    and not (
-                        producer.startswith("template:")
-                        or (
-                            producer.startswith("module:")
-                            and old is not None
-                            and old.startswith("module:")
-                        )
-                    )
+                    not existed
+                    and overlap_seen
+                    and not separator_added
+                    and isinstance(target, tomlkit.items.AbstractTable)
+                    and not isinstance(value, tomlkit.items.AbstractTable)
                 ):
-                    raise ConfigurationError(
-                        f"Ambiguous TOML producers at {'.'.join(keys)}.",
-                        hint="Use documented module sequence/template precedence or remove conflicting declarations.",
-                    )
+                    target.add(tomlkit.nl())
+                    separator_added = True
                 target[key] = deepcopy(value)
-                owners[keys] = producer
-                if isinstance(value, dict):
-                    target[key] = {}
-                    add(cast(dict[str, Value], target[key]), value, producer, keys)
+            overlap_seen = overlap_seen or existed
 
     for contribution in sorted(
-        contributions, key=lambda c: c.producer.startswith("template:")
+        contributions, key=lambda item: item.producer.startswith("template:")
     ):
         data = cast(dict[str, Value], validate_configuration(contribution.content))
-        add(desired, data, contribution.producer)
-    return desired
+        add_semantic(desired, data, contribution.producer)
+        overlay_ast(desired_doc, tomlkit.parse(contribution.content))
+    return AggregatedToml(desired, desired_doc)
+
+
+def aggregate_toml(contributions: list[StructuredContribution]) -> dict[str, Value]:
+    """Returns aggregated semantic intent for validation and pure callers."""
+    return aggregate_toml_document(contributions).value
 
 
 def reconcile_toml(
@@ -114,6 +165,7 @@ def reconcile_toml(
     overwrite: bool = False,
     initializing: bool = False,
     missing_file: bool = False,
+    desired_ast: Any | None = None,
 ) -> TomlReconciliation:
     """Applies semantic decisions to the local AST without global formatting."""
     try:
@@ -153,6 +205,17 @@ def reconcile_toml(
         baseline = result.baseline
         conflicts = result.conflicts
 
+    def desired_node(keys: tuple[str, ...]) -> Any | None:
+        node = desired_ast
+        if node is None:
+            return None
+        try:
+            for key in keys:
+                node = node[key]
+        except (KeyError, TypeError):
+            return None
+        return node
+
     def patch(
         ast: Any,
         before: dict[str, Value],
@@ -163,12 +226,76 @@ def reconcile_toml(
             previous = before.get(key, MISSING)
             if semantic_equal(previous, value):
                 continue
+            path = (*keys, key)
+            styled = desired_node(path)
+            styled_value: Value = MISSING
+            if styled is not None and hasattr(styled, "unwrap"):
+                styled_value = cast(Value, styled.unwrap())
             if isinstance(previous, dict) and isinstance(value, dict):
-                patch(ast[key], previous, value, (*keys, key))
+                patch(ast[key], previous, value, path)
+            elif previous is MISSING and isinstance(value, dict) and path == ("tool",):
+                styled_keys = (
+                    list(styled.keys())
+                    if styled is not None and hasattr(styled, "keys")
+                    else []
+                )
+                first_section = (
+                    TOOL_SECTION_NAMES.get(styled_keys[0]) if styled_keys else None
+                )
+                prior = next(
+                    (
+                        item
+                        for _, item in reversed(ast.body)
+                        if isinstance(item, tomlkit.items.AbstractTable)
+                    ),
+                    None,
+                )
+                if not initializing and prior is not None and first_section is not None:
+                    prior.add(tomlkit.nl())
+                    if "# Tool Configuration" not in original:
+                        prior.add(tomlkit.comment("=" * 50))
+                        prior.add(tomlkit.comment("Tool Configuration"))
+                        prior.add(tomlkit.comment("=" * 50))
+                        prior.add(tomlkit.nl())
+                    prior.add(tomlkit.comment(f"---- {first_section} ---- #"))
+                ast[key] = tomlkit.table(is_super_table=True)
+                patch(ast[key], {}, value, path)
+            elif styled is not None and semantic_equal(styled_value, value):
+                if previous is MISSING:
+                    section: str | None = None
+                    banner = False
+                    if len(path) == 2 and path[0] == "tool":
+                        section = TOOL_SECTION_NAMES.get(key)
+                    elif path == ("tool",) and hasattr(styled, "keys"):
+                        first_tool = cast(str | None, next(iter(styled.keys()), None))
+                        if first_tool is not None:
+                            section = TOOL_SECTION_NAMES.get(first_tool)
+                        banner = True
+                    if not initializing and section is not None:
+                        marker = f"# ---- {section} ---- #"
+                        body = ast.body if hasattr(ast, "body") else ast.value.body
+                        prior = next(
+                            (
+                                item
+                                for _, item in reversed(body)
+                                if isinstance(item, tomlkit.items.AbstractTable)
+                            ),
+                            None,
+                        )
+                        if prior is not None:
+                            prior.add(tomlkit.nl())
+                            if banner and "# Tool Configuration" not in original:
+                                prior.add(tomlkit.comment("=" * 50))
+                                prior.add(tomlkit.comment("Tool Configuration"))
+                                prior.add(tomlkit.comment("=" * 50))
+                                prior.add(tomlkit.nl())
+                            if marker not in original:
+                                prior.add(tomlkit.comment(f"---- {section} ---- #"))
+                ast[key] = deepcopy(styled)
             elif (
                 isinstance(previous, list)
                 and isinstance(value, list)
-                and (*keys, key) in SET_LIKE_TOML_PATHS
+                and path in SET_LIKE_TOML_PATHS
                 and value[: len(previous)] == previous
             ):
                 for member in value[len(previous) :]:
@@ -177,7 +304,12 @@ def reconcile_toml(
                 ast[key] = tomlkit.item(value)
 
     patch(doc, local, value)
-    content = original if semantic_equal(local, value) else tomlkit.dumps(doc)
+    if semantic_equal(local, value):
+        content = original
+    elif initializing and location.file == "pyproject.toml":
+        content = format_pyproject_toml(doc)
+    else:
+        content = tomlkit.dumps(doc)
     return TomlReconciliation(content, baseline, conflicts)
 
 
@@ -310,6 +442,12 @@ def format_pyproject_toml(doc: Any) -> str:
 
     # 5. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
     new_content = _MULTI_NEWLINE_RE.sub("\n\n", new_content).rstrip() + "\n"
+    new_content = re.sub(
+        r"\n+[ \t]*\[dependency-groups\]",
+        "\n\n[dependency-groups]",
+        new_content,
+        count=1,
+    )
 
     # 6. Safety Parity Guard: Guarantee data integrity
     try:
@@ -414,6 +552,8 @@ def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> 
         )
     if groups is None:
         groups = tomlkit.table()
+        if doc:
+            doc.add(tomlkit.nl())
         doc["dependency-groups"] = groups
     changed = False
     for edge in edges:
@@ -435,8 +575,9 @@ def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> 
             isinstance(e, dict) and e.get("include-group") == edge.include
             for e in entries
         ):
-            item = tomlkit.inline_table()
-            item["include-group"] = edge.include.value
+            item = tomlkit.parse(
+                f'entry = {{ include-group = "{edge.include.value}" }}\n'
+            )["entry"]
             entries.append(item)
             changed = True
     return tomlkit.dumps(doc) if changed else original

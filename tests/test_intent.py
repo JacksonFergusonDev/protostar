@@ -237,6 +237,7 @@ def test_typed_include_applied_before_resolver_and_rolls_back(
     executor._apply_dependency_includes()
     executor._install_dependencies()
     assert process.call_count == 1
+    assert '{ include-group = "docs" }' in pyproject.read_text()
     assert executor.journal.rollback().succeeded
     assert pyproject.read_text() == original
     assert lock.read_bytes() == b"original lock"

@@ -1133,7 +1133,12 @@ def test_executor_append_files_cli_template_full_lifecycle(
     assert not result.endswith("\n\n")
     assert tomllib.loads(result)
 
-    assert "# Tool Configuration" not in result
+    assert "# Tool Configuration" in result
+    assert result.index("# ---- Ruff ---- #") < result.index("# ---- Mypy ---- #")
+    assert result.index("# ---- Mypy ---- #") < result.index("# ---- Pytest ---- #")
+    assert result.index("# ---- Pytest ---- #") < result.index(
+        "# ---- Commitizen ---- #"
+    )
     parsed = tomllib.loads(result)
     assert parsed["tool"]["ruff"]["line-length"] == 88
     assert parsed["tool"]["coverage"]["run"]["branch"] is True
@@ -1183,17 +1188,17 @@ line-length = 88
     # Banners should appear exactly once
     assert result.count("# Tool Configuration") == 1
     assert result.count("# ---- Ruff ---- #") == 1
-    assert result.count("# ---- Pytest ---- #") == 0
+    assert result.count("# ---- Pytest ---- #") == 1
     assert result.count("# ---- Commitizen ---- #") == 1
 
     # User comment preserved
     assert "# Keep this user comment" in result
 
-    # Order maintained
+    # Existing order is preserved; the new managed section is appended.
     ruff_pos = result.find("# ---- Ruff ---- #")
+    pytest_pos = result.find("# ---- Pytest ---- #")
     cz_pos = result.find("# ---- Commitizen ---- #")
-    assert cz_pos < ruff_pos
-    assert result.startswith(existing)
+    assert cz_pos < ruff_pos < pytest_pos
     assert result.endswith("\n")
     assert not result.endswith("\n\n")
 

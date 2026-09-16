@@ -107,8 +107,12 @@ state before journal commit so failure restores exact original file/state bytes
 and modes. Expected merge conflicts preserve affected values and become structured
 warnings; malformed state remains fatal. The executor aggregates module contributions in declared sequence order, then
 applies template opinions once. Unclassified conflicting producers fail before
-mutations. The TOML adapter patches accepted nodes in the existing AST; it does
-not globally format an existing document. Explicit overwrite owns declared values
+mutations. The TOML adapter keeps semantic intent separate from a desired
+`tomlkit` AST: the kernel decides ownership using plain values, while accepted
+nodes retain authored comments, array layout, and inline-table style from that
+AST. It patches the existing local AST and does not globally format an existing
+document. Newly initialized `pyproject.toml` files retain the standard tool
+banner and section markers. Explicit overwrite owns declared values
 while retaining undeclared siblings. Personal project fields are seed-only in
 merge mode; defaults written by a journaled initializer are eligible for initial
 ownership, while pre-existing user metadata is preserved.
