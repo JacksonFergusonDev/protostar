@@ -618,7 +618,7 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
     Path(".github/renovate.json").write_text(json.dumps({"value": "local"}))
     target = Path("pyproject.toml")
     target.write_text(target.read_text().replace("value = 1", "value = 3"))
-    Path("notes.txt").write_text("local prefix\n" + Path("notes.txt").read_text())
+    Path("notes.txt").write_bytes(b"local prefix\n" + Path("notes.txt").read_bytes())
     project.write_text(revision("remote", evolved=True))
     before = snapshot(Path.cwd())
     review = inspect_project()
