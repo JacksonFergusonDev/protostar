@@ -232,7 +232,9 @@ def decode_recipe(data: object) -> ProjectRecipe:
                 ".." in Path(locator).parts
                 or "\\" in locator
                 or "\x00" in locator
-                or PureWindowsPath(locator).drive
+                or (
+                    PureWindowsPath(locator).drive and not PureWindowsPath(locator).root
+                )
             ):
                 raise _invalid()
         else:
