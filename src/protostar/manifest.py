@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum
 import hashlib
 from collections.abc import Callable
