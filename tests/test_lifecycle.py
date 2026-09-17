@@ -121,9 +121,12 @@ def test_missing_enrollment_is_actionable(project, target):
 def test_identity_change_and_missing_source_fail(project):
     data = Path("pyproject.toml").read_text()
     Path("other.toml").write_text(project.read_text())
-    Path("pyproject.toml").write_text(
-        data.replace(str(project), str(project.parent / "other.toml"))
+    modified = data.replace(
+        project.resolve().as_posix(),
+        (project.parent / "other.toml").resolve().as_posix(),
     )
+    assert modified != data
+    Path("pyproject.toml").write_text(modified)
     with pytest.raises(ProtostarError):
         inspect_project()
     Path("pyproject.toml").write_text(data)
