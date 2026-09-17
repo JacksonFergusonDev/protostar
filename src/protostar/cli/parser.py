@@ -288,6 +288,27 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="<command>",
     )
 
+    from protostar.cli.reviews import handle_review
+
+    for command, description in (
+        (
+            "status",
+            "Summarize accepted updates, conflicts, and preserved local intent.",
+        ),
+        (
+            "diff",
+            "Review accepted file diffs, conflicts, and proposed resolver actions.",
+        ),
+    ):
+        review_parser = subparsers.add_parser(
+            command,
+            help=description,
+            description=description,
+            parents=[base_parser],
+            epilog="Inspects the current directory. Requires [tool.protostar] and .protostar.lock.toml; never executes tasks or writes files.",
+        )
+        review_parser.set_defaults(func=handle_review)
+
     # --- Init Subparser ---
     init_parser = subparsers.add_parser(
         "init",

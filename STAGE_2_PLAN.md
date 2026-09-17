@@ -323,6 +323,19 @@ executor framework. This PR must not force init through lifecycle task suppressi
 
 ### PR 3: `feat(cli): add project status and diff reviews`
 
+**Status: Completed (2026-09-17).** Recipe-driven `status` and `diff` now
+consume the shared immutable review path, with one captured source revision and
+hook registry snapshot. Remote file/archive inspection acquires data in memory;
+inspection skips executable prerequisites, tasks, resolvers, and IDE probes.
+Human summaries and API-v1 JSON expose accepted diffs, semantic conflicts,
+preserved deviations, state-only advancement, and unknown resolver output.
+Schema discovery, parser-based completion, command docs, generated review schema,
+and help SVGs are published together. All 1,034 unit tests pass with 91.62%
+coverage; focused inspection and all built-in repeatability checks pass. Generated
+drift was reviewed: new command help/schema assets, expanded top-level help, and
+API-version changes in JSON examples are intentional. Project snapshots remain
+unchanged. No application command or ownership schema change is introduced.
+
 **Purpose:** Give developers a usable, trustworthy inspection workflow first.
 
 - Add `status` and `diff`, shared recipe/source loading, in-memory inspection

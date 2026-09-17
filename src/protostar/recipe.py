@@ -92,6 +92,49 @@ class RecipeSource:
             built_in=self.locator if self.origin is TemplateOrigin.BUILT_IN else None,
         )
 
+    def inspect(self, root: Path, context: dict[str, str]) -> TemplateBlueprint:
+        """Loads the exact recorded revision with no remote disk acquisition."""
+        if self.origin is not TemplateOrigin.REMOTE:
+            from .review_workspace import capture_node
+
+            target = (
+                Path(
+                    str(
+                        importlib.resources.files("protostar.templates").joinpath(
+                            f"{self.locator}.toml"
+                        )
+                    )
+                )
+                if self.origin is TemplateOrigin.BUILT_IN
+                else root / self.locator
+            ).expanduser()
+            capture_node(target)
+            base = target if target.is_dir() else target.parent
+            if target.is_dir():
+                capture_node(target / "protostar.toml")
+            template = base / "template"
+            capture_node(template)
+            if template.is_dir():
+                for path in template.rglob("*"):
+                    capture_node(path)
+            return self.load(root, context)
+        import hashlib
+
+        from .config import TemplateBlueprint
+        from .network import acquire_inspection_source, resolve_remote_source
+
+        source = resolve_remote_source(self.locator)
+        acquired = acquire_inspection_source(source.locator)
+        reference = TemplateReference(
+            self.origin,
+            source.locator,
+            hashlib.sha256(acquired.template_bytes).hexdigest(),
+            source_revision=source.revision,
+        )
+        return TemplateBlueprint.from_sources(
+            acquired.template_bytes, acquired.files, reference, context
+        )
+
 
 @dataclass(frozen=True)
 class ProjectRecipe:

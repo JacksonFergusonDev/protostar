@@ -44,6 +44,42 @@ Any template containing placeholders (e.g., `<% DATABASE_URL %>`) can receive va
 protostar init --from ./api.toml --DATABASE_URL="postgresql://localhost:5432/db"
 ```
 
+### `protostar status` and `protostar diff`
+
+Inspect the current directory using its recorded project recipe and ownership ledger:
+
+```bash
+protostar status
+protostar diff
+protostar diff --json
+```
+
+![Status command help](../assets/terminals/cli_status_help.svg)
+
+![Diff command help](../assets/terminals/cli_diff_help.svg)
+
+`status` summarizes accepted edits, conflicts, preserved local edits/deletions,
+ownership advancement, and resolver actions. `diff` also displays unified diffs
+of accepted direct edits. Conflicting content is preserved; conflict details give
+the file, semantic keys or region identity, and reason. Resolver output is unknown
+until application; no predicted dependency or lockfile diff is shown.
+
+Both commands support `--json`, `--verbose`, and help. They never prompt, execute
+subprocesses, write workspace files, or populate disk caches. Remote template
+acquisition may use the network and reads archive data entirely in memory.
+Initialization-only tasks and IDE probes are reported as excluded.
+
+The explicit current directory must contain `[tool.protostar]` in `pyproject.toml`
+and `.protostar.lock.toml`. For a Stage 1 project, rerun the original explicit
+selection with `init --force-merge` to enroll it. Edit the recipe deliberately to
+change tool selections; global defaults are never consulted during review.
+Custom variables require `[tool.protostar.bindings]` and their environment values.
+Recorded template identity changes are rejected.
+
+Valid reviews exit `0`, even with conflicts or pending work. Fatal errors use the
+existing domain-specific exit codes. These commands only inspect; `init --dry-run`
+continues to show the creation manifest rather than accepted lifecycle changes.
+
 ### `protostar config`
 
 Manages your default preferences stored in `~/.config/protostar/config.toml`.

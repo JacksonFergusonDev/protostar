@@ -25,6 +25,7 @@ from .modules import (
     ReadTheDocsModule,
     ZensicalModule,
 )
+from .preparation import ExecutionPolicy
 from .system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
@@ -78,11 +79,16 @@ class Orchestrator:
         """
         return {target for target in manifest.target_files() if target.exists()}
 
-    def plan(self) -> EnvironmentManifest:
+    def plan(
+        self, *, policy: ExecutionPolicy = ExecutionPolicy.INITIALIZATION
+    ) -> EnvironmentManifest:
         """Evaluates workspace state and assembles a declarative EnvironmentManifest.
 
         A fresh EnvironmentManifest is instantiated on every call, guaranteeing
         that retries (e.g. after a collision resolution) start from a clean slate.
+
+        Args:
+            policy: Lifecycle reviews skip execution prerequisite checks.
 
         Raises:
             WorkspaceCollisionError: If collision targets exist on disk and no
@@ -157,7 +163,7 @@ class Orchestrator:
             )
 
         missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
-        for mod in active_modules:
+        for mod in active_modules if policy is ExecutionPolicy.INITIALIZATION else []:
             try:
                 mod.pre_flight()
             except MissingDependencyError as e:

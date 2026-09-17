@@ -9,7 +9,7 @@ from protostar.cli import ui
 from protostar.config import TemplateBlueprint
 from protostar.modules import TOOLING_MODULES
 
-CLI_API_VERSION = 0
+CLI_API_VERSION = 1
 
 
 def handle_export_schema(args: argparse.Namespace) -> None:
@@ -194,7 +194,7 @@ def _build_capabilities_schema(
                 "description": subparser.description or "",
                 "flags": flags,
             }
-    return {"commands": commands}
+    return {"commands": commands, "review_schema": review_schema()}
 
 
 def emit_capabilities(
@@ -209,3 +209,94 @@ def emit_capabilities(
         }
     )
     sys.exit(0)
+
+
+def review_schema() -> dict[str, Any]:
+    """Returns the schema for shipped status/diff JSON review envelopes."""
+    from protostar.merge import ConflictReason
+    from protostar.recipe import SelectionLayer, Tool
+
+    string = {"type": "string"}
+    strings = {"type": "array", "items": string}
+    boolean = {"type": "boolean"}
+    nullable_string = {"type": ["string", "null"]}
+
+    def record(properties: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": list(properties),
+            "additionalProperties": False,
+        }
+
+    def records(properties: dict[str, Any]) -> dict[str, Any]:
+        return {"type": "array", "items": record(properties)}
+
+    location = {"file": string, "keys": strings, "identity": nullable_string}
+    review = record(
+        {
+            "edits": records(
+                {"path": string, "before": nullable_string, "after": string}
+            ),
+            "directories": strings,
+            "conflicts": records(
+                {
+                    **location,
+                    "reason": {"enum": [reason.value for reason in ConflictReason]},
+                }
+            ),
+            "preserved": records({**location, "deleted": boolean}),
+            "state_changed": boolean,
+            "resolver": record(
+                {
+                    "requirements": record(
+                        {"main": strings, "dev": strings, "docs": strings}
+                    ),
+                    "lock_required": boolean,
+                    "footprint": record({"paths": strings}),
+                    "output": {"enum": ["unknown", None]},
+                }
+            ),
+            "initialization_only": {"type": "array", "items": strings},
+            "initialization_only_ide_probe": boolean,
+            "selections": records(
+                {
+                    "tool": {"enum": [tool.value for tool in Tool]},
+                    "enabled": boolean,
+                    "layer": {"enum": [layer.value for layer in SelectionLayer]},
+                }
+            ),
+            "producers": records(
+                {
+                    "producer": string,
+                    "tool": {"enum": [None, *[tool.value for tool in Tool]]},
+                    "path": strings,
+                }
+            ),
+        }
+    )
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Protostar project review v1",
+        "type": "object",
+        "required": ["api_version", "status", "pending", "review", "diffs"],
+        "additionalProperties": False,
+        "properties": {
+            "api_version": {"const": CLI_API_VERSION},
+            "status": {"const": "reviewed"},
+            "pending": {"type": "boolean"},
+            "review": review,
+            "diffs": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "required": ["path", "diff"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "path": {"type": "string"},
+                        "diff": {"type": "string"},
+                    },
+                },
+            },
+        },
+    }

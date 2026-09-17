@@ -266,3 +266,102 @@ def resolve_remote_template(url: str, temp_workspace: Path, timeout: int = 10) -
     toml_path = temp_workspace / "protostar.toml"
     toml_path.write_text(raw_content, encoding="utf-8")
     return temp_workspace
+
+
+@dataclass(frozen=True)
+class AcquiredTemplate:
+    """One in-memory source revision with its file payloads."""
+
+    template_bytes: bytes
+    files: dict[str, str]
+
+
+def acquire_inspection_source(url: str) -> AcquiredTemplate:
+    """Acquires raw or archived template sources without filesystem writes.
+
+    Validates every archive member before reading template data; links and
+    special nodes are never accepted as template inputs.
+    """
+    import io
+    import stat
+    import tarfile
+    import zipfile
+    from pathlib import PurePosixPath, PureWindowsPath
+
+    source = resolve_remote_source(url)
+    if not source.locator.startswith("https://"):
+        raise NetworkFetchError(url, message="Remote templates require HTTPS.")
+    fmt = ArchiveFormat.from_path(source.locator)
+    if fmt is None:
+        return AcquiredTemplate(fetch_remote_config(source.locator).encode(), {})
+    try:
+        with _get_opener().open(source.locator, timeout=10) as response:
+            payload = response.read()
+    except URLError as error:
+        raise NetworkFetchError(url, original=error) from error
+
+    files: dict[str, bytes] = {}
+
+    def validate(name: str) -> str:
+        path = PurePosixPath(name)
+        if (
+            path.is_absolute()
+            or ".." in path.parts
+            or PureWindowsPath(name).drive
+            or "\\" in name
+        ):
+            raise SecurityViolationError(f"Unsafe archive member: {name}")
+        return path.as_posix()
+
+    try:
+        if fmt is ArchiveFormat.ZIP:
+            with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+                for member in archive.infolist():
+                    name = validate(member.filename)
+                    mode = member.external_attr >> 16
+                    if stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR):
+                        raise SecurityViolationError(
+                            f"Unsupported archive member: {name}"
+                        )
+                    if not member.is_dir():
+                        if name in files:
+                            raise SecurityViolationError(
+                                f"Duplicate archive member: {name}"
+                            )
+                        files[name] = archive.read(member)
+        else:
+            with tarfile.open(fileobj=io.BytesIO(payload), mode="r:*") as tar_archive:
+                for tar_member in tar_archive:
+                    name = validate(tar_member.name)
+                    if tar_member.isdir():
+                        continue
+                    if not tar_member.isfile():
+                        raise SecurityViolationError(
+                            f"Unsupported archive member: {name}"
+                        )
+                    content = tar_archive.extractfile(tar_member)
+                    if content is not None:
+                        if name in files:
+                            raise SecurityViolationError(
+                                f"Duplicate archive member: {name}"
+                            )
+                        files[name] = content.read()
+    except (zipfile.BadZipFile, tarfile.TarError, OSError) as error:
+        raise TemplateResolutionError(url, "Cannot read template archive.") from error
+    roots = sorted(
+        name for name in files if PurePosixPath(name).name == "protostar.toml"
+    )
+    if len(roots) != 1:
+        raise TemplateResolutionError(
+            url, "Archive must contain exactly one protostar.toml."
+        )
+    prefix = str(PurePosixPath(roots[0]).parent / "template") + "/"
+    return AcquiredTemplate(
+        files[roots[0]],
+        {
+            name[len(prefix) :]: content.decode("utf-8")
+            for name, content in sorted(files.items())
+            if name.startswith(prefix)
+            and not {".DS_Store", "__pycache__"}.intersection(PurePosixPath(name).parts)
+        },
+    )
