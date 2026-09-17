@@ -391,6 +391,22 @@ implicit dependency upgrades.
 
 ### PR 5: `test(lifecycle): verify stage 2 acceptance and publish workflows`
 
+**Status: Completed (2026-09-17).** End-to-end machine-mode acceptance now
+initializes every built-in, inspects status/diff/dry-run/check, and applies sync
+three times with exact byte/mode preservation and zero lifecycle subprocesses or
+prompts. A mixed same-source revision verifies safe siblings beside checksum and
+semantic conflicts, accepted dependency resolution, named regions, deletion
+preservation, retained omitted ownership, preview parity, and partial convergence.
+Recipe opinion evolution, explicit Renovate opt-out/re-enable, and keyed hook
+preservation are exercised together. Lifecycle walkthroughs, enrollment, recipe
+editing, check/partial exits, security, and rollback boundaries describe shipped
+behavior; stale pre-lifecycle documentation is corrected. Generated review/check
+examples use the shared preparation path and are tested for determinism. All
+1,060 unit tests pass with 91.74% coverage. Generator drift was inspected: only the
+two new review/check JSON examples are intentional; project snapshots, existing
+schemas, and help SVGs are unchanged. No engine behavior or ownership schema is
+changed.
+
 **Purpose:** Prove the complete developer workflow and its operational boundaries.
 
 - Add end-to-end lifecycle acceptance using isolated workspaces and mocked process,

@@ -583,3 +583,169 @@ def test_sync_application_schema_and_flags_are_published():
         for flag in capabilities["commands"]["sync"]["flags"]
         for name in flag["names"]
     }
+
+
+def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver(
+    project, monkeypatch, capsys, mocker
+):
+    """A mixed revision applies safe intent and then converges beside local drift."""
+    import tomlkit
+
+    from protostar.lifecycle import prepare_project
+    from protostar.sync_state import deserialize_state
+
+    def revision(value, *, evolved=False):
+        files = source_text(value)
+        files += (
+            '"deleted.txt" = "keep absent"\n"omitted.txt" = "retain ownership"\n'
+            if not evolved
+            else '"safe.txt" = "accepted"\n'
+        )
+        return (
+            ('dependencies = ["example"]\n' if evolved else "")
+            + files
+            + '[appends."notes.txt".managed]\ncontent = "'
+            + value
+            + '"\n'
+            + "[dev.pyproject]\nexample = '''[tool.example]\nvalue = "
+            + ("2\nsafe = true" if evolved else "1")
+            + "\n'''\n"
+        )
+
+    project.write_text(revision("original"))
+    prepare_project().apply()
+    Path("deleted.txt").unlink()
+    Path(".github/renovate.json").write_text(json.dumps({"value": "local"}))
+    target = Path("pyproject.toml")
+    target.write_text(target.read_text().replace("value = 1", "value = 3"))
+    Path("notes.txt").write_bytes(b"local prefix\n" + Path("notes.txt").read_bytes())
+    project.write_text(revision("remote", evolved=True))
+    before = snapshot(Path.cwd())
+    review = inspect_project()
+    assert len(review.conflicts) == 2
+    assert review.resolver.pending
+    assert snapshot(Path.cwd()) == before
+    preview = invoke_sync(monkeypatch, capsys, "--dry-run")
+    assert preview == review_payload(review)
+    assert "uv.lock" not in {item["path"] for item in preview["diffs"]}
+    invoke_sync(monkeypatch, capsys, "--check", code=1)
+    assert snapshot(Path.cwd()) == before
+
+    def resolve(_runner, command, *, timeout):
+        assert command == ["uv", "add", "example"]
+        doc = tomlkit.parse(target.read_text())
+        doc["project"]["dependencies"] = ["example>=3"]
+        target.write_text(tomlkit.dumps(doc))
+        Path("uv.lock").write_text("resolved")
+
+    process = mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+    )
+    result = invoke_sync(monkeypatch, capsys, code=1)
+    assert result["status"] == "partial"
+    process.assert_called_once()
+    assert not Path("deleted.txt").exists()
+    assert Path("omitted.txt").read_text() == "retain ownership"
+    assert Path("safe.txt").read_text() == "accepted"
+    assert Path("notes.txt").read_text().startswith("local prefix\n")
+    assert "remote" in Path("notes.txt").read_text()
+    assert tomlkit.parse(target.read_text())["tool"]["example"] == {
+        "value": 3,
+        "safe": True,
+    }
+    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    assert any(record.path == "omitted.txt" for record in state.files)
+    process.reset_mock()
+    after = snapshot(Path.cwd())
+    for _ in range(2):
+        repeated = inspect_project()
+        assert repeated.conflicts
+        assert not repeated.edits
+        assert not repeated.state_changed
+        assert not repeated.resolver.pending
+        assert invoke_sync(monkeypatch, capsys, code=1)["result"]["touched_paths"] == []
+        assert snapshot(Path.cwd()) == after
+    process.assert_not_called()
+
+
+def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
+    project, mocker
+):
+    """Omitted opinions evolve, explicit opt-outs retain ownership on re-enable."""
+    import tomlkit
+    from ruamel.yaml import YAML
+
+    yaml = YAML(typ="rt")
+
+    from protostar.lifecycle import prepare_project
+    from protostar.recipe import SelectionLayer
+
+    def resolve(_runner, command, *, timeout):
+        assert command[:3] == ["uv", "add", "--dev"]
+        doc = tomlkit.parse(Path("pyproject.toml").read_text())
+        groups = doc.setdefault("dependency-groups", {})
+        existing = groups.setdefault("dev", [])
+        existing.extend(package + ">=1" for package in command[3:])
+        Path("pyproject.toml").write_text(tomlkit.dumps(doc))
+        Path("uv.lock").write_text("resolved")
+
+    process = mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+    )
+    project.write_text("ruff = true\nprek = true\nrenovate = true\n")
+    prepare_project().apply()
+    hooks = Path(".pre-commit-config.yaml")
+    data = yaml.load(hooks.read_text())
+    local = next(repo for repo in data["repos"] if repo["repo"] == "local")
+    next(hook for hook in local["hooks"] if hook["id"] == "ruff-check")["entry"] = (
+        "local ruff"
+    )
+    with hooks.open("w") as stream:
+        yaml.dump(data, stream)
+    Path(".github/renovate.json").unlink()
+    process.reset_mock()
+    recipe_doc = tomlkit.parse(Path("pyproject.toml").read_text())
+    recipe_doc["tool"]["protostar"]["tools"] = {"renovate": False}
+    Path("pyproject.toml").write_text(tomlkit.dumps(recipe_doc))
+    retained = Path(".protostar.lock.toml").read_bytes()
+    project.write_text("ruff = true\nprek = true\nrenovate = true\nmypy = true\n")
+    prepared = prepare_project()
+    selections = {selection.tool: selection for selection in prepared.review.selections}
+    assert not selections[Tool.RENOVATE].enabled
+    assert selections[Tool.RENOVATE].layer is SelectionLayer.PROJECT
+    assert selections[Tool.MYPY].enabled
+    assert not any(
+        "renovate" in diagnostic.message.lower()
+        for diagnostic in prepared.review.diagnostics
+    )
+    prepared.apply()
+    process.assert_called_once()
+    data = yaml.load(hooks.read_text())
+    local = next(repo for repo in data["repos"] if repo["repo"] == "local")
+    assert (
+        next(hook for hook in local["hooks"] if hook["id"] == "ruff-check")["entry"]
+        == "local ruff"
+    )
+    assert any(hook["id"] == "mypy" for hook in local["hooks"])
+    assert not Path(".github/renovate.json").exists()
+    from protostar.sync_state import deserialize_state
+
+    before = deserialize_state(retained.decode())
+    after = deserialize_state(Path(".protostar.lock.toml").read_text())
+    record = next(
+        record for record in before.files if record.path == ".github/renovate.json"
+    )
+    assert record in after.files
+    recipe_doc = tomlkit.parse(Path("pyproject.toml").read_text())
+    recipe_doc["tool"]["protostar"]["tools"]["renovate"] = True
+    Path("pyproject.toml").write_text(tomlkit.dumps(recipe_doc))
+    process.reset_mock()
+    prepared = prepare_project()
+    assert any(
+        item.deleted and item.location.file == ".github/renovate.json"
+        for item in prepared.review.preserved
+    )
+    prepared.apply()
+    assert not Path(".github/renovate.json").exists()
+    process.assert_not_called()
+    assert not inspect_project().pending

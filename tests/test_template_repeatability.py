@@ -359,3 +359,79 @@ def test_stage_one_enrollment_preserves_applied_ownership(
     )
     assert (tmp_path / ".protostar.lock.toml").read_bytes() == before
     assert "protostar" not in str(deserialize_state(before.decode()).files)
+
+
+@pytest.mark.parametrize("template_alias", BUILTIN_TEMPLATES)
+def test_builtin_complete_lifecycle_has_no_repeat_mutations(
+    template_alias, tmp_path, monkeypatch, mocker, capsys
+):
+    """Every shipped template supports inspection and three no-op applications."""
+    import json
+    import stat
+
+    from protostar.cli import main, ui
+
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
+    mocker.patch.object(ProcessRunner, "run", side_effect=_mock_process_runner)
+    mocker.patch(
+        "protostar.cli.main.resolve_auto_metadata",
+        return_value={
+            "description": "Lifecycle acceptance",
+            "author_name": "Test Author",
+            "author_email": "test@example.invalid",
+            "license": "MIT",
+        },
+    )
+    mocker.patch("subprocess.run", side_effect=AssertionError("subprocess"))
+    mocker.patch("subprocess.Popen", side_effect=AssertionError("subprocess"))
+    monkeypatch.setattr(ui, "is_json_mode", True)
+    handle_init(
+        argparse.Namespace(
+            template_name=template_alias, python_version="3.13", docker=None
+        )
+    )
+    capsys.readouterr()
+    before = {
+        p.relative_to(tmp_path): (p.read_bytes(), stat.S_IMODE(p.stat().st_mode))
+        for p in tmp_path.rglob("*")
+        if p.is_file()
+    }
+    process = mocker.patch.object(
+        ProcessRunner, "run", side_effect=AssertionError("process")
+    )
+    mocker.patch("subprocess.run", side_effect=AssertionError("subprocess"))
+    mocker.patch("subprocess.Popen", side_effect=AssertionError("subprocess"))
+    mocker.patch("questionary.confirm", side_effect=AssertionError("prompt"))
+    mocker.patch(
+        "protostar.config.UserConfig.load", side_effect=AssertionError("defaults")
+    )
+    for _ in range(3):
+        for command in (
+            ["status"],
+            ["diff"],
+            ["sync", "--dry-run"],
+            ["sync", "--check"],
+            ["sync"],
+        ):
+            monkeypatch.setattr(ui, "is_json_mode", False)
+            monkeypatch.setattr("sys.argv", ["protostar", *command, "--json"])
+            main()
+            payload = json.loads(capsys.readouterr().out)
+            if command == ["sync"]:
+                assert payload["status"] == "success"
+                assert payload["result"]["touched_paths"] == []
+            else:
+                assert payload["status"] == "reviewed"
+                assert not payload["pending"]
+                if "--check" in command:
+                    assert payload["check_passed"]
+            assert {
+                p.relative_to(tmp_path): (
+                    p.read_bytes(),
+                    stat.S_IMODE(p.stat().st_mode),
+                )
+                for p in tmp_path.rglob("*")
+                if p.is_file()
+            } == before
+    process.assert_not_called()

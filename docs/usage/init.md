@@ -11,7 +11,8 @@ an already initialized workspace, `--force-merge` safely reconciles contribution
 that Protostar previously recorded. It can apply unchanged-local template updates
 and additive tooling, while preserving user edits, deletions, and unowned content.
 It does not adopt existing configuration, switch templates, prune removed template
-content, or provide a `sync` command.
+content. After initialization, use the [project lifecycle](lifecycle.md) commands
+`status`, `diff`, and `sync` to review and apply the recorded recipe.
 
 <div class="grid cards" markdown>
 
