@@ -244,9 +244,9 @@ The practical consequence: fields you've customized survive untouched.
     select = ["E", "F", "I", "UP"]
     ```
 
-The same principle applies to `.gitignore` — Protostar appends deduplicated patterns inside delimited marker blocks rather than replacing the file — and to VS Code `settings.json`, which is deep-merged at the key level.
+The same principle applies to `.gitignore` — Protostar appends deduplicated patterns inside delimited marker blocks rather than replacing the file. For supported managed configuration, merge mode uses the recorded ownership baseline to preserve unowned content and local edits.
 
-**Why this matters:** Scaffolding tools that write files by template substitution can only safely target *new* repositories. AST merging allows Protostar to be applied to existing repositories without risk of data loss, making progressive scaffolding and incremental tool adoption practical.
+**Why this matters:** Scaffolding tools that write files by template substitution can only safely target *new* repositories. Ownership-aware reconciliation lets Protostar reinitialize an already managed repository without treating its existing content as template-owned.
 
 !!! tip "Collision strategies"
     The merge behavior is tunable. The default is `MERGE` (preserve your scalars, inject missing nodes). `--force-replace` switches to `OVERWRITE` (Protostar's baseline takes precedence on conflicts). See [The Environment Manifest](./mechanics/manifest.md#collision-strategies) for the full behavior matrix.

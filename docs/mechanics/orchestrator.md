@@ -28,7 +28,7 @@ flowchart TD
     Plan -->|Plan Validated| Manifest[(EnvironmentManifest)]:::state
 
     Manifest -->|--dry-run / --json| DryRun([Serialize Manifest / Dry Run]):::boundary
-    Manifest -->|Live Execution| Exec["Phase 2: execute()<br/>• Validate & deep-merge ASTs<br/>• Scaffold directories & inject files<br/>• Execute managed subprocesses"]:::phase
+    Manifest -->|Live Execution| Exec["Phase 2: execute()<br/>• Reconcile managed configuration<br/>• Scaffold directories & inject files<br/>• Execute managed subprocesses"]:::phase
 
     Exec --> Result([ExecutionResult]):::success
 ```

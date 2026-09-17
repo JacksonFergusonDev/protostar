@@ -48,7 +48,7 @@ Workspace Collision: Protostar detected existing configuration files in the work
 
 In interactive terminals, you can choose from three strategies:
 
-1. **Merge (Default):** Deep-merges AST tables and arrays into `pyproject.toml` and appends missing rules to `.gitignore`, preserving all your custom settings and comments.
+1. **Merge (Default):** Reconciles previously managed TOML/YAML contributions and checksum-gated generated content while preserving unowned content, local edits, and deletions. It also appends missing rules to `.gitignore`.
 1. **Overwrite:** Overwrites existing configuration keys with Protostar's baseline standards.
 1. **Abort:** Safely cancels the operation without making changes.
 
@@ -57,7 +57,7 @@ In interactive terminals, you can choose from three strategies:
 In non-interactive environments or when running with `--json`, interactive prompts are disabled. Pass explicit strategy flags to proceed:
 
 ```bash
-# Safely deep-merge into existing configs:
+# Safely reconcile an already managed workspace:
 protostar init --template cli --force-merge
 
 # Forcefully overwrite existing configs:

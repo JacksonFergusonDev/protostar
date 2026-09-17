@@ -48,7 +48,7 @@ BEGIN
   3. CI/CD & Configuration Artifacts: Workflows, pre-commit config, and Justfile
   4. System Tasks: Initial setup commands (e.g., git init) via ProcessRunner
   5. Dependency Resolution: Pre-journals pyproject.toml & uv.lock, runs uv add (fatal on failure)
-  6. Configuration Appends & Merging: AST merges for TOML and hash-delimited marker blocks
+  6. Configuration Reconciliation: ownership-aware TOML/YAML updates and hash-delimited marker blocks
   7. Ignores & Containers: .gitignore deduplication and Docker artifacts
   8. IDE Configuration: Writes .vscode settings and verifies extensions
 
@@ -70,7 +70,7 @@ These modules contain pure functions: given the same inputs, they always return 
 
 - **`workflows.py`**: Handles string templating for CI/CD workflows, Justfiles, Dockerfiles, pre-commit configurations, and VCS ignores.
 - **`appends.py`**: Resolves language-specific comment syntax and injects hash-delimited marker blocks into existing file strings.
-- **`toml_ast.py`**: Parses TOML strings using `tomlkit` to manipulate the Abstract Syntax Tree (AST), performing deep merges, header formatting, and array-of-tables (AoT) conflict resolution while preserving your comments.
+- **`toml_ast.py`**: Parses TOML strings using `tomlkit` to patch accepted, ownership-aware reconciliation decisions while preserving local comments and formatting.
 
 ### 3. Policy & System Integration
 
