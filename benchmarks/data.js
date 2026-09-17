@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789601698148,
+  "lastUpdate": 1789606393652,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13129,6 +13129,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 237.04,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6deeab6765d4ed25ef7abf3e4de56588c3cb0017",
+          "message": "feat(merge): reconcile Codecov YAML with owned baselines (#256)\n\n* feat(merge): reconcile Codecov YAML with owned baselines\n\n* test(yaml): assign explicit IDs to bounded input parameter sets",
+          "timestamp": "2026-09-16T17:52:04-07:00",
+          "tree_id": "d5aa2602c41377abb219acea1a99d45608853184",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6deeab6765d4ed25ef7abf3e4de56588c3cb0017"
+        },
+        "date": 1789606392184,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 167.54,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 238.43,
             "unit": "ms"
           }
         ]
