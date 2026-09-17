@@ -1,5 +1,6 @@
 """Recipe persistence and its separation from ownership and secret answers."""
 
+import sys
 import tomllib
 from dataclasses import replace
 from pathlib import Path
@@ -167,7 +168,8 @@ def test_recipe_and_state_rollback_together(tmp_path, monkeypatch, mocker, failu
     with pytest.raises(FileSystemError):
         executor.execute()
     assert target.read_bytes() == original
-    assert target.stat().st_mode & 0o777 == 0o640
+    if sys.platform != "win32":
+        assert target.stat().st_mode & 0o777 == 0o640
     assert not (tmp_path / ".protostar.lock.toml").exists()
 
 
@@ -447,8 +449,9 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
     with pytest.raises(FileSystemError):
         executor.execute()
     assert (target.read_bytes(), lock.read_bytes()) == before
-    assert target.stat().st_mode & 0o777 == 0o640
-    assert lock.stat().st_mode & 0o777 == 0o600
+    if sys.platform != "win32":
+        assert target.stat().st_mode & 0o777 == 0o640
+        assert lock.stat().st_mode & 0o777 == 0o600
 
 
 def test_invalid_desired_recipe_fails_before_mutation(tmp_path, monkeypatch, mocker):
