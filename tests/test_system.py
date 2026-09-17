@@ -1,5 +1,6 @@
 import signal
 import subprocess
+import sys
 
 import pytest
 
@@ -27,7 +28,13 @@ def test_process_runner_success(mocker):
     runner.run(["uv", "sync"])
 
     assert runner.active_process is None
-    assert popen.call_args.kwargs["start_new_session"] is True
+    if sys.platform == "win32":
+        assert (
+            popen.call_args.kwargs["creationflags"]
+            == subprocess.CREATE_NEW_PROCESS_GROUP
+        )
+    else:
+        assert popen.call_args.kwargs["start_new_session"] is True
     assert popen.call_args.kwargs["encoding"] == "utf-8"
 
 
@@ -58,6 +65,10 @@ def test_process_runner_sanitizes_environment(mocker, monkeypatch):
     assert child_env["KEEP_ME"] == "yes"
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="POSIX process group signaling is not used on Windows",
+)
 def test_process_runner_timeout_terminates_escalates_and_reaps(mocker):
     process = _mock_process(mocker)
     process.pid = 123
@@ -81,6 +92,10 @@ def test_process_runner_timeout_terminates_escalates_and_reaps(mocker):
     ]
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="POSIX process group signaling is not used on Windows",
+)
 def test_process_runner_keyboard_interrupt_terminates_before_reraising(mocker):
     process = _mock_process(mocker)
     process.pid = 123
@@ -100,6 +115,10 @@ def test_process_runner_keyboard_interrupt_terminates_before_reraising(mocker):
     assert runner.active_process is None
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="POSIX process group signaling is not used on Windows",
+)
 def test_process_runner_retains_unreaped_process_after_termination_failure(mocker):
     process = _mock_process(mocker)
     process.pid = 123
@@ -109,6 +128,84 @@ def test_process_runner_retains_unreaped_process_after_termination_failure(mocke
     mocker.patch("protostar.system.subprocess.Popen", return_value=process)
     mocker.patch("protostar.system.os.getpgid", return_value=456)
     mocker.patch("protostar.system.os.killpg", side_effect=OSError("no group"))
+
+    runner = ProcessRunner()
+    with pytest.raises(ProcessTerminationError):
+        runner.run(["uv", "sync"])
+
+    assert runner.active_process is process
+
+
+def test_process_runner_timeout_windows(mocker, monkeypatch):
+    monkeypatch.setattr("protostar.system.sys.platform", "win32")
+    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    monkeypatch.setattr(
+        "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
+    )
+    process = _mock_process(mocker)
+    process.pid = 123
+    process.communicate.side_effect = subprocess.TimeoutExpired(["uv"], 10)
+    process.poll.return_value = None
+    process.wait.side_effect = [subprocess.TimeoutExpired(["uv"], 2), None]
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+    send_signal = mocker.patch.object(process, "send_signal")
+    kill = mocker.patch.object(process, "kill")
+    ctrl_break = getattr(signal, "CTRL_BREAK_EVENT", 512)
+    monkeypatch.setattr(
+        "protostar.system.signal.CTRL_BREAK_EVENT", ctrl_break, raising=False
+    )
+
+    with pytest.raises(CommandTimeoutError):
+        ProcessRunner(termination_grace_seconds=2).run(["uv", "sync"], timeout=10)
+
+    send_signal.assert_called_once_with(ctrl_break)
+    kill.assert_called_once()
+
+
+def test_process_runner_keyboard_interrupt_windows(mocker, monkeypatch):
+    monkeypatch.setattr("protostar.system.sys.platform", "win32")
+    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    monkeypatch.setattr(
+        "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
+    )
+    process = _mock_process(mocker)
+    process.pid = 123
+    process.communicate.side_effect = KeyboardInterrupt
+    process.poll.return_value = None
+    process.wait.return_value = None
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+    send_signal = mocker.patch.object(process, "send_signal")
+    ctrl_break = getattr(signal, "CTRL_BREAK_EVENT", 512)
+    monkeypatch.setattr(
+        "protostar.system.signal.CTRL_BREAK_EVENT", ctrl_break, raising=False
+    )
+
+    runner = ProcessRunner()
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(["uv", "sync"])
+
+    send_signal.assert_called_once_with(ctrl_break)
+    process.wait.assert_called_once_with(timeout=2.0)
+    assert runner.active_process is None
+
+
+def test_process_runner_windows_termination_failure(mocker, monkeypatch):
+    monkeypatch.setattr("protostar.system.sys.platform", "win32")
+    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    monkeypatch.setattr(
+        "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
+    )
+    process = _mock_process(mocker)
+    process.pid = 123
+    process.communicate.side_effect = KeyboardInterrupt
+    process.poll.return_value = None
+    process.send_signal.side_effect = OSError("cannot signal")
+    process.terminate.side_effect = OSError("cannot terminate")
+    ctrl_break = getattr(signal, "CTRL_BREAK_EVENT", 512)
+    monkeypatch.setattr(
+        "protostar.system.signal.CTRL_BREAK_EVENT", ctrl_break, raising=False
+    )
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
 
     runner = ProcessRunner()
     with pytest.raises(ProcessTerminationError):

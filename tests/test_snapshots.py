@@ -152,7 +152,7 @@ def test_existing_svg_documentation_fixtures():
     for filename, expected_width in expected_fixtures.items():
         svg_path = terminals_dir / filename
         assert svg_path.exists(), f"Missing terminal SVG fixture {filename}"
-        content = svg_path.read_text()
+        content = svg_path.read_text(encoding="utf-8")
 
         # Must parse as valid XML
         root = ET.fromstring(content)

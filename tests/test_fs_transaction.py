@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -29,11 +30,13 @@ def test_write_text_restores_existing_content_and_mode(tmp_path: Path) -> None:
     fs = TransactionAwareFS(journal)
 
     fs.write_text(target, "changed")
-    assert target.stat().st_mode & 0o777 == 0o755
+    if sys.platform != "win32":
+        assert target.stat().st_mode & 0o777 == 0o755
     assert journal.rollback().succeeded
 
     assert target.read_text() == "original"
-    assert target.stat().st_mode & 0o777 == 0o755
+    if sys.platform != "win32":
+        assert target.stat().st_mode & 0o777 == 0o755
 
 
 def test_write_text_rejects_symlink_target(tmp_path: Path) -> None:

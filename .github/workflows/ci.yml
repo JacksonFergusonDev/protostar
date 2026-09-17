@@ -106,6 +106,7 @@ jobs:
 
     - name: Run tests (Windows) # (skip slow tests, but run one E2E smoke test)
       if: matrix.os == 'windows-latest'
+      shell: bash
       run: |
         uv run pytest -m "not (integration or exhaustive)"
         uv run pytest "tests/test_exhaustive.py::test_individual_template_scaffolding[cli]"

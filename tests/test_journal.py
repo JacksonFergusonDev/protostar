@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 import pytest
@@ -161,7 +162,8 @@ def test_journal_restores_original_mode(tmp_path: Path) -> None:
 
     assert result.succeeded
     assert target.read_text() == "original"
-    assert target.stat().st_mode & 0o777 == 0o755
+    if sys.platform != "win32":
+        assert target.stat().st_mode & 0o777 == 0o755
     assert journal.state is TransactionState.ROLLED_BACK
 
 
