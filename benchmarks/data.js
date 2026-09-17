@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789606393652,
+  "lastUpdate": 1789606972033,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13163,6 +13163,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 238.43,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0f0279b5b757ca378696cdf197f18be7435d169b",
+          "message": "fix(ci): enforce Windows test step gating and fix platform test failures (#257)",
+          "timestamp": "2026-09-16T18:01:39-07:00",
+          "tree_id": "9eef0e33f4258908515248e4515c3c7a0ff559ec",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0f0279b5b757ca378696cdf197f18be7435d169b"
+        },
+        "date": 1789606970998,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 183.32,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 259.97,
             "unit": "ms"
           }
         ]
