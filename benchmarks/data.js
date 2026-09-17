@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789681011813,
+  "lastUpdate": 1789685377467,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13639,6 +13639,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 223.94,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5234b5be907412285f71e81076e6e6993e00a17d",
+          "message": "feat(cli): add project status and diff reviews (#265)\n\n* feat(cli): add project status and diff reviews\n\n* test(lifecycle): normalize template locator path in identity change test",
+          "timestamp": "2026-09-17T15:48:33-07:00",
+          "tree_id": "c1cb36333c04e07ff3cdb2afda6fe43c20c4ecf9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5234b5be907412285f71e81076e6e6993e00a17d"
+        },
+        "date": 1789685376061,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 148.35,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 211.51,
             "unit": "ms"
           }
         ]
