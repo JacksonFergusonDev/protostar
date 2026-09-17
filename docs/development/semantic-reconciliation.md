@@ -2,7 +2,8 @@
 
 PR B provides the pure kernel and schema-v1 state codec. PR C connects them to
 transactional execution and TOML AST application, with early dependency selection
-guards. PR D adds the YAML codec and validated YAML snapshots.
+guards. PR D adds the YAML codec and validated YAML snapshots. PR E adds keyed
+pre-commit reconciliation and guarded hook pin provenance.
 
 ## Kernel and ownership
 
@@ -44,8 +45,7 @@ enumerate set-like key paths in `MergePolicy`. These accept unique scalars only,
 retain local order and user deletions, retain omitted baseline members, and append
 new accepted members in desired order. Existing foreign equal members do not
 become owned. Policy validation examines all inputs before truth-table shortcuts,
-including lists inside unchanged mappings. File-specific keyed sequence policies
-remain downstream.
+including lists inside unchanged mappings. Pre-commit supplies its file-specific keyed repository/hook policy in PR E.
 
 ## State schema v1
 
@@ -183,3 +183,44 @@ through `TransactionAwareFS`, and writes candidate state only at transaction
 completion. Parse errors commit nothing; later failures restore exact YAML/state
 bytes and POSIX modes. Acceptance tests use temporary workspaces and mocked
 processes. Identity-aware pre-commit editing remains PR E.
+
+## PR E pre-commit boundary
+
+Pre-commit configuration now uses the YAML round-trip adapter with exact `repo`
+identities and `(repo, id)` hook identities, including `repo: local`. The adapter
+presents keyed semantic values to the existing three-way kernel, then patches
+accepted fields on the original sequence records. Repository/hook order, comments,
+and foreign fields remain in the local AST. Owned snapshots remain ordinary YAML
+with `repos` and `hooks` sequences; they never contain copied foreign hooks.
+
+Repository revisions are owned independently of hook fields. Adding a managed hook
+to an existing repository does not adopt its revision or its other hooks. User
+edits and deletions retain their previous baselines, omitted contributions are not
+pruned, and explicit overwrite targets declared fields while preserving foreign
+siblings. Duplicate local repository blocks or hook IDs preserve the entire
+ambiguous repository with a `duplicate-identity` conflict; independent repositories
+can still change. Duplicate desired/state identities and malformed shapes are
+fatal domain errors. Existing alias and merge-key protection also applies to keyed
+records and sequences.
+
+The executor captures one frozen registry snapshot before execution starts. Planning
+still performs no network requests, and reconciliation never refetches pins.
+Each automatic revision carries registry/fallback provenance. A fallback cannot
+replace a previously applied pin, even when its version appears newer. Comparable
+regressive versions and changed unorderable automatic revisions also preserve the
+local pin with an `unsafe-pin` conflict. Explicit opaque revisions use the ordinary
+three-way policy. Pin state advances only when an owned revision is accepted or
+converged, and identical fallback responses do not relabel registry provenance.
+
+Generation explicitly declares `default_install_hook_types` and `default_stages`
+every run, including their defaults. This allows clean runner/install-type changes
+to update owned top-level fields instead of leaving stale values through omission.
+User changes to these atomic sequences still take precedence in merge mode.
+Switching runners can add a new repository identity; the general no-pruning policy
+retains the old repository and hooks.
+
+File and pin state are staged together and written through the transaction-aware
+filesystem. Unchanged runs write nothing. Failures, including a failure after the
+state write, restore exact configuration/state bytes and POSIX modes. Generated
+file and append-region checksum gates remain PR F; this milestone adds neither
+pruning nor a `sync` command.

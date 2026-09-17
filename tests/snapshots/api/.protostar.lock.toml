@@ -1,12 +1,16 @@
 schema_version = 1
 producer_version = "0.9.0"
-hook_pins = []
 
 [template]
 origin = "built-in"
 locator = "api"
 digest = "19bbe682c0abb9bef6ce49b70ccc62d8ec9c12068e82e086c1d18bcc6cadb2da"
 display_name = "api"
+
+[[files]]
+path = ".pre-commit-config.yaml"
+policy = "structured-yaml"
+baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\ndefault_stages:\n  - pre-commit\nrepos:\n  - hooks:\n      - id: check-added-large-files\n      - id: check-merge-conflict\n      - id: check-case-conflict\n      - id: check-symlinks\n      - id: check-executables-have-shebangs\n      - exclude: \\.py$\n        id: trailing-whitespace\n      - exclude: \\.py$\n        id: end-of-file-fixer\n      - id: check-yaml\n      - id: check-json\n      - id: check-toml\n    repo: builtin\n  - hooks:\n      - entry: uv lock --check\n        files: ^(pyproject\\.toml|uv\\.lock)$\n        id: uv-lock-check\n        language: system\n        name: uv lock check\n        pass_filenames: false\n      - entry: uv run rumdl check --fix\n        id: rumdl-check\n        language: system\n        name: rumdl check\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run rumdl fmt\n        id: rumdl-fmt\n        language: system\n        name: rumdl fmt\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run ruff check --fix\n        id: ruff-check\n        language: system\n        name: ruff check\n        require_serial: true\n        types:\n          - python\n      - entry: uv run ruff format\n        id: ruff-format\n        language: system\n        name: ruff format\n        require_serial: true\n        types:\n          - python\n      - entry: uv run mypy\n        id: mypy\n        language: system\n        name: mypy\n        require_serial: true\n        types:\n          - python\n    repo: local\n  - hooks:\n      - id: gitleaks\n    repo: https://github.com/gitleaks/gitleaks\n    rev: v8.30.1\n  - hooks:\n      - id: commitizen\n        stages:\n          - commit-msg\n    repo: https://github.com/commitizen-tools/commitizen\n    rev: v4.18.1\n  - hooks:\n      - files: .github/renovate.json\n        id: renovate-config-validator\n    repo: https://github.com/renovatebot/pre-commit-hooks\n    rev: 44.65.5\n"
 
 [[files]]
 path = "pyproject.toml"
@@ -108,3 +112,21 @@ name = "uvicorn"
 marker = ""
 declared = "uvicorn"
 materialized = "uvicorn>=0.53.0"
+
+[[hook_pins]]
+path = ".pre-commit-config.yaml"
+repo = "https://github.com/commitizen-tools/commitizen"
+revision = "v4.18.1"
+provenance = "fallback"
+
+[[hook_pins]]
+path = ".pre-commit-config.yaml"
+repo = "https://github.com/gitleaks/gitleaks"
+revision = "v8.30.1"
+provenance = "fallback"
+
+[[hook_pins]]
+path = ".pre-commit-config.yaml"
+repo = "https://github.com/renovatebot/pre-commit-hooks"
+revision = "44.65.5"
+provenance = "fallback"
