@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789665621513,
+  "lastUpdate": 1789668274421,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13299,6 +13299,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 261.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cb12031e75214ecc81194b032f1e9ce178a57d1a",
+          "message": "perf(cli): defer heavy ast and engine imports to resolve cold-start latency (#260)\n\n* perf(cli): defer heavy ast and engine imports to resolve cold-start latency\n\n* fix(sync_state): explicitly re-export PinProvenance for mypy strict compliance",
+          "timestamp": "2026-09-17T11:03:42-07:00",
+          "tree_id": "56a33cb9b37bac5e7678cd7d2b3ef3277cb2b277",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cb12031e75214ecc81194b032f1e9ce178a57d1a"
+        },
+        "date": 1789668273111,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 102.49,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 165.63,
             "unit": "ms"
           }
         ]
