@@ -116,7 +116,7 @@ def test_invalid_yaml_fails_before_mutation(tmp_path, monkeypatch, mocker, conte
     assert not STATE.exists()
 
 
-@pytest.mark.parametrize("failure", ["_write_ignores", "_write_state"])
+@pytest.mark.parametrize("failure", ["_check_ide_extensions", "_write_state"])
 def test_failure_restores_exact_yaml_and_state_bytes_modes(
     tmp_path, monkeypatch, mocker, failure
 ):

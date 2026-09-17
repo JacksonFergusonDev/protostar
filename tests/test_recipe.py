@@ -370,7 +370,9 @@ def test_duplicate_dependency_declarations_retain_both_producers(tmp_path, monke
         config_key = "mypy"
 
     manifest = Orchestrator(
-        [First(), Second()], UserConfig(), InitRequest(recipe=recipe())
+        [First(), Second()],
+        UserConfig(),
+        InitRequest(recipe=replace(recipe(), tools=((Tool.MYPY, True),))),
     ).plan()
     declarations = [
         p

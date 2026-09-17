@@ -284,6 +284,18 @@ new review/command behavior.
 
 ### PR 2: `refactor(reconcile): share read-only preparation with execution`
 
+**Status: Completed (2026-09-17).** Immutable prepared reviews now share the
+existing reconciliation adapters with transactional execution. Captured bytes,
+presence, modes, ancestors, recipe/state, and resolver inputs are revalidated before
+application. Recipe selections filter producers before pre-flight/build, retaining
+shared-target attribution. Explicit lifecycle policy excludes all declared tasks
+and IDE probes; initialization retains phased initializer/resolver sequencing and
+eligible initializer ownership. Resolver output remains execution-only and its
+footprint is pre-journaled. All 1,018 unit tests pass; coverage is 92.11%. Focused
+preview/application, conflict/deletion, keyed YAML, generated/region, convergence,
+opt-out, stale-input, rollback, and built-in repeatability cases pass. No public
+lifecycle command or ownership schema change is introduced.
+
 **Purpose:** Make review an accurate view of the decisions execution will consume.
 
 - Extract pure decisions and byte preparation from adapters/executor into a flat,

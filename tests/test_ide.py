@@ -10,6 +10,7 @@ from protostar.fs_transaction import TransactionAwareFS
 from protostar.ide import IDEType, check_ide_extensions, write_ide_settings
 from protostar.journal import MutationJournal
 from protostar.manifest import Severity
+from protostar.review_workspace import LiveWorkspace
 
 
 def test_ide_type_enum_properties():
@@ -207,6 +208,7 @@ def test_write_ide_settings_empty(mocker, tmp_path):
     diagnostics = []
 
     write_ide_settings(
+        workspace=LiveWorkspace(),
         ide_settings={},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
         fs=fs,
@@ -234,6 +236,7 @@ def test_write_ide_settings_merge(tmp_path: Path, monkeypatch):
     journal = MutationJournal(tmp_path)
 
     write_ide_settings(
+        workspace=LiveWorkspace(),
         ide_settings={  # type: ignore
             "files.exclude": {"**/.venv": True},
             "new.key": "new_value",
@@ -262,6 +265,7 @@ def test_write_ide_settings_empty_file(tmp_path: Path, monkeypatch):
     journal = MutationJournal(tmp_path)
 
     write_ide_settings(
+        workspace=LiveWorkspace(),
         ide_settings={"files.exclude": {"**/.venv": True}},  # type: ignore
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
         fs=TransactionAwareFS(journal),
@@ -285,6 +289,7 @@ def test_write_ide_settings_skips_malformed_json(tmp_path: Path, monkeypatch):
     journal = MutationJournal(tmp_path)
 
     write_ide_settings(
+        workspace=LiveWorkspace(),
         ide_settings={"python.defaultInterpreterPath": "/fake/path"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
         fs=TransactionAwareFS(journal),
@@ -308,6 +313,7 @@ def test_write_ide_settings_skips_non_dict_json(tmp_path: Path, monkeypatch):
     journal = MutationJournal(tmp_path)
 
     write_ide_settings(
+        workspace=LiveWorkspace(),
         ide_settings={"python.defaultInterpreterPath": "/fake/path"},
         on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
         fs=TransactionAwareFS(journal),
@@ -324,6 +330,7 @@ def test_write_ide_settings_handles_read_os_error(mocker, tmp_path):
 
     with pytest.raises(FileSystemError) as exc_info:
         write_ide_settings(
+            workspace=LiveWorkspace(),
             ide_settings={"foo": "bar"},  # type: ignore
             on_diagnostic=lambda msg, sev: None,
             fs=TransactionAwareFS(MutationJournal(tmp_path)),
@@ -340,6 +347,7 @@ def test_write_ide_settings_handles_write_os_error(mocker, tmp_path, monkeypatch
 
     with pytest.raises(FileSystemError) as exc_info:
         write_ide_settings(
+            workspace=LiveWorkspace(),
             ide_settings={"foo": "bar"},  # type: ignore
             on_diagnostic=lambda msg, sev: None,
             fs=fs,

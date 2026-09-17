@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .errors import FileSystemError
 
 if TYPE_CHECKING:
-    from .fs_transaction import TransactionAwareFS
+    from .review_workspace import ByteSink, WorkspaceReader
 from .manifest import IDESettings, Severity
 
 __all__ = ["IDEType", "check_ide_extensions", "write_ide_settings"]
@@ -102,16 +102,17 @@ def check_ide_extensions(
 def write_ide_settings(
     ide_settings: IDESettings,
     on_diagnostic: Callable[[str, Severity], None],
-    fs: "TransactionAwareFS",
+    fs: "ByteSink",
+    workspace: "WorkspaceReader",
 ) -> None:
     """Writes the aggregated IDE configuration to the appropriate local files.
 
     Args:
         ide_settings: IDESettings
         on_diagnostic: Callable
-        fs: TransactionAwareFS Mapping of IDE setting keys to values.
+        fs: Accepted-byte sink for workspace preferences.
+        workspace: Reader supplying existing workspace settings.
         on_diagnostic: Callback invoked when existing settings cannot be merged safely.
-        on_record_touch: Callback to record created or mutated paths.
     """
     if not ide_settings:
         return
@@ -120,9 +121,9 @@ def write_ide_settings(
     settings_path = vscode_dir / "settings.json"
     settings: dict[str, Any] = {}
 
-    if settings_path.exists():
+    if workspace.exists(settings_path):
         try:
-            original_content = settings_path.read_text()
+            original_content = workspace.read_text(settings_path)
             if original_content.strip():
                 parsed_data = json.loads(original_content)
                 if not isinstance(parsed_data, dict):

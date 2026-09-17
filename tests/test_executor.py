@@ -418,9 +418,11 @@ def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_c
         "protostar.executor.Path.read_text", return_value="old_ignored_file\n"
     )
     mock_generate = mocker.patch(
-        "protostar.executor.generate_dockerignore", return_value="new_ignore"
+        "protostar.reconciliation.generate_dockerignore", return_value="new_ignore"
     )
-    mocker.patch("protostar.executor.generate_dockerfile", return_value="FROM python")
+    mocker.patch(
+        "protostar.reconciliation.generate_dockerfile", return_value="FROM python"
+    )
     mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
@@ -591,7 +593,7 @@ def test_executor_validate_targets_success(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
 
-    mock_file = mocker.mock_open(read_data=b'[project]\nname = "test"\n')
+    mock_file = mocker.mock_open(read_data='[project]\nname = "test"\n')
     mocker.patch("protostar.executor.Path.open", mock_file)
 
     # Should execute cleanly without raising any exceptions
@@ -608,7 +610,7 @@ def test_executor_validate_targets_malformed_toml(mocker, mock_config):
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
 
-    mock_file = mocker.mock_open(read_data=b"[invalid toml == \n")
+    mock_file = mocker.mock_open(read_data="[invalid toml == \n")
     mocker.patch("protostar.executor.Path.open", mock_file)
 
     with pytest.raises(
@@ -666,7 +668,6 @@ def test_executor_early_returns_on_empty_manifest(mocker, mock_config):
 
     executor._write_ignores()
     executor._write_ide_settings()
-    executor._install_dependencies()
 
     mock_exists.assert_not_called()
 
@@ -722,9 +723,7 @@ def test_executor_lifecycle_ordering(tmp_path, monkeypatch, mocker, mock_config)
     manager = mocker.Mock()
 
     manager.attach_mock(mocker.patch.object(executor, "_run_tasks"), "run_tasks")
-    manager.attach_mock(
-        mocker.patch.object(executor, "_install_dependencies"), "install"
-    )
+    manager.attach_mock(mocker.patch.object(executor, "_resolve_review"), "install")
 
     # Silence all other disk I/O mutations
     mocker.patch.object(executor, "_validate_targets")
@@ -745,7 +744,7 @@ def test_executor_lifecycle_ordering(tmp_path, monkeypatch, mocker, mock_config)
 
     expected_call_order = [
         mocker.call.run_tasks(manifest.tasks.system_tasks),
-        mocker.call.install(),
+        mocker.call.install(mocker.ANY),
         mocker.call.run_tasks(manifest.tasks.post_install_tasks),
     ]
 
@@ -1478,9 +1477,7 @@ def test_executor_early_failure_restores_workspace_snapshot(
     manifest.filesystem.add_file_injection("existing.txt", "changed")
     manifest.filesystem.add_file_injection("generated/nested/new.txt", "new")
     executor = SystemExecutor(manifest, mock_config)
-    mocker.patch.object(
-        executor, "_write_pre_commit_config", side_effect=OSError("stop")
-    )
+    mocker.patch.object(executor, "_run_tasks", side_effect=OSError("stop"))
 
     with pytest.raises(OSError, match="stop"):
         executor.execute()
@@ -1529,7 +1526,7 @@ def test_executor_surfaces_non_destructive_rollback_failure(
         raise OSError("stop")
 
     mocker.patch.object(
-        executor, "_write_injected_files", side_effect=create_untracked_file
+        executor, "_check_ide_extensions", side_effect=create_untracked_file
     )
 
     with pytest.raises(RollbackFailedError) as exc_info:

@@ -20,6 +20,7 @@ from protostar.intent import (
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
+from protostar.preparation import prepare_review
 
 
 def test_reference_hashes_raw_selected_bytes_before_interpolation(tmp_path):
@@ -234,9 +235,9 @@ def test_typed_include_applied_before_resolver_and_rolls_back(
         lock.write_bytes(b"resolver lock")
 
     process = mocker.patch.object(executor.process_runner, "run", side_effect=run)
-    executor._apply_dependency_includes()
-    executor._install_dependencies()
-    executor._run_lock(manifest.dependencies.resolver_footprint)
+    review = prepare_review(manifest, UserConfig())
+    executor._apply_review(review)
+    executor._resolve_review(review)
     assert process.call_count == 1
     assert '{ include-group = "docs" }' in pyproject.read_text()
     assert executor.journal.rollback().succeeded
