@@ -1,11 +1,20 @@
 """Recipe-driven, headless project inspection using shared reconciliation."""
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .config import UserConfig
-from .errors import ConfigurationError, ProtostarError, TemplateResolutionError
-from .models import InitRequest
+from .errors import (
+    ConfigurationError,
+    ExecutionInterruptedError,
+    ProtostarError,
+    TemplateResolutionError,
+)
+from .executor import SystemExecutor
+from .intent import TemplateOrigin
+from .journal import TransactionState
+from .manifest import EnvironmentManifest
+from .models import ExecutionResult, InitRequest, RollbackContext
 from .modules import PythonCore, SystemWorkspaceModule
 from .orchestrator import Orchestrator
 from .preparation import ExecutionPolicy, PreparedReview, prepare_review
@@ -15,8 +24,49 @@ from .review_workspace import capture_node
 from .sync_state import check_template_identity, deserialize_state
 
 
+@dataclass(frozen=True)
+class PreparedProject:
+    """One captured source revision and the decisions to review or apply."""
+
+    manifest: EnvironmentManifest
+    config: UserConfig
+    review: PreparedReview
+
+    def apply(self) -> ExecutionResult:
+        """Applies lifecycle decisions atomically, with structured rollback reporting."""
+        executor = SystemExecutor(self.manifest, self.config, review=self.review)
+        try:
+            executor.execute()
+        except (KeyboardInterrupt, ProtostarError) as error:
+            context = RollbackContext(
+                touched_paths=frozenset(executor.journal.touched_paths),
+                completed_tasks=tuple(executor.completed_tasks),
+                interrupted_task=executor.interrupted_task,
+                is_external=bool(
+                    self.manifest.template_reference
+                    and self.manifest.template_reference.origin
+                    is not TemplateOrigin.BUILT_IN
+                ),
+            )
+            if isinstance(error, KeyboardInterrupt):
+                raise ExecutionInterruptedError(context) from error
+            if executor.journal.state is TransactionState.ROLLED_BACK:
+                error.rollback_context = context
+            raise
+        return ExecutionResult(
+            created_paths=executor.journal.created_paths,
+            mutated_paths=executor.journal.mutated_paths,
+            diagnostics=tuple(executor.diagnostics),
+        )
+
+
 def inspect_project() -> PreparedReview:
     """Reviews the explicit current project without prompts or subprocesses."""
+    return prepare_project().review
+
+
+def prepare_project() -> PreparedProject:
+    """Captures a project once for shared inspection and lifecycle application."""
     root = Path.cwd().resolve()
     recipe = read_recipe(root / "pyproject.toml")
     if recipe is None:
@@ -93,4 +143,6 @@ def inspect_project() -> PreparedReview:
         policy=ExecutionPolicy.LIFECYCLE
     )
     revisions = resolve_hook_revisions()
-    return prepare_review(manifest, config, hook_revisions=revisions)
+    return PreparedProject(
+        manifest, config, prepare_review(manifest, config, hook_revisions=revisions)
+    )

@@ -80,6 +80,44 @@ Valid reviews exit `0`, even with conflicts or pending work. Fatal errors use th
 existing domain-specific exit codes. These commands only inspect; `init --dry-run`
 continues to show the creation manifest rather than accepted lifecycle changes.
 
+### `protostar sync`
+
+Apply the accepted decisions from the same recipe-driven review:
+
+```bash
+protostar sync --dry-run
+protostar sync --check --json
+protostar sync --json
+```
+
+![Sync command help](../assets/terminals/cli_sync_help.svg)
+
+`sync` applies safe updates and advances ownership state in one transaction.
+Conflicting local content and its applied baselines are retained while safe sibling
+updates commit. Deleted tracked files stay deleted. Removing a tool stops requesting
+its contributions without pruning existing files, dependencies, or ownership.
+Initialization tasks, hook installation, arbitrary template tasks, and IDE probes
+never run. Only accepted dependency requests and required metadata lock refreshes
+invoke the resolver; unchanged repeats write nothing and run no subprocesses.
+
+`--dry-run` presents the same accepted diffs as `diff`. `--check` is read-only and
+exits `1` for accepted work, baseline advancement, or conflicts; preserved local
+edits and deletions alone pass. The two modes are mutually exclusive.
+
+Application exits `0` on success and `1` after committing safe changes with retained
+conflicts. JSON application envelopes have `status: "success"` or `"partial"`, the
+captured `review`, and an actual `result` with sorted created, mutated, and touched
+paths. Inspection uses `status: "reviewed"`; check adds `check_passed`.
+Schema discovery publishes both review and application schemas.
+
+One source revision and hook registry snapshot are captured per invocation. Inputs
+are revalidated before mutation; stale inputs abort. Resolver failures, timeouts,
+interrupts, and late state-write failures roll back journaled bytes and POSIX modes.
+Fatal JSON errors report rollback context when available. Resolver `pyproject.toml`
+and `uv.lock` writes are journaled; `.venv` and global caches remain outside the
+rollback boundary. Review output contains project content, including any secrets
+rendered into files.
+
 ### `protostar config`
 
 Manages your default preferences stored in `~/.config/protostar/config.toml`.

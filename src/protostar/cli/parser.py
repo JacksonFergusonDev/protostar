@@ -309,6 +309,28 @@ def build_parser() -> argparse.ArgumentParser:
         )
         review_parser.set_defaults(func=handle_review)
 
+    from protostar.cli.reviews import handle_sync
+
+    sync_parser = subparsers.add_parser(
+        "sync",
+        help="Apply safe project updates and retain conflicting local content.",
+        description="Apply accepted lifecycle updates transactionally in the current directory.",
+        parents=[base_parser],
+        epilog="Requires the project recipe in pyproject.toml and .protostar.lock.toml. Never replays initialization tasks or IDE probes. Conflicts commit safe changes with exit 1.",
+    )
+    sync_modes = sync_parser.add_mutually_exclusive_group()
+    sync_modes.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Review accepted diffs without writing files or running subprocesses.",
+    )
+    sync_modes.add_argument(
+        "--check",
+        action="store_true",
+        help="Read-only check; exit 1 when accepted work, state advancement, or conflicts remain.",
+    )
+    sync_parser.set_defaults(func=handle_sync)
+
     # --- Init Subparser ---
     init_parser = subparsers.add_parser(
         "init",

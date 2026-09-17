@@ -855,7 +855,7 @@ def generate_cli_help_svgs() -> None:
             config_parser = subparsers.choices["config"]
             _render_svg(config_parser, "help config", "cli_config_help.svg")
         if subparsers:
-            for command in ("status", "diff"):
+            for command in ("status", "diff", "sync"):
                 _render_svg(
                     subparsers.choices[command],
                     f"help {command}",
@@ -1035,6 +1035,10 @@ def generate_docs_assets() -> None:
     generate_agent_payloads()
     _write_generated_doc(
         "review_schema.json", json.dumps(protostar.cli.schema.review_schema(), indent=2)
+    )
+    _write_generated_doc(
+        "application_schema.json",
+        json.dumps(protostar.cli.schema.application_schema(), indent=2),
     )
     generate_template_schema_fixture()
     generate_diagnostic_panel_svg()
