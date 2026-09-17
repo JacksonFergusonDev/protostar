@@ -2,10 +2,11 @@
 
 import argparse
 import difflib
+import sys
 from typing import Any
 
 from protostar.cli import schema, ui
-from protostar.lifecycle import inspect_project
+from protostar.lifecycle import inspect_project, prepare_project
 from protostar.preparation import PreparedEdit, PreparedReview
 
 
@@ -42,6 +43,13 @@ def handle_review(args: argparse.Namespace) -> None:
     if ui.is_json_mode:
         ui.emit_json(review_payload(review))
         return
+    render_review(review, show_diffs=args.command == "diff")
+
+
+def render_review(
+    review: PreparedReview, *, show_diffs: bool = False, applied: bool = False
+) -> None:
+    """Renders shared decisions for inspection, checks, and application."""
     ui.console.print(
         f"{len(review.edits)} accepted file edits; {len(review.conflicts)} conflicts; "
         f"{len(review.preserved)} preserved local deviations.",
@@ -49,7 +57,7 @@ def handle_review(args: argparse.Namespace) -> None:
     )
     for edit in review.edits:
         ui.console.print(f"Accepted: {edit.path}", markup=False)
-        if args.command == "diff":
+        if show_diffs:
             ui.console.print(unified_diff(edit), markup=False, highlight=False, end="")
     for path in review.directories:
         ui.console.print(f"Accepted directory: {path}", markup=False)
@@ -68,7 +76,11 @@ def handle_review(args: argparse.Namespace) -> None:
         )
     if review.state_changed:
         ui.console.print(
-            "Ownership/provenance state will advance (may require no content write).",
+            (
+                "Ownership/provenance state advanced."
+                if applied
+                else "Ownership/provenance state will advance (may require no content write)."
+            ),
             markup=False,
         )
     if review.resolver.pending:
@@ -78,12 +90,18 @@ def handle_review(args: argparse.Namespace) -> None:
                     f"Resolver {group.value}: {', '.join(requirements)}", markup=False
                 )
         ui.console.print(
-            f"Resolver footprint: {', '.join(review.resolver.footprint.paths)}; output unknown.",
+            f"Resolver footprint: {', '.join(review.resolver.footprint.paths)}; "
+            + ("executed." if applied else "output unknown."),
             markup=False,
         )
         if review.resolver.lock_required:
             ui.console.print(
-                "Lock refresh required after accepted metadata changes.", markup=False
+                (
+                    "Lock refreshed after accepted metadata changes."
+                    if applied
+                    else "Lock refresh required after accepted metadata changes."
+                ),
+                markup=False,
             )
     if review.initialization_only or review.initialization_only_ide_probe:
         ui.console.print(
@@ -91,3 +109,46 @@ def handle_review(args: argparse.Namespace) -> None:
         )
     if not review.pending:
         ui.console.print("No pending work.", markup=False)
+
+
+def handle_sync(args: argparse.Namespace) -> None:
+    """Reviews or applies the current recipe without prompts or task replay."""
+    project = prepare_project()
+    review = project.review
+    if args.dry_run or args.check:
+        payload = review_payload(review)
+        if args.check:
+            payload["check_passed"] = not review.pending
+        if ui.is_json_mode:
+            ui.emit_json(payload)
+        else:
+            render_review(review, show_diffs=args.dry_run)
+            if args.check:
+                ui.console.print(
+                    "Check passed."
+                    if not review.pending
+                    else "Check failed: pending work."
+                )
+        if args.check and review.pending:
+            sys.exit(1)
+        return
+    result = project.apply()
+    partial = bool(review.conflicts)
+    if ui.is_json_mode:
+        ui.emit_json(
+            {
+                "api_version": schema.CLI_API_VERSION,
+                "status": "partial" if partial else "success",
+                "review": review.to_dict(),
+                "result": result.to_dict(),
+            }
+        )
+    else:
+        render_review(review, applied=True)
+        ui.console.print(
+            f"Applied changes to {len(result.touched_paths)} paths; "
+            f"{len(review.conflicts)} conflicts retained.",
+            markup=False,
+        )
+    if partial:
+        sys.exit(1)

@@ -10,7 +10,7 @@ import pytest
 from protostar.cli import main, schema, ui
 from protostar.cli.reviews import review_payload
 from protostar.config import TemplateBlueprint, UserConfig
-from protostar.errors import ConfigurationError, ProtostarError
+from protostar.errors import ConfigurationError, InvalidUsageError, ProtostarError
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project
 from protostar.manifest import EnvironmentManifest
@@ -140,7 +140,7 @@ def test_capabilities_publish_review_schema():
 
     capabilities = schema._build_capabilities_schema(build_parser())
     assert {"status", "diff"} <= capabilities["commands"].keys()
-    assert "sync" not in capabilities["commands"]
+    assert "sync" in capabilities["commands"]
     assert capabilities["review_schema"]["properties"]["status"]["const"] == "reviewed"
 
 
@@ -310,3 +310,276 @@ def test_source_symlink_is_rejected(project):
     project.symlink_to(moved)
     with pytest.raises(UnsupportedFilesystemNodeError):
         inspect_project()
+
+
+def invoke_sync(monkeypatch, capsys, *flags, code=0):
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync", "--json", *flags])
+    if code:
+        with pytest.raises(SystemExit) as caught:
+            main()
+        assert caught.value.code == code
+    else:
+        main()
+    return json.loads(capsys.readouterr().out)
+
+
+def test_sync_preview_parity_captured_revision_and_repeat(project, mocker):
+    from protostar.lifecycle import prepare_project
+
+    project.write_text(source_text("updated") + '"new.txt" = "safe\\n"\n')
+    prepared = prepare_project()
+    registry = mocker.patch("protostar.lifecycle.resolve_hook_revisions")
+    project.write_text(source_text("later"))
+    result = prepared.apply()
+    registry.assert_not_called()
+    for edit in prepared.review.edits:
+        assert Path(edit.path).read_bytes() == edit.after
+    assert "new.txt" in result.created_paths
+    project.write_text(source_text("updated") + '"new.txt" = "safe\\n"\n')
+    repeated = prepare_project()
+    assert not repeated.review.pending
+    before = snapshot(Path.cwd())
+    assert not repeated.apply().touched_paths
+    assert snapshot(Path.cwd()) == before
+
+
+def test_sync_partial_commits_safe_siblings_and_retains_conflict(
+    project, monkeypatch, capsys
+):
+    Path(".github/renovate.json").write_text(json.dumps({"value": "local"}))
+    project.write_text(source_text("remote") + '"safe.txt" = "accepted"\n')
+    payload = invoke_sync(monkeypatch, capsys, code=1)
+    assert payload["status"] == "partial"
+    assert Path("safe.txt").read_text() == "accepted"
+    assert json.loads(Path(".github/renovate.json").read_text()) == {"value": "local"}
+    assert payload["review"]["conflicts"]
+    assert "safe.txt" in payload["result"]["created_paths"]
+    review = inspect_project()
+    assert review.conflicts
+    assert not review.edits
+    assert not review.state_changed
+
+
+def test_sync_check_and_dry_run_are_read_only(project, monkeypatch, capsys):
+    project.write_text(source_text("updated"))
+    before = snapshot(Path.cwd())
+    preview = invoke_sync(monkeypatch, capsys, "--dry-run")
+    assert preview == review_payload(inspect_project())
+    checked = invoke_sync(monkeypatch, capsys, "--check", code=1)
+    assert checked["check_passed"] is False
+    assert snapshot(Path.cwd()) == before
+    invoke_sync(monkeypatch, capsys)
+    assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
+    Path(".github/renovate.json").unlink()
+    assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
+    invoke_sync(monkeypatch, capsys)
+    assert not Path(".github/renovate.json").exists()
+
+
+@pytest.mark.parametrize("failure", ["state", "interrupt"])
+def test_sync_fatal_failure_restores_bytes_modes_and_reports_rollback(
+    project, monkeypatch, capsys, mocker, failure
+):
+    from protostar.errors import FileSystemError
+
+    project.write_text(source_text("updated") + '"safe.txt" = "accepted"\n')
+    Path(".github/renovate.json").chmod(0o640)
+    before = snapshot(Path.cwd())
+    error = (
+        KeyboardInterrupt()
+        if failure == "interrupt"
+        else FileSystemError("write state", ".protostar.lock.toml", OSError("injected"))
+    )
+    mocker.patch("protostar.executor.SystemExecutor._write_state", side_effect=error)
+    payload = invoke_sync(
+        monkeypatch, capsys, code=130 if failure == "interrupt" else 74
+    )
+    assert payload["status"] == "error"
+    assert payload["error"]["rollback_context"]["touched_paths"]
+    assert snapshot(Path.cwd()) == before
+
+
+def test_sync_tasks_and_ide_probes_never_run(project, mocker):
+    from protostar.lifecycle import prepare_project
+
+    project.write_text(
+        'system_tasks = [["custom", "system"]]\n'
+        'post_install_tasks = [["custom", "post"]]\n' + source_text("updated")
+    )
+    tasks = mocker.patch(
+        "protostar.executor.SystemExecutor._run_tasks",
+        side_effect=AssertionError("task"),
+    )
+    probe = mocker.patch(
+        "protostar.executor.SystemExecutor._check_ide_extensions",
+        side_effect=AssertionError("probe"),
+    )
+    prepared = prepare_project()
+    assert ("custom", "system") in prepared.review.initialization_only
+    prepared.apply()
+    tasks.assert_not_called()
+    probe.assert_not_called()
+
+
+def test_sync_modes_are_mutually_exclusive():
+    from protostar.cli.parser import build_parser
+
+    with pytest.raises(InvalidUsageError):
+        build_parser().parse_args(["sync", "--check", "--dry-run"])
+
+
+def test_sync_accepted_dependencies_resolve_once(project, mocker):
+    import tomlkit
+
+    from protostar.lifecycle import prepare_project
+
+    project.write_text('dependencies = ["example"]\n' + source_text("updated"))
+    prepared = prepare_project()
+    assert dict(prepared.review.resolver.requirements)
+
+    def resolve(_runner, command, *, timeout):
+        assert command == ["uv", "add", "example"]
+        doc = tomlkit.parse(Path("pyproject.toml").read_text())
+        doc["project"]["dependencies"] = ["example>=3"]
+        Path("pyproject.toml").write_text(tomlkit.dumps(doc))
+        Path("uv.lock").write_text("resolved")
+
+    process = mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+    )
+    prepared.apply()
+    process.assert_called_once()
+    process.reset_mock()
+    repeated = prepare_project()
+    assert not repeated.review.pending
+    assert not repeated.apply().touched_paths
+    process.assert_not_called()
+
+
+def test_sync_metadata_only_resolves_lock_once(project, mocker):
+    from protostar.lifecycle import prepare_project
+
+    project.write_text(
+        '[dev.pyproject]\nmetadata = "[project]\\nrequires-python = \\"'
+        + ">=3.13"
+        + '\\"\\n"\n'
+    )
+    prepared = prepare_project()
+    assert prepared.review.resolver.lock_required
+
+    def resolve(_runner, command, *, timeout):
+        assert command == ["uv", "lock"]
+        Path("uv.lock").write_text("refreshed")
+
+    process = mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+    )
+    prepared.apply()
+    process.assert_called_once()
+    process.reset_mock()
+    assert not prepare_project().apply().touched_paths
+    process.assert_not_called()
+
+
+def test_sync_check_counts_baseline_only_advancement(project, monkeypatch, capsys):
+    invoke_sync(monkeypatch, capsys)
+    project.write_text(source_text("converged"))
+    Path(".github/renovate.json").write_text(json.dumps({"value": "converged"}))
+    review = inspect_project()
+    assert review.state_changed
+    assert not review.edits
+    assert not review.resolver.pending
+    before = Path(".github/renovate.json").read_bytes()
+    invoke_sync(monkeypatch, capsys, "--check", code=1)
+    result = invoke_sync(monkeypatch, capsys)
+    assert result["result"]["touched_paths"] == [".protostar.lock.toml"]
+    assert Path(".github/renovate.json").read_bytes() == before
+    assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"]
+
+
+def test_sync_stale_review_aborts_before_mutation(project):
+    from protostar.errors import StaleReviewError
+    from protostar.lifecycle import prepare_project
+
+    project.write_text(source_text("updated") + '"new.txt" = "safe"\n')
+    prepared = prepare_project()
+    Path("pyproject.toml").write_text(
+        "# concurrent\n" + Path("pyproject.toml").read_text()
+    )
+    before = snapshot(Path.cwd())
+    with pytest.raises(StaleReviewError):
+        prepared.apply()
+    assert snapshot(Path.cwd()) == before
+
+
+@pytest.mark.parametrize("timeout", [False, True])
+def test_sync_resolver_failure_restores_entire_transaction(
+    project, monkeypatch, capsys, mocker, timeout
+):
+    from protostar.errors import CommandExecutionError, CommandTimeoutError
+
+    project.write_text('dependencies = ["example"]\n' + source_text("updated"))
+    Path("uv.lock").write_text("original lock")
+    Path("uv.lock").chmod(0o640)
+    before = snapshot(Path.cwd())
+
+    def fail(_runner, command, *, timeout):
+        Path("pyproject.toml").write_text("resolver mutation")
+        Path("uv.lock").write_text("resolver lock")
+        raise error
+
+    error = (
+        CommandTimeoutError(["uv", "add", "example"], 600)
+        if timeout
+        else CommandExecutionError(["uv", "add", "example"], 2)
+    )
+    mocker.patch("protostar.system.ProcessRunner.run", autospec=True, side_effect=fail)
+    terminate = mocker.patch(
+        "protostar.system.ProcessRunner.terminate_active_process_tree"
+    )
+    payload = invoke_sync(monkeypatch, capsys, code=1)
+    terminate.assert_called_once()
+    assert payload["error"]["type"] == type(error).__name__
+    assert payload["error"]["rollback_context"]
+    assert snapshot(Path.cwd()) == before
+
+
+@pytest.mark.parametrize("mode", [[], ["--dry-run"], ["--check"]])
+def test_sync_human_rendering_agrees_with_review(project, monkeypatch, capsys, mode):
+    project.write_text(source_text("updated"))
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync", *mode])
+    if mode == ["--check"]:
+        with pytest.raises(SystemExit) as caught:
+            main()
+        assert caught.value.code == 1
+    else:
+        main()
+    output = capsys.readouterr().out
+    assert "Accepted: .github/renovate.json" in output
+    if mode == ["--dry-run"]:
+        assert "--- a/.github/renovate.json" in output
+        assert (
+            json.loads(Path(".github/renovate.json").read_text())["value"] == "original"
+        )
+    elif mode == ["--check"]:
+        assert "Check failed" in output
+    else:
+        assert "Applied changes" in output
+        assert (
+            json.loads(Path(".github/renovate.json").read_text())["value"] == "updated"
+        )
+
+
+def test_sync_application_schema_and_flags_are_published():
+    from protostar.cli.parser import build_parser
+
+    capabilities = schema._build_capabilities_schema(build_parser())
+    application = capabilities["application_schema"]
+    assert application["properties"]["status"]["enum"] == ["success", "partial"]
+    assert {"--dry-run", "--check"} <= {
+        name
+        for flag in capabilities["commands"]["sync"]["flags"]
+        for name in flag["names"]
+    }

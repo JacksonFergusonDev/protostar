@@ -194,7 +194,11 @@ def _build_capabilities_schema(
                 "description": subparser.description or "",
                 "flags": flags,
             }
-    return {"commands": commands, "review_schema": review_schema()}
+    return {
+        "commands": commands,
+        "review_schema": review_schema(),
+        "application_schema": application_schema(),
+    }
 
 
 def emit_capabilities(
@@ -285,6 +289,7 @@ def review_schema() -> dict[str, Any]:
             "api_version": {"const": CLI_API_VERSION},
             "status": {"const": "reviewed"},
             "pending": {"type": "boolean"},
+            "check_passed": {"type": "boolean"},
             "review": review,
             "diffs": {
                 "type": "array",
@@ -296,6 +301,39 @@ def review_schema() -> dict[str, Any]:
                         "path": {"type": "string"},
                         "diff": {"type": "string"},
                     },
+                },
+            },
+        },
+    }
+
+
+def application_schema() -> dict[str, Any]:
+    """Returns success/partial lifecycle application envelopes with actual results."""
+    strings = {"type": "array", "items": {"type": "string"}}
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Protostar project application v1",
+        "type": "object",
+        "required": ["api_version", "status", "review", "result"],
+        "additionalProperties": False,
+        "properties": {
+            "api_version": {"const": CLI_API_VERSION},
+            "status": {"enum": ["success", "partial"]},
+            "review": review_schema()["properties"]["review"],
+            "result": {
+                "type": "object",
+                "required": [
+                    "created_paths",
+                    "mutated_paths",
+                    "touched_paths",
+                    "diagnostics",
+                ],
+                "additionalProperties": False,
+                "properties": {
+                    "created_paths": strings,
+                    "mutated_paths": strings,
+                    "touched_paths": strings,
+                    "diagnostics": {"type": "array", "items": {"type": "object"}},
                 },
             },
         },

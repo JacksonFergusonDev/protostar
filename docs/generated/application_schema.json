@@ -1,13 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Protostar project review v1",
+  "title": "Protostar project application v1",
   "type": "object",
   "required": [
     "api_version",
     "status",
-    "pending",
     "review",
-    "diffs"
+    "result"
   ],
   "additionalProperties": false,
   "properties": {
@@ -15,13 +14,10 @@
       "const": 1
     },
     "status": {
-      "const": "reviewed"
-    },
-    "pending": {
-      "type": "boolean"
-    },
-    "check_passed": {
-      "type": "boolean"
+      "enum": [
+        "success",
+        "partial"
+      ]
     },
     "review": {
       "type": "object",
@@ -319,21 +315,38 @@
       ],
       "additionalProperties": false
     },
-    "diffs": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": [
-          "path",
-          "diff"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "path": {
+    "result": {
+      "type": "object",
+      "required": [
+        "created_paths",
+        "mutated_paths",
+        "touched_paths",
+        "diagnostics"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "created_paths": {
+          "type": "array",
+          "items": {
             "type": "string"
-          },
-          "diff": {
+          }
+        },
+        "mutated_paths": {
+          "type": "array",
+          "items": {
             "type": "string"
+          }
+        },
+        "touched_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "object"
           }
         }
       }

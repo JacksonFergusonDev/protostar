@@ -356,6 +356,20 @@ follow the settled table.
 
 ### PR 4: `feat(cli): apply safe lifecycle updates with sync`
 
+**Status: Completed (2026-09-17).** Recipe-driven `sync`, `--dry-run`, and
+`--check` consume one captured source revision and the shared prepared decisions.
+Lifecycle application commits safe siblings and composite ownership state beside
+conflicts with partial exit `1`; fatal errors and interrupts expose rollback context.
+Check mode counts state-only advancement while allowing preserved local intent.
+Focused tests cover preview/apply parity, captured revisions, partial convergence,
+deletion preservation, stale inputs, byte/mode rollback, accepted resolver requests,
+metadata-only locking, unchanged repeats, task/probe suppression, and human/JSON
+outcomes. Review/application schemas, parser-based completion, command docs, and
+help SVGs ship together. All unit tests pass with coverage above 85%.
+Generated drift was inspected: sync help, the additional top-level command row,
+the application schema, and optional review `check_passed` are intentional.
+Project snapshots are unchanged. No ownership schema or task replay is introduced.
+
 **Purpose:** Complete the review-to-apply lifecycle with explicit partial outcomes.
 
 - Add `sync`, `--dry-run`, and `--check` using the same preparation and renderers.
