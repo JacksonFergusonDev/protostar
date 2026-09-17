@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -65,7 +66,7 @@ def _mock_process_runner(cmd: list[str], *args: Any, **kwargs: Any) -> None:
     if len(cmd) >= 2 and cmd[0] == "uv" and cmd[1] == "init":
         pyproject_path = Path("pyproject.toml")
         if not pyproject_path.exists():
-            pkg_name = Path.cwd().name.replace("-", "_").lower()
+            pkg_name = re.sub(r"[-_.]+", "-", Path.cwd().name).lower()
             pyproject_path.write_text(
                 f'[project]\nname = "{pkg_name}"\nversion = "0.1.0"\n'
                 'description = "Add your description here."\nreadme = "README.md"\n'
@@ -314,3 +315,33 @@ def test_template_merge_preserves_foreign_content_and_local_modifications(
     assert isinstance(owned_deps, list)
     owned_dep_names = {r["name"] for r in owned_deps if isinstance(r, dict)}
     assert "foreign-package" not in owned_dep_names
+
+
+def test_stage_one_enrollment_preserves_applied_ownership(
+    tmp_path, monkeypatch, mocker
+):
+    """Explicit enrollment writes intent without adopting equal foreign keys."""
+    from protostar.recipe import read_recipe
+
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
+    mocker.patch.object(ProcessRunner, "run", side_effect=_mock_process_runner)
+    mocker.patch("protostar.cli.ui.is_json_mode", True)
+    mocker.patch("protostar.cli.ui.emit_json")
+    args = argparse.Namespace(
+        template_name="cli", docker=None, python_version="3.13", force_merge=True
+    )
+    handle_init(args)
+    project = tmp_path / "pyproject.toml"
+    doc = tomlkit.parse(project.read_text())
+    del doc["tool"]["protostar"]
+    doc["tool"]["foreign"] = {"local-key": "retain"}
+    project.write_text(tomlkit.dumps(doc))
+    before = (tmp_path / ".protostar.lock.toml").read_bytes()
+    handle_init(args)
+    assert read_recipe(project) is not None
+    assert (
+        tomlkit.parse(project.read_text())["tool"]["foreign"]["local-key"] == "retain"
+    )
+    assert (tmp_path / ".protostar.lock.toml").read_bytes() == before
+    assert "protostar" not in str(deserialize_state(before.decode()).files)

@@ -49,6 +49,49 @@ pythonpath = [
     ".",
 ]
 
+[tool.protostar]
+version = 1
+mode = "template"
+python = "3.13"
+docker = false
+ide = "none"
+
+[tool.protostar.source]
+origin = "built-in"
+locator = "dsp"
+
+[tool.protostar.tools]
+
+[tool.protostar.fallback]
+ci = false
+codecov = false
+commitizen = false
+direnv = false
+just = false
+markdownlint = false
+mypy = false
+pre_commit = false
+prek = false
+pyrefly = false
+pytest = false
+readthedocs = false
+release = false
+renovate = false
+ruff = true
+rumdl = false
+ty = false
+zensical = false
+
+[tool.protostar.context]
+AUTHOR_NAME = "your-name"
+CURRENT_YEAR = "2026"
+PACKAGE_NAME = "demo_project"
+PROJECT_NAME = "demo-project"
+PYTHON_VERSION = "3.13"
+
+[tool.protostar.metadata]
+
+[tool.protostar.bindings]
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",

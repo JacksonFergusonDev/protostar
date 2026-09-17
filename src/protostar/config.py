@@ -365,6 +365,7 @@ def clear_user_config_cache() -> None:
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
 
+    custom_variables: frozenset[str] = field(default=frozenset(), repr=False)
     reference: TemplateReference | None = field(default=None, repr=False)
     version: str = field(
         default="",
@@ -454,7 +455,7 @@ class TemplateBlueprint:
     pyproject_injections: dict[str, str] = field(
         default_factory=dict,
         metadata={
-            "description": "Managed TOML configuration; personal metadata is seed-only and dependency tables are forbidden.",
+            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden.",
             "example": {
                 "custom_linting": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]'
             },
@@ -563,6 +564,7 @@ class TemplateBlueprint:
 
             rendered_toml = render_template(toml_content, context, escape_toml=True)
             blueprint = cls._parse(rendered_toml, target)
+            blueprint.custom_variables = frozenset(variables) - late_binding_vars
 
             interpolated_files: dict[str, str] = {}
             for rel_path, content in raw_files.items():
@@ -844,6 +846,11 @@ class TemplateBlueprint:
                 normalized[key] = value
             return normalized
 
+        if "pyproject.toml" in self.files:
+            raise ConfigurationError(
+                "Free-form pyproject.toml replacement is unsupported.",
+                hint="Use dev.pyproject structured contributions; tool.protostar is reserved.",
+            )
         self.files = normalize_keys(self.files)
         self.appends = normalize_keys(self.appends)
         if self.files.keys() & self.appends.keys() or (

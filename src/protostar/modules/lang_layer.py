@@ -174,8 +174,8 @@ Issues = "https://github.com/{github}/{repo_name}/issues"
         )
 
         # --- IDE Injection ---
-        config = UserConfig.load()
-        if config.ide in (IDEType.VSCODE, IDEType.CURSOR):
+        ide = manifest.recipe.ide if manifest.recipe else UserConfig.load().ide
+        if ide in (IDEType.VSCODE, IDEType.CURSOR):
             import sys
 
             if sys.platform == "win32":

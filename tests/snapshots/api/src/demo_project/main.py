@@ -1,4 +1,4 @@
-"""Application entrypoint for demo_project."""
+"""Application entrypoint for demo-project."""
 
 from fastapi import FastAPI
 

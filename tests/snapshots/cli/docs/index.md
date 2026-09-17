@@ -1,3 +1,3 @@
-# Welcome to demo_project
+# Welcome to demo-project
 
 Add your project overview and documentation here.

@@ -17,6 +17,7 @@ nav = [
         { "Authoring Templates" = "usage/authoring-templates.md" },
         { "Tooling & Flags Matrix" = "usage/tooling-matrix.md" },
         { "Global Configuration" = "usage/configuration.md" },
+        { "Project Recipes" = "development/project-recipe.md" },
         { "Agent & Machine Interface" = "usage/agent-interface.md" },
         { "Automatic Rollback" = "usage/rollback.md" },
         { "CLI Reference" = "usage/cli-reference.md" },

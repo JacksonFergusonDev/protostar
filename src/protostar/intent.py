@@ -177,6 +177,11 @@ def validate_configuration(content: str) -> dict[str, Any]:
             "Generic configuration cannot manage dependency tables.",
             hint="Use dependencies, dev.dev_dependencies, docs_dependencies, or dependency_includes instead; uv sources and optional groups are unsupported.",
         )
+    if "protostar" in tool:
+        raise ConfigurationError(
+            "The complete tool.protostar subtree is reserved for project intent.",
+            hint="Remove recipe contributions from the template; edit the project recipe directly.",
+        )
     return data
 
 

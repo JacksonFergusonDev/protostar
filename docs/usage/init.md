@@ -305,3 +305,10 @@ To view all supported subcommands and flags in your terminal, run `protostar hel
 - __[Tooling & Flags Matrix](./tooling-matrix.md):__ Explore all supported linters, formatters, type checkers, and test runners.
 - __[Global Configuration](./configuration.md):__ Customize your default Python version, licenses, and template aliases.
 - __[Troubleshooting & FAQ](./troubleshooting.md):__ Resolve missing binary dependencies, workspace collisions, and editor configuration issues.
+
+## Persisted project intent
+
+Successful initialization records `[tool.protostar]` in `pyproject.toml` alongside
+the separate ownership ledger. Unspecified flags preserve recorded diversions on
+reinitialization. See [project recipes](../development/project-recipe.md) for
+enrollment, selection precedence, and custom environment bindings.

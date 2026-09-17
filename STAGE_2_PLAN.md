@@ -250,6 +250,15 @@ may advertise a command whose backend is still a stub.
 
 ### PR 1: `feat(recipe): persist project intent in pyproject`
 
+**Status: Completed (2026-09-17).** Schema-v1 recipes, typed layered selection,
+producer attribution, environment bindings, reserved-subtree enforcement, and
+transactional initialization are implemented. Focused recipe/enrollment tests and
+all 996 unit tests pass; coverage is 92.01%. Built-in repeatability remains covered.
+Regenerated fixtures were inspected: recipe tables and help/schema/diff updates are
+intentional. New-project rendering now consistently captures uv's normalized
+project name while retaining the Python package identifier. No lifecycle command
+is exposed, and ownership state remains schema v1.
+
 **Purpose:** Make future updates reproducible without changing ownership rules.
 
 - Introduce strict `[tool.protostar]` models, TOML codec, source/selection

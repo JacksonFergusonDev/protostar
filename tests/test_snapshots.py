@@ -194,10 +194,14 @@ def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
     # Resolver-created groups follow tooling now; compare the tooling portion
     # independently from dependencies intentionally added during the rerun.
     original_tools = original_text[original_text.index("# ---- Ruff ---- #") :]
-    original_tools = original_tools.split("[dependency-groups]", 1)[0].rstrip()
+    original_tools = original_tools.split("[tool.protostar]", 1)[0].rstrip()
     merged_tools = pyproject_text[pyproject_text.index("# ---- Ruff ---- #") :]
     assert merged_tools.startswith(original_tools)
-    assert merged_tools[len(original_tools) :].lstrip().startswith("# ---- Mypy ---- #")
+    assert merged_tools[len(original_tools) :].lstrip().startswith("[tool.protostar]")
+    assert merged_tools.index("[tool.protostar]") < merged_tools.index(
+        "# ---- Mypy ---- #"
+    )
+    assert pyproject["tool"]["protostar"]["tools"] == {"mypy": True}
     ignores = (root / ".gitignore").read_text()
     assert all(pattern in ignores for pattern in ("*.csv", "*.fits", "*.parquet"))
 
