@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import dataclasses
 import json
 import logging
 import shlex
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rich import box
 from rich.console import Console
@@ -22,10 +24,12 @@ from protostar.errors import (
 )
 from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
 from protostar.models import ExecutionResult, InitRequest
-from protostar.orchestrator import Orchestrator
 from protostar.system import is_interactive
 from protostar.ui import Choice, confirm, select
 from protostar.ui import Style as UIStyle
+
+if TYPE_CHECKING:
+    from protostar.orchestrator import Orchestrator
 
 # Marks the agent interface as experimental. Increment when the schema
 # stabilises and a compatibility commitment is made.
@@ -223,7 +227,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
             request = dataclasses.replace(
                 request, force_merge=False, force_replace=True
             )
-        engine = Orchestrator(engine.modules, engine.user_config, request=request)
+        engine = type(engine)(engine.modules, engine.user_config, request=request)
         manifest = engine.plan()
 
     # --- Trust Boundary ---

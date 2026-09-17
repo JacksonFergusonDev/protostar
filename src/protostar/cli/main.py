@@ -9,9 +9,12 @@ import subprocess
 import sys
 import traceback
 import urllib.parse
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rich.columns import Columns
+
+if TYPE_CHECKING:
+    from protostar.orchestrator import Orchestrator
 from rich.console import Group
 from rich.logging import RichHandler
 from rich.panel import Panel
@@ -51,7 +54,6 @@ from protostar.modules import (
     PythonCore,
     SystemWorkspaceModule,
 )
-from protostar.orchestrator import Orchestrator
 from protostar.ui import confirm
 from protostar.wizard import resolve_missing_variables
 
@@ -216,7 +218,8 @@ def handle_init(args: argparse.Namespace) -> None:
         is_user_aliased=is_user_aliased,
         is_trusted=is_trusted,
     )
-    engine = Orchestrator(modules, user_config, request=request)
+    orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
+    engine = orchestrator_cls(modules, user_config, request=request)
 
     if getattr(args, "dry_run", False):
         manifest = engine.plan()
@@ -616,3 +619,13 @@ def main() -> None:
         )
 
         sys.exit(ExitCode.SOFTWARE)  # 70: Internal software malfunction code
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy evaluation for heavy CLI dependencies."""
+    if name == "Orchestrator":
+        from protostar.orchestrator import Orchestrator
+
+        globals()["Orchestrator"] = Orchestrator
+        return Orchestrator
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

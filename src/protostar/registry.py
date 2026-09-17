@@ -24,11 +24,18 @@ from dataclasses import dataclass
 from urllib.error import URLError
 
 from ._fallbacks import DEFAULT_REVISIONS
-from .sync_state import PinProvenance
 
 logger = logging.getLogger("protostar")
 
-__all__ = ["HookRegistry", "RemoteHook", "clear_hook_registry_cache"]
+__all__ = ["HookRegistry", "PinProvenance", "RemoteHook", "clear_hook_registry_cache"]
+
+
+class PinProvenance(enum.StrEnum):
+    """Source of an applied hook revision, without replay authorization."""
+
+    REGISTRY = "registry"
+    TEMPLATE = "template"
+    FALLBACK = "fallback"
 
 
 class RemoteHook(enum.StrEnum):
