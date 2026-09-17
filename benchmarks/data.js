@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789606972033,
+  "lastUpdate": 1789607551880,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13197,6 +13197,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 259.97,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "72f89764e77615a40336e306fbce0241ca5daece",
+          "message": "ci(workflows): add 6-minute job timeouts and automatic retry for hung jobs",
+          "timestamp": "2026-09-16T18:10:59-07:00",
+          "tree_id": "a171d017d95bd60a23a761a4dd8550d9caf65f73",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/72f89764e77615a40336e306fbce0241ca5daece"
+        },
+        "date": 1789607550485,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 168.85,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 242.66,
             "unit": "ms"
           }
         ]
