@@ -759,6 +759,41 @@ def generate_agent_payloads() -> None:
         finally:
             os.chdir(orig_cwd)
 
+    # Lifecycle examples use the shipped preparation and presentation path.
+    from protostar.cli.reviews import review_payload
+    from protostar.preparation import prepare_review
+    from protostar.sync_state import serialize_state
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        try:
+            os.chdir(tmp_dir)
+            baseline = EnvironmentManifest(force_merge=True)
+            baseline.filesystem.add_file_injection(
+                ".github/renovate.json", '{"value": "original"}\n'
+            )
+            initial = prepare_review(baseline, UserConfig(), hook_revisions=())
+            Path(".protostar.lock.toml").write_text(
+                serialize_state(initial.candidate_state)
+            )
+            manifest = EnvironmentManifest(force_merge=True)
+            manifest.filesystem.add_file_injection("safe.txt", "accepted\n")
+            manifest.filesystem.add_file_injection(
+                ".github/renovate.json", '{"value": "desired"}\n'
+            )
+            Path(".github").mkdir()
+            Path(".github/renovate.json").write_text('{"value": "local"}\n')
+            review = prepare_review(manifest, UserConfig(), hook_revisions=())
+            payload = review_payload(review)
+            _write_generated_doc(
+                "agent_payload_reviewed.json", json.dumps(payload, indent=2)
+            )
+            payload["check_passed"] = not review.pending
+            _write_generated_doc(
+                "agent_payload_check.json", json.dumps(payload, indent=2)
+            )
+        finally:
+            os.chdir(orig_cwd)
+
     # 2. Success payload generated dynamically using ExecutionResult
     paths = frozenset(
         [

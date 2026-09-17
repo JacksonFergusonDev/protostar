@@ -521,3 +521,39 @@ def test_harness_main_no_check_flag(
     main()
 
     mock_check.assert_not_called()
+
+
+def test_generated_lifecycle_examples_use_real_decisions_and_are_repeatable(
+    tmp_path, monkeypatch, mocker
+):
+    """Generated review/check examples separate accepted bytes from conflicts."""
+    import json
+
+    from scripts import generate_docs_assets as assets
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(assets, "DOCS_GENERATED_DIR", tmp_path / "generated")
+    import tempfile
+
+    temporary_directory = tempfile.TemporaryDirectory
+    mocker.patch(
+        "scripts.generate_docs_assets.tempfile.TemporaryDirectory",
+        side_effect=lambda: temporary_directory(dir=tmp_path),
+    )
+    mocker.patch("subprocess.run", side_effect=AssertionError("subprocess"))
+    mocker.patch("subprocess.Popen", side_effect=AssertionError("subprocess"))
+    assets.generate_agent_payloads()
+    reviewed = json.loads(
+        (tmp_path / "generated/agent_payload_reviewed.json").read_text()
+    )
+    checked = json.loads((tmp_path / "generated/agent_payload_check.json").read_text())
+    assert checked == {**reviewed, "check_passed": False}
+    assert [item["path"] for item in reviewed["diffs"]] == ["safe.txt"]
+    assert reviewed["review"]["conflicts"][0]["file"] == ".github/renovate.json"
+    before = {
+        path.name: path.read_bytes() for path in (tmp_path / "generated").iterdir()
+    }
+    assets.generate_agent_payloads()
+    assert {
+        path.name: path.read_bytes() for path in (tmp_path / "generated").iterdir()
+    } == before

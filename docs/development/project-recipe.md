@@ -59,7 +59,8 @@ protostar init --template cli --force-merge
 
 This establishes a recipe without reconstructing the original command from the
 lock or adopting equal foreign content. Template identity checks still apply.
-There are no lifecycle inspection or synchronization commands in this PR.
+Use `status`, `diff`, and `sync` after enrollment; see the
+[lifecycle walkthrough](../usage/lifecycle.md).
 
 ## Custom interpolation
 
@@ -78,8 +79,8 @@ The resulting recipe contains only the binding name:
 ENDPOINT = "PROJECT_ENDPOINT"
 ```
 
-Subsequent initialization resolves these values in memory. Missing bindings or
-missing environment variables fail before workspace mutation. Arbitrary answers
+Subsequent initialization and lifecycle commands resolve these values in memory.
+Missing bindings or missing environment variables fail before workspace mutation. Arbitrary answers
 provided through dynamic interpolation flags cannot enroll a project unless the
 variables also have environment bindings. Interactive custom answers likewise
 cannot establish replayable intent; use explicit bindings instead. Trust
