@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import tomllib
 from collections.abc import Sequence
-from dataclasses import asdict, fields, is_dataclass
+from dataclasses import fields, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -79,7 +79,12 @@ class ManifestEncoder(json.JSONEncoder):
         if isinstance(obj, Enum):
             return obj.value
         if is_dataclass(obj) and not isinstance(obj, type):
-            return asdict(obj)
+            return {
+                f.name: getattr(obj, f.name)
+                for f in fields(obj)
+                if f.name
+                not in {"observe", "producer_contributions", "selections", "recipe"}
+            }
         if hasattr(obj, "__dict__"):
             return obj.__dict__
         return super().default(obj)

@@ -17,10 +17,18 @@
      "torch>=2.14.0",
      "tqdm>=4.70.1",
  ]
-@@ -94,8 +100,22 @@
-     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
- ]
+@@ -106,6 +112,7 @@
+ locator = "ml"
 
+ [tool.protostar.tools]
++mypy = true
+
+ [tool.protostar.fallback]
+ ci = false
+@@ -137,8 +144,22 @@
+ [tool.protostar.metadata]
+
+ [tool.protostar.bindings]
 +
 +# ---- Mypy ---- #
 +

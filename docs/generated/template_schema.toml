@@ -101,7 +101,7 @@ __version__ = "0.1.0"
 '''
 
 # --- pyproject.toml AST Injections ---
-# Managed TOML configuration; personal metadata is seed-only and dependency tables are forbidden.
+# Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden.
 
 [dev.pyproject]
 custom_linting = '''

@@ -9,7 +9,7 @@ import subprocess
 import sys
 import traceback
 import urllib.parse
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from rich.columns import Columns
 
@@ -46,6 +46,8 @@ from protostar.errors import (
     WorkspaceCollisionError,
 )
 from protostar.fs import atomic_write_text
+from protostar.intent import TemplateOrigin
+from protostar.manifest import ProjectMetadata
 from protostar.metadata import resolve_auto_metadata
 from protostar.models import InitRequest
 from protostar.modules import (
@@ -69,7 +71,39 @@ def handle_init(args: argparse.Namespace) -> None:
     template_name = getattr(args, "template_name", None)
     template_context = getattr(args, "template_context", {})
 
+    from dataclasses import replace
+    from pathlib import Path
+
+    from protostar.recipe import RecipeIntent, Tool, establish_recipe, read_recipe
+
     user_config = UserConfig.load()
+    existing_recipe = read_recipe(Path("pyproject.toml"))
+    bindings = dict(existing_recipe.bindings) if existing_recipe else {}
+    for binding in getattr(args, "bind", []):
+        variable, separator, environment = binding.partition("=")
+        if not separator:
+            raise ConfigurationError(
+                "Invalid environment binding.", hint="Use --bind VARIABLE=ENVIRONMENT."
+            )
+        bindings[variable] = environment
+    # Validate binding names before touching environment values.
+    binding_recipe = establish_recipe(user_config)
+    from protostar.recipe import decode_recipe
+
+    decode_recipe(
+        replace(binding_recipe, bindings=tuple(sorted(bindings.items()))).to_dict()
+    )
+    for variable, environment in bindings.items():
+        if environment not in os.environ:
+            raise ConfigurationError(
+                f"Missing environment binding for {variable}.",
+                hint=f"Set environment variable {environment}.",
+            )
+        template_context[variable] = os.environ[environment]
+    if existing_recipe:
+        user_config = replace(
+            user_config, python_version=existing_recipe.python, ide=existing_recipe.ide
+        )
     is_external = False
     is_user_aliased = False
     is_trusted = False
@@ -125,11 +159,25 @@ def handle_init(args: argparse.Namespace) -> None:
         else None
     )
 
-    if override_target:
+    def resolve_bound_variables(missing: list[str]) -> dict[str, str]:
+        if getattr(args, "dry_run", False):
+            return resolve_missing_variables(missing)
+        raise ConfigurationError(
+            "Custom interpolation requires environment bindings.",
+            hint="Provide --bind VARIABLE=ENVIRONMENT for every custom template variable.",
+        )
+
+    if not override_target and existing_recipe and existing_recipe.source:
+        blueprint = existing_recipe.source.load(
+            Path.cwd(), existing_recipe.rendering_context()
+        )
+        is_external = existing_recipe.source.origin is not TemplateOrigin.BUILT_IN
+        is_trusted = not is_external
+    elif override_target:
         blueprint = TemplateBlueprint.load(
             override_target,
             template_context=template_context,
-            variable_resolver=resolve_missing_variables,
+            variable_resolver=resolve_bound_variables,
             built_in=built_in,
             display_name=template_name,
         )
@@ -141,27 +189,33 @@ def handle_init(args: argparse.Namespace) -> None:
 
     # 2. Mandatory Python Core
     python_core = PythonCore(
-        python_version=getattr(args, "python_version", None),
+        python_version=getattr(args, "python_version", None)
+        or user_config.python_version,
     )
     modules.append(python_core)
 
-    # 3. Tooling Layers
+    overrides = dict(existing_recipe.tools) if existing_recipe else {}
     for mod in TOOLING_MODULES:
-        # 3. Lowest priority: User's global defaults
-        is_active = getattr(user_config, mod.config_key, False)
+        cli_override = getattr(args, mod.__class__.__name__, None)
+        if cli_override is not None:
+            overrides[Tool(mod.config_key)] = cli_override
+    fallback = (
+        dict(existing_recipe.fallback)
+        if existing_recipe
+        else {tool: bool(getattr(user_config, tool)) for tool in Tool}
+    )
+    selection_recipe = establish_recipe(
+        user_config, RecipeIntent(reference=blueprint.reference if blueprint else None)
+    )
+    selection_recipe = replace(
+        selection_recipe,
+        tools=tuple(sorted(overrides.items())),
+        fallback=tuple(sorted(fallback.items())),
+    )
+    from protostar.recipe import select_tooling
 
-        # 2. Medium priority: Template author's explicit overrides
-        if blueprint and mod.config_key in blueprint.tooling_overrides:
-            is_active = blueprint.tooling_overrides[mod.config_key]
-
-        # 1. Highest priority: User's CLI flags for this specific run
-        if mod.cli_flags:
-            cli_override = getattr(args, mod.__class__.__name__, None)
-            if cli_override is not None:
-                is_active = cli_override
-
-        if is_active:
-            modules.append(mod)
+    opinions = blueprint.tooling_overrides if blueprint else {}
+    modules.extend(select_tooling(selection_recipe, opinions))
 
     # Validate mutually exclusive tooling modules
     active_tooling_names = [type(mod).__name__ for mod in modules]
@@ -203,14 +257,56 @@ def handle_init(args: argparse.Namespace) -> None:
     for mod in modules:
         required_keys.update(mod.required_metadata)
 
-    resolved_metadata = resolve_auto_metadata(required_keys)
+    resolved_metadata = (
+        {k: list(v) if isinstance(v, tuple) else v for k, v in existing_recipe.metadata}
+        if existing_recipe
+        else resolve_auto_metadata(required_keys, config=user_config)
+    )
     if "license" in resolved_metadata:
-        python_core.license = resolved_metadata["license"]
+        python_core.license = str(resolved_metadata["license"])
 
+    docker = (
+        args.docker
+        if args.docker is not None
+        else (existing_recipe.docker if existing_recipe else False)
+    )
+    recipe = establish_recipe(
+        user_config,
+        RecipeIntent(
+            blueprint.reference if blueprint else None,
+            cast(ProjectMetadata, resolved_metadata),
+            docker,
+            getattr(args, "python_version", None),
+        ),
+    )
+    from protostar.recipe import decode_recipe
+
+    recipe = replace(
+        recipe,
+        tools=tuple(sorted(overrides.items())),
+        fallback=tuple(sorted(fallback.items())),
+        bindings=tuple(sorted(bindings.items())),
+        context=existing_recipe.context if existing_recipe else recipe.context,
+    )
+    if getattr(args, "python_version", None):
+        context = dict(recipe.context)
+        context["PYTHON_VERSION"] = args.python_version
+        recipe = replace(recipe, context=tuple(sorted(context.items())))
+    recipe = decode_recipe(recipe.to_dict())
+
+    # Custom answers must have replayable bindings; never persist their values.
+    custom = set(template_context) - set(dict(recipe.context))
+    if not custom <= set(bindings) and not getattr(args, "dry_run", False):
+        raise ConfigurationError(
+            "Custom interpolation requires environment bindings.",
+            hint="Use --bind VARIABLE=ENVIRONMENT instead of persisting interpolation answers.",
+        )
     request = InitRequest(
+        recipe=recipe,
+        python_version=recipe.python,
         template_blueprint=blueprint,
         template_reference=blueprint.reference if blueprint else None,
-        docker=args.docker,
+        docker=docker,
         force_merge=getattr(args, "force_merge", False),
         force_replace=getattr(args, "force_replace", False),
         metadata=resolved_metadata,

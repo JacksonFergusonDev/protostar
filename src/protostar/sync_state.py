@@ -110,7 +110,11 @@ class FileState:
                     "structured configuration requires only a baseline document string."
                 )
             if self.policy is FilePolicy.TOML:
-                decode_toml_baseline(self.baseline)
+                value = decode_toml_baseline(self.baseline)
+                if self.path == "pyproject.toml":
+                    tool = value.get("tool", {})
+                    if not isinstance(tool, dict) or "protostar" in tool:
+                        raise _invalid("tool.protostar cannot be owned.")
             else:
                 from .yaml_ast import (
                     decode_yaml_baseline,

@@ -20,7 +20,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     dev_properties: dict[str, Any] = {}
 
     for f in dataclasses.fields(TemplateBlueprint):
-        if f.name == "reference":
+        if f.name in {"reference", "custom_variables"}:
             continue
         desc = f.metadata.get("description", "")
         if f.name == "tooling_overrides":
@@ -84,6 +84,13 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         target_pattern = r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))(?!.*(?:^|/)(?:\.protostar\.lock\.toml|uv\.lock)(?:/|$)).+$"
         if f.name in ("files", "appends"):
             prop["propertyNames"] = {"pattern": target_pattern}
+        if f.name == "files":
+            prop["propertyNames"] = {
+                "allOf": [
+                    {"pattern": target_pattern},
+                    {"not": {"enum": ["pyproject.toml"]}},
+                ]
+            }
         if f.name == "appends":
             prop["propertyNames"] = {
                 "allOf": [{"pattern": target_pattern}, {"not": {"pattern": r"\.toml$"}}]

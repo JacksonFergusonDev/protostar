@@ -325,7 +325,7 @@ def test_equivalent_path_spellings_share_policy_and_collision_checks():
         manifest.filesystem.structured["pyproject.toml"][0].policy
         == ContributionPolicy.SEED_ONLY
     )
-    with pytest.raises(ConfigurationError, match="Ambiguous"):
+    with pytest.raises(ConfigurationError, match="Free-form pyproject"):
         manifest.filesystem.add_file_injection("pyproject.toml", "free-form")
     with pytest.raises(ConfigurationError, match="Ambiguous"):
         TemplateBlueprint._parse(

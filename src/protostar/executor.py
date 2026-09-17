@@ -146,6 +146,8 @@ class SystemExecutor:
     @property
     def interpolation_context(self) -> dict[str, str]:
         """Dynamically generates the context for template interpolation."""
+        if self.manifest.recipe:
+            return self.manifest.recipe.rendering_context()
         return {
             "PROJECT_NAME": resolve_project_name(self.manifest.metadata),
             "PACKAGE_NAME": resolve_package_name(self.manifest.metadata),
@@ -167,7 +169,14 @@ class SystemExecutor:
     def execute(self) -> None:
         """Executes the materialized manifest in a deterministic sequence."""
         try:
+            from .recipe import decode_recipe, read_recipe
+
+            if self.manifest.recipe:
+                decode_recipe(self.manifest.recipe.to_dict())
             self._load_state()
+
+            self._validate_node(Path("pyproject.toml"))
+            read_recipe(Path("pyproject.toml"))
             self._validate_targets()
             self._create_directories()
             self._write_injected_files()
@@ -186,6 +195,7 @@ class SystemExecutor:
             self._write_ide_settings()
             self._run_tasks(self.manifest.tasks.post_install_tasks)
             self._check_ide_extensions()
+            self._write_recipe()
             self._write_state()
             self.journal.commit()
         except BaseException as original_error:
@@ -207,7 +217,7 @@ class SystemExecutor:
         diagnostic only on a successful check that uncovers missing extensions.
         """
         check_ide_extensions(
-            ide=self.config.ide,
+            ide=self.manifest.recipe.ide if self.manifest.recipe else self.config.ide,
             ide_extensions=self.manifest.tooling.ide_extensions,
             on_diagnostic=lambda msg, sev: self.add_diagnostic(
                 phase=DiagnosticPhase.IDE,
@@ -237,6 +247,14 @@ class SystemExecutor:
                 Path(render_template(path, self.interpolation_context)),
                 directory=path in self.manifest.filesystem.directories,
             )
+        for path in self.manifest.filesystem.file_injections:
+            if Path(render_template(path, self.interpolation_context)) == Path(
+                "pyproject.toml"
+            ):
+                raise ConfigurationError(
+                    "Free-form pyproject.toml replacement is unsupported.",
+                    hint="Declare structured contributions; tool.protostar is reserved.",
+                )
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if any(c.format is StructuredFormat.YAML for c in contributions):
                 if len(contributions) != 1 or filepath != ".github/codecov.yml":
@@ -1389,6 +1407,21 @@ class SystemExecutor:
                 "Cannot read Protostar state.",
                 hint="Correct the state file encoding and permissions.",
             ) from e
+
+    def _write_recipe(self) -> None:
+        """Commits requested intent separately from accepted ownership baselines."""
+        from .recipe import edit_recipe
+
+        target = Path("pyproject.toml")
+        if self.manifest.recipe is None or self._preserve_deleted_pyproject:
+            return
+        try:
+            original = target.read_text() if target.exists() else ""
+            content = edit_recipe(original, self.manifest.recipe)
+            if content != original:
+                self.fs.write_text(target, content)
+        except (OSError, UnicodeError) as e:
+            raise FileSystemError("write project recipe", str(target), e) from e
 
     def _write_state(self) -> None:
         """Writes candidate ownership last, before committing the journal."""

@@ -1,7 +1,9 @@
 import enum
+import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from .errors import ConfigurationError
 from .intent import (
@@ -22,6 +24,13 @@ from .metadata import LicenseType
 from .workflows import CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
 from .workspace import resolve_package_name, resolve_project_name
+
+if TYPE_CHECKING:
+    from .recipe import ProducerContribution, ProjectRecipe, ToolSelection
+
+
+def _ignore_contribution(path: tuple[str, ...]) -> None:
+    """Ignores attribution when assembling a standalone manifest slice."""
 
 
 class DiagnosticPhase(enum.StrEnum):
@@ -137,6 +146,10 @@ IDESettingKey = Literal[
 class DependencyManifest:
     """Domain slice managing environment dependencies."""
 
+    observe: Callable[[tuple[str, ...]], None] = field(
+        default=_ignore_contribution, repr=False
+    )
+
     dependencies: list[str] = field(default_factory=list)
     dev_dependencies: list[str] = field(default_factory=list)
     docs_dependencies: list[str] = field(default_factory=list)
@@ -145,6 +158,7 @@ class DependencyManifest:
 
     def add_include(self, group: DependencyGroup, include: DependencyGroup) -> None:
         """Declares a supported dependency-group include without generic TOML."""
+        self.observe(("includes", group.value, include.value))
         if (
             group not in (DependencyGroup.DEV, DependencyGroup.DOCS)
             or include not in (DependencyGroup.DEV, DependencyGroup.DOCS)
@@ -165,16 +179,19 @@ class DependencyManifest:
 
     def add(self, package: str) -> None:
         """Queues a dependency for installation, preventing duplicates."""
+        self.observe(("dependencies", package))
         if package not in self.dependencies:
             self.dependencies.append(package)
 
     def add_dev(self, package: str) -> None:
         """Queues a development dependency for installation, preventing duplicates."""
+        self.observe(("dev_dependencies", package))
         if package not in self.dev_dependencies:
             self.dev_dependencies.append(package)
 
     def add_docs(self, package: str) -> None:
         """Queues a documentation dependency for installation, preventing duplicates."""
+        self.observe(("docs_dependencies", package))
         if package not in self.docs_dependencies:
             self.docs_dependencies.append(package)
 
@@ -203,6 +220,10 @@ class DependencyManifest:
 class FilesystemManifest:
     """Domain slice managing local filesystem scaffolding and tracking."""
 
+    observe: Callable[[tuple[str, ...]], None] = field(
+        default=_ignore_contribution, repr=False
+    )
+
     directories: set[str] = field(default_factory=set)
     file_injections: dict[str, str] = field(default_factory=dict)
     structured: dict[str, list[StructuredContribution]] = field(default_factory=dict)
@@ -212,6 +233,7 @@ class FilesystemManifest:
 
     def add_directory(self, path: str) -> None:
         """Queues a relative directory path to be scaffolded."""
+        self.observe(("directories", path))
         validate_target(path)
         self.directories.add(Path(path).as_posix())
 
@@ -226,8 +248,14 @@ class FilesystemManifest:
             ConfigurationError: If the path has already been registered with
                 conflicting file content.
         """
+        self.observe(("file_injections", path))
         validate_target(path)
         path = Path(path).as_posix()
+        if path == "pyproject.toml":
+            raise ConfigurationError(
+                "Free-form pyproject.toml replacement is unsupported.",
+                hint="Declare structured TOML contributions; tool.protostar is reserved.",
+            )
         if path in self.structured or path in self.regions:
             raise ConfigurationError(
                 f"Ambiguous contributions for '{path}'.",
@@ -250,6 +278,7 @@ class FilesystemManifest:
         document_format: StructuredFormat = StructuredFormat.TOML,
     ) -> None:
         """Declares explicit structured intent; YAML is limited to the Codecov pilot."""
+        self.observe(("structured", path, producer))
         from .toml_ast import declare_structured_contributions
 
         validate_target(path)
@@ -293,6 +322,7 @@ class FilesystemManifest:
 
     def add_region(self, path: str, content: str, *, identity: str) -> None:
         """Declares one uniquely identified non-TOML text region."""
+        self.observe(("regions", path, identity))
         validate_target(path)
         path = Path(path).as_posix()
         validate_region_id(identity)
@@ -316,10 +346,12 @@ class FilesystemManifest:
 
     def add_vcs_ignore(self, path: str) -> None:
         """Appends a file or directory pattern to the VCS ignore list (.gitignore)."""
+        self.observe(("vcs_ignores", path))
         self.vcs_ignores.add(path)
 
     def add_workspace_hide(self, path: str) -> None:
         """Appends a file or directory pattern to the IDE workspace exclusion list."""
+        self.observe(("workspace_hides", path))
         self.workspace_hides.add(path)
 
     def add_environment_artifact(self, path: str) -> None:
@@ -357,6 +389,10 @@ class FilesystemManifest:
 class ToolingManifest:
     """Domain slice managing tooling configuration and templating parameters."""
 
+    observe: Callable[[tuple[str, ...]], None] = field(
+        default=_ignore_contribution, repr=False
+    )
+
     hook_runner: HookRunner = HookRunner.NONE
     pre_commit_hooks: list[str] = field(default_factory=list)
     pre_commit_local_hooks: list[str] = field(default_factory=list)
@@ -380,6 +416,7 @@ class ToolingManifest:
 
     def set_hook_runner(self, runner: HookRunner) -> None:
         """Sets the Git hook manager, enforcing mutual exclusivity."""
+        self.observe(("hook_runner", runner.value))
         if self.hook_runner != HookRunner.NONE and self.hook_runner != runner:
             raise ConfigurationError(
                 f"Cannot configure '{runner.value}' when '{self.hook_runner.value}' is already active.",
@@ -389,29 +426,37 @@ class ToolingManifest:
 
     def add_pre_commit_hook(self, payload: str) -> None:
         """Appends a raw YAML payload to the pre-commit configuration."""
+        self.observe(("pre_commit_hooks", hashlib.sha256(payload.encode()).hexdigest()))
         if payload not in self.pre_commit_hooks:
             self.pre_commit_hooks.append(payload)
 
     def add_pre_commit_local_hook(self, payload: str) -> None:
         """Appends a raw YAML hook payload to the local pre-commit toolchain configuration."""
+        self.observe(
+            ("pre_commit_local_hooks", hashlib.sha256(payload.encode()).hexdigest())
+        )
         if payload not in self.pre_commit_local_hooks:
             self.pre_commit_local_hooks.append(payload)
 
     def add_pre_commit_hook_type(self, hook_type: str) -> None:
         """Declares a Git hook lifecycle type required by a tooling module (e.g. 'commit-msg')."""
+        self.observe(("pre_commit_install_hook_types", hook_type))
         self.pre_commit_install_hook_types.add(hook_type)
 
     def add_ci_flag(self, key: CIFlag | str) -> None:
         """Adds a CI flag to trigger specialized executor generation logic."""
+        self.observe(("ci_flags", str(key)))
         self.ci_flags.add(key)
 
     def add_ci_step(self, step_yaml: str) -> None:
         """Appends a raw YAML payload to the CI configuration."""
+        self.observe(("ci_steps", hashlib.sha256(step_yaml.encode()).hexdigest()))
         if step_yaml not in self.ci_steps:
             self.ci_steps.append(step_yaml)
 
     def add_ide_extension(self, extension_id: str | tuple[str, ...]) -> None:
         """Queues an IDE extension ID (or fallback tuple) for verification during the realization phase."""
+        self.observe(("ide_extensions", str(extension_id)))
         self.ide_extensions.add(extension_id)
 
     def to_dict(self) -> dict[str, Any]:
@@ -455,6 +500,10 @@ class ToolingManifest:
 class TaskManifest:
     """Domain slice managing shell command execution tasks."""
 
+    observe: Callable[[tuple[str, ...]], None] = field(
+        default=_ignore_contribution, repr=False
+    )
+
     system_tasks: list[SystemTask] = field(default_factory=list)
     post_install_tasks: list[SystemTask] = field(default_factory=list)
 
@@ -467,6 +516,9 @@ class TaskManifest:
         owned_trees: list[str] | None = None,
     ) -> None:
         """Queues a shell command for execution during the realization phase."""
+        self.observe(
+            ("system_tasks", hashlib.sha256("\0".join(command).encode()).hexdigest())
+        )
         if any(task.command == command for task in self.system_tasks):
             return
         self.system_tasks.append(
@@ -488,6 +540,12 @@ class TaskManifest:
         owned_trees: list[str] | None = None,
     ) -> None:
         """Queues a shell command for execution after dependencies are fully installed."""
+        self.observe(
+            (
+                "post_install_tasks",
+                hashlib.sha256("\0".join(command).encode()).hexdigest(),
+            )
+        )
         if any(task.command == command for task in self.post_install_tasks):
             return
         self.post_install_tasks.append(
@@ -534,6 +592,9 @@ class EnvironmentManifest:
     subsequently reads this object to execute the unified system changes.
     """
 
+    producer_contributions: tuple[ProducerContribution, ...] = ()
+    selections: tuple[ToolSelection, ...] = ()
+    recipe: ProjectRecipe | None = None
     template_reference: TemplateReference | None = None
     dependencies: DependencyManifest = field(default_factory=DependencyManifest)
     filesystem: FilesystemManifest = field(default_factory=FilesystemManifest)
@@ -560,10 +621,14 @@ class EnvironmentManifest:
             A set of Path objects representing target files.
         """
         targets: set[Path] = set()
-        ctx = {
-            "PROJECT_NAME": resolve_project_name(self.metadata),
-            "PACKAGE_NAME": resolve_package_name(self.metadata),
-        }
+        ctx = (
+            dict(self.recipe.context)
+            if self.recipe
+            else {
+                "PROJECT_NAME": resolve_project_name(self.metadata),
+                "PACKAGE_NAME": resolve_package_name(self.metadata),
+            }
+        )
 
         for filepath in self.filesystem.file_injections:
             rendered = render_template(filepath, ctx, escape_toml=False)

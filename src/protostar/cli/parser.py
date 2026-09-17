@@ -2,6 +2,7 @@ import argparse
 import difflib
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -364,8 +365,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     tooling_group.add_argument(
         "--docker",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        default=None,
         help="Generate Dockerfile and .dockerignore container scaffolding",
+    )
+
+    tooling_group.add_argument(
+        "--bind",
+        action="append",
+        default=[],
+        metavar="VARIABLE=ENVIRONMENT",
+        help="Bind a custom template variable to an environment variable for replay.",
     )
 
     for mod in TOOLING_MODULES:
@@ -569,7 +579,42 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             1, PythonCore(python_version=min_py, project_license=selected_license)
         )
 
+        from dataclasses import replace
+
+        from protostar.manifest import ProjectMetadata
+        from protostar.recipe import RecipeIntent, Tool, establish_recipe, read_recipe
+
+        existing_recipe = read_recipe(Path("pyproject.toml"))
+        recipe = establish_recipe(
+            user_config,
+            RecipeIntent(
+                selections.blueprint.reference if selections.blueprint else None,
+                cast(ProjectMetadata, selections.project_metadata),
+                selections.docker,
+                min_py,
+            ),
+        )
+        if existing_recipe:
+            context = dict(recipe.context)
+            context["CURRENT_YEAR"] = dict(existing_recipe.context)["CURRENT_YEAR"]
+            recipe = replace(
+                recipe,
+                fallback=existing_recipe.fallback,
+                context=tuple(sorted(context.items())),
+                bindings=existing_recipe.bindings,
+            )
+        selected = {m.config_key for m in modules if m.config_key}
+        opinions = (
+            selections.blueprint.tooling_overrides if selections.blueprint else {}
+        )
+        tools = dict(existing_recipe.tools) if existing_recipe else {}
+        for tool in Tool:
+            enabled = tool in selected
+            if enabled != opinions.get(tool, dict(recipe.fallback)[tool]):
+                tools[tool] = enabled
+        recipe = replace(recipe, tools=tuple(sorted(tools.items())))
         request = InitRequest(
+            recipe=recipe,
             template_blueprint=selections.blueprint,
             template_reference=selections.blueprint.reference
             if selections.blueprint

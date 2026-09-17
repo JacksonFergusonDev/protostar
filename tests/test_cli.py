@@ -822,7 +822,15 @@ def test_handle_init_template_resolution(mocker):
     mock_load = mocker.patch(
         "protostar.cli.main.UserConfig.load", return_value=UserConfig()
     )
-    mock_bp_load = mocker.patch("protostar.cli.main.TemplateBlueprint.load")
+    from protostar.config import TemplateBlueprint
+    from protostar.intent import TemplateOrigin, TemplateReference
+
+    mock_bp_load = mocker.patch(
+        "protostar.cli.main.TemplateBlueprint.load",
+        return_value=TemplateBlueprint(
+            reference=TemplateReference(TemplateOrigin.BUILT_IN, "astro", "a" * 64)
+        ),
+    )
 
     # Removed handle_init import as it is global
 

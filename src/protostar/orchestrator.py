@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import sys
 from pathlib import Path
@@ -20,6 +21,7 @@ from .modules import (
     BootstrapModule,
     PreCommitModule,
     PrekModule,
+    PythonCore,
     ReadTheDocsModule,
     ZensicalModule,
 )
@@ -133,9 +135,70 @@ class Orchestrator:
         if req.docker:
             manifest.tooling.wants_docker = True
 
+        from .recipe import RecipeIntent, decode_recipe, establish_recipe
+
+        manifest.recipe = req.recipe or establish_recipe(
+            self.user_config,
+            RecipeIntent(
+                manifest.template_reference,
+                manifest.metadata,
+                req.docker,
+                req.python_version,
+            ),
+        )
+
+        manifest.recipe = decode_recipe(manifest.recipe.to_dict())
+
         # Phase 3: Module aggregation
+        from .recipe import ProducerContribution, Tool
+
+        opinions = (
+            req.template_blueprint.tooling_overrides if req.template_blueprint else {}
+        )
+        manifest.selections = manifest.recipe.selections(opinions)
+        producer = ""
+        tool: Tool | None = None
+        contributions: list[ProducerContribution] = []
+        if req.docker:
+            contributions.append(
+                ProducerContribution("request", None, ("tooling", "wants_docker"))
+            )
+
+        def observe(scope: str, path: tuple[str, ...]) -> None:
+            contributions.append(ProducerContribution(producer, tool, (scope, *path)))
+
+        manifest.dependencies.observe = lambda path: observe("dependencies", path)
+        manifest.filesystem.observe = lambda path: observe("filesystem", path)
+        manifest.tasks.observe = lambda path: observe("tasks", path)
+        manifest.tooling.observe = lambda path: observe("tooling", path)
         for mod in self.modules:
+            producer = f"module:{type(mod).__name__}"
+            tool = Tool(mod.config_key) if mod.config_key else None
+            if isinstance(mod, PythonCore):
+                mod.python_version = manifest.recipe.python
+            # These command lists remain additive; capture every producer even
+            # when another module declares the same command.
+            command_fields = (
+                "just_format_commands",
+                "just_lint_commands",
+                "just_typecheck_commands",
+                "just_clean_paths",
+            )
+            lengths = {
+                key: len(getattr(manifest.tooling, key)) for key in command_fields
+            }
+            before_ide = dict(manifest.ide_settings)
             mod.build(manifest)
+            for key in command_fields:
+                for command in getattr(manifest.tooling, key)[lengths[key] :]:
+                    observe(
+                        "tooling", (key, hashlib.sha256(command.encode()).hexdigest())
+                    )
+            if mod.config_key in {"ci", "release", "just"}:
+                observe("tooling", (f"wants_{mod.config_key}",))
+            for key, value in manifest.ide_settings.items():
+                if before_ide.get(key) != value:
+                    observe("ide_settings", (key,))
 
         # Phase 4: Blueprint injection
         blueprint = req.template_blueprint
@@ -145,6 +208,8 @@ class Orchestrator:
                 if manifest.template_reference
                 else "unresolved"
             )
+            producer = f"template:{template_id}"
+            tool = None
             logger.debug("Injecting blueprint structural fields into manifest.")
 
             for edge in blueprint.dependency_includes:
@@ -195,6 +260,14 @@ class Orchestrator:
                 for filepath, content in blueprint.files.items():
                     manifest.filesystem.add_file_injection(filepath, content)
 
+        manifest.producer_contributions = tuple(contributions)
+        from .manifest import _ignore_contribution
+
+        manifest.dependencies.observe = _ignore_contribution
+        manifest.filesystem.observe = _ignore_contribution
+        manifest.tasks.observe = _ignore_contribution
+        manifest.tooling.observe = _ignore_contribution
+
         # Phase 5: Manifest-First Collision Intercept
         collision_targets = self._detect_collisions(manifest)
         if collision_targets:
@@ -234,6 +307,20 @@ class Orchestrator:
         from .errors import ProtostarError
         from .journal import TransactionState
         from .models import RollbackContext
+
+        if (
+            self.request.template_blueprint
+            and self.request.template_blueprint.custom_variables
+            and (
+                manifest.recipe is None
+                or not self.request.template_blueprint.custom_variables
+                <= set(dict(manifest.recipe.bindings))
+            )
+        ):
+            raise ConfigurationError(
+                "Custom interpolation requires environment bindings.",
+                hint="Enroll using init --bind VARIABLE=ENVIRONMENT for each custom template variable.",
+            )
 
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
         executor = executor_cls(manifest, self.user_config, self.request.docker)

@@ -8,6 +8,7 @@ from typing import Any
 from .config import TemplateBlueprint
 from .intent import TemplateReference
 from .manifest import DiagnosticEvent, SystemTask
+from .recipe import ProjectRecipe
 
 __all__ = ["ExecutionResult", "InitRequest", "RollbackContext"]
 
@@ -50,6 +51,7 @@ class InitRequest:
         is_trusted: If True, the template source is explicitly trusted to execute tasks.
     """
 
+    recipe: ProjectRecipe | None = None
     template_blueprint: TemplateBlueprint | None = None
     template_reference: TemplateReference | None = None
     python_version: str | None = None
