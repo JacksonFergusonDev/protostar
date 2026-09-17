@@ -11,6 +11,7 @@ from .intent import (
     DependencyInclude,
     ResolverFootprint,
     StructuredContribution,
+    StructuredFormat,
     TemplateReference,
     validate_region_id,
     validate_target,
@@ -246,8 +247,9 @@ class FilesystemManifest:
         *,
         producer: str,
         policy: ContributionPolicy = ContributionPolicy.MANAGED,
+        document_format: StructuredFormat = StructuredFormat.TOML,
     ) -> None:
-        """Declares TOML intent, separating personal project metadata from tooling."""
+        """Declares explicit structured intent; YAML is limited to the Codecov pilot."""
         from .toml_ast import declare_structured_contributions
 
         validate_target(path)
@@ -257,6 +259,29 @@ class FilesystemManifest:
                 f"Ambiguous contributions for '{path}'.",
                 hint="Use one contribution policy per target.",
             )
+        if document_format is StructuredFormat.YAML:
+            from .yaml_ast import decode_yaml_baseline
+
+            if (
+                path != ".github/codecov.yml"
+                or policy is not ContributionPolicy.MANAGED
+            ):
+                raise ConfigurationError(
+                    "Unsupported structured YAML target or policy.",
+                    hint="Only managed .github/codecov.yml is supported by the YAML pilot.",
+                )
+            decode_yaml_baseline(content)
+            if path in self.structured:
+                raise ConfigurationError(
+                    "Ambiguous YAML producers.",
+                    hint="Declare one Codecov contribution per manifest.",
+                )
+            self.structured[path] = [
+                StructuredContribution(
+                    producer, content, policy, format=document_format
+                )
+            ]
+            return
         if not path.endswith(".toml"):
             raise ConfigurationError(
                 "Structured contributions require TOML targets.",

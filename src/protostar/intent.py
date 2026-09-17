@@ -58,18 +58,27 @@ class ContributionPolicy(StrEnum):
     SEED_ONLY = "seed-only"
 
 
+class StructuredFormat(StrEnum):
+    """Explicit format of a managed structured contribution."""
+
+    TOML = "toml"
+    YAML = "yaml"
+
+
 @dataclass(frozen=True)
 class StructuredContribution:
-    """A TOML configuration contribution from one stable producer."""
+    """A structured configuration contribution from one stable producer."""
 
     producer: str
     content: str
     policy: ContributionPolicy = ContributionPolicy.MANAGED
     resolver_footprint: ResolverFootprint | None = None
+    format: StructuredFormat = StructuredFormat.TOML
 
     def to_dict(self) -> dict[str, Any]:
         """Serializes contribution intent."""
         return {
+            "format": self.format.value,
             "producer": self.producer,
             "content": self.content,
             "policy": self.policy.value,

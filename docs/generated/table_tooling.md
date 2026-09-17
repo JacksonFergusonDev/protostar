@@ -12,7 +12,7 @@
 | Prek | `--prek` | Scaffold prek hooks and configuration (faster Rust alternative to pre-commit) | `.pre-commit-config.yaml` |
 | Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | `CHANGELOG.md` |
 | Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `.github/renovate.json` |
-| Codecov | `--codecov` | Scaffold Codecov configuration | `.github/codecov.yml` |
+| Codecov | `--codecov` | Scaffold Codecov configuration | *None* |
 | Zensical | `--zensical` | Scaffold Zensical documentation | `docs/index.md`, `mkdocs.yml` |
 | Read the Docs | `--readthedocs` | Scaffold Read the Docs configuration | `.readthedocs.yaml` |
 | GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `.github/workflows/ci.yml` |

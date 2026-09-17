@@ -1,0 +1,332 @@
+"""Bounded YAML 1.2 round-trip codec and Codecov reconciliation adapter."""
+
+from __future__ import annotations
+
+from copy import deepcopy
+from dataclasses import dataclass
+from io import StringIO
+from typing import Any, cast
+
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
+from ruamel.yaml.scalarstring import ScalarString
+
+from .errors import ConfigurationError
+from .merge import (
+    MISSING,
+    ConflictReason,
+    MergeConflict,
+    MergeLocation,
+    MergePolicy,
+    Value,
+    reconcile,
+    semantic_equal,
+    validate_value,
+)
+
+CODECOV_POLICY = MergePolicy(frozenset({("ignore",)}))
+_MAX_NODES = 10000
+_MAX_BYTES = 1_000_000
+_TAGS = {"map", "seq", "str", "null", "bool", "int", "float", "merge"}
+
+
+def _invalid() -> ConfigurationError:
+    return ConfigurationError(
+        "Invalid or unsupported YAML configuration.",
+        hint="Use one YAML 1.2 mapping with unique string keys, standard JSON-like values, no cyclic aliases, and at most 100 levels/10000 nodes/1 MB.",
+    )
+
+
+def _codec() -> YAML:
+    codec = YAML(typ="rt", pure=True)
+    codec.preserve_quotes = True
+    codec.allow_duplicate_keys = False
+    codec.indent(mapping=2, sequence=4, offset=2)
+    return codec
+
+
+def _load(content: str) -> Any:
+    if len(content.encode("utf-8")) > _MAX_BYTES:
+        raise _invalid()
+    try:
+        codec = _codec()
+        root = codec.compose(content)
+        if codec.doc_infos and codec.doc_infos[-1].doc_version is not None:
+            version = codec.doc_infos[-1].doc_version
+            if (version.major, version.minor) != (1, 2):
+                raise _invalid()
+        if not isinstance(root, MappingNode):
+            raise _invalid()
+        active: set[int] = set()
+        count = 0
+
+        def visit(node: Node, depth: int) -> None:
+            nonlocal count
+            count += 1
+            if count > _MAX_NODES or depth > 100 or id(node) in active:
+                raise _invalid()
+            if node.tag not in {f"tag:yaml.org,2002:{tag}" for tag in _TAGS}:
+                raise _invalid()
+            active.add(id(node))
+            if isinstance(node, MappingNode):
+                for key, value in node.value:
+                    if not isinstance(key, ScalarNode) or key.tag not in (
+                        "tag:yaml.org,2002:str",
+                        "tag:yaml.org,2002:merge",
+                    ):
+                        raise _invalid()
+                    visit(key, depth + 1)
+                    visit(value, depth + 1)
+            elif isinstance(node, SequenceNode):
+                for child in node.value:
+                    visit(child, depth + 1)
+            active.remove(id(node))
+
+        visit(root, 0)
+        return _codec().load(content)
+    except (YAMLError, ValueError, TypeError, RecursionError) as error:
+        raise _invalid() from error
+
+
+def _plain(node: Any) -> Value:
+    if isinstance(node, dict):
+        return {str(key): _plain(value) for key, value in node.items()}
+    if isinstance(node, list):
+        return [_plain(value) for value in node]
+    if node is None:
+        return None
+    if isinstance(node, bool):
+        return bool(node)
+    if isinstance(node, str):
+        return str(node)
+    if isinstance(node, int):
+        # Anchored booleans are ScalarBoolean (an int subclass).
+        from ruamel.yaml.scalarbool import ScalarBoolean
+
+        return bool(node) if isinstance(node, ScalarBoolean) else int(node)
+    if isinstance(node, float):
+        return float(node)
+    raise _invalid()
+
+
+def decode_yaml_baseline(content: str) -> dict[str, Value]:
+    """Decodes a bounded YAML mapping into detached, type-aware semantic values."""
+    value = cast(dict[str, Value], _plain(_load(content)))
+    validate_value(value)
+    return value
+
+
+def encode_yaml_baseline(value: dict[str, Value]) -> str:
+    """Encodes owned values deterministically without local comments or aliases."""
+    validate_value(value)
+
+    def ordered(node: Value) -> Value:
+        if isinstance(node, dict):
+            return {key: ordered(node[key]) for key in sorted(node)}
+        if isinstance(node, list):
+            return [ordered(child) for child in node]
+        return node
+
+    stream = StringIO()
+    try:
+        _codec().dump(ordered(value), stream)
+    except (YAMLError, ValueError, TypeError, RecursionError) as error:
+        raise _invalid() from error
+    content = stream.getvalue()
+    decode_yaml_baseline(content)
+    return content
+
+
+@dataclass(frozen=True)
+class YamlReconciliation:
+    """Round-trip output, owned composite baseline, and structured conflicts."""
+
+    content: str
+    baseline: Value
+    conflicts: tuple[MergeConflict, ...]
+
+
+def reconcile_codecov(
+    original: str,
+    desired: str,
+    base: Value,
+    location: MergeLocation,
+    *,
+    missing_file: bool = False,
+    overwrite: bool = False,
+) -> YamlReconciliation:
+    """Reconciles Codecov while confining edits to independent managed AST nodes."""
+    desired_ast = _load(desired)
+    remote = cast(dict[str, Value], _plain(desired_ast))
+    doc = _load(original) if not missing_file else _load("{}\n")
+    local = cast(dict[str, Value], _plain(doc))
+    # Validate explicit membership policy even under overwrite authorization.
+    result = reconcile(
+        base, MISSING if missing_file else local, remote, location, CODECOV_POLICY
+    )
+    value = result.value
+    baseline = result.baseline
+    conflicts = list(result.conflicts)
+    if overwrite:
+
+        def overlay(target: dict[str, Value], incoming: dict[str, Value]) -> None:
+            for key, child in incoming.items():
+                if isinstance(child, dict) and isinstance(target.get(key), dict):
+                    overlay(cast(dict[str, Value], target[key]), child)
+                else:
+                    target[key] = deepcopy(child)
+
+        value = deepcopy(local)
+        baseline = deepcopy(base) if isinstance(base, dict) else {}
+        overlay(value, remote)
+        overlay(baseline, remote)
+        conflicts = []
+    if value is MISSING:
+        return YamlReconciliation(original, baseline, tuple(conflicts))
+
+    counts: dict[int, int] = {}
+
+    def count_refs(node: Any) -> None:
+        if not isinstance(node, (dict, list)) and not getattr(node, "anchor", None):
+            return
+        anchor = getattr(node, "anchor", None)
+        if anchor is not None and anchor.value is not None:
+            anchor.always_dump = True
+        counts[id(node)] = counts.get(id(node), 0) + 1
+        if counts[id(node)] > 1:
+            return
+        if isinstance(node, dict):
+            for child in node.values():
+                count_refs(child)
+            for source in getattr(node, "merge", ()):
+                count_refs(source)
+        elif isinstance(node, list):
+            for child in node:
+                count_refs(child)
+
+    count_refs(doc)
+
+    def hazardous(node: Any) -> bool:
+        return counts.get(id(node), 0) > 1 or bool(getattr(node, "merge", ()))
+
+    def contains_hazard(node: Any) -> bool:
+        if hazardous(node):
+            return True
+        children = (
+            node.values()
+            if isinstance(node, dict)
+            else node
+            if isinstance(node, list)
+            else ()
+        )
+        return any(contains_hazard(child) for child in children)
+
+    def patch(
+        ast: Any,
+        before: dict[str, Value],
+        after: dict[str, Value],
+        owned: dict[str, Value],
+        previous: dict[str, Value],
+        styled: Any,
+        keys: tuple[str, ...],
+    ) -> None:
+        for key, child in list(after.items()):
+            old = before.get(key, MISSING)
+            if semantic_equal(old, child):
+                continue
+            path = (*keys, key)
+            node = ast.get(key)
+            recursive = isinstance(old, dict) and isinstance(child, dict)
+            if hazardous(ast) or (
+                hazardous(node) if recursive else contains_hazard(node)
+            ):
+                if old is MISSING:
+                    after.pop(key)
+                else:
+                    after[key] = deepcopy(old)
+                if key in previous:
+                    owned[key] = deepcopy(previous[key])
+                else:
+                    owned.pop(key, None)
+                conflicts.append(
+                    MergeConflict(
+                        MergeLocation(location.file, path),
+                        ConflictReason.SHARED_STRUCTURE,
+                    )
+                )
+            elif recursive:
+                patch(
+                    node,
+                    cast(dict[str, Value], old),
+                    cast(dict[str, Value], child),
+                    cast(dict[str, Value], owned.setdefault(key, {})),
+                    cast(dict[str, Value], previous.get(key, {})),
+                    styled.get(key, {}),
+                    path,
+                )
+            elif (
+                isinstance(old, list)
+                and isinstance(child, list)
+                and path in CODECOV_POLICY.set_like_paths
+                and semantic_equal(old, child[: len(old)])
+            ):
+                for member in child[len(old) :]:
+                    ast[key].append(deepcopy(member))
+            else:
+                replacement = (
+                    deepcopy(styled[key])
+                    if key in styled and semantic_equal(_plain(styled[key]), child)
+                    else deepcopy(child)
+                )
+                if isinstance(node, str) and isinstance(child, str):
+                    replacement = type(node)(child)
+                    anchor = getattr(node, "anchor", None)
+                    if (
+                        isinstance(replacement, ScalarString)
+                        and anchor is not None
+                        and anchor.value is not None
+                    ):
+                        replacement.yaml_set_anchor(anchor.value, always_dump=True)
+                ast[key] = replacement
+
+    patch(
+        doc,
+        local,
+        cast(dict[str, Value], value),
+        baseline if isinstance(baseline, dict) else {},
+        base if isinstance(base, dict) else {},
+        desired_ast,
+        (),
+    )
+
+    def prune_unapplied(
+        owned: dict[str, Value], previous: dict[str, Value], current: dict[str, Value]
+    ) -> None:
+        for key, child in list(owned.items()):
+            if isinstance(child, dict) and isinstance(current.get(key), dict):
+                prune_unapplied(
+                    child,
+                    cast(dict[str, Value], previous.get(key, {}))
+                    if isinstance(previous.get(key, {}), dict)
+                    else {},
+                    cast(dict[str, Value], current[key]),
+                )
+                if not child and key not in previous:
+                    owned.pop(key)
+
+    if isinstance(baseline, dict):
+        prune_unapplied(baseline, base if isinstance(base, dict) else {}, local)
+        if not baseline and base is MISSING and not missing_file:
+            baseline = MISSING
+    if semantic_equal(local, value) and not missing_file:
+        return YamlReconciliation(original, baseline, tuple(conflicts))
+    stream = StringIO()
+    try:
+        _codec().dump(doc, stream)
+    except (YAMLError, ValueError, TypeError, RecursionError) as error:
+        raise _invalid() from error
+    content = stream.getvalue()
+    if not semantic_equal(decode_yaml_baseline(content), value):
+        raise _invalid()
+    return YamlReconciliation(content, baseline, tuple(conflicts))

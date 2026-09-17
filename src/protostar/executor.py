@@ -28,6 +28,7 @@ from .intent import (
     ContributionPolicy,
     DependencyGroup,
     ResolverFootprint,
+    StructuredFormat,
     validate_target,
 )
 from .interpolation import render_template
@@ -80,6 +81,7 @@ from .workspace import (
     resolve_python_version,
     validate_resolver_workspace,
 )
+from .yaml_ast import decode_yaml_baseline, encode_yaml_baseline, reconcile_codecov
 
 logger = logging.getLogger("protostar")
 
@@ -226,7 +228,23 @@ class SystemExecutor:
                 Path(render_template(path, self.interpolation_context)),
                 directory=path in self.manifest.filesystem.directories,
             )
-        for contributions in self.manifest.filesystem.structured.values():
+        for filepath, contributions in self.manifest.filesystem.structured.items():
+            if any(c.format is StructuredFormat.YAML for c in contributions):
+                if len(contributions) != 1 or filepath != ".github/codecov.yml":
+                    raise ConfigurationError(
+                        "Unsupported YAML contributions.",
+                        hint="Declare exactly one Codecov YAML producer.",
+                    )
+                decode_yaml_baseline(contributions[0].content)
+                target = Path(filepath)
+                if target.exists():
+                    try:
+                        decode_yaml_baseline(target.read_bytes().decode("utf-8"))
+                    except (OSError, UnicodeError) as error:
+                        raise FileSystemError(
+                            "read YAML configuration", str(target), error
+                        ) from error
+                continue
             aggregate_toml(
                 [
                     replace(
@@ -470,6 +488,47 @@ class SystemExecutor:
         )
         self.fs.write_text(target, full_content)
 
+    def _reconcile_codecov(self, desired: str) -> None:
+        """Applies the YAML pilot through the transaction and candidate state."""
+        target = Path(".github/codecov.yml")
+        record = next(
+            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
+        )
+        if record is not None and record.policy is not FilePolicy.YAML:
+            raise ConfigurationError(
+                "Conflicting structured ownership policy.",
+                hint="Keep the tracked file policy unchanged.",
+            )
+        try:
+            original = target.read_bytes().decode("utf-8") if target.exists() else ""
+            result = reconcile_codecov(
+                original,
+                desired,
+                decode_yaml_baseline(record.baseline)
+                if record and record.baseline is not None
+                else MISSING,
+                MergeLocation(target.as_posix()),
+                missing_file=not target.exists(),
+                overwrite=self.manifest.collision_strategy
+                is CollisionStrategy.OVERWRITE,
+            )
+            for conflict in result.conflicts:
+                self._merge_warning(conflict)
+            if result.baseline is not MISSING:
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        target.as_posix(),
+                        FilePolicy.YAML,
+                        encode_yaml_baseline(cast(dict[str, Value], result.baseline)),
+                    )
+                )
+            if result.content != original:
+                self.fs.write_text(target, result.content)
+        except (OSError, UnicodeError) as error:
+            raise FileSystemError(
+                "reconcile Codecov configuration", str(target), error
+            ) from error
+
     # --- Architectural Note: AST-Preserving TOML Merging ---
     # Protostar uses `tomlkit` AST parsing rather than standard dictionary updates or tomllib/tomli.
     #
@@ -478,6 +537,9 @@ class SystemExecutor:
         """Appends late-binding configuration payloads to their target files."""
         is_overwrite = self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
         for filepath, contributions in self.manifest.filesystem.structured.items():
+            if contributions[0].format is StructuredFormat.YAML:
+                self._reconcile_codecov(contributions[0].content)
+                continue
             target = Path(render_template(filepath, self.interpolation_context))
             validate_target(target.as_posix())
             enforce_path_jail(target, Path.cwd())
