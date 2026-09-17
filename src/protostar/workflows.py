@@ -214,18 +214,11 @@ def generate_pre_commit_config(
     if remote_hooks:
         repo_blocks.extend(remote_hooks)
 
-    has_commit_msg = bool(install_hook_types and "commit-msg" in install_hook_types)
-
-    header = ""
-    if has_commit_msg:
-        header = """default_install_hook_types:
-  - pre-commit
-  - commit-msg
-
-default_stages:
-  - pre-commit
-
-"""
+    hook_types = ["pre-commit", *sorted(set(install_hook_types or ()) - {"pre-commit"})]
+    header = "default_install_hook_types:\n" + "".join(
+        f"  - {kind}\n" for kind in hook_types
+    )
+    header += "\ndefault_stages:\n  - pre-commit\n\n"
 
     # Enforce exactly one empty line between all dynamic payloads
     hooks_yaml = "\n\n".join(repo_blocks)

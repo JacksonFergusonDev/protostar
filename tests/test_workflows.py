@@ -140,9 +140,9 @@ def test_generate_pre_commit_config_without_commit_msg_hook_type():
         gitleaks_rev="v8.24.0",
         install_hook_types=set(),
     )
-    assert content.startswith("repos:\n")
-    assert "default_install_hook_types" not in content
-    assert "default_stages" not in content
+    assert content.startswith("default_install_hook_types:\n")
+    assert "default_install_hook_types:\n  - pre-commit" in content
+    assert "default_stages:\n  - pre-commit" in content
 
 
 def test_generate_pre_commit_config_mypy_dependencies_interpolation():

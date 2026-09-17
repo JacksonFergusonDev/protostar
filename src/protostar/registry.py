@@ -9,7 +9,8 @@ a semantic version tag.
 To eliminate this client-side bottleneck, we shifted to an asynchronous static registry model:
 1. An auxiliary repository (`protostar-hook-registry`) tracks upstream tools via Renovate Bot.
 2. A GitHub Actions pipeline catches version bumps, compiles them, and deploys a lightweight `registry.json` payload to an edge CDN.
-3. This module makes a single HTTP GET request during the `plan()` phase. It parses the JSON in memory and the Orchestrator injects these resolved semantic versions into the YAML string blocks before writing to disk.
+3. At executor construction, this module takes one registry snapshot with per-pin
+   provenance. Pure reconciliation consumes that snapshot without network access.
 
 This decoupling provides zero-dependency churn in core, maximum determinism, and graceful offline degradation.
 """
@@ -19,9 +20,11 @@ import functools
 import json
 import logging
 import os
+from dataclasses import dataclass
 from urllib.error import URLError
 
 from ._fallbacks import DEFAULT_REVISIONS
+from .sync_state import PinProvenance
 
 logger = logging.getLogger("protostar")
 
@@ -41,6 +44,30 @@ class RemoteHook(enum.StrEnum):
     def placeholder(self) -> str:
         """Returns the template placeholder string for deferred revision interpolation."""
         return f"<% REV_{self.name} %>"
+
+
+@dataclass(frozen=True)
+class ResolvedHookRevision:
+    """Resolved automatic pin carried from planning into execution."""
+
+    hook: RemoteHook
+    revision: str
+    provenance: PinProvenance
+
+
+def resolve_hook_revisions() -> tuple[ResolvedHookRevision, ...]:
+    """Takes one registry snapshot, recording fallback provenance per repository."""
+    registry = _fetch_hook_registry()
+    return tuple(
+        ResolvedHookRevision(
+            hook,
+            registry.get(hook.value, DEFAULT_REVISIONS[hook]),
+            PinProvenance.REGISTRY
+            if hook.value in registry
+            else PinProvenance.FALLBACK,
+        )
+        for hook in RemoteHook
+    )
 
 
 _REGISTRY_URL = (

@@ -43,7 +43,8 @@ from .manifest import (
     SystemTask,
 )
 from .merge import MISSING, ConflictReason, MergeConflict, MergeLocation, Value
-from .registry import HookRegistry
+from .pre_commit import reconcile_hook_config
+from .registry import resolve_hook_revisions
 from .security import enforce_binary_safelist, enforce_path_jail
 from .sync_state import (
     DependencyState,
@@ -105,6 +106,9 @@ class SystemExecutor:
             docker: If True, scaffolds a .dockerignore from the manifest ignores.
         """
         self.manifest = manifest
+        self.hook_revisions = (
+            resolve_hook_revisions() if manifest.tooling.wants_hooks else ()
+        )
         self.config = config
         self.docker = docker or manifest.tooling.wants_docker
         if self.docker:
@@ -306,14 +310,6 @@ class SystemExecutor:
 
         target = Path(".pre-commit-config.yaml")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target):
-            self.add_diagnostic(
-                phase=DiagnosticPhase.PRE_COMMIT,
-                message=f"Skipping {target.name} generation; file already exists.",
-                severity=Severity.SKIP,
-            )
-            return
-
         full_yaml = generate_pre_commit_config(
             local_hooks=self.manifest.tooling.pre_commit_local_hooks,
             remote_hooks=self.manifest.tooling.pre_commit_hooks,
@@ -322,13 +318,44 @@ class SystemExecutor:
             install_hook_types=self.manifest.tooling.pre_commit_install_hook_types,
         )
 
-        full_yaml = HookRegistry.resolve_placeholders(full_yaml)
-
+        record = next(
+            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
+        )
+        if record is not None and record.policy is not FilePolicy.YAML:
+            raise ConfigurationError(
+                "Conflicting pre-commit ownership policy.",
+                hint="Keep the tracked file policy unchanged.",
+            )
+        self._validate_node(target)
         try:
-            self.fs.write_text(target, full_yaml)
-        except OSError as e:
-            raise FileSystemError("write configuration file", str(target), e) from e
-        logger.debug("Scaffolded .pre-commit-config.yaml")
+            original = target.read_bytes().decode("utf-8") if target.exists() else ""
+            result, pins = reconcile_hook_config(
+                original,
+                full_yaml,
+                record,
+                self.hook_revisions,
+                self.candidate_state.hook_pins,
+                missing_file=not target.exists(),
+                overwrite=self.manifest.collision_strategy
+                is CollisionStrategy.OVERWRITE,
+            )
+            for conflict in result.conflicts:
+                self._merge_warning(conflict)
+            if result.baseline is not MISSING:
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        target.as_posix(),
+                        FilePolicy.YAML,
+                        encode_yaml_baseline(cast(dict[str, Value], result.baseline)),
+                    )
+                )
+            self.candidate_state = replace(self.candidate_state, hook_pins=pins)
+            if result.content != original:
+                self.fs.write_text(target, result.content)
+        except (OSError, UnicodeError) as error:
+            raise FileSystemError(
+                "reconcile pre-commit configuration", str(target), error
+            ) from error
 
     def _write_injected_files(self) -> None:
         """Writes all queued boilerplate files to the local workspace."""

@@ -33,6 +33,8 @@ class MergeDecision(StrEnum):
 class ConflictReason(StrEnum):
     """Machine-readable reason for preserving a conflicting local contribution."""
 
+    DUPLICATE_IDENTITY = "duplicate-identity"
+    UNSAFE_PIN = "unsafe-pin"
     SHARED_STRUCTURE = "shared-structure"
     UNOWNED = "unowned"
     DIVERGED = "diverged"
