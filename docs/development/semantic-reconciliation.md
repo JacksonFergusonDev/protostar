@@ -66,7 +66,7 @@ transaction attempt; file baselines remain authoritative after partial conflicts
 | --- | --- |
 | `structured-toml` | TOML document string containing only applied contributions |
 | `structured-yaml` | Validated YAML 1.2 document string containing only applied contributions |
-| `checksum` | Last applied lowercase SHA-256 hex digest |
+| `checksum` | Last applied lowercase SHA-256 hex digest, plus optional managed-region digests |
 | `seed-only` | Path actually seeded; retained after deletion |
 | `regions` | Stable region IDs and last applied SHA-256 digests |
 
@@ -224,3 +224,47 @@ filesystem. Unchanged runs write nothing. Failures, including a failure after th
 state write, restore exact configuration/state bytes and POSIX modes. Generated
 file and append-region checksum gates remain PR F; this milestone adds neither
 pruning nor a `sync` command.
+
+## PR F: Generated files, seeds, and regions
+
+Renovate, CI/release workflows, Dockerfile, and justfile use one pure exact-byte
+SHA-256 gate. An absent never-owned target is created; an unchanged owned target
+can update. Convergence advances an existing baseline without rewriting the file.
+Unowned existing files are never adopted, including when their bytes equal the
+desired output. Edited or deleted owned files remain untouched. A pending desired
+change emits a structured conflict; an unchanged desired contribution does not
+warn merely because the user edited or deleted it. Explicit overwrite can replace
+a declared generated target and establish its new digest.
+
+Renovate's existing content is never parsed, so JSONC comments remain intact.
+New generated content must be a strict JSON object. Recognized alternative
+Renovate locations prevent creation of a competing configuration and produce a
+conflict; they are not adopted. Dockerfile preservation does not prevent additive
+`.dockerignore` updates.
+
+Free-form files record paths actually seeded. Existing files remain unowned and
+untouched in merge mode, regardless of extension; deleted seeded files stay absent.
+New never-seeded paths can still be created.
+
+Named append regions use the same gate per stable identity. The digest covers
+UTF-8 bytes from the begin marker through the end marker, including the payload
+and internal line endings, excluding the newline following the end marker.
+Replacement preserves all bytes outside that interval. Existing unowned regions
+remain unowned; edited/deleted regions retain their old digest. Deleting an owned
+region file protects newly introduced regions too. Omitted region identities
+retain their baselines without pruning. Duplicate, nested, malformed, or legacy
+anonymous boundaries raise domain errors, including boundaries injected by a
+new payload.
+
+Accepted digests and seeded paths enter the candidate state only, with final state
+writes through the transactional filesystem. No-op runs write nothing; failures
+restore exact file/state bytes and POSIX modes. Resolver completion and end-to-end
+Stage 1 acceptance remain PR G and PR H.
+
+Generated targets with declared append regions (the embedded justfile) checksum
+the complete desired file and also retain individual region digests. If user edits
+prevent whole-file regeneration, clean region updates can still apply independently.
+A pre-existing unowned generated target can own a newly appended region without
+acquiring whole-file ownership. When a previously managed region is omitted, merge
+mode conservatively skips whole-file regeneration because its digest cannot
+reconstruct the omitted payload; independently declared region updates still apply.

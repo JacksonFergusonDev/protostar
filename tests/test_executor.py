@@ -28,6 +28,13 @@ from protostar.manifest import (
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def isolated_executor_workspace(tmp_path, monkeypatch):
+    workspace = tmp_path / "protostar"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+
+
 @pytest.fixture
 def mock_config() -> UserConfig:
     """Provides a fresh baseline configuration for DI injections."""
@@ -378,23 +385,23 @@ def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
 
 
 def test_executor_skips_docker_artifacts_on_collision(mocker, mock_config):
-    """Test that existing Dockerfile causes both Dockerfile and .dockerignore to be skipped when merging."""
+    """Test that preserving Dockerfile still processes additive Docker ignores."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mocker.patch("protostar.executor.Path.read_bytes", return_value=b"custom")
     mocker.patch("protostar.executor.Path.read_text", return_value="")
     mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._write_docker_artifacts()
 
     written_paths = [call[0][0] for call in mock_write.call_args_list]
-    assert Path(".dockerignore") not in written_paths
+    assert Path(".dockerignore") in written_paths
     assert Path("Dockerfile") not in written_paths
     assert any(
-        "Skipping Dockerfile and .dockerignore generation; Dockerfile already exists."
-        in d.message
+        "Preserving local contribution in Dockerfile" in d.message
         for d in executor.diagnostics
     )
 
@@ -406,6 +413,7 @@ def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_c
     executor = SystemExecutor(manifest, mock_config, docker=True)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
+    mocker.patch("protostar.executor.Path.read_bytes", return_value=b"old")
     mock_read = mocker.patch(
         "protostar.executor.Path.read_text", return_value="old_ignored_file\n"
     )
@@ -437,10 +445,7 @@ def test_write_dockerfile_handles_os_error(mocker, mock_config):
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_docker_artifacts()
 
-    assert (
-        "scaffold container runtime configurations (Dockerfile)"
-        in exc_info.value.operation
-    )
+    assert "write generated file" in exc_info.value.operation
     assert "Dockerfile" in exc_info.value.path
 
 
@@ -643,7 +648,9 @@ def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
     manifest.collision_strategy = CollisionStrategy.MERGE
     executor = SystemExecutor(manifest, mock_config)
 
-    mocker.patch("protostar.executor.Path.read_text", return_value=existing_content)
+    mocker.patch(
+        "protostar.executor.Path.read_bytes", return_value=existing_content.encode()
+    )
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mock_write = mocker.patch.object(executor.fs, "write_text")
 
@@ -677,7 +684,7 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
     executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mocker.patch("protostar.executor.Path.read_text", return_value="existing_data")
+    mocker.patch("protostar.executor.Path.read_bytes", return_value=b"existing_data")
     mock_write = mocker.patch.object(executor.fs, "write_text")
 
     executor._append_files()
@@ -936,6 +943,7 @@ def test_append_files_handles_string_block_write_failure(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
+    mocker.patch.object(Path, "read_bytes", return_value=b"")
     mocker.patch.object(
         executor.fs,
         "write_text",
@@ -956,6 +964,7 @@ def test_write_ignores_handles_os_error(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
+    mocker.patch.object(Path, "read_bytes", return_value=b"")
     mocker.patch.object(
         executor.fs,
         "write_text",
@@ -978,6 +987,7 @@ def test_write_docker_artifacts_handles_os_error(mocker):
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")
+    mocker.patch.object(Path, "read_bytes", return_value=b"")
     mocker.patch.object(
         executor.fs,
         "write_text",
@@ -1255,13 +1265,14 @@ def test_executor_skips_justfile_when_file_exists(mocker, mock_config):
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mock_write = mocker.patch.object(executor.fs, "write_text")
 
+    mocker.patch("protostar.executor.Path.read_bytes", return_value=b"custom")
     executor._write_justfile()
 
     mock_write.assert_not_called()
     assert len(executor.diagnostics) == 1
-    assert executor.diagnostics[0].phase == DiagnosticPhase.JUST
-    assert executor.diagnostics[0].severity == Severity.SKIP
-    assert "Skipping justfile generation" in executor.diagnostics[0].message
+    assert executor.diagnostics[0].phase == DiagnosticPhase.EXECUTOR
+    assert executor.diagnostics[0].severity == Severity.WARNING
+    assert "justfile" in executor.diagnostics[0].message
 
 
 def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_config):
@@ -1310,9 +1321,9 @@ def test_executor_write_ci_workflow_skips_existing_merge(
 
     assert ci_file.read_text(encoding="utf-8") == "# Custom CI\n"
     assert len(executor.diagnostics) == 1
-    assert executor.diagnostics[0].phase == DiagnosticPhase.CI
-    assert executor.diagnostics[0].severity == Severity.SKIP
-    assert "Skipping ci.yml generation" in executor.diagnostics[0].message
+    assert executor.diagnostics[0].phase == DiagnosticPhase.EXECUTOR
+    assert executor.diagnostics[0].severity == Severity.WARNING
+    assert "ci.yml" in executor.diagnostics[0].message
 
 
 def test_executor_write_ci_workflow_overwrites_existing_overwrite(
@@ -1359,9 +1370,9 @@ def test_executor_write_release_workflow_skips_existing_merge(
 
     assert release_file.read_text(encoding="utf-8") == "# Custom Release\n"
     assert len(executor.diagnostics) == 1
-    assert executor.diagnostics[0].phase == DiagnosticPhase.CI
-    assert executor.diagnostics[0].severity == Severity.SKIP
-    assert "Skipping release.yml generation" in executor.diagnostics[0].message
+    assert executor.diagnostics[0].phase == DiagnosticPhase.EXECUTOR
+    assert executor.diagnostics[0].severity == Severity.WARNING
+    assert "release.yml" in executor.diagnostics[0].message
 
 
 def test_executor_write_release_workflow_overwrites_existing_overwrite(
@@ -1409,7 +1420,7 @@ def test_executor_write_ci_workflow_handles_os_error(
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_ci_workflow()
 
-    assert "write CI workflow" in exc_info.value.operation
+    assert "write generated file" in exc_info.value.operation
     assert "ci.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 
@@ -1433,7 +1444,7 @@ def test_executor_write_release_workflow_handles_os_error(
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_release_workflow()
 
-    assert "write release workflow" in exc_info.value.operation
+    assert "write generated file" in exc_info.value.operation
     assert "release.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 

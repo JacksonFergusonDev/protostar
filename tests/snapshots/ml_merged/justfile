@@ -34,6 +34,12 @@ lint: sync
     uv run ruff format --check .
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
+# Run static type checking
+typecheck: sync
+    @printf "\n{{ blue }}=== Running Type Checks ==={{ nc }}\n"
+    uv run mypy .
+    @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
+
 # Run the full automated testing matrix
 test: sync
     @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
@@ -47,7 +53,7 @@ test-cov: sync
     @printf "{{ green }}✔ Coverage run complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint test
+ci: lint typecheck test
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -56,6 +62,7 @@ clean:
     rm -rf \
         .rumdl_cache \
         .ruff_cache \
+        .mypy_cache \
         .pytest_cache \
         htmlcov \
         .coverage \

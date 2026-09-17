@@ -128,7 +128,7 @@ class FileState:
                 if self.path == ".pre-commit-config.yaml":
                     validate_pre_commit_baseline(value)
         elif self.policy is FilePolicy.CHECKSUM:
-            if self.digest is None or self.baseline is not None or self.regions:
+            if self.digest is None or self.baseline is not None:
                 raise _invalid("checksum policy requires only a digest.")
             _digest(self.digest)
         elif self.policy is FilePolicy.SEED:

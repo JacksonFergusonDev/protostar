@@ -1,13 +1,14 @@
 import datetime
+import json
 import logging
 import stat
 import tomllib
 from dataclasses import replace
-from functools import partial
 from pathlib import Path
 from typing import cast
 
 from .appends import append_marker_blocks
+from .checksum import checksum_gate
 from .config import UserConfig
 from .dependencies import (
     install_dependencies,
@@ -50,6 +51,7 @@ from .sync_state import (
     DependencyState,
     FilePolicy,
     FileState,
+    RegionState,
     SyncState,
     check_template_identity,
     decode_toml_baseline,
@@ -369,16 +371,53 @@ class SystemExecutor:
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
             enforce_path_jail(target, Path.cwd())
-            if self.manifest.should_skip_file(target):
+            if target.as_posix() == ".github/renovate.json":
+                try:
+                    parsed = json.loads(content)
+                except json.JSONDecodeError as error:
+                    raise ConfigurationError(
+                        "Invalid generated Renovate JSON.",
+                        hint="Provide strict JSON for the generated configuration.",
+                    ) from error
+                if not isinstance(parsed, dict):
+                    raise ConfigurationError(
+                        "Invalid generated Renovate root.",
+                        hint="Provide a JSON object.",
+                    )
+                alternatives = (
+                    "renovate.json",
+                    "renovate.json5",
+                    ".renovaterc",
+                    ".renovaterc.json",
+                    ".renovaterc.json5",
+                    ".github/renovate.json5",
+                    ".gitlab/renovate.json",
+                    ".gitlab/renovate.json5",
+                )
+                if any(Path(path).exists() for path in alternatives):
+                    self._merge_warning(
+                        MergeConflict(
+                            MergeLocation(target.as_posix()), ConflictReason.UNOWNED
+                        )
+                    )
+                    continue
+                self._write_generated(target, content)
+                continue
+            record = self._file_record(target, FilePolicy.SEED)
+            if self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE and (
+                target.exists() or record is not None
+            ):
                 self.add_diagnostic(
-                    phase=DiagnosticPhase.EXECUTOR,
-                    message=f"Skipping {target.name} generation; file already exists.",
-                    severity=Severity.SKIP,
+                    DiagnosticPhase.EXECUTOR,
+                    f"Skipping {target.name} generation; existing or deleted seed.",
+                    Severity.SKIP,
                 )
                 continue
-
             try:
                 self.fs.write_text(target, content)
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(target.as_posix(), FilePolicy.SEED)
+                )
             except OSError as e:
                 raise FileSystemError("inject boilerplate file", str(target), e) from e
             logger.debug(f"Injected configuration file: {interpolated_filepath}")
@@ -447,14 +486,6 @@ class SystemExecutor:
 
         target = Path(".github/workflows/ci.yml")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target):
-            self.add_diagnostic(
-                phase=DiagnosticPhase.CI,
-                message=f"Skipping {target.name} generation; file already exists.",
-                severity=Severity.SKIP,
-            )
-            return
-
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
@@ -464,7 +495,7 @@ class SystemExecutor:
             )
         )
         try:
-            self.fs.write_text(target, workflow)
+            self._write_generated(target, workflow)
         except OSError as e:
             raise FileSystemError("write CI workflow", str(target), e) from e
 
@@ -475,17 +506,9 @@ class SystemExecutor:
 
         target = Path(".github/workflows/release.yml")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target):
-            self.add_diagnostic(
-                phase=DiagnosticPhase.CI,
-                message=f"Skipping {target.name} generation; file already exists.",
-                severity=Severity.SKIP,
-            )
-            return
-
         workflow = generate_release_workflow()
         try:
-            self.fs.write_text(target, workflow)
+            self._write_generated(target, workflow)
         except OSError as e:
             raise FileSystemError("write release workflow", str(target), e) from e
 
@@ -496,14 +519,6 @@ class SystemExecutor:
 
         target = Path("justfile")
         enforce_path_jail(target, Path.cwd())
-        if self.manifest.should_skip_file(target):
-            self.add_diagnostic(
-                phase=DiagnosticPhase.JUST,
-                message=f"Skipping {target.name} generation; file already exists.",
-                severity=Severity.SKIP,
-            )
-            return
-
         full_content = generate_justfile(
             JustfileSpec(
                 format_commands=self.manifest.tooling.just_format_commands,
@@ -513,7 +528,7 @@ class SystemExecutor:
                 clean_paths=self.manifest.tooling.just_clean_paths,
             )
         )
-        self.fs.write_text(target, full_content)
+        self._write_generated(target, full_content)
 
     def _reconcile_codecov(self, desired: str) -> None:
         """Applies the YAML pilot through the transaction and candidate state."""
@@ -667,8 +682,10 @@ class SystemExecutor:
             validate_target(target.as_posix())
             enforce_path_jail(target, Path.cwd())
             try:
-                original = target.read_text(encoding="utf-8") if target.exists() else ""
-            except OSError as e:
+                original = (
+                    target.read_bytes().decode("utf-8") if target.exists() else ""
+                )
+            except (OSError, UnicodeError) as e:
                 raise FileSystemError(
                     "read target append context", str(target), e
                 ) from e
@@ -678,29 +695,148 @@ class SystemExecutor:
                 )
                 for c in regions
             ]
+            record = next(
+                (r for r in self.candidate_state.files if r.path == target.as_posix()),
+                None,
+            )
+            if record is not None and record.policy not in (
+                FilePolicy.REGIONS,
+                FilePolicy.CHECKSUM,
+            ):
+                raise ConfigurationError(
+                    "Conflicting region ownership policy.",
+                    hint="Keep the tracked file policy unchanged.",
+                )
             region_result = append_marker_blocks(
                 original,
                 region_payloads,
                 target,
                 overwrite=is_overwrite,
-                on_conflict=partial(self._warn_region_conflict, target),
+                baselines={r.id: r.digest for r in record.regions} if record else {},
+                missing_owned_file=record is not None and not target.exists(),
             )
-            if region_result is not None:
+            for identity in region_result.conflicts:
+                self._merge_warning(
+                    MergeConflict(
+                        MergeLocation(target.as_posix(), identity=identity),
+                        ConflictReason.DIVERGED if record else ConflictReason.UNOWNED,
+                    )
+                )
+            if region_result.digests:
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        target.as_posix(),
+                        record.policy if record else FilePolicy.REGIONS,
+                        digest=record.digest if record else None,
+                        regions=tuple(
+                            RegionState(identity, digest)
+                            for identity, digest in region_result.digests.items()
+                        ),
+                    )
+                )
+            if region_result.content != original:
                 try:
-                    self.fs.write_text(target, region_result)
+                    self.fs.write_text(target, region_result.content)
                 except OSError as e:
                     raise FileSystemError(
                         "append configurations block", str(target), e
                     ) from e
 
-    def _warn_region_conflict(self, target: Path, identity: str) -> None:
-        """Reports a preserved existing region until checksum ownership is available."""
-        self.add_diagnostic(
-            DiagnosticPhase.EXECUTOR,
-            f"Preserving existing append region in {target}: {identity}.",
-            Severity.WARNING,
-            "Checksum ownership is not available yet; explicit overwrite is required for region updates.",
+    def _file_record(self, target: Path, policy: FilePolicy) -> FileState | None:
+        """Returns ownership after checking that the policy has not changed."""
+        record = next(
+            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
         )
+        if record is not None and record.policy is not policy:
+            raise ConfigurationError(
+                "Conflicting file ownership policy.",
+                hint="Keep the tracked file policy unchanged.",
+            )
+        return record
+
+    def _write_generated(self, target: Path, content: str) -> None:
+        """Applies the shared checksum gate transactionally to exact generated bytes."""
+        enforce_path_jail(target, Path.cwd())
+        self._validate_node(target)
+        record = next(
+            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
+        )
+        if record is not None and record.policy not in (
+            FilePolicy.CHECKSUM,
+            FilePolicy.REGIONS,
+        ):
+            raise ConfigurationError(
+                "Conflicting generated ownership policy.",
+                hint="Keep the tracked file policy unchanged.",
+            )
+        contributions = self.manifest.filesystem.regions.get(target.as_posix(), [])
+        if record is not None and any(
+            r.id not in {c.id for c in contributions} for r in record.regions
+        ):
+            # Digests cannot reconstruct omitted payloads. Preserve the whole file
+            # rather than removing a region during otherwise clean regeneration.
+            return
+        framed = append_marker_blocks(
+            content,
+            [
+                AppendContribution(
+                    c.id, render_template(c.content, self.interpolation_context)
+                )
+                for c in contributions
+            ],
+            target,
+            overwrite=True,
+        )
+        content = framed.content
+        try:
+            local = target.read_bytes() if target.exists() else None
+            desired = content.encode("utf-8")
+            if (
+                local is None
+                and record is not None
+                and record.policy is FilePolicy.REGIONS
+                and self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE
+            ):
+                self._merge_warning(
+                    MergeConflict(
+                        MergeLocation(target.as_posix()),
+                        ConflictReason.DELETED_ANCESTOR,
+                    )
+                )
+                return
+            result = checksum_gate(
+                local,
+                desired,
+                record.digest if record else None,
+                overwrite=self.manifest.collision_strategy
+                is CollisionStrategy.OVERWRITE,
+            )
+            if result.conflict:
+                self._merge_warning(
+                    MergeConflict(
+                        MergeLocation(target.as_posix()),
+                        ConflictReason.DIVERGED if record else ConflictReason.UNOWNED,
+                    )
+                )
+            if result.write:
+                self.fs.write_text(target, content)
+            if result.digest is not None:
+                regions = {r.id: r.digest for r in record.regions} if record else {}
+                if result.write or (record is not None and local == desired):
+                    regions.update(framed.digests)
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        target.as_posix(),
+                        FilePolicy.CHECKSUM,
+                        digest=result.digest,
+                        regions=tuple(
+                            RegionState(identity, digest)
+                            for identity, digest in regions.items()
+                        ),
+                    )
+                )
+        except OSError as error:
+            raise FileSystemError("write generated file", str(target), error) from error
 
     def _apply_dependency_includes(self) -> None:
         """Applies typed include edges before uv add observes dependency metadata."""
@@ -784,14 +920,7 @@ class SystemExecutor:
         dockerignore = Path(".dockerignore")
         enforce_path_jail(dockerfile, Path.cwd())
         enforce_path_jail(dockerignore, Path.cwd())
-
-        if self.manifest.should_skip_file(dockerfile):
-            self.add_diagnostic(
-                phase=DiagnosticPhase.DOCKER,
-                message=f"Skipping {dockerfile.name} and {dockerignore.name} generation; {dockerfile.name} already exists.",
-                severity=Severity.SKIP,
-            )
-            return
+        self._validate_node(dockerignore)
 
         try:
             existing_content = (
@@ -853,7 +982,7 @@ class SystemExecutor:
                 ) from e
 
         try:
-            self.fs.write_text(dockerfile, dockerfile_content)
+            self._write_generated(dockerfile, dockerfile_content)
             logger.debug("Scaffolded Dockerfile")
         except OSError as e:
             raise FileSystemError(

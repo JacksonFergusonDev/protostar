@@ -9,9 +9,30 @@ digest = "a5821920ff0285d484d03db7f8ba22b35013395acded3758653d460ceca09cf7"
 display_name = "embedded"
 
 [[files]]
+path = ".envrc"
+policy = "seed-only"
+
+[[files]]
+path = "justfile"
+policy = "checksum"
+digest = "18c2fb38321e1dcc88b45c9159c40c3e8b8216209ec3d34ffc3207c968d5d02e"
+
+[[files.regions]]
+id = "template:059d1993625a3d78f74b76169594cf2d39e9185cf7d38976689c9ca218adb171:microcontroller_recipes"
+digest = "9821649381e559f7579238417a3098da0304a289cb18b65f7b946812342b4bb9"
+
+[[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
 baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+
+[[files]]
+path = "src/board/boot.py"
+policy = "seed-only"
+
+[[files]]
+path = "src/board/main.py"
+policy = "seed-only"
 
 [[dependencies]]
 path = "pyproject.toml"

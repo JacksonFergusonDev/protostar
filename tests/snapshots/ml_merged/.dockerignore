@@ -30,3 +30,4 @@ mlruns/
 runs/
 tests/
 wandb/
+.mypy_cache/
