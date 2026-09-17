@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Protostar project review v1",
+  "type": "object",
+  "required": [
+    "api_version",
+    "status",
+    "pending",
+    "review",
+    "diffs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "const": 1
+    },
+    "status": {
+      "const": "reviewed"
+    },
+    "pending": {
+      "type": "boolean"
+    },
+    "review": {
+      "type": "object",
+      "properties": {
+        "edits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "before": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "after": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "before",
+              "after"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "directories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "identity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "duplicate-identity",
+                  "unsafe-pin",
+                  "shared-structure",
+                  "unowned",
+                  "diverged",
+                  "type-mismatch",
+                  "deleted-ancestor"
+                ]
+              }
+            },
+            "required": [
+              "file",
+              "keys",
+              "identity",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "preserved": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "identity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "deleted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "file",
+              "keys",
+              "identity",
+              "deleted"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "state_changed": {
+          "type": "boolean"
+        },
+        "resolver": {
+          "type": "object",
+          "properties": {
+            "requirements": {
+              "type": "object",
+              "properties": {
+                "main": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "dev": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "docs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "main",
+                "dev",
+                "docs"
+              ],
+              "additionalProperties": false
+            },
+            "lock_required": {
+              "type": "boolean"
+            },
+            "footprint": {
+              "type": "object",
+              "properties": {
+                "paths": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "paths"
+              ],
+              "additionalProperties": false
+            },
+            "output": {
+              "enum": [
+                "unknown",
+                null
+              ]
+            }
+          },
+          "required": [
+            "requirements",
+            "lock_required",
+            "footprint",
+            "output"
+          ],
+          "additionalProperties": false
+        },
+        "initialization_only": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "initialization_only_ide_probe": {
+          "type": "boolean"
+        },
+        "selections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tool": {
+                "enum": [
+                  "direnv",
+                  "markdownlint",
+                  "rumdl",
+                  "ruff",
+                  "mypy",
+                  "ty",
+                  "pyrefly",
+                  "pytest",
+                  "pre_commit",
+                  "prek",
+                  "commitizen",
+                  "renovate",
+                  "codecov",
+                  "zensical",
+                  "readthedocs",
+                  "ci",
+                  "release",
+                  "just"
+                ]
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "layer": {
+                "enum": [
+                  "project",
+                  "template",
+                  "fallback"
+                ]
+              }
+            },
+            "required": [
+              "tool",
+              "enabled",
+              "layer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "producers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "producer": {
+                "type": "string"
+              },
+              "tool": {
+                "enum": [
+                  null,
+                  "direnv",
+                  "markdownlint",
+                  "rumdl",
+                  "ruff",
+                  "mypy",
+                  "ty",
+                  "pyrefly",
+                  "pytest",
+                  "pre_commit",
+                  "prek",
+                  "commitizen",
+                  "renovate",
+                  "codecov",
+                  "zensical",
+                  "readthedocs",
+                  "ci",
+                  "release",
+                  "just"
+                ]
+              },
+              "path": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "producer",
+              "tool",
+              "path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "edits",
+        "directories",
+        "conflicts",
+        "preserved",
+        "state_changed",
+        "resolver",
+        "initialization_only",
+        "initialization_only_ide_probe",
+        "selections",
+        "producers"
+      ],
+      "additionalProperties": false
+    },
+    "diffs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "diff"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "diff": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

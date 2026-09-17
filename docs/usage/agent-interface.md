@@ -30,7 +30,7 @@ By passing the position-independent `--json` flag and utilizing the `--dry-run` 
 
 ## The Machine Protocol
 
-Protostar marks its machine interface with an explicit `api_version` field in all JSON payloads (`"api_version": 0` during the experimental phase).
+Protostar marks its machine interface with an explicit `api_version` field in all JSON payloads (`"api_version": 1` during the experimental phase).
 
 The CLI uses a position-independent `--json` flag that can appear anywhere in the argument list (e.g., `protostar --json`, `protostar init --template cli --json`, or `protostar --json init`).
 
@@ -154,3 +154,19 @@ Agents can use standard JSON Schema validators (e.g., `jsonschema` in Python or 
 - __[The Environment Manifest](../mechanics/manifest.md):__ Detailed structure and domain slices of the in-memory state object serialized during `--dry-run --json`.
 - __[Error Handling Architecture](../mechanics/error_handling.md):__ Deep dive into machine error envelopes, collision paths, and POSIX exit code mappings.
 - __[CLI Reference](./cli-reference.md):__ Full list of subcommands, global flags, and exit status codes.
+
+## Project review envelopes
+
+`protostar status --json` and `protostar diff --json` return the same deterministic
+review envelope with `status: "reviewed"`, `pending`, `review`, and accepted `diffs`.
+Discover its JSON Schema through `protostar help status --json` in
+`capabilities.review_schema`. The generated schema is included below.
+
+```json
+--8<-- "review_schema.json"
+```
+
+Both commands exit `0` for a valid review, including conflicts. Domain failures use
+the existing error envelope and domain exit code. Resolver output is explicitly
+unknown; review never runs package managers. Diffs contain project content and
+are not a secret-redaction system.

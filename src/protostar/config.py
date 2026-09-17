@@ -519,7 +519,6 @@ class TemplateBlueprint:
                 base_dir = target_path
 
             template_bytes = toml_path.read_bytes()
-            toml_content = template_bytes.decode("utf-8")
 
             raw_files: dict[str, str] = {}
             template_dir = base_dir / "template"
@@ -535,67 +534,89 @@ class TemplateBlueprint:
                     rel_path = str(file_path.relative_to(template_dir))
                     raw_files[rel_path] = file_path.read_text(encoding="utf-8")
 
-            all_text_sources = [toml_content, *raw_files.keys(), *raw_files.values()]
-            combined_text = "\n".join(all_text_sources)
-            variables = extract_variables(combined_text)
-
-            context = dict(template_context) if template_context else {}
-
-            late_binding_vars = {
-                "PYTHON_VERSION",
-                "PROJECT_NAME",
-                "PACKAGE_NAME",
-                "CURRENT_YEAR",
-                "AUTHOR_NAME",
-            }
-            missing = [
-                v for v in variables if v not in context and v not in late_binding_vars
-            ]
-
-            if missing:
-                if variable_resolver is not None:
-                    context.update(variable_resolver(missing))
-                else:
-                    raise TemplateResolutionError(
-                        target,
-                        f"Template requires variables: {', '.join(missing)}.",
-                        hint="Please provide them via CLI flags (e.g. --variable_name=value) or run in an interactive terminal.",
-                    )
-
-            rendered_toml = render_template(toml_content, context, escape_toml=True)
-            blueprint = cls._parse(rendered_toml, target)
-            blueprint.custom_variables = frozenset(variables) - late_binding_vars
-
-            interpolated_files: dict[str, str] = {}
-            for rel_path, content in raw_files.items():
-                new_path = render_template(rel_path, context, escape_toml=False)
-                new_content = render_template(content, context, escape_toml=False)
-                interpolated_files[new_path] = new_content
-
-            blueprint.files.update(interpolated_files)
             origin = (
                 TemplateOrigin.BUILT_IN
                 if built_in
-                else (TemplateOrigin.REMOTE if temp_dir else TemplateOrigin.LOCAL)
+                else TemplateOrigin.REMOTE
+                if remote_source
+                else TemplateOrigin.LOCAL
             )
             locator = built_in or (
                 remote_source.locator
                 if remote_source
                 else toml_path.expanduser().resolve().as_posix()
             )
-            blueprint.reference = TemplateReference(
+            reference = TemplateReference(
                 origin,
                 locator,
                 hashlib.sha256(template_bytes).hexdigest(),
                 display_name,
-                blueprint.version or None,
-                remote_source.revision if remote_source else None,
+                source_revision=remote_source.revision if remote_source else None,
             )
-            blueprint._validate_declarations()
-            return blueprint
+            return cls.from_sources(
+                template_bytes,
+                raw_files,
+                reference,
+                template_context,
+                variable_resolver,
+            )
         finally:
             if temp_dir is not None:
                 temp_dir.cleanup()
+
+    @classmethod
+    def from_sources(
+        cls,
+        template_bytes: bytes,
+        raw_files: dict[str, str],
+        reference: TemplateReference,
+        template_context: dict[str, str] | None = None,
+        variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
+    ) -> "TemplateBlueprint":
+        """Renders one acquired source revision entirely in memory."""
+        target = reference.locator
+        toml_content = template_bytes.decode("utf-8")
+        all_text_sources = [toml_content, *raw_files.keys(), *raw_files.values()]
+        combined_text = "\n".join(all_text_sources)
+        variables = extract_variables(combined_text)
+
+        context = dict(template_context) if template_context else {}
+
+        late_binding_vars = {
+            "PYTHON_VERSION",
+            "PROJECT_NAME",
+            "PACKAGE_NAME",
+            "CURRENT_YEAR",
+            "AUTHOR_NAME",
+        }
+        missing = [
+            v for v in variables if v not in context and v not in late_binding_vars
+        ]
+
+        if missing:
+            if variable_resolver is not None:
+                context.update(variable_resolver(missing))
+            else:
+                raise TemplateResolutionError(
+                    target,
+                    f"Template requires variables: {', '.join(missing)}.",
+                    hint="Please provide them via CLI flags (e.g. --variable_name=value) or run in an interactive terminal.",
+                )
+
+        rendered_toml = render_template(toml_content, context, escape_toml=True)
+        blueprint = cls._parse(rendered_toml, target)
+        blueprint.custom_variables = frozenset(variables) - late_binding_vars
+
+        interpolated_files: dict[str, str] = {}
+        for rel_path, content in raw_files.items():
+            new_path = render_template(rel_path, context, escape_toml=False)
+            new_content = render_template(content, context, escape_toml=False)
+            interpolated_files[new_path] = new_content
+
+        blueprint.files.update(interpolated_files)
+        blueprint.reference = replace(reference, version=blueprint.version or None)
+        blueprint._validate_declarations()
+        return blueprint
 
     @classmethod
     def _parse(cls, content: str, source: str = "unknown") -> "TemplateBlueprint":
