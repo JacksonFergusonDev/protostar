@@ -268,3 +268,35 @@ A pre-existing unowned generated target can own a newly appended region without
 acquiring whole-file ownership. When a previously managed region is omitted, merge
 mode conservatively skips whole-file regeneration because its digest cannot
 reconstruct the omitted payload; independently declared region updates still apply.
+
+## PR G resolver and derived-artifact boundary
+
+System tasks establish the local project first (`uv init` when needed). Structured
+TOML and accepted typed include edges then apply before any dependency resolver.
+Requirement selection remains per group, canonical package name, and normalized
+marker; extras, bounds, and direct references remain requirement values. Only
+accepted requests invoke `uv add`; successful requests record both declared intent
+and the actual materialized requirement. Matching foreign entries remain unowned.
+Unchanged declared intent preserves resolver-added bounds and later user edits.
+
+Accepted `requires-python` or include-edge writes mark resolution dirty. A later
+accepted `uv add` resolves the final metadata and clears that flag. Otherwise one
+`uv lock` runs after all relevant writes. Identical repeats run neither command.
+Include ownership records only managed edges and groups created for them in the
+owned TOML baseline; foreign requirements and include records are never copied
+into ownership. Deleted owned edges/groups stay deleted, including when a new
+requirement would otherwise recreate their group. Removed template edges are
+not pruned. Ambiguous include identities preserve local content with a conflict.
+
+Resolver invocation requires a local project and a footprint containing both
+`pyproject.toml` and `uv.lock`. Ancestor workspace ownership remains rejected.
+Both resolver paths are journaled before invocation. Failures/timeouts are fatal;
+interrupts terminate managed processes before rollback restores exact original
+project, lock, and state bytes and modes. `.venv` and global caches remain outside
+the rollback boundary. No AST dependency rewrite, implicit upgrade, or redundant
+lock after an ordinary dependency addition is introduced.
+
+The snapshot table-placement changes are intentional: dependency groups created
+by the resolver now follow tooling tables that must exist before resolution.
+Requirement values are unchanged. The CLI snapshot additionally records its
+managed dev-to-docs edge and the initially created docs group.

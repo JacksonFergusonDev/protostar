@@ -1,6 +1,6 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: PR-A through PR-F complete; PR-G is next.
+Status: PR-A through PR-G complete; PR-H is next.
 Updated: 2026-09-17.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
@@ -40,7 +40,7 @@ Protostar is pre-1.0 with no external users. Break APIs and template schemas cle
 
 ### Implementation status
 
-This checklist records implementation progress, including the completed PR-F
+This checklist records implementation progress, including the completed PR-G
 implementation submitted for review. It is limited to this plan; a completed
 milestone does not imply that later reconciliation behavior is available.
 
@@ -52,7 +52,8 @@ milestone does not imply that later reconciliation behavior is available.
 | PR-D: YAML codec and Codecov pilot | **Complete** | Bounded YAML 1.2 round-trip codec; explicit Codecov structured intent; validated YAML owned snapshots; three-way target and ignore-list reconciliation; shared-alias/merge-key protection; transactional writes and rollback. | Nine-file targeted suite: 372 passed, including 44 YAML/Codecov acceptance tests. |
 | PR-E: Identity-based pre-commit reconciliation | **Complete** | Keyed repository/hook fields and explicit runner defaults; owned YAML snapshots and transactional pin provenance; fallback/regression guards; custom hooks/comments and ambiguous identities preserved. | 375 targeted tests passed across twelve files; implementation commit `c4373e5`; commit hooks passed. |
 | PR-F: Generated-file and append-region checksum gates | **Complete** | Shared exact-byte generated-file gate; stable region digests and replacement; seed deletion protection; independent additive Docker ignores; Renovate alternative-location checks. | Six-file targeted suite: 262 passed; snapshot and commit/pre-push gates recorded in the implementation PR. |
-| PR-G through PR-H | Planned | — | — |
+| PR-G: Resolver ordering and derived-artifact completion | **Complete** | Final structured TOML/include writes precede resolution; one conditional lock for metadata changes without accepted additions; requested/materialized per-group tracking; local resolver project/footprint validation; include-edge ownership and deletion protection. | Six-file targeted suite: 209 passed; read-only review regression fixed; intended snapshot table-placement and include-baseline changes reviewed. |
+| PR-H | Planned | — | — |
 
 ## 2. Scope and per-artifact policy
 
@@ -358,7 +359,7 @@ Depends on PR-C; implement after PR-E by default to avoid simultaneous executor 
 
 Gate: **Complete.** All five generated artifacts share an exact-byte SHA-256 gate with initial creation, unchanged repeat, clean update, local edit, convergence, missing baseline, and deletion tests. Stable append regions retain surrounding bytes and composite digests; malformed/legacy boundaries fail without adoption. Deleted seeded paths and owned region files remain absent; independent Docker ignores append new patterns. Existing commented Renovate content is never parsed or rewritten; competing recognized locations are preserved with a structured conflict, and generated JSON is validated. Exact file/state bytes and POSIX modes roll back on failure. `uv run pytest tests/test_checksum_execution.py tests/test_appends.py tests/test_intent.py tests/test_executor.py tests/test_reconciliation_execution.py tests/test_sync_state.py -q` passed **262 tests**. See [PR F contracts](docs/development/semantic-reconciliation.md#pr-f-generated-files-seeds-and-regions).
 
-### PR-G: Resolver ordering and derived-artifact completion
+### PR-G: Resolver ordering and derived-artifact completion — **Complete**
 
 Depends on PR-C and relevant artifact integration.
 
@@ -367,7 +368,7 @@ Depends on PR-C and relevant artifact integration.
 - Add conditional lock-only actions for supported metadata changes not handled by a later `uv add`.
 - Validate resolver workspace ownership and preserve fatal failure/interrupt/process cleanup behavior.
 
-Gate: unchanged requirements invoke no redundant `uv add`/`uv lock`; user constraints are not reset; additions resolve once through the existing path; include-group/requires-python changes leave the mocked lock up to date; failures restore original pyproject/lock/state bytes and modes.
+Gate: **Complete.** `uv run pytest tests/test_resolver_execution.py tests/test_reconciliation_execution.py tests/test_intent.py tests/test_executor.py tests/test_dependencies.py tests/test_workspace.py -q` passed **209 tests**. Initializer ordering, final metadata observation, all three dependency groups, foreign identities, include deletions, and resolver failure/timeout/interrupt rollback are covered with in-process doubles. A separate read-only review identified an include-owned group resurrection gap; the fix checks owned group baselines before accepting new dependencies. Snapshot changes were inspected: requirements remain identical, dependency-group tables follow pre-resolver tooling writes, and the CLI state records typed include ownership. See [PR G contracts](docs/development/semantic-reconciliation.md#pr-g-resolver-and-derived-artifact-boundary). Unchanged requirements invoke no redundant `uv add`/`uv lock`; user constraints are not reset; additions resolve once through the existing path; include-group/requires-python changes leave the mocked lock up to date; failures restore original pyproject/lock/state bytes and modes.
 
 ### PR-H: End-to-end acceptance, documentation, and cleanup
 
