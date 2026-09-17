@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from .errors import (
     AggregatedDependencyError,
@@ -13,7 +14,6 @@ from .errors import (
     MissingDependencyError,
     WorkspaceCollisionError,
 )
-from .executor import SystemExecutor
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
 from .modules import (
@@ -27,6 +27,7 @@ from .system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
     from .config import UserConfig
+    from .executor import SystemExecutor
 
 logger = logging.getLogger("protostar")
 
@@ -230,11 +231,12 @@ class Orchestrator:
         Returns:
             An ExecutionResult describing what was touched and any diagnostics.
         """
-        executor = SystemExecutor(manifest, self.user_config, self.request.docker)
-
         from .errors import ProtostarError
         from .journal import TransactionState
         from .models import RollbackContext
+
+        executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
+        executor = executor_cls(manifest, self.user_config, self.request.docker)
 
         try:
             executor.execute()
@@ -262,3 +264,13 @@ class Orchestrator:
             mutated_paths=executor.journal.mutated_paths,
             diagnostics=tuple(executor.diagnostics),
         )
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy evaluation for heavy executor dependencies."""
+    if name == "SystemExecutor":
+        from .executor import SystemExecutor
+
+        globals()["SystemExecutor"] = SystemExecutor
+        return SystemExecutor
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

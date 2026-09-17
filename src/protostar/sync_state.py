@@ -22,11 +22,7 @@ from .intent import (
     validate_region_id,
 )
 from .merge import Value, validate_value
-from .yaml_ast import (
-    decode_yaml_baseline,
-    encode_yaml_baseline,
-    validate_pre_commit_baseline,
-)
+from .registry import PinProvenance as PinProvenance
 
 SCHEMA_VERSION = 1
 
@@ -39,14 +35,6 @@ class FilePolicy(StrEnum):
     CHECKSUM = "checksum"
     SEED = "seed-only"
     REGIONS = "regions"
-
-
-class PinProvenance(StrEnum):
-    """Source of an applied hook revision, without replay authorization."""
-
-    REGISTRY = "registry"
-    TEMPLATE = "template"
-    FALLBACK = "fallback"
 
 
 def _invalid(detail: str) -> ConfigurationError:
@@ -124,6 +112,11 @@ class FileState:
             if self.policy is FilePolicy.TOML:
                 decode_toml_baseline(self.baseline)
             else:
+                from .yaml_ast import (
+                    decode_yaml_baseline,
+                    validate_pre_commit_baseline,
+                )
+
                 value = decode_yaml_baseline(self.baseline)
                 if self.path == ".pre-commit-config.yaml":
                     validate_pre_commit_baseline(value)
@@ -431,11 +424,19 @@ def serialize_state(state: SyncState) -> str:
     for record in sorted(state.files, key=lambda item: item.path):
         fields: dict[str, object] = {"path": record.path, "policy": record.policy.value}
         if record.baseline is not None:
-            fields["baseline"] = (
-                encode_yaml_baseline(decode_yaml_baseline(record.baseline))
-                if record.policy is FilePolicy.YAML
-                else encode_toml_baseline(decode_toml_baseline(record.baseline))
-            )
+            if record.policy is FilePolicy.YAML:
+                from .yaml_ast import (
+                    decode_yaml_baseline,
+                    encode_yaml_baseline,
+                )
+
+                fields["baseline"] = encode_yaml_baseline(
+                    decode_yaml_baseline(record.baseline)
+                )
+            else:
+                fields["baseline"] = encode_toml_baseline(
+                    decode_toml_baseline(record.baseline)
+                )
         if record.digest is not None:
             fields["digest"] = record.digest
         if record.regions:

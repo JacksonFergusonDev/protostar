@@ -2,7 +2,10 @@ import argparse
 import difflib
 import sys
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from protostar.orchestrator import Orchestrator
 
 import argcomplete
 from rich import box
@@ -17,7 +20,6 @@ from protostar.docs_registry import DocsPage
 from protostar.errors import InvalidUsageError
 from protostar.models import InitRequest
 from protostar.modules import TOOLING_MODULES, PythonCore, SystemWorkspaceModule
-from protostar.orchestrator import Orchestrator
 from protostar.wizard import run_init_wizard
 
 
@@ -580,7 +582,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             is_user_aliased=selections.is_user_aliased,
             is_trusted=selections.is_trusted,
         )
-        engine = Orchestrator(modules, user_config, request=request)
+        orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
+        engine = orchestrator_cls(modules, user_config, request=request)
         ui._run_engine(engine, request)
         sys.exit(0)
 
@@ -590,3 +593,13 @@ _SUBCOMMAND_DOC_PATHS: dict[str, DocsPage] = {
     "config": DocsPage.CONFIGURATION,
     "completion": DocsPage.CLI_REFERENCE,
 }
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy evaluation for heavy CLI dependencies."""
+    if name == "Orchestrator":
+        from protostar.orchestrator import Orchestrator
+
+        globals()["Orchestrator"] = Orchestrator
+        return Orchestrator
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
