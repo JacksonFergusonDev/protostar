@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789685377467,
+  "lastUpdate": 1789686699857,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13673,6 +13673,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 211.51,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6d0f10ea2b687e3c34e743d033c7ed90c4f712a4",
+          "message": "feat(cli): apply safe lifecycle updates with sync (#266)\n\n* feat(cli): apply safe lifecycle updates with sync\n\n* test(lifecycle): invalidate stale review via content for windows compatibility",
+          "timestamp": "2026-09-17T16:10:23-07:00",
+          "tree_id": "548060693d618204d0ed8d2d47b4c70c8c4a627e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6d0f10ea2b687e3c34e743d033c7ed90c4f712a4"
+        },
+        "date": 1789686698799,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 196.51,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 275.2,
             "unit": "ms"
           }
         ]
