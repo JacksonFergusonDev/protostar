@@ -28,6 +28,7 @@ from .intent import (
     AppendContribution,
     ContributionPolicy,
     DependencyGroup,
+    DependencyInclude,
     ResolverFootprint,
     StructuredFormat,
     validate_target,
@@ -125,7 +126,7 @@ class SystemExecutor:
 
         self.candidate_state = SyncState(__version__, manifest.template_reference)
         self._state_bytes: bytes | None = None
-        self._includes_changed = False
+        self._resolution_dirty = False
         self._preserve_deleted_pyproject = False
 
     def add_diagnostic(
@@ -175,9 +176,11 @@ class SystemExecutor:
             self._write_release_workflow()
             self._write_justfile()
             self._run_tasks(self.manifest.tasks.system_tasks)
+            self._append_files()
             self._apply_dependency_includes()
             self._install_dependencies()
-            self._append_files()
+            if self._resolution_dirty:
+                self._run_lock(self.manifest.dependencies.resolver_footprint)
             self._write_ignores()
             self._write_docker_artifacts()
             self._write_ide_settings()
@@ -673,10 +676,11 @@ class SystemExecutor:
                     else None
                 )
                 if (
-                    any(c.resolver_footprint for c in contributions)
+                    target == Path("pyproject.toml")
+                    and any(c.resolver_footprint for c in contributions)
                     and original_python != updated_python
                 ):
-                    self._run_lock(self.manifest.dependencies.resolver_footprint)
+                    self._resolution_dirty = True
         for filepath, regions in self.manifest.filesystem.regions.items():
             target = Path(render_template(filepath, self.interpolation_context))
             validate_target(target.as_posix())
@@ -859,30 +863,163 @@ class SystemExecutor:
             )
             return
         enforce_path_jail(target, Path.cwd())
+        record = self._file_record(target, FilePolicy.TOML)
+        baseline = (
+            decode_toml_baseline(record.baseline)
+            if record and record.baseline is not None
+            else {}
+        )
+        owned_groups = baseline.get("dependency-groups", {})
+        if not isinstance(owned_groups, dict):
+            raise ConfigurationError(
+                "Invalid owned dependency-group baseline.",
+                hint="Keep dependency-group ownership as a TOML table.",
+            )
         try:
-            original = target.read_text(encoding="utf-8") if target.exists() else ""
-            updated = apply_dependency_includes(
-                original, self.manifest.dependencies.includes
+            original = target.read_bytes().decode("utf-8") if target.exists() else ""
+            local_groups = tomllib.loads(original).get("dependency-groups", {})
+            accepted: list[DependencyInclude] = []
+            overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
+            for edge in self.manifest.dependencies.includes:
+                member: dict[str, Value] = {"include-group": edge.include.value}
+                previous = owned_groups.get(edge.group.value, [])
+                if not isinstance(previous, list):
+                    raise ConfigurationError(
+                        "Invalid owned dependency-group baseline.",
+                        hint="Keep owned dependency groups as arrays of include records.",
+                    )
+                local = (
+                    local_groups.get(edge.group.value, [])
+                    if isinstance(local_groups, dict)
+                    else None
+                )
+                included = (
+                    local_groups.get(edge.include.value, [])
+                    if isinstance(local_groups, dict)
+                    else None
+                )
+                ambiguous = (
+                    isinstance(local, list)
+                    and sum(
+                        isinstance(item, dict)
+                        and item.get("include-group") == edge.include.value
+                        for item in local
+                    )
+                    > 1
+                )
+                if ambiguous or not isinstance(included, list):
+                    self._merge_warning(
+                        MergeConflict(
+                            MergeLocation(
+                                "pyproject.toml",
+                                ("dependency-groups", edge.group.value),
+                                edge.include.value,
+                            ),
+                            ConflictReason.DIVERGED,
+                        )
+                    )
+                    continue
+                deleted = (
+                    not isinstance(local, list)
+                    or (
+                        edge.group.value in owned_groups
+                        and (
+                            not isinstance(local_groups, dict)
+                            or edge.group.value not in local_groups
+                        )
+                    )
+                    or (
+                        isinstance(previous, list)
+                        and member in previous
+                        and member not in local
+                    )
+                )
+                deleted = deleted or (
+                    edge.include.value in owned_groups
+                    and (
+                        not isinstance(local_groups, dict)
+                        or edge.include.value not in local_groups
+                    )
+                )
+                if deleted and not overwrite:
+                    if member not in previous:
+                        self._merge_warning(
+                            MergeConflict(
+                                MergeLocation(
+                                    "pyproject.toml",
+                                    ("dependency-groups", edge.group.value),
+                                    edge.include.value,
+                                ),
+                                ConflictReason.DELETED_ANCESTOR,
+                            )
+                        )
+                    continue
+                if (
+                    not overwrite
+                    and isinstance(local, list)
+                    and member in local
+                    and member not in previous
+                ):
+                    # Matching foreign edges are not adopted.
+                    continue
+                accepted.append(edge)
+            updated = (
+                apply_dependency_includes(original, accepted) if accepted else original
             )
             if updated != original:
                 self.fs.write_text(target, updated)
-        except OSError as e:
+                self._resolution_dirty = True
+            for edge in accepted:
+                entries = owned_groups.setdefault(edge.group.value, [])
+                if not isinstance(entries, list):
+                    raise ConfigurationError(
+                        "Invalid owned dependency-group baseline.",
+                        hint="Keep owned dependency groups as arrays of include records.",
+                    )
+                member = {"include-group": edge.include.value}
+                if member not in entries:
+                    entries.append(member)
+                if (
+                    isinstance(local_groups, dict)
+                    and edge.include.value not in local_groups
+                ):
+                    owned_groups.setdefault(edge.include.value, [])
+            if accepted:
+                baseline["dependency-groups"] = owned_groups
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        "pyproject.toml",
+                        FilePolicy.TOML,
+                        encode_toml_baseline(baseline),
+                    )
+                )
+        except (OSError, UnicodeError) as e:
             raise FileSystemError("apply dependency includes", str(target), e) from e
-        if updated != original:
-            self._includes_changed = True
-            deps = self.manifest.dependencies
-            if not (
-                deps.dependencies or deps.dev_dependencies or deps.docs_dependencies
-            ):
-                self._run_lock(deps.resolver_footprint)
+
+    def _validate_resolver_project(self) -> None:
+        """Prevents uv from discovering an undeclared ancestor project."""
+        if not Path("pyproject.toml").is_file():
+            raise ConfigurationError(
+                "No local resolver project exists.",
+                hint="Declare a local pyproject.toml or uv init task before resolving dependencies.",
+            )
+        if not {"pyproject.toml", "uv.lock"}.issubset(
+            self.manifest.dependencies.resolver_footprint.paths
+        ):
+            raise ConfigurationError(
+                "Incomplete resolver footprint.",
+                hint="Declare pyproject.toml and uv.lock before resolver execution.",
+            )
 
     def _run_lock(self, footprint: ResolverFootprint) -> None:
         """Journals declared resolver files before a conditional lock-only action."""
         validate_resolver_workspace(self.journal.workspace_root)
+        self._validate_resolver_project()
         for path in footprint.paths:
             enforce_path_jail(Path(path), Path.cwd())
             self.journal.record_mutation(Path(path))
         self.process_runner.run(["uv", "lock"], timeout=600)
+        self._resolution_dirty = False
 
     def _write_ignores(self) -> None:
         """Deduplicates and appends paths to the local .gitignore."""
@@ -1049,6 +1186,12 @@ class SystemExecutor:
             ancestor_key = (
                 "project" if group is DependencyGroup.MAIN else "dependency-groups"
             )
+            baseline_groups = baseline.get("dependency-groups", {})
+            owned_group = owned_group or (
+                group is not DependencyGroup.MAIN
+                and isinstance(baseline_groups, dict)
+                and group.value in baseline_groups
+            )
             owned_ancestor = ancestor_key in baseline
             ancestor_deleted = owned_ancestor and (
                 ancestor_key not in data or not isinstance(data[ancestor_key], dict)
@@ -1119,15 +1262,16 @@ class SystemExecutor:
         )
         if any(selected.values()):
             validate_resolver_workspace(self.journal.workspace_root)
+            self._validate_resolver_project()
             for declared_path in dependencies.resolver_footprint.paths:
                 path = Path(declared_path)
                 enforce_path_jail(path, Path.cwd())
                 self.journal.record_mutation(path)
-        if self._includes_changed and not any(selected.values()):
-            self._run_lock(dependencies.resolver_footprint)
         install_dependencies(
             dependencies_manifest=accepted, process_runner=self.process_runner
         )
+        if any(selected.values()):
+            self._resolution_dirty = False
         materialized = (
             tomllib.loads(target.read_text(encoding="utf-8")) if target.exists() else {}
         )

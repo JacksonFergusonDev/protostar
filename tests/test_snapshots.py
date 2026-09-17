@@ -191,7 +191,10 @@ def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
     assert any(requirement.startswith("astropy>=") for requirement in dependencies)
     assert any(requirement.startswith("specutils>=") for requirement in dependencies)
     original_text = Path("tests/snapshots/ml/pyproject.toml").read_text()
+    # Resolver-created groups follow tooling now; compare the tooling portion
+    # independently from dependencies intentionally added during the rerun.
     original_tools = original_text[original_text.index("# ---- Ruff ---- #") :]
+    original_tools = original_tools.split("[dependency-groups]", 1)[0].rstrip()
     merged_tools = pyproject_text[pyproject_text.index("# ---- Ruff ---- #") :]
     assert merged_tools.startswith(original_tools)
     assert merged_tools[len(original_tools) :].lstrip().startswith("# ---- Mypy ---- #")

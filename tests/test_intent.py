@@ -236,6 +236,7 @@ def test_typed_include_applied_before_resolver_and_rolls_back(
     process = mocker.patch.object(executor.process_runner, "run", side_effect=run)
     executor._apply_dependency_includes()
     executor._install_dependencies()
+    executor._run_lock(manifest.dependencies.resolver_footprint)
     assert process.call_count == 1
     assert '{ include-group = "docs" }' in pyproject.read_text()
     assert executor.journal.rollback().succeeded
@@ -251,8 +252,11 @@ def test_include_only_locks_once_and_identical_repeat_is_noop(
     manifest.dependencies.add_include(DependencyGroup.DEV, DependencyGroup.DOCS)
     executor = SystemExecutor(manifest, UserConfig())
     process = mocker.patch.object(executor.process_runner, "run")
-    executor._apply_dependency_includes()
-    executor._apply_dependency_includes()
+    executor.execute()
+    repeated = SystemExecutor(manifest, UserConfig())
+    repeat_process = mocker.patch.object(repeated.process_runner, "run")
+    repeated.execute()
+    repeat_process.assert_not_called()
     process.assert_called_once_with(["uv", "lock"], timeout=600)
     assert manifest.dependencies.to_dict()["resolver_footprint"] == {
         "paths": ["pyproject.toml", "uv.lock"]
@@ -412,8 +416,11 @@ def test_requires_python_declares_and_executes_conditional_lock(
     }
     executor = SystemExecutor(manifest, UserConfig())
     process = mocker.patch.object(executor.process_runner, "run")
-    executor._append_files()
-    executor._append_files()
+    executor.execute()
+    repeated = SystemExecutor(manifest, UserConfig())
+    repeat_process = mocker.patch.object(repeated.process_runner, "run")
+    repeated.execute()
+    repeat_process.assert_not_called()
     process.assert_called_once_with(["uv", "lock"], timeout=600)
 
 

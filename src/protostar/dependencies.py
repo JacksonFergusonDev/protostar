@@ -195,7 +195,9 @@ def select_dependencies(
                 and simple_new
                 and (
                     (not old_bounds and not old.url)
-                    or (new_bounds and max(new_bounds) >= max(old_bounds))
+                    or (
+                        old_bounds and new_bounds and max(new_bounds) >= max(old_bounds)
+                    )
                 )
             ):
                 accepted.append(requests[0])

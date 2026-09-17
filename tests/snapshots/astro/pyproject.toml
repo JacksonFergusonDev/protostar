@@ -17,11 +17,6 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email" }]
 
-[dependency-groups]
-dev = [
-    "ruff>=0.16.8",
-]
-
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -46,3 +41,8 @@ ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
 extend-select = ["PD", "NPY"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.8",
+]
