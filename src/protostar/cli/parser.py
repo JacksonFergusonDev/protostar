@@ -257,6 +257,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser = JsonAwareParser(
+        prog="protostar",
         description="High-velocity, zero-friction Python environment scaffolding.",
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         add_help=False,

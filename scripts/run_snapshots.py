@@ -303,7 +303,9 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
         True if zero uncommitted changes exist; False otherwise.
     """
     rel_targets = [
-        str(t.relative_to(Path.cwd())) if t.is_relative_to(Path.cwd()) else str(t)
+        t.relative_to(Path.cwd()).as_posix()
+        if t.is_relative_to(Path.cwd())
+        else t.as_posix()
         for t in targets
     ]
     if not rel_targets:
@@ -382,9 +384,9 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     untracked_diff_blocks: list[str] = []
     for untracked_path in sorted(untracked_disk_files):
         rel_untracked = (
-            str(untracked_path.relative_to(Path.cwd()))
+            untracked_path.relative_to(Path.cwd()).as_posix()
             if untracked_path.is_relative_to(Path.cwd())
-            else str(untracked_path)
+            else untracked_path.as_posix()
         )
         untracked_diff = subprocess.run(
             ["git", "diff", "--no-index", "--color=never", "/dev/null", rel_untracked],
@@ -415,18 +417,18 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
 
     for untracked_path in sorted(untracked_disk_files):
         rel = (
-            str(untracked_path.relative_to(Path.cwd()))
+            untracked_path.relative_to(Path.cwd()).as_posix()
             if untracked_path.is_relative_to(Path.cwd())
-            else str(untracked_path)
+            else untracked_path.as_posix()
         )
         if rel not in reported_paths:
             print(f"  ?? {rel}", file=sys.stderr)
 
     for deleted_path in sorted(deleted_tracked_files):
         rel = (
-            str(deleted_path.relative_to(Path.cwd()))
+            deleted_path.relative_to(Path.cwd()).as_posix()
             if deleted_path.is_relative_to(Path.cwd())
-            else str(deleted_path)
+            else deleted_path.as_posix()
         )
         if rel not in reported_paths:
             print(f"  D  {rel}", file=sys.stderr)

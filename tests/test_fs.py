@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -48,7 +49,8 @@ def test_atomic_write_bytes_uses_chmod_when_fchmod_is_unavailable(
     atomic_write_bytes(target_file, b"updated", mode=0o640)
 
     assert target_file.read_bytes() == b"updated"
-    assert target_file.stat().st_mode & 0o777 == 0o640
+    if sys.platform != "win32":
+        assert target_file.stat().st_mode & 0o777 == 0o640
 
 
 def test_atomic_write_text_cleans_up_temp_file_on_failure(

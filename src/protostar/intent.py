@@ -7,7 +7,7 @@ import re
 import tomllib
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from .errors import ConfigurationError
@@ -103,8 +103,13 @@ class AppendContribution:
 def validate_target(path: str) -> None:
     """Rejects escaping targets and the reserved engine state path."""
     target = Path(path)
+    posix = PurePosixPath(path)
+    win = PureWindowsPath(path)
     if (
         target.is_absolute()
+        or posix.is_absolute()
+        or bool(win.drive)
+        or bool(win.root)
         or ".." in target.parts
         or not target.parts
         or any(part in (".protostar.lock.toml", "uv.lock") for part in target.parts)
