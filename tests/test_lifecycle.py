@@ -504,8 +504,8 @@ def test_sync_stale_review_aborts_before_mutation(project):
 
     project.write_text(source_text("updated") + '"new.txt" = "safe"\n')
     prepared = prepare_project()
-    Path("pyproject.toml").chmod(
-        stat.S_IMODE(Path("pyproject.toml").stat().st_mode) ^ 0o100
+    Path("pyproject.toml").write_text(
+        "# concurrent\n" + Path("pyproject.toml").read_text()
     )
     before = snapshot(Path.cwd())
     with pytest.raises(StaleReviewError):
