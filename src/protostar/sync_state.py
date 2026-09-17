@@ -22,7 +22,7 @@ from .intent import (
     validate_region_id,
 )
 from .merge import Value, validate_value
-from .registry import PinProvenance
+from .registry import PinProvenance as PinProvenance
 
 SCHEMA_VERSION = 1
 
