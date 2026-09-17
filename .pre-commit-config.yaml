@@ -40,7 +40,7 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
-        exclude: ^tests/snapshots/
+        exclude: ^(docs/|site/|tests/snapshots/)
         require_serial: true
 
       - id: ruff-format
@@ -48,16 +48,16 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
-        exclude: ^tests/snapshots/
+        exclude: ^(docs/|site/|tests/snapshots/)
         require_serial: true
 
       - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: uv run mypy .
         language: system
+        pass_filenames: false
         types: [python]
-        exclude: ^tests/snapshots/
-        require_serial: true
+        exclude: ^(docs/|site/|tests/snapshots/)
 
       - id: rumdl-check
         name: rumdl check

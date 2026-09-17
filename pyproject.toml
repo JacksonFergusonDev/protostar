@@ -74,7 +74,7 @@ dev = [{ include-group = "ci" }, { include-group = "docs" }, "prek>=0.4.11"]
 
 [tool.ruff]
 target-version = "py312"
-extend-exclude = ["docs", "site"]
+extend-exclude = ["docs", "site", "tests/snapshots"]
 
 [tool.ruff.lint]
 select = [
