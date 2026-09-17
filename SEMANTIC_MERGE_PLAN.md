@@ -1,7 +1,7 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: PR-A through PR-E complete; PR-F is next.
-Updated: 2026-09-16.
+Status: PR-A through PR-F complete; PR-G is next.
+Updated: 2026-09-17.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
 
@@ -40,7 +40,7 @@ Protostar is pre-1.0 with no external users. Break APIs and template schemas cle
 
 ### Implementation status
 
-This checklist records implementation progress, including the completed PR-E
+This checklist records implementation progress, including the completed PR-F
 implementation submitted for review. It is limited to this plan; a completed
 milestone does not imply that later reconciliation behavior is available.
 
@@ -51,7 +51,8 @@ milestone does not imply that later reconciliation behavior is available.
 | PR-C: Transactional state integration and TOML reconciliation | **Complete** | Transactional state loading/final candidate writes; owned-only TOML AST reconciliation; module/template aggregation; seed metadata and deletion protection; structured conflicts; guarded dependency selection and accepted requirement capture. Complete resolver ordering/include reconciliation remains PR-G. | Implementation commit `71e0547`; fixture/documentation alignment `efd8dfd`; nine-file targeted suite: 349 passed; commit hooks passed; separate read-only boundary review found no remaining blockers. |
 | PR-D: YAML codec and Codecov pilot | **Complete** | Bounded YAML 1.2 round-trip codec; explicit Codecov structured intent; validated YAML owned snapshots; three-way target and ignore-list reconciliation; shared-alias/merge-key protection; transactional writes and rollback. | Nine-file targeted suite: 372 passed, including 44 YAML/Codecov acceptance tests. |
 | PR-E: Identity-based pre-commit reconciliation | **Complete** | Keyed repository/hook fields and explicit runner defaults; owned YAML snapshots and transactional pin provenance; fallback/regression guards; custom hooks/comments and ambiguous identities preserved. | 375 targeted tests passed across twelve files; implementation commit `c4373e5`; commit hooks passed. |
-| PR-F through PR-H | Planned | — | — |
+| PR-F: Generated-file and append-region checksum gates | **Complete** | Shared exact-byte generated-file gate; stable region digests and replacement; seed deletion protection; independent additive Docker ignores; Renovate alternative-location checks. | Six-file targeted suite: 262 passed; snapshot and commit/pre-push gates recorded in the implementation PR. |
+| PR-G through PR-H | Planned | — | — |
 
 ## 2. Scope and per-artifact policy
 
@@ -347,7 +348,7 @@ Depends on PR-D.
 
 Gate: **Complete.** One run adds a managed hook and safely changes a managed pin while retaining custom hooks/comments. Tests cover same-repository foreign hooks, local hook identities, runner/install-type changes, duplicates, user pin edits/deletions, offline fallback, malformed inputs, alias protection, overwrite boundaries, deterministic no-ops, and exact file/state rollback. The targeted twelve-file suite passed **375 tests**. See [PR E contracts](docs/development/semantic-reconciliation.md#pr-e-pre-commit-boundary). All seven snapshot scenarios and documentation assets were regenerated; affected snapshots now record owned hook baselines and pin provenance.
 
-### PR-F: Generated-file and append-region checksum gates
+### PR-F: Generated-file and append-region checksum gates — **Complete**
 
 Depends on PR-C; implement after PR-E by default to avoid simultaneous executor edits.
 
@@ -355,7 +356,7 @@ Depends on PR-C; implement after PR-E by default to avoid simultaneous executor 
 - Implement stable managed-region replacement using the existing comment-syntax helper where appropriate.
 - Add seeded-path deletion handling for `[files]` and decouple `.dockerignore`.
 
-Gate: test every artifact for initial creation, unchanged repeat, clean update, local edit, convergence, missing baseline, and user deletion. Assert exact digest correspondence and preservation of surrounding region bytes. Existing commented Renovate config is never parsed or rewritten.
+Gate: **Complete.** All five generated artifacts share an exact-byte SHA-256 gate with initial creation, unchanged repeat, clean update, local edit, convergence, missing baseline, and deletion tests. Stable append regions retain surrounding bytes and composite digests; malformed/legacy boundaries fail without adoption. Deleted seeded paths and owned region files remain absent; independent Docker ignores append new patterns. Existing commented Renovate content is never parsed or rewritten; competing recognized locations are preserved with a structured conflict, and generated JSON is validated. Exact file/state bytes and POSIX modes roll back on failure. `uv run pytest tests/test_checksum_execution.py tests/test_appends.py tests/test_intent.py tests/test_executor.py tests/test_reconciliation_execution.py tests/test_sync_state.py -q` passed **262 tests**. See [PR F contracts](docs/development/semantic-reconciliation.md#pr-f-generated-files-seeds-and-regions).
 
 ### PR-G: Resolver ordering and derived-artifact completion
 

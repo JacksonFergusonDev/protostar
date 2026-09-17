@@ -9,6 +9,40 @@ digest = "bfde93ef30b5d57018baad55d3e10c5568550669629b259097ac6a0e016c1dd0"
 display_name = "ml"
 
 [[files]]
+path = ".envrc"
+policy = "seed-only"
+
+[[files]]
+path = ".gitattributes"
+policy = "seed-only"
+
+[[files]]
+path = "Dockerfile"
+policy = "checksum"
+digest = "939ff4782c2ac5025855e03ed675c1ae74bea412b7b2ea7d2421c64d892f4c96"
+
+[[files]]
+path = "data/01_raw/.gitkeep"
+policy = "seed-only"
+
+[[files]]
+path = "data/02_processed/.gitkeep"
+policy = "seed-only"
+
+[[files]]
+path = "data/03_features/.gitkeep"
+policy = "seed-only"
+
+[[files]]
+path = "justfile"
+policy = "checksum"
+digest = "badc2688c7c4688762b637b8093bb425f3e157b8a60c0d4a759e558ac2ae15f5"
+
+[[files]]
+path = "models/weights/.gitkeep"
+policy = "seed-only"
+
+[[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
 baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"

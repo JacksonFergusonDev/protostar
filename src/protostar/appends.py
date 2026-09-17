@@ -1,9 +1,10 @@
 """Generic marker-block file append engine."""
 
 import re
-from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
+from .checksum import checksum_gate
 from .errors import ConfigurationError
 from .intent import AppendContribution, validate_region_id
 
@@ -67,19 +68,25 @@ def get_comment_markers(filepath: Path) -> tuple[str, str]:
     return ("#", "")
 
 
+@dataclass(frozen=True)
+class RegionResult:
+    """Exact region content, composite applied digests, and conflicting identities."""
+
+    content: str
+    digests: dict[str, str]
+    conflicts: tuple[str, ...]
+
+
 def append_marker_blocks(
     original_content: str,
     payloads: list[AppendContribution],
     filepath: Path,
     overwrite: bool = False,
-    on_conflict: Callable[[str], None] | None = None,
-) -> str | None:
-    """Applies named regions conservatively until checksum state lands in PR F.
-
-    Existing regions are preserved in merge mode. Explicit overwrite replaces
-    only the declared region and retains surrounding bytes. Legacy or malformed
-    markers fail rather than guessing ownership.
-    """
+    *,
+    baselines: dict[str, str] | None = None,
+    missing_owned_file: bool = False,
+) -> RegionResult:
+    """Reconciles stable regions using exact-byte gates and preserves surrounding bytes."""
     c_start, c_end = get_comment_markers(filepath)
 
     def marker(identity: str, end: bool = False) -> str:
@@ -131,19 +138,39 @@ def append_marker_blocks(
     for identity in identities:
         validate_region_id(identity)
     result = original_content
+    digests = dict(baselines or {})
+    conflicts: list[str] = []
     for contribution in payloads:
         begin, end = marker(contribution.id), marker(contribution.id, True)
         framed = f"{begin}\n{contribution.content}"
         if not framed.endswith("\n"):
             framed += "\n"
         framed += end
+        local = None
+        start = stop = 0
         if contribution.id in seen:
             start = result.index(begin)
             stop = result.index(end, start) + len(end)
-            if not overwrite:
-                if result[start:stop] != framed and on_conflict:
-                    on_conflict(contribution.id)
-                continue
+            local = result[start:stop].encode("utf-8")
+        baseline = digests.get(contribution.id)
+        if missing_owned_file and not overwrite:
+            # An owned deleted file protects newly introduced regions too.
+            if (
+                baseline is None
+                or checksum_gate(None, framed.encode("utf-8"), baseline).conflict
+            ):
+                conflicts.append(contribution.id)
+            continue
+        decision = checksum_gate(
+            local, framed.encode("utf-8"), baseline, overwrite=overwrite
+        )
+        if decision.conflict:
+            conflicts.append(contribution.id)
+        if decision.digest is not None:
+            digests[contribution.id] = decision.digest
+        if not decision.write:
+            continue
+        if local is not None:
             result = result[:start] + framed + result[stop:]
         else:
             separator = (
@@ -151,4 +178,6 @@ def append_marker_blocks(
             )
             result += separator + framed + "\n"
             seen.add(contribution.id)
-    return result if result != original_content else None
+    if payloads:
+        append_marker_blocks(result, [], filepath)
+    return RegionResult(result, digests, tuple(conflicts))

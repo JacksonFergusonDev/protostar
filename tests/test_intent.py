@@ -274,16 +274,16 @@ def test_named_region_update_preserves_surrounding_bytes_and_merge_preserves_loc
         "prefix\n", [AppendContribution("module:environment", "A=1")], Path(".envrc")
     )
     assert first is not None
-    first += "suffix\n"
+    original = first.content + "suffix\n"
     changed = [AppendContribution("module:environment", "A=2")]
-    assert append_marker_blocks(first, changed, Path(".envrc")) is None
-    result = append_marker_blocks(first, changed, Path(".envrc"), overwrite=True)
+    assert append_marker_blocks(original, changed, Path(".envrc")).content == original
+    result = append_marker_blocks(original, changed, Path(".envrc"), overwrite=True)
     assert result is not None
-    assert result.startswith("prefix\n")
-    assert result.endswith("suffix\n")
-    assert result.count("Protostar Region: module:environment") == 2
-    assert "A=2" in result
-    assert "A=1" not in result
+    assert result.content.startswith("prefix\n")
+    assert result.content.endswith("suffix\n")
+    assert result.content.count("Protostar Region: module:environment") == 2
+    assert "A=2" in result.content
+    assert "A=1" not in result.content
 
 
 @pytest.mark.parametrize(

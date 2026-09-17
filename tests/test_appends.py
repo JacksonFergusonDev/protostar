@@ -46,11 +46,11 @@ def test_append_marker_blocks_fresh():
     payloads = [AppendContribution("template:environment", "export FOO=bar")]
     result = append_marker_blocks(orig, payloads, Path(".envrc"))
 
-    assert result is not None
-    assert "# --- Protostar Region:" in result
-    assert "export FOO=bar" in result
-    assert "# --- End Protostar Region: template:environment ---" in result
-    assert result.endswith("\n")
+    assert result.content
+    assert "# --- Protostar Region:" in result.content
+    assert "export FOO=bar" in result.content
+    assert "# --- End Protostar Region: template:environment ---" in result.content
+    assert result.content.endswith("\n")
 
 
 def test_append_marker_blocks_existing_file():
@@ -58,39 +58,39 @@ def test_append_marker_blocks_existing_file():
     payloads = [AppendContribution("template:environment", "export FOO=bar")]
     result = append_marker_blocks(orig, payloads, Path(".envrc"))
 
-    assert result is not None
-    assert result.startswith("export EXISTING=1\n\n# --- Protostar Region:")
-    assert "export FOO=bar" in result
+    assert result.content
+    assert result.content.startswith("export EXISTING=1\n\n# --- Protostar Region:")
+    assert "export FOO=bar" in result.content
 
 
 def test_append_marker_blocks_deduplication():
     payloads = [AppendContribution("template:environment", "export FOO=bar")]
     first_pass = append_marker_blocks("", payloads, Path(".envrc"))
-    assert first_pass is not None
+    assert first_pass.content
 
     # Second pass without overwrite should return None
     second_pass = append_marker_blocks(
-        first_pass, payloads, Path(".envrc"), overwrite=False
+        first_pass.content, payloads, Path(".envrc"), overwrite=False
     )
-    assert second_pass is None
+    assert second_pass.content == first_pass.content
 
 
 def test_append_marker_blocks_overwrite():
     payloads = [AppendContribution("template:environment", "export FOO=bar")]
     first_pass = append_marker_blocks("", payloads, Path(".envrc"))
-    assert first_pass is not None
+    assert first_pass.content
 
     # Pass with overwrite=True should re-append
     second_pass = append_marker_blocks(
-        first_pass, payloads, Path(".envrc"), overwrite=True
+        first_pass.content, payloads, Path(".envrc"), overwrite=True
     )
-    assert second_pass is None
+    assert second_pass.content == first_pass.content
 
 
 def test_append_marker_blocks_html_comment_syntax():
     payloads = [AppendContribution("template:html", "<div>Injected Block</div>")]
     result = append_marker_blocks("", payloads, Path("index.html"))
 
-    assert result is not None
-    assert "<!-- --- Protostar Region:" in result
-    assert "--- End Protostar Region: template:html --- -->" in result
+    assert result.content
+    assert "<!-- --- Protostar Region:" in result.content
+    assert "--- End Protostar Region: template:html --- -->" in result.content

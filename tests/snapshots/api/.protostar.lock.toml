@@ -8,14 +8,49 @@ digest = "19bbe682c0abb9bef6ce49b70ccc62d8ec9c12068e82e086c1d18bcc6cadb2da"
 display_name = "api"
 
 [[files]]
+path = ".env.example"
+policy = "seed-only"
+
+[[files]]
+path = ".envrc"
+policy = "seed-only"
+
+[[files]]
+path = ".github/renovate.json"
+policy = "checksum"
+digest = "8ebc4c61fd909f57770b959abeca245d4b312d0a330d56015dae709414c92ee0"
+
+[[files]]
+path = ".github/workflows/ci.yml"
+policy = "checksum"
+digest = "10f1587d9b25cbbf84e6e3d62d56465899055eae5632e5a281f98b139c4dca54"
+
+[[files]]
 path = ".pre-commit-config.yaml"
 policy = "structured-yaml"
 baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\ndefault_stages:\n  - pre-commit\nrepos:\n  - hooks:\n      - id: check-added-large-files\n      - id: check-merge-conflict\n      - id: check-case-conflict\n      - id: check-symlinks\n      - id: check-executables-have-shebangs\n      - exclude: \\.py$\n        id: trailing-whitespace\n      - exclude: \\.py$\n        id: end-of-file-fixer\n      - id: check-yaml\n      - id: check-json\n      - id: check-toml\n    repo: builtin\n  - hooks:\n      - entry: uv lock --check\n        files: ^(pyproject\\.toml|uv\\.lock)$\n        id: uv-lock-check\n        language: system\n        name: uv lock check\n        pass_filenames: false\n      - entry: uv run rumdl check --fix\n        id: rumdl-check\n        language: system\n        name: rumdl check\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run rumdl fmt\n        id: rumdl-fmt\n        language: system\n        name: rumdl fmt\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run ruff check --fix\n        id: ruff-check\n        language: system\n        name: ruff check\n        require_serial: true\n        types:\n          - python\n      - entry: uv run ruff format\n        id: ruff-format\n        language: system\n        name: ruff format\n        require_serial: true\n        types:\n          - python\n      - entry: uv run mypy\n        id: mypy\n        language: system\n        name: mypy\n        require_serial: true\n        types:\n          - python\n    repo: local\n  - hooks:\n      - id: gitleaks\n    repo: https://github.com/gitleaks/gitleaks\n    rev: v8.30.1\n  - hooks:\n      - id: commitizen\n        stages:\n          - commit-msg\n    repo: https://github.com/commitizen-tools/commitizen\n    rev: v4.18.1\n  - hooks:\n      - files: .github/renovate.json\n        id: renovate-config-validator\n    repo: https://github.com/renovatebot/pre-commit-hooks\n    rev: 44.65.5\n"
 
 [[files]]
+path = "CHANGELOG.md"
+policy = "seed-only"
+
+[[files]]
+path = "justfile"
+policy = "checksum"
+digest = "1ab70adea6c9b1ce8c5e7adb046659da762f6e69dec78b050fbbc7bf6020b513"
+
+[[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
 baseline = "[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
+
+[[files]]
+path = "src/demo_project/core/config.py"
+policy = "seed-only"
+
+[[files]]
+path = "src/demo_project/main.py"
+policy = "seed-only"
 
 [[dependencies]]
 path = "pyproject.toml"

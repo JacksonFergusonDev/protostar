@@ -9,6 +9,23 @@ digest = "60f6a735345a6238ba0d6869b4210dbbcafeb5deb0403e39bca6b993a17b08ea"
 display_name = "dsp"
 
 [[files]]
+path = ".envrc"
+policy = "seed-only"
+
+[[files]]
+path = "data/samples/bounces/.gitkeep"
+policy = "seed-only"
+
+[[files]]
+path = "data/samples/raw/.gitkeep"
+policy = "seed-only"
+
+[[files]]
+path = "justfile"
+policy = "checksum"
+digest = "8c0e86315ead7f4c8d34750a0812d6f4fbdac8cfdec3f2b8bec1b43af48f26f6"
+
+[[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
 baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email\"\nname = \"your-name\"\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
