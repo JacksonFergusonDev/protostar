@@ -1,0 +1,46 @@
+name: Retry Timed Out CI
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+
+jobs:
+  retry-timed-out-jobs:
+    name: Retry Timed Out Jobs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.event.workflow_run.conclusion != 'success' &&
+      github.event.workflow_run.run_attempt < 3
+    permissions:
+      actions: write
+    steps:
+      - name: Check for timed-out jobs and retry
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.event.repository.full_name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          # Fetch jobs from the latest attempt of the workflow run
+          JOBS_JSON=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?filter=latest")
+
+          # Identify jobs that were not successful/skipped and ran for >= 350 seconds
+          # (indicating termination by the 6-minute / 360-second job timeout).
+          TIMED_OUT_JOBS=$(echo "$JOBS_JSON" | jq -r '
+            .jobs[]
+            | select(.conclusion != "success" and .conclusion != "skipped")
+            | select(.completed_at != null and .started_at != null)
+            | select(((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) >= 350)
+            | .name
+          ')
+
+          if [ -n "$TIMED_OUT_JOBS" ]; then
+            echo "Detected job(s) terminated by the 6-minute timeout:"
+            echo "$TIMED_OUT_JOBS"
+            echo "Retrying failed job(s) in a fresh runner..."
+            gh run rerun "$RUN_ID" --repo "$REPO" --failed
+          else
+            echo "No jobs exceeded the 6-minute timeout threshold (failure was due to normal error or quick cancellation). Skipping retry."
+          fi
