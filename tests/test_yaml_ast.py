@@ -42,9 +42,12 @@ def merge(local, remote, base=MISSING, **kwargs):
         "a: 2026-09-16\n",
         "a: !!set {x: null}\n",
         "a: !!binary YQ==\n",
-        "a: " + "[" * 102 + "0" + "]" * 102,
-        "a: [" + ",".join("0" for _ in range(10001)) + "]",
-        "a: " + "x" * 1_000_000,
+        pytest.param("a: " + "[" * 102 + "0" + "]" * 102, id="max-depth-exceeded"),
+        pytest.param(
+            "a: [" + ",".join("0" for _ in range(10001)) + "]",
+            id="max-nodes-exceeded",
+        ),
+        pytest.param("a: " + "x" * 1_000_000, id="max-bytes-exceeded"),
     ],
 )
 def test_rejects_unsupported_or_unbounded_input(content):
