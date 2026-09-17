@@ -56,7 +56,7 @@ class Severity(enum.StrEnum):
     WARNING = "warning"
 
 
-@dataclass
+@dataclass(frozen=True)
 class DiagnosticEvent:
     """A structured record of a non-fatal anomaly or skipped operation.
 

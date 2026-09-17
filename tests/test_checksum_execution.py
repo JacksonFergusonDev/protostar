@@ -41,10 +41,9 @@ def test_generated_lifecycle(tmp_path, monkeypatch, mocker, path):
     def apply(value):
         return run(
             mocker,
-            lambda e: mocker.patch.object(
-                e,
-                "_write_ci_workflow",
-                side_effect=lambda: e._write_generated(target, value),
+            lambda e: mocker.patch(
+                "protostar.reconciliation.Reconciliation._write_ci_workflow",
+                lambda decisions: decisions._write_generated(target, value),
             ),
         )
 
@@ -209,18 +208,23 @@ def test_gate_absence(local, base, remote, write, conflict):
 
 def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
-    mocker.patch("protostar.executor.generate_ci_workflow", return_value="ci v1\n")
     mocker.patch(
-        "protostar.executor.generate_release_workflow", return_value="release v1\n"
+        "protostar.reconciliation.generate_ci_workflow", return_value="ci v1\n"
     )
-    mocker.patch("protostar.executor.generate_justfile", return_value="just v1\n")
-    mocker.patch("protostar.executor.generate_dockerfile", return_value="docker v1\n")
+    mocker.patch(
+        "protostar.reconciliation.generate_release_workflow",
+        return_value="release v1\n",
+    )
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="just v1\n")
+    mocker.patch(
+        "protostar.reconciliation.generate_dockerfile", return_value="docker v1\n"
+    )
 
     def setup(e):
         e.manifest.tooling.wants_ci = True
         e.manifest.tooling.wants_release = True
         e.manifest.tooling.wants_just = True
-        e.docker = True
+        e.manifest.tooling.wants_docker = True
         e.manifest.filesystem.add_file_injection(
             ".github/renovate.json", '{"extends": []}\n'
         )
@@ -235,7 +239,9 @@ def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
     original = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert not run(mocker, setup).journal.touched_paths
     assert {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == original
-    mocker.patch("protostar.executor.generate_ci_workflow", return_value="ci v2\n")
+    mocker.patch(
+        "protostar.reconciliation.generate_ci_workflow", return_value="ci v2\n"
+    )
     run(mocker, setup)
     assert Path(".github/workflows/ci.yml").read_text() == "ci v2\n"
 
@@ -277,7 +283,7 @@ def test_edited_dockerfile_still_appends_ignore_patterns(tmp_path, monkeypatch, 
     Path(".dockerignore").write_text("# custom\nmy-pattern\n")
 
     def setup(e):
-        e.docker = True
+        e.manifest.tooling.wants_docker = True
         e.manifest.filesystem.vcs_ignores.add("new-pattern")
 
     run(mocker, setup)
@@ -297,7 +303,7 @@ def test_desired_region_cannot_inject_boundaries(content):
 
 def test_generated_justfile_with_regions(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
-    mocker.patch("protostar.executor.generate_justfile", return_value="base v1\n")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v1\n")
 
     def setup(value):
         def configure(e):
@@ -352,7 +358,7 @@ def test_unowned_generated_file_can_manage_new_region(tmp_path, monkeypatch, moc
 
 def test_generated_region_omission_never_prunes(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
-    mocker.patch("protostar.executor.generate_justfile", return_value="base\n")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base\n")
 
     def setup(e):
         e.manifest.tooling.wants_just = True
@@ -361,7 +367,9 @@ def test_generated_region_omission_never_prunes(tmp_path, monkeypatch, mocker):
     run(mocker, setup)
     original = Path("justfile").read_bytes()
     baseline = Path(".protostar.lock.toml").read_bytes()
-    mocker.patch("protostar.executor.generate_justfile", return_value="changed base\n")
+    mocker.patch(
+        "protostar.reconciliation.generate_justfile", return_value="changed base\n"
+    )
     run(mocker, lambda e: setattr(e.manifest.tooling, "wants_just", True))
     assert Path("justfile").read_bytes() == original
     assert Path(".protostar.lock.toml").read_bytes() == baseline

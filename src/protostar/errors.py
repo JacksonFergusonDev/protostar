@@ -68,6 +68,16 @@ class ConfigurationError(ProtostarError):
         super().__init__(message, hint=hint, docs_path=docs_path)
 
 
+class StaleReviewError(ConfigurationError):
+    """Raised when workspace inputs change between preparation and execution."""
+
+    def __init__(self, path: str) -> None:
+        super().__init__(
+            f"Review input changed: {path}.",
+            hint="Prepare a new review against the current workspace before applying changes.",
+        )
+
+
 class InvalidUsageError(ProtostarError):
     """Raised when the user provides unrecognized or invalid CLI arguments."""
 

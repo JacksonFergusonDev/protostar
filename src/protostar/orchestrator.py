@@ -95,34 +95,7 @@ class Orchestrator:
         """
         req = self.request
 
-        # Phase 1: Pre-flight verification
-        has_pre_commit = any(isinstance(m, PreCommitModule) for m in self.modules)
-        has_prek = any(isinstance(m, PrekModule) for m in self.modules)
-        if has_pre_commit and has_prek:
-            raise ConfigurationError(
-                "Cannot use both '--pre-commit' and '--prek' simultaneously. Please choose one git hook manager.",
-                hint="Remove either --pre-commit or --prek from your selection.",
-            )
-
-        has_readthedocs = any(isinstance(m, ReadTheDocsModule) for m in self.modules)
-        has_zensical = any(isinstance(m, ZensicalModule) for m in self.modules)
-        if has_readthedocs and not has_zensical:
-            raise ConfigurationError(
-                "Read the Docs scaffolding requires the Zensical module to be enabled.",
-                hint="Enable the Zensical documentation module (--zensical or [tooling] zensical = true) or remove the Read the Docs module.",
-            )
-
-        missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
-        for mod in self.modules:
-            try:
-                mod.pre_flight()
-            except MissingDependencyError as e:
-                missing_deps[e.dependency] = e
-
-        if missing_deps:
-            raise AggregatedDependencyError(tuple(missing_deps.values()))
-
-        # Phase 2: Manifest instantiation & initialization
+        # Phase 1: Manifest instantiation & recipe selection
         manifest = EnvironmentManifest(
             template_reference=req.template_reference
             or (req.template_blueprint.reference if req.template_blueprint else None),
@@ -149,13 +122,50 @@ class Orchestrator:
 
         manifest.recipe = decode_recipe(manifest.recipe.to_dict())
 
-        # Phase 3: Module aggregation
+        # Phase 2: Resolve the diversion ledger before module validation/build
         from .recipe import ProducerContribution, Tool
 
         opinions = (
             req.template_blueprint.tooling_overrides if req.template_blueprint else {}
         )
         manifest.selections = manifest.recipe.selections(opinions)
+        enabled_tools = {
+            selection.tool for selection in manifest.selections if selection.enabled
+        }
+        active_modules = [
+            module
+            for module in self.modules
+            if req.recipe is None
+            or not module.config_key
+            or Tool(module.config_key) in enabled_tools
+        ]
+        # Pre-flight verification of effective producers only
+        has_pre_commit = any(isinstance(m, PreCommitModule) for m in active_modules)
+        has_prek = any(isinstance(m, PrekModule) for m in active_modules)
+        if has_pre_commit and has_prek:
+            raise ConfigurationError(
+                "Cannot use both '--pre-commit' and '--prek' simultaneously. Please choose one git hook manager.",
+                hint="Remove either --pre-commit or --prek from your selection.",
+            )
+
+        has_readthedocs = any(isinstance(m, ReadTheDocsModule) for m in active_modules)
+        has_zensical = any(isinstance(m, ZensicalModule) for m in active_modules)
+        if has_readthedocs and not has_zensical:
+            raise ConfigurationError(
+                "Read the Docs scaffolding requires the Zensical module to be enabled.",
+                hint="Enable the Zensical documentation module (--zensical or [tooling] zensical = true) or remove the Read the Docs module.",
+            )
+
+        missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
+        for mod in active_modules:
+            try:
+                mod.pre_flight()
+            except MissingDependencyError as e:
+                missing_deps[e.dependency] = e
+
+        if missing_deps:
+            raise AggregatedDependencyError(tuple(missing_deps.values()))
+
         producer = ""
         tool: Tool | None = None
         contributions: list[ProducerContribution] = []
@@ -171,7 +181,7 @@ class Orchestrator:
         manifest.filesystem.observe = lambda path: observe("filesystem", path)
         manifest.tasks.observe = lambda path: observe("tasks", path)
         manifest.tooling.observe = lambda path: observe("tooling", path)
-        for mod in self.modules:
+        for mod in active_modules:
             producer = f"module:{type(mod).__name__}"
             tool = Tool(mod.config_key) if mod.config_key else None
             if isinstance(mod, PythonCore):

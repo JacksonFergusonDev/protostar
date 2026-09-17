@@ -328,3 +328,40 @@ reconciles only recorded contributions. It does not adopt pre-existing files,
 restore user-deleted content, prune omitted contributions, switch templates, or
 reconstruct/rerun a request from the lock state. Those capabilities, along with a
 user-facing `sync` command and semantic Renovate/JSONC editing, remain deferred.
+
+## Stage 2 shared preparation boundary
+
+`protostar.preparation.prepare_review()` computes immutable accepted file bytes,
+conflicts, preserved local deviations, candidate ownership, and resolver requests
+from a manifest and captured workspace inputs. It uses the existing TOML, YAML,
+keyed-hook, region, and checksum adapters through `Reconciliation`. Preparation
+writes only to an in-memory byte sink; it never runs initializers, package managers,
+template tasks, IDE probes, or registry acquisition. This is a headless backend
+boundary; no public lifecycle command ships with this refactor.
+
+Tool selection resolves project overrides, current template opinions, and captured
+fallback before effective modules run pre-flight checks or declare contributions.
+Producer attribution survives into the review, so opting out of one producer does
+not suppress another producer contributing to the same target.
+
+The caller supplies one acquired hook revision snapshot. A `SystemExecutor`
+constructed with `review=review` consumes that snapshot and the exact accepted
+bytes without acquiring pins again. The lifecycle policy skips every declared
+system/post-install task and IDE extension probe. It applies direct edits and only
+accepted resolver requests, materializes dependency ownership from actual resolver
+output, and writes the ownership ledger last within the same transaction. Resolver
+output stays unknown in review data: there is no simulated dependency rewrite or
+fabricated `uv.lock` diff.
+
+Initialization retains its own policy and prepares successive batches around
+actual initializer and resolver execution. Original transaction presence still
+distinguishes eligible initializer-created values from pre-existing user values.
+Recipe refresh remains after post-install tasks and inside the state transaction.
+
+Captured inputs include exact bytes, existence, POSIX modes, relevant ancestors,
+`pyproject.toml`, `.protostar.lock.toml`, and declared resolver paths. Unsupported
+nodes fail during preparation. Immediately before applying a batch, execution
+checks the desired manifest and all captured inputs; a stale review fails before
+that batch mutates anything. Fatal failures terminate managed processes and roll
+back exact journaled bytes/modes. This protects the preparation/application
+interval, without promising exclusion of concurrent writers during a transaction.

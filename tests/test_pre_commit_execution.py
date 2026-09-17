@@ -95,7 +95,7 @@ def test_runner_and_install_types_change(tmp_path, monkeypatch, mocker):
     assert not any(d.conflict for d in result.diagnostics)
 
 
-@pytest.mark.parametrize("failure", ["_write_ignores", "_write_state"])
+@pytest.mark.parametrize("failure", ["_check_ide_extensions", "_write_state"])
 def test_rollback_restores_file_state_bytes_modes(
     tmp_path, monkeypatch, mocker, failure
 ):
