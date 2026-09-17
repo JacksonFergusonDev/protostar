@@ -575,20 +575,6 @@ def test_executor_append_files_ast_overwrite(tmp_path, monkeypatch, mock_config)
     assert parsed_toml["tool"]["mypy"]["overrides"][0]["module"] == "legacy_module.*"
 
 
-def test_executor_write_pre_commit_config_skips_existing_merge(mocker, mock_config):
-    """Test that pre-commit generation aborts if file exists and strategy is not OVERWRITE."""
-    manifest = EnvironmentManifest()
-    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
-    manifest.collision_strategy = CollisionStrategy.MERGE
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch.object(executor.fs, "write_text")
-
-    executor._write_pre_commit_config()
-    mock_write.assert_not_called()
-
-
 def test_executor_validate_targets_success(mocker, mock_config):
     """Test that pre-execution validation passes silently on valid TOML files."""
 
@@ -858,7 +844,6 @@ def test_executor_runs_hook_install_when_git_and_dev_succeed(
 def test_executor_handles_write_permission_denied(mocker):
     manifest = EnvironmentManifest()
     manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
-    manifest.tooling.pre_commit_hooks.append("  - repo: local")
 
     config = UserConfig()
     executor = SystemExecutor(manifest, config)
@@ -876,7 +861,7 @@ def test_executor_handles_write_permission_denied(mocker):
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_pre_commit_config()
 
-    assert "write configuration file" in exc_info.value.operation
+    assert "reconcile pre-commit configuration" in exc_info.value.operation
     assert ".pre-commit-config.yaml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 
@@ -1239,27 +1224,6 @@ def test_executor_diagnostic_collection_with_enum(mock_config):
     event = executor.diagnostics[0]
     assert event.phase == DiagnosticPhase.EXECUTOR
     assert event.phase == "Executor"
-
-
-def test_executor_skips_pre_commit_when_file_exists(mocker, mock_config):
-    """Test that existing .pre-commit-config.yaml is skipped and logs a diagnostic."""
-    manifest = EnvironmentManifest()
-    manifest.tooling.hook_runner = HookRunner.PRE_COMMIT
-    manifest.collision_strategy = CollisionStrategy.MERGE
-    executor = SystemExecutor(manifest, mock_config)
-
-    mocker.patch("protostar.executor.Path.exists", return_value=True)
-    mock_write = mocker.patch.object(executor.fs, "write_text")
-
-    executor._write_pre_commit_config()
-
-    mock_write.assert_not_called()
-    assert len(executor.diagnostics) == 1
-    assert executor.diagnostics[0].phase == DiagnosticPhase.PRE_COMMIT
-    assert executor.diagnostics[0].severity == Severity.SKIP
-    assert (
-        "Skipping .pre-commit-config.yaml generation" in executor.diagnostics[0].message
-    )
 
 
 def test_executor_skips_injected_files_when_file_exists(mocker, mock_config):

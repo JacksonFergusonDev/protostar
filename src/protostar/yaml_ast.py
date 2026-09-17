@@ -156,18 +156,168 @@ def reconcile_codecov(
     missing_file: bool = False,
     overwrite: bool = False,
 ) -> YamlReconciliation:
-    """Reconciles Codecov while confining edits to independent managed AST nodes."""
+    """Reconciles Codecov with explicit set-like ignore membership."""
+    return _reconcile_yaml(
+        original,
+        desired,
+        base,
+        location,
+        missing_file=missing_file,
+        overwrite=overwrite,
+    )
+
+
+def reconcile_pre_commit(
+    original: str,
+    desired: str,
+    base: Value,
+    location: MergeLocation,
+    *,
+    missing_file: bool = False,
+    overwrite: bool = False,
+) -> YamlReconciliation:
+    """Reconciles exact repository/hook identities without owning foreign fields."""
+    return _reconcile_yaml(
+        original,
+        desired,
+        base,
+        location,
+        missing_file=missing_file,
+        overwrite=overwrite,
+        keyed=True,
+    )
+
+
+def validate_pre_commit_baseline(value: Value) -> None:
+    """Validates unique repository/hook identities in desired or owned snapshots."""
+    _keyed(value, strict=True)
+
+
+def _identity_key(path: tuple[str, ...]) -> str | None:
+    if path == ("repos",):
+        return "repo"
+    if len(path) == 3 and path[0] == "repos" and path[2] == "hooks":
+        return "id"
+    return None
+
+
+def _keyed(value: Value, path: tuple[str, ...] = (), *, strict: bool = False) -> Value:
+    identity = _identity_key(path)
+    if identity is not None:
+        if not isinstance(value, list):
+            raise ConfigurationError(
+                "Invalid pre-commit record sequence.",
+                hint="Use lists of repositories and hooks with non-empty repo/id strings.",
+            )
+        grouped: dict[str, list[Value]] = {}
+        for record in value:
+            if (
+                not isinstance(record, dict)
+                or not isinstance(record.get(identity), str)
+                or not record[identity]
+            ):
+                raise ConfigurationError(
+                    "Invalid pre-commit identity.",
+                    hint="Give every repository/hook a non-empty repo/id string.",
+                )
+            if (
+                identity == "repo"
+                and "rev" in record
+                and (not isinstance(record["rev"], str) or not record["rev"])
+            ):
+                raise ConfigurationError(
+                    "Invalid pre-commit revision.",
+                    hint="Quote repository revisions as non-empty strings.",
+                )
+            name = cast(str, record[identity])
+            grouped.setdefault(name, []).append(record)
+        records: dict[str, Value] = {}
+        for name, members in grouped.items():
+            if len(members) > 1:
+                if strict:
+                    raise ConfigurationError(
+                        "Duplicate desired or owned pre-commit identity.",
+                        hint="Declare each repository and hook ID once.",
+                    )
+                records[name] = deepcopy(members)
+            else:
+                record = cast(dict[str, Value], members[0])
+                records[name] = _keyed(
+                    {k: v for k, v in record.items() if k != identity},
+                    (*path, name),
+                    strict=strict,
+                )
+        return records
+    if isinstance(value, dict):
+        return {k: _keyed(v, (*path, k), strict=strict) for k, v in value.items()}
+    return deepcopy(value)
+
+
+def _unkeyed(value: Value, path: tuple[str, ...] = ()) -> Value:
+    if isinstance(value, dict):
+        identity = _identity_key(path)
+        if identity:
+            records: list[Value] = []
+            for name, record in value.items():
+                if isinstance(record, list):
+                    records.extend(deepcopy(record))
+                else:
+                    records.append(
+                        {
+                            identity: name,
+                            **cast(dict[str, Value], _unkeyed(record, (*path, name))),
+                        }
+                    )
+            return records
+        return {k: _unkeyed(v, (*path, k)) for k, v in value.items()}
+    return deepcopy(value)
+
+
+def _reconcile_yaml(
+    original: str,
+    desired: str,
+    base: Value,
+    location: MergeLocation,
+    *,
+    missing_file: bool = False,
+    overwrite: bool = False,
+    keyed: bool = False,
+) -> YamlReconciliation:
+    """Confines accepted semantic edits to independent round-trip AST nodes."""
     desired_ast = _load(desired)
     remote = cast(dict[str, Value], _plain(desired_ast))
     doc = _load(original) if not missing_file else _load("{}\n")
     local = cast(dict[str, Value], _plain(doc))
+    ambiguities: list[MergeConflict] = []
+    policy = MergePolicy() if keyed else CODECOV_POLICY
+    if keyed:
+        remote = cast(dict[str, Value], _keyed(remote, strict=True))
+        local = cast(dict[str, Value], _keyed(local))
+        base = _keyed(base, strict=True)
+        repositories = local.get("repos", MISSING)
+        if isinstance(repositories, dict):
+            for name, record in repositories.items():
+                hooks = record.get("hooks", {}) if isinstance(record, dict) else {}
+                if isinstance(record, list) or (
+                    isinstance(hooks, dict)
+                    and any(isinstance(hook, list) for hook in hooks.values())
+                ):
+                    planned = remote.get("repos")
+                    if isinstance(planned, dict):
+                        planned.pop(name, None)
+                    ambiguities.append(
+                        MergeConflict(
+                            MergeLocation(location.file, ("repos", name), name),
+                            ConflictReason.DUPLICATE_IDENTITY,
+                        )
+                    )
     # Validate explicit membership policy even under overwrite authorization.
     result = reconcile(
-        base, MISSING if missing_file else local, remote, location, CODECOV_POLICY
+        base, MISSING if missing_file else local, remote, location, policy
     )
     value = result.value
     baseline = result.baseline
-    conflicts = list(result.conflicts)
+    conflicts = [*ambiguities, *result.conflicts]
     if overwrite:
 
         def overlay(target: dict[str, Value], incoming: dict[str, Value]) -> None:
@@ -181,9 +331,11 @@ def reconcile_codecov(
         baseline = deepcopy(base) if isinstance(base, dict) else {}
         overlay(value, remote)
         overlay(baseline, remote)
-        conflicts = []
+        conflicts = list(ambiguities)
     if value is MISSING:
-        return YamlReconciliation(original, baseline, tuple(conflicts))
+        return YamlReconciliation(
+            original, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
+        )
 
     counts: dict[int, int] = {}
 
@@ -255,6 +407,25 @@ def reconcile_codecov(
                         ConflictReason.SHARED_STRUCTURE,
                     )
                 )
+            elif recursive and keyed and _identity_key(path) and isinstance(node, list):
+                identity = _identity_key(path)
+                indexed = {str(record[identity]): record for record in node}
+                desired_index = {
+                    str(record[identity]): record for record in styled[key]
+                }
+                patch(
+                    indexed,
+                    cast(dict[str, Value], old),
+                    cast(dict[str, Value], child),
+                    cast(dict[str, Value], owned.setdefault(key, {})),
+                    cast(dict[str, Value], previous.get(key, {})),
+                    desired_index,
+                    path,
+                )
+                for name, record in indexed.items():
+                    if name not in cast(dict[str, Value], old):
+                        record[identity] = name
+                        node.append(record)
             elif recursive:
                 patch(
                     node,
@@ -268,7 +439,7 @@ def reconcile_codecov(
             elif (
                 isinstance(old, list)
                 and isinstance(child, list)
-                and path in CODECOV_POLICY.set_like_paths
+                and path in policy.set_like_paths
                 and semantic_equal(old, child[: len(old)])
             ):
                 for member in child[len(old) :]:
@@ -276,8 +447,14 @@ def reconcile_codecov(
             else:
                 replacement = (
                     deepcopy(styled[key])
-                    if key in styled and semantic_equal(_plain(styled[key]), child)
-                    else deepcopy(child)
+                    if key in styled
+                    and semantic_equal(
+                        _keyed(_plain(styled[key]), path)
+                        if keyed
+                        else _plain(styled[key]),
+                        child,
+                    )
+                    else deepcopy(_unkeyed(child, path) if keyed else child)
                 )
                 if isinstance(node, str) and isinstance(child, str):
                     replacement = type(node)(child)
@@ -320,13 +497,18 @@ def reconcile_codecov(
         if not baseline and base is MISSING and not missing_file:
             baseline = MISSING
     if semantic_equal(local, value) and not missing_file:
-        return YamlReconciliation(original, baseline, tuple(conflicts))
+        return YamlReconciliation(
+            original, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
+        )
     stream = StringIO()
     try:
         _codec().dump(doc, stream)
     except (YAMLError, ValueError, TypeError, RecursionError) as error:
         raise _invalid() from error
     content = stream.getvalue()
-    if not semantic_equal(decode_yaml_baseline(content), value):
+    decoded = decode_yaml_baseline(content)
+    if not semantic_equal(_keyed(decoded) if keyed else decoded, value):
         raise _invalid()
-    return YamlReconciliation(content, baseline, tuple(conflicts))
+    return YamlReconciliation(
+        content, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
+    )
