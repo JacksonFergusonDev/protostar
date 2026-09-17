@@ -2,6 +2,7 @@
 
 import dataclasses
 import stat
+import sys
 import tomllib
 from pathlib import Path
 
@@ -118,6 +119,8 @@ def test_stale_review_aborts_before_mutation(tmp_path, monkeypatch, mocker, chan
     elif change == "uv-lock":
         Path("uv.lock").write_text("new resolver state")
     elif change == "mode":
+        if sys.platform == "win32":
+            pytest.skip("Windows does not support POSIX permission modes")
         Path("pyproject.toml").chmod(0o744)
     elif change == "new-file":
         Path("new").mkdir()
@@ -435,7 +438,7 @@ def test_independent_region_update_beside_conflict(tmp_path, monkeypatch, mocker
     first.filesystem.add_region(".envrc", "safe-v1", identity="safe")
     initialize(first, mocker)
     target = Path(".envrc")
-    target.write_text(target.read_text().replace("\nv1\n", "\nlocal\n"))
+    target.write_bytes(target.read_bytes().replace(b"\nv1\n", b"\nlocal\n"))
     desired = EnvironmentManifest()
     desired.filesystem.add_region(".envrc", "v2", identity="conflicting")
     desired.filesystem.add_region(".envrc", "safe-v2", identity="safe")
