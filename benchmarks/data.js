@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789675971831,
+  "lastUpdate": 1789678359257,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13571,6 +13571,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 196.74,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "24cc4d2d1b2c266894303095db5f92b752756e98",
+          "message": "feat(recipe): persist project intent in pyproject (#263)\n\n* feat(recipe): persist project intent in pyproject\n\n* fix(manifest): defer annotation evaluation with future annotations\n\n* fix(recipe): permit Windows absolute paths for local template locators\n\n* test(recipe): skip posix file mode checks on windows",
+          "timestamp": "2026-09-17T13:51:35-07:00",
+          "tree_id": "93a5d7f47a4bd3b05461355421f6ec1f8837d289",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/24cc4d2d1b2c266894303095db5f92b752756e98"
+        },
+        "date": 1789678358415,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 155.04,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 242.3,
             "unit": "ms"
           }
         ]
