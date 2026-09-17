@@ -71,7 +71,7 @@ Head over to the **[Official Documentation](https://protostar.readthedocs.io/sta
 
 Protostar is built to save you time and stay out of your way. It adheres to a strict separation of concerns to avoid generating bloated artifacts you'll inevitably just delete manually:
 
-1. **Foundational Scaffolding:** The `protostar init` command is designed to be run exactly *once* at the inception of a repository to lay the architectural groundwork, establishing your dependency managers and directory structures.
+1. **Foundational Scaffolding:** The `protostar init` command establishes dependency managers, directory structures, and tooling at a repository's inception. It can also be safely re-run with `--force-merge`: Protostar reconciles only the contributions it previously recorded, preserving unowned workspace content and local edits.
 
 1. **Plan First, Write Later:** Many setup scripts run a sequence of shell commands and fail unpredictably midway through, leaving behind half-configured files. Protostar plans all changes upfront in memory during the read-only `plan()` phase before touching disk or running subprocesses in `execute()`. Furthermore, execution is transaction-managed: if an error or interruption occurs, managed subprocesses are stopped and all Protostar-tracked workspace modifications (direct file writes, AST merges, and declared dependency files) are automatically rolled back. (Note: Protostar reliably reverts tracked workspace mutations, but cannot infer or revert arbitrary, undeclared side effects produced by external shell commands).
 
@@ -79,7 +79,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
 
-1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. It dynamically appends to `.gitignore` files, intelligently merges IDE JSON configurations, uses deterministic AST modification to deep-merge TOML configurations, and safely aborts if generated files already exist.
+1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. In merge mode, it reconciles managed TOML and YAML contributions from recorded ownership baselines, checksum-gates generated files and named regions, and appends missing ignore patterns. Existing unowned content is not adopted; locally edited managed content is preserved with a diagnostic.
 
 1. **Actionable Diagnostics:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment details to make debugging painless. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
 

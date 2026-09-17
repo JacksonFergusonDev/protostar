@@ -116,7 +116,8 @@ If the target workspace already contains files (such as an existing `pyproject.t
 
 The agent can parse the `"paths"` array and choose how to proceed:
 
-- Pass `--force-merge` to safely deep-merge configurations and append ignore rules.
+- Pass `--force-merge` to reconcile previously managed configuration without
+  adopting existing content, and append missing ignore rules.
 - Pass `--force-replace` to overwrite existing configuration files.
 
 ### 3. Headless Execution

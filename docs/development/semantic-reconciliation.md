@@ -300,3 +300,31 @@ The snapshot table-placement changes are intentional: dependency groups created
 by the resolver now follow tooling tables that must exist before resolution.
 Requirement values are unchanged. The CLI snapshot additionally records its
 managed dev-to-docs edge and the initially created docs group.
+
+## PR H acceptance and operational boundary
+
+Stage 1 is complete. The acceptance suite deliberately separates broad
+end-to-end evidence from focused synthetic-revision cases:
+
+- `tests/test_template_repeatability.py` executes every built-in template in an
+  isolated workspace, then performs two identical merge runs. It asserts
+  byte-identical workspace and lock state, no managed mutations on either
+  repeat, and exact-byte agreement between every persisted whole-file digest and
+  its generated artifact.
+- `tests/test_reconciliation_execution.py`, `tests/test_codecov_execution.py`,
+  `tests/test_pre_commit_reconciliation.py`, `tests/test_checksum_execution.py`,
+  and `tests/test_resolver_execution.py` provide synthetic v1-to-v2 revisions
+  and conflict/failure cases. They cover non-overlapping edits, scalar/keyed/
+  sequence conflicts, deletion protection, state-write rollback, resolver
+  rollback, and generated/region baseline advancement.
+- `tests/test_sync_state.py`, `tests/test_yaml_ast.py`, and
+  `tests/test_intent.py` reject invalid state, unsupported YAML structures,
+  unsafe paths, duplicate identities, reserved targets, and unsupported control
+  keys before any execution mutation.
+
+`init --force-merge` is therefore safe reinitialization, not an update product.
+It requires the same selected template identity for a tracked project and
+reconciles only recorded contributions. It does not adopt pre-existing files,
+restore user-deleted content, prune omitted contributions, switch templates, or
+reconstruct/rerun a request from the lock state. Those capabilities, along with a
+user-facing `sync` command and semantic Renovate/JSONC editing, remain deferred.

@@ -1,6 +1,6 @@
 # Protostar Stage 1: Safe Semantic Reconciliation
 
-Status: PR-A through PR-G complete; PR-H is next.
+Status: PR-A through PR-H complete; Stage 1 is complete.
 Updated: 2026-09-17.
 Primary audience: LLM implementation and review agents.
 Secondary audience: human maintainers.
@@ -53,7 +53,7 @@ milestone does not imply that later reconciliation behavior is available.
 | PR-E: Identity-based pre-commit reconciliation | **Complete** | Keyed repository/hook fields and explicit runner defaults; owned YAML snapshots and transactional pin provenance; fallback/regression guards; custom hooks/comments and ambiguous identities preserved. | 375 targeted tests passed across twelve files; implementation commit `c4373e5`; commit hooks passed. |
 | PR-F: Generated-file and append-region checksum gates | **Complete** | Shared exact-byte generated-file gate; stable region digests and replacement; seed deletion protection; independent additive Docker ignores; Renovate alternative-location checks. | Six-file targeted suite: 262 passed; snapshot and commit/pre-push gates recorded in the implementation PR. |
 | PR-G: Resolver ordering and derived-artifact completion | **Complete** | Final structured TOML/include writes precede resolution; one conditional lock for metadata changes without accepted additions; requested/materialized per-group tracking; local resolver project/footprint validation; include-edge ownership and deletion protection. | Six-file targeted suite: 209 passed; read-only review regression fixed; intended snapshot table-placement and include-baseline changes reviewed. |
-| PR-H | Planned | — | — |
+| PR-H: End-to-end acceptance, documentation, and cleanup | **Complete** | Built-in-template three-run acceptance verifies byte-identical state/workspace convergence and exact generated-file digest ownership; documentation now describes safe reinitialization and its non-adoption limitations; superseded “run once” and generic deep-merge claims were removed. | Targeted reconciliation suite: 283 passed. `just test-cov`: 969 passed, 92.18% coverage. |
 
 ## 2. Scope and per-artifact policy
 

@@ -6,13 +6,18 @@ description: "Learn how to use protostar init to safely construct and manage you
 
 The `init` command is Protostar's primary command. It sets up folder structures, wires together tools, and configures dependencies in seconds.
 
-Protostar is designed to be run on Day 1 to build your repository foundation, but it is safe to re-run on Day 50 to inject a forgotten dependency or adopt a new static analysis tool.
+Protostar is designed to be run on Day 1 to build your repository foundation. On
+an already initialized workspace, `--force-merge` safely reconciles contributions
+that Protostar previously recorded. It can apply unchanged-local template updates
+and additive tooling, while preserving user edits, deletions, and unowned content.
+It does not adopt existing configuration, switch templates, prune removed template
+content, or provide a `sync` command.
 
 <div class="grid cards" markdown>
 
 - :material-shield-check: __Safe Merging__
 
-    Protostar doesn't blindly overwrite files. It parses ASTs, deduplicates `.gitignore` entries, and safely deep-merges configurations. It is safe to execute on pre-existing codebases.
+    Protostar doesn't blindly overwrite files. In merge mode it uses recorded ownership baselines for supported TOML and YAML configuration, checksum gates for generated files, and deduplicated ignore additions. Existing content without state remains unowned.
 
 - :material-clock-fast: __Instant & Repeatable__
 
