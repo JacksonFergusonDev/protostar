@@ -1,20 +1,13 @@
-"""IDE extension verification and settings synchronization."""
+"""IDE extension verification."""
 
 import enum
-import json
 import shutil
 import subprocess
 from collections.abc import Callable
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
 
-from .errors import FileSystemError
+from .manifest import Severity
 
-if TYPE_CHECKING:
-    from .review_workspace import ByteSink, WorkspaceReader
-from .manifest import IDESettings, Severity
-
-__all__ = ["IDEType", "check_ide_extensions", "write_ide_settings"]
+__all__ = ["IDEType", "check_ide_extensions"]
 
 
 class IDEType(enum.StrEnum):
@@ -97,64 +90,3 @@ def check_ide_extensions(
             f"IDE extension verification skipped due to an unexpected error: {e}",
             Severity.SKIP,
         )
-
-
-def write_ide_settings(
-    ide_settings: IDESettings,
-    on_diagnostic: Callable[[str, Severity], None],
-    fs: "ByteSink",
-    workspace: "WorkspaceReader",
-) -> None:
-    """Writes the aggregated IDE configuration to the appropriate local files.
-
-    Args:
-        ide_settings: IDESettings
-        on_diagnostic: Callable
-        fs: Accepted-byte sink for workspace preferences.
-        workspace: Reader supplying existing workspace settings.
-        on_diagnostic: Callback invoked when existing settings cannot be merged safely.
-    """
-    if not ide_settings:
-        return
-
-    vscode_dir = Path(".vscode")
-    settings_path = vscode_dir / "settings.json"
-    settings: dict[str, Any] = {}
-
-    if workspace.exists(settings_path):
-        try:
-            original_content = workspace.read_text(settings_path)
-            if original_content.strip():
-                parsed_data = json.loads(original_content)
-                if not isinstance(parsed_data, dict):
-                    on_diagnostic(
-                        "Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                        Severity.WARNING,
-                    )
-                    return
-                settings = parsed_data
-        except json.JSONDecodeError:
-            on_diagnostic(
-                "Existing settings.json contains comments, trailing commas, or is malformed. Skipping IDE settings injection to prevent data loss.",
-                Severity.WARNING,
-            )
-            return
-        except OSError as e:
-            raise FileSystemError(
-                "inspect active IDE settings files", str(settings_path), e
-            ) from e
-
-    # 1-level deep dictionary merge
-    for key, value in ide_settings.items():
-        if isinstance(value, dict) and isinstance(settings.get(key), dict):
-            settings[key].update(value)
-        else:
-            settings[key] = value
-
-    try:
-        fs.ensure_directory(vscode_dir)
-        fs.write_text(settings_path, json.dumps(settings, indent=4) + "\n")
-    except OSError as e:
-        raise FileSystemError(
-            "synchronize IDE workspace preferences", str(settings_path), e
-        ) from e

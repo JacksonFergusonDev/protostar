@@ -1,10 +1,10 @@
 """Shared ownership decisions over workspace reads and accepted byte sinks."""
 
 import datetime
-import json
 import logging
 import stat
 import tomllib
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -23,7 +23,6 @@ from .errors import (
     FileSystemError,
     UnsupportedFilesystemNodeError,
 )
-from .ide import write_ide_settings
 from .intent import (
     AppendContribution,
     ContributionPolicy,
@@ -33,6 +32,15 @@ from .intent import (
     validate_target,
 )
 from .interpolation import render_template
+from .jsonc_ast import (
+    JsoncReconciliation,
+    decode_jsonc,
+    decode_jsonc_baseline,
+    dumps_jsonc,
+    encode_jsonc_baseline,
+    parse_jsonc,
+    reconcile_jsonc,
+)
 from .manifest import (
     CollisionStrategy,
     DependencyManifest,
@@ -81,11 +89,32 @@ from .workspace import (
     resolve_python_version,
     validate_resolver_workspace,
 )
-from .yaml_ast import decode_yaml_baseline, encode_yaml_baseline, reconcile_codecov
+from .yaml_ast import (
+    YamlReconciliation,
+    decode_yaml_baseline,
+    encode_yaml_baseline,
+    reconcile_codecov,
+)
 
 logger = logging.getLogger("protostar")
 
 __all__ = ["Reconciliation"]
+
+IDE_SETTINGS_TARGET = Path(".vscode/settings.json")
+IDE_SETTINGS_INDENT = "    "
+# Renovate uses the first configuration it finds, so a sibling location would
+# compete with (or shadow) the managed file.
+RENOVATE_TARGET = Path(".github/renovate.json")
+RENOVATE_ALTERNATIVES = (
+    "renovate.json",
+    "renovate.json5",
+    ".renovaterc",
+    ".renovaterc.json",
+    ".renovaterc.json5",
+    ".github/renovate.json5",
+    ".gitlab/renovate.json",
+    ".gitlab/renovate.json5",
+)
 
 
 class Reconciliation:
@@ -178,6 +207,20 @@ class Reconciliation:
                     "Free-form pyproject.toml replacement is unsupported.",
                     hint="Declare structured contributions; tool.protostar is reserved.",
                 )
+        for filepath, content in self.manifest.filesystem.file_injections.items():
+            if Path(render_template(filepath, self.interpolation_context)) == (
+                RENOVATE_TARGET
+            ):
+                decode_jsonc(render_template(content, self.interpolation_context))
+                if self.workspace.exists(RENOVATE_TARGET):
+                    try:
+                        decode_jsonc(
+                            self.workspace.read_bytes(RENOVATE_TARGET).decode("utf-8")
+                        )
+                    except (OSError, UnicodeError) as error:
+                        raise FileSystemError(
+                            "read JSONC configuration", str(RENOVATE_TARGET), error
+                        ) from error
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if any(c.format is StructuredFormat.YAML for c in contributions):
                 if len(contributions) != 1 or filepath != ".github/codecov.yml":
@@ -320,37 +363,15 @@ class Reconciliation:
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
             enforce_path_jail(target, Path.cwd())
-            if target.as_posix() == ".github/renovate.json":
-                try:
-                    parsed = json.loads(content)
-                except json.JSONDecodeError as error:
-                    raise ConfigurationError(
-                        "Invalid generated Renovate JSON.",
-                        hint="Provide strict JSON for the generated configuration.",
-                    ) from error
-                if not isinstance(parsed, dict):
-                    raise ConfigurationError(
-                        "Invalid generated Renovate root.",
-                        hint="Provide a JSON object.",
-                    )
-                alternatives = (
-                    "renovate.json",
-                    "renovate.json5",
-                    ".renovaterc",
-                    ".renovaterc.json",
-                    ".renovaterc.json5",
-                    ".github/renovate.json5",
-                    ".gitlab/renovate.json",
-                    ".gitlab/renovate.json5",
-                )
-                if any(self.workspace.exists(Path(path)) for path in alternatives):
+            if target == RENOVATE_TARGET:
+                if any(self.workspace.exists(Path(p)) for p in RENOVATE_ALTERNATIVES):
                     self._merge_warning(
                         MergeConflict(
                             MergeLocation(target.as_posix()), ConflictReason.UNOWNED
                         )
                     )
                     continue
-                self._write_generated(target, content)
+                self._reconcile_document(target, content, FilePolicy.JSONC)
                 continue
             record = self._file_record(target, FilePolicy.SEED)
             if self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE and (
@@ -439,49 +460,77 @@ class Reconciliation:
         )
         self._write_generated(target, full_content)
 
-    def _reconcile_codecov(self, desired: str) -> None:
-        """Applies the YAML pilot through the transaction and candidate state."""
-        target = Path(".github/codecov.yml")
-        record = next(
-            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
-        )
-        if record is not None and record.policy is not FilePolicy.YAML:
-            raise ConfigurationError(
-                "Conflicting structured ownership policy.",
-                hint="Keep the tracked file policy unchanged.",
-            )
+    def _reconcile_document(
+        self,
+        target: Path,
+        desired: str,
+        policy: FilePolicy,
+        *,
+        indent: str = "  ",
+    ) -> None:
+        """Applies a YAML or JSONC document through the transaction and candidate state.
+
+        Args:
+            target: Workspace-relative document path.
+            desired: Desired contribution text.
+            policy: ``FilePolicy.YAML`` or ``FilePolicy.JSONC``.
+            indent: Indentation unit for JSONC edits when none can be inferred.
+        """
+        decode_baseline: Callable[[str], dict[str, Value]]
+        encode_baseline: Callable[[dict[str, Value]], str]
+        if policy is FilePolicy.YAML:
+            decode_baseline = decode_yaml_baseline
+            encode_baseline = encode_yaml_baseline
+        else:
+            decode_baseline = decode_jsonc_baseline
+            encode_baseline = encode_jsonc_baseline
+        record = self._file_record(target, policy)
         try:
+            exists = self.workspace.exists(target)
             original = (
-                self.workspace.read_bytes(target).decode("utf-8")
-                if self.workspace.exists(target)
-                else ""
+                self.workspace.read_bytes(target).decode("utf-8") if exists else ""
             )
-            result = reconcile_codecov(
-                original,
-                desired,
-                decode_yaml_baseline(record.baseline)
+            base = (
+                decode_baseline(record.baseline)
                 if record and record.baseline is not None
-                else MISSING,
-                MergeLocation(target.as_posix()),
-                missing_file=not self.workspace.exists(target),
-                overwrite=self.manifest.collision_strategy
-                is CollisionStrategy.OVERWRITE,
+                else MISSING
             )
+            location = MergeLocation(target.as_posix())
+            overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
+            if policy is FilePolicy.YAML:
+                result: YamlReconciliation | JsoncReconciliation = reconcile_codecov(
+                    original,
+                    desired,
+                    base,
+                    location,
+                    missing_file=not exists,
+                    overwrite=overwrite,
+                )
+            else:
+                result = reconcile_jsonc(
+                    original,
+                    desired,
+                    base,
+                    location,
+                    missing_file=not exists,
+                    overwrite=overwrite,
+                    default_indent=indent,
+                )
             for conflict in result.conflicts:
                 self._merge_warning(conflict)
             if result.baseline is not MISSING:
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
                         target.as_posix(),
-                        FilePolicy.YAML,
-                        encode_yaml_baseline(cast(dict[str, Value], result.baseline)),
+                        policy,
+                        encode_baseline(cast(dict[str, Value], result.baseline)),
                     )
                 )
             if result.content != original:
                 self.fs.write_text(target, result.content)
         except (OSError, UnicodeError) as error:
             raise FileSystemError(
-                "reconcile Codecov configuration", str(target), error
+                f"reconcile {target.name} configuration", str(target), error
             ) from error
 
     def _append_files(self) -> None:
@@ -489,7 +538,11 @@ class Reconciliation:
         is_overwrite = self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if contributions[0].format is StructuredFormat.YAML:
-                self._reconcile_codecov(contributions[0].content)
+                self._reconcile_document(
+                    Path(".github/codecov.yml"),
+                    contributions[0].content,
+                    FilePolicy.YAML,
+                )
                 continue
             target = Path(render_template(filepath, self.interpolation_context))
             validate_target(target.as_posix())
@@ -1025,16 +1078,37 @@ class Reconciliation:
             ) from e
 
     def _write_ide_settings(self) -> None:
-        """Writes the aggregated IDE configuration to the appropriate local files."""
-        write_ide_settings(
-            ide_settings=self.manifest.ide_settings,
-            on_diagnostic=lambda msg, sev: self.add_diagnostic(
-                phase=DiagnosticPhase.EXECUTOR,
-                message=msg,
-                severity=sev,
-            ),
-            fs=self.fs,
-            workspace=self.workspace,
+        """Reconciles IDE workspace preferences without discarding user content.
+
+        A malformed existing settings file is an editor convenience, so it is
+        skipped with a warning rather than aborting the run.
+        """
+        settings = self.manifest.ide_settings
+        if not settings:
+            return
+        try:
+            if self.workspace.exists(IDE_SETTINGS_TARGET):
+                parse_jsonc(
+                    self.workspace.read_bytes(IDE_SETTINGS_TARGET).decode("utf-8"),
+                    allow_empty=True,
+                )
+        except (OSError, UnicodeError) as error:
+            raise FileSystemError(
+                "inspect active IDE settings files", str(IDE_SETTINGS_TARGET), error
+            ) from error
+        except ConfigurationError:
+            self.add_diagnostic(
+                DiagnosticPhase.EXECUTOR,
+                "Existing settings.json is not a valid JSONC object (syntax error or "
+                "duplicate keys). Skipping IDE settings injection to prevent data loss.",
+                Severity.WARNING,
+            )
+            return
+        self._reconcile_document(
+            IDE_SETTINGS_TARGET,
+            dumps_jsonc(cast(dict[str, Value], dict(settings)), IDE_SETTINGS_INDENT),
+            FilePolicy.JSONC,
+            indent=IDE_SETTINGS_INDENT,
         )
 
     def _merge_warning(self, conflict: MergeConflict) -> None:

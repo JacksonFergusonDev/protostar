@@ -14,6 +14,7 @@ from protostar.errors import ConfigurationError, InvalidUsageError, ProtostarErr
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project
 from protostar.manifest import EnvironmentManifest
+from protostar.merge import ConflictReason
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
 
 
@@ -741,11 +742,14 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     Path("pyproject.toml").write_text(tomlkit.dumps(recipe_doc))
     process.reset_mock()
     prepared = prepare_project()
+    # The fixture's earlier template content left an owned key that the Renovate
+    # module omits, so the desired document counts as changed intent under a
+    # deleted ancestor: the deletion is preserved and reported as a conflict.
     assert any(
-        item.deleted and item.location.file == ".github/renovate.json"
-        for item in prepared.review.preserved
+        conflict.location.file == ".github/renovate.json"
+        and conflict.reason is ConflictReason.DELETED_ANCESTOR
+        for conflict in prepared.review.conflicts
     )
     prepared.apply()
     assert not Path(".github/renovate.json").exists()
     process.assert_not_called()
-    assert not inspect_project().pending

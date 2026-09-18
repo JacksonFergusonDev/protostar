@@ -11,6 +11,7 @@ from .dependencies import (
     requirement_entries,
     requirement_identity,
 )
+from .jsonc_ast import decode_jsonc
 from .merge import MISSING, MergeConflict, MergeLocation, Value, semantic_equal
 from .review_workspace import ReviewWorkspace
 from .sync_state import FilePolicy, SyncState, decode_toml_baseline
@@ -119,15 +120,15 @@ def preserved_deviations(
         exists = workspace.exists(target)
         location = MergeLocation(record.path)
         if (
-            record.policy in (FilePolicy.TOML, FilePolicy.YAML)
+            record.policy in (FilePolicy.TOML, FilePolicy.YAML, FilePolicy.JSONC)
             and record.baseline
             and candidate.baseline
         ):
-            decode = (
-                decode_toml_baseline
-                if record.policy is FilePolicy.TOML
-                else decode_yaml_baseline
-            )
+            decode = {
+                FilePolicy.TOML: decode_toml_baseline,
+                FilePolicy.YAML: decode_yaml_baseline,
+                FilePolicy.JSONC: decode_jsonc,
+            }[record.policy]
             local = decode(workspace.read_text(target)) if exists else MISSING
             inspect(
                 location, decode(record.baseline), decode(candidate.baseline), local
