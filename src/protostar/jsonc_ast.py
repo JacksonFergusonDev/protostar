@@ -9,12 +9,23 @@ from __future__ import annotations
 
 import json
 import math
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import cast
 
 from .errors import ConfigurationError
-from .merge import MISSING, Value, semantic_equal, validate_value
+from .merge import (
+    MISSING,
+    MergeConflict,
+    MergeLocation,
+    Value,
+    overlay_declared,
+    prune_unapplied,
+    reconcile,
+    semantic_equal,
+    validate_value,
+)
 
 type Path = tuple[str | int, ...]
 
@@ -745,3 +756,100 @@ def encode_jsonc_baseline(value: dict[str, Value]) -> str:
     content = dumps_jsonc(cast(dict[str, Value], ordered(value)))
     decode_jsonc_baseline(content)
     return content
+
+
+@dataclass(frozen=True)
+class JsoncReconciliation:
+    """Round-trip output, owned composite baseline, and structured conflicts."""
+
+    content: str
+    baseline: Value
+    conflicts: tuple[MergeConflict, ...]
+
+
+def reconcile_jsonc(
+    original: str,
+    desired: str,
+    base: Value,
+    location: MergeLocation,
+    *,
+    missing_file: bool = False,
+    overwrite: bool = False,
+    default_indent: str = "  ",
+) -> JsoncReconciliation:
+    """Confines accepted semantic edits to byte spans of the local document.
+
+    The three-way kernel decides ownership over decoded values. Accepted changes are
+    then spliced into the local text, so comments, ordering, quoting, and
+    formatting outside those spans are retained. A semantic no-op returns the
+    original bytes. Arrays are atomic for ownership, but an accepted array
+    replacement is applied by position so unchanged elements keep their comments.
+
+    Args:
+        original: Current local text; ignored when ``missing_file``.
+        desired: Desired contribution as a JSONC object.
+        base: Previously owned contributions, or ``MISSING``.
+        location: File and key path carried into conflicts.
+        missing_file: Whether the local file does not exist.
+        overwrite: Own declared values while retaining undeclared siblings.
+        default_indent: Indentation unit when the document offers none to infer.
+
+    Returns:
+        Resulting text, the owned baseline, and preserved-local conflicts.
+
+    Raises:
+        ConfigurationError: If either document is invalid.
+    """
+    remote = decode_jsonc(desired)
+    doc = parse_jsonc(
+        "" if missing_file else original,
+        allow_empty=True,
+        default_indent=default_indent,
+    )
+    local = doc.value()
+    conflicts: list[MergeConflict] = []
+    if overwrite:
+        value: Value = deepcopy(local)
+        baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
+        overlay_declared(cast(dict[str, Value], value), remote)
+        overlay_declared(cast(dict[str, Value], baseline), remote)
+    else:
+        result = reconcile(base, MISSING if missing_file else local, remote, location)
+        value, baseline = result.value, result.baseline
+        conflicts = list(result.conflicts)
+    if value is MISSING:
+        return JsoncReconciliation(original, baseline, tuple(conflicts))
+    accepted = cast(dict[str, Value], value)
+
+    if isinstance(baseline, dict):
+        prune_unapplied(baseline, base if isinstance(base, dict) else {}, local)
+        if not baseline and base is MISSING and not missing_file:
+            baseline = MISSING
+    if missing_file and semantic_equal(accepted, remote):
+        return JsoncReconciliation(desired, baseline, tuple(conflicts))
+    if semantic_equal(local, accepted) and (not missing_file or not accepted):
+        return JsoncReconciliation(original, baseline, tuple(conflicts))
+
+    def patch(
+        target: JsoncDocument,
+        prefix: Path,
+        before: dict[str, Value],
+        after: dict[str, Value],
+    ) -> JsoncDocument:
+        for key, child in after.items():
+            old = before.get(key, MISSING)
+            if semantic_equal(old, child):
+                continue
+            if isinstance(old, dict) and isinstance(child, dict):
+                target = patch(target, (*prefix, key), old, child)
+            else:
+                target = target.set((*prefix, key), child)
+        return target
+
+    edited = patch(doc, (), local, accepted)
+    if not semantic_equal(edited.value(), accepted):
+        raise ConfigurationError(
+            "JSONC reconciliation could not preserve the accepted values.",
+            hint="Simplify the target document or restore it from version control.",
+        )
+    return JsoncReconciliation(edited.text, baseline, tuple(conflicts))
