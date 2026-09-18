@@ -29,6 +29,7 @@ from .intent import (
     DependencyGroup,
     DependencyInclude,
     StructuredFormat,
+    region_tag,
     validate_target,
 )
 from .interpolation import render_template
@@ -697,7 +698,7 @@ class Reconciliation:
                         record.policy if record else FilePolicy.REGIONS,
                         digest=record.digest if record else None,
                         regions=tuple(
-                            RegionState(identity, digest)
+                            RegionState(region_tag(identity), identity, digest)
                             for identity, digest in region_result.digests.items()
                         ),
                     )
@@ -802,7 +803,7 @@ class Reconciliation:
                         FilePolicy.CHECKSUM,
                         digest=result.digest,
                         regions=tuple(
-                            RegionState(identity, digest)
+                            RegionState(region_tag(identity), identity, digest)
                             for identity, digest in regions.items()
                         ),
                     )

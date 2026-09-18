@@ -16,6 +16,7 @@ from protostar.intent import (
     ContributionPolicy,
     DependencyGroup,
     TemplateOrigin,
+    region_tag,
 )
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.models import InitRequest
@@ -286,7 +287,7 @@ def test_named_region_update_preserves_surrounding_bytes_and_merge_preserves_loc
     assert result is not None
     assert result.content.startswith("prefix\n")
     assert result.content.endswith("suffix\n")
-    assert result.content.count("Protostar Region: module:environment") == 2
+    assert result.content.count(f": protostar {changed[0].tag}") == 2
     assert "A=2" in result.content
     assert "A=1" not in result.content
 
@@ -294,16 +295,27 @@ def test_named_region_update_preserves_surrounding_bytes_and_merge_preserves_loc
 @pytest.mark.parametrize(
     "content",
     [
-        "# --- Protostar Injection: deadbeef ---\na\n# --- End Protostar Injection ---",
-        "# --- Protostar Region: one ---",
-        "# --- End Protostar Region: one ---",
-        "# --- Protostar Region: one ---\n# --- Protostar Region: two ---",
-        "# --- Protostar Region: one ---\n# --- End Protostar Region: two ---",
+        "# region: protostar deadbeef",
+        "# endregion: protostar deadbeef",
+        "# region: protostar deadbeef\n# region: protostar 12345678",
+        "# region: protostar deadbeef\n# endregion: protostar 12345678",
+        "# region: protostar nothex\n# endregion: protostar nothex",
     ],
 )
-def test_legacy_and_malformed_region_boundaries_fail(content):
+def test_malformed_region_boundaries_fail(content):
     with pytest.raises(ConfigurationError):
         append_marker_blocks(content, [AppendContribution("one", "a")], Path(".envrc"))
+
+
+def test_historical_marker_strings_treated_as_ordinary_unmanaged_content():
+    legacy = (
+        "# --- Protostar Region: one ---\nold\n# --- End Protostar Region: one ---\n"
+    )
+    result = append_marker_blocks(
+        legacy, [AppendContribution("one", "a")], Path(".envrc")
+    )
+    assert legacy in result.content
+    assert f"# region: protostar {region_tag('one')}" in result.content
 
 
 @pytest.mark.parametrize(

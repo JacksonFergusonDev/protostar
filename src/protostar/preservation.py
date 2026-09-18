@@ -151,10 +151,9 @@ def preserved_deviations(
                 region_location = MergeLocation(record.path, identity=region.id)
                 if candidate_region != region or blocked(region_location):
                     continue
-                begin = f"{start} --- Protostar Region: {region.id} --- {end}".strip()
-                finish = (
-                    f"{start} --- End Protostar Region: {region.id} --- {end}".strip()
-                )
+                suffix = f" {end}" if end else ""
+                begin = f"{start} region: protostar {region.tag}{suffix}".strip()
+                finish = f"{start} endregion: protostar {region.tag}{suffix}".strip()
                 offset = region_content.find(begin)
                 stop = region_content.find(finish, offset) if offset >= 0 else -1
                 local_digest = (

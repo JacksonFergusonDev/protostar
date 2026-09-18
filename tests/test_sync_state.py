@@ -4,7 +4,12 @@ from datetime import UTC, date, datetime, time
 import pytest
 
 from protostar.errors import ConfigurationError
-from protostar.intent import DependencyGroup, TemplateOrigin, TemplateReference
+from protostar.intent import (
+    DependencyGroup,
+    TemplateOrigin,
+    TemplateReference,
+    region_tag,
+)
 from protostar.jsonc_ast import encode_jsonc_baseline
 from protostar.merge import Value, semantic_equal
 from protostar.sync_state import (
@@ -46,8 +51,12 @@ def sample_state():
                 ".envrc",
                 FilePolicy.REGIONS,
                 regions=(
-                    RegionState("module:direnv", DIGEST),
-                    RegionState("template:api/environment", "b" * 64),
+                    RegionState(region_tag("module:direnv"), "module:direnv", DIGEST),
+                    RegionState(
+                        region_tag("template:api/environment"),
+                        "template:api/environment",
+                        "b" * 64,
+                    ),
                 ),
             ),
         ),
@@ -199,9 +208,29 @@ def test_corrupt_state_is_fatal_with_actionable_hint(content):
         lambda: FileState(
             "file",
             FilePolicy.REGIONS,
-            regions=(RegionState("a", DIGEST), RegionState("a", DIGEST)),
+            regions=(
+                RegionState("12345678", "a", DIGEST),
+                RegionState("12345678", "a", DIGEST),
+            ),
         ),
-        lambda: RegionState("bad identity", DIGEST),
+        lambda: FileState(
+            "file",
+            FilePolicy.REGIONS,
+            regions=(
+                RegionState("12345678", "a", DIGEST),
+                RegionState("87654321", "a", DIGEST),
+            ),
+        ),
+        lambda: FileState(
+            "file",
+            FilePolicy.REGIONS,
+            regions=(
+                RegionState("12345678", "a", DIGEST),
+                RegionState("12345678", "b", DIGEST),
+            ),
+        ),
+        lambda: RegionState("bad_tag", "a", DIGEST),
+        lambda: RegionState("12345678", "bad identity", DIGEST),
         lambda: DependencyState(
             "pyproject.toml", DependencyGroup.MAIN, "Not_Canonical", "", "x", "x"
         ),
@@ -357,7 +386,11 @@ def test_jsonc_baseline_must_be_a_strict_json_object(baseline):
 
 @pytest.mark.parametrize(
     "fields",
-    [{"digest": DIGEST}, {"regions": (RegionState("test:id", DIGEST),)}, {}],
+    [
+        {"digest": DIGEST},
+        {"regions": (RegionState("12345678", "test:id", DIGEST),)},
+        {},
+    ],
 )
 def test_jsonc_records_hold_only_a_baseline(fields):
     with pytest.raises(ConfigurationError):
