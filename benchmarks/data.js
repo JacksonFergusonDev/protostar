@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789763819192,
+  "lastUpdate": 1789768729906,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13843,6 +13843,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 272.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7187eade53befe6f8c517efba59ef0631f253d9a",
+          "message": "feat(reconciliation): introduce subtle region delimiters and lockfile metadata (#269)",
+          "timestamp": "2026-09-18T14:57:31-07:00",
+          "tree_id": "408ab0cab5ff5b401684f00d7e740c15317a775a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7187eade53befe6f8c517efba59ef0631f253d9a"
+        },
+        "date": 1789768728488,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 195.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 272.43,
             "unit": "ms"
           }
         ]
