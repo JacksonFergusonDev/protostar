@@ -66,6 +66,7 @@ transaction attempt; file baselines remain authoritative after partial conflicts
 | --- | --- |
 | `structured-toml` | TOML document string containing only applied contributions |
 | `structured-yaml` | Validated YAML 1.2 document string containing only applied contributions |
+| `structured-jsonc` | Strict JSON object string containing only applied contributions, including nulls |
 | `checksum` | Last applied lowercase SHA-256 hex digest, plus optional managed-region digests |
 | `seed-only` | Path actually seeded; retained after deletion |
 | `regions` | Stable region IDs and last applied SHA-256 digests |
@@ -227,7 +228,7 @@ pruning nor a `sync` command.
 
 ## PR F: Generated files, seeds, and regions
 
-Renovate, CI/release workflows, Dockerfile, and justfile use one pure exact-byte
+CI/release workflows, Dockerfile, and justfile use one pure exact-byte
 SHA-256 gate. An absent never-owned target is created; an unchanged owned target
 can update. Convergence advances an existing baseline without rewriting the file.
 Unowned existing files are never adopted, including when their bytes equal the
@@ -236,10 +237,8 @@ change emits a structured conflict; an unchanged desired contribution does not
 warn merely because the user edited or deleted it. Explicit overwrite can replace
 a declared generated target and establish its new digest.
 
-Renovate's existing content is never parsed, so JSONC comments remain intact.
-New generated content must be a strict JSON object. Recognized alternative
-Renovate locations prevent creation of a competing configuration and produce a
-conflict; they are not adopted. Dockerfile preservation does not prevent additive
+Renovate configuration is no longer checksum-gated; it is reconciled as JSONC
+(see the JSONC boundary below). Dockerfile preservation does not prevent additive
 `.dockerignore` updates.
 
 Free-form files record paths actually seeded. Existing files remain unowned and
@@ -327,7 +326,7 @@ It requires the same selected template identity for a tracked project and
 reconciles only recorded contributions. It does not adopt pre-existing files,
 restore user-deleted content, prune omitted contributions, switch templates, or
 reconstruct/rerun a request from the lock state. Those capabilities, along with a
-user-facing `sync` command and semantic Renovate/JSONC editing, remain deferred.
+user-facing `sync` command, remain deferred.
 
 ## Stage 2 shared preparation boundary
 
@@ -365,3 +364,49 @@ checks the desired manifest and all captured inputs; a stale review fails before
 that batch mutates anything. Fatal failures terminate managed processes and roll
 back exact journaled bytes/modes. This protects the preparation/application
 interval, without promising exclusion of concurrent writers during a transaction.
+
+## JSONC boundary
+
+`jsonc_ast.py` is a pure-Python, standard-library-only codec, editor, and
+reconciliation adapter for `.github/renovate.json` and `.vscode/settings.json`.
+It has no dependency beyond the merge kernel and domain errors, performs no I/O,
+and never touches a terminal.
+
+The dialect is JSONC: `//` and `/* */` comments and trailing commas over one
+object root with unique string keys. JSON5 (single quotes, unquoted keys,
+hexadecimal numbers) is unsupported, so `renovate.json5` and the other Renovate
+alternatives remain untouched foreign locations. Duplicate keys, non-finite
+numbers, lone surrogates, and non-object roots are domain errors. Input is bounded
+to 1 MB, 100 nesting levels, and 10,000 nodes. Owned baselines use the strict
+subset (no comments or trailing commas), deterministic key order, and preserve
+null values.
+
+The parser records source spans rather than rebuilding text. Every edit is a set of
+replacements over those spans, so all bytes outside an accepted edit, including
+comments, key order, quoting, number spellings, CRLF or LF line endings, and a
+leading BOM, are identical. Inserted members copy the indentation, separator
+style, and trailing-comma style of their neighbors, and stay compact inside
+single-line containers. Accepted array replacements are applied by position, so
+unchanged leading elements keep their comments; arrays remain atomic for
+ownership. Comments on their own lines above a removed item are retained. A
+semantic no-op returns the original bytes.
+
+The existing three-way kernel controls ownership. Existing equal content is not
+adopted, missing unowned keys may be added and owned, local edits and deletions are
+preserved with structured conflicts, and explicit overwrite owns declared leaves
+while retaining foreign siblings. A missing file receives the desired bytes
+verbatim, so template comments and layout survive. Conflicts are reported at key
+level. Blank or comment-only files gain a root object after their existing trivia.
+
+Renovate declarations still arrive through the file-injection channel, so a template
+`[files]` entry for `.github/renovate.json` follows the same path as the built-in
+module. Recognized alternative Renovate locations prevent creation of a competing
+configuration and produce an `unowned` conflict. A malformed generated or existing
+Renovate document fails before any workspace mutation.
+
+IDE settings reconcile the flat `python.*` preference keys as literal top-level keys
+(not nested paths), indenting new content with four spaces. Existing user values are
+preserved with a warning rather than overwritten. A settings file that is not a
+valid JSONC object is an editor convenience: it is skipped with a warning and never
+aborts the run. Writes use the transaction-aware filesystem, candidate state is
+committed only at transaction completion, and failures restore exact bytes and modes.

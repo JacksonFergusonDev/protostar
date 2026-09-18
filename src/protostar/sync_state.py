@@ -21,6 +21,7 @@ from .intent import (
     TemplateReference,
     validate_region_id,
 )
+from .jsonc_ast import decode_jsonc_baseline, encode_jsonc_baseline
 from .merge import Value, validate_value
 from .registry import PinProvenance as PinProvenance
 
@@ -32,6 +33,7 @@ class FilePolicy(StrEnum):
 
     TOML = "structured-toml"
     YAML = "structured-yaml"
+    JSONC = "structured-jsonc"
     CHECKSUM = "checksum"
     SEED = "seed-only"
     REGIONS = "regions"
@@ -100,7 +102,7 @@ class FileState:
         validate_state_path(self.path)
         if not isinstance(self.policy, FilePolicy):
             raise _invalid("unknown file policy.")
-        if self.policy in (FilePolicy.TOML, FilePolicy.YAML):
+        if self.policy in (FilePolicy.TOML, FilePolicy.YAML, FilePolicy.JSONC):
             if (
                 type(self.baseline) is not str
                 or self.digest is not None
@@ -115,6 +117,8 @@ class FileState:
                     tool = value.get("tool", {})
                     if not isinstance(tool, dict) or "protostar" in tool:
                         raise _invalid("tool.protostar cannot be owned.")
+            elif self.policy is FilePolicy.JSONC:
+                decode_jsonc_baseline(self.baseline)
             else:
                 from .yaml_ast import (
                     decode_yaml_baseline,
@@ -436,6 +440,10 @@ def serialize_state(state: SyncState) -> str:
 
                 fields["baseline"] = encode_yaml_baseline(
                     decode_yaml_baseline(record.baseline)
+                )
+            elif record.policy is FilePolicy.JSONC:
+                fields["baseline"] = encode_jsonc_baseline(
+                    decode_jsonc_baseline(record.baseline)
                 )
             else:
                 fields["baseline"] = encode_toml_baseline(

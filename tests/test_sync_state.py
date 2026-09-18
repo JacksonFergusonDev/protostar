@@ -5,6 +5,7 @@ import pytest
 
 from protostar.errors import ConfigurationError
 from protostar.intent import DependencyGroup, TemplateOrigin, TemplateReference
+from protostar.jsonc_ast import encode_jsonc_baseline
 from protostar.merge import Value, semantic_equal
 from protostar.sync_state import (
     DependencyState,
@@ -316,3 +317,48 @@ def test_state_codec_is_filesystem_subprocess_and_output_free(mocker, capsys):
     write.assert_not_called()
     run.assert_not_called()
     assert capsys.readouterr() == ("", "")
+
+
+def test_jsonc_baseline_round_trips_canonically_and_keeps_nulls():
+    unordered = '{"b": {"y": null, "x": [1, 2.5]}, "a": true}'
+    state = SyncState(
+        "0.9.0",
+        None,
+        (FileState(".vscode/settings.json", FilePolicy.JSONC, unordered),),
+    )
+
+    content = serialize_state(state)
+    parsed = deserialize_state(content)
+
+    assert "structured-jsonc" in content
+    record = parsed.files[0]
+    assert record.policy is FilePolicy.JSONC
+    assert record.baseline == encode_jsonc_baseline(
+        {"a": True, "b": {"x": [1, 2.5], "y": None}}
+    )
+    assert serialize_state(parsed) == content
+
+
+@pytest.mark.parametrize(
+    "baseline",
+    [
+        "",
+        "[]",
+        '{"a": 1, // comment\n}',
+        '{"a": 1,}',
+        '{"a": 1, "a": 2}',
+        "{broken",
+    ],
+)
+def test_jsonc_baseline_must_be_a_strict_json_object(baseline):
+    with pytest.raises(ConfigurationError):
+        FileState(".github/renovate.json", FilePolicy.JSONC, baseline)
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [{"digest": DIGEST}, {"regions": (RegionState("test:id", DIGEST),)}, {}],
+)
+def test_jsonc_records_hold_only_a_baseline(fields):
+    with pytest.raises(ConfigurationError):
+        FileState(".github/renovate.json", FilePolicy.JSONC, **fields)

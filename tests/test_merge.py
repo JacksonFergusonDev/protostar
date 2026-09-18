@@ -12,6 +12,8 @@ from protostar.merge import (
     MergeLocation,
     MergePolicy,
     Value,
+    overlay_declared,
+    prune_unapplied,
     reconcile,
     semantic_equal,
 )
@@ -294,3 +296,34 @@ def test_unchanged_ancestor_cannot_bypass_nested_set_validation(base, local, rem
         reconcile(
             base, local, remote, LOC, MergePolicy(frozenset({(*LOC.keys, "select")}))
         )
+
+
+def test_overlay_declared_recurses_and_retains_foreign_siblings():
+    target: dict[str, Value] = {"a": {"x": 1, "foreign": 2}, "keep": [1]}
+    incoming: dict[str, Value] = {"a": {"x": 9}, "b": [1, 2], "keep": {"n": 1}}
+
+    overlay_declared(target, incoming)
+
+    assert target == {"a": {"x": 9, "foreign": 2}, "b": [1, 2], "keep": {"n": 1}}
+    cast(list[Value], target["b"]).append(3)
+    assert incoming["b"] == [1, 2]
+
+
+def test_prune_unapplied_drops_only_new_empty_owned_mappings():
+    owned: dict[str, Value] = {
+        "new_empty": {},
+        "old_empty": {},
+        "nested": {"inner": {}},
+        "applied": {"k": 1},
+    }
+    previous: dict[str, Value] = {"old_empty": {}}
+    current: dict[str, Value] = {
+        "new_empty": {},
+        "old_empty": {},
+        "nested": {"inner": {}},
+        "applied": {"k": 1},
+    }
+
+    prune_unapplied(owned, previous, current)
+
+    assert owned == {"old_empty": {}, "applied": {"k": 1}}

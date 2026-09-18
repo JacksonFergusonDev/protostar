@@ -15,7 +15,6 @@ from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.sync_state import deserialize_state
 
 ARTIFACTS = [
-    ".github/renovate.json",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
     "Dockerfile",
@@ -225,9 +224,6 @@ def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
         e.manifest.tooling.wants_release = True
         e.manifest.tooling.wants_just = True
         e.manifest.tooling.wants_docker = True
-        e.manifest.filesystem.add_file_injection(
-            ".github/renovate.json", '{"extends": []}\n'
-        )
         e.manifest.filesystem.add_region(".envrc", "v1", identity="test:region")
 
     run(mocker, setup)
@@ -244,37 +240,6 @@ def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
     )
     run(mocker, setup)
     assert Path(".github/workflows/ci.yml").read_text() == "ci v2\n"
-
-
-@pytest.mark.parametrize(
-    "alternate", ["renovate.json", ".renovaterc.json5", ".github/renovate.json5"]
-)
-def test_renovate_alternative_preserved(tmp_path, monkeypatch, mocker, alternate):
-    monkeypatch.chdir(tmp_path)
-    target = Path(alternate)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(b"// comments\n{}")
-
-    def setup(e):
-        e.manifest.filesystem.add_file_injection(".github/renovate.json", "{}")
-
-    assert run(mocker, setup).diagnostics[0].conflict
-    assert target.read_bytes() == b"// comments\n{}"
-    assert not Path(".github/renovate.json").exists()
-
-
-@pytest.mark.parametrize("content", ["{broken", "[]"])
-def test_invalid_generated_renovate_rolls_back(tmp_path, monkeypatch, mocker, content):
-    monkeypatch.chdir(tmp_path)
-
-    def setup(e):
-        e.manifest.filesystem.add_file_injection("seed.py", "seed")
-        e.manifest.filesystem.add_file_injection(".github/renovate.json", content)
-
-    with pytest.raises(ConfigurationError):
-        run(mocker, setup)
-    assert not Path("seed.py").exists()
-    assert not Path(".protostar.lock.toml").exists()
 
 
 def test_edited_dockerfile_still_appends_ignore_patterns(tmp_path, monkeypatch, mocker):

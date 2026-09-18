@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import StrEnum
+from typing import cast
 
 from .errors import ConfigurationError
 
@@ -316,3 +317,47 @@ def reconcile(
     for value in (base, local, remote):
         validate_policy(value, location.keys)
     return merge(base, local, remote, location, policy.protected_ancestor)
+
+
+def overlay_declared(target: dict[str, Value], incoming: dict[str, Value]) -> None:
+    """Overlays declared leaves onto ``target`` in place, retaining foreign siblings.
+
+    Mappings present on both sides merge recursively; every other declared value
+    replaces the target with a detached copy. Used for explicit overwrite, which owns
+    declared values but never undeclared siblings.
+
+    Args:
+        target: Mapping mutated in place.
+        incoming: Declared contribution copied into ``target``.
+    """
+    for key, child in incoming.items():
+        existing = target.get(key)
+        if isinstance(child, dict) and isinstance(existing, dict):
+            overlay_declared(existing, child)
+        else:
+            target[key] = deepcopy(child)
+
+
+def prune_unapplied(
+    owned: dict[str, Value], previous: dict[str, Value], current: dict[str, Value]
+) -> None:
+    """Drops newly created owned mappings that the adapter left empty, in place.
+
+    An owned mapping that accepted no children and did not exist in the previous
+    baseline was never applied, so it must not become owned.
+
+    Args:
+        owned: Composite baseline mutated in place.
+        previous: Baseline before this reconciliation.
+        current: Local semantic value the accepted edits were applied to.
+    """
+    for key, child in list(owned.items()):
+        if isinstance(child, dict) and isinstance(current.get(key), dict):
+            prior = previous.get(key, {})
+            prune_unapplied(
+                child,
+                prior if isinstance(prior, dict) else {},
+                cast(dict[str, Value], current[key]),
+            )
+            if not child and key not in previous:
+                owned.pop(key)
