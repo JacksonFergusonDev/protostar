@@ -17,8 +17,8 @@ policy = "seed-only"
 
 [[files]]
 path = ".github/renovate.json"
-policy = "checksum"
-digest = "8ebc4c61fd909f57770b959abeca245d4b312d0a330d56015dae709414c92ee0"
+policy = "structured-jsonc"
+baseline = "{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.json\",\n  \"extends\": [\n    \"config:best-practices\",\n    \":semanticCommits\"\n  ],\n  \"internalChecksFilter\": \"strict\",\n  \"packageRules\": [\n    {\n      \"description\": \"Require a package to be 2 weeks old before updating, but exclude vulnerability remediation from this wait.\",\n      \"matchUpdateTypes\": [\n        \"major\",\n        \"minor\",\n        \"patch\",\n        \"pin\",\n        \"digest\"\n      ],\n      \"minimumReleaseAge\": \"2 weeks\"\n    },\n    {\n      \"automerge\": true,\n      \"description\": \"Group all python dev-dependencies into one PR and automerge them.\",\n      \"groupName\": \"python-dev-tools\",\n      \"matchDepTypes\": [\n        \"dependency-groups\"\n      ],\n      \"matchFileNames\": [\n        \"pyproject.toml\"\n      ]\n    },\n    {\n      \"automerge\": true,\n      \"description\": \"Group GitHub Actions updates into one PR and automerge them.\",\n      \"groupName\": \"github-actions\",\n      \"matchManagers\": [\n        \"github-actions\"\n      ]\n    }\n  ],\n  \"rebaseWhen\": \"conflicted\",\n  \"schedule\": [\n    \"before 4am on monday\"\n  ],\n  \"vulnerabilityAlerts\": {\n    \"schedule\": [\n      \"at any time\"\n    ]\n  }\n}\n"
 
 [[files]]
 path = ".github/workflows/ci.yml"

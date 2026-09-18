@@ -14,7 +14,9 @@
     "conflicts": [
       {
         "file": ".github/renovate.json",
-        "keys": [],
+        "keys": [
+          "value"
+        ],
         "identity": null,
         "reason": "diverged"
       }
