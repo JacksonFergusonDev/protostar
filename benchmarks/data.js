@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789687941383,
+  "lastUpdate": 1789759294408,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13741,6 +13741,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 285.06,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "70367055b9e93f8251ec21757db2ace93c68b84a",
+          "message": "docs: remove completed Stage 2 execution plan\n\nStage 2 (developer-facing lifecycle commands: status, diff, sync) has\nshipped, passing all acceptance criteria across PRs 1 through 5. Remove\nSTAGE_2_PLAN.md now that its requirements, boundaries, and test matrices\nare codified in tree.",
+          "timestamp": "2026-09-18T12:19:54-07:00",
+          "tree_id": "60953182970b1bb0d7fa11a812a961db1fb01362",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/70367055b9e93f8251ec21757db2ace93c68b84a"
+        },
+        "date": 1789759292812,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 193.71,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 267.94,
             "unit": "ms"
           }
         ]
