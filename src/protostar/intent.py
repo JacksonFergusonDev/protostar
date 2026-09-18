@@ -88,6 +88,11 @@ class StructuredContribution:
         }
 
 
+def region_tag(identity: str) -> str:
+    """Returns a deterministic 8-character hex tag for an append region identity."""
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:8]
+
+
 @dataclass(frozen=True)
 class AppendContribution:
     """A text region whose identity remains stable across payload revisions."""
@@ -95,9 +100,14 @@ class AppendContribution:
     id: str
     content: str
 
+    @property
+    def tag(self) -> str:
+        """Deterministic 8-character hex tag used in delimiter markers."""
+        return region_tag(self.id)
+
     def to_dict(self) -> dict[str, str]:
-        """Serializes stable region identity and desired bytes."""
-        return {"id": self.id, "content": self.content}
+        """Serializes stable region identity, delimiter tag, and desired bytes."""
+        return {"id": self.id, "tag": self.tag, "content": self.content}
 
 
 def validate_target(path: str) -> None:

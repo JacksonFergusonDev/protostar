@@ -47,9 +47,9 @@ def test_append_marker_blocks_fresh():
     result = append_marker_blocks(orig, payloads, Path(".envrc"))
 
     assert result.content
-    assert "# --- Protostar Region:" in result.content
+    assert f"# region: protostar {payloads[0].tag}" in result.content
     assert "export FOO=bar" in result.content
-    assert "# --- End Protostar Region: template:environment ---" in result.content
+    assert f"# endregion: protostar {payloads[0].tag}" in result.content
     assert result.content.endswith("\n")
 
 
@@ -59,7 +59,9 @@ def test_append_marker_blocks_existing_file():
     result = append_marker_blocks(orig, payloads, Path(".envrc"))
 
     assert result.content
-    assert result.content.startswith("export EXISTING=1\n\n# --- Protostar Region:")
+    assert result.content.startswith(
+        f"export EXISTING=1\n\n# region: protostar {payloads[0].tag}"
+    )
     assert "export FOO=bar" in result.content
 
 
@@ -68,7 +70,7 @@ def test_append_marker_blocks_deduplication():
     first_pass = append_marker_blocks("", payloads, Path(".envrc"))
     assert first_pass.content
 
-    # Second pass without overwrite should return None
+    # Second pass without overwrite should return unchanged content
     second_pass = append_marker_blocks(
         first_pass.content, payloads, Path(".envrc"), overwrite=False
     )
@@ -92,5 +94,32 @@ def test_append_marker_blocks_html_comment_syntax():
     result = append_marker_blocks("", payloads, Path("index.html"))
 
     assert result.content
-    assert "<!-- --- Protostar Region:" in result.content
-    assert "--- End Protostar Region: template:html --- -->" in result.content
+    assert f"<!-- region: protostar {payloads[0].tag} -->" in result.content
+    assert f"<!-- endregion: protostar {payloads[0].tag} -->" in result.content
+
+
+def test_append_marker_blocks_slash_comment_syntax():
+    payloads = [AppendContribution("template:ts", "console.log('test');")]
+    result = append_marker_blocks("", payloads, Path("app.ts"))
+
+    assert result.content
+    assert f"// region: protostar {payloads[0].tag}" in result.content
+    assert f"// endregion: protostar {payloads[0].tag}" in result.content
+
+
+def test_append_marker_blocks_css_comment_syntax():
+    payloads = [AppendContribution("template:css", ".box { color: red; }")]
+    result = append_marker_blocks("", payloads, Path("style.css"))
+
+    assert result.content
+    assert f"/* region: protostar {payloads[0].tag} */" in result.content
+    assert f"/* endregion: protostar {payloads[0].tag} */" in result.content
+
+
+def test_append_marker_blocks_sql_comment_syntax():
+    payloads = [AppendContribution("template:sql", "SELECT 1;")]
+    result = append_marker_blocks("", payloads, Path("query.sql"))
+
+    assert result.content
+    assert f"-- region: protostar {payloads[0].tag}" in result.content
+    assert f"-- endregion: protostar {payloads[0].tag}" in result.content

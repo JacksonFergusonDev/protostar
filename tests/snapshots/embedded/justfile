@@ -42,7 +42,7 @@ clean:
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"
 
-# --- Protostar Region: template:059d1993625a3d78f74b76169594cf2d39e9185cf7d38976689c9ca218adb171:microcontroller_recipes ---
+# region: protostar 66c9e0eb
 port := "/dev/ttyACM0" # Default Linux port, update for macOS (/dev/tty.usbmodem*) or Windows (COM*)
 
 # Copy the board directory to the microcontroller
@@ -52,4 +52,4 @@ flash:
 # Open a REPL on the board
 repl:
 	mpremote connect {{ port }} repl
-# --- End Protostar Region: template:059d1993625a3d78f74b76169594cf2d39e9185cf7d38976689c9ca218adb171:microcontroller_recipes ---
+# endregion: protostar 66c9e0eb

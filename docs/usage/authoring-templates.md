@@ -60,7 +60,7 @@ extend-select = ["I", "UP", "B"]
 content = "export PROJECT=example"
 ```
 
-Non-TOML appends use a stable named record containing exactly one string `content` field. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing named region and warns when its desired content differs; explicit overwrite replaces only that region while retaining surrounding bytes. Automatic checksum-gated updates are a later reconciliation milestone.
+Non-TOML appends use a stable named record containing exactly one string `content` field. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing named region and warns when its desired content differs; explicit overwrite replaces only that region while retaining surrounding bytes. Delimiters use subtle editor-folding comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`) with deterministic 8-character hex tags, while the expanded logical identity and applied digests are preserved in `.protostar.lock.toml`.
 
 Anonymous strings/arrays under `[appends]`, TOML append regions, and the `__replace__`/`__remove__` control keys are rejected. Do not combine `[files]` with structured configuration or named regions targeting the same path. `.protostar.lock.toml` is reserved for engine state; `uv.lock` belongs to the resolver. Neither filename nor its descendants can be a template target.
 

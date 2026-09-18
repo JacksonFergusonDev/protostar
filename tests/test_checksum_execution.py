@@ -259,7 +259,7 @@ def test_edited_dockerfile_still_appends_ignore_patterns(tmp_path, monkeypatch, 
 
 @pytest.mark.parametrize(
     "content",
-    ["# --- Protostar Region: nested ---", "# --- End Protostar Region: test:id ---"],
+    ["# region: protostar 12345678", "# endregion: protostar 12345678"],
 )
 def test_desired_region_cannot_inject_boundaries(content):
     with pytest.raises(ConfigurationError):

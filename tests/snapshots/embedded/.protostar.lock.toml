@@ -15,11 +15,12 @@ policy = "seed-only"
 [[files]]
 path = "justfile"
 policy = "checksum"
-digest = "18c2fb38321e1dcc88b45c9159c40c3e8b8216209ec3d34ffc3207c968d5d02e"
+digest = "4eb7573b945e6bd653917cd8311302a0718b4f298bf5d000480cb3ed05748a0c"
 
 [[files.regions]]
+tag = "66c9e0eb"
 id = "template:059d1993625a3d78f74b76169594cf2d39e9185cf7d38976689c9ca218adb171:microcontroller_recipes"
-digest = "9821649381e559f7579238417a3098da0304a289cb18b65f7b946812342b4bb9"
+digest = "e83f69f7a06980f5facac0b320c25cbba4cde58ac37f3e99a41ee362208af0f1"
 
 [[files]]
 path = "pyproject.toml"

@@ -57,6 +57,11 @@ def _digest(value: str) -> None:
         raise _invalid("digests must be lowercase SHA-256 hex strings.")
 
 
+def _tag(value: str) -> None:
+    if not re.fullmatch(r"[0-9a-f]{8}", value):
+        raise _invalid("tags must be 8-character lowercase hex strings.")
+
+
 def validate_state_path(path: str) -> None:
     """Requires a canonical relative POSIX workspace path inside the path jail."""
     _text(path, "path")
@@ -76,13 +81,15 @@ def validate_state_path(path: str) -> None:
 
 @dataclass(frozen=True)
 class RegionState:
-    """Last applied digest for a stable managed append identity."""
+    """Delimited tag, stable logical identity, and applied digest for an append region."""
 
+    tag: str
     id: str
     digest: str
 
     def __post_init__(self) -> None:
         """Validates the persisted ownership contract at construction."""
+        _tag(self.tag)
         validate_region_id(self.id)
         _digest(self.digest)
 
@@ -139,6 +146,8 @@ class FileState:
             raise _invalid("region policy records only region digests.")
         if len({region.id for region in self.regions}) != len(self.regions):
             raise _invalid("duplicate region identities.")
+        if len({region.tag for region in self.regions}) != len(self.regions):
+            raise _invalid("duplicate region tags.")
 
 
 @dataclass(frozen=True)
@@ -354,9 +363,10 @@ def deserialize_state(content: str) -> SyncState:
             )
             regions = []
             for region in _records(record.get("regions", [])):
-                fields = _record(region, {"id", "digest"})
+                fields = _record(region, {"tag", "id", "digest"})
                 regions.append(
                     RegionState(
+                        _text(fields["tag"], "region tag"),
                         _text(fields["id"], "region id"),
                         _text(fields["digest"], "region digest"),
                     )
@@ -453,8 +463,10 @@ def serialize_state(state: SyncState) -> str:
             fields["digest"] = record.digest
         if record.regions:
             fields["regions"] = [
-                {"id": region.id, "digest": region.digest}
-                for region in sorted(record.regions, key=lambda item: item.id)
+                {"tag": region.tag, "id": region.id, "digest": region.digest}
+                for region in sorted(
+                    record.regions, key=lambda item: (item.tag, item.id)
+                )
             ]
         files.append(fields)
     data["files"] = files

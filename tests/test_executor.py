@@ -13,7 +13,7 @@ from protostar.errors import (
     RollbackFailedError,
 )
 from protostar.executor import SystemExecutor
-from protostar.intent import DependencyGroup
+from protostar.intent import DependencyGroup, region_tag
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -643,7 +643,10 @@ def test_executor_append_files_malformed_payload_toml(mocker, mock_config):
 def test_executor_append_files_string_fallback_redundant(mocker, mock_config):
     """Test that the string fallback skips writing if the payload hash is already in the file."""
     payload = "line1\nline2"
-    existing_content = f"existing\n# --- Protostar Region: test:region660 ---\n{payload}\n# --- End Protostar Region: test:region660 ---"
+    tag = region_tag("test:region660")
+    existing_content = (
+        f"existing\n# region: protostar {tag}\n{payload}\n# endregion: protostar {tag}"
+    )
 
     manifest = EnvironmentManifest()
     manifest.filesystem.add_region("test.txt", payload, identity="test:region660")
@@ -690,10 +693,12 @@ def test_executor_append_files_string_fallback_append(mocker, mock_config):
 
     executor._append_files()
 
+    tag1 = region_tag("test:region688")
+    tag2 = region_tag("test:region689")
     expected_data = (
         "existing_data\n\n"
-        "# --- Protostar Region: test:region688 ---\nnew_payload_1\n# --- End Protostar Region: test:region688 ---\n\n"
-        "# --- Protostar Region: test:region689 ---\nnew_payload_2\n# --- End Protostar Region: test:region689 ---\n"
+        f"# region: protostar {tag1}\nnew_payload_1\n# endregion: protostar {tag1}\n\n"
+        f"# region: protostar {tag2}\nnew_payload_2\n# endregion: protostar {tag2}\n"
     )
 
     written_data = mock_write.call_args[0][1]

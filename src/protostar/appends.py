@@ -89,33 +89,30 @@ def append_marker_blocks(
     """Reconciles stable regions using exact-byte gates and preserves surrounding bytes."""
     c_start, c_end = get_comment_markers(filepath)
 
-    def marker(identity: str, end: bool = False) -> str:
-        return f"{c_start} --- {'End ' if end else ''}Protostar Region: {identity} --- {c_end}".strip()
+    def marker(tag: str, end: bool = False) -> str:
+        prefix = "endregion" if end else "region"
+        suffix = f" {c_end}" if c_end else ""
+        return f"{c_start} {prefix}: protostar {tag}{suffix}".strip()
 
-    if "Protostar Injection" in original_content:
-        raise ConfigurationError(
-            "Legacy anonymous append markers are unsupported.",
-            hint="Remove the legacy block before applying a named region; automatic adoption is unavailable.",
-        )
     active: str | None = None
     seen: set[str] = set()
     for line in original_content.splitlines():
         match = re.fullmatch(
-            r".*--- (End )?Protostar Region: ([A-Za-z0-9_][A-Za-z0-9_.:/-]*) ---.*",
+            r".*?\b(end)?region:\s*protostar\s+([0-9a-f]{8}).*",
             line,
         )
         if not match:
-            if "Protostar Region:" in line:
+            if "region: protostar" in line or "endregion: protostar" in line:
                 raise ConfigurationError(
                     "Malformed append boundary.",
-                    hint="Repair the named region markers.",
+                    hint="Repair the region markers.",
                 )
             continue
-        ending, identity = match.groups()
+        ending, tag = match.groups()
         if (
-            line != marker(identity, bool(ending))
-            or (ending and active != identity)
-            or (not ending and (active is not None or identity in seen))
+            line != marker(tag, bool(ending))
+            or (ending and active != tag)
+            or (not ending and (active is not None or tag in seen))
         ):
             raise ConfigurationError(
                 "Duplicate, nested, or mismatched append boundaries.",
@@ -124,8 +121,8 @@ def append_marker_blocks(
         if ending:
             active = None
         else:
-            active = identity
-            seen.add(identity)
+            active = tag
+            seen.add(tag)
     if active:
         raise ConfigurationError(
             "Unclosed append region.", hint="Restore the matching end marker."
@@ -135,20 +132,26 @@ def append_marker_blocks(
         raise ConfigurationError(
             "Duplicate desired region identities.", hint="Use unique stable IDs."
         )
+    tags = [c.tag for c in payloads]
+    if len(set(tags)) != len(tags):
+        raise ConfigurationError(
+            "Duplicate desired region tags.", hint="Use unique stable IDs."
+        )
     for identity in identities:
         validate_region_id(identity)
     result = original_content
     digests = dict(baselines or {})
     conflicts: list[str] = []
     for contribution in payloads:
-        begin, end = marker(contribution.id), marker(contribution.id, True)
+        tag = contribution.tag
+        begin, end = marker(tag), marker(tag, True)
         framed = f"{begin}\n{contribution.content}"
         if not framed.endswith("\n"):
             framed += "\n"
         framed += end
         local = None
         start = stop = 0
-        if contribution.id in seen:
+        if tag in seen:
             start = result.index(begin)
             stop = result.index(end, start) + len(end)
             local = result[start:stop].encode("utf-8")
@@ -177,7 +180,7 @@ def append_marker_blocks(
                 "" if not result else ("\n" if result.endswith("\n") else "\n\n")
             )
             result += separator + framed + "\n"
-            seen.add(contribution.id)
+            seen.add(tag)
     if payloads:
         append_marker_blocks(result, [], filepath)
     return RegionResult(result, digests, tuple(conflicts))

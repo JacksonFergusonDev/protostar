@@ -69,7 +69,7 @@ transaction attempt; file baselines remain authoritative after partial conflicts
 | `structured-jsonc` | Strict JSON object string containing only applied contributions, including nulls |
 | `checksum` | Last applied lowercase SHA-256 hex digest, plus optional managed-region digests |
 | `seed-only` | Path actually seeded; retained after deletion |
-| `regions` | Stable region IDs and last applied SHA-256 digests |
+| `regions` | Delimited 8-hex tags, stable logical IDs, and last applied SHA-256 digests |
 
 TOML and YAML snapshots are validated by their respective codecs; unknown policies
 fail rather than accepting opaque documents. YAML snapshots preserve null values.
@@ -245,15 +245,17 @@ Free-form files record paths actually seeded. Existing files remain unowned and
 untouched in merge mode, regardless of extension; deleted seeded files stay absent.
 New never-seeded paths can still be created.
 
-Named append regions use the same gate per stable identity. The digest covers
+Named append regions use the same gate per stable identity. Delimiters use subtle,
+editor-folding-compatible comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`)
+carrying a deterministic 8-character hex tag derived from the region identity, while `.protostar.lock.toml`
+preserves the tag, full logical ID, and digest. The digest covers
 UTF-8 bytes from the begin marker through the end marker, including the payload
 and internal line endings, excluding the newline following the end marker.
 Replacement preserves all bytes outside that interval. Existing unowned regions
 remain unowned; edited/deleted regions retain their old digest. Deleting an owned
 region file protects newly introduced regions too. Omitted region identities
-retain their baselines without pruning. Duplicate, nested, malformed, or legacy
-anonymous boundaries raise domain errors, including boundaries injected by a
-new payload.
+retain their baselines without pruning. Duplicate, nested, or malformed
+boundaries raise domain errors, including boundaries injected by a new payload.
 
 Accepted digests and seeded paths enter the candidate state only, with final state
 writes through the transactional filesystem. No-op runs write nothing; failures
