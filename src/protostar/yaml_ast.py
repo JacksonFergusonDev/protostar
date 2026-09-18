@@ -20,6 +20,8 @@ from .merge import (
     MergeLocation,
     MergePolicy,
     Value,
+    overlay_declared,
+    prune_unapplied,
     reconcile,
     semantic_equal,
     validate_value,
@@ -319,18 +321,10 @@ def _reconcile_yaml(
     baseline = result.baseline
     conflicts = [*ambiguities, *result.conflicts]
     if overwrite:
-
-        def overlay(target: dict[str, Value], incoming: dict[str, Value]) -> None:
-            for key, child in incoming.items():
-                if isinstance(child, dict) and isinstance(target.get(key), dict):
-                    overlay(cast(dict[str, Value], target[key]), child)
-                else:
-                    target[key] = deepcopy(child)
-
         value = deepcopy(local)
         baseline = deepcopy(base) if isinstance(base, dict) else {}
-        overlay(value, remote)
-        overlay(baseline, remote)
+        overlay_declared(value, remote)
+        overlay_declared(baseline, remote)
         conflicts = list(ambiguities)
     if value is MISSING:
         return YamlReconciliation(
@@ -476,21 +470,6 @@ def _reconcile_yaml(
         desired_ast,
         (),
     )
-
-    def prune_unapplied(
-        owned: dict[str, Value], previous: dict[str, Value], current: dict[str, Value]
-    ) -> None:
-        for key, child in list(owned.items()):
-            if isinstance(child, dict) and isinstance(current.get(key), dict):
-                prune_unapplied(
-                    child,
-                    cast(dict[str, Value], previous.get(key, {}))
-                    if isinstance(previous.get(key, {}), dict)
-                    else {},
-                    cast(dict[str, Value], current[key]),
-                )
-                if not child and key not in previous:
-                    owned.pop(key)
 
     if isinstance(baseline, dict):
         prune_unapplied(baseline, base if isinstance(base, dict) else {}, local)

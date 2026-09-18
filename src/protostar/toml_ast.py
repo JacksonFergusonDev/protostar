@@ -26,6 +26,7 @@ from .merge import (
     MergeLocation,
     MergePolicy,
     Value,
+    overlay_declared,
     reconcile,
     semantic_equal,
 )
@@ -180,16 +181,9 @@ def reconcile_toml(
         # Explicit target authorization owns declared leaves, never foreign siblings.
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
 
-        def overlay(target: dict[str, Value], incoming: dict[str, Value]) -> None:
-            for key, value in incoming.items():
-                if isinstance(value, dict) and isinstance(target.get(key), dict):
-                    overlay(cast(dict[str, Value], target[key]), value)
-                else:
-                    target[key] = deepcopy(value)
-
         value = deepcopy(local)
-        overlay(value, desired)
-        overlay(cast(dict[str, Value], baseline), desired)
+        overlay_declared(value, desired)
+        overlay_declared(cast(dict[str, Value], baseline), desired)
         conflicts: tuple[MergeConflict, ...] = ()
     else:
         result = reconcile(
