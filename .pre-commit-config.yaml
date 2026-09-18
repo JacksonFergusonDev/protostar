@@ -80,6 +80,7 @@ repos:
         entry: uv run zensical build --strict
         language: system
         pass_filenames: false
+        files: ^(docs/|zensical\.toml|README\.md|src/|tests/snapshots/)
         stages: [pre-push]
 
       - id: check-doc-links
@@ -87,6 +88,7 @@ repos:
         entry: uv run python scripts/check_doc_links.py
         language: system
         pass_filenames: false
+        files: ^(docs/|src/protostar/docs_registry\.py|scripts/check_doc_links\.py)
         stages: [pre-push]
 
       - id: pytest-unit
@@ -94,6 +96,7 @@ repos:
         entry: uv run pytest -m "not integration and not exhaustive"
         language: system
         pass_filenames: false
+        files: ^(src/|tests/|pyproject\.toml|uv\.lock)
         stages: [pre-push]
 
       - id: check-snapshots
@@ -101,6 +104,7 @@ repos:
         entry: uv run python scripts/run_snapshots.py
         language: system
         pass_filenames: false
+        files: ^(src/|scripts/(run_snapshots|generate_docs_assets)\.py|tests/snapshots/|docs/generated/|docs/assets/terminals/|pyproject\.toml|uv\.lock)
         stages: [pre-push]
 
   # Check for accidental commits of secrets
