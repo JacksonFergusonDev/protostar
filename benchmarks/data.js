@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789760164037,
+  "lastUpdate": 1789763819192,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13809,6 +13809,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 263.26,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "52635020308e27ff57e4b49752b878b56ab81059",
+          "message": "feat(reconcile): manage Renovate and VS Code settings via lossless JSONC ownership (#268)\n\n* refactor(merge): share declared-leaf overlay and baseline pruning\n\nThe TOML and YAML adapters each carried an identical nested overlay for\nexplicit overwrite, and the YAML adapter carried the only baseline pruning\nhelper. Move both into the merge kernel module so the upcoming JSONC adapter\ndoes not become a third copy. Behavior is unchanged.\n\n* feat(jsonc): add lossless JSONC codec and byte-splice editor\n\nAdd a stdlib-only JSONC parser that records source spans, so edits are\ncomputed as replacements over those spans and every byte outside an accepted\nedit is preserved. The editor sets, appends, and deletes members and elements\nwhile inferring indentation, separators, line endings, and comma style from\nthe surrounding document, and diffs replaced arrays by position so unchanged\nelements keep their comments.\n\nThe codec accepts comments and trailing commas, rejects duplicate keys,\nnon-finite numbers, and unsupported structures, and enforces the same size,\ndepth, and node limits as the YAML codec. A strict mode backs deterministic\nowned-baseline snapshots.\n\n* feat(jsonc): reconcile owned JSONC values against local documents\n\nAdd reconcile_jsonc, which runs the shared three-way kernel over decoded\nvalues and splices only accepted changes into the local text. New files take\nthe desired bytes verbatim so template comments and layout survive, existing\nequal content is never adopted, and a semantic no-op returns the original\nbytes. Explicit overwrite owns declared leaves and retains foreign siblings,\nmatching the TOML and YAML adapters.\n\n* feat(reconcile): manage Renovate and VS Code settings via JSONC ownership\n\nRoute .github/renovate.json and .vscode/settings.json through the JSONC\nadapter and a new structured-jsonc ownership policy instead of a checksum\ngate and a blind json.dumps merge. Comments, ordering, and user edits\nsurvive, clean template updates apply to untouched keys, and conflicts are\nreported per key. A malformed Renovate document now fails before any\nmutation, while a malformed settings file is skipped with a warning.\n\nDeclarations keep arriving through the file-injection channel so template\n[files] entries for Renovate continue to work; only the reconciliation\nbehind the special-cased path changed. The YAML-only Codecov helper becomes\na shared document reconciler, and ide.write_ide_settings is deleted.\n\n* docs(jsonc): document the JSONC boundary and regenerate snapshots\n\nRecord the codec, editor, and adapter contracts in the reconciliation\ndevelopment guide and retire the deferred Renovate/JSONC note. Regenerated\nsnapshots show only the Renovate lock record changing from a checksum digest\nto a structured-jsonc baseline, and the agent payload examples now report the\nconflict at key level.",
+          "timestamp": "2026-09-18T13:35:43-07:00",
+          "tree_id": "a9eeb347984f3d2fa1e156427548eb16dc8a6ff2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/52635020308e27ff57e4b49752b878b56ab81059"
+        },
+        "date": 1789763818383,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 195.72,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 272.65,
             "unit": "ms"
           }
         ]
