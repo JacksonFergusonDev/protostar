@@ -61,6 +61,13 @@ Templates declare opinions about which tools to enable (e.g., `ruff = true`, `my
 protostar init -t astro --no-direnv --mypy
 ```
 
+Container scaffolding follows the same rules. A template can opt in with `docker = true` (the built-in `api` template does), and `--no-docker` turns it back off:
+
+```bash
+# The api template scaffolds a Dockerfile by default; skip it for this project
+protostar init -t api --no-docker
+```
+
 !!! tip "Precedence Cascade (Highest to Lowest)"
     1. __CLI Flags__ – Explicit terminal arguments (e.g., `--mypy`).
     1. __Template Blueprint__ – Settings declared in your active template.

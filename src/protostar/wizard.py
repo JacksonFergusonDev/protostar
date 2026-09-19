@@ -150,7 +150,15 @@ def run_init_wizard() -> WizardSelections | None:
 
     # Context & Tooling
     choices.append(Separator("--- Context & Tooling ---"))
-    choices.append(Choice(title="Docker (Dockerfile & .dockerignore)", value="docker"))
+    docker_from_template = bool(blueprint and blueprint.tooling_overrides.get("docker"))
+    choices.append(
+        Choice(
+            title="Docker (Dockerfile & .dockerignore)"
+            + (" (Enforced by template)" if docker_from_template else ""),
+            value="docker",
+            checked=docker_from_template,
+        )
+    )
 
     for tool_mod in TOOLING_MODULES:
         is_checked = getattr(config, tool_mod.config_key, False)

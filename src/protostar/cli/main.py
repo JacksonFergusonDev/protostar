@@ -265,10 +265,14 @@ def handle_init(args: argparse.Namespace) -> None:
     if "license" in resolved_metadata:
         python_core.license = str(resolved_metadata["license"])
 
+    # Precedence mirrors tooling flags: explicit flag > captured recipe > template.
+    template_docker = (
+        blueprint.tooling_overrides.get("docker", False) if blueprint else False
+    )
     docker = (
         args.docker
         if args.docker is not None
-        else (existing_recipe.docker if existing_recipe else False)
+        else (existing_recipe.docker if existing_recipe else template_docker)
     )
     recipe = establish_recipe(
         user_config,

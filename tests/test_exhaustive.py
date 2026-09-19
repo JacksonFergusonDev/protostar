@@ -130,8 +130,9 @@ def test_individual_template_scaffolding(run_cli, template):
 
 def test_api_dockerfile_targets_an_importable_app(run_cli):
     """The container's uvicorn target must resolve inside the scaffolded project."""
+    # No --docker: the api template opts in to container scaffolding on its own.
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python-version", "3.12", "--template", "api", "--docker"
+        "init", "--python-version", "3.12", "--template", "api"
     )
     assert code == 0, f"CLI Failed for template api.\n{stdout}\n{stderr}"
 
