@@ -334,7 +334,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     return result
 
 
-def _print_dry_run_summary(manifest: EnvironmentManifest) -> None:
+def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     """Renders a human-readable summary of the planned environment manifest."""
     table = Table(box=None, show_header=False, padding=(0, 2))
     table.add_column("Category", justify="right", style="bold")

@@ -949,7 +949,7 @@ def generate_cli_dry_run_svg() -> None:
                 request = InitRequest(template_blueprint=blueprint)
                 engine = Orchestrator(modules, user_config, request=request)
                 manifest = engine.plan()
-                protostar.cli.ui._print_dry_run_summary(manifest)
+                protostar.cli.ui.print_dry_run_summary(manifest)
             finally:
                 os.chdir(orig_cwd)
 
