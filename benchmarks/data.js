@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789768729906,
+  "lastUpdate": 1789778775321,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13877,6 +13877,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 272.43,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "420639a6ca5082b99537b55e4f3e2155ecd0b617",
+          "message": "feat(ci): add schema validation and local actionlint gating (#270)",
+          "timestamp": "2026-09-18T17:44:51-07:00",
+          "tree_id": "0eafd7b4727151e0e5e8981b20a2fa44d81a73d9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/420639a6ca5082b99537b55e4f3e2155ecd0b617"
+        },
+        "date": 1789778773974,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 215.07,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 307.12,
             "unit": "ms"
           }
         ]
