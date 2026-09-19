@@ -610,6 +610,8 @@ class Reconciliation:
             )
             for conflict in result.conflicts:
                 self._merge_warning(conflict)
+            for note in result.layout_notes:
+                self._layout_warning(target, note)
             if result.baseline is not MISSING:
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
@@ -1124,6 +1126,16 @@ class Reconciliation:
             )
         )
 
+    def _layout_warning(self, target: Path, reason: str) -> None:
+        """Reports a file that was left unformatted because formatting was unsafe."""
+        self.diagnostics.append(
+            DiagnosticEvent(
+                DiagnosticPhase.EXECUTOR,
+                f"Left {target.as_posix()} unformatted: {reason}.",
+                Severity.WARNING,
+            )
+        )
+
     def _validate_node(self, target: Path, *, directory: bool = False) -> None:
         """Rejects unsafe nodes before reads or transaction mutations."""
         if isinstance(self.workspace, ReviewWorkspace):
@@ -1201,7 +1213,9 @@ class Reconciliation:
             if not self.journal.was_present(target):
                 # Protostar created this file, so it owns its layout; a project the
                 # user already had keeps whatever order they gave it.
-                content = finalize_new_pyproject(content)
+                content = finalize_new_pyproject(
+                    content, lambda reason: self._layout_warning(target, reason)
+                )
             if content != original:
                 self.fs.write_text(target, content)
         except (OSError, UnicodeError) as e:
