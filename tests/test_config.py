@@ -11,6 +11,7 @@ from protostar.errors import (
     ConfigurationError,
     TemplateResolutionError,
 )
+from protostar.intent import PyprojectPayload
 
 
 @pytest.fixture(autouse=True)
@@ -348,11 +349,59 @@ custom_ruff = "[tool.ruff]\\nline-length = 100"
 """
     blueprint = TemplateBlueprint._parse(content, source="test.toml")
     assert blueprint.dev_dependencies == ["bump-my-version"]
-    assert (
-        blueprint.pyproject_injections["custom_ruff"]
-        == "[tool.ruff]\nline-length = 100"
+    assert blueprint.pyproject_injections["custom_ruff"] == PyprojectPayload(
+        "[tool.ruff]\nline-length = 100"
     )
     assert blueprint.files["test.txt"] == "hello"
+
+
+def test_template_blueprint_parses_a_tool_bound_payload():
+    blueprint = TemplateBlueprint._parse(
+        """
+[dev.pyproject]
+always = "[tool.hatch]\\nx = 1"
+
+[dev.pyproject.typing]
+requires = "mypy"
+content = "[tool.mypy]\\nstrict = true"
+
+[dev.pyproject.unbound_table]
+content = "[tool.other]\\ny = 2"
+""",
+        source="test.toml",
+    )
+
+    assert blueprint.pyproject_injections == {
+        "always": PyprojectPayload("[tool.hatch]\nx = 1"),
+        "typing": PyprojectPayload("[tool.mypy]\nstrict = true", "mypy"),
+        "unbound_table": PyprojectPayload("[tool.other]\ny = 2"),
+    }
+
+
+@pytest.mark.parametrize(
+    ("entry", "message"),
+    [
+        ("typing = 5", "Invalid structured payload"),
+        ('[dev.pyproject.typing]\nrequires = "mypy"', "Invalid structured payload"),
+        ("[dev.pyproject.typing]\ncontent = 5", "Invalid structured payload"),
+        (
+            '[dev.pyproject.typing]\ncontent = "[tool.x]"\ntool = "mypy"',
+            "Invalid structured payload",
+        ),
+        (
+            '[dev.pyproject.typing]\ncontent = "[tool.x]"\nrequires = "flake9"',
+            "Unknown tool 'flake9'",
+        ),
+        (
+            '[dev.pyproject.typing]\ncontent = "[tool.x]"\nrequires = 5',
+            "Unknown tool 5",
+        ),
+    ],
+)
+def test_template_blueprint_rejects_malformed_payloads(entry, message):
+    body = entry if entry.startswith("[") else f"[dev.pyproject]\n{entry}"
+    with pytest.raises(ConfigurationError, match=message):
+        TemplateBlueprint._parse(body, source="test.toml")
 
 
 def test_template_blueprint_load_interpolation(tmp_path):
@@ -553,3 +602,37 @@ def test_template_blueprint_parse_rejects_wrong_field_types(
 
     assert expected_err_snippet in str(exc_info.value)
     assert exc_info.value.hint is not None
+
+
+def test_template_blueprint_parses_tool_bound_dev_dependencies():
+    blueprint = TemplateBlueprint._parse(
+        """
+[dev]
+dev_dependencies = ["always"]
+
+[dev.tool_dependencies]
+pytest = ["pytest-cov", "httpx"]
+mypy = []
+""",
+        source="test.toml",
+    )
+
+    assert blueprint.dev_dependencies == ["always"]
+    assert blueprint.tool_dev_dependencies == {
+        "pytest": ["pytest-cov", "httpx"],
+        "mypy": [],
+    }
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ('[dev]\ntool_dependencies = ["pytest-cov"]', "Expected table"),
+        ('[dev.tool_dependencies]\nflake9 = ["x"]', "Unknown tool 'flake9'"),
+        ('[dev.tool_dependencies]\npytest = "pytest-cov"', "Expected an array"),
+        ("[dev.tool_dependencies]\npytest = [1]", "Expected an array"),
+    ],
+)
+def test_template_blueprint_rejects_malformed_tool_dependencies(body, message):
+    with pytest.raises(ConfigurationError, match=message):
+        TemplateBlueprint._parse(body, source="test.toml")

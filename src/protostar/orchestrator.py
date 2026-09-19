@@ -234,8 +234,19 @@ class Orchestrator:
             for dep in blueprint.dependencies:
                 manifest.dependencies.add(dep)
 
+            active_tools = {m.config_key for m in active_modules if m.config_key}
             for dep in blueprint.dev_dependencies:
                 manifest.dependencies.add_dev(dep)
+
+            for tool_key, packages in blueprint.tool_dev_dependencies.items():
+                if tool_key not in active_tools:
+                    logger.debug(f"Skipping {tool_key} dev dependencies: disabled.")
+                    continue
+                # Attribute the packages to their tool, like module output.
+                tool = Tool(tool_key)
+                for dep in packages:
+                    manifest.dependencies.add_dev(dep)
+            tool = None
 
             for dep in blueprint.docs_dependencies:
                 manifest.dependencies.add_docs(dep)
@@ -255,11 +266,19 @@ class Orchestrator:
             if blueprint.pyproject_injections:
                 logger.debug("Injecting pyproject.toml payloads from configuration.")
                 for identity, payload in blueprint.pyproject_injections.items():
+                    if payload.requires and payload.requires not in active_tools:
+                        logger.debug(
+                            f"Skipping payload '{identity}': {payload.requires} is disabled."
+                        )
+                        continue
+                    # Attribute a tool-bound payload to its tool, like module output.
+                    tool = Tool(payload.requires) if payload.requires else None
                     manifest.filesystem.add_structured(
                         "pyproject.toml",
-                        payload,
+                        payload.content,
                         producer=f"template:{template_id}:{identity}",
                     )
+                tool = None
 
             if blueprint.appends:
                 logger.debug("Injecting generic file appends from configuration.")

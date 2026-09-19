@@ -44,8 +44,9 @@ prek = false
 ci = false
 
 # --- pyproject.toml AST Injections ---
-[dev.pyproject]
-data_science_linting = '''
+[dev.pyproject.data_science_linting]
+requires = "ruff"
+content = '''
 [tool.ruff.lint]
 extend-select = ["PD", "NPY"]
 '''

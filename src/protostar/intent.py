@@ -94,6 +94,20 @@ def region_tag(identity: str) -> str:
 
 
 @dataclass(frozen=True)
+class PyprojectPayload:
+    """A managed pyproject.toml payload, optionally tied to a tooling module.
+
+    Attributes:
+        content: TOML text merged into pyproject.toml.
+        requires: Config key of the tool this payload configures. The payload is
+            injected only while that tool is active; None means always.
+    """
+
+    content: str
+    requires: str | None = None
+
+
+@dataclass(frozen=True)
 class AppendContribution:
     """A text region whose identity remains stable across payload revisions."""
 

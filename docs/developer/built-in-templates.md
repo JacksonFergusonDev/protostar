@@ -83,19 +83,22 @@ Imagine someone picks `ruff` and `mypy` because they are writing a small script 
 Strictness belongs where it defines a shape. The `cli` template is a published package, so it adds strict typing and docstring rules on top:
 
 ```toml
-[dev.pyproject]
-cli_ruff_config = '''
+[dev.pyproject.cli_ruff_config]
+requires = "ruff"
+content = '''
 [tool.ruff.lint]
 extend-select = ["D", "N", "PT", "RET", "SIM", "T20"]
 '''
 
-cli_mypy_config = '''
+[dev.pyproject.cli_mypy_config]
+requires = "mypy"
+content = '''
 [tool.mypy]
 strict = true
 '''
 ```
 
-The template states `strict = true` and nothing else about mypy, because the module already supplies the rest.
+The template states `strict = true` and nothing else about mypy, because the module already supplies the rest. Each payload also declares the tool it configures with `requires`, so it is injected only while that tool is enabled.
 
 ### Why Templates Use Additive Keys
 
@@ -103,8 +106,9 @@ Sequences merge atomically. If a template redefines `select`, its list *replaces
 
 A few lists have no additive key. Ruff's `ignore` is the current example. A template may redefine such a list only if it keeps every baseline entry, so it is a strict superset. `cli.toml` repeats `E501` alongside its docstring exemptions for exactly this reason.
 
-!!! warning "Known limitation: payloads ignore tool flags"
-    Template `[dev.pyproject]` payloads are injected whether or not the tool they configure is enabled. `protostar init -t cli --no-mypy` still writes `[tool.mypy]`. Until payloads can be tied to a tool, keep them minimal: a small delta leaves only a small orphan behind.
+### Tool Configuration Follows the Tool
+
+A payload that configures a tool declares it with `requires`, so `protostar init -t cli --no-mypy` writes no `[tool.mypy]`. Dev packages that only a tool needs (such as `pytest-cov`) go under `[dev.tool_dependencies]`, keyed by that tool, so `--no-pytest` does not install them. Payloads that no tool toggle should remove, such as a `[build-system]` table, stay plain strings and are always injected. Tool-bound payloads are also attributed to their tool in lifecycle reviews, so a project's recipe opt-out treats them like the tool's own configuration.
 
 ## Conventions Every Built-in Follows
 
@@ -114,6 +118,8 @@ A few lists have no additive key. Ruff's `ignore` is the current example. A temp
 1. **No version pins.** Dependencies are passed to `uv` so the environment resolves the latest compatible versions when the project is created.
 1. **Keep tasks to a minimum.** No `system_tasks`. A `post_install_tasks` entry is allowed only when the domain truly needs it (`nbdime` for notebook diffs), and it must be on the allowlist in the contract test, because built-ins run without a trust prompt.
 1. **Generated code formats cleanly for any project name.** Do not interpolate `<% PROJECT_NAME %>` into a line that `ruff format` would wrap for longer names. The `cli` template defines an `APP_NAME` constant for this reason: a version line that embedded the name failed `ruff format --check` for names over about 16 characters.
+1. **Tool configuration and tool packages declare the tool they need.** Test plugins such as `pytest-cov` go under `[dev.tool_dependencies]`, so disabling the tool installs none of them.
+1. **Tool configuration declares the tool it needs.** A payload that configures `ruff`, `mypy`, `pytest`, or another tool is a table with `requires = "<tool>"`, so disabling the tool leaves none of its configuration behind. Tool-agnostic payloads, such as `[build-system]`, stay plain strings.
 1. **Explain decisions in the template file, not the payload.** A comment inside a `[dev.pyproject]` string is copied into every user's `pyproject.toml`. Put maintainer-facing comments above the payload instead.
 1. **Web services expose `<package>.main:app`.** The generated `Dockerfile` starts `uvicorn <package>.main:app`. For projects that are not from the `api` template but list FastAPI or Uvicorn, this is the best available guess. If it is wrong for a project, the container fails at start with a clear `ModuleNotFoundError`.
 
@@ -143,12 +149,14 @@ Most of the contract is checked by tests, parametrized over discovered built-ins
 | No version pins | `test_dependencies_carry_no_version_pins` |
 | Tasks stay within the trusted allowlist | `test_tasks_stay_within_the_trusted_allowlist` |
 | Payloads state only the delta from module baselines | `test_pyproject_payloads_state_only_the_delta` |
+| Tool configuration declares its tool with `requires` | `test_tool_configuration_declares_the_tool_it_needs` |
+| Tool packages are installed only with their tool | `test_tool_packages_are_installed_only_with_their_tool` |
 | Module baselines stay casual | `test_ruff_module_baseline_stays_casual`, `test_mypy_module_baseline_stays_casual` |
 | A fresh scaffold passes its enabled gates | `test_individual_template_scaffolding` (with `KNOWN_GATE_GAPS`) |
 | The `api` Dockerfile targets an importable app | `test_api_dockerfile_targets_an_importable_app` |
 | No trailing whitespace in scaffolded files | `test_builtin_templates_no_trailing_whitespace` |
 
-The first six live in `tests/test_builtin_template_contract.py`. The module baseline guards live in `tests/test_modules.py`, and the scaffold checks live in `tests/test_exhaustive.py` (an integration-level suite, so a full run scaffolds every template, including the ML environment).
+The first eight live in `tests/test_builtin_template_contract.py`. The module baseline guards live in `tests/test_modules.py`, and the scaffold checks live in `tests/test_exhaustive.py` (an integration-level suite, so a full run scaffolds every template, including the ML environment).
 
 `KNOWN_GATE_GAPS` in the exhaustive suite is an exact-match ratchet. It is currently empty. A new failing gate fails the test, and fixing a recorded gap forces its removal, so gaps cannot grow silently.
 

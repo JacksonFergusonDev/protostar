@@ -74,6 +74,32 @@ Includes support the `dev` and `docs` groups and reject cycles. Execution applie
 
 Templates may declare an informational root `version` string. CLI and wizard resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and remote locators retain the canonical resolved download URL rather than temporary extraction paths. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Recognizable immutable commit locators also retain their source revision. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance. State and three-way reconciliation are subsequent milestones.
 
+### Tool-Bound Payloads & Dependencies
+
+A payload that configures a tool should say which one. Write it as a table with `content` and `requires`, and Protostar injects it only while that tool is enabled:
+
+```toml
+[dev.pyproject.linting]
+requires = "ruff"
+content = '''
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B"]
+'''
+```
+
+With this, `protostar init --template my-template --no-ruff` writes no `[tool.ruff]` at all, instead of leaving configuration behind for a tool that isn't installed. A project's recipe opt-out treats the payload the same way it treats the tool's own configuration.
+
+Plain string payloads are always injected. Use them for configuration that no tool toggle should remove, such as a `[build-system]` table. The valid `requires` names are the tool keys in the [Tooling & Flags Matrix](./tooling-matrix.md) (for example `ruff`, `mypy`, `pytest`), and an unknown name is rejected when the template loads. In TOML, put the plain string payloads before any `[dev.pyproject.<name>]` sub-tables.
+
+Dev packages that only one tool needs belong in `[dev.tool_dependencies]`, keyed by the tool. They are installed only while that tool is enabled:
+
+```toml
+[dev.tool_dependencies]
+pytest = ["pytest-cov", "httpx"]
+```
+
+With this, `--no-pytest` does not install `pytest-cov` or `httpx`. Packages in `[dev].dev_dependencies` are always installed, so keep that list for tools no toggle should remove. The tool names are validated the same way as `requires`.
+
 ## Level 2: The Multi-File Repository
 
 While the `[files]` table in a single TOML file is excellent for small injections (like a standard `LICENSE` or a minimal `main.py`), complex scaffolds—such as a full FastAPI architecture or a PyTorch training pipeline—require physical files.

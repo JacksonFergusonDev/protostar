@@ -51,6 +51,41 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     },
                 },
             }
+        elif f.name == "tool_dev_dependencies":
+            prop = {
+                "type": "object",
+                "propertyNames": {
+                    "enum": sorted(
+                        mod.config_key for mod in TOOLING_MODULES if mod.config_key
+                    )
+                },
+                "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            }
+        elif f.name == "pyproject_injections":
+            prop = {
+                "type": "object",
+                "additionalProperties": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "properties": {
+                                "content": {"type": "string"},
+                                "requires": {
+                                    "enum": sorted(
+                                        mod.config_key
+                                        for mod in TOOLING_MODULES
+                                        if mod.config_key
+                                    ),
+                                    "description": "Inject this payload only while the tool is enabled.",
+                                },
+                            },
+                            "required": ["content"],
+                            "additionalProperties": False,
+                        },
+                    ]
+                },
+            }
         elif f.name == "dependency_includes":
             prop = {
                 "type": "array",
@@ -106,6 +141,8 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
         if f.name == "dev_dependencies":
             dev_properties["dev_dependencies"] = prop
+        elif f.name == "tool_dev_dependencies":
+            dev_properties["tool_dependencies"] = prop
         elif f.name == "pyproject_injections":
             dev_properties["pyproject"] = prop
         else:

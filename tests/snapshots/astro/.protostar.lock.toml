@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "astro"
-digest = "5a1baf46fd8b9b5ded8e95af07df51429171cbb6bd6e23ea5a2aeaba8ee38cd4"
+digest = "ca7abbda8095b46f6bdb925f8d3fdeff6ec0ff24a72b61b0f13549cb8756a6f7"
 display_name = "astro"
 
 [[files]]

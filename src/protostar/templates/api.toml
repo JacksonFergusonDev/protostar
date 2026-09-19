@@ -34,8 +34,9 @@ commitizen = true
 renovate = true
 
 # --- Development Dependencies ---
-[dev]
-dev_dependencies = ["httpx", "pytest-asyncio"]
+# Tied to the tool that needs them, so `--no-pytest` does not install them.
+[dev.tool_dependencies]
+pytest = ["httpx", "pytest-asyncio"]
 
 # --- pyproject.toml AST Injections ---
 # The scaffold is an installable package: src layout with a real build backend, so

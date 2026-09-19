@@ -19,6 +19,7 @@ from .intent import (
     AppendContribution,
     DependencyGroup,
     DependencyInclude,
+    PyprojectPayload,
     TemplateOrigin,
     TemplateReference,
     validate_configuration,
@@ -361,6 +362,68 @@ def clear_user_config_cache() -> None:
     _load_cached_user_config.cache_clear()
 
 
+def _parse_pyproject_payload(
+    identity: str, raw: object, source: str
+) -> PyprojectPayload:
+    """Parses one [dev.pyproject] entry: a TOML string, or a content/requires table."""
+    if isinstance(raw, str):
+        return PyprojectPayload(raw)
+
+    location = f"[dev.pyproject].{identity}"
+    if (
+        not isinstance(raw, dict)
+        or not isinstance(raw.get("content"), str)
+        or set(raw) - {"content", "requires"}
+    ):
+        raise ConfigurationError(
+            f"Invalid structured payload in configuration source '{source}' for '{location}'.",
+            hint='Use a TOML string, or a table with a string "content" and an optional "requires" tool name.',
+        )
+
+    requires = raw.get("requires")
+    if requires is not None:
+        _validated_tool(requires, location, source)
+    return PyprojectPayload(raw["content"], requires)
+
+
+def _validated_tool(name: object, location: str, source: str) -> str:
+    """Returns a known tool key, or raises listing the valid ones."""
+    # Local import: recipe sits above config in the import graph.
+    from .recipe import Tool
+
+    tools = sorted(tool.value for tool in Tool)
+    if not isinstance(name, str) or name not in tools:
+        raise ConfigurationError(
+            f"Unknown tool {name!r} in configuration source '{source}' for '{location}'.",
+            hint=f"Use one of: {', '.join(tools)}.",
+        )
+    return name
+
+
+def _parse_tool_dependencies(raw: object, source: str) -> dict[str, list[str]]:
+    """Parses [dev.tool_dependencies]: each tool maps to the packages it needs."""
+    if not isinstance(raw, dict):
+        raise ConfigurationError(
+            f"Type mismatch in configuration source '{source}' for '[dev].tool_dependencies'.\n"
+            f"Expected table, but got {type(raw).__name__}.",
+            hint='Map each tool to its packages: [dev.tool_dependencies]\npytest = ["pytest-cov"]',
+        )
+    parsed: dict[str, list[str]] = {}
+    for tool, packages in raw.items():
+        location = f"[dev.tool_dependencies].{tool}"
+        _validated_tool(tool, location, source)
+        if not isinstance(packages, list) or not all(
+            isinstance(package, str) for package in packages
+        ):
+            raise ConfigurationError(
+                f"Type mismatch in configuration source '{source}' for '{location}'.\n"
+                "Expected an array of strings.",
+                hint=f'Define the packages as an array: {tool} = ["package"]',
+            )
+        parsed[tool] = list(packages)
+    return parsed
+
+
 @dataclass
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
@@ -405,6 +468,13 @@ class TemplateBlueprint:
         metadata={
             "description": "Development packages not shipped to production.",
             "example": ["pytest", "mypy", "ruff"],
+        },
+    )
+    tool_dev_dependencies: dict[str, list[str]] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Development packages installed only while the named tool is enabled.",
+            "example": {"pytest": ["pytest-cov"]},
         },
     )
     docs_dependencies: list[str] = field(
@@ -452,12 +522,16 @@ class TemplateBlueprint:
             },
         },
     )
-    pyproject_injections: dict[str, str] = field(
+    pyproject_injections: dict[str, PyprojectPayload] = field(
         default_factory=dict,
         metadata={
-            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden.",
+            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` tool that injects it only while that tool is enabled.",
             "example": {
-                "custom_linting": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]'
+                "custom_linting": {
+                    "requires": "ruff",
+                    "content": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]',
+                },
+                "build_backend": '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"',
             },
         },
     )
@@ -734,6 +808,11 @@ class TemplateBlueprint:
                         )
                 instance.dev_dependencies = dev_deps
 
+            if "tool_dependencies" in dev_data:
+                instance.tool_dev_dependencies = _parse_tool_dependencies(
+                    dev_data["tool_dependencies"], source
+                )
+
             if "pyproject" in dev_data:
                 if not isinstance(dev_data["pyproject"], dict):
                     raise ConfigurationError(
@@ -741,7 +820,10 @@ class TemplateBlueprint:
                         f"Expected table, but got {type(dev_data['pyproject']).__name__}.",
                         hint="Define pyproject as a table: [dev.pyproject]",
                     )
-                instance.pyproject_injections = dev_data["pyproject"]
+                for identity, raw in dev_data["pyproject"].items():
+                    instance.pyproject_injections[identity] = _parse_pyproject_payload(
+                        identity, raw, source
+                    )
 
         if "files" in data:
             if not isinstance(data["files"], dict):
@@ -887,13 +969,9 @@ class TemplateBlueprint:
                     "TOML append regions are unsupported.",
                     hint="Use dev.pyproject for TOML configuration.",
                 )
-        for content in self.pyproject_injections.values():
-            if not isinstance(content, str):
-                raise ConfigurationError(
-                    "Structured payloads must be TOML strings.",
-                    hint="Use named string payloads in dev.pyproject.",
-                )
+        for payload in self.pyproject_injections.values():
             rendered = render_template(
-                content, dict.fromkeys(extract_variables(content), "placeholder")
+                payload.content,
+                dict.fromkeys(extract_variables(payload.content), "placeholder"),
             )
             validate_configuration(rendered)
