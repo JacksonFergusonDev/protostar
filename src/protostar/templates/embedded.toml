@@ -1,3 +1,6 @@
+# Built-in template. Workbench tier: MicroPython and microcontrollers, lean by default.
+# Contract: docs/developer/built-in-templates.md
+
 name = "Embedded"
 description = "Embedded Python development and microcontroller setup"
 

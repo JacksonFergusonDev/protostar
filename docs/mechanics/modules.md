@@ -45,6 +45,8 @@ The core runtime environment (`PythonCore`). Establishes the primary package man
 
 Ancillary development tools. Tools like `ruff`, `mypy`, `pytest`, and `prek` evaluate the manifest to inject configuration blocks into the project files.
 
+A tooling module's configuration is a __baseline tuned for casual projects__: it should never make a small script painful. Strict settings such as `mypy`'s `strict = true` belong in the templates whose shape calls for them, not in the module. See [Built-in Templates](../developer/built-in-templates.md#baseline-in-modules-delta-in-templates).
+
 ## The Module Contract
 
 ### `pre_flight()`
@@ -62,10 +64,11 @@ class MyPyModule(BootstrapModule):
         # Register the dependency
         manifest.dependencies.add_dev("mypy")
 
-        # Inject the AST payload for pyproject.toml
+        # Inject the AST payload for pyproject.toml. Keep it a casual baseline;
+        # templates that want strict mode add it themselves.
         manifest.filesystem.add_structured("pyproject.toml", """
 [tool.mypy]
-strict = true
+check_untyped_defs = true
 warn_return_any = true
         """, producer="module:MyPyModule")
 ```

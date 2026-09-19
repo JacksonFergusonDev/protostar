@@ -35,6 +35,7 @@ nav = [
     { "Developer Guide" = [
         { "Overview" = "developer/overview.md" },
         { "Extending Protostar" = "developer/extending-protostar.md" },
+        { "Built-in Templates" = "developer/built-in-templates.md" },
         { "Testing & Philosophy" = "developer/testing.md" },
         { "API Reference" = "developer/api-reference.md" },
     ] },

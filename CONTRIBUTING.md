@@ -42,9 +42,18 @@ Protostar never overwrites existing work. `.gitignore` entries are appended and 
 
 A module only interacts with the manifest interface. It must not inspect what other modules are loaded, assume a particular run order, or conditionally change behaviour based on the presence of sibling modules.
 
-### 6. Presets are Independent Pipeline Injections
+### 6. Built-in templates state a delta, not a stack
 
-Presets inherit from the `PresetModule` abstract base class and evaluate independently during the manifest aggregation phase. They do not override language modules; they strictly append domain-specific dependencies and directory scaffolding to the `EnvironmentManifest`.
+A built-in template is a project *shape* (a CLI, a web service, an analysis workbench), never a particular stack of libraries. Stacks belong in a `--from` template or a global alias. Built-ins are trusted implicitly and maintained forever, so the bar is high: the default answer to a new-template proposal is "publish it as a `--from` template".
+
+Modules and templates divide the work:
+
+- **Modules ship a baseline tuned for casual projects.** A default must never make a small script painful, so `MypyModule` has no `strict` and `RuffModule` selects only a gentle rule set.
+- **Templates state only the delta that defines their shape**, such as `strict = true` for the `cli` template. Use a tool's additive keys (`extend-select`) rather than redefining a list, because sequences merge atomically.
+- **Every built-in declares all eight quality flags explicitly** (`ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, `just`) as `true` or `false`.
+- **A fresh scaffold passes the gates its flags enable.** Do not enable `pytest` without shipping a test.
+
+`tests/test_builtin_template_contract.py` and the exhaustive suite enforce this. The full contract, the two tiers, and how to add or retire a built-in are in `docs/developer/built-in-templates.md`.
 
 ### 7. Structural Error Handling Paradigm
 
@@ -214,7 +223,7 @@ To manually test Protostar in an isolated workspace without modifying your globa
 
 1. **Make Changes**
 
-    Write your code. Ensure your changes are tightly scoped to a single feature, preset, or bug fix. Avoid monolithic pull requests that mix refactoring with new logic.
+    Write your code. Ensure your changes are tightly scoped to a single feature, template, or bug fix. Avoid monolithic pull requests that mix refactoring with new logic. If you change a built-in template or a tooling module's defaults, read `docs/developer/built-in-templates.md` first, then regenerate snapshots with `just check-snapshots` and review every generated file.
 
 1. **Verify**
 

@@ -1,3 +1,6 @@
+# Built-in template. Workbench tier: signal processing and audio, lean by default.
+# Contract: docs/developer/built-in-templates.md
+
 name = "DSP"
 description = "Digital signal processing and audio analysis scaffold"
 

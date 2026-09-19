@@ -1,4 +1,9 @@
-"""Centralized template discovery engine for Protostar."""
+"""Centralized template discovery engine for Protostar.
+
+Built-in templates share one contract, described in
+``docs/developer/built-in-templates.md`` and enforced by
+``tests/test_builtin_template_contract.py``.
+"""
 
 import importlib.resources
 import os

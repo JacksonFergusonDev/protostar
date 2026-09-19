@@ -254,7 +254,7 @@ For full template specifications, AST injections, and multi-file repository temp
 This tool uses a highly decoupled, plugin-style architecture. The CLI parser dynamically evaluates module registries at runtime.
 
 - **To add support for a new core tool (e.g., a linter or formatter):** Subclass `BootstrapModule`.
-- **To define a new domain workflow:** Author a declarative TOML Template.
+- **To define a new domain workflow:** Author a declarative TOML Template. (Built-in templates follow a stricter contract; see `docs/developer/built-in-templates.md` before proposing one.)
 
 Protostar maintains strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
 

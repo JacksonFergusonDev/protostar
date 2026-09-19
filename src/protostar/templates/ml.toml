@@ -1,3 +1,6 @@
+# Built-in template. Workbench tier: machine learning and data science, lean by default.
+# Contract: docs/developer/built-in-templates.md
+
 name = "ML"
 description = "Machine learning & data science scaffold with PyTorch and Jupyter"
 

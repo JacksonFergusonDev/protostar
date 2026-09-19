@@ -1,3 +1,6 @@
+# Built-in template. Workbench tier: astrophysics analysis, lean by default.
+# Contract: docs/developer/built-in-templates.md
+
 name = "Astro"
 description = "Astrophysics and astronomy data analysis scaffold with Astropy"
 

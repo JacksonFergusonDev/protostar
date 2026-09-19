@@ -26,9 +26,11 @@ content. After initialization, use the [project lifecycle](lifecycle.md) command
 
 </div>
 
-## Opinionated Templates
+## Built-in Templates
 
-While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in __Opinionated Templates__ that bundle domain-specific tools, directories, and AST configurations.
+While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in templates that bundle domain-specific tools, directories, and AST configurations. Each one is a project *shape* (a command-line app, a web service, an analysis workbench), not a fixed stack of libraries.
+
+The shapes come in two kinds of default. __Product__ templates (`cli`, `api`) start with the full quality gate: strict typing, tests, CI, and commit hooks. __Workbench__ templates (`astro`, `ml`, `dsp`, `embedded`) start lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Either kind is only a starting point: every tool can be overridden with the tri-state flags below.
 
 To scaffold from a template headlessly, pass `--template` (or `-t`):
 
