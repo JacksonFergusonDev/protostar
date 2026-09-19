@@ -131,7 +131,7 @@ check-schemas: sync
 schema-check: check-schemas
 
 # Pre-warm environment and caches for demo generation
-prewarm-demo: sync
+demo-prewarm: sync
     @printf "\n{{ blue }}=== Pre-warming Demo Environment & Caches ==={{ nc }}\n"
     @uv pip install --dry-run \
         numpy scipy pandas matplotlib astropy astroquery photutils specutils nbdime \
@@ -142,11 +142,11 @@ prewarm-demo: sync
     @printf "{{ green }}✔ Demo environment warmed{{ nc }}\n"
 
 # Helper recipe to record and render demo using asciinema + agg
-_run-demo name target: prewarm-demo
-    @printf "\n{{ blue }}=== Generating {{ name }} Demo ==={{ nc }}\n"
+_demo-run name target trials="5": demo-prewarm
+    @printf "\n{{ blue }}=== Generating {{ name }} Demo (trials: {{ trials }}) ==={{ nc }}\n"
     rm -rf /tmp/demo_project && mkdir -p /tmp/demo_project
     PATH="{{ invocation_directory() }}/.venv/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$$PATH" \
-        uv run python scripts/record_demos.py {{ target }} --output docs/assets/demo_{{ target }}.cast
+        uv run python scripts/record_demos.py {{ target }} --trials {{ trials }} --output docs/assets/demo_{{ target }}.cast
     agg docs/assets/demo_{{ target }}.cast docs/assets/demo_{{ target }}.gif \
         --font-family "JetBrainsMono Nerd Font Mono" \
         --font-size 22 \
@@ -154,15 +154,25 @@ _run-demo name target: prewarm-demo
     rm -rf /tmp/demo_project
     @printf "{{ green }}✔ {{ name }} demo generated in docs/assets/demo_{{ target }}.gif{{ nc }}\n"
 
-# Generate wizard demo
-wizard-demo: (_run-demo "Wizard" "wizard")
+# Generate headless demo (production, best of 5 trials)
+demo-headless trials="5": (_demo-run "Headless" "headless" trials)
 
-# Generate headless demo
-headless-demo: (_run-demo "Headless" "headless")
+# Generate headless demo draft (single trial)
+demo-headless-draft: (_demo-run "Headless (Draft)" "headless" "1")
 
-# Generate all demos
-all-demo: wizard-demo headless-demo
-    @printf "\n{{ blue }}=== All demos generated ==={{ nc }}\n"
+# Generate wizard demo (production, best of 5 trials)
+demo-wizard trials="5": (_demo-run "Wizard" "wizard" trials)
+
+# Generate wizard demo draft (single trial)
+demo-wizard-draft: (_demo-run "Wizard (Draft)" "wizard" "1")
+
+# Generate all demos (production, best of 5 trials)
+demo-all trials="5": (demo-wizard trials) (demo-headless trials)
+    @printf "\n{{ blue }}=== All production demos generated ==={{ nc }}\n"
+
+# Generate all demo drafts (single trial)
+demo-all-draft: demo-wizard-draft demo-headless-draft
+    @printf "\n{{ blue }}=== All demo drafts generated ==={{ nc }}\n"
 
 # Start the documentation preview server
 serve: sync

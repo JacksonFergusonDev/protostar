@@ -21,6 +21,7 @@ import sys
 import termios
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
@@ -34,6 +35,17 @@ DEFAULT_ROWS = 30
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
 CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J")
+
+
+@dataclass(frozen=True)
+class DemoTrialResult:
+    """Summary metrics of a single demo recording trial."""
+
+    trial: int
+    duration_s: float
+    events: int
+    status: str
+
 
 # Single source of truth for demo colors: consumed by asciinema-player (docs) and agg (GIFs)
 DEFAULT_THEME: dict[str, str] = {
@@ -209,7 +221,49 @@ class PTYSession:
     def enter(self, wait: float = 0.5) -> None:
         """Sends an Enter keypress and waits for output."""
         os.write(self.master_fd, b"\n")
-        self._drain(wait)
+        if wait > 0:
+            self._drain(wait)
+
+    def wait_for(
+        self,
+        markers: str | tuple[str, ...],
+        timeout: float = 10.0,
+        post_wait: float = 0.4,
+    ) -> str:
+        """Drains output until any specified marker is observed, then drains post_wait.
+
+        Args:
+            markers: Substring or tuple of substrings to look for in the output stream.
+            timeout: Maximum seconds to wait before raising TimeoutError.
+            post_wait: Additional seconds to drain after the marker is detected
+                (useful for allowing shell prompt redraws to settle).
+
+        Returns:
+            The accumulated decoded output drained during this operation.
+
+        Raises:
+            TimeoutError: If none of the markers appear before the timeout expires.
+        """
+        targets = (markers,) if isinstance(markers, str) else markers
+        deadline = time.time() + timeout
+        accumulated: list[str] = []
+
+        while time.time() < deadline:
+            remaining = max(0.01, min(0.15, deadline - time.time()))
+            chunk_str = self._drain(remaining)
+            if chunk_str:
+                accumulated.append(chunk_str)
+                full_text = "".join(accumulated)
+                if any(m in full_text for m in targets):
+                    if post_wait > 0:
+                        extra = self._drain(post_wait)
+                        accumulated.append(extra)
+                    return "".join(accumulated)
+
+        raise TimeoutError(
+            f"Timed out after {timeout}s waiting for markers: {targets!r}. "
+            f"Received output: {''.join(accumulated)!r}"
+        )
 
     def key(self, key_bytes: bytes, wait: float = 0.3) -> None:
         """Sends raw key sequence (e.g. arrow keys, space, escape)."""
@@ -319,7 +373,9 @@ def record_headless(session: PTYSession) -> None:
     """Script for the non-interactive (headless) CLI initialization demo."""
     session.sleep(0.5)
     session.type("protostar init --template cli", char_delay=0.035, post_delay=0.3)
-    session.enter(wait=3.0)
+    session.enter(wait=0.0)
+    session.wait_for("Accretion disk stabilized", timeout=12.0, post_wait=0.4)
+    session.sleep(0.6)  # Viewing pause after initialization completes
 
     # Post-generation inspection using cli fixture line metrics
     inspect_project_file(session, preset="cli")
@@ -329,10 +385,11 @@ def record_wizard(session: PTYSession) -> None:
     """Script for the interactive wizard CLI initialization demo using the Astro preset."""
     session.sleep(0.5)
     session.type("protostar init", char_delay=0.035, post_delay=0.3)
-    session.enter(wait=1.0)
+    session.enter(wait=0.0)
+    session.wait_for("Start from a template?", timeout=8.0, post_wait=0.3)
 
     # 1. Template selection: "Start from a template?" -> Navigate down and select "astro"
-    session.sleep(0.5)
+    session.sleep(0.4)
     session.down(count=2, wait=0.2)
     session.sleep(0.4)
     session.enter(wait=0.8)
@@ -366,7 +423,9 @@ def record_wizard(session: PTYSession) -> None:
 
     # Minimum Python version (3.13 default, press Enter to confirm and begin scaffolding)
     session.sleep(0.3)
-    session.enter(wait=4.0)
+    session.enter(wait=0.0)
+    session.wait_for("Accretion disk stabilized", timeout=15.0, post_wait=0.4)
+    session.sleep(0.6)  # Viewing pause after initialization completes
 
     # 4. Post-generation inspection using astro fixture line metrics
     inspect_project_file(session, preset="astro")
@@ -396,6 +455,12 @@ def main() -> None:
         help="Output .cast file path (defaults to docs/assets/demo_<scenario>.cast)",
     )
     parser.add_argument(
+        "--trials",
+        type=int,
+        default=1,
+        help="Number of recording trials to run, selecting the shortest duration (default: 1)",
+    )
+    parser.add_argument(
         "--cols", type=int, default=DEFAULT_COLS, help="Terminal width in columns"
     )
     parser.add_argument(
@@ -404,15 +469,122 @@ def main() -> None:
 
     args = parser.parse_args()
     targets = ["headless", "wizard"] if args.scenario == "all" else [args.scenario]
+    trials_count = max(1, args.trials)
 
     for target in targets:
         out_path = args.output or Path(f"docs/assets/demo_{target}.cast")
-        print(f"🎬 Recording demo '{target}' -> {out_path} ...")
-        session = PTYSession(cols=args.cols, rows=args.rows)
-        session.start()
-        SCENARIOS[target](session)
-        session.save(out_path)
-        print(f"✔ Recorded '{target}' successfully ({len(session.events)} events).")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if trials_count == 1:
+            print(f"🎬 Recording demo '{target}' -> {out_path} ...")
+            session = PTYSession(cols=args.cols, rows=args.rows)
+            session.start()
+            SCENARIOS[target](session)
+            session.save(out_path)
+            duration = float(session.events[-1][0]) if session.events else 0.0
+            print(
+                f"✔ Recorded '{target}' successfully in {duration:.2f}s "
+                f"({len(session.events)} events)."
+            )
+            continue
+
+        print(
+            f"🎬 Recording demo '{target}' ({trials_count} trials requested) -> {out_path} ..."
+        )
+        trial_results: list[DemoTrialResult] = []
+        trial_paths: list[Path] = []
+
+        try:
+            for trial_idx in range(1, trials_count + 1):
+                tmp_cast = out_path.with_name(
+                    f".{out_path.stem}.trial_{trial_idx}.tmp.cast"
+                )
+                trial_paths.append(tmp_cast)
+                print(f"  ↳ [Trial {trial_idx}/{trials_count}] Recording ...")
+                session = PTYSession(cols=args.cols, rows=args.rows)
+                session.start()
+                try:
+                    SCENARIOS[target](session)
+                    session.save(tmp_cast)
+                    duration = float(session.events[-1][0]) if session.events else 0.0
+                    event_count = len(session.events)
+                    trial_results.append(
+                        DemoTrialResult(
+                            trial=trial_idx,
+                            duration_s=round(duration, 2),
+                            events=event_count,
+                            status="success",
+                        )
+                    )
+                    print(
+                        f"    ✔ Trial {trial_idx} completed in {duration:.2f}s "
+                        f"({event_count} events)"
+                    )
+                except Exception as exc:
+                    trial_results.append(
+                        DemoTrialResult(
+                            trial=trial_idx,
+                            duration_s=0.0,
+                            events=0,
+                            status=f"failed: {exc}",
+                        )
+                    )
+                    print(f"    ✖ Trial {trial_idx} failed: {exc}")
+
+            successful_trials = [t for t in trial_results if t.status == "success"]
+            if not successful_trials:
+                raise RuntimeError(
+                    f"All {trials_count} recording trials failed for demo '{target}'."
+                )
+
+            winner = min(successful_trials, key=lambda t: t.duration_s)
+            winning_path = out_path.with_name(
+                f".{out_path.stem}.trial_{winner.trial}.tmp.cast"
+            )
+            shutil.move(winning_path, out_path)
+
+            durations = [t.duration_s for t in successful_trials]
+            min_duration = min(durations)
+            max_duration = max(durations)
+            mean_duration = round(sum(durations) / len(durations), 2)
+            saved_vs_slowest_s = round(max_duration - min_duration, 2)
+
+            trial_dicts = [
+                {
+                    "trial": r.trial,
+                    "duration_s": r.duration_s,
+                    "events": r.events,
+                    "status": r.status,
+                    **({"winner": True} if r.trial == winner.trial else {}),
+                }
+                for r in trial_results
+            ]
+
+            summary = {
+                "scenario": target,
+                "trials_requested": trials_count,
+                "trials_completed": len(successful_trials),
+                "winning_trial": winner.trial,
+                "winning_duration_s": winner.duration_s,
+                "event_count": winner.events,
+                "duration_range_s": [min_duration, max_duration],
+                "mean_duration_s": mean_duration,
+                "saved_vs_slowest_s": saved_vs_slowest_s,
+                "trials": trial_dicts,
+                "output_file": str(out_path),
+            }
+
+            print(f"\n=== DEMO TRIAL SUMMARY [{target}] ===")
+            print(json.dumps(summary, indent=2))
+            print("====================================\n")
+            print(
+                f"✔ Selected trial {winner.trial} ({winner.duration_s:.2f}s) "
+                f"saved to {out_path}"
+            )
+        finally:
+            for p in trial_paths:
+                if p.exists():
+                    p.unlink()
 
 
 if __name__ == "__main__":
