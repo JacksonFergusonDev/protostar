@@ -218,7 +218,6 @@ To understand how Protostar interprets your flags, observe what happens when we 
     __What Protostar sets up:__
 
     - __Board & Host Decoupling:__ Separates on-device firmware code (`src/board/boot.py`, `src/board/main.py`) from host workstation tools (`src/host/`).
-    - __Host Mock Testing:__ Scaffolds a `tests/host_mocks/` harness to validate hardware interaction logic locally without physical microcontrollers connected.
     - __MicroPython Device Tooling:__ Bundles `mpremote` and `pyserial` for device communication, flashing, and interactive REPL sessions.
 
 ## Task Runner Orchestration (`justfile`)

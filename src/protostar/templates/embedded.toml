@@ -5,7 +5,7 @@ description = "Embedded Python development and microcontroller setup"
 dependencies = ["pyserial", "mpremote"]
 
 # --- Directory Architecture ---
-directories = ["src/board", "src/host", "tests/host_mocks"]
+directories = ["src/board", "src/host"]
 
 # --- Version Control Ignores ---
 vcs_ignores = ["*.bin", "*.uf2", "build/"]
