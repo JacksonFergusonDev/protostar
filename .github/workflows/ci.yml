@@ -36,11 +36,14 @@ jobs:
     - name: Check Markdown formatting with rumdl
       run: uv run rumdl fmt --check --output-format github .
 
+    - name: Run actionlint
+      run: uv run actionlint .github/workflows/*.yml
+
     - name: Type check with Mypy
       run: uv run mypy .
 
   docs:
-    name: Documentation Checks
+    name: Documentation Checks & Schema Validation
     runs-on: ubuntu-latest
     timeout-minutes: 6
 
@@ -64,6 +67,9 @@ jobs:
 
     - name: Validate embedded documentation links
       run: uv run python scripts/check_doc_links.py
+
+    - name: Validate schemas
+      run: uv run python scripts/check_schemas.py
 
   test:
     name: Test on ${{ matrix.os }} / Python ${{ matrix.python-version }}

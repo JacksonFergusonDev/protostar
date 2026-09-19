@@ -25,13 +25,14 @@ format: sync
     uv run rumdl fmt .
     @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
 
-# Run linters and check formatting (Ruff and Markdown)
+# Run linters and check formatting (Ruff, Markdown, and GitHub Workflows)
 lint: sync
     @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
     uv run ruff check .
     uv run ruff format --check .
     uv run rumdl check .
     uv run rumdl fmt --check .
+    uv run actionlint .github/workflows/*.yml
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
 # Run static type checking with Mypy
@@ -81,7 +82,7 @@ test-benchmark-slower: sync
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test-unit check-snapshots check-doc-links
+ci: lint typecheck test-unit check-snapshots check-doc-links check-schemas
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -120,6 +121,14 @@ check-doc-links: sync
     @printf "\n{{ blue }}=== Validating Embedded Documentation Links ==={{ nc }}\n"
     uv run python scripts/check_doc_links.py
     @printf "{{ green }}✔ All embedded documentation links are valid{{ nc }}\n"
+
+# Validate repository and snapshot configurations against official schemas
+check-schemas: sync
+    @printf "\n{{ blue }}=== Validating JSON & YAML Schemas ==={{ nc }}\n"
+    uv run python scripts/check_schemas.py
+
+# Alias for check-schemas
+schema-check: check-schemas
 
 # Pre-warm environment and caches for demo generation
 prewarm-demo: sync
