@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789779203056,
+  "lastUpdate": 1789790202569,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13945,6 +13945,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 233.34,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f460e55ddd692143b0873282d77bbfd93871c01b",
+          "message": "refactor(scripts): harden developer tooling, paths, and presentation boundaries (#271)\n\n* chore(scripts): guard check_schemas with uv sync and direct binary execution\n\n* fix(scripts): resolve working directory coupling to repo root in generate_docs_assets\n\n* fix(scripts): resolve working directory coupling in snapshot test runner\n\n* fix(scripts): prune empty directories during snapshot target extraction\n\n* refactor(scripts): make Hyperfine command parsing robust against flag order\n\n* fix(scripts): ensure trailing newline in benchmark JSON output\n\n* fix(scripts): eliminate 64 KiB buffer cap when fetching registry\n\n* fix(scripts): use atomic file writes in registry sync\n\n* refactor(cli): promote _print_dry_run_summary to public UI function",
+          "timestamp": "2026-09-18T20:55:30-07:00",
+          "tree_id": "183eead4288867d2c5256634feda021d9f772a77",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f460e55ddd692143b0873282d77bbfd93871c01b"
+        },
+        "date": 1789790201382,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 188.15,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 260.17,
             "unit": "ms"
           }
         ]
