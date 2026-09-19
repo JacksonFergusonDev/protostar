@@ -36,6 +36,7 @@ nav = [
         { "Overview" = "developer/overview.md" },
         { "Extending Protostar" = "developer/extending-protostar.md" },
         { "Built-in Templates" = "developer/built-in-templates.md" },
+        { "pyproject.toml Layout" = "developer/pyproject-layout.md" },
         { "Testing & Philosophy" = "developer/testing.md" },
         { "API Reference" = "developer/api-reference.md" },
     ] },
