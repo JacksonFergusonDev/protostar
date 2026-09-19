@@ -1,3 +1,6 @@
+# Built-in template. Product tier: a deployed web service, full quality gate by default.
+# Contract: docs/developer/built-in-templates.md
+
 name = "FastAPI"
 description = "FastAPI web application scaffold with Uvicorn and Pydantic"
 

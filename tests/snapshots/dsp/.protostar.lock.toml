@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "dsp"
-digest = "96ea57443aad49839833bededad4cb45714470cdee8ff40af11b1774e312b813"
+digest = "36d89251b38ce9383a7d01b95e27f2c0a16ccc45e2bddb36d255f91130821fc4"
 display_name = "dsp"
 
 [[files]]

@@ -153,6 +153,40 @@ When you toggle `--no-direnv`, the `direnv` module simply isn't loaded. When you
 !!! note "Related: tri-state toggling"
     Because modules are independent, Protostar can offer `--<flag>` / `--no-<flag>` overrides for any module without the template author needing to write any conditional logic. See [Initialization](./usage/init.md) for the full flag matrix.
 
+## Baseline in Modules, Shape in Templates
+
+**Modules ship a baseline tuned for casual projects. Templates add the strictness that defines a particular kind of project.**
+
+Suppose you run Protostar, pick `ruff` and `mypy`, and start writing a few scripts you want to keep modern and clean. If the `mypy` module shipped a strict, production-grade configuration, your first `mypy .` would bury a weekend script in errors you never asked for. The tool would feel like it was fighting you, and you would be right to be annoyed.
+
+So each module's defaults are what a casual user would thank it for. The `cli` template, which produces a published package, adds `strict = true` and stricter lint rules because for that shape they are the point.
+
+=== "Protostar (Baseline + Delta)"
+
+    ```toml
+    # Module baseline (always the same, gentle):
+    [tool.mypy]
+    check_untyped_defs = true
+    warn_return_any = true
+
+    # cli template delta (only what defines a published CLI):
+    [tool.mypy]
+    strict = true
+    ```
+
+=== "What You'd Have Without It"
+
+    ```toml
+    # Strict defaults in the module, so every user pays for them:
+    [tool.mypy]
+    strict = true
+
+    # ...and a template that wants *less* strict must now
+    # override the module, one setting at a time.
+    ```
+
+**Why this matters:** Putting strictness in the shared default makes every user carry the cost of a choice only some of them want, and it forces each relaxed project to undo it setting by setting. Putting it in the template keeps the choice with the shape that needs it, and keeps each template small enough to read at a glance. See [Built-in Templates](./developer/built-in-templates.md) for how this rule is enforced.
+
 ## Fail Loud, Fail Early
 
 **All system dependency checks run during `plan()` — before `execute()` is called and before any file is written.**

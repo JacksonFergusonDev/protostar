@@ -342,7 +342,7 @@ def generate_capability_tables() -> None:
     )
 
     # Built-in Template matrix
-    template_headers = ["Template", "Invocation", "Dependencies"]
+    template_headers = ["Template", "Description", "Invocation", "Dependencies"]
     template_rows = []
 
     try:
@@ -356,6 +356,7 @@ def generate_capability_tables() -> None:
                 template_rows.append(
                     [
                         f"`{name}`",
+                        content.get("description", ""),
                         f"`protostar init --template {name}`",
                         deps_formatted,
                     ]

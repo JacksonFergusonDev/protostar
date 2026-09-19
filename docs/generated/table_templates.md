@@ -1,8 +1,8 @@
-| Template | Invocation | Dependencies |
-| :--- | :--- | :--- |
-| `api` | `protostar init --template api` | `fastapi`, `uvicorn`, `pydantic-settings` |
-| `astro` | `protostar init --template astro` | `numpy`, `scipy`, `pandas`, `matplotlib`, `astropy`, `astroquery`, `photutils`, `specutils`, `nbdime` |
-| `cli` | `protostar init --template cli` | `typer`, `rich` |
-| `dsp` | `protostar init --template dsp` | `librosa`, `soundfile`, `scipy`, `numpy`, `matplotlib`, `pedalboard` |
-| `embedded` | `protostar init --template embedded` | `pyserial`, `mpremote` |
-| `ml` | `protostar init --template ml` | `torch`, `scikit-learn`, `pandas`, `numpy`, `matplotlib`, `tqdm` |
+| Template | Description | Invocation | Dependencies |
+| :--- | :--- | :--- | :--- |
+| `api` | FastAPI web application scaffold with Uvicorn and Pydantic | `protostar init --template api` | `fastapi`, `uvicorn`, `pydantic-settings` |
+| `astro` | Astrophysics and astronomy data analysis scaffold with Astropy | `protostar init --template astro` | `numpy`, `scipy`, `pandas`, `matplotlib`, `astropy`, `astroquery`, `photutils`, `specutils`, `nbdime` |
+| `cli` | Rich & Typer command-line application | `protostar init --template cli` | `typer`, `rich` |
+| `dsp` | Digital signal processing and audio analysis scaffold | `protostar init --template dsp` | `librosa`, `soundfile`, `scipy`, `numpy`, `matplotlib`, `pedalboard` |
+| `embedded` | Embedded Python development and microcontroller setup | `protostar init --template embedded` | `pyserial`, `mpremote` |
+| `ml` | Machine learning & data science scaffold with PyTorch and Jupyter | `protostar init --template ml` | `torch`, `scikit-learn`, `pandas`, `numpy`, `matplotlib`, `tqdm` |

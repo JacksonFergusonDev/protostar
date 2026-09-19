@@ -14,7 +14,7 @@ Protostar provides a modular matrix of tooling modules and built-in templates. T
 
 ## Built-in Templates
 
-Built-in templates act as high-level macros that execute on top of a base language footprint. They dynamically inject structural scaffolding, directories, and domain-specific dependencies into the environment manifest.
+Built-in templates are project shapes that build on a base language footprint. They inject structural scaffolding, directories, and domain-specific dependencies into the environment manifest, and they add only the tooling configuration that defines their shape on top of each tool's casual-user defaults.
 
 !!! tip "Dynamic Resolution"
     Templates do not hardcode package versions. They pass the library requirements directly to the package manager (`uv`), allowing your environment to resolve the latest compatible machine learning, astrophysics, or API packages at runtime.
