@@ -209,7 +209,49 @@ class PTYSession:
     def enter(self, wait: float = 0.5) -> None:
         """Sends an Enter keypress and waits for output."""
         os.write(self.master_fd, b"\n")
-        self._drain(wait)
+        if wait > 0:
+            self._drain(wait)
+
+    def wait_for(
+        self,
+        markers: str | tuple[str, ...],
+        timeout: float = 10.0,
+        post_wait: float = 0.4,
+    ) -> str:
+        """Drains output until any specified marker is observed, then drains post_wait.
+
+        Args:
+            markers: Substring or tuple of substrings to look for in the output stream.
+            timeout: Maximum seconds to wait before raising TimeoutError.
+            post_wait: Additional seconds to drain after the marker is detected
+                (useful for allowing shell prompt redraws to settle).
+
+        Returns:
+            The accumulated decoded output drained during this operation.
+
+        Raises:
+            TimeoutError: If none of the markers appear before the timeout expires.
+        """
+        targets = (markers,) if isinstance(markers, str) else markers
+        deadline = time.time() + timeout
+        accumulated: list[str] = []
+
+        while time.time() < deadline:
+            remaining = max(0.01, min(0.15, deadline - time.time()))
+            chunk_str = self._drain(remaining)
+            if chunk_str:
+                accumulated.append(chunk_str)
+                full_text = "".join(accumulated)
+                if any(m in full_text for m in targets):
+                    if post_wait > 0:
+                        extra = self._drain(post_wait)
+                        accumulated.append(extra)
+                    return "".join(accumulated)
+
+        raise TimeoutError(
+            f"Timed out after {timeout}s waiting for markers: {targets!r}. "
+            f"Received output: {''.join(accumulated)!r}"
+        )
 
     def key(self, key_bytes: bytes, wait: float = 0.3) -> None:
         """Sends raw key sequence (e.g. arrow keys, space, escape)."""
@@ -319,7 +361,9 @@ def record_headless(session: PTYSession) -> None:
     """Script for the non-interactive (headless) CLI initialization demo."""
     session.sleep(0.5)
     session.type("protostar init --template cli", char_delay=0.035, post_delay=0.3)
-    session.enter(wait=3.0)
+    session.enter(wait=0.0)
+    session.wait_for("Accretion disk stabilized", timeout=12.0, post_wait=0.4)
+    session.sleep(0.6)  # Viewing pause after initialization completes
 
     # Post-generation inspection using cli fixture line metrics
     inspect_project_file(session, preset="cli")
@@ -329,10 +373,11 @@ def record_wizard(session: PTYSession) -> None:
     """Script for the interactive wizard CLI initialization demo using the Astro preset."""
     session.sleep(0.5)
     session.type("protostar init", char_delay=0.035, post_delay=0.3)
-    session.enter(wait=1.0)
+    session.enter(wait=0.0)
+    session.wait_for("Start from a template?", timeout=8.0, post_wait=0.3)
 
     # 1. Template selection: "Start from a template?" -> Navigate down and select "astro"
-    session.sleep(0.5)
+    session.sleep(0.4)
     session.down(count=2, wait=0.2)
     session.sleep(0.4)
     session.enter(wait=0.8)
@@ -366,7 +411,9 @@ def record_wizard(session: PTYSession) -> None:
 
     # Minimum Python version (3.13 default, press Enter to confirm and begin scaffolding)
     session.sleep(0.3)
-    session.enter(wait=4.0)
+    session.enter(wait=0.0)
+    session.wait_for("Accretion disk stabilized", timeout=15.0, post_wait=0.4)
+    session.sleep(0.6)  # Viewing pause after initialization completes
 
     # 4. Post-generation inspection using astro fixture line metrics
     inspect_project_file(session, preset="astro")
