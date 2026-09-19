@@ -4,7 +4,7 @@ producer_version = "0.9.0"
 [template]
 origin = "built-in"
 locator = "api"
-digest = "19bbe682c0abb9bef6ce49b70ccc62d8ec9c12068e82e086c1d18bcc6cadb2da"
+digest = "7017252d50ed91c8602c11735a7eb3704eec3f4797e7cdc78a59a98797fc5d9e"
 display_name = "api"
 
 [[files]]
@@ -35,6 +35,10 @@ path = "CHANGELOG.md"
 policy = "seed-only"
 
 [[files]]
+path = "README.md"
+policy = "seed-only"
+
+[[files]]
 path = "justfile"
 policy = "checksum"
 digest = "1ab70adea6c9b1ce8c5e7adb046659da762f6e69dec78b050fbbc7bf6020b513"
@@ -42,7 +46,7 @@ digest = "1ab70adea6c9b1ce8c5e7adb046659da762f6e69dec78b050fbbc7bf6020b513"
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
+baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"hatchling\"]\n\n[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.hatch.build.targets.wheel]\npackages = [\"src/demo_project\"]\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
 
 [[files]]
 path = "src/demo_project/core/config.py"
@@ -50,6 +54,10 @@ policy = "seed-only"
 
 [[files]]
 path = "src/demo_project/main.py"
+policy = "seed-only"
+
+[[files]]
+path = "tests/test_health.py"
 policy = "seed-only"
 
 [[dependencies]]

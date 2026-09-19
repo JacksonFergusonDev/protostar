@@ -30,30 +30,14 @@ lint: sync
     uv run ruff format --check .
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
-# Run the full automated testing matrix
-test: sync
-    @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
-    uv run pytest
-    @printf "{{ green }}✔ All tests passed{{ nc }}\n"
-
-# Run tests with coverage
-test-cov: sync
-    @printf "\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\n"
-    uv run pytest --cov
-    @printf "{{ green }}✔ Coverage run complete{{ nc }}\n"
-
 # Run the fast local CI pipeline executed before pushing
-ci: lint test
+ci: lint
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
 clean:
     @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
     rm -rf \
-        .ruff_cache \
-        .pytest_cache \
-        htmlcov \
-        .coverage \
-        coverage.xml
+        .ruff_cache
     find . -type d -name "__pycache__" -exec rm -rf {} +
     @printf "{{ green }}✔ Workspace cleaned{{ nc }}\n"

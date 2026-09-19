@@ -13,7 +13,6 @@
 .git/
 .idea/
 .ipynb_checkpoints/
-.pytest_cache/
 .python-version
 .ruff_cache/
 .venv/

@@ -21,6 +21,10 @@ classifiers = [
 [project.scripts]
 demo-project = "demo_project.cli:app"
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -155,6 +159,9 @@ style = "one"
     "MD041", # first line need not be a top-level heading in doc pages
     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demo_project"]
 
 [tool.protostar]
 version = 1

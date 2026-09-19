@@ -10,6 +10,7 @@
 ├── .protostar.lock.toml
 ├── .python-version
 ├── CHANGELOG.md
+├── README.md
 ├── justfile
 ├── pyproject.toml
 ├── src
@@ -23,5 +24,6 @@
 │       ├── schemas
 │       └── services
 ├── tests
-│   └── api
+│   ├── api
+│   └── test_health.py
 └── uv.lock

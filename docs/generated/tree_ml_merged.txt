@@ -27,5 +27,4 @@
 │       ├── data
 │       ├── models
 │       └── training
-├── tests
 └── uv.lock

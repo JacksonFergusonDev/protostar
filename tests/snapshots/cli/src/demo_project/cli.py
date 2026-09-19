@@ -5,9 +5,11 @@ from rich.console import Console
 
 from demo_project import __version__
 
+APP_NAME = "demo-project"
+
 app = typer.Typer(
-    name="demo-project",
-    help="Command-line interface for demo-project.",
+    name=APP_NAME,
+    help=f"Command-line interface for {APP_NAME}.",
     add_completion=False,
 )
 console = Console()
@@ -16,7 +18,7 @@ console = Console()
 def version_callback(value: bool) -> None:
     """Print the version and exit eagerly."""
     if value:
-        console.print(f"demo-project version [bold cyan]{__version__}[/bold cyan]")
+        console.print(f"{APP_NAME} version [bold cyan]{__version__}[/bold cyan]")
         raise typer.Exit()
 
 

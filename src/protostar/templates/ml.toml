@@ -44,7 +44,7 @@ vcs_ignores = [
 # --- Tooling Opinions ---
 ruff = true
 direnv = true
-pytest = true
+pytest = false
 just = true
 rumdl = false
 mypy = false

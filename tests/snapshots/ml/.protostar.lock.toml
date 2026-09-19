@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "428de5131924145bb72b423129221f0a530a9eb49ac64a0afdecbb251f30aff2"
+digest = "868d42993579b0f7293e2357395f5b42aea76e9ce17b2329deab1c7bbe893b0e"
 display_name = "ml"
 
 [[files]]
@@ -36,7 +36,7 @@ policy = "seed-only"
 [[files]]
 path = "justfile"
 policy = "checksum"
-digest = "8c0e86315ead7f4c8d34750a0812d6f4fbdac8cfdec3f2b8bec1b43af48f26f6"
+digest = "9f4b2fb4b0af95bc52718e71f0aedb56c59c07e595de391c444199c5ded13c5c"
 
 [[files]]
 path = "models/weights/.gitkeep"
@@ -45,23 +45,7 @@ policy = "seed-only"
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest"
-marker = ""
-declared = "pytest"
-materialized = "pytest>=9.1.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest-mock"
-marker = ""
-declared = "pytest-mock"
-materialized = "pytest-mock>=3.15.1"
+baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
 
 [[dependencies]]
 path = "pyproject.toml"
