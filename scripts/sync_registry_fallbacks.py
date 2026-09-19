@@ -12,6 +12,7 @@ sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 )
 from protostar._fallbacks import DEFAULT_REVISIONS
+from protostar.fs import atomic_write_text
 
 REGISTRY_URL = (
     "https://jacksonfergusondev.github.io/protostar-hook-registry/registry.json"
@@ -82,7 +83,7 @@ def main() -> None:
 
     print("Fallbacks are out of date. Updating src/protostar/_fallbacks.py...")
     new_content = generate_fallbacks_content(remote_hooks)
-    FALLBACKS_FILE.write_text(new_content)
+    atomic_write_text(FALLBACKS_FILE, new_content)
     print("WARNING: Fallbacks have been updated.")
     print(
         "Please review the changes in src/protostar/_fallbacks.py and rerun your bump/release command."
