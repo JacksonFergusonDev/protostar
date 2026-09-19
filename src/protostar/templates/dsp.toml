@@ -41,6 +41,7 @@ direnv = true
 pytest = true
 just = true
 rumdl = false
+mypy = false
 prek = false
 ci = false
 

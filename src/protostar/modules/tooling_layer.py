@@ -263,7 +263,10 @@ style = "one"
 
 
 class RuffModule(BootstrapModule):
-    """Configures the Ruff linter and formatter with a standard baseline."""
+    """Configures the Ruff linter and formatter with a sensible baseline.
+
+    The baseline suits casual projects; stricter rule sets belong in templates.
+    """
 
     cli_flags = ("--ruff",)
     cli_help = "Scaffold Ruff linter and formatter"
@@ -337,7 +340,10 @@ ignore = [
 
 
 class MypyModule(BootstrapModule):
-    """Configures the Mypy static type checker with strict enforcement."""
+    """Configures the Mypy static type checker with a sensible baseline.
+
+    Strict mode is intentionally left to templates that want it.
+    """
 
     cli_flags = ("--mypy",)
     cli_help = "Scaffold Mypy static type checker"

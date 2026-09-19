@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "bfde93ef30b5d57018baad55d3e10c5568550669629b259097ac6a0e016c1dd0"
+digest = "428de5131924145bb72b423129221f0a530a9eb49ac64a0afdecbb251f30aff2"
 display_name = "ml"
 
 [[files]]
@@ -36,7 +36,7 @@ policy = "seed-only"
 [[files]]
 path = "justfile"
 policy = "checksum"
-digest = "badc2688c7c4688762b637b8093bb425f3e157b8a60c0d4a759e558ac2ae15f5"
+digest = "8c0e86315ead7f4c8d34750a0812d6f4fbdac8cfdec3f2b8bec1b43af48f26f6"
 
 [[files]]
 path = "models/weights/.gitkeep"
@@ -45,7 +45,7 @@ policy = "seed-only"
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
+baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -70,14 +70,6 @@ name = "ruff"
 marker = ""
 declared = "ruff"
 materialized = "ruff>=0.16.8"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "rumdl"
-marker = ""
-declared = "rumdl"
-materialized = "rumdl>=0.2.73"
 
 [[dependencies]]
 path = "pyproject.toml"
