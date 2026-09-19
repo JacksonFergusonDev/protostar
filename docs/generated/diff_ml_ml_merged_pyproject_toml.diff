@@ -17,7 +17,7 @@
      "torch>=2.14.0",
      "tqdm>=4.70.1",
  ]
-@@ -106,6 +112,7 @@
+@@ -63,6 +69,7 @@
  locator = "ml"
 
  [tool.protostar.tools]
@@ -25,7 +25,7 @@
 
  [tool.protostar.fallback]
  ci = false
-@@ -137,8 +144,22 @@
+@@ -94,8 +101,22 @@
  [tool.protostar.metadata]
 
  [tool.protostar.bindings]

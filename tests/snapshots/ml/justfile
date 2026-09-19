@@ -19,8 +19,6 @@ sync:
 # Auto-format code
 format: sync
     @printf "\n{{ blue }}=== Formatting Code ==={{ nc }}\n"
-    uv run rumdl check --fix .
-    uv run rumdl fmt .
     uv run ruff check --fix .
     uv run ruff format .
     @printf "{{ green }}✔ Formatting complete{{ nc }}\n"
@@ -28,8 +26,6 @@ format: sync
 # Run linters
 lint: sync
     @printf "\n{{ blue }}=== Running Linters ==={{ nc }}\n"
-    uv run rumdl check .
-    uv run rumdl fmt --check .
     uv run ruff check .
     uv run ruff format --check .
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
@@ -54,7 +50,6 @@ ci: lint test
 clean:
     @printf "\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\n"
     rm -rf \
-        .rumdl_cache \
         .ruff_cache \
         .pytest_cache \
         htmlcov \
