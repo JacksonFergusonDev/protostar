@@ -21,6 +21,7 @@ import sys
 import termios
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
@@ -34,6 +35,17 @@ DEFAULT_ROWS = 30
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
 CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J")
+
+
+@dataclass(frozen=True)
+class DemoTrialResult:
+    """Summary metrics of a single demo recording trial."""
+
+    trial: int
+    duration_s: float
+    events: int
+    status: str
+
 
 # Single source of truth for demo colors: consumed by asciinema-player (docs) and agg (GIFs)
 DEFAULT_THEME: dict[str, str] = {
@@ -443,6 +455,12 @@ def main() -> None:
         help="Output .cast file path (defaults to docs/assets/demo_<scenario>.cast)",
     )
     parser.add_argument(
+        "--trials",
+        type=int,
+        default=1,
+        help="Number of recording trials to run, selecting the shortest duration (default: 1)",
+    )
+    parser.add_argument(
         "--cols", type=int, default=DEFAULT_COLS, help="Terminal width in columns"
     )
     parser.add_argument(
@@ -451,15 +469,122 @@ def main() -> None:
 
     args = parser.parse_args()
     targets = ["headless", "wizard"] if args.scenario == "all" else [args.scenario]
+    trials_count = max(1, args.trials)
 
     for target in targets:
         out_path = args.output or Path(f"docs/assets/demo_{target}.cast")
-        print(f"🎬 Recording demo '{target}' -> {out_path} ...")
-        session = PTYSession(cols=args.cols, rows=args.rows)
-        session.start()
-        SCENARIOS[target](session)
-        session.save(out_path)
-        print(f"✔ Recorded '{target}' successfully ({len(session.events)} events).")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if trials_count == 1:
+            print(f"🎬 Recording demo '{target}' -> {out_path} ...")
+            session = PTYSession(cols=args.cols, rows=args.rows)
+            session.start()
+            SCENARIOS[target](session)
+            session.save(out_path)
+            duration = float(session.events[-1][0]) if session.events else 0.0
+            print(
+                f"✔ Recorded '{target}' successfully in {duration:.2f}s "
+                f"({len(session.events)} events)."
+            )
+            continue
+
+        print(
+            f"🎬 Recording demo '{target}' ({trials_count} trials requested) -> {out_path} ..."
+        )
+        trial_results: list[DemoTrialResult] = []
+        trial_paths: list[Path] = []
+
+        try:
+            for trial_idx in range(1, trials_count + 1):
+                tmp_cast = out_path.with_name(
+                    f".{out_path.stem}.trial_{trial_idx}.tmp.cast"
+                )
+                trial_paths.append(tmp_cast)
+                print(f"  ↳ [Trial {trial_idx}/{trials_count}] Recording ...")
+                session = PTYSession(cols=args.cols, rows=args.rows)
+                session.start()
+                try:
+                    SCENARIOS[target](session)
+                    session.save(tmp_cast)
+                    duration = float(session.events[-1][0]) if session.events else 0.0
+                    event_count = len(session.events)
+                    trial_results.append(
+                        DemoTrialResult(
+                            trial=trial_idx,
+                            duration_s=round(duration, 2),
+                            events=event_count,
+                            status="success",
+                        )
+                    )
+                    print(
+                        f"    ✔ Trial {trial_idx} completed in {duration:.2f}s "
+                        f"({event_count} events)"
+                    )
+                except Exception as exc:
+                    trial_results.append(
+                        DemoTrialResult(
+                            trial=trial_idx,
+                            duration_s=0.0,
+                            events=0,
+                            status=f"failed: {exc}",
+                        )
+                    )
+                    print(f"    ✖ Trial {trial_idx} failed: {exc}")
+
+            successful_trials = [t for t in trial_results if t.status == "success"]
+            if not successful_trials:
+                raise RuntimeError(
+                    f"All {trials_count} recording trials failed for demo '{target}'."
+                )
+
+            winner = min(successful_trials, key=lambda t: t.duration_s)
+            winning_path = out_path.with_name(
+                f".{out_path.stem}.trial_{winner.trial}.tmp.cast"
+            )
+            shutil.move(winning_path, out_path)
+
+            durations = [t.duration_s for t in successful_trials]
+            min_duration = min(durations)
+            max_duration = max(durations)
+            mean_duration = round(sum(durations) / len(durations), 2)
+            saved_vs_slowest_s = round(max_duration - min_duration, 2)
+
+            trial_dicts = [
+                {
+                    "trial": r.trial,
+                    "duration_s": r.duration_s,
+                    "events": r.events,
+                    "status": r.status,
+                    **({"winner": True} if r.trial == winner.trial else {}),
+                }
+                for r in trial_results
+            ]
+
+            summary = {
+                "scenario": target,
+                "trials_requested": trials_count,
+                "trials_completed": len(successful_trials),
+                "winning_trial": winner.trial,
+                "winning_duration_s": winner.duration_s,
+                "event_count": winner.events,
+                "duration_range_s": [min_duration, max_duration],
+                "mean_duration_s": mean_duration,
+                "saved_vs_slowest_s": saved_vs_slowest_s,
+                "trials": trial_dicts,
+                "output_file": str(out_path),
+            }
+
+            print(f"\n=== DEMO TRIAL SUMMARY [{target}] ===")
+            print(json.dumps(summary, indent=2))
+            print("====================================\n")
+            print(
+                f"✔ Selected trial {winner.trial} ({winner.duration_s:.2f}s) "
+                f"saved to {out_path}"
+            )
+        finally:
+            for p in trial_paths:
+                if p.exists():
+                    p.unlink()
 
 
 if __name__ == "__main__":
