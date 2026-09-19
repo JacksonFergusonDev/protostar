@@ -19,6 +19,13 @@ from .errors import ConfigurationError, UnsupportedFilesystemNodeError
 from .ide import IDEType
 from .intent import TemplateOrigin, TemplateReference
 from .manifest import ProjectMetadata
+from .toml_layout import (
+    Section,
+    compose_children,
+    insert_section,
+    join_sections,
+    split_sections,
+)
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
@@ -230,8 +237,6 @@ _RECIPE_ORDER = (
     "bindings",
 )
 
-_RECIPE_HEADER_RE = re.compile(r"^\[\[?tool\.protostar[A-Za-z0-9_.-]*\]\]?[ \t]*$")
-
 
 def _invalid() -> ConfigurationError:
     return ConfigurationError(
@@ -416,7 +421,10 @@ def read_recipe(path: Path) -> ProjectRecipe | None:
 
 
 def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
-    """Updates only recipe leaves through round-trip AST edits."""
+    """Updates only recipe leaves through round-trip AST edits.
+
+    The recipe is edited as its own section, so no other byte of the file changes.
+    """
     decode_recipe(recipe.to_dict())
     try:
         raw = tomllib.loads(content)
@@ -425,7 +433,7 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
             raise _invalid()
         if "protostar" in tool_data:
             decode_recipe(tool_data["protostar"])
-        doc = tomlkit.parse(content)
+        document = tomlkit.parse(content)
     except tomllib.TOMLDecodeError as e:
         raise _invalid() from e
     # Empty tables are noise in the file; the reader treats an absent table as empty.
@@ -434,60 +442,56 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
         for key, value in recipe.to_dict().items()
         if key not in _OPTIONAL_TABLES or value
     }
-    tool = doc.setdefault("tool", tomlkit.table())
-    table = tool.setdefault("protostar", tomlkit.table())
 
-    def update(current: Any, values: dict[str, Any]) -> None:
-        for key in list(current):
-            if key not in values:
-                del current[key]
-        for key, value in values.items():
-            if isinstance(value, dict):
-                child = current.setdefault(key, tomlkit.table())
-                update(child, value)
-            elif key not in current or current[key] != value:
-                current[key] = value
-
-    before = {str(key) for key in table}
-    update(table, desired)
-    _place_new_tables(
-        table, [key for key in _RECIPE_ORDER if key in table and key not in before]
-    )
-    return _separate_recipe_tables(tomlkit.dumps(doc))
-
-
-def _place_new_tables(table: Any, new_keys: list[str]) -> None:
-    """Moves tables added to an existing recipe to their canonical position.
-
-    tomlkit appends them, which puts them after any trailing comment that belongs to
-    the recipe's last table, such as the header of the tool configured after it.
-    """
-    body = table.value.body
-    for key in new_keys:
-        entry = next(e for e in body if e[0] is not None and e[0].key == key)
-        body.remove(entry)
-        later = _RECIPE_ORDER[_RECIPE_ORDER.index(key) + 1 :]
-        index = next(
-            (i for i, (k, _) in enumerate(body) if k is not None and k.key in later),
-            len(body),
+    sections = split_sections(document)
+    recipe_sections = [
+        i for i, section in enumerate(sections) if section.path == ("tool", "protostar")
+    ]
+    if len(recipe_sections) == 1:
+        section = sections[recipe_sections[0]]
+        section.body = _edit_recipe_text(section.body, desired)
+        return join_sections(sections)
+    if "protostar" not in tool_data and not any(s.path == ("tool",) for s in sections):
+        tool_indexes = [i for i, s in enumerate(sections) if s.path[:1] == ("tool",)]
+        index = tool_indexes[-1] + 1 if tool_indexes else len(sections)
+        insert_section(
+            sections,
+            Section(("tool", "protostar"), _edit_recipe_text("", desired)),
+            index,
         )
-        body.insert(index, entry)
-    table.value._map = {k: i for i, (k, _) in enumerate(body) if k is not None}
+        return join_sections(sections)
+    # Out-of-order recipe tables, or a [tool] that is not a table of tables: edit each
+    # leaf where it stands.
+    tool = document.setdefault("tool", tomlkit.table())
+    _update_recipe(tool.setdefault("protostar", tomlkit.table()), desired)
+    return tomlkit.dumps(document)
 
 
-def _separate_recipe_tables(content: str) -> str:
-    """Puts a blank line before each recipe table header, touching nothing else."""
-    lines: list[str] = []
-    for line in content.split("\n"):
-        if (
-            _RECIPE_HEADER_RE.match(line)
-            and lines
-            and lines[-1].strip()
-            and not lines[-1].lstrip().startswith("#")
-        ):
-            lines.append("")
-        lines.append(line)
-    return "\n".join(lines)
+def _update_recipe(current: Any, values: dict[str, Any]) -> None:
+    for key in list(current):
+        if key not in values:
+            del current[key]
+    for key, value in values.items():
+        if isinstance(value, dict):
+            _update_recipe(current.setdefault(key, tomlkit.table()), value)
+        elif key not in current or current[key] != value:
+            current[key] = value
+
+
+def _edit_recipe_text(text: str, desired: dict[str, Any]) -> str:
+    """Edits the text of a lone ``[tool.protostar]`` section, or writes a new one.
+
+    Editing leaves in place changes nothing else. Adding a table recomposes the
+    section, so tables sit in schema order with one blank line between them.
+    """
+    document = tomlkit.parse(text)
+    tool = document.setdefault("tool", tomlkit.table(is_super_table=True))
+    table = tool.setdefault("protostar", tomlkit.table())
+    before = {str(key) for key in table}
+    _update_recipe(table, desired)
+    if {str(key) for key in table} == before:
+        return tomlkit.dumps(document)
+    return compose_children(document, ("tool", "protostar"), _RECIPE_ORDER)
 
 
 @dataclass(frozen=True)

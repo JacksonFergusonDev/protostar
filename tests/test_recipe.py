@@ -762,3 +762,62 @@ def test_every_recipe_table_header_has_a_blank_line_before_it():
     for index, line in enumerate(lines[1:], start=1):
         if line.startswith("[tool.protostar"):
             assert lines[index - 1] == "", f"no blank line before {line!r}"
+
+
+FOREIGN_PYPROJECT = '# mine\n[project]\nname="x"\n\n\n[tool.black]\nx = 1\n'
+
+
+def test_editing_a_recipe_leaf_changes_no_other_byte():
+    first = edit_recipe(FOREIGN_PYPROJECT, recipe())
+
+    second = edit_recipe(first, replace(recipe(), docker=True))
+
+    assert second == first.replace("docker = false", "docker = true")
+
+
+def test_a_new_recipe_keeps_the_users_file_and_follows_their_last_tool():
+    updated = edit_recipe(FOREIGN_PYPROJECT, recipe())
+
+    assert updated.startswith(FOREIGN_PYPROJECT + "\n[tool.protostar]")
+    assert decode_recipe(_recipe_table(updated)) == recipe()
+
+
+def test_a_new_recipe_follows_the_files_own_newline_style():
+    original = '[project]\r\nname = "x"\r\n'
+
+    updated = edit_recipe(original, recipe())
+
+    assert updated.startswith(original + "\r\n[tool.protostar]")
+    assert "\n" not in updated.replace("\r\n", "")
+
+
+def test_out_of_order_recipe_tables_are_edited_where_they_stand():
+    first = edit_recipe("", recipe())
+    scattered = first.replace(
+        "[tool.protostar.context]", "[tool.other]\nz = 1\n\n[tool.protostar.context]"
+    )
+
+    updated = tomllib.loads(edit_recipe(scattered, replace(recipe(), docker=True)))
+
+    assert updated["tool"]["protostar"]["docker"] is True
+    assert updated["tool"]["other"] == {"z": 1}
+
+
+def test_an_unformattable_new_pyproject_is_reported_as_a_diagnostic(
+    tmp_path, monkeypatch, mocker
+):
+    """A layout problem must leave the file valid and say so, never stay silent."""
+    monkeypatch.chdir(tmp_path)
+    mocker.patch(
+        "protostar.toml_layout.format_sections", return_value='[project]\nname = "no"\n'
+    )
+    executor = SystemExecutor(EnvironmentManifest(recipe=recipe()), UserConfig())
+    executor.fs.write_text(Path("pyproject.toml"), UV_LAYOUT)
+
+    executor._write_recipe()
+
+    written = tomllib.loads((tmp_path / "pyproject.toml").read_text())
+    assert written["project"]["name"] == "app"
+    assert "protostar" in written["tool"]
+    messages = [event.message for event in executor.diagnostics]
+    assert any("Left pyproject.toml unformatted" in m for m in messages), messages

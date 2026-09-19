@@ -1,15 +1,14 @@
 """AST-preserving TOML merging, manipulation, and formatting."""
 
 import logging
-import re
-import tomllib
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, cast
 
 import tomlkit
 import tomlkit.items
-from tomlkit.items import AoT, Table
+from tomlkit.items import AoT
 
 from .errors import ConfigurationError
 from .intent import (
@@ -30,19 +29,9 @@ from .merge import (
     reconcile,
     semantic_equal,
 )
+from .toml_layout import TOOL_SECTION_NAMES, format_document
 
 logger = logging.getLogger("protostar")
-
-TOOL_SECTION_NAMES = {
-    "ruff": "Ruff",
-    "mypy": "Mypy",
-    "ty": "Ty",
-    "pyrefly": "Pyrefly",
-    "pytest": "Pytest",
-    "coverage": "Pytest",
-    "commitizen": "Commitizen",
-    "rumdl": "rumdl",
-}
 
 SET_LIKE_TOML_PATHS = frozenset(
     {
@@ -71,6 +60,7 @@ class TomlReconciliation:
     content: str
     baseline: Value
     conflicts: tuple[MergeConflict, ...]
+    layout_notes: tuple[str, ...] = ()
 
 
 def aggregate_toml_document(
@@ -299,214 +289,33 @@ def reconcile_toml(
                 ast[key] = tomlkit.item(value)
 
     patch(doc, local, value)
+    layout_notes: list[str] = []
     if semantic_equal(local, value):
         content = original
     elif location.file == "pyproject.toml" and initializing:
-        content = format_pyproject_toml(doc)
+        content = format_pyproject_toml(doc, layout_notes.append)
     else:
         content = tomlkit.dumps(doc)
-    return TomlReconciliation(content, baseline, conflicts)
+    return TomlReconciliation(content, baseline, conflicts, tuple(layout_notes))
 
 
-_RAW_TOOL_HEADERS = [
-    ("Ruff", r"\[+tool\.ruff(?:\.[^\]]+)?\]+"),
-    ("Mypy", r"\[+tool\.mypy(?:\.[^\]]+)?\]+"),
-    ("Ty", r"\[+tool\.ty(?:\.[^\]]+)?\]+"),
-    ("Pyrefly", r"\[+tool\.pyrefly(?:\.[^\]]+)?\]+"),
-    ("Pytest", r"\[+tool\.(?:pytest|coverage)(?:\.[^\]]+)?\]+"),
-    ("Commitizen", r"\[+tool\.commitizen(?:\.[^\]]+)?\]+"),
-    ("rumdl", r"\[+tool\.rumdl(?:\.[^\]]+)?\]+"),
-    ("Protostar", r"\[+tool\.protostar(?:\.[^\]]+)?\]+"),
-]
-
-_COMPILED_TOOL_HEADERS: list[tuple[re.Pattern[str], re.Pattern[str], str]] = [
-    (
-        re.compile(rf"^{re.escape(f'# ---- {title} ---- #')}", re.MULTILINE),
-        re.compile(rf"^{table_regex}\s*$", re.MULTILINE),
-        f"# ---- {title} ---- #",
-    )
-    for title, table_regex in _RAW_TOOL_HEADERS
-]
-
-_FIRST_TOOL_HEADER_RE: re.Pattern[str] = re.compile(
-    r"^# ---- (?:Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen|rumdl|Protostar) ---- #\s*$",
-    re.MULTILINE,
-)
-
-# [tool.*] tables that configure packaging rather than a development tool. They sort
-# ahead of the "Tool Configuration" banner so that only tooling lives beneath it.
-_PACKAGING_TOOLS = ("hatch",)
-
-_MULTI_NEWLINE_RE: re.Pattern[str] = re.compile(r"\n{3,}")
-
-# A bare-key table header on its own line, such as [tool.ruff] or [[tool.mypy.overrides]].
-_TABLE_HEADER_RE: re.Pattern[str] = re.compile(r"^\[\[?[A-Za-z0-9_.-]+\]\]?[ \t]*$")
+def format_pyproject_toml(
+    doc: Any, on_fallback: Callable[[str], None] | None = None
+) -> str:
+    """Formats a pyproject.toml document into the canonical Protostar layout."""
+    return format_document(doc, on_fallback)
 
 
-def _separate_tables(content: str) -> str:
-    """Puts a blank line before each table header unless a comment already precedes it."""
-    lines: list[str] = []
-    for line in content.split("\n"):
-        if (
-            _TABLE_HEADER_RE.match(line)
-            and lines
-            and lines[-1].strip()
-            and not lines[-1].lstrip().startswith("#")
-        ):
-            lines.append("")
-        lines.append(line)
-    return "\n".join(lines)
-
-
-_TOOL_CONFIG_BANNER_RE: re.Pattern[str] = re.compile(
-    r"^[ \t]*# =+\s*\n[ \t]*# Tool Configuration\s*\n[ \t]*# =+\s*\n*",
-    re.MULTILINE,
-)
-
-_TOOL_SECTION_HEADER_RE: re.Pattern[str] = re.compile(
-    r"^[ \t]*# ---- [A-Za-z0-9_-]+ ---- #[ \t]*\n*",
-    re.MULTILINE,
-)
-
-
-def format_pyproject_toml(doc: Any) -> str:
-    """Deterministically sorts tables and applies structured visual headers to pyproject.toml."""
-    # 1. Deterministically sort top-level tables (scalar keys must precede all tables)
-    root_order = ["project", "build-system", "dependency-groups"]
-
-    def root_sort_key(item: tuple[Any, Any]) -> tuple[int, str]:
-        k, v = item
-        if k is None:
-            return (999, "")
-        k_str = k.key if hasattr(k, "key") else str(k)
-        # Scalar/array keys at root level must precede table headers in TOML
-        if not isinstance(v, (Table, AoT)) and not (
-            hasattr(v, "is_table") and v.is_table()
-        ):
-            return (0, k_str)
-        if k_str in root_order:
-            return (1 + root_order.index(k_str), k_str)
-        if k_str == "tool":
-            return (500, k_str)
-        return (100, k_str)
-
-    if hasattr(doc, "body") and isinstance(doc.body, list):
-        doc.body.sort(key=root_sort_key)
-        if hasattr(doc, "_map") and isinstance(doc._map, dict):
-            doc._map = {k: idx for idx, (k, _) in enumerate(doc.body) if k is not None}
-
-    # 2. Deterministically sort tools within [tool]
-    if (
-        "tool" in doc
-        and hasattr(doc["tool"], "value")
-        and hasattr(doc["tool"].value, "body")
-    ):
-        tool_order = [
-            "ruff",
-            "mypy",
-            "ty",
-            "pyrefly",
-            "pytest",
-            "coverage",
-            "commitizen",
-            "rumdl",
-        ]
-
-        def tool_sort_key(item: tuple[Any, Any]) -> tuple[int, str]:
-            k, _ = item
-            if k is None:
-                return (999, "")
-            k_str = k.key if hasattr(k, "key") else str(k)
-            if k_str in _PACKAGING_TOOLS:
-                # Build backend config belongs with [build-system], above the banner.
-                return (-1, k_str)
-            if k_str in tool_order:
-                return (tool_order.index(k_str), k_str)
-            if k_str == "protostar":
-                return (200, k_str)
-            return (100, k_str)
-
-        doc["tool"].value.body.sort(key=tool_sort_key)
-        if hasattr(doc["tool"].value, "_map") and isinstance(
-            doc["tool"].value._map, dict
-        ):
-            doc["tool"].value._map = {
-                k: idx
-                for idx, (k, _) in enumerate(doc["tool"].value.body)
-                if k is not None
-            }
-
-    new_content = tomlkit.dumps(doc)
-    raw_dump = new_content
-
-    # 3. Rebuild managed visual separators after AST table ordering. Parsed
-    # comments are attached to the preceding table, so retaining old markers
-    # while moving tables can label the wrong section.
-    new_content = _TOOL_CONFIG_BANNER_RE.sub("", new_content)
-    for marker_re, _, _ in _COMPILED_TOOL_HEADERS:
-        new_content = marker_re.sub("", new_content)
-
-    # 4. Apply visual separators safely using anchored regex
-    for marker_re, table_re, marker in _COMPILED_TOOL_HEADERS:
-        if not marker_re.search(new_content):
-            new_content = table_re.sub(
-                rf"\n{marker}\n\n\g<0>",
-                new_content,
-                count=1,
-            )
-
-    # 5. Add main Tool Configuration banner before the first tool header if not exists
-    if "# Tool Configuration" not in new_content:
-        tool_match = _FIRST_TOOL_HEADER_RE.search(new_content)
-        if tool_match:
-            header = (
-                "# ==================================================\n"
-                "# Tool Configuration\n"
-                "# ==================================================\n\n"
-            )
-            new_content = (
-                new_content[: tool_match.start()].rstrip()
-                + "\n\n"
-                + header
-                + new_content[tool_match.start() :]
-            )
-
-    # 6. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
-    new_content = _MULTI_NEWLINE_RE.sub("\n\n", new_content).rstrip() + "\n"
-    new_content = _separate_tables(new_content)
-    new_content = re.sub(
-        r"\n+[ \t]*\[dependency-groups\]",
-        "\n\n[dependency-groups]",
-        new_content,
-        count=1,
-    )
-
-    # 7. Safety Parity Guard: Guarantee data integrity
-    try:
-        expected_data = tomllib.loads(raw_dump)
-        parsed_check = tomllib.loads(new_content)
-        if parsed_check != expected_data:
-            logger.warning(
-                "AST Parity mismatch during pyproject.toml formatting; falling back to direct AST dump."
-            )
-            return raw_dump.rstrip() + "\n"
-    except Exception as e:
-        logger.warning(
-            f"Validation error during pyproject.toml formatting ({e}); falling back to direct AST dump."
-        )
-        return raw_dump.rstrip() + "\n"
-
-    return new_content
-
-
-def finalize_new_pyproject(content: str) -> str:
+def finalize_new_pyproject(
+    content: str, on_fallback: Callable[[str], None] | None = None
+) -> str:
     """Settles the layout of a pyproject.toml that Protostar created.
 
     The managed merge formats the file, but `uv add` then appends
     `[dependency-groups]` and the recipe is inserted after it, so the finished file
     needs one more pass. Never call this on a project the user already had.
     """
-    return format_pyproject_toml(tomlkit.parse(content))
+    return format_pyproject_toml(tomlkit.parse(content), on_fallback)
 
 
 def declare_structured_contributions(
