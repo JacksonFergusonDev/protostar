@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "dsp"
-digest = "9ad61485ca2cc40ed7c0f6497860b90ae8cc5c6e1e6f9936d091a011403f3d01"
+digest = "96ea57443aad49839833bededad4cb45714470cdee8ff40af11b1774e312b813"
 display_name = "dsp"
 
 [[files]]
@@ -23,28 +23,12 @@ policy = "seed-only"
 [[files]]
 path = "justfile"
 policy = "checksum"
-digest = "8c0e86315ead7f4c8d34750a0812d6f4fbdac8cfdec3f2b8bec1b43af48f26f6"
+digest = "9f4b2fb4b0af95bc52718e71f0aedb56c59c07e595de391c444199c5ded13c5c"
 
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest"
-marker = ""
-declared = "pytest"
-materialized = "pytest>=9.1.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest-mock"
-marker = ""
-declared = "pytest-mock"
-materialized = "pytest-mock>=3.15.1"
+baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
 
 [[dependencies]]
 path = "pyproject.toml"

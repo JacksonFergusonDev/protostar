@@ -17,7 +17,7 @@
      "torch>=2.14.0",
      "tqdm>=4.70.1",
  ]
-@@ -63,6 +69,7 @@
+@@ -52,6 +58,7 @@
  locator = "ml"
 
  [tool.protostar.tools]
@@ -25,7 +25,7 @@
 
  [tool.protostar.fallback]
  ci = false
-@@ -94,8 +101,22 @@
+@@ -83,8 +90,22 @@
  [tool.protostar.metadata]
 
  [tool.protostar.bindings]
@@ -45,6 +45,6 @@
  [dependency-groups]
  dev = [
 +    "mypy>=2.3.1",
-     "pytest>=9.1.1",
-     "pytest-mock>=3.15.1",
      "ruff>=0.16.8",
+ ]
+ docs = [

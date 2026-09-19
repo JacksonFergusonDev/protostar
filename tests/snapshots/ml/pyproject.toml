@@ -40,17 +40,6 @@ ignore = [
 ]
 extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
 
-# ---- Pytest ---- #
-
-[tool.pytest.ini_options]
-addopts = "--strict-markers"
-testpaths = [
-    "tests",
-]
-pythonpath = [
-    ".",
-]
-
 [tool.protostar]
 version = 1
 mode = "template"
@@ -96,8 +85,6 @@ PYTHON_VERSION = "3.13"
 [tool.protostar.bindings]
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
-    "pytest-mock>=3.15.1",
     "ruff>=0.16.8",
 ]
 docs = [

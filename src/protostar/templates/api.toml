@@ -34,6 +34,20 @@ renovate = true
 [dev]
 dev_dependencies = ["httpx", "pytest-asyncio"]
 
+# --- pyproject.toml AST Injections ---
+# The scaffold is an installable package: src layout with a real build backend, so
+# tests import it like any consumer would and the container build can install it.
+# Hatchling needs no version bound, unlike uv_build.
+[dev.pyproject]
+api_build_system = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/<% PACKAGE_NAME %>"]
+'''
+
 # --- Static File Injections ---
 [files]
 "src/<% PACKAGE_NAME %>/core/config.py" = '''
@@ -74,6 +88,32 @@ app = FastAPI(
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "ok"}
+'''
+
+"tests/test_health.py" = '''
+"""Tests for the <% PROJECT_NAME %> health endpoint."""
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from <% PACKAGE_NAME %>.main import app
+
+
+@pytest.mark.asyncio
+async def test_health_check() -> None:
+    """The health endpoint reports an ok status."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+'''
+
+"README.md" = '''
+# <% PROJECT_NAME %>
+
+FastAPI service for <% PROJECT_NAME %>.
 '''
 
 ".env.example" = '''

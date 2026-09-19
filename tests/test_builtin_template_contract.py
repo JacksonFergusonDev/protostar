@@ -1,0 +1,252 @@
+"""Contract that every built-in template must satisfy.
+
+Built-in templates share one identity: modules ship a sensible baseline for casual
+projects, and templates state only the delta that defines their shape. These tests
+enforce that identity statically, and are parametrized over discovery so a newly
+added built-in is held to the contract automatically.
+"""
+
+import importlib.resources
+import re
+import tomllib
+from collections.abc import Iterator
+from typing import Any
+
+import pytest
+
+from protostar.config import UserConfig
+from protostar.manifest import EnvironmentManifest
+from protostar.modules import TOOLING_MODULES
+from protostar.templates import TemplateType, discover_templates
+
+BUILTIN_ALIASES = sorted(
+    t.alias
+    for t in discover_templates(config=UserConfig())
+    if t.type == TemplateType.BUILT_IN
+)
+
+# Every built-in states each of these explicitly, as true or false, so a reader can
+# always see the choice and never has to infer it from an omission.
+QUALITY_FLAGS = ("ruff", "mypy", "pytest", "prek", "ci", "rumdl", "direnv", "just")
+
+# Root-level booleans that are valid but are not tooling modules.
+NON_MODULE_FLAGS = {"docker"}
+
+# Tools whose config has no additive key, so a template must redefine the whole list.
+# Redefining is only allowed when it keeps every baseline entry (a strict superset).
+ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY = {("tool", "ruff", "lint", "ignore")}
+
+# Built-ins are trusted implicitly, so what they may execute is deliberately tiny.
+ALLOWED_POST_INSTALL_TASKS = {("uv", "run", "nbdime", "config-git", "--enable")}
+
+_MISSING = object()
+
+# Payloads may use `<% VAR %>` as a bare key or value, which is only valid TOML after
+# interpolation, so a neutral stand-in is substituted before parsing.
+_PLACEHOLDER = re.compile(r"<%\s*[A-Z_]+\s*%>")
+
+
+def _load(alias: str) -> dict[str, Any]:
+    text = (
+        importlib.resources.files("protostar.templates")
+        .joinpath(f"{alias}.toml")
+        .read_text(encoding="utf-8")
+    )
+    return tomllib.loads(text)
+
+
+def _module_baselines() -> dict[str, dict[str, Any]]:
+    """Returns each tooling module's pyproject.toml contribution, keyed by module."""
+    baselines: dict[str, dict[str, Any]] = {}
+    for module in TOOLING_MODULES:
+        manifest = EnvironmentManifest()
+        module.build(manifest)
+        contributions = manifest.filesystem.structured.get("pyproject.toml", [])
+        if contributions:
+            baselines[module.config_key] = tomllib.loads(
+                _PLACEHOLDER.sub(
+                    "placeholder", "\n".join(c.content for c in contributions)
+                )
+            )
+    return baselines
+
+
+def _leaves(
+    node: Any, path: tuple[str, ...] = ()
+) -> Iterator[tuple[tuple[str, ...], Any]]:
+    """Yields (path, value) for every non-table value; lists are atomic leaves."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from _leaves(value, (*path, key))
+    else:
+        yield path, node
+
+
+def _lookup(node: Any, path: tuple[str, ...]) -> Any:
+    for key in path:
+        if not isinstance(node, dict) or key not in node:
+            return _MISSING
+        node = node[key]
+    return node
+
+
+def find_baseline_violations(
+    payload: str, baselines: dict[str, dict[str, Any]]
+) -> list[str]:
+    """Lists ways a template's TOML payload restates a module baseline.
+
+    Overriding a baseline scalar with a different value is a legitimate delta. What is
+    flagged is repeating a baseline value verbatim, and redefining a baseline list
+    where an additive key (e.g. `extend-select`) exists.
+    """
+    violations: list[str] = []
+    parsed = tomllib.loads(_PLACEHOLDER.sub("placeholder", payload))
+    for path, value in _leaves(parsed):
+        dotted = ".".join(path)
+        for tool, baseline in baselines.items():
+            base_value = _lookup(baseline, path)
+            if base_value is _MISSING:
+                continue
+            if value == base_value:
+                violations.append(f"{dotted}: repeats the {tool} baseline verbatim")
+            elif isinstance(value, list) and isinstance(base_value, list):
+                if path not in ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY:
+                    violations.append(
+                        f"{dotted}: redefines the {tool} baseline list; "
+                        "use an additive key such as extend-select"
+                    )
+                elif not all(item in value for item in base_value):
+                    violations.append(
+                        f"{dotted}: drops entries from the {tool} baseline list"
+                    )
+    return violations
+
+
+@pytest.fixture(scope="module")
+def baselines() -> dict[str, dict[str, Any]]:
+    return _module_baselines()
+
+
+def test_builtin_templates_are_discovered() -> None:
+    """Guards against the parametrized contract silently covering nothing."""
+    assert {"api", "astro", "cli", "dsp", "embedded", "ml"} <= set(BUILTIN_ALIASES)
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_declares_every_quality_flag_explicitly(alias: str) -> None:
+    data = _load(alias)
+    not_explicit = [
+        flag for flag in QUALITY_FLAGS if not isinstance(data.get(flag), bool)
+    ]
+    assert not not_explicit, (
+        f"{alias}.toml must declare {not_explicit} explicitly as true or false."
+    )
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_root_flags_name_real_tools(alias: str) -> None:
+    """A misspelled flag is otherwise a silent no-op."""
+    valid = {m.config_key for m in TOOLING_MODULES} | NON_MODULE_FLAGS
+    unknown = [
+        key
+        for key, value in _load(alias).items()
+        if isinstance(value, bool) and key not in valid
+    ]
+    assert not unknown, f"{alias}.toml declares unknown tooling flags: {unknown}"
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_declares_name_and_description(alias: str) -> None:
+    data = _load(alias)
+    assert data.get("name"), f"{alias}.toml is missing a display name."
+    assert data.get("description"), f"{alias}.toml is missing a description."
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_dependencies_carry_no_version_pins(alias: str) -> None:
+    """Templates pass requirements to uv so environments resolve at scaffold time."""
+    data = _load(alias)
+    declared = [
+        *data.get("dependencies", []),
+        *data.get("dev", {}).get("dev_dependencies", []),
+        *data.get("docs_dependencies", []),
+    ]
+    pinned = [dep for dep in declared if any(ch in dep for ch in "<>=!~@;")]
+    assert not pinned, f"{alias}.toml pins or constrains versions: {pinned}"
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_tasks_stay_within_the_trusted_allowlist(alias: str) -> None:
+    data = _load(alias)
+    assert not data.get("system_tasks"), (
+        f"{alias}.toml declares system_tasks; built-ins are trusted implicitly."
+    )
+    unlisted = [
+        task
+        for task in data.get("post_install_tasks", [])
+        if tuple(task) not in ALLOWED_POST_INSTALL_TASKS
+    ]
+    assert not unlisted, (
+        f"{alias}.toml runs post-install tasks outside the allowlist: {unlisted}"
+    )
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_pyproject_payloads_state_only_the_delta(
+    alias: str, baselines: dict[str, dict[str, Any]]
+) -> None:
+    payloads = _load(alias).get("dev", {}).get("pyproject", {})
+    violations = [
+        f"[dev.pyproject].{identity} -> {violation}"
+        for identity, payload in payloads.items()
+        for violation in find_baseline_violations(payload, baselines)
+    ]
+    assert not violations, f"{alias}.toml restates module baselines:\n" + "\n".join(
+        violations
+    )
+
+
+SYNTHETIC_BASELINES: dict[str, dict[str, Any]] = {
+    "ruff": {"tool": {"ruff": {"lint": {"select": ["A", "B"], "ignore": ["E501"]}}}},
+    "mypy": {"tool": {"mypy": {"pretty": True, "python_version": "3.13"}}},
+}
+
+
+class TestBaselineViolationDetector:
+    """Proves the delta check bites, so it cannot pass vacuously."""
+
+    def test_flags_a_verbatim_scalar_repeat(self) -> None:
+        violations = find_baseline_violations(
+            "[tool.mypy]\npretty = true\n", SYNTHETIC_BASELINES
+        )
+        assert len(violations) == 1
+        assert "repeats the mypy baseline" in violations[0]
+
+    def test_flags_a_redefined_baseline_list(self) -> None:
+        violations = find_baseline_violations(
+            '[tool.ruff.lint]\nselect = ["A", "B", "D"]\n', SYNTHETIC_BASELINES
+        )
+        assert len(violations) == 1
+        assert "extend-select" in violations[0]
+
+    def test_allows_an_additive_key(self) -> None:
+        assert not find_baseline_violations(
+            '[tool.ruff.lint]\nextend-select = ["D"]\n', SYNTHETIC_BASELINES
+        )
+
+    def test_allows_a_different_scalar_override(self) -> None:
+        assert not find_baseline_violations(
+            '[tool.mypy]\npython_version = "3.12"\n', SYNTHETIC_BASELINES
+        )
+
+    def test_allows_a_superset_of_an_atomic_list(self) -> None:
+        assert not find_baseline_violations(
+            '[tool.ruff.lint]\nignore = ["D100", "E501"]\n', SYNTHETIC_BASELINES
+        )
+
+    def test_flags_an_atomic_list_that_drops_baseline_entries(self) -> None:
+        violations = find_baseline_violations(
+            '[tool.ruff.lint]\nignore = ["D100"]\n', SYNTHETIC_BASELINES
+        )
+        assert len(violations) == 1
+        assert "drops entries" in violations[0]

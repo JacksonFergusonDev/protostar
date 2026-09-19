@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "428de5131924145bb72b423129221f0a530a9eb49ac64a0afdecbb251f30aff2"
+digest = "868d42993579b0f7293e2357395f5b42aea76e9ce17b2329deab1c7bbe893b0e"
 display_name = "ml"
 
 [[files]]
@@ -36,7 +36,7 @@ policy = "seed-only"
 [[files]]
 path = "justfile"
 policy = "checksum"
-digest = "83abcead5e185d1a23acb8b26ac8cf5c5f5c173d83338116e63ef567fc2bda61"
+digest = "99d40f17f9f8e940f92a19fd7c5532b85d66626114b107ec6df650748218ae5e"
 
 [[files]]
 path = "models/weights/.gitkeep"
@@ -45,7 +45,7 @@ policy = "seed-only"
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.ruff]\nextend-include = [\"*.ipynb\"]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"NPY\", \"PD\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -54,22 +54,6 @@ name = "mypy"
 marker = ""
 declared = "mypy"
 materialized = "mypy>=2.3.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest"
-marker = ""
-declared = "pytest"
-materialized = "pytest>=9.1.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest-mock"
-marker = ""
-declared = "pytest-mock"
-materialized = "pytest-mock>=3.15.1"
 
 [[dependencies]]
 path = "pyproject.toml"

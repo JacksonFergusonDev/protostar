@@ -353,7 +353,7 @@ def test_generate_dockerfile_variants():
     )
     assert "EXPOSE 8080" in df_fastapi
     assert (
-        'CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "8080"]'
+        'CMD ["uvicorn", "api_server.main:app", "--host", "0.0.0.0", "--port", "8080"]'
         in df_fastapi
     )
 

@@ -2,8 +2,15 @@ import sys
 
 import pytest
 
-from protostar.config import TemplateBlueprint
+from protostar.config import TemplateBlueprint, UserConfig
 from protostar.errors import TemplateResolutionError
+from protostar.templates import TemplateType, discover_templates
+
+BUILTIN_TEMPLATES = sorted(
+    t.alias
+    for t in discover_templates(config=UserConfig())
+    if t.type == TemplateType.BUILT_IN
+)
 
 
 @pytest.mark.skipif(
@@ -75,9 +82,7 @@ def test_template_blueprint_missing_variables_error(tmp_path):
         TemplateBlueprint.load(str(tmp_path))
 
 
-@pytest.mark.parametrize(
-    "template_name", ["cli", "api", "astro", "dsp", "embedded", "ml"]
-)
+@pytest.mark.parametrize("template_name", BUILTIN_TEMPLATES)
 def test_builtin_templates_no_trailing_whitespace(template_name: str):
     """Statically verifies all built-in template files have zero trailing whitespace and valid newlines."""
     import importlib.resources

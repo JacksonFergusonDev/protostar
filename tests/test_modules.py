@@ -1,3 +1,5 @@
+import tomllib
+
 import pytest
 
 from protostar.config import UserConfig
@@ -194,17 +196,30 @@ def test_pytest_build(manifest):
     assert "pyproject.toml" in manifest.filesystem.structured
 
 
-def test_ruff_module_base_config():
+def _pyproject_baseline(module):
+    """Builds a module on a fresh manifest and parses its pyproject.toml payload."""
     manifest = EnvironmentManifest()
-    mod = RuffModule()
-    mod.build(manifest)
+    module.build(manifest)
+    contributions = manifest.filesystem.structured.get("pyproject.toml", [])
+    return tomllib.loads("\n".join(c.content for c in contributions))
 
-    appends = manifest.filesystem.structured.get("pyproject.toml", [])
-    combined = "\n".join(c.content for c in appends)
-    assert '"A",' in combined
-    assert '"C4",' in combined
-    assert '"RUF",' in combined
-    assert '"D",' not in combined
+
+def test_ruff_module_base_config():
+    config = _pyproject_baseline(RuffModule())
+
+    assert config["tool"]["ruff"]["line-length"] == 88
+    assert "E501" in config["tool"]["ruff"]["lint"]["ignore"]
+
+
+def test_ruff_module_baseline_stays_casual():
+    """Modules are tuned for casual projects; strict rule sets belong in templates.
+
+    Widening this set is a deliberate decision: update it here together with the
+    built-in template documentation, and check that no template now repeats it.
+    """
+    select = set(_pyproject_baseline(RuffModule())["tool"]["ruff"]["lint"]["select"])
+
+    assert select == {"A", "B", "C4", "E", "F", "I", "RUF", "UP"}
 
 
 def test_ruff_module_adds_pre_commit_hook():
@@ -222,15 +237,18 @@ def test_ruff_module_adds_pre_commit_hook():
 
 
 def test_mypy_module_base_config():
-    manifest = EnvironmentManifest()
-    mod = MypyModule()
-    mod.build(manifest)
+    mypy = _pyproject_baseline(MypyModule())["tool"]["mypy"]
 
-    appends = manifest.filesystem.structured.get("pyproject.toml", [])
-    combined = "\n".join(c.content for c in appends)
-    assert "pretty = true" in combined
-    assert "check_untyped_defs = true" in combined
-    assert "strict = true" not in combined
+    assert mypy["pretty"] is True
+    assert mypy["check_untyped_defs"] is True
+
+
+def test_mypy_module_baseline_stays_casual():
+    """Strict mode is left to templates that want it, e.g. the cli template."""
+    mypy = _pyproject_baseline(MypyModule())["tool"]["mypy"]
+
+    assert "strict" not in mypy
+    assert not [key for key in mypy if key.startswith("disallow_")]
 
 
 def test_mypy_module_adds_pre_commit_hook():

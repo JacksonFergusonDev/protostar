@@ -355,11 +355,13 @@ def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
     written_paths = {call[0][0]: call[0][1] for call in mock_write.call_args_list}
     dockerfile_content = written_paths[Path("Dockerfile")]
 
+    package = executor.interpolation_context["PACKAGE_NAME"]
     assert "EXPOSE 8080" in dockerfile_content
     assert (
-        'CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "8080"]'
+        f'CMD ["uvicorn", "{package}.main:app", "--host", "0.0.0.0", "--port", "8080"]'
         in dockerfile_content
     )
+    assert "core.main" not in dockerfile_content
 
 
 def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
