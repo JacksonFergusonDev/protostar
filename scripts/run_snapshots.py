@@ -13,15 +13,25 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 from protostar.fs import atomic_write_bytes, atomic_write_text
+from scripts._common import (
+    CONSTRAINTS_FILE as CONSTRAINTS_FILE,
+)
+from scripts._common import (
+    DOCS_GENERATED_DIR as DOCS_GENERATED_DIR,
+)
+from scripts._common import (
+    DOCS_TERMINALS_DIR as DOCS_TERMINALS_DIR,
+)
+from scripts._common import (
+    REPO_ROOT as REPO_ROOT,
+)
+from scripts._common import (
+    SNAPSHOTS_DIR as SNAPSHOTS_DIR,
+)
 from scripts.generate_docs_assets import (
-    DOCS_GENERATED_DIR,
-    DOCS_TERMINALS_DIR,
     generate_diff_fixtures,
     generate_docs_assets,
 )
-
-SNAPSHOTS_DIR = (_repo_root / "tests" / "snapshots").resolve()
-CONSTRAINTS_FILE = SNAPSHOTS_DIR / "constraints.txt"
 
 
 @dataclass(frozen=True)
@@ -311,10 +321,10 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
         True if zero uncommitted changes exist; False otherwise.
     """
     base_dir = Path.cwd()
-    if any(t.is_relative_to(_repo_root) for t in targets if t.exists()) and not any(
+    if any(t.is_relative_to(REPO_ROOT) for t in targets if t.exists()) and not any(
         t.is_relative_to(base_dir) for t in targets if t.exists()
     ):
-        base_dir = _repo_root
+        base_dir = REPO_ROOT
 
     rel_targets = [
         t.relative_to(base_dir).as_posix()
@@ -354,6 +364,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     # 2. Collect Git tracked files for the target paths
     ls_result = subprocess.run(
         ["git", "ls-files", "--", *rel_targets],
+        cwd=base_dir,
         capture_output=True,
         text=True,
         check=True,
@@ -371,6 +382,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     # 3. Check for modified tracked files against HEAD (covers both staged and unstaged changes)
     diff_stat_result = subprocess.run(
         ["git", "diff", "HEAD", "--name-status", "--", *rel_targets],
+        cwd=base_dir,
         capture_output=True,
         text=True,
         check=True,
@@ -388,6 +400,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     # 4. Generate unified diff for tracked changes against HEAD
     diff_result = subprocess.run(
         ["git", "diff", "HEAD", "--color=never", "--", *rel_targets],
+        cwd=base_dir,
         capture_output=True,
         text=True,
         check=True,
@@ -404,6 +417,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
         )
         untracked_diff = subprocess.run(
             ["git", "diff", "--no-index", "--color=never", "/dev/null", rel_untracked],
+            cwd=base_dir,
             capture_output=True,
             text=True,
         )

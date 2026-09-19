@@ -21,13 +21,24 @@ import sys
 import tempfile
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+from scripts._common import (
+    DOCS_GENERATED_DIR,
+    REPO_ROOT,
+    SNAPSHOTS_DIR,
+    SRC_DIR,
+    VENV_BIN,
+    run_repo_cmd,
+)
 
 
 def ensure_environment_synced() -> None:
     """Ensures the virtual environment is synced via uv before validation checks."""
     try:
-        subprocess.run(["uv", "sync", "--quiet"], cwd=REPO_ROOT, check=True)
+        run_repo_cmd(["uv", "sync", "--quiet"], check=True)
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         print(
             f"\033[1;31m✖ Failed to sync environment with uv: {e}\033[0m",
@@ -35,11 +46,10 @@ def ensure_environment_synced() -> None:
         )
         sys.exit(1)
 
-    venv_bin = REPO_ROOT / ".venv" / ("Scripts" if sys.platform == "win32" else "bin")
-    if venv_bin.is_dir() and str(venv_bin) not in os.environ.get("PATH", "").split(
+    if VENV_BIN.is_dir() and str(VENV_BIN) not in os.environ.get("PATH", "").split(
         os.pathsep
     ):
-        os.environ["PATH"] = f"{venv_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+        os.environ["PATH"] = f"{VENV_BIN}{os.pathsep}{os.environ.get('PATH', '')}"
 
 
 def _run_validator(name: str, cmd: list[str]) -> bool:
@@ -53,7 +63,7 @@ def _run_validator(name: str, cmd: list[str]) -> bool:
         True if the validation command exited with 0, False otherwise.
     """
     print(f"\033[1;34m=== Validating {name} ===\033[0m")
-    result = subprocess.run(cmd, cwd=REPO_ROOT)
+    result = run_repo_cmd(cmd)
     if result.returncode == 0:
         print(f"\033[1;32m✔ {name} valid\033[0m\n")
         return True
@@ -68,7 +78,7 @@ def validate_prek_configs() -> bool:
     if root_config.is_file():
         prek_files.append(root_config)
 
-    snapshots_dir = REPO_ROOT / "tests" / "snapshots"
+    snapshots_dir = SNAPSHOTS_DIR
     if snapshots_dir.is_dir():
         prek_files.extend(sorted(snapshots_dir.rglob("pre-commit-config.fixture.yaml")))
         prek_files.extend(sorted(snapshots_dir.rglob(".pre-commit-config.yaml")))
@@ -93,7 +103,7 @@ def validate_github_workflows() -> bool:
         workflow_files.extend(sorted(workflows_dir.glob("*.yml")))
         workflow_files.extend(sorted(workflows_dir.glob("*.yaml")))
 
-    snapshots_dir = REPO_ROOT / "tests" / "snapshots"
+    snapshots_dir = SNAPSHOTS_DIR
     if snapshots_dir.is_dir():
         for path in sorted(snapshots_dir.rglob("*.yml")) + sorted(
             snapshots_dir.rglob("*.yaml")
@@ -123,7 +133,7 @@ def validate_github_actions() -> bool:
         action_files.extend(sorted(actions_dir.rglob("action.yml")))
         action_files.extend(sorted(actions_dir.rglob("action.yaml")))
 
-    snapshots_dir = REPO_ROOT / "tests" / "snapshots"
+    snapshots_dir = SNAPSHOTS_DIR
     if snapshots_dir.is_dir():
         for path in sorted(snapshots_dir.rglob("action.yml")) + sorted(
             snapshots_dir.rglob("action.yaml")
@@ -149,7 +159,7 @@ def validate_renovate() -> bool:
     if root_renovate.is_file():
         renovate_files.append(root_renovate)
 
-    snapshots_dir = REPO_ROOT / "tests" / "snapshots"
+    snapshots_dir = SNAPSHOTS_DIR
     if snapshots_dir.is_dir():
         renovate_files.extend(sorted(snapshots_dir.rglob("renovate.json")))
 
@@ -167,7 +177,7 @@ def validate_renovate() -> bool:
 
 def validate_metaschemas() -> bool:
     """Validates Protostar emitted JSON schemas against Draft 2020-12 metaschema."""
-    docs_generated_dir = REPO_ROOT / "docs" / "generated"
+    docs_generated_dir = DOCS_GENERATED_DIR
     schema_files: list[Path] = []
     if docs_generated_dir.is_dir():
         schema_files.extend(sorted(docs_generated_dir.glob("*_schema.json")))
@@ -185,13 +195,13 @@ def validate_metaschemas() -> bool:
 
 def validate_template_blueprints() -> bool:
     """Validates internal template definitions against Protostar's exported schema."""
-    templates_dir = REPO_ROOT / "src" / "protostar" / "templates"
+    templates_dir = SRC_DIR / "protostar" / "templates"
     template_files = sorted(templates_dir.glob("*.toml"))
     if not template_files:
         return True
 
     schema_cmd = ["protostar", "export-schema", "--json"]
-    schema_json = subprocess.check_output(schema_cmd, cwd=REPO_ROOT, text=True)
+    schema_json = run_repo_cmd(schema_cmd, check=True, capture_output=True).stdout
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
         tmp.write(schema_json)
         tmp_path = tmp.name
@@ -217,7 +227,7 @@ def validate_pyproject_files() -> bool:
     if root_pyproject.is_file():
         pyproject_files.append(root_pyproject)
 
-    snapshots_dir = REPO_ROOT / "tests" / "snapshots"
+    snapshots_dir = SNAPSHOTS_DIR
     if snapshots_dir.is_dir():
         pyproject_files.extend(sorted(snapshots_dir.rglob("pyproject.toml")))
 

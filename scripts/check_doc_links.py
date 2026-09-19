@@ -12,9 +12,11 @@ import re
 import sys
 from pathlib import Path
 
-# Resolve the docs/ directory relative to this script's location
-REPO_ROOT = Path(__file__).parent.parent
-DOCS_DIR = REPO_ROOT / "docs"
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+from scripts._common import DOCS_DIR, REPO_ROOT
 
 
 def slugify(text: str) -> str:

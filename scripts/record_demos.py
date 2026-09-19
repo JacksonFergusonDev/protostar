@@ -17,10 +17,17 @@ import select
 import shutil
 import struct
 import subprocess
+import sys
 import termios
 import time
 from collections.abc import Callable
 from pathlib import Path
+
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+from scripts._common import SNAPSHOTS_DIR, VENV_BIN
 
 DEFAULT_COLS = 105
 DEFAULT_ROWS = 30
@@ -45,8 +52,7 @@ def get_fixture_line_count(
     fixture_preset: str, relative_path: str = "pyproject.toml"
 ) -> int:
     """Extracts the exact line count of a generated file from tests/snapshots."""
-    repo_root = Path(__file__).resolve().parent.parent
-    fixture_file = repo_root / "tests" / "snapshots" / fixture_preset / relative_path
+    fixture_file = SNAPSHOTS_DIR / fixture_preset / relative_path
     if fixture_file.exists():
         return len(fixture_file.read_text(encoding="utf-8").splitlines())
     return 60
@@ -91,8 +97,7 @@ class PTYSession:
         env["COLUMNS"] = str(self.cols)
 
         # Inherit host venv bin and tools on PATH
-        protostar_root = str(Path(__file__).resolve().parent.parent)
-        venv_bin = os.path.join(protostar_root, ".venv", "bin")
+        venv_bin = str(VENV_BIN)
         env["PATH"] = (
             f"{venv_bin}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         )

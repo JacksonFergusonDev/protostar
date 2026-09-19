@@ -7,7 +7,12 @@ import sys
 from pathlib import Path
 from typing import Any, TypedDict
 
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
 from protostar.fs import atomic_write_text
+from scripts._common import REPO_ROOT
 
 
 class BenchmarkOutput(TypedDict):
@@ -30,13 +35,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input",
         type=Path,
-        default=Path("benchmark.json"),
+        default=REPO_ROOT / "benchmark.json",
         help="Input Hyperfine JSON file.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("benchmark-gh.json"),
+        default=REPO_ROOT / "benchmark-gh.json",
         help="Output JSON file.",
     )
     parser.add_argument(
@@ -44,7 +49,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Extract only the first result under a generic name for regression testing.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    if (
+        not args.input.is_absolute()
+        and not args.input.exists()
+        and (REPO_ROOT / args.input).exists()
+    ):
+        args.input = REPO_ROOT / args.input
+    return args
 
 
 def process_benchmarks(input_file: Path, gate_mode: bool) -> list[BenchmarkOutput]:
