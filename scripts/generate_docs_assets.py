@@ -262,6 +262,7 @@ def generate_template_schema_fixture() -> None:
             )
             tooling_keys = sorted(
                 [mod.config_key for mod in TOOLING_MODULES if mod.config_key]
+                + ["docker"]
             )
             for key in tooling_keys:
                 default_val = key in ("ruff", "pytest")

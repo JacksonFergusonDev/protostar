@@ -43,7 +43,7 @@ DEFAULT_CONFIG_CONTENT = """[env]
 
 # Default Author Information
 # author_name = "your-name"
-# author_email = "your-email"
+# author_email = "your-email@example.com"
 # github_username = "your-github-username"
 
 # Default Python version

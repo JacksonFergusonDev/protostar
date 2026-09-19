@@ -30,6 +30,10 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                         "type": "boolean",
                         "description": mod.cli_help,
                     }
+            properties["docker"] = {
+                "type": "boolean",
+                "description": "Containerize workspace environment with Docker.",
+            }
             continue
 
         type_str = str(f.type)

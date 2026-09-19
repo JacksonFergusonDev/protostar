@@ -96,7 +96,7 @@ class PythonCore(BootstrapModule):
 
         desc = manifest.metadata.get("description") or "Add your description here."
         name = manifest.metadata.get("author_name") or "your-name"
-        email = manifest.metadata.get("author_email") or "your-email"
+        email = manifest.metadata.get("author_email") or "your-email@example.com"
         github = manifest.metadata.get("github_username")
         min_python = manifest.metadata.get("minimum_python")
         supported_os: list[TargetOS | str] = manifest.metadata.get("supported_os", [])

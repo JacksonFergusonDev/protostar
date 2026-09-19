@@ -39,7 +39,7 @@
           {
             "format": "toml",
             "producer": "module:PythonCore",
-            "content": "[project]\ndescription = \"High-velocity CLI application.\"\nreadme = \"README.md\"\nauthors = [{ name = \"Demo Author\", email = \"your-email\" }]\nlicense = { file = \"LICENSE\" }\nclassifiers = [\n    \"License :: OSI Approved :: MIT License\",\n]\n",
+            "content": "[project]\ndescription = \"High-velocity CLI application.\"\nreadme = \"README.md\"\nauthors = [{ name = \"Demo Author\", email = \"your-email@example.com\" }]\nlicense = { file = \"LICENSE\" }\nclassifiers = [\n    \"License :: OSI Approved :: MIT License\",\n]\n",
             "policy": "seed-only",
             "resolver_footprint": null
           },

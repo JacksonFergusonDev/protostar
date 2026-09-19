@@ -45,7 +45,7 @@
             "pyproject.toml": [
                 {
                     "producer": "module:PythonCore",
-                    "content": "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\nauthors = [{ name = \"your-name\", email = \"your-email\" }]\n",
+                    "content": "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\nauthors = [{ name = \"your-name\", email = \"your-email@example.com\" }]\n",
                     "policy": "seed-only",
                     "resolver_footprint": null,
                     "format": "toml"

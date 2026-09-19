@@ -71,6 +71,7 @@ ci = false
 codecov = false
 commitizen = false
 direnv = false
+docker = false
 just = false
 markdownlint = false
 mypy = false

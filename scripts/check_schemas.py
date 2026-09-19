@@ -6,6 +6,8 @@ Checks:
 3. Custom GitHub Actions metadata against vendor.github-actions schema (root and snapshots).
 4. Renovate configuration against vendor.renovate schema (root and snapshots).
 5. Protostar emitted JSON schemas against JSON Schema Draft 2020-12 metaschema.
+6. Internal template definitions against Protostar's exported schema.
+7. Root and snapshot pyproject.toml files against PEP 621 schema.
 
 Run:
     uv run python scripts/check_schemas.py
@@ -15,6 +17,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -161,6 +164,56 @@ def validate_metaschemas() -> bool:
     return _run_validator("Emitted JSON Metaschemas", cmd)
 
 
+def validate_template_blueprints() -> bool:
+    """Validates internal template definitions against Protostar's exported schema."""
+    templates_dir = REPO_ROOT / "src" / "protostar" / "templates"
+    template_files = sorted(templates_dir.glob("*.toml"))
+    if not template_files:
+        return True
+
+    schema_cmd = ["uv", "run", "protostar", "export-schema", "--json"]
+    schema_json = subprocess.check_output(schema_cmd, cwd=REPO_ROOT, text=True)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
+        tmp.write(schema_json)
+        tmp_path = tmp.name
+
+    try:
+        cmd = [
+            "check-jsonschema",
+            "--schemafile",
+            tmp_path,
+            "--force-filetype",
+            "toml",
+            *[str(p.relative_to(REPO_ROOT)) for p in template_files],
+        ]
+        return _run_validator("Internal Template Blueprints", cmd)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def validate_pyproject_files() -> bool:
+    """Validates root and snapshot pyproject.toml files against PEP 621 schema."""
+    pyproject_files: list[Path] = []
+    root_pyproject = REPO_ROOT / "pyproject.toml"
+    if root_pyproject.is_file():
+        pyproject_files.append(root_pyproject)
+
+    snapshots_dir = REPO_ROOT / "tests" / "snapshots"
+    if snapshots_dir.is_dir():
+        pyproject_files.extend(sorted(snapshots_dir.rglob("pyproject.toml")))
+
+    if not pyproject_files:
+        return True
+
+    cmd = [
+        "check-jsonschema",
+        "--schemafile",
+        "https://json.schemastore.org/pyproject.json",
+        *[str(p.relative_to(REPO_ROOT)) for p in pyproject_files],
+    ]
+    return _run_validator("PEP 621 pyproject.toml Specifications", cmd)
+
+
 def main() -> None:
     """Runs all schema validation checks and exits with non-zero on failure."""
     checks = [
@@ -169,6 +222,8 @@ def main() -> None:
         validate_github_actions,
         validate_renovate,
         validate_metaschemas,
+        validate_template_blueprints,
+        validate_pyproject_files,
     ]
 
     all_passed = True
