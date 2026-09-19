@@ -39,7 +39,7 @@ flowchart TD
     The `plan()` phase calculates the target state and verifies safety without performing disk mutations:
 
     1. **Pre-Flight Verification:** Asserts workspace accessibility, clean/git repository status, and runs `pre_flight()` across all loaded modules to assert that required binaries (`uv`, `git`, etc.) exist in `$PATH`.
-    2. **Manifest Aggregation:** Evaluates language, tooling, and preset modules to populate an `EnvironmentManifest` with file injections, AST merge payloads, ignore patterns, and system tasks.
+    2. **Manifest Aggregation:** Evaluates language and tooling modules to populate an `EnvironmentManifest` with file injections, AST merge payloads, ignore patterns, and system tasks.
     3. **Blueprint Injection:** Injects any template blueprint files and configurations into the manifest with variable interpolation.
     4. **Manifest-First Collision Check:** Derives all planned target files dynamically via `manifest.target_files()` and inspects the workspace. If collisions exist and no force flag is active, raises `WorkspaceCollisionError(paths=...)`.
 

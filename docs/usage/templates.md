@@ -4,7 +4,7 @@ description: "Discover, load, and configure declarative templates in Protostar."
 
 # Templates
 
-Protostar's template engine allows you to define declarative, reusable environment blueprints. Whether you are using built-in domain presets, fetching team standards from remote Git repositories, or defining custom local setups, templates eliminate boilerplate and ensure consistent repository architecture.
+Protostar's template engine allows you to define declarative, reusable environment blueprints. Whether you are using built-in templates, fetching team standards from remote Git repositories, or defining custom local setups, templates eliminate boilerplate and ensure consistent repository architecture.
 
 <div class="grid cards" markdown>
 

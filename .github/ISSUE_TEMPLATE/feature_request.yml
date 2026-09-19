@@ -1,5 +1,5 @@
 name: Feature Request
-description: Propose a new language module, IDE integration, or preset.
+description: Propose a new language module, IDE integration, or built-in template.
 title: "feat: <short description>"
 labels: ["enhancement"]
 body:

@@ -62,10 +62,10 @@ def set_winsize(fd: int, rows: int, cols: int) -> None:
 
 
 def get_fixture_line_count(
-    fixture_preset: str, relative_path: str = "pyproject.toml"
+    fixture_template: str, relative_path: str = "pyproject.toml"
 ) -> int:
     """Extracts the exact line count of a generated file from tests/snapshots."""
-    fixture_file = SNAPSHOTS_DIR / fixture_preset / relative_path
+    fixture_file = SNAPSHOTS_DIR / fixture_template / relative_path
     if fixture_file.exists():
         return len(fixture_file.read_text(encoding="utf-8").splitlines())
     return 60
@@ -338,7 +338,7 @@ MAX_SCROLL_LINES = 32  # Maximum lines to scroll during demo previews
 
 def inspect_project_file(
     session: PTYSession,
-    preset: str,
+    template: str,
     target_file: str = "pyproject.toml",
     scroll_delay: float = DEFAULT_SCROLL_DELAY,
     max_scroll: int = MAX_SCROLL_LINES,
@@ -346,7 +346,7 @@ def inspect_project_file(
     """Executes the standard post-initialization inspection with eza and bat.
 
     Dynamically calculates the exact number of lines to scroll through bat
-    based on the total line count in tests/snapshots/<preset>/<target_file>,
+    based on the total line count in tests/snapshots/<template>/<target_file>,
     capped at max_scroll for demo brevity and pacing.
     """
     session.sleep(0.4)
@@ -360,7 +360,7 @@ def inspect_project_file(
     session.sleep(0.8)  # Initial pause to view file header
 
     # Calculate lines to scroll (capped for crisp demo pacing)
-    total_lines = get_fixture_line_count(preset, target_file)
+    total_lines = get_fixture_line_count(template, target_file)
     visible_lines = max(1, session.rows - 5)
     needed_lines = max(5, total_lines - visible_lines + 4)
     lines_to_scroll = min(needed_lines, max_scroll)
@@ -378,11 +378,11 @@ def record_headless(session: PTYSession) -> None:
     session.sleep(0.6)  # Viewing pause after initialization completes
 
     # Post-generation inspection using cli fixture line metrics
-    inspect_project_file(session, preset="cli")
+    inspect_project_file(session, template="cli")
 
 
 def record_wizard(session: PTYSession) -> None:
-    """Script for the interactive wizard CLI initialization demo using the Astro preset."""
+    """Script for the interactive wizard CLI initialization demo using the Astro template."""
     session.sleep(0.5)
     session.type("protostar init", char_delay=0.035, post_delay=0.3)
     session.enter(wait=0.0)
@@ -395,7 +395,7 @@ def record_wizard(session: PTYSession) -> None:
     session.enter(wait=0.8)
 
     # 2. Component selection: "Select the components for your new environment:"
-    # In the astro preset, defaults (direnv, Ruff, just) are pre-selected.
+    # In the astro template, defaults (direnv, Ruff, just) are pre-selected.
     # Pause briefly to showcase the pre-checked template tooling, then submit defaults:
     session.sleep(0.8)
     session.enter(wait=0.8)
@@ -428,7 +428,7 @@ def record_wizard(session: PTYSession) -> None:
     session.sleep(0.6)  # Viewing pause after initialization completes
 
     # 4. Post-generation inspection using astro fixture line metrics
-    inspect_project_file(session, preset="astro")
+    inspect_project_file(session, template="astro")
 
 
 SCENARIOS: dict[str, Callable[[PTYSession], None]] = {

@@ -61,7 +61,7 @@ Head over to the **[Official Documentation](https://protostar.readthedocs.io/sta
 
 - **Command Reference:** Full flags and capabilities for `init`.
 - **Agent & Machine Interface:** Driving Protostar programmatically via `--json` and `--dry-run`.
-- **Domain Presets:** Matrices for Scientific, Astrophysics, ML, DSP, Embedded, REST API, and CLI Application workflows.
+- **Built-in Templates:** Scaffolds for Astrophysics, ML, DSP, Embedded, REST API, and CLI Application workflows.
 - **Configuration & Shell Autocomplete:** Setting up global defaults, CLI autocompletion, and advanced AST overrides.
 - **Architecture Mechanics:** Deep dives into the Orchestrator, Executor, and Manifest lifecycle.
 

@@ -338,7 +338,7 @@ def test_executor_writes_dockerfile_default(mocker, mock_config):
     assert 'CMD ["python", "-m", "protostar"]' in dockerfile_content
 
 
-def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
+def test_executor_writes_dockerfile_with_api_template(mocker, mock_config):
     """Test that the executor writes an API-tailored Dockerfile when FastAPI/uvicorn is present."""
     manifest = EnvironmentManifest()
     manifest.dependencies.dependencies = ["fastapi", "uvicorn"]
@@ -364,7 +364,7 @@ def test_executor_writes_dockerfile_with_api_preset(mocker, mock_config):
     assert "core.main" not in dockerfile_content
 
 
-def test_executor_writes_dockerfile_with_cli_preset(mocker, mock_config):
+def test_executor_writes_dockerfile_with_cli_template(mocker, mock_config):
     """Test that the executor writes a CLI-tailored Dockerfile when typer/project.scripts is present."""
     manifest = EnvironmentManifest()
     manifest.dependencies.dependencies = ["typer"]
