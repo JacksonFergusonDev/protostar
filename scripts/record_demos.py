@@ -33,6 +33,7 @@ DEFAULT_COLS = 105
 DEFAULT_ROWS = 30
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
+CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J")
 
 # Single source of truth for demo colors: consumed by asciinema-player (docs) and agg (GIFs)
 DEFAULT_THEME: dict[str, str] = {
@@ -140,22 +141,40 @@ class PTYSession:
         self._silent_write(f"alias protostar='{venv_bin}/protostar'\n")
         self._drain(0.05)
 
-        # Start recording and clear screen so the initial starship prompt is drawn at t=0
+        # Starship can finish drawing the pre-recording prompt after the last
+        # bootstrap command. Drain it before collecting the clean redraw.
+        self._drain(0.4)
+
+        # Clear before recording, then retain only the terminal's clear-and-
+        # redraw output. Recording the command itself would expose "clear" in
+        # the first frame before the prompt is rendered.
+        self._silent_write("clear\n")
+        clear_output = self._drain(0.4)
+        screen_start = next(
+            (
+                clear_output.find(marker)
+                for marker in CLEAR_SCREEN_MARKERS
+                if clear_output.find(marker) >= 0
+            ),
+            -1,
+        )
+
         self.events.clear()
         self.decoder.reset()
         self.start_time = time.time()
         self.recording = True
 
-        self._silent_write("clear\n")
-        self._drain(0.4)
+        if screen_start >= 0:
+            self.events.append([0.0, "o", clear_output[screen_start:]])
 
     def _silent_write(self, data: str) -> None:
         """Writes data directly to master fd without recording timestamps."""
         os.write(self.master_fd, data.encode("utf-8"))
 
-    def _drain(self, timeout: float = 0.05) -> None:
-        """Drains output from master fd and logs events if recording is active."""
+    def _drain(self, timeout: float = 0.05) -> str:
+        """Drains output from master fd, records it when active, and returns it."""
         deadline = time.time() + timeout
+        output: list[str] = []
         while True:
             remaining = max(0.0, deadline - time.time())
             r, _, _ = select.select([self.master_fd], [], [], remaining)
@@ -169,11 +188,13 @@ class PTYSession:
                     os.write(self.master_fd, b"\x1b[1;1R")
 
                 decoded = self.decoder.decode(chunk, final=False)
+                output.append(decoded)
                 if decoded and self.recording:
                     rel_time = round(time.time() - self.start_time, 4)
                     self.events.append([rel_time, "o", decoded])
             except OSError:
                 break
+        return "".join(output)
 
     def type(
         self, text: str, char_delay: float = 0.035, post_delay: float = 0.2
