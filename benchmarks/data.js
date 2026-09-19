@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789778775321,
+  "lastUpdate": 1789779203056,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -13911,6 +13911,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 307.12,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "3880048b82ebd2d60e3be97c96b28e0d1b0608c7",
+          "message": "fix(schema): support docker in template schema and use RFC-valid email placeholder",
+          "timestamp": "2026-09-18T17:50:42-07:00",
+          "tree_id": "334f4a807daaed70416cabdef786606428f01c4f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/3880048b82ebd2d60e3be97c96b28e0d1b0608c7"
+        },
+        "date": 1789779201562,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 160.98,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 233.34,
             "unit": "ms"
           }
         ]
