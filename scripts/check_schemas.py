@@ -15,12 +15,31 @@ Run:
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def ensure_environment_synced() -> None:
+    """Ensures the virtual environment is synced via uv before validation checks."""
+    try:
+        subprocess.run(["uv", "sync", "--quiet"], cwd=REPO_ROOT, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(
+            f"\033[1;31m✖ Failed to sync environment with uv: {e}\033[0m",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    venv_bin = REPO_ROOT / ".venv" / ("Scripts" if sys.platform == "win32" else "bin")
+    if venv_bin.is_dir() and str(venv_bin) not in os.environ.get("PATH", "").split(
+        os.pathsep
+    ):
+        os.environ["PATH"] = f"{venv_bin}{os.pathsep}{os.environ.get('PATH', '')}"
 
 
 def _run_validator(name: str, cmd: list[str]) -> bool:
@@ -171,7 +190,7 @@ def validate_template_blueprints() -> bool:
     if not template_files:
         return True
 
-    schema_cmd = ["uv", "run", "protostar", "export-schema", "--json"]
+    schema_cmd = ["protostar", "export-schema", "--json"]
     schema_json = subprocess.check_output(schema_cmd, cwd=REPO_ROOT, text=True)
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as tmp:
         tmp.write(schema_json)
@@ -216,6 +235,8 @@ def validate_pyproject_files() -> bool:
 
 def main() -> None:
     """Runs all schema validation checks and exits with non-zero on failure."""
+    ensure_environment_synced()
+
     checks = [
         validate_prek_configs,
         validate_github_workflows,
