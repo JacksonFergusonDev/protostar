@@ -119,7 +119,7 @@ def main() -> None:
         print(f"Unexpected error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    atomic_write_text(args.output, json.dumps(converted_data, indent=2))
+    atomic_write_text(args.output, json.dumps(converted_data, indent=2) + "\n")
 
 
 if __name__ == "__main__":
