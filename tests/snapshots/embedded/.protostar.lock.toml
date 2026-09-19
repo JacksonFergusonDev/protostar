@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "embedded"
-digest = "a5821920ff0285d484d03db7f8ba22b35013395acded3758653d460ceca09cf7"
+digest = "c755baf5bb02ac0f2716101b5a11bfbeaf4ab2769abc3024033348137cf81b6a"
 display_name = "embedded"
 
 [[files]]

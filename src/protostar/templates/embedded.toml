@@ -15,6 +15,8 @@ ruff = true
 direnv = true
 just = true
 rumdl = false
+mypy = false
+pytest = false
 prek = false
 ci = false
 
