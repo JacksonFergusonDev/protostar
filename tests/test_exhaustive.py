@@ -1,4 +1,5 @@
 import importlib.resources
+import json
 import os
 import re
 import subprocess
@@ -39,6 +40,54 @@ GATE_COMMANDS = {
 KNOWN_GATE_GAPS: dict[str, set[str]] = {}
 
 
+def _package_name(requirement: str) -> str:
+    """Normalizes 'Torch[extra]>=2' to 'torch' the way installed names compare."""
+    return (
+        re.split(r"[\[<>=!~; ]", requirement, maxsplit=1)[0].lower().replace("_", "-")
+    )
+
+
+def _assert_default_sync_keeps_declared_packages(template, workspace, flags):
+    """`just sync` runs a plain `uv sync`, which prunes anything outside default groups."""
+    data = flags
+    declared = {
+        *data.get("dependencies", []),
+        *data.get("dev", {}).get("dev_dependencies", []),
+        # Included on purpose: a group uv does not install by default is exactly how
+        # packages a template declares end up removed by the first `just sync`.
+        *data.get("docs_dependencies", []),
+    }
+    for tool, packages in data.get("dev", {}).get("tool_dependencies", {}).items():
+        if data.get(tool):
+            declared.update(packages)
+
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+    subprocess.run(
+        ["uv", "sync", "--quiet"],
+        cwd=workspace,
+        check=True,
+        env=env,
+        capture_output=True,
+    )
+    listed = subprocess.run(
+        ["uv", "pip", "list", "--format=json"],
+        cwd=workspace,
+        check=True,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    installed = {
+        _package_name(package["name"]) for package in json.loads(listed.stdout)
+    }
+
+    missing = sorted({_package_name(d) for d in declared} - installed)
+    assert not missing, (
+        f"{template}: `uv sync` removed packages the template declares: {missing}. "
+        "They are probably in a dependency group that uv does not install by default."
+    )
+
+
 def _assert_skeleton_passes_its_gates(template, workspace):
     """A fresh scaffold must satisfy every quality gate its template switches on."""
     flags = tomllib.loads(
@@ -73,6 +122,8 @@ def _assert_skeleton_passes_its_gates(template, workspace):
         f"{template}: gates failing on a fresh scaffold {sorted(failures)} != "
         f"known gaps {sorted(expected)}.\n" + "\n".join(failures.values())
     )
+
+    _assert_default_sync_keeps_declared_packages(template, workspace, flags)
 
 
 @pytest.mark.parametrize("template", BUILTIN_TEMPLATES)

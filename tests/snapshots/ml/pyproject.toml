@@ -14,6 +14,14 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email@example.com" }]
 
+[dependency-groups]
+dev = [
+    "ipywidgets>=8.1.9",
+    "jupyterlab>=4.6.3",
+    "nbdime>=4.0.4",
+    "ruff>=0.16.8",
+]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -39,6 +47,8 @@ ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
 extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
+
+# ---- Protostar ---- #
 
 [tool.protostar]
 version = 1
@@ -83,12 +93,3 @@ PYTHON_VERSION = "3.13"
 [tool.protostar.metadata]
 
 [tool.protostar.bindings]
-[dependency-groups]
-dev = [
-    "ruff>=0.16.8",
-]
-docs = [
-    "ipywidgets>=8.1.9",
-    "jupyterlab>=4.6.3",
-    "nbdime>=4.0.4",
-]

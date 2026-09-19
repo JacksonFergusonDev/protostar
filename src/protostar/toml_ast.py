@@ -316,6 +316,7 @@ _RAW_TOOL_HEADERS = [
     ("Pytest", r"\[+tool\.(?:pytest|coverage)(?:\.[^\]]+)?\]+"),
     ("Commitizen", r"\[+tool\.commitizen(?:\.[^\]]+)?\]+"),
     ("rumdl", r"\[+tool\.rumdl(?:\.[^\]]+)?\]+"),
+    ("Protostar", r"\[+tool\.protostar(?:\.[^\]]+)?\]+"),
 ]
 
 _COMPILED_TOOL_HEADERS: list[tuple[re.Pattern[str], re.Pattern[str], str]] = [
@@ -328,11 +329,34 @@ _COMPILED_TOOL_HEADERS: list[tuple[re.Pattern[str], re.Pattern[str], str]] = [
 ]
 
 _FIRST_TOOL_HEADER_RE: re.Pattern[str] = re.compile(
-    r"^# ---- (?:Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen|rumdl) ---- #\s*$",
+    r"^# ---- (?:Ruff|Mypy|Ty|Pyrefly|Pytest|Commitizen|rumdl|Protostar) ---- #\s*$",
     re.MULTILINE,
 )
 
+# [tool.*] tables that configure packaging rather than a development tool. They sort
+# ahead of the "Tool Configuration" banner so that only tooling lives beneath it.
+_PACKAGING_TOOLS = ("hatch",)
+
 _MULTI_NEWLINE_RE: re.Pattern[str] = re.compile(r"\n{3,}")
+
+# A bare-key table header on its own line, such as [tool.ruff] or [[tool.mypy.overrides]].
+_TABLE_HEADER_RE: re.Pattern[str] = re.compile(r"^\[\[?[A-Za-z0-9_.-]+\]\]?[ \t]*$")
+
+
+def _separate_tables(content: str) -> str:
+    """Puts a blank line before each table header unless a comment already precedes it."""
+    lines: list[str] = []
+    for line in content.split("\n"):
+        if (
+            _TABLE_HEADER_RE.match(line)
+            and lines
+            and lines[-1].strip()
+            and not lines[-1].lstrip().startswith("#")
+        ):
+            lines.append("")
+        lines.append(line)
+    return "\n".join(lines)
+
 
 _TOOL_CONFIG_BANNER_RE: re.Pattern[str] = re.compile(
     r"^[ \t]*# =+\s*\n[ \t]*# Tool Configuration\s*\n[ \t]*# =+\s*\n*",
@@ -393,8 +417,13 @@ def format_pyproject_toml(doc: Any) -> str:
             if k is None:
                 return (999, "")
             k_str = k.key if hasattr(k, "key") else str(k)
+            if k_str in _PACKAGING_TOOLS:
+                # Build backend config belongs with [build-system], above the banner.
+                return (-1, k_str)
             if k_str in tool_order:
                 return (tool_order.index(k_str), k_str)
+            if k_str == "protostar":
+                return (200, k_str)
             return (100, k_str)
 
         doc["tool"].value.body.sort(key=tool_sort_key)
@@ -444,6 +473,7 @@ def format_pyproject_toml(doc: Any) -> str:
 
     # 6. Normalize spacing (no more than one consecutive blank line, ending with a single newline)
     new_content = _MULTI_NEWLINE_RE.sub("\n\n", new_content).rstrip() + "\n"
+    new_content = _separate_tables(new_content)
     new_content = re.sub(
         r"\n+[ \t]*\[dependency-groups\]",
         "\n\n[dependency-groups]",
@@ -467,6 +497,16 @@ def format_pyproject_toml(doc: Any) -> str:
         return raw_dump.rstrip() + "\n"
 
     return new_content
+
+
+def finalize_new_pyproject(content: str) -> str:
+    """Settles the layout of a pyproject.toml that Protostar created.
+
+    The managed merge formats the file, but `uv add` then appends
+    `[dependency-groups]` and the recipe is inserted after it, so the finished file
+    needs one more pass. Never call this on a project the user already had.
+    """
+    return format_pyproject_toml(tomlkit.parse(content))
 
 
 def declare_structured_contributions(

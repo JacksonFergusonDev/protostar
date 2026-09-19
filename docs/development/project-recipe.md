@@ -6,6 +6,8 @@ what you request; the lock records contributions actually accepted by semantic
 reconciliation. Conflicts can therefore leave desired intent ahead of applied
 ownership. The ownership ledger remains schema v1.
 
+In a `pyproject.toml` that Protostar creates, the recipe is the last section, under its own `# ---- Protostar ---- #` header, like every other tool's configuration. Everything that is not tool configuration (`[project]`, `[build-system]`, `[dependency-groups]`, and build-backend tables such as `[tool.hatch...]`) sits above the `# Tool Configuration` banner. A `pyproject.toml` you already had keeps your own order.
+
 For new uv projects, the captured project name uses uv normalization (`Demo_Project`
 becomes `demo-project`); the package identifier remains `demo_project`. This keeps
 early file rendering and later TOML rendering consistent.

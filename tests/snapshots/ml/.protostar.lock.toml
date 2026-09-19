@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "3a25ebec34068124c59c25b5a950c0ea2b5d91106fce8aeed5b44719133b6270"
+digest = "1df69e5fd682b69ff4a5050c691ac245f05897d148c23e48eef300a09e66db1f"
 display_name = "ml"
 
 [[files]]
@@ -50,14 +50,6 @@ baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"
 [[dependencies]]
 path = "pyproject.toml"
 group = "dev"
-name = "ruff"
-marker = ""
-declared = "ruff"
-materialized = "ruff>=0.16.8"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "docs"
 name = "ipywidgets"
 marker = ""
 declared = "ipywidgets"
@@ -65,7 +57,7 @@ materialized = "ipywidgets>=8.1.9"
 
 [[dependencies]]
 path = "pyproject.toml"
-group = "docs"
+group = "dev"
 name = "jupyterlab"
 marker = ""
 declared = "jupyterlab"
@@ -73,11 +65,19 @@ materialized = "jupyterlab>=4.6.3"
 
 [[dependencies]]
 path = "pyproject.toml"
-group = "docs"
+group = "dev"
 name = "nbdime"
 marker = ""
 declared = "nbdime"
 materialized = "nbdime>=4.0.4"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "ruff"
+marker = ""
+declared = "ruff"
+materialized = "ruff>=0.16.8"
 
 [[dependencies]]
 path = "pyproject.toml"

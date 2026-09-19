@@ -64,7 +64,7 @@ Non-TOML appends use a stable named record containing exactly one string `conten
 
 Anonymous strings/arrays under `[appends]`, TOML append regions, and the `__replace__`/`__remove__` control keys are rejected. Do not combine `[files]` with structured configuration or named regions targeting the same path. `.protostar.lock.toml` is reserved for engine state; `uv.lock` belongs to the resolver. Neither filename nor its descendants can be a template target.
 
-Dependency declarations belong in `dependencies`, `[dev].dev_dependencies`, and `docs_dependencies`. Generic TOML payloads cannot write `project.dependencies`, `project.optional-dependencies`, `dependency-groups`, or `tool.uv.sources`. Declare supported group wiring explicitly at the root:
+Dependency declarations belong in `dependencies`, `[dev].dev_dependencies`, and `docs_dependencies`. Keep `docs_dependencies` for a documentation toolchain: `uv sync` installs the `dev` group by default but not `docs`, so anything else placed there (notebook tooling, for example) is removed by the next sync. Put development tooling in `[dev].dev_dependencies`. Generic TOML payloads cannot write `project.dependencies`, `project.optional-dependencies`, `dependency-groups`, or `tool.uv.sources`. Declare supported group wiring explicitly at the root:
 
 ```toml
 dependency_includes = [{ group = "dev", include = "docs" }]

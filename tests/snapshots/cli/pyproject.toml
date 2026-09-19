@@ -25,6 +25,26 @@ demo-project = "demo_project.cli:app"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    { include-group = "docs" },
+    "commitizen>=4.18.1",
+    "mypy>=2.3.1",
+    "prek>=0.5.3",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.16.8",
+    "rumdl>=0.2.73",
+]
+docs = [
+    "mkdocstrings[python]>=1.0.6",
+    "zensical>=0.0.62",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demo_project"]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -160,8 +180,7 @@ style = "one"
     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/demo_project"]
+# ---- Protostar ---- #
 
 [tool.protostar]
 version = 1
@@ -208,19 +227,3 @@ minimum_python = "3.13"
 supported_os = ["MacOS", "Linux", "Windows"]
 
 [tool.protostar.bindings]
-[dependency-groups]
-dev = [
-    { include-group = "docs" },
-    "commitizen>=4.18.1",
-    "mypy>=2.3.1",
-    "prek>=0.5.3",
-    "pytest>=9.1.1",
-    "pytest-cov>=7.1.0",
-    "pytest-mock>=3.15.1",
-    "ruff>=0.16.8",
-    "rumdl>=0.2.73",
-]
-docs = [
-    "mkdocstrings[python]>=1.0.6",
-    "zensical>=0.0.62",
-]

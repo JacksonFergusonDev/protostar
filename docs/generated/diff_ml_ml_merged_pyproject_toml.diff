@@ -17,7 +17,15 @@
      "torch>=2.14.0",
      "tqdm>=4.70.1",
  ]
-@@ -52,6 +58,7 @@
+@@ -18,6 +24,7 @@
+ dev = [
+     "ipywidgets>=8.1.9",
+     "jupyterlab>=4.6.3",
++    "mypy>=2.3.1",
+     "nbdime>=4.0.4",
+     "ruff>=0.16.8",
+ ]
+@@ -62,6 +69,7 @@
  locator = "ml"
 
  [tool.protostar.tools]
@@ -25,7 +33,7 @@
 
  [tool.protostar.fallback]
  ci = false
-@@ -83,8 +90,22 @@
+@@ -93,3 +101,16 @@
  [tool.protostar.metadata]
 
  [tool.protostar.bindings]
@@ -42,9 +50,3 @@
 +warn_unused_configs = true
 +check_untyped_defs = true
 +explicit_package_bases = true
- [dependency-groups]
- dev = [
-+    "mypy>=2.3.1",
-     "ruff>=0.16.8",
- ]
- docs = [

@@ -208,6 +208,18 @@ def test_dependencies_carry_no_version_pins(alias: str) -> None:
 
 
 @pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_docs_group_is_left_to_the_docs_tooling(alias: str) -> None:
+    """Only the Zensical module puts packages in the docs group.
+
+    `uv sync` installs the dev group by default but not docs, so anything else
+    placed there (notebook tooling, for example) is removed by the first `just sync`.
+    """
+    assert not _load(alias).get("docs_dependencies"), (
+        f"{alias}.toml declares docs_dependencies; use [dev].dev_dependencies."
+    )
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
 def test_tasks_stay_within_the_trusted_allowlist(alias: str) -> None:
     data = _load(alias)
     assert not data.get("system_tasks"), (

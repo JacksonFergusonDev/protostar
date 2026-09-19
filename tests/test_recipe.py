@@ -618,3 +618,53 @@ def test_builtin_test_packages_follow_the_pytest_flag(
 
     assert packages <= set(with_pytest)
     assert not packages & set(without)
+
+
+UV_LAYOUT = """[project]
+name = "app"
+version = "0.1.0"
+
+[tool.ruff]
+line-length = 88
+
+[dependency-groups]
+dev = ["ruff"]
+"""
+
+
+def _order(content: str, *markers: str) -> list[str]:
+    return sorted(markers, key=content.index)
+
+
+def test_recipe_write_settles_the_layout_of_a_pyproject_protostar_created(
+    tmp_path, monkeypatch
+):
+    """uv appends [dependency-groups] after the managed merge; the final pass fixes it."""
+    monkeypatch.chdir(tmp_path)
+    executor = SystemExecutor(EnvironmentManifest(recipe=recipe()), UserConfig())
+    executor.fs.write_text(Path("pyproject.toml"), UV_LAYOUT)  # created in this run
+
+    executor._write_recipe()
+
+    content = (tmp_path / "pyproject.toml").read_text()
+    assert _order(
+        content,
+        "[dependency-groups]",
+        "# Tool Configuration",
+        "# ---- Protostar ---- #",
+    ) == ["[dependency-groups]", "# Tool Configuration", "# ---- Protostar ---- #"]
+
+
+def test_recipe_write_leaves_a_project_the_user_already_had_in_their_order(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(UV_LAYOUT)  # exists before the run
+    executor = SystemExecutor(EnvironmentManifest(recipe=recipe()), UserConfig())
+
+    executor._write_recipe()
+
+    content = (tmp_path / "pyproject.toml").read_text()
+    assert "# Tool Configuration" not in content
+    assert content.startswith(UV_LAYOUT.split("[dependency-groups]")[0])
+    assert content.index("[tool.protostar]") < content.index("[dependency-groups]")
