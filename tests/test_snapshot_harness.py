@@ -10,9 +10,8 @@ from typing import Any
 import pytest
 from pytest_mock import MockerFixture
 
-from scripts.generate_docs_assets import DOCS_GENERATED_DIR
+from scripts._common import DOCS_GENERATED_DIR, SNAPSHOTS_DIR
 from scripts.run_snapshots import (
-    SNAPSHOTS_DIR,
     _extract_and_write_targets,
     check_snapshot_drift,
     main,

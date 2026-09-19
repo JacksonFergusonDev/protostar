@@ -4,6 +4,7 @@ import io
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import tomllib
 from collections.abc import Sequence
@@ -38,10 +39,22 @@ from protostar.modules import (
 )
 from protostar.orchestrator import Orchestrator
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-DOCS_GENERATED_DIR = (REPO_ROOT / "docs" / "generated").resolve()
-DOCS_TERMINALS_DIR = (REPO_ROOT / "docs" / "assets" / "terminals").resolve()
-SNAPSHOTS_DIR = (REPO_ROOT / "tests" / "snapshots").resolve()
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
+from scripts._common import (
+    DOCS_GENERATED_DIR as DOCS_GENERATED_DIR,
+)
+from scripts._common import (
+    DOCS_TERMINALS_DIR as DOCS_TERMINALS_DIR,
+)
+from scripts._common import (
+    REPO_ROOT as REPO_ROOT,
+)
+from scripts._common import (
+    SNAPSHOTS_DIR as SNAPSHOTS_DIR,
+)
 
 
 def _write_generated_doc(filepath: str | Path, content: str) -> None:

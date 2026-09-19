@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 import argparse
 import json
-import os
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-# Add src/ to sys.path to import the current fallbacks
-sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
-)
+_repo_root = Path(__file__).resolve().parent.parent
+if str(_repo_root) not in sys.path:
+    sys.path.insert(0, str(_repo_root))
+
 from protostar._fallbacks import DEFAULT_REVISIONS
 from protostar.fs import atomic_write_text
+from scripts._common import SRC_DIR
 
 REGISTRY_URL = (
     "https://jacksonfergusondev.github.io/protostar-hook-registry/registry.json"
 )
-FALLBACKS_FILE = Path(__file__).parent.parent / "src" / "protostar" / "_fallbacks.py"
+FALLBACKS_FILE = SRC_DIR / "protostar" / "_fallbacks.py"
 
 
 def generate_fallbacks_content(new_revisions: dict[str, str]) -> str:
