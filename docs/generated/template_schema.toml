@@ -24,13 +24,6 @@ dependencies = [
     "pydantic",
 ]
 
-# Development packages not shipped to production.
-dev_dependencies = [
-    "pytest",
-    "mypy",
-    "ruff",
-]
-
 # Documentation toolchain dependencies.
 docs_dependencies = [
     "mkdocstrings[python]",
@@ -100,6 +93,21 @@ Auto-scaffolded using custom template.
 """<% PROJECT_NAME %> package."""
 __version__ = "0.1.0"
 '''
+
+# --- Development Environment ([dev]) ---
+
+[dev]
+# Development packages not shipped to production.
+dev_dependencies = [
+    "pytest",
+    "mypy",
+    "ruff",
+]
+
+# Development packages installed only while the named tool is enabled.
+
+[dev.tool_dependencies]
+pytest = ["pytest-cov"]
 
 # --- pyproject.toml AST Injections ---
 # Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` tool that injects it only while that tool is enabled.

@@ -39,6 +39,14 @@ ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY = {("tool", "ruff", "lint", "ignore")}
 # Built-ins are trusted implicitly, so what they may execute is deliberately tiny.
 ALLOWED_POST_INSTALL_TASKS = {("uv", "run", "nbdime", "config-git", "--enable")}
 
+# Package-name prefixes that only make sense while a tool is enabled.
+TOOL_PACKAGE_OWNERS = {
+    "pytest": "pytest",
+    "coverage": "pytest",
+    "ruff": "ruff",
+    "mypy": "mypy",
+}
+
 # `tool.<table>` names that belong to a tool but are not in that module's baseline.
 EXTRA_TOOL_TABLES = {"coverage": "pytest"}
 
@@ -188,6 +196,11 @@ def test_dependencies_carry_no_version_pins(alias: str) -> None:
     declared = [
         *data.get("dependencies", []),
         *data.get("dev", {}).get("dev_dependencies", []),
+        *(
+            package
+            for packages in data.get("dev", {}).get("tool_dependencies", {}).values()
+            for package in packages
+        ),
         *data.get("docs_dependencies", []),
     ]
     pinned = [dep for dep in declared if any(ch in dep for ch in "<>=!~@;")]
@@ -348,3 +361,41 @@ class TestUnboundToolConfigDetector:
             },
             SYNTHETIC_OWNERS,
         )
+
+
+def find_unbound_tool_packages(dev_dependencies: list[str]) -> list[str]:
+    """Lists always-installed dev packages that belong to a tool's toolchain."""
+    problems: list[str] = []
+    for dependency in dev_dependencies:
+        name = re.split(r"[\[<>=!~; ]", dependency, maxsplit=1)[0].lower()
+        for prefix, owner in TOOL_PACKAGE_OWNERS.items():
+            if name == prefix or name.startswith(f"{prefix}-"):
+                problems.append(
+                    f"'{dependency}' is installed unconditionally but belongs to "
+                    f"{owner}; declare it under [dev.tool_dependencies] {owner} = [...]"
+                )
+    return problems
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_tool_packages_are_installed_only_with_their_tool(alias: str) -> None:
+    """`--no-<tool>` must not install that tool's plugins."""
+    problems = find_unbound_tool_packages(
+        _load(alias).get("dev", {}).get("dev_dependencies", [])
+    )
+    assert not problems, f"{alias}.toml:\n" + "\n".join(problems)
+
+
+class TestUnboundToolPackageDetector:
+    """Proves the tool-package ratchet bites, so it cannot pass vacuously."""
+
+    def test_flags_a_pytest_plugin_installed_unconditionally(self) -> None:
+        problems = find_unbound_tool_packages(["pytest-cov", "rich"])
+        assert len(problems) == 1
+        assert "pytest-cov" in problems[0]
+
+    def test_flags_the_tool_itself_and_extras(self) -> None:
+        assert len(find_unbound_tool_packages(["mypy>=1", "ruff[dev]"])) == 2
+
+    def test_ignores_packages_that_only_share_a_prefix(self) -> None:
+        assert find_unbound_tool_packages(["pytestish", "rufflib", "mypyish"]) == []

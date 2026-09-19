@@ -382,16 +382,46 @@ def _parse_pyproject_payload(
 
     requires = raw.get("requires")
     if requires is not None:
-        # Local import: recipe sits above config in the import graph.
-        from .recipe import Tool
-
-        tools = sorted(tool.value for tool in Tool)
-        if not isinstance(requires, str) or requires not in tools:
-            raise ConfigurationError(
-                f"Unknown tool {requires!r} in configuration source '{source}' for '{location}'.",
-                hint=f"Set requires to one of: {', '.join(tools)}.",
-            )
+        _validated_tool(requires, location, source)
     return PyprojectPayload(raw["content"], requires)
+
+
+def _validated_tool(name: object, location: str, source: str) -> str:
+    """Returns a known tool key, or raises listing the valid ones."""
+    # Local import: recipe sits above config in the import graph.
+    from .recipe import Tool
+
+    tools = sorted(tool.value for tool in Tool)
+    if not isinstance(name, str) or name not in tools:
+        raise ConfigurationError(
+            f"Unknown tool {name!r} in configuration source '{source}' for '{location}'.",
+            hint=f"Use one of: {', '.join(tools)}.",
+        )
+    return name
+
+
+def _parse_tool_dependencies(raw: object, source: str) -> dict[str, list[str]]:
+    """Parses [dev.tool_dependencies]: each tool maps to the packages it needs."""
+    if not isinstance(raw, dict):
+        raise ConfigurationError(
+            f"Type mismatch in configuration source '{source}' for '[dev].tool_dependencies'.\n"
+            f"Expected table, but got {type(raw).__name__}.",
+            hint='Map each tool to its packages: [dev.tool_dependencies]\npytest = ["pytest-cov"]',
+        )
+    parsed: dict[str, list[str]] = {}
+    for tool, packages in raw.items():
+        location = f"[dev.tool_dependencies].{tool}"
+        _validated_tool(tool, location, source)
+        if not isinstance(packages, list) or not all(
+            isinstance(package, str) for package in packages
+        ):
+            raise ConfigurationError(
+                f"Type mismatch in configuration source '{source}' for '{location}'.\n"
+                "Expected an array of strings.",
+                hint=f'Define the packages as an array: {tool} = ["package"]',
+            )
+        parsed[tool] = list(packages)
+    return parsed
 
 
 @dataclass
@@ -438,6 +468,13 @@ class TemplateBlueprint:
         metadata={
             "description": "Development packages not shipped to production.",
             "example": ["pytest", "mypy", "ruff"],
+        },
+    )
+    tool_dev_dependencies: dict[str, list[str]] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Development packages installed only while the named tool is enabled.",
+            "example": {"pytest": ["pytest-cov"]},
         },
     )
     docs_dependencies: list[str] = field(
@@ -770,6 +807,11 @@ class TemplateBlueprint:
                             hint="Ensure all elements in 'dev_dependencies' are strings: dev_dependencies = [\"...\"]",
                         )
                 instance.dev_dependencies = dev_deps
+
+            if "tool_dependencies" in dev_data:
+                instance.tool_dev_dependencies = _parse_tool_dependencies(
+                    dev_data["tool_dependencies"], source
+                )
 
             if "pyproject" in dev_data:
                 if not isinstance(dev_data["pyproject"], dict):

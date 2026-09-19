@@ -587,3 +587,34 @@ def test_cli_template_drops_tool_config_for_disabled_tools(
     assert "extend-select" in pyproject
     assert "hatchling" in pyproject
     assert "[project.scripts]" in pyproject
+
+
+def _template_dev_dependencies(tmp_path, monkeypatch, mocker, template, **flags):
+    import argparse
+
+    from protostar.cli.main import handle_init
+
+    monkeypatch.chdir(tmp_path)
+    engines = _capture_init_engines(mocker)
+    handle_init(
+        argparse.Namespace(
+            template_name=template, template_context={}, bind=[], docker=None, **flags
+        )
+    )
+    return engines[-1].plan().dependencies.dev_dependencies
+
+
+@pytest.mark.parametrize(
+    ("template", "packages"),
+    [("cli", {"pytest-cov"}), ("api", {"httpx", "pytest-asyncio"})],
+)
+def test_builtin_test_packages_follow_the_pytest_flag(
+    tmp_path, monkeypatch, mocker, template, packages
+):
+    with_pytest = _template_dev_dependencies(tmp_path, monkeypatch, mocker, template)
+    without = _template_dev_dependencies(
+        tmp_path, monkeypatch, mocker, template, PytestModule=False
+    )
+
+    assert packages <= set(with_pytest)
+    assert not packages & set(without)

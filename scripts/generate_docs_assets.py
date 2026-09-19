@@ -249,7 +249,13 @@ def generate_template_schema_fixture() -> None:
         f for f in blueprint_fields if f.name in table_fields
     ]
 
+    # These live under the [dev] table, which is emitted once, with pyproject.
+    dev_table_fields = ("dev_dependencies", "tool_dev_dependencies")
+    fields_by_name = {f.name: f for f in blueprint_fields}
+
     for f in ordered_fields:
+        if f.name in dev_table_fields:
+            continue
         if "description" in f.metadata:
             if f.name == "dependencies":
                 doc.add(tomlkit.comment("--- Dependencies ---"))
@@ -262,13 +268,14 @@ def generate_template_schema_fixture() -> None:
             elif f.name == "files":
                 doc.add(tomlkit.comment("--- Static File Injections ---"))
             elif f.name == "pyproject_injections":
-                doc.add(tomlkit.comment("--- pyproject.toml AST Injections ---"))
+                doc.add(tomlkit.comment("--- Development Environment ([dev]) ---"))
             elif f.name == "appends":
                 doc.add(tomlkit.comment("--- File Appends ---"))
             elif f.name == "tooling_overrides":
                 doc.add(tomlkit.comment("--- Tooling Opinions & Overrides ---"))
 
-            doc.add(tomlkit.comment(f.metadata["description"]))
+            if f.name != "pyproject_injections":
+                doc.add(tomlkit.comment(f.metadata["description"]))
 
         if f.name == "tooling_overrides":
             doc.add(
@@ -290,6 +297,16 @@ def generate_template_schema_fixture() -> None:
             example = f.metadata["example"]
             if f.name == "pyproject_injections":
                 dev_table = tomlkit.table()
+                for name, key in (
+                    ("dev_dependencies", "dev_dependencies"),
+                    ("tool_dev_dependencies", "tool_dependencies"),
+                ):
+                    meta = fields_by_name[name].metadata
+                    dev_table.add(tomlkit.comment(meta["description"]))
+                    dev_table.add(key, _python_to_tomlkit(meta["example"]))
+                    dev_table.add(tomlkit.nl())
+                dev_table.add(tomlkit.comment("--- pyproject.toml AST Injections ---"))
+                dev_table.add(tomlkit.comment(f.metadata["description"]))
                 dev_table.add("pyproject", _python_to_tomlkit(example))
                 doc.add("dev", dev_table)
             else:

@@ -51,6 +51,16 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     },
                 },
             }
+        elif f.name == "tool_dev_dependencies":
+            prop = {
+                "type": "object",
+                "propertyNames": {
+                    "enum": sorted(
+                        mod.config_key for mod in TOOLING_MODULES if mod.config_key
+                    )
+                },
+                "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            }
         elif f.name == "pyproject_injections":
             prop = {
                 "type": "object",
@@ -131,6 +141,8 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
         if f.name == "dev_dependencies":
             dev_properties["dev_dependencies"] = prop
+        elif f.name == "tool_dev_dependencies":
+            dev_properties["tool_dependencies"] = prop
         elif f.name == "pyproject_injections":
             dev_properties["pyproject"] = prop
         else:

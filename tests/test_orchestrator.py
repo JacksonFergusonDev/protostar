@@ -237,6 +237,69 @@ def test_plan_attributes_a_tool_bound_payload_to_its_tool(mocker, mock_config):
     assert all(c.tool is None for c in always)
 
 
+def _tool_dependency_blueprint() -> TemplateBlueprint:
+    return TemplateBlueprint(
+        dev_dependencies=["always-dev"],
+        tool_dev_dependencies={"ruff": ["ruff-plugin"]},
+    )
+
+
+def test_plan_installs_tool_bound_dev_dependencies_while_the_tool_is_active(
+    mocker, mock_config
+):
+    engine = Orchestrator(
+        [RuffModule()],
+        mock_config,
+        request=InitRequest(template_blueprint=_tool_dependency_blueprint()),
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    assert {"always-dev", "ruff-plugin"} <= set(manifest.dependencies.dev_dependencies)
+
+
+def test_plan_skips_tool_bound_dev_dependencies_when_the_tool_is_inactive(
+    mocker, mock_config
+):
+    """`--no-ruff` must not install packages that only ruff needs."""
+    engine = Orchestrator(
+        [],
+        mock_config,
+        request=InitRequest(template_blueprint=_tool_dependency_blueprint()),
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    assert "always-dev" in manifest.dependencies.dev_dependencies
+    assert "ruff-plugin" not in manifest.dependencies.dev_dependencies
+
+
+def test_plan_attributes_tool_bound_dev_dependencies_to_their_tool(mocker, mock_config):
+    from protostar.recipe import Tool
+
+    engine = Orchestrator(
+        [RuffModule()],
+        mock_config,
+        request=InitRequest(template_blueprint=_tool_dependency_blueprint()),
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    def tools_for(package):
+        return [
+            c.tool
+            for c in manifest.producer_contributions
+            if c.path == ("dependencies", "dev_dependencies", package)
+            and c.producer.startswith("template:")
+        ]
+
+    assert tools_for("ruff-plugin") == [Tool.RUFF]
+    assert tools_for("always-dev") == [None]
+
+
 def test_plan_produces_clean_blueprint(mocker, mock_config):
     """plan() produces a pure declarative blueprint with no runtime diagnostic state."""
     engine = Orchestrator([], mock_config)

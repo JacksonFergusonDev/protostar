@@ -602,3 +602,37 @@ def test_template_blueprint_parse_rejects_wrong_field_types(
 
     assert expected_err_snippet in str(exc_info.value)
     assert exc_info.value.hint is not None
+
+
+def test_template_blueprint_parses_tool_bound_dev_dependencies():
+    blueprint = TemplateBlueprint._parse(
+        """
+[dev]
+dev_dependencies = ["always"]
+
+[dev.tool_dependencies]
+pytest = ["pytest-cov", "httpx"]
+mypy = []
+""",
+        source="test.toml",
+    )
+
+    assert blueprint.dev_dependencies == ["always"]
+    assert blueprint.tool_dev_dependencies == {
+        "pytest": ["pytest-cov", "httpx"],
+        "mypy": [],
+    }
+
+
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        ('[dev]\ntool_dependencies = ["pytest-cov"]', "Expected table"),
+        ('[dev.tool_dependencies]\nflake9 = ["x"]', "Unknown tool 'flake9'"),
+        ('[dev.tool_dependencies]\npytest = "pytest-cov"', "Expected an array"),
+        ("[dev.tool_dependencies]\npytest = [1]", "Expected an array"),
+    ],
+)
+def test_template_blueprint_rejects_malformed_tool_dependencies(body, message):
+    with pytest.raises(ConfigurationError, match=message):
+        TemplateBlueprint._parse(body, source="test.toml")

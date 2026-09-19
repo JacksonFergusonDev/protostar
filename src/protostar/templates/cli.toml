@@ -27,8 +27,9 @@ readthedocs = true
 rumdl = true
 
 # --- Development Dependencies ---
-[dev]
-dev_dependencies = ["pytest-cov"]
+# Tied to the tool that needs them, so `--no-pytest` does not install them.
+[dev.tool_dependencies]
+pytest = ["pytest-cov"]
 
 # --- pyproject.toml AST Injections ---
 # Payloads that are not tied to a tool are plain strings and are always injected.
