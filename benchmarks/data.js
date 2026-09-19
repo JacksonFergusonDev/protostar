@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789795964044,
+  "lastUpdate": 1789841979072,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -14013,6 +14013,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 267.95,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a97edb5179c466b9fecd02dc24aa12ec079e49fd",
+          "message": "fix(scripts): eliminate clear command leak in initial demo frame",
+          "timestamp": "2026-09-19T11:14:53-07:00",
+          "tree_id": "5f01d309fb445fdbc5aca4ef1337c9e4a38f81a7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a97edb5179c466b9fecd02dc24aa12ec079e49fd"
+        },
+        "date": 1789841977942,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 189.17,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 264.05,
             "unit": "ms"
           }
         ]
