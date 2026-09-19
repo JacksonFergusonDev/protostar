@@ -60,6 +60,23 @@ extend-select = ["I", "UP", "B"]
 content = "export PROJECT=example"
 ```
 
+#### Tool-Bound Payloads
+
+A payload that configures a tool should say which one. Write it as a table with `content` and `requires`, and Protostar injects it only while that tool is enabled:
+
+```toml
+[dev.pyproject.linting]
+requires = "ruff"
+content = '''
+[tool.ruff.lint]
+extend-select = ["I", "UP", "B"]
+'''
+```
+
+With this, `protostar init --template my-template --no-ruff` writes no `[tool.ruff]` at all, instead of leaving configuration behind for a tool that isn't installed. A project's recipe opt-out treats the payload the same way it treats the tool's own configuration.
+
+Plain string payloads are always injected. Use them for configuration that no tool toggle should remove, such as a `[build-system]` table. The valid `requires` names are the tool keys in the [Tooling & Flags Matrix](./tooling-matrix.md) (for example `ruff`, `mypy`, `pytest`), and an unknown name is rejected when the template loads. In TOML, put the plain string payloads before any `[dev.pyproject.<name>]` sub-tables.
+
 Non-TOML appends use a stable named record containing exactly one string `content` field. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing named region and warns when its desired content differs; explicit overwrite replaces only that region while retaining surrounding bytes. Delimiters use subtle editor-folding comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`) with deterministic 8-character hex tags, while the expanded logical identity and applied digests are preserved in `.protostar.lock.toml`.
 
 Anonymous strings/arrays under `[appends]`, TOML append regions, and the `__replace__`/`__remove__` control keys are rejected. Do not combine `[files]` with structured configuration or named regions targeting the same path. `.protostar.lock.toml` is reserved for engine state; `uv.lock` belongs to the resolver. Neither filename nor its descendants can be a template target.

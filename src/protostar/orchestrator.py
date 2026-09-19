@@ -254,12 +254,21 @@ class Orchestrator:
 
             if blueprint.pyproject_injections:
                 logger.debug("Injecting pyproject.toml payloads from configuration.")
+                active_tools = {m.config_key for m in active_modules if m.config_key}
                 for identity, payload in blueprint.pyproject_injections.items():
+                    if payload.requires and payload.requires not in active_tools:
+                        logger.debug(
+                            f"Skipping payload '{identity}': {payload.requires} is disabled."
+                        )
+                        continue
+                    # Attribute a tool-bound payload to its tool, like module output.
+                    tool = Tool(payload.requires) if payload.requires else None
                     manifest.filesystem.add_structured(
                         "pyproject.toml",
-                        payload,
+                        payload.content,
                         producer=f"template:{template_id}:{identity}",
                     )
+                tool = None
 
             if blueprint.appends:
                 logger.debug("Injecting generic file appends from configuration.")

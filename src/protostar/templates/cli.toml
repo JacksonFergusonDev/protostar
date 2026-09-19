@@ -31,11 +31,34 @@ rumdl = true
 dev_dependencies = ["pytest-cov"]
 
 # --- pyproject.toml AST Injections ---
+# Payloads that are not tied to a tool are plain strings and are always injected.
 [dev.pyproject]
+# The scaffold is an installable package: src layout with a real build backend, so
+# tests import it like any consumer would and the console script / container
+# entrypoint resolve. Hatchling needs no version bound, unlike uv_build.
+cli_build_system = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/<% PACKAGE_NAME %>"]
+'''
+
+cli_entrypoint = '''
+[project.scripts]
+<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"
+'''
+
+# Payloads that configure a tool declare `requires`, so they are injected only while
+# that tool is enabled (`--no-mypy` must not leave a [tool.mypy] behind).
+
 # Additive on top of the Ruff module's baseline (A, B, C4, E, F, I, RUF, UP).
 # Sequences merge atomically, so `select` must not be redefined here; and
 # `ignore` replaces the module's list, so it keeps E501 alongside the D rules.
-cli_ruff_config = '''
+[dev.pyproject.cli_ruff_config]
+requires = "ruff"
+content = '''
 [tool.ruff.lint]
 extend-select = [
     "D",   # pydocstyle
@@ -62,7 +85,9 @@ convention = "google"
 # Only the delta from the Mypy module's baseline: strict mode for the package,
 # relaxed for tests. The tests override turns off warn_return_any, which the
 # baseline enables, because test doubles routinely return Any.
-cli_mypy_config = '''
+[dev.pyproject.cli_mypy_config]
+requires = "mypy"
+content = '''
 [tool.mypy]
 strict = true
 
@@ -74,7 +99,9 @@ disallow_untyped_calls = false
 warn_return_any = false
 '''
 
-cli_pytest_config = '''
+[dev.pyproject.cli_pytest_config]
+requires = "pytest"
+content = '''
 [tool.coverage.run]
 branch = true
 
@@ -83,23 +110,6 @@ omit = ["**/__init__.py"]
 show_missing = true
 skip_covered = true
 fail_under = 90
-'''
-
-# The scaffold is an installable package: src layout with a real build backend, so
-# tests import it like any consumer would and the console script / container
-# entrypoint resolve. Hatchling needs no version bound, unlike uv_build.
-cli_build_system = '''
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/<% PACKAGE_NAME %>"]
-'''
-
-cli_entrypoint = '''
-[project.scripts]
-<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.cli:app"
 '''
 
 # --- Static File Injections ---

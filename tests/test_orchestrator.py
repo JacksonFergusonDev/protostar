@@ -8,6 +8,7 @@ from protostar.errors import (
     ExecutionInterruptedError,
     WorkspaceCollisionError,
 )
+from protostar.intent import PyprojectPayload
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -22,6 +23,7 @@ from protostar.modules import (
     PrekModule,
     PythonCore,
     ReadTheDocsModule,
+    RuffModule,
     ZensicalModule,
 )
 from protostar.orchestrator import Orchestrator
@@ -138,7 +140,9 @@ def test_plan_injects_blueprint_fields(mocker, mock_config):
 def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
     """plan() injects pyproject.toml payloads from blueprint.pyproject_injections."""
     blueprint = TemplateBlueprint(dev_dependencies=["test-global-dep"])
-    blueprint.pyproject_injections = {"custom_key": "[tool.custom]\nvalue = true"}
+    blueprint.pyproject_injections = {
+        "custom_key": PyprojectPayload("[tool.custom]\nvalue = true")
+    }
 
     engine = Orchestrator(
         [], mock_config, request=InitRequest(template_blueprint=blueprint)
@@ -152,6 +156,85 @@ def test_plan_injects_pyproject_injections_from_blueprint(mocker, mock_config):
         "[tool.custom]" in c.content
         for c in manifest.filesystem.structured["pyproject.toml"]
     )
+
+
+def _gated_payload_blueprint() -> TemplateBlueprint:
+    blueprint = TemplateBlueprint()
+    blueprint.pyproject_injections = {
+        "always": PyprojectPayload("[tool.always]\nvalue = true"),
+        "lint": PyprojectPayload("[tool.ruff.lint]\nextend-select = ['D']", "ruff"),
+    }
+    return blueprint
+
+
+def _injected_payloads(manifest):
+    return {
+        c.producer.rsplit(":", 1)[-1]: c
+        for c in manifest.filesystem.structured.get("pyproject.toml", [])
+        if c.producer.startswith("template:")
+    }
+
+
+def test_plan_injects_a_tool_bound_payload_while_its_tool_is_active(
+    mocker, mock_config
+):
+    engine = Orchestrator(
+        [RuffModule()],
+        mock_config,
+        request=InitRequest(template_blueprint=_gated_payload_blueprint()),
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    assert {"always", "lint"} <= _injected_payloads(manifest).keys()
+
+
+def test_plan_skips_a_tool_bound_payload_when_its_tool_is_inactive(mocker, mock_config):
+    """`--no-ruff` must not leave ruff configuration behind."""
+    engine = Orchestrator(
+        [],
+        mock_config,
+        request=InitRequest(template_blueprint=_gated_payload_blueprint()),
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    payloads = _injected_payloads(manifest)
+    assert "always" in payloads
+    assert "lint" not in payloads
+    assert "[tool.ruff" not in "".join(
+        c.content for c in manifest.filesystem.structured["pyproject.toml"]
+    )
+
+
+def test_plan_attributes_a_tool_bound_payload_to_its_tool(mocker, mock_config):
+    from protostar.recipe import Tool
+
+    engine = Orchestrator(
+        [RuffModule()],
+        mock_config,
+        request=InitRequest(template_blueprint=_gated_payload_blueprint()),
+    )
+    mocker.patch.object(Path, "exists", return_value=False)
+
+    manifest = engine.plan()
+
+    def contributions(identity):
+        return [
+            c
+            for c in manifest.producer_contributions
+            if c.path[:3] == ("filesystem", "structured", "pyproject.toml")
+            and c.path[-1].endswith(f":{identity}")
+        ]
+
+    lint, always = contributions("lint"), contributions("always")
+
+    assert lint
+    assert all(c.tool is Tool.RUFF for c in lint)
+    assert always
+    assert all(c.tool is None for c in always)
 
 
 def test_plan_produces_clean_blueprint(mocker, mock_config):

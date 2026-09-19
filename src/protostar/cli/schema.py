@@ -51,6 +51,31 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     },
                 },
             }
+        elif f.name == "pyproject_injections":
+            prop = {
+                "type": "object",
+                "additionalProperties": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "properties": {
+                                "content": {"type": "string"},
+                                "requires": {
+                                    "enum": sorted(
+                                        mod.config_key
+                                        for mod in TOOLING_MODULES
+                                        if mod.config_key
+                                    ),
+                                    "description": "Inject this payload only while the tool is enabled.",
+                                },
+                            },
+                            "required": ["content"],
+                            "additionalProperties": False,
+                        },
+                    ]
+                },
+            }
         elif f.name == "dependency_includes":
             prop = {
                 "type": "array",

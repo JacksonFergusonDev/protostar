@@ -39,6 +39,9 @@ ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY = {("tool", "ruff", "lint", "ignore")}
 # Built-ins are trusted implicitly, so what they may execute is deliberately tiny.
 ALLOWED_POST_INSTALL_TASKS = {("uv", "run", "nbdime", "config-git", "--enable")}
 
+# `tool.<table>` names that belong to a tool but are not in that module's baseline.
+EXTRA_TOOL_TABLES = {"coverage": "pytest"}
+
 _MISSING = object()
 
 # Payloads may use `<% VAR %>` as a bare key or value, which is only valid TOML after
@@ -53,6 +56,19 @@ def _load(alias: str) -> dict[str, Any]:
         .read_text(encoding="utf-8")
     )
     return tomllib.loads(text)
+
+
+def _payloads(alias: str) -> dict[str, tuple[str, str | None]]:
+    """Returns each [dev.pyproject] entry as (content, requires)."""
+    entries = _load(alias).get("dev", {}).get("pyproject", {})
+    return {
+        identity: (
+            (entry, None)
+            if isinstance(entry, str)
+            else (entry["content"], entry.get("requires"))
+        )
+        for identity, entry in entries.items()
+    }
 
 
 def _module_baselines() -> dict[str, dict[str, Any]]:
@@ -91,14 +107,17 @@ def _lookup(node: Any, path: tuple[str, ...]) -> Any:
 
 
 def find_baseline_violations(
-    payload: str, baselines: dict[str, dict[str, Any]]
+    payload: str, baselines: dict[str, dict[str, Any]], requires: str | None = None
 ) -> list[str]:
     """Lists ways a template's TOML payload restates a module baseline.
 
     Overriding a baseline scalar with a different value is a legitimate delta. What is
     flagged is repeating a baseline value verbatim, and redefining a baseline list
-    where an additive key (e.g. `extend-select`) exists.
+    where an additive key (e.g. `extend-select`) exists. A payload bound to a tool is
+    compared only with that tool's baseline; an unbound one with every baseline.
     """
+    if requires is not None:
+        baselines = {requires: baselines.get(requires, {})}
     violations: list[str] = []
     parsed = tomllib.loads(_PLACEHOLDER.sub("placeholder", payload))
     for path, value in _leaves(parsed):
@@ -195,15 +214,50 @@ def test_tasks_stay_within_the_trusted_allowlist(alias: str) -> None:
 def test_pyproject_payloads_state_only_the_delta(
     alias: str, baselines: dict[str, dict[str, Any]]
 ) -> None:
-    payloads = _load(alias).get("dev", {}).get("pyproject", {})
     violations = [
         f"[dev.pyproject].{identity} -> {violation}"
-        for identity, payload in payloads.items()
-        for violation in find_baseline_violations(payload, baselines)
+        for identity, (content, requires) in _payloads(alias).items()
+        for violation in find_baseline_violations(content, baselines, requires)
     ]
     assert not violations, f"{alias}.toml restates module baselines:\n" + "\n".join(
         violations
     )
+
+
+def find_unbound_tool_config(
+    payloads: dict[str, tuple[str, str | None]], owners: dict[str, str]
+) -> list[str]:
+    """Lists payloads that configure a tool without declaring `requires` for it."""
+    problems: list[str] = []
+    for identity, (content, requires) in payloads.items():
+        parsed = tomllib.loads(_PLACEHOLDER.sub("placeholder", content))
+        for table in parsed.get("tool", {}):
+            owner = owners.get(table)
+            if owner and requires != owner:
+                problems.append(
+                    f"[dev.pyproject].{identity} configures tool.{table} but "
+                    f'declares requires = {requires!r}; expected "{owner}"'
+                )
+    return problems
+
+
+@pytest.fixture(scope="module")
+def tool_table_owners(baselines: dict[str, dict[str, Any]]) -> dict[str, str]:
+    owners = {
+        table: tool
+        for tool, baseline in baselines.items()
+        for table in baseline.get("tool", {})
+    }
+    return owners | EXTRA_TOOL_TABLES
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_tool_configuration_declares_the_tool_it_needs(
+    alias: str, tool_table_owners: dict[str, str]
+) -> None:
+    """`--no-<tool>` must not leave that tool's configuration behind."""
+    problems = find_unbound_tool_config(_payloads(alias), tool_table_owners)
+    assert not problems, f"{alias}.toml:\n" + "\n".join(problems)
 
 
 SYNTHETIC_BASELINES: dict[str, dict[str, Any]] = {
@@ -250,3 +304,47 @@ class TestBaselineViolationDetector:
         )
         assert len(violations) == 1
         assert "drops entries" in violations[0]
+
+    def test_a_tool_bound_payload_is_compared_only_with_its_own_baseline(self) -> None:
+        # `pretty = true` repeats the mypy baseline, but a ruff-bound payload is
+        # only measured against ruff, so it is not flagged.
+        payload = "[tool.mypy]\npretty = true\n"
+        assert find_baseline_violations(payload, SYNTHETIC_BASELINES, "ruff") == []
+        assert len(find_baseline_violations(payload, SYNTHETIC_BASELINES, "mypy")) == 1
+
+
+SYNTHETIC_OWNERS = {"mypy": "mypy", "ruff": "ruff", "coverage": "pytest"}
+
+
+class TestUnboundToolConfigDetector:
+    """Proves the requires ratchet bites, so it cannot pass vacuously."""
+
+    def test_flags_tool_config_with_no_requires(self) -> None:
+        problems = find_unbound_tool_config(
+            {"typing": ("[tool.mypy]\nstrict = true\n", None)}, SYNTHETIC_OWNERS
+        )
+        assert len(problems) == 1
+        assert 'expected "mypy"' in problems[0]
+
+    def test_flags_tool_config_bound_to_the_wrong_tool(self) -> None:
+        problems = find_unbound_tool_config(
+            {"cov": ("[tool.coverage.run]\nbranch = true\n", "ruff")}, SYNTHETIC_OWNERS
+        )
+        assert len(problems) == 1
+        assert 'expected "pytest"' in problems[0]
+
+    def test_accepts_correctly_bound_config(self) -> None:
+        assert not find_unbound_tool_config(
+            {"typing": ("[tool.mypy]\nstrict = true\n", "mypy")}, SYNTHETIC_OWNERS
+        )
+
+    def test_ignores_config_no_module_owns(self) -> None:
+        assert not find_unbound_tool_config(
+            {
+                "build": (
+                    '[tool.hatch.build.targets.wheel]\npackages = ["src/x"]\n',
+                    None,
+                )
+            },
+            SYNTHETIC_OWNERS,
+        )

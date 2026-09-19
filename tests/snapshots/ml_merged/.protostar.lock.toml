@@ -5,7 +5,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "00e3ff86608f65625186e8e0659f8dee61b346f75b03b82ec81d3f7533c71492"
+digest = "3a25ebec34068124c59c25b5a950c0ea2b5d91106fce8aeed5b44719133b6270"
 display_name = "ml"
 
 [[files]]

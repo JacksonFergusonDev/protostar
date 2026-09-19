@@ -236,6 +236,8 @@ def generate_template_schema_fixture() -> None:
                     arr = tomlkit.array()
                     arr.extend(v)
                     table.add(k, arr)
+                elif isinstance(v, dict):
+                    table.add(k, _python_to_tomlkit(v))
                 else:
                     table.add(k, v)
             return table
@@ -722,7 +724,7 @@ def generate_manifest_state() -> None:
         for identity, payload in blueprint.pyproject_injections.items():
             manifest.filesystem.add_structured(
                 "pyproject.toml",
-                payload,
+                payload.content,
                 producer=f"template:{blueprint.reference.identity if blueprint.reference else 'unresolved'}:{identity}",
             )
 

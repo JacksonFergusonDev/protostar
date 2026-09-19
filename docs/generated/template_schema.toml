@@ -102,10 +102,18 @@ __version__ = "0.1.0"
 '''
 
 # --- pyproject.toml AST Injections ---
-# Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden.
+# Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` tool that injects it only while that tool is enabled.
 
 [dev.pyproject]
-custom_linting = '''
+build_backend = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+'''
+
+[dev.pyproject.custom_linting]
+requires = "ruff"
+content = '''
 [tool.ruff.lint]
 extend-select = ["I", "UP", "B"]
 '''

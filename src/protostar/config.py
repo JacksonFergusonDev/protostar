@@ -19,6 +19,7 @@ from .intent import (
     AppendContribution,
     DependencyGroup,
     DependencyInclude,
+    PyprojectPayload,
     TemplateOrigin,
     TemplateReference,
     validate_configuration,
@@ -361,6 +362,38 @@ def clear_user_config_cache() -> None:
     _load_cached_user_config.cache_clear()
 
 
+def _parse_pyproject_payload(
+    identity: str, raw: object, source: str
+) -> PyprojectPayload:
+    """Parses one [dev.pyproject] entry: a TOML string, or a content/requires table."""
+    if isinstance(raw, str):
+        return PyprojectPayload(raw)
+
+    location = f"[dev.pyproject].{identity}"
+    if (
+        not isinstance(raw, dict)
+        or not isinstance(raw.get("content"), str)
+        or set(raw) - {"content", "requires"}
+    ):
+        raise ConfigurationError(
+            f"Invalid structured payload in configuration source '{source}' for '{location}'.",
+            hint='Use a TOML string, or a table with a string "content" and an optional "requires" tool name.',
+        )
+
+    requires = raw.get("requires")
+    if requires is not None:
+        # Local import: recipe sits above config in the import graph.
+        from .recipe import Tool
+
+        tools = sorted(tool.value for tool in Tool)
+        if not isinstance(requires, str) or requires not in tools:
+            raise ConfigurationError(
+                f"Unknown tool {requires!r} in configuration source '{source}' for '{location}'.",
+                hint=f"Set requires to one of: {', '.join(tools)}.",
+            )
+    return PyprojectPayload(raw["content"], requires)
+
+
 @dataclass
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
@@ -452,12 +485,16 @@ class TemplateBlueprint:
             },
         },
     )
-    pyproject_injections: dict[str, str] = field(
+    pyproject_injections: dict[str, PyprojectPayload] = field(
         default_factory=dict,
         metadata={
-            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden.",
+            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` tool that injects it only while that tool is enabled.",
             "example": {
-                "custom_linting": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]'
+                "custom_linting": {
+                    "requires": "ruff",
+                    "content": '[tool.ruff.lint]\nextend-select = ["I", "UP", "B"]',
+                },
+                "build_backend": '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"',
             },
         },
     )
@@ -741,7 +778,10 @@ class TemplateBlueprint:
                         f"Expected table, but got {type(dev_data['pyproject']).__name__}.",
                         hint="Define pyproject as a table: [dev.pyproject]",
                     )
-                instance.pyproject_injections = dev_data["pyproject"]
+                for identity, raw in dev_data["pyproject"].items():
+                    instance.pyproject_injections[identity] = _parse_pyproject_payload(
+                        identity, raw, source
+                    )
 
         if "files" in data:
             if not isinstance(data["files"], dict):
@@ -887,13 +927,9 @@ class TemplateBlueprint:
                     "TOML append regions are unsupported.",
                     hint="Use dev.pyproject for TOML configuration.",
                 )
-        for content in self.pyproject_injections.values():
-            if not isinstance(content, str):
-                raise ConfigurationError(
-                    "Structured payloads must be TOML strings.",
-                    hint="Use named string payloads in dev.pyproject.",
-                )
+        for payload in self.pyproject_injections.values():
             rendered = render_template(
-                content, dict.fromkeys(extract_variables(content), "placeholder")
+                payload.content,
+                dict.fromkeys(extract_variables(payload.content), "placeholder"),
             )
             validate_configuration(rendered)

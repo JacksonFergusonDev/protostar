@@ -58,9 +58,10 @@ ci = false
 post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
 
 # --- pyproject.toml AST Injections ---
-[dev.pyproject]
 # Configure Ruff to lint/format inside notebooks
-ml_ruff_config = '''
+[dev.pyproject.ml_ruff_config]
+requires = "ruff"
+content = '''
 [tool.ruff]
 extend-include = ["*.ipynb"]
 

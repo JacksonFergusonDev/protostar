@@ -542,3 +542,48 @@ def test_captured_recipe_docker_wins_over_a_later_template_opinion(
     )
 
     assert engines[-1].request.docker is False
+
+
+def _cli_template_pyproject(tmp_path, monkeypatch, mocker, **flags):
+    import argparse
+
+    from protostar.cli.main import handle_init
+
+    monkeypatch.chdir(tmp_path)
+    engines = _capture_init_engines(mocker)
+    handle_init(
+        argparse.Namespace(
+            template_name="cli", template_context={}, bind=[], docker=None, **flags
+        )
+    )
+    manifest = engines[-1].plan()
+    return "\n".join(
+        c.content for c in manifest.filesystem.structured["pyproject.toml"]
+    )
+
+
+def test_cli_template_keeps_tool_config_for_enabled_tools(
+    tmp_path, monkeypatch, mocker
+):
+    pyproject = _cli_template_pyproject(tmp_path, monkeypatch, mocker)
+
+    assert "strict = true" in pyproject
+    assert "[tool.coverage.report]" in pyproject
+    assert 'extend-select = [\n    "D",' in pyproject
+
+
+def test_cli_template_drops_tool_config_for_disabled_tools(
+    tmp_path, monkeypatch, mocker
+):
+    """`--no-mypy --no-pytest` must not leave [tool.mypy] or [tool.coverage] behind."""
+    pyproject = _cli_template_pyproject(
+        tmp_path, monkeypatch, mocker, MypyModule=False, PytestModule=False
+    )
+
+    assert "strict = true" not in pyproject
+    assert "[tool.mypy" not in pyproject
+    assert "[tool.coverage" not in pyproject
+    # Ruff stayed on, and so did the tool-agnostic build system and entrypoint.
+    assert "extend-select" in pyproject
+    assert "hatchling" in pyproject
+    assert "[project.scripts]" in pyproject
