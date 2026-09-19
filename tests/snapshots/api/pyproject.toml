@@ -153,8 +153,6 @@ ide = "none"
 origin = "built-in"
 locator = "api"
 
-[tool.protostar.tools]
-
 [tool.protostar.fallback]
 ci = false
 codecov = false
@@ -185,5 +183,3 @@ PYTHON_VERSION = "3.13"
 [tool.protostar.metadata]
 minimum_python = "3.13"
 supported_os = ["MacOS", "Linux", "Windows"]
-
-[tool.protostar.bindings]

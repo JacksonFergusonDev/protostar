@@ -64,7 +64,7 @@ Equal foreign content remains unowned.
 
 ## Edit the recipe deliberately
 
-Edit existing entries in `[tool.protostar]` using the
+Edit entries in `[tool.protostar]` using the
 [recipe rules](../development/project-recipe.md). For example:
 
 ```toml
@@ -72,6 +72,8 @@ Edit existing entries in `[tool.protostar]` using the
 renovate = false
 mypy = true
 ```
+
+The `tools` table is left out of `pyproject.toml` until it has an entry, so add it when you need it.
 
 An omitted tool follows current template opinion, then the fallback captured on
 initialization. Current global defaults cannot change project selection. An opt-out

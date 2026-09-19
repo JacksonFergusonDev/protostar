@@ -4,6 +4,7 @@ import sys
 import tomllib
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -668,3 +669,96 @@ def test_recipe_write_leaves_a_project_the_user_already_had_in_their_order(
     assert "# Tool Configuration" not in content
     assert content.startswith(UV_LAYOUT.split("[dependency-groups]")[0])
     assert content.index("[tool.protostar]") < content.index("[dependency-groups]")
+
+
+def _recipe_table(content: str) -> dict[str, Any]:
+    return tomllib.loads(content)["tool"]["protostar"]
+
+
+def test_edit_recipe_omits_empty_tables_and_keeps_populated_ones():
+    """The sample recipe has metadata but no diversions or bindings."""
+    table = _recipe_table(edit_recipe("", recipe()))
+
+    assert {"fallback", "context", "metadata"} <= set(table)
+    assert "tools" not in table
+    assert "bindings" not in table
+
+
+def test_edit_recipe_writes_populated_optional_tables():
+    populated = replace(
+        recipe(),
+        tools=((Tool.MYPY, True),),
+        bindings=(("TOKEN", "PROJECT_TOKEN"),),
+    )
+    table = _recipe_table(edit_recipe("", populated))
+
+    assert table["tools"] == {"mypy": True}
+    assert table["bindings"] == {"TOKEN": "PROJECT_TOKEN"}
+
+
+def test_absent_optional_tables_decode_as_empty():
+    data = recipe().to_dict()
+    for name in ("tools", "metadata", "bindings"):
+        data.pop(name)
+
+    decoded = decode_recipe(data)
+
+    assert decoded.tools == ()
+    assert decoded.metadata == ()
+    assert decoded.bindings == ()
+
+
+@pytest.mark.parametrize("name", ["fallback", "context"])
+def test_always_populated_recipe_tables_stay_required(name):
+    data = recipe().to_dict()
+    data.pop(name)
+
+    with pytest.raises(ConfigurationError):
+        decode_recipe(data)
+
+
+def test_a_recipe_written_with_empty_tables_still_decodes_and_is_tidied():
+    """Projects created before empty tables were dropped keep working."""
+    legacy = replace(recipe(), metadata=())
+    text = edit_recipe("", legacy)
+    text += "\n[tool.protostar.tools]\n\n[tool.protostar.bindings]\n"
+
+    assert decode_recipe(_recipe_table(text)) == legacy
+    tidied = _recipe_table(edit_recipe(text, legacy))
+    assert "tools" not in tidied
+    assert "bindings" not in tidied
+
+
+def test_edit_recipe_is_idempotent():
+    once = edit_recipe("[tool.ruff]\nline-length = 88\n", recipe())
+
+    assert edit_recipe(once, recipe()) == once
+
+
+def test_a_table_added_to_an_existing_recipe_lands_in_its_canonical_place():
+    """tomlkit appends it, which would steal the next tool's header comment."""
+    base = edit_recipe("", recipe())
+    existing = base + "\n# ---- Mypy ---- #\n\n[tool.mypy]\nstrict = true\n"
+
+    updated = edit_recipe(existing, replace(recipe(), tools=((Tool.MYPY, True),)))
+
+    assert updated.index("[tool.protostar]") < updated.index("[tool.protostar.tools]")
+    assert updated.index("[tool.protostar.tools]") < updated.index(
+        "[tool.protostar.fallback]"
+    )
+    assert "# ---- Mypy ---- #\n\n[tool.mypy]\nstrict = true" in updated
+    assert _recipe_table(updated)["tools"] == {"mypy": True}
+    assert tomllib.loads(updated)["tool"]["mypy"] == {"strict": True}
+
+
+def test_every_recipe_table_header_has_a_blank_line_before_it():
+    base = edit_recipe("", recipe())
+    updated = edit_recipe(
+        base + "\n[tool.mypy]\nstrict = true\n",
+        replace(recipe(), tools=((Tool.MYPY, True),)),
+    )
+    lines = updated.split("\n")
+
+    for index, line in enumerate(lines[1:], start=1):
+        if line.startswith("[tool.protostar"):
+            assert lines[index - 1] == "", f"no blank line before {line!r}"

@@ -25,18 +25,20 @@
      "nbdime>=4.0.4",
      "ruff>=0.16.8",
  ]
-@@ -62,6 +69,7 @@
+@@ -61,6 +68,9 @@
+ origin = "built-in"
  locator = "ml"
 
- [tool.protostar.tools]
++[tool.protostar.tools]
 +mypy = true
-
++
  [tool.protostar.fallback]
  ci = false
-@@ -93,3 +101,16 @@
- [tool.protostar.metadata]
-
- [tool.protostar.bindings]
+ codecov = false
+@@ -87,3 +97,16 @@
+ PACKAGE_NAME = "demo_project"
+ PROJECT_NAME = "demo-project"
+ PYTHON_VERSION = "3.13"
 +
 +# ---- Mypy ---- #
 +

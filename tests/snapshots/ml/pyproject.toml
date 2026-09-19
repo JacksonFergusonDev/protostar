@@ -61,8 +61,6 @@ ide = "none"
 origin = "built-in"
 locator = "ml"
 
-[tool.protostar.tools]
-
 [tool.protostar.fallback]
 ci = false
 codecov = false
@@ -89,7 +87,3 @@ CURRENT_YEAR = "2026"
 PACKAGE_NAME = "demo_project"
 PROJECT_NAME = "demo-project"
 PYTHON_VERSION = "3.13"
-
-[tool.protostar.metadata]
-
-[tool.protostar.bindings]

@@ -12,6 +12,8 @@ For new uv projects, the captured project name uses uv normalization (`Demo_Proj
 becomes `demo-project`); the package identifier remains `demo_project`. This keeps
 early file rendering and later TOML rendering consistent.
 
+`[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.bindings]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
+
 The schema-v1 recipe captures the resolved template origin and locator (or explicit
 `mode = "tooling-only"`), Python version, Docker selection, IDE, original tooling
 fallbacks, built-in rendering context, and non-secret project metadata. Template
@@ -36,7 +38,7 @@ opt-out affects that module only: an independent template or another module can
 still contribute to the same file or dependency group. No files, dependencies, or
 ownership records are pruned when a tool is disabled.
 
-For example, after initialization, edit the existing tools table:
+The table is omitted while it has no entries, so a new project has none. To record a diversion, add the table:
 
 ```toml
 [tool.protostar.tools]
