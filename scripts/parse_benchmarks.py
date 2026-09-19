@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, TypedDict
@@ -80,9 +81,13 @@ def process_benchmarks(input_file: Path, gate_mode: bool) -> list[BenchmarkOutpu
         mean_ms = result.get("mean", 0.0) * 1000
         command: str = result.get("command", "")
 
+        is_wizard = bool(
+            re.search(r"\bPROTOSTAR_BENCHMARK_WIZARD\b", command)
+            or re.search(r"\bwizard\b", command, re.IGNORECASE)
+        )
         name: str = (
             "Protostar TUI Wizard Latency"
-            if "WIZARD" in command
+            if is_wizard
             else "Protostar Headless Latency"
         )
 
