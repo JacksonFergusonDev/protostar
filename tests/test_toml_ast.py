@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 import tomlkit
@@ -293,3 +294,89 @@ def test_adding_tool_preserves_existing_document_presentation():
         desired_ast=desired,
     )
     assert repeated.content == result.content
+
+
+UV_APPENDED_LAYOUT = """
+[project]
+name = "app"
+version = "0.1.0"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[tool.protostar]
+version = 1
+[dependency-groups]
+dev = ["ruff"]
+"""
+
+
+def _header_positions(formatted: str) -> dict[str, int]:
+    return {
+        marker: formatted.find(marker)
+        for marker in (
+            "[dependency-groups]",
+            "[tool.hatch",
+            "# Tool Configuration",
+            "# ---- Ruff ---- #",
+            "# ---- Protostar ---- #",
+            "[tool.protostar]",
+        )
+    }
+
+
+def test_format_pyproject_toml_keeps_only_tooling_under_the_banner():
+    """Dependency groups and packaging config sit above the Tool Configuration banner."""
+    formatted = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    pos = _header_positions(formatted)
+
+    assert -1 not in pos.values()
+    assert pos["[dependency-groups]"] < pos["[tool.hatch"] < pos["# Tool Configuration"]
+    assert pos["# Tool Configuration"] < pos["# ---- Ruff ---- #"]
+
+
+def test_format_pyproject_toml_labels_the_protostar_section_last():
+    formatted = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    pos = _header_positions(formatted)
+
+    assert (
+        pos["# ---- Ruff ---- #"]
+        < pos["# ---- Protostar ---- #"]
+        < pos["[tool.protostar]"]
+    )
+    assert formatted.count("# ---- Protostar ---- #") == 1
+
+
+def test_format_pyproject_toml_separates_every_table_with_a_blank_line():
+    formatted = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    lines = formatted.split("\n")
+
+    for index, line in enumerate(lines[1:], start=1):
+        if line.startswith("["):
+            previous = lines[index - 1]
+            assert previous == "" or previous.startswith("#"), (
+                f"no blank line before {line!r}"
+            )
+
+
+def test_format_pyproject_toml_layout_is_idempotent_with_protostar_section():
+    once = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    twice = format_pyproject_toml(tomlkit.parse(once))
+
+    assert once == twice
+
+
+def test_finalize_new_pyproject_fixes_the_layout_uv_and_the_recipe_leave():
+    from protostar.toml_ast import finalize_new_pyproject
+
+    finalized = finalize_new_pyproject(UV_APPENDED_LAYOUT)
+
+    assert finalized == format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    assert tomllib.loads(finalized) == tomllib.loads(UV_APPENDED_LAYOUT)

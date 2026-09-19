@@ -23,6 +23,22 @@ classifiers = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+    "commitizen>=4.18.1",
+    "httpx>=0.28.1",
+    "mypy>=2.3.1",
+    "prek>=0.5.3",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-mock>=3.15.1",
+    "ruff>=0.16.8",
+    "rumdl>=0.2.73",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/demo_project"]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -124,8 +140,7 @@ style = "one"
     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/demo_project"]
+# ---- Protostar ---- #
 
 [tool.protostar]
 version = 1
@@ -137,8 +152,6 @@ ide = "none"
 [tool.protostar.source]
 origin = "built-in"
 locator = "api"
-
-[tool.protostar.tools]
 
 [tool.protostar.fallback]
 ci = false
@@ -170,17 +183,3 @@ PYTHON_VERSION = "3.13"
 [tool.protostar.metadata]
 minimum_python = "3.13"
 supported_os = ["MacOS", "Linux", "Windows"]
-
-[tool.protostar.bindings]
-[dependency-groups]
-dev = [
-    "commitizen>=4.18.1",
-    "httpx>=0.28.1",
-    "mypy>=2.3.1",
-    "prek>=0.5.3",
-    "pytest>=9.1.1",
-    "pytest-asyncio>=1.4.0",
-    "pytest-mock>=3.15.1",
-    "ruff>=0.16.8",
-    "rumdl>=0.2.73",
-]

@@ -17,18 +17,28 @@
      "torch>=2.14.0",
      "tqdm>=4.70.1",
  ]
-@@ -52,6 +58,7 @@
+@@ -18,6 +24,7 @@
+ dev = [
+     "ipywidgets>=8.1.9",
+     "jupyterlab>=4.6.3",
++    "mypy>=2.3.1",
+     "nbdime>=4.0.4",
+     "ruff>=0.16.8",
+ ]
+@@ -61,6 +68,9 @@
+ origin = "built-in"
  locator = "ml"
 
- [tool.protostar.tools]
++[tool.protostar.tools]
 +mypy = true
-
++
  [tool.protostar.fallback]
  ci = false
-@@ -83,8 +90,22 @@
- [tool.protostar.metadata]
-
- [tool.protostar.bindings]
+ codecov = false
+@@ -87,3 +97,16 @@
+ PACKAGE_NAME = "demo_project"
+ PROJECT_NAME = "demo-project"
+ PYTHON_VERSION = "3.13"
 +
 +# ---- Mypy ---- #
 +
@@ -42,9 +52,3 @@
 +warn_unused_configs = true
 +check_untyped_defs = true
 +explicit_package_bases = true
- [dependency-groups]
- dev = [
-+    "mypy>=2.3.1",
-     "ruff>=0.16.8",
- ]
- docs = [

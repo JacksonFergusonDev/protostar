@@ -6,9 +6,13 @@ what you request; the lock records contributions actually accepted by semantic
 reconciliation. Conflicts can therefore leave desired intent ahead of applied
 ownership. The ownership ledger remains schema v1.
 
+In a `pyproject.toml` that Protostar creates, the recipe is the last section, under its own `# ---- Protostar ---- #` header, like every other tool's configuration. Everything that is not tool configuration (`[project]`, `[build-system]`, `[dependency-groups]`, and build-backend tables such as `[tool.hatch...]`) sits above the `# Tool Configuration` banner. A `pyproject.toml` you already had keeps your own order.
+
 For new uv projects, the captured project name uses uv normalization (`Demo_Project`
 becomes `demo-project`); the package identifier remains `demo_project`. This keeps
 early file rendering and later TOML rendering consistent.
+
+`[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.bindings]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
 
 The schema-v1 recipe captures the resolved template origin and locator (or explicit
 `mode = "tooling-only"`), Python version, Docker selection, IDE, original tooling
@@ -34,7 +38,7 @@ opt-out affects that module only: an independent template or another module can
 still contribute to the same file or dependency group. No files, dependencies, or
 ownership records are pruned when a tool is disabled.
 
-For example, after initialization, edit the existing tools table:
+The table is omitted while it has no entries, so a new project has none. To record a diversion, add the table:
 
 ```toml
 [tool.protostar.tools]

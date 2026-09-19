@@ -13,7 +13,6 @@ dependencies = [
     "matplotlib",
     "tqdm",
 ]
-docs_dependencies = ["jupyterlab", "nbdime", "ipywidgets"]
 
 # --- Directory Architecture ---
 directories = [
@@ -56,6 +55,13 @@ ci = false
 
 # --- Post-Install Subprocesses ---
 post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
+
+# --- Development Dependencies ---
+# Notebook tooling belongs in the dev group. The docs group is only for the
+# documentation toolchain (zensical, mkdocstrings), and `uv sync` installs the dev
+# group by default but not docs, so anything here survives `just sync`.
+[dev]
+dev_dependencies = ["jupyterlab", "nbdime", "ipywidgets"]
 
 # --- pyproject.toml AST Injections ---
 # Configure Ruff to lint/format inside notebooks

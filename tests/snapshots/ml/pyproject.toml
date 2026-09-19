@@ -14,6 +14,14 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email@example.com" }]
 
+[dependency-groups]
+dev = [
+    "ipywidgets>=8.1.9",
+    "jupyterlab>=4.6.3",
+    "nbdime>=4.0.4",
+    "ruff>=0.16.8",
+]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -40,6 +48,8 @@ ignore = [
 ]
 extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
 
+# ---- Protostar ---- #
+
 [tool.protostar]
 version = 1
 mode = "template"
@@ -50,8 +60,6 @@ ide = "none"
 [tool.protostar.source]
 origin = "built-in"
 locator = "ml"
-
-[tool.protostar.tools]
 
 [tool.protostar.fallback]
 ci = false
@@ -79,16 +87,3 @@ CURRENT_YEAR = "2026"
 PACKAGE_NAME = "demo_project"
 PROJECT_NAME = "demo-project"
 PYTHON_VERSION = "3.13"
-
-[tool.protostar.metadata]
-
-[tool.protostar.bindings]
-[dependency-groups]
-dev = [
-    "ruff>=0.16.8",
-]
-docs = [
-    "ipywidgets>=8.1.9",
-    "jupyterlab>=4.6.3",
-    "nbdime>=4.0.4",
-]

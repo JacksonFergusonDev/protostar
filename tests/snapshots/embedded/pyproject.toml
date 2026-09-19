@@ -10,6 +10,11 @@ description = "Add your description here."
 readme = "README.md"
 authors = [{ name = "your-name", email = "your-email@example.com" }]
 
+[dependency-groups]
+dev = [
+    "ruff>=0.16.8",
+]
+
 # ==================================================
 # Tool Configuration
 # ==================================================
@@ -34,6 +39,8 @@ ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
 
+# ---- Protostar ---- #
+
 [tool.protostar]
 version = 1
 mode = "template"
@@ -44,8 +51,6 @@ ide = "none"
 [tool.protostar.source]
 origin = "built-in"
 locator = "embedded"
-
-[tool.protostar.tools]
 
 [tool.protostar.fallback]
 ci = false
@@ -73,11 +78,3 @@ CURRENT_YEAR = "2026"
 PACKAGE_NAME = "demo_project"
 PROJECT_NAME = "demo-project"
 PYTHON_VERSION = "3.13"
-
-[tool.protostar.metadata]
-
-[tool.protostar.bindings]
-[dependency-groups]
-dev = [
-    "ruff>=0.16.8",
-]

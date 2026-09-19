@@ -212,6 +212,27 @@ class ProjectRecipe:
         }
 
 
+# Tables that are omitted from pyproject.toml while empty; an absent one means empty.
+_OPTIONAL_TABLES = frozenset({"tools", "metadata", "bindings"})
+
+# The order recipe entries are written in, and where a late-added table belongs.
+_RECIPE_ORDER = (
+    "version",
+    "mode",
+    "python",
+    "docker",
+    "ide",
+    "source",
+    "tools",
+    "fallback",
+    "context",
+    "metadata",
+    "bindings",
+)
+
+_RECIPE_HEADER_RE = re.compile(r"^\[\[?tool\.protostar[A-Za-z0-9_.-]*\]\]?[ \t]*$")
+
+
 def _invalid() -> ConfigurationError:
     return ConfigurationError(
         "Invalid [tool.protostar] project recipe.",
@@ -223,25 +244,15 @@ def decode_recipe(data: object) -> ProjectRecipe:
     """Strictly validates recipe fields, source identity, and binding names."""
     if not isinstance(data, dict):
         raise _invalid()
-    required = {
-        "version",
-        "mode",
-        "python",
-        "docker",
-        "ide",
-        "tools",
-        "fallback",
-        "context",
-        "metadata",
-        "bindings",
-    }
+    required = {"version", "mode", "python", "docker", "ide", "fallback", "context"}
     if (
-        set(data) - (required | {"source"})
+        set(data) - (required | _OPTIONAL_TABLES | {"source"})
         or not required <= set(data)
         or type(data["version"]) is not int
         or data["version"] != 1
     ):
         raise _invalid()
+    data = {**{table: {} for table in _OPTIONAL_TABLES}, **data}
     if (
         not isinstance(data["python"], str)
         or not re.fullmatch(r"3\.\d+(?:\.\d+)?", data["python"])
@@ -417,7 +428,12 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
         doc = tomlkit.parse(content)
     except tomllib.TOMLDecodeError as e:
         raise _invalid() from e
-    desired = recipe.to_dict()
+    # Empty tables are noise in the file; the reader treats an absent table as empty.
+    desired = {
+        key: value
+        for key, value in recipe.to_dict().items()
+        if key not in _OPTIONAL_TABLES or value
+    }
     tool = doc.setdefault("tool", tomlkit.table())
     table = tool.setdefault("protostar", tomlkit.table())
 
@@ -432,8 +448,46 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
             elif key not in current or current[key] != value:
                 current[key] = value
 
+    before = {str(key) for key in table}
     update(table, desired)
-    return tomlkit.dumps(doc)
+    _place_new_tables(
+        table, [key for key in _RECIPE_ORDER if key in table and key not in before]
+    )
+    return _separate_recipe_tables(tomlkit.dumps(doc))
+
+
+def _place_new_tables(table: Any, new_keys: list[str]) -> None:
+    """Moves tables added to an existing recipe to their canonical position.
+
+    tomlkit appends them, which puts them after any trailing comment that belongs to
+    the recipe's last table, such as the header of the tool configured after it.
+    """
+    body = table.value.body
+    for key in new_keys:
+        entry = next(e for e in body if e[0] is not None and e[0].key == key)
+        body.remove(entry)
+        later = _RECIPE_ORDER[_RECIPE_ORDER.index(key) + 1 :]
+        index = next(
+            (i for i, (k, _) in enumerate(body) if k is not None and k.key in later),
+            len(body),
+        )
+        body.insert(index, entry)
+    table.value._map = {k: i for i, (k, _) in enumerate(body) if k is not None}
+
+
+def _separate_recipe_tables(content: str) -> str:
+    """Puts a blank line before each recipe table header, touching nothing else."""
+    lines: list[str] = []
+    for line in content.split("\n"):
+        if (
+            _RECIPE_HEADER_RE.match(line)
+            and lines
+            and lines[-1].strip()
+            and not lines[-1].lstrip().startswith("#")
+        ):
+            lines.append("")
+        lines.append(line)
+    return "\n".join(lines)
 
 
 @dataclass(frozen=True)

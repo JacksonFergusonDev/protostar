@@ -70,6 +70,7 @@ from .toml_ast import (
     aggregate_toml,
     aggregate_toml_document,
     apply_dependency_includes,
+    finalize_new_pyproject,
     reconcile_toml,
 )
 from .workflows import (
@@ -1197,6 +1198,10 @@ class Reconciliation:
                 else ""
             )
             content = edit_recipe(original, self.manifest.recipe)
+            if not self.journal.was_present(target):
+                # Protostar created this file, so it owns its layout; a project the
+                # user already had keeps whatever order they gave it.
+                content = finalize_new_pyproject(content)
             if content != original:
                 self.fs.write_text(target, content)
         except (OSError, UnicodeError) as e:
