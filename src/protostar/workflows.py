@@ -660,9 +660,12 @@ def generate_dockerfile(spec: DockerfileSpec) -> str:
     """Generates the multi-stage Dockerfile content."""
     if "fastapi" in spec.dependencies or "uvicorn" in spec.dependencies:
         port = str(spec.docker_port or "8000")
+        # `<package>.main:app` is the src-layout convention and what the api template
+        # scaffolds; the project is installed by `uv sync`, so the package is importable.
         runtime_block = (
             f"EXPOSE {port}\n\n"
-            f'CMD ["uvicorn", "core.main:app", "--host", "0.0.0.0", "--port", "{port}"]'
+            f'CMD ["uvicorn", "{spec.package_name}.main:app", '
+            f'"--host", "0.0.0.0", "--port", "{port}"]'
         )
     elif spec.is_script_or_typer:
         runtime_block = f'ENTRYPOINT ["{spec.project_name}"]'
