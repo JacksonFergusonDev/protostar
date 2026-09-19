@@ -38,9 +38,10 @@ from protostar.modules import (
 )
 from protostar.orchestrator import Orchestrator
 
-DOCS_GENERATED_DIR = Path("docs/generated").resolve()
-DOCS_TERMINALS_DIR = Path("docs/assets/terminals").resolve()
-SNAPSHOTS_DIR = Path("tests/snapshots").resolve()
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DOCS_GENERATED_DIR = (REPO_ROOT / "docs" / "generated").resolve()
+DOCS_TERMINALS_DIR = (REPO_ROOT / "docs" / "assets" / "terminals").resolve()
+SNAPSHOTS_DIR = (REPO_ROOT / "tests" / "snapshots").resolve()
 
 
 def _write_generated_doc(filepath: str | Path, content: str) -> None:
@@ -659,7 +660,7 @@ def generate_capability_tables() -> None:
     )
 
     # Sync table into CONTRIBUTING.md if present
-    contributing_path = Path("CONTRIBUTING.md")
+    contributing_path = REPO_ROOT / "CONTRIBUTING.md"
     if contributing_path.exists():
         contrib_content = contributing_path.read_text(encoding="utf-8")
         markdown_table = _format_markdown_table(exit_code_headers, exit_code_rows)
@@ -948,7 +949,7 @@ def generate_cli_dry_run_svg() -> None:
                 request = InitRequest(template_blueprint=blueprint)
                 engine = Orchestrator(modules, user_config, request=request)
                 manifest = engine.plan()
-                protostar.cli.ui._print_dry_run_summary(manifest)
+                protostar.cli.ui.print_dry_run_summary(manifest)
             finally:
                 os.chdir(orig_cwd)
 

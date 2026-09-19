@@ -328,7 +328,7 @@ def handle_init(args: argparse.Namespace) -> None:
                 }
             )
         else:
-            ui._print_dry_run_summary(manifest)
+            ui.print_dry_run_summary(manifest)
         sys.exit(0)
 
     result = ui._run_engine(engine, request)
