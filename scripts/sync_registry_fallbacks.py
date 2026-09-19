@@ -51,7 +51,7 @@ def main() -> None:
     print(f"Fetching latest registry from {REGISTRY_URL}...")
     try:
         with urllib.request.urlopen(REGISTRY_URL, timeout=5) as response:
-            raw = response.read(65_536)
+            raw = response.read(10 * 1024 * 1024)
             data = json.loads(raw.decode("utf-8"))
     except (urllib.error.URLError, json.JSONDecodeError, TimeoutError) as e:
         print(f"Failed to fetch registry: {e}", file=sys.stderr)
