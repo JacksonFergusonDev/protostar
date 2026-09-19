@@ -35,6 +35,11 @@ path = "CHANGELOG.md"
 policy = "seed-only"
 
 [[files]]
+path = "Dockerfile"
+policy = "checksum"
+digest = "705e475a081781061d079436eac2f5bb5cb88abe67aa1a7d3b4dd7f8ef40452b"
+
+[[files]]
 path = "README.md"
 policy = "seed-only"
 

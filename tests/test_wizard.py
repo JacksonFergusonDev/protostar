@@ -279,3 +279,38 @@ def test_run_init_wizard_hook_runner_conflict_cancellation(mocker):
         ExecutionAbortedError, match=r"Hook runner selection cancelled by user\."
     ):
         run_init_wizard()
+
+
+def test_run_init_wizard_preselects_docker_when_the_template_asks_for_it(mocker):
+    """Built-in templates that declare docker = true arrive with it pre-checked."""
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch.dict(os.environ, {}, clear=True)
+    mocker.patch("questionary.select").return_value.ask.return_value = "api"
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = []
+    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+
+    run_init_wizard()
+
+    choices = mock_checkbox.call_args.kwargs["choices"]
+    docker = next(c for c in choices if getattr(c, "value", None) == "docker")
+    assert docker.checked is True
+    assert "Enforced by template" in docker.title
+
+
+def test_run_init_wizard_leaves_docker_unchecked_without_a_template(mocker):
+    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch.dict(os.environ, {}, clear=True)
+    mocker.patch("questionary.select").return_value.ask.return_value = "None"
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = []
+    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+
+    run_init_wizard()
+
+    choices = mock_checkbox.call_args.kwargs["choices"]
+    docker = next(c for c in choices if getattr(c, "value", None) == "docker")
+    assert not docker.checked
+    assert "Enforced by template" not in docker.title

@@ -131,7 +131,7 @@ packages = ["src/demo_project"]
 version = 1
 mode = "template"
 python = "3.13"
-docker = false
+docker = true
 ide = "none"
 
 [tool.protostar.source]

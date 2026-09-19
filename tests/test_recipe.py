@@ -467,3 +467,78 @@ def test_invalid_desired_recipe_fails_before_mutation(tmp_path, monkeypatch, moc
         executor.execute()
     write.assert_not_called()
     assert not (tmp_path / "would-create").exists()
+
+
+def _capture_init_engines(mocker):
+    from protostar.models import ExecutionResult
+
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
+    mocker.patch("shutil.which", return_value="/mock/command")
+    engines = []
+
+    def capture(engine, request):
+        engines.append(engine)
+        return ExecutionResult(frozenset(), frozenset(), ())
+
+    mocker.patch("protostar.cli.ui._run_engine", side_effect=capture)
+    return engines
+
+
+@pytest.mark.parametrize(
+    ("template_docker", "flag", "expected"),
+    [
+        (True, None, True),  # template opinion applies when nothing overrides it
+        (True, False, False),  # --no-docker beats the template
+        (False, True, True),  # --docker beats the template
+        (False, None, False),
+        (None, None, False),  # silent template: container scaffolding stays opt-in
+    ],
+)
+def test_template_docker_opinion_follows_flag_precedence(
+    tmp_path, monkeypatch, mocker, template_docker, flag, expected
+):
+    import argparse
+
+    from protostar.cli.main import handle_init
+
+    monkeypatch.chdir(tmp_path)
+    opinion = (
+        "" if template_docker is None else f"docker={str(template_docker).lower()}\n"
+    )
+    source = tmp_path / "blueprint.toml"
+    source.write_text(f'name="custom"\n{opinion}')
+    engines = _capture_init_engines(mocker)
+
+    handle_init(
+        argparse.Namespace(
+            from_path=str(source), template_context={}, bind=[], docker=flag
+        )
+    )
+
+    assert engines[-1].request.docker is expected
+    assert engines[-1].request.recipe.docker is expected
+
+
+def test_captured_recipe_docker_wins_over_a_later_template_opinion(
+    tmp_path, monkeypatch, mocker
+):
+    """An initialized project keeps its captured intent when the template changes."""
+    import argparse
+
+    from protostar.cli.main import handle_init
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        edit_recipe('[project]\nname="foreign"\n', replace(recipe(), docker=False))
+    )
+    source = tmp_path / "blueprint.toml"
+    source.write_text('name="custom"\ndocker=true\n')
+    engines = _capture_init_engines(mocker)
+
+    handle_init(
+        argparse.Namespace(
+            from_path=str(source), template_context={}, bind=[], docker=None
+        )
+    )
+
+    assert engines[-1].request.docker is False
