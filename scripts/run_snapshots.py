@@ -20,7 +20,7 @@ from scripts.generate_docs_assets import (
     generate_docs_assets,
 )
 
-SNAPSHOTS_DIR = Path("tests/snapshots").resolve()
+SNAPSHOTS_DIR = (_repo_root / "tests" / "snapshots").resolve()
 CONSTRAINTS_FILE = SNAPSHOTS_DIR / "constraints.txt"
 
 
@@ -302,9 +302,15 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     Returns:
         True if zero uncommitted changes exist; False otherwise.
     """
+    base_dir = Path.cwd()
+    if any(t.is_relative_to(_repo_root) for t in targets if t.exists()) and not any(
+        t.is_relative_to(base_dir) for t in targets if t.exists()
+    ):
+        base_dir = _repo_root
+
     rel_targets = [
-        t.relative_to(Path.cwd()).as_posix()
-        if t.is_relative_to(Path.cwd())
+        t.relative_to(base_dir).as_posix()
+        if t.is_relative_to(base_dir)
         else t.as_posix()
         for t in targets
     ]
@@ -345,7 +351,7 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
         check=True,
     )
     tracked_files = {
-        (Path.cwd() / line).resolve()
+        (base_dir / line).resolve()
         for line in ls_result.stdout.splitlines()
         if line.strip()
     }
@@ -384,8 +390,8 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
     untracked_diff_blocks: list[str] = []
     for untracked_path in sorted(untracked_disk_files):
         rel_untracked = (
-            untracked_path.relative_to(Path.cwd()).as_posix()
-            if untracked_path.is_relative_to(Path.cwd())
+            untracked_path.relative_to(base_dir).as_posix()
+            if untracked_path.is_relative_to(base_dir)
             else untracked_path.as_posix()
         )
         untracked_diff = subprocess.run(
@@ -417,8 +423,8 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
 
     for untracked_path in sorted(untracked_disk_files):
         rel = (
-            untracked_path.relative_to(Path.cwd()).as_posix()
-            if untracked_path.is_relative_to(Path.cwd())
+            untracked_path.relative_to(base_dir).as_posix()
+            if untracked_path.is_relative_to(base_dir)
             else untracked_path.as_posix()
         )
         if rel not in reported_paths:
@@ -426,8 +432,8 @@ def check_snapshot_drift(targets: Sequence[Path]) -> bool:
 
     for deleted_path in sorted(deleted_tracked_files):
         rel = (
-            deleted_path.relative_to(Path.cwd()).as_posix()
-            if deleted_path.is_relative_to(Path.cwd())
+            deleted_path.relative_to(base_dir).as_posix()
+            if deleted_path.is_relative_to(base_dir)
             else deleted_path.as_posix()
         )
         if rel not in reported_paths:
