@@ -425,6 +425,10 @@ def test_extract_and_write_targets_preserves_exact_bytes(
     fixture_root.mkdir(parents=True)
     obsolete_file = fixture_root / "obsolete.txt"
     obsolete_file.write_bytes(b"old")
+    obsolete_empty_dir = fixture_root / "obsolete_nested" / "deep_dir"
+    obsolete_empty_dir.mkdir(parents=True)
+    obsolete_nested_file = obsolete_empty_dir / "deep_file.txt"
+    obsolete_nested_file.write_bytes(b"nested_old")
 
     _extract_and_write_targets(source_dir, "my_fixture")
 
@@ -443,8 +447,9 @@ def test_extract_and_write_targets_preserves_exact_bytes(
     assert not (fixture_root / ".venv").exists()
     assert not (fixture_root / "uv.lock").exists()
 
-    # Assert obsolete file was pruned
+    # Assert obsolete file and empty directories were pruned
     assert not obsolete_file.exists()
+    assert not (fixture_root / "obsolete_nested").exists()
 
     # Assert tree file written
     assert (fake_docs_dir / "tree_my_fixture.txt").read_text(

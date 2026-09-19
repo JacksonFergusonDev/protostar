@@ -206,6 +206,14 @@ def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
             ):
                 existing_file.unlink()
 
+        for directory in sorted(
+            [d for d in fixture_root.rglob("*") if d.is_dir()],
+            key=lambda p: len(p.parts),
+            reverse=True,
+        ):
+            if not any(directory.iterdir()):
+                directory.rmdir()
+
 
 def _get_host_uv_cache_dir() -> Path:
     """Resolves the user's host uv cache directory for sharing with isolated environments."""
