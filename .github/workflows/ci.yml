@@ -137,7 +137,7 @@ jobs:
   template-hooks-smoke:
     name: Template Hooks Smoke (${{ matrix.os }} / ${{ matrix.template }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 6
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -193,6 +193,14 @@ jobs:
         git config --global init.defaultBranch main
         git config --global core.autocrlf false
         git config --global credential.helper ""
+
+    - name: Configure Windows Defender & pre-cache npm on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+        Add-MpPreference -ExclusionPath "${{ github.workspace }}", "${{ runner.temp }}", "$env:LOCALAPPDATA" -ErrorAction SilentlyContinue
+        npm install -g --prefer-offline renovate@44.65.5
 
     - name: Verify first commit triggers prek hooks
       shell: bash
