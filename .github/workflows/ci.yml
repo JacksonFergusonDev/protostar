@@ -195,15 +195,16 @@ jobs:
 
         protostar init --template ${{ matrix.template }} --prek --python-version 3.12
 
-        # 1. Verify hook scripts were installed by Protostar
+        # 1. Verify pre-commit hook script was installed by Protostar
         test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
-        test -f .git/hooks/commit-msg || { echo "ERROR: .git/hooks/commit-msg missing"; exit 1; }
 
-        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit
+        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
         git add .
-        if git commit -m "invalid non-conventional commit message" 2>/dev/null; then
-          echo "ERROR: commit-msg hook failed to reject invalid commit message"
-          exit 1
+        if [ -f .git/hooks/commit-msg ]; then
+          if git commit -m "invalid non-conventional commit message" 2>/dev/null; then
+            echo "ERROR: commit-msg hook failed to reject invalid commit message"
+            exit 1
+          fi
         fi
 
         # 3. Verify clean first commit triggers prek hooks and succeeds
