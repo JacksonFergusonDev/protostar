@@ -669,20 +669,12 @@ class RenovateModule(BootstrapModule):
         return "Renovate"
 
     def build(self, manifest: EnvironmentManifest) -> None:
-        """Queues Renovate configuration file and pre-commit validator hook.
+        """Queues Renovate configuration file.
 
         Args:
             manifest: The centralized state object.
         """
         logger.debug("Building Renovate tooling layer.")
-
-        hook_payload = f"""  # Renovate config validation
-  - repo: {RemoteHook.RENOVATE.value}
-    rev: {RemoteHook.RENOVATE.placeholder}
-    hooks:
-      - id: renovate-config-validator
-        files: '.github/renovate.json'"""
-        manifest.tooling.add_pre_commit_hook(hook_payload)
 
         config = """{
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",

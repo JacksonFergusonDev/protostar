@@ -12,6 +12,7 @@ if str(_repo_root) not in sys.path:
 
 from protostar._fallbacks import DEFAULT_REVISIONS
 from protostar.fs import atomic_write_text
+from protostar.registry import RemoteHook
 from scripts._common import SRC_DIR
 
 REGISTRY_URL = (
@@ -62,9 +63,13 @@ def main() -> None:
         print("Invalid registry schema.")
         sys.exit(1)
 
-    remote_hooks = data.get("hooks", {})
+    raw_remote_hooks = data.get("hooks", {})
+    supported_hook_urls = {hook.value for hook in RemoteHook}
+    remote_hooks = {
+        k: v for k, v in raw_remote_hooks.items() if k in supported_hook_urls
+    }
     if not remote_hooks:
-        print("Remote registry is empty.")
+        print("Remote registry has no supported hooks.")
         sys.exit(1)
 
     # Compare

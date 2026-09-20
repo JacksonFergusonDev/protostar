@@ -194,18 +194,9 @@ jobs:
         git config --global core.autocrlf false
         git config --global credential.helper ""
 
-    - name: Configure Windows Defender & pre-cache npm on Windows
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
-        Add-MpPreference -ExclusionPath "${{ github.workspace }}", "${{ runner.temp }}", "$env:LOCALAPPDATA" -ErrorAction SilentlyContinue
-        npm install -g --prefer-offline renovate@44.65.5
-
     - name: Verify first commit triggers prek hooks
       shell: bash
       run: |
-        set -x
         if command -v cygpath >/dev/null 2>&1; then
           TEMP_BASE=$(cygpath -u "${{ runner.temp }}")
         else
@@ -220,34 +211,18 @@ jobs:
 
         # 1. Verify pre-commit hook script was installed by Protostar
         test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
-        echo "=== Installed .git/hooks/pre-commit ==="
-        cat .git/hooks/pre-commit
-        if [ -f .git/hooks/commit-msg ]; then
-          echo "=== Installed .git/hooks/commit-msg ==="
-          cat .git/hooks/commit-msg
-        fi
-
-        # Pre-stage all files and pre-warm hook environments
-        echo "=== Staging all files ==="
-        git add .
-
-        echo "=== Direct prek run --all-files --verbose ==="
-        uv run prek -vvv --no-progress run --all-files
 
         # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
         if [ -f .git/hooks/commit-msg ]; then
-          echo "=== Running commit-msg canary check ==="
-          if GIT_TRACE=1 git commit -m "invalid non-conventional commit message" < /dev/null; then
+          if git commit -m "invalid non-conventional commit message" < /dev/null; then
             echo "ERROR: commit-msg hook failed to reject invalid commit message"
             exit 1
-          else
-            echo "Canary successfully blocked invalid commit"
           fi
         fi
 
         # 3. Verify clean first commit triggers prek hooks and succeeds
-        echo "=== Running valid first commit ==="
-        commit_output=$(GIT_TRACE=1 git commit -m "feat: initial scaffold" < /dev/null 2>&1)
+        git add .
+        commit_output=$(git commit -m "feat: initial scaffold" < /dev/null 2>&1)
         commit_code=$?
         echo "$commit_output"
 

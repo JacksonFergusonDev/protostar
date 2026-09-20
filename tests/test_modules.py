@@ -486,15 +486,12 @@ def test_renovate_module_injects_file():
     assert "github-actions" in content
 
 
-def test_renovate_module_adds_pre_commit_hook():
+def test_renovate_module_does_not_add_pre_commit_hook():
     manifest = EnvironmentManifest()
     module = RenovateModule()
     module.build(manifest)
 
-    assert any(
-        "renovatebot/pre-commit-hooks" in hook and "renovate-config-validator" in hook
-        for hook in manifest.tooling.pre_commit_hooks
-    )
+    assert not manifest.tooling.pre_commit_hooks
 
 
 def test_codecov_module_properties():
