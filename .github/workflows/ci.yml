@@ -163,6 +163,10 @@ jobs:
           - os: windows-latest
             template: api
 
+    env:
+      GIT_TERMINAL_PROMPT: "0"
+      GCM_INTERACTIVE: "never"
+
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
@@ -184,6 +188,8 @@ jobs:
         git config --global user.name "Protostar Bot"
         git config --global user.email "bot@protostar.dev"
         git config --global init.defaultBranch main
+        git config --global core.autocrlf false
+        git config --global credential.helper ""
 
     - name: Verify first commit triggers prek hooks
       shell: bash
@@ -201,9 +207,11 @@ jobs:
         # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
         git add .
         if [ -f .git/hooks/commit-msg ]; then
-          if git commit -m "invalid non-conventional commit message" 2>/dev/null; then
+          if git commit -m "invalid non-conventional commit message"; then
             echo "ERROR: commit-msg hook failed to reject invalid commit message"
             exit 1
+          else
+            echo "Canary successfully blocked invalid commit"
           fi
         fi
 
