@@ -16,7 +16,6 @@
 .rumdl_cache/
 .venv/
 .vscode/
-README*
 Thumbs.db
 __pycache__/
 docs/

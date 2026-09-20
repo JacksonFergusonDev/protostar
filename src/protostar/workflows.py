@@ -636,11 +636,12 @@ def generate_dockerignore(
 ) -> str | None:
     """Computes and returns the updated .dockerignore content, or None if no changes."""
     existing_lines = {line.strip() for line in existing_content.splitlines()}
+    # README is deliberately not ignored: the scaffolded pyproject declares it as the
+    # package readme, so the build backend fails inside the image without it.
     base_ignores = {
         ".git/",
         "tests/",
         "docs/",
-        "README*",
         ".vscode/",
         ".idea/",
     }

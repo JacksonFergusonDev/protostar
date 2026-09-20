@@ -247,6 +247,73 @@ jobs:
           exit 1
         }
 
+  template-docker-build:
+    name: Template Docker Build (${{ matrix.template }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        template: [cli, api]
+
+    env:
+      GIT_TERMINAL_PROMPT: "0"
+      GCM_INTERACTIVE: "never"
+      IMAGE: protostar-smoke-${{ matrix.template }}
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      with:
+        enable-cache: true
+        python-version: "3.12"
+
+    - name: Install Protostar
+      run: uv tool install --editable .
+
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
+    - name: Configure Git Identity
+      run: |
+        git config --global user.name "Protostar Bot"
+        git config --global user.email "bot@protostar.dev"
+        git config --global init.defaultBranch main
+
+    - name: Scaffold ${{ matrix.template }} with a Dockerfile
+      run: |
+        mkdir "$RUNNER_TEMP/docker_${{ matrix.template }}"
+        cd "$RUNNER_TEMP/docker_${{ matrix.template }}"
+        protostar init --template ${{ matrix.template }} --docker --no-prek --python-version 3.12
+        test -f Dockerfile
+        test -f .dockerignore
+        test -f uv.lock
+
+    - name: Build image
+      working-directory: ${{ runner.temp }}/docker_${{ matrix.template }}
+      run: docker build --tag "$IMAGE" .
+
+    - name: Smoke test cli image
+      if: matrix.template == 'cli'
+      run: docker run --rm "$IMAGE" --help
+
+    - name: Smoke test api image
+      if: matrix.template == 'api'
+      run: |
+        docker run --detach --name "$IMAGE" --publish 8000:8000 "$IMAGE"
+        for _ in $(seq 1 30); do
+          if curl --fail --silent --show-error http://localhost:8000/health; then
+            echo
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "ERROR: api container never answered /health"
+        docker logs "$IMAGE"
+        exit 1
+
   benchmark-gate:
     name: Benchmark Regression Check
     runs-on: ubuntu-latest
