@@ -52,11 +52,20 @@ The banner and headers that trail a piece are kept apart in `Section.tail`, and 
 ## Two ways the layout is applied
 
 - **Files Protostar creates** are formatted whole. Managed decoration is discarded and rebuilt from the spec, so the result never depends on where a previous layout left it.
-- **Files you already had** are never reformatted. Protostar adds its own recipe after your last tool, separated by a blank line, in your file's newline style, and leaves every other byte alone. A tool table that a later run adds is currently appended after the last existing section rather than placed by the spec, so it can land after `[tool.protostar]`.
+- **Files you already had** are never reformatted. A table a run adds is placed by the spec, and every section that already existed keeps its text.
+
+### Adding a table to an existing file
+
+A merge, or a later run that enables a tool, can add a table to a file the user already owns. The new section goes **after the last existing section that ranks at or below it**, so the file's own order is kept, a new tool lands before `[tool.protostar]`, and a new build backend lands after `[project]`. Then:
+
+- **Only the two seams change.** Each is left with exactly one blank line, in the file's own newline style, and a missing final newline is supplied.
+- **A header announces the section after it,** so headers are re-homed. A new titled tool gets its header, and takes the banner and any sibling's header with it when it now comes first. A tool the user already had is never labelled, and the banner is added only if the file has none.
+- **A comment directly above a table stays with it.** A comment set apart by a blank line stays where it was.
+- **Order does not matter.** Adding tool A then B gives the same file as B then A, and inserting into a canonical file gives the canonical file. The tests check both.
 
 ## The safety fallback
 
-Formatting must not change a project's configuration. The formatted text is parsed and compared with the original data, and if they differ the file is left as it was. That is reported as a warning diagnostic (`Left pyproject.toml unformatted: ...`) as well as logged, so it is never silent. The test suite checks every combination of the known tools and asserts the fallback never triggers.
+Formatting must not change a project's configuration. The formatted text is parsed and compared with the original data, and if they differ the file is left as it was. That is reported as a warning diagnostic (`Left pyproject.toml unformatted: ...`) as well as logged, so it is never silent. The same check guards placing an added table, where the fallback is a plain dump of the merged document. The test suite checks every combination of the known tools and asserts the fallback never triggers.
 
 ## Related Pages
 
