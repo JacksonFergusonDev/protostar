@@ -17,7 +17,6 @@
 .ruff_cache/
 .venv/
 .vscode/
-README*
 Thumbs.db
 __pycache__/
 data/01_raw/*

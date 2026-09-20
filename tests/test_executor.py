@@ -261,7 +261,8 @@ def test_executor_writes_dockerignore(tmp_path, monkeypatch, mock_config):
     written_data = (tmp_path / ".dockerignore").read_text(encoding="utf-8")
     assert "custom_build_artifact/" in written_data
     assert ".git/" in written_data
-    assert "README*" in written_data
+    # The package build reads README.md, so it must stay in the image context.
+    assert "README" not in written_data
 
 
 def test_executor_writes_gitignore(tmp_path, monkeypatch, mock_config):
