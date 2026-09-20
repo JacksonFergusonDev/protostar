@@ -1,5 +1,6 @@
 """Configuration management and schema definitions for Protostar."""
 
+import enum
 import functools
 import hashlib
 import logging
@@ -37,6 +38,93 @@ if _xdg_config_home:
     CONFIG_FILE = Path(_xdg_config_home) / "protostar" / "config.toml"
 else:
     CONFIG_FILE = Path.home() / ".config" / "protostar" / "config.toml"
+
+CONFIG_ENV_VAR = "PROTOSTAR_CONFIG"
+
+
+class ConfigOrigin(enum.StrEnum):
+    """How the configuration file for this run was chosen."""
+
+    DEFAULT = "default"
+    EXPLICIT = "explicit"
+    DISABLED = "disabled"
+
+
+@dataclass(frozen=True)
+class ConfigSource:
+    """The configuration file a run reads, and how it was selected.
+
+    Attributes:
+        origin: Whether the path is the default location, an explicit
+            selection, or absent because configuration is disabled.
+        path: The file to read, or None when configuration is disabled.
+    """
+
+    origin: ConfigOrigin
+    path: Path | None
+
+    @classmethod
+    def disabled(cls) -> "ConfigSource":
+        """Returns the source that reads no configuration at all."""
+        return cls(ConfigOrigin.DISABLED, None)
+
+    @classmethod
+    def explicit(cls, path: Path) -> "ConfigSource":
+        """Returns a deliberately selected configuration file."""
+        return cls(ConfigOrigin.EXPLICIT, path)
+
+
+_config_override: ConfigSource | None = None
+
+
+def select_config_source(path: str | None, *, disabled: bool = False) -> None:
+    """Overrides the configuration source for the remainder of the process.
+
+    The CLI applies its ``--config`` / ``--no-config`` selection here after
+    parsing, ahead of any command handler that reads configuration.
+
+    Args:
+        path: An explicit configuration file, or None to leave it unselected.
+        disabled: True to read no configuration file at all.
+
+    Raises:
+        ConfigurationError: If both an explicit path and disabling are given.
+    """
+    global _config_override
+
+    if disabled and path is not None:
+        raise ConfigurationError(
+            "Cannot combine an explicit configuration file with disabling configuration.",
+            hint="Pass either '--config <path>' or '--no-config', not both.",
+        )
+    if disabled:
+        _config_override = ConfigSource.disabled()
+    elif path is not None:
+        _config_override = ConfigSource.explicit(Path(path).expanduser())
+    else:
+        _config_override = None
+    clear_user_config_cache()
+
+
+def active_config_source() -> ConfigSource:
+    """Resolves which configuration file this run reads.
+
+    Precedence is the CLI selection, then the ``PROTOSTAR_CONFIG`` environment
+    variable (empty disables configuration entirely), then the default path.
+
+    Returns:
+        The resolved configuration source.
+    """
+    if _config_override is not None:
+        return _config_override
+
+    raw = os.environ.get(CONFIG_ENV_VAR)
+    if raw is None:
+        return ConfigSource(ConfigOrigin.DEFAULT, CONFIG_FILE)
+    if not raw.strip():
+        return ConfigSource.disabled()
+    return ConfigSource.explicit(Path(raw).expanduser())
+
 
 DEFAULT_CONFIG_CONTENT = """[env]
 # Preferred IDE: 'vscode', 'cursor', or 'none'
@@ -117,6 +205,7 @@ def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> Non
     """
     from protostar.templates import builtin_template_aliases
 
+    config_path = active_config_source().path or CONFIG_FILE
     reserved = {alias.casefold(): alias for alias in builtin_template_aliases()}
     seen: dict[str, str] = {}
     for alias in sorted(templates):
@@ -126,7 +215,7 @@ def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> Non
                 f"Template alias '{alias}' in '[templates]' is reserved by the "
                 f"built-in template '{reserved[folded]}'.",
                 hint=(
-                    f"Rename the alias in {CONFIG_FILE}. Built-in template names "
+                    f"Rename the alias in {config_path}. Built-in template names "
                     "cannot be reused, because '--template' and the interactive "
                     "wizard would resolve them to different templates."
                 ),
@@ -136,7 +225,7 @@ def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> Non
                 f"Template aliases '{seen[folded]}' and '{alias}' in '[templates]' "
                 "differ only by letter case.",
                 hint=(
-                    f"Rename one of them in {CONFIG_FILE}. Template lookup is "
+                    f"Rename one of them in {config_path}. Template lookup is "
                     "case-insensitive, so only one of the two is reachable."
                 ),
             )
@@ -385,20 +474,42 @@ class UserConfig:
 
 @functools.cache
 def _load_cached_user_config() -> UserConfig:
-    """Loads and parses the global Protostar configuration file with caching."""
+    """Loads and parses the selected Protostar configuration file with caching.
+
+    Raises:
+        ConfigurationError: If an explicitly selected configuration file is
+            missing or unreadable. A missing file at the default location is
+            not an error; it simply yields built-in defaults.
+    """
+    source = active_config_source()
     logger.debug(
-        "Loading global configuration from %s (exists=%s)",
-        CONFIG_FILE,
-        CONFIG_FILE.exists(),
+        "Loading configuration from %s (origin=%s)", source.path, source.origin
     )
     instance = UserConfig()
 
-    if CONFIG_FILE.exists():
-        instance = UserConfig._parse_and_merge(
-            CONFIG_FILE.read_text(encoding="utf-8"), str(CONFIG_FILE), instance
-        )
+    if source.path is None:
+        return instance
 
-    return instance
+    if not source.path.is_file():
+        if source.origin is ConfigOrigin.EXPLICIT:
+            raise ConfigurationError(
+                f"Configuration file '{source.path}' does not exist.",
+                hint=(
+                    f"Point '--config' or ${CONFIG_ENV_VAR} at a readable file, "
+                    "or pass '--no-config' to run without one."
+                ),
+            )
+        return instance
+
+    try:
+        content = source.path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        raise ConfigurationError(
+            f"Configuration file '{source.path}' could not be read.",
+            hint="Verify the file's permissions and UTF-8 encoding.",
+        ) from error
+
+    return UserConfig._parse_and_merge(content, str(source.path), instance)
 
 
 def clear_user_config_cache() -> None:

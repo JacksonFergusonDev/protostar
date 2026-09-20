@@ -24,10 +24,11 @@ from rich.text import Text
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
 from protostar.config import (
-    CONFIG_FILE,
     DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
     UserConfig,
+    active_config_source,
+    select_config_source,
 )
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
@@ -358,10 +359,18 @@ def handle_config(args: argparse.Namespace) -> None:
     Args:
         args: Parsed CLI arguments mapping to this command.
     """
-    logger.debug("Handling 'config' command (config path: %s)", CONFIG_FILE)
-    if not CONFIG_FILE.parent.exists():
-        logger.debug("Creating configuration parent directory: %s", CONFIG_FILE.parent)
-        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    source = active_config_source()
+    if source.path is None:
+        raise InvalidUsageError(
+            "There is no configuration file to edit while configuration is disabled.",
+            hint="Drop '--no-config' to edit the selected configuration file.",
+            docs_path=DocsPage.CONFIGURATION,
+        )
+    config_path = source.path
+    logger.debug("Handling 'config' command (config path: %s)", config_path)
+    if not config_path.parent.exists():
+        logger.debug("Creating configuration parent directory: %s", config_path.parent)
+        config_path.parent.mkdir(parents=True, exist_ok=True)
 
     if getattr(args, "force", False) and not getattr(args, "reset", False):
         raise InvalidUsageError(
@@ -383,19 +392,19 @@ def handle_config(args: argparse.Namespace) -> None:
                 return
 
         logger.debug(
-            "Resetting configuration file at %s to default template", CONFIG_FILE
+            "Resetting configuration file at %s to default template", config_path
         )
-        atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
+        atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
         ui.console.print(
-            f"[bold green]Reset configuration at {CONFIG_FILE} to default state.[/bold green]"
+            f"[bold green]Reset configuration at {config_path} to default state.[/bold green]"
         )
         return
 
-    if not CONFIG_FILE.exists():
-        logger.debug("Writing initial default configuration to %s", CONFIG_FILE)
-        atomic_write_text(CONFIG_FILE, DEFAULT_CONFIG_CONTENT)
+    if not config_path.exists():
+        logger.debug("Writing initial default configuration to %s", config_path)
+        atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
         ui.console.print(
-            f"[bold green]Initialized default configuration at {CONFIG_FILE}[/bold green]"
+            f"[bold green]Initialized default configuration at {config_path}[/bold green]"
         )
 
     editor_env = os.environ.get("EDITOR", "nano")
@@ -415,7 +424,7 @@ def handle_config(args: argparse.Namespace) -> None:
             "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
         )
 
-    editor_cmd.append(str(CONFIG_FILE))
+    editor_cmd.append(str(config_path))
     logger.debug("Launching editor command: %s", editor_cmd)
 
     try:
@@ -498,6 +507,12 @@ def main() -> None:
             )
 
         args.template_context = _parse_dynamic_kwargs(unknown)
+
+        # Applied before any handler reads configuration.
+        select_config_source(
+            getattr(args, "config", None),
+            disabled=getattr(args, "no_config", False),
+        )
 
         if getattr(args, "verbose", False):
             configure_logging()

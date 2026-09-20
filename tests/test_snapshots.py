@@ -145,7 +145,7 @@ def test_existing_svg_documentation_fixtures():
         "cli_config_help.svg": 933,  # 75 cols
         "cli_dry_run.svg": 1080,  # 80 cols
         "diagnostic_panel.svg": 1006,  # 81 cols
-        "cli_help.svg": 1165,  # 94 cols
+        "cli_help.svg": 1177,  # 95 cols (widened by the --config <path> flag)
         "cli_init_help.svg": 1238,  # 100 cols
     }
 

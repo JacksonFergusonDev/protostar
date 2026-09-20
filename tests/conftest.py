@@ -17,6 +17,11 @@ def mock_global_config_file(mocker, tmp_path):
     mock_config = tmp_path / "config.toml"
     mock_config.write_text("[env]\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config)
+    # Neither an inherited PROTOSTAR_CONFIG nor a selection leaked from an
+    # earlier test may redirect the suite away from the mocked file.
+    mocker.patch("protostar.config._config_override", None)
+    mocker.patch.dict(os.environ, {}, clear=False)
+    os.environ.pop("PROTOSTAR_CONFIG", None)
     from protostar.config import clear_user_config_cache
     from protostar.registry import clear_hook_registry_cache
 

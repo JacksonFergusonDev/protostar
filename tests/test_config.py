@@ -3,10 +3,13 @@ from collections.abc import Generator
 import pytest
 
 from protostar.config import (
+    ConfigOrigin,
     TemplateAliasConfig,
     TemplateBlueprint,
     UserConfig,
+    active_config_source,
     clear_user_config_cache,
+    select_config_source,
 )
 from protostar.errors import (
     ConfigurationError,
@@ -688,3 +691,86 @@ def test_template_aliases_that_do_not_collide_are_accepted():
     )
 
     assert sorted(config.templates) == ["acme-api", "acme-cli"]
+
+
+def test_active_config_source_defaults_to_the_standard_path(monkeypatch):
+    """With nothing selected, the default location is read."""
+    import protostar.config as config_module
+
+    monkeypatch.delenv("PROTOSTAR_CONFIG", raising=False)
+    source = active_config_source()
+
+    assert source.origin is ConfigOrigin.DEFAULT
+    assert source.path == config_module.CONFIG_FILE
+
+
+def test_config_env_var_selects_an_explicit_file(monkeypatch, tmp_path):
+    """PROTOSTAR_CONFIG redirects the run to a named file."""
+    monkeypatch.setenv("PROTOSTAR_CONFIG", str(tmp_path / "team.toml"))
+    source = active_config_source()
+
+    assert source.origin is ConfigOrigin.EXPLICIT
+    assert source.path == tmp_path / "team.toml"
+
+
+def test_empty_config_env_var_disables_configuration(monkeypatch):
+    """An empty PROTOSTAR_CONFIG is the CI form of --no-config."""
+    monkeypatch.setenv("PROTOSTAR_CONFIG", "")
+    source = active_config_source()
+
+    assert source.origin is ConfigOrigin.DISABLED
+    assert source.path is None
+
+
+def test_cli_selection_outranks_the_environment(monkeypatch, tmp_path):
+    """An explicit --config wins over an inherited PROTOSTAR_CONFIG."""
+    monkeypatch.setenv("PROTOSTAR_CONFIG", str(tmp_path / "from_env.toml"))
+    select_config_source(str(tmp_path / "from_flag.toml"))
+
+    assert active_config_source().path == tmp_path / "from_flag.toml"
+
+
+def test_selecting_a_file_and_disabling_together_is_rejected(tmp_path):
+    """--config and --no-config express opposite intents."""
+    with pytest.raises(ConfigurationError) as excinfo:
+        select_config_source(str(tmp_path / "team.toml"), disabled=True)
+
+    assert "Cannot combine" in str(excinfo.value)
+
+
+def test_selected_config_file_is_loaded(tmp_path):
+    """Values come from the selected file rather than the default location."""
+    selected = tmp_path / "team.toml"
+    selected.write_text('[env]\nauthor_name = "Acme Platform"\n', encoding="utf-8")
+    select_config_source(str(selected))
+
+    assert UserConfig.load().author_name == "Acme Platform"
+
+
+def test_missing_selected_config_file_is_an_error(tmp_path):
+    """A typo in an explicit path must not degrade silently to defaults."""
+    select_config_source(str(tmp_path / "absent.toml"))
+
+    with pytest.raises(ConfigurationError) as excinfo:
+        UserConfig.load()
+
+    assert "does not exist" in str(excinfo.value)
+    assert excinfo.value.hint is not None
+
+
+def test_missing_default_config_file_is_not_an_error(mocker, tmp_path):
+    """The default location stays optional; absence just means defaults."""
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "absent.toml")
+    clear_user_config_cache()
+
+    assert UserConfig.load().author_name is None
+
+
+def test_disabled_configuration_ignores_the_default_file(mocker, tmp_path):
+    """--no-config yields built-in defaults even when a config file exists."""
+    populated = tmp_path / "config.toml"
+    populated.write_text('[env]\nauthor_name = "Ignored"\n', encoding="utf-8")
+    mocker.patch("protostar.config.CONFIG_FILE", populated)
+    select_config_source(None, disabled=True)
+
+    assert UserConfig.load().author_name is None

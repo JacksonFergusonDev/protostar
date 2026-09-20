@@ -141,12 +141,11 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
 
     # 2. Discover user aliases from UserConfig
     if config is None:
-        try:
-            from protostar.config import UserConfig
+        from protostar.config import UserConfig
 
-            config = UserConfig.load()
-        except Exception:
-            config = None
+        # A broken or missing-but-selected configuration is the user's problem
+        # to see, not something to silently discover around.
+        config = UserConfig.load()
 
     if config is not None and config.templates:
         for alias, alias_cfg in sorted(config.templates.items(), key=lambda x: x[0]):

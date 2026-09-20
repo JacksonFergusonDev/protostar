@@ -15,7 +15,7 @@ from rich.table import Table
 from rich.tree import Tree
 
 from protostar.cli import schema
-from protostar.config import CONFIG_FILE
+from protostar.config import active_config_source
 from protostar.errors import (
     ExecutionAbortedError,
     ProtostarError,
@@ -241,7 +241,8 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                     "executable tasks. To trust this source, configure it with "
                     "'trusted = true' in your global configuration.",
                     hint=(
-                        f"Configure the template in {CONFIG_FILE} with 'trusted = true' "
+                        f"Configure the template in {active_config_source().path} "
+                        "with 'trusted = true' "
                         "and re-run."
                     ),
                 )

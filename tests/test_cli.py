@@ -119,7 +119,7 @@ def test_configure_logging():
 def test_handle_config_success(mocker, tmp_path):
     """Test the config command successfully spawns the user's editor."""
     mock_config_file = tmp_path / "config.toml"
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mock_run = mocker.patch("subprocess.run")
@@ -135,7 +135,7 @@ def test_handle_config_reset_confirmed(mocker, tmp_path):
     """Test that handle_config with --reset overwrites existing config when confirmed."""
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = True
     mock_run = mocker.patch("subprocess.run")
@@ -157,7 +157,7 @@ def test_handle_config_reset_cancelled(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     initial_content = "custom_setting = true\n"
     mock_config_file.write_text(initial_content)
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = False
     mock_run = mocker.patch("subprocess.run")
@@ -174,7 +174,7 @@ def test_handle_config_reset_aborted(mocker, tmp_path):
     """Test that handle_config with --reset raises ExecutionAbortedError when cancelled via Esc/Ctrl+C."""
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_confirm.return_value.ask.return_value = None
 
@@ -187,7 +187,7 @@ def test_handle_config_reset_force(mocker, tmp_path):
     """Test that handle_config with --reset and --force bypasses confirmation prompt."""
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     mock_confirm = mocker.patch("questionary.confirm")
     mock_run = mocker.patch("subprocess.run")
 
@@ -224,7 +224,7 @@ def test_build_parser_config_reset():
 def test_handle_config_errors(mocker, tmp_path):
     """Test missing binaries, empty env vars, and subprocess crashes in handle_config."""
     mock_config_file = tmp_path / "config.toml"
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     args = argparse.Namespace()
 
     # 1. Empty EDITOR
@@ -428,7 +428,7 @@ def test_print_table_help_execution(mocker):
 def test_handle_config_parent_dir_creation(mocker, tmp_path):
     """Test configuration gracefully builds missing parent directories."""
     mock_config_file = tmp_path / "deep" / "nested" / "config.toml"
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mocker.patch("subprocess.run")
@@ -1425,7 +1425,7 @@ def test_config_verbose_logging(capsys, monkeypatch, tmp_path, mocker):
 
     mock_config = tmp_path / "config.toml"
     mock_config.write_text("[env]\n")
-    mocker.patch("protostar.cli.main.CONFIG_FILE", mock_config)
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config)
     mocker.patch("subprocess.run")
 
     monkeypatch.setattr(sys, "argv", ["protostar", "config", "-v"])
@@ -1554,3 +1554,39 @@ def test_main_renders_bracketed_error_text_literally(mocker):
 
     assert "Unrecognized fields in '[templates.backend]': bogus." in rendered_output
     assert "Hint: Fix '[templates.backend]' and re-run." in rendered_output
+
+
+def test_main_routes_the_config_flag_to_the_selected_file(mocker, tmp_path):
+    """`--config` survives real argument parsing and redirects the config command."""
+    selected = tmp_path / "team.toml"
+    mocker.patch("sys.argv", ["protostar", "config", "--config", str(selected)])
+    mocker.patch.dict("os.environ", {"EDITOR": "nano"})
+    mocker.patch("shutil.which", return_value="/usr/bin/nano")
+    mock_run = mocker.patch("subprocess.run")
+
+    main()
+
+    assert selected.exists()
+    mock_run.assert_called_once_with(["nano", str(selected)], check=True)
+
+
+def test_config_command_refuses_to_edit_while_disabled(mocker):
+    """`--no-config` leaves no file for the config command to open."""
+    from protostar.config import select_config_source
+
+    select_config_source(None, disabled=True)
+
+    with pytest.raises(InvalidUsageError, match="no configuration file to edit"):
+        handle_config(argparse.Namespace())
+
+
+def test_list_templates_surfaces_a_broken_config(mocker, tmp_path):
+    """A selected file that is missing is reported, not discovered around."""
+    from protostar.config import select_config_source
+    from protostar.errors import ConfigurationError
+    from protostar.templates import discover_templates
+
+    select_config_source(str(tmp_path / "absent.toml"))
+
+    with pytest.raises(ConfigurationError, match="does not exist"):
+        discover_templates()

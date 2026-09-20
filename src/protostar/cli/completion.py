@@ -61,7 +61,13 @@ def get_available_templates() -> dict[str, str]:
     from protostar.templates import discover_templates
 
     mapping: dict[str, str] = {}
-    for t in discover_templates():
+    try:
+        discovered = discover_templates()
+    except Exception:
+        # Shell completion must never fail, whatever the cause: a broken or
+        # unreadable configuration is reported by the commands that read it.
+        return mapping
+    for t in discovered:
         mapping[t.alias] = t.description
         if t.name.lower() != t.alias.lower():
             mapping[t.name.lower()] = t.description

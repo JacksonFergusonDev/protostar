@@ -24,6 +24,37 @@ To bypass the confirmation prompt (e.g., in automated scripts), append `--force`
 protostar config --reset --force
 ```
 
+## Selecting a Configuration File
+
+By default Protostar reads `~/.config/protostar/config.toml` (or `$XDG_CONFIG_HOME/protostar/config.toml`). Two global flags override that for a single run, and both work with every subcommand:
+
+```bash
+# Read one specific file
+protostar init --config ./ci/protostar.toml
+
+# Read no configuration at all, and run on built-in defaults
+protostar init --no-config
+```
+
+The `PROTOSTAR_CONFIG` environment variable is the equivalent for scripts and CI, where adding a flag to every invocation is impractical. Setting it to a path selects that file; setting it to an empty value disables configuration exactly like `--no-config`:
+
+```bash
+PROTOSTAR_CONFIG=./ci/protostar.toml protostar init --template cli
+PROTOSTAR_CONFIG= protostar init --template cli
+```
+
+A `--config` flag takes precedence over `PROTOSTAR_CONFIG`, which takes precedence over the default location. `protostar config` follows the same selection, so `protostar config --config ./ci/protostar.toml` edits that file and seeds it with the default template if it does not yet exist.
+
+### Why Select One
+
+An unpinned run inherits whatever configuration happens to exist on the machine, which is exactly what you do not want in three cases:
+
+- **CI**: a self-hosted runner, or a developer running the pipeline locally, silently picks up a personal `config.toml`. Selecting a committed file (or `--no-config`) makes the run reproducible wherever it executes.
+- **Reproducing a bug report**: drop the reported configuration in a file and run against it directly, without touching your own.
+- **Testing a template or alias**: check how a scaffold behaves under a clean baseline rather than your accumulated defaults.
+
+Selection is deliberate, so a `--config` or `PROTOSTAR_CONFIG` path that does not exist is an error rather than a silent fall back to defaults. A missing file at the *default* location stays perfectly normal and simply yields built-in defaults.
+
 ## The Default Baseline
 
 When you first run `protostar config` a configuration file is created and opened at `~/.config/protostar/config.toml`:

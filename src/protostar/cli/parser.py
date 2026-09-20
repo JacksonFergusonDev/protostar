@@ -242,6 +242,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,  # Hide from human help output
     )
+    base_parser.add_argument(
+        "--config",
+        metavar="<path>",
+        default=argparse.SUPPRESS,
+        help="Read global configuration from this file instead of the default location.",
+    )
+    base_parser.add_argument(
+        "--no-config",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="Ignore global configuration entirely and use built-in defaults.",
+    )
 
     # Subcommand base parser: accepts global flags like --verbose but hides them from help output
     suppressed_base_parser = JsonAwareParser(add_help=False)
@@ -254,6 +266,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     suppressed_base_parser.add_argument(
         "--json",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+    suppressed_base_parser.add_argument(
+        "--config",
+        metavar="<path>",
+        default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+    suppressed_base_parser.add_argument(
+        "--no-config",
         action="store_true",
         default=argparse.SUPPRESS,
         help=argparse.SUPPRESS,
