@@ -156,9 +156,7 @@ def baselines() -> dict[str, dict[str, Any]]:
 
 def test_builtin_templates_are_discovered() -> None:
     """Guards against the parametrized contract silently covering nothing."""
-    assert {"api", "astro", "cli", "dsp", "embedded", "lib", "ml"} <= set(
-        BUILTIN_ALIASES
-    )
+    assert {"api", "astro", "cli", "lib", "ml"} <= set(BUILTIN_ALIASES)
 
 
 @pytest.mark.parametrize("alias", BUILTIN_ALIASES)

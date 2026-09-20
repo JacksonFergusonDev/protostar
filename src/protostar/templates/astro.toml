@@ -14,7 +14,6 @@ dependencies = [
     "astroquery",
     "photutils",
     "specutils",
-    "nbdime",
 ]
 
 # --- Directory Architecture ---
@@ -42,6 +41,11 @@ mypy = false
 pytest = false
 prek = false
 ci = false
+
+# --- Development Dependencies ---
+# Notebook tooling belongs in the dev group so it survives `just sync`.
+[dev]
+dev_dependencies = ["nbdime"]
 
 # --- pyproject.toml AST Injections ---
 [dev.pyproject.data_science_linting]

@@ -6,7 +6,6 @@ dependencies = [
     "astropy>=8.0.1",
     "astroquery>=0.4.11",
     "matplotlib>=3.11.2",
-    "nbdime>=4.0.4",
     "numpy>=2.5.3",
     "pandas>=3.0.5",
     "photutils>=3.0.0",
@@ -19,6 +18,7 @@ authors = [{ name = "your-name", email = "your-email@example.com" }]
 
 [dependency-groups]
 dev = [
+    "nbdime>=4.0.4",
     "ruff>=0.16.8",
 ]
 

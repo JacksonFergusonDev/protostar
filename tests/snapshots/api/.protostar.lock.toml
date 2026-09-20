@@ -4,7 +4,7 @@ producer_version = "0.9.0"
 [template]
 origin = "built-in"
 locator = "api"
-digest = "dc65b12658c29657f226d07cc3803f835e6567475667828026c7a6e7b3fcb53f"
+digest = "2c901275c09b59132c58d5c5cad16a4ea4f6f9b83b71637229c0198e0bdc0fed"
 display_name = "api"
 
 [[files]]

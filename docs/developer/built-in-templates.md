@@ -4,7 +4,7 @@ description: "What a built-in Protostar template is, what deserves to ship as on
 
 # Built-in Templates
 
-Protostar ships seven built-in templates: `api`, `astro`, `cli`, `dsp`, `embedded`, `lib`, and `ml`. This page is the contract they share. It exists so that maintainers, contributors, and reviewers can answer three questions the same way every time:
+Protostar ships five built-in templates: `api`, `astro`, `cli`, `lib`, and `ml`. This page is the contract they share. It exists so that maintainers, contributors, and reviewers can answer three questions the same way every time:
 
 - What deserves to be a built-in template?
 - What must a built-in template look like?
@@ -18,7 +18,7 @@ If you are writing a template for your own team, see [Authoring Custom Templates
 
 A shape is a kind of project someone recognizes on sight: a command-line tool, a web service, an analysis workbench for a field. A stack is a particular combination of libraries: FastAPI plus Postgres plus Redis. Shapes belong in Protostar. Stacks belong in a [`--from` template or a global alias](../usage/templates.md).
 
-What earns a shape its place is knowledge a generic scaffolder doesn't have: the ignore patterns for `.fits` files or `.uf2` firmware images, `nbdime` wired into notebook diffs, a `/health` endpoint with a test that actually runs. Everything a built-in encodes should be something you would otherwise copy from your last project.
+What earns a shape its place is knowledge a generic scaffolder doesn't have: the ignore patterns for `.fits` files, `nbdime` wired into notebook diffs, a `/health` endpoint with a test that actually runs. Everything a built-in encodes should be something you would otherwise copy from your last project.
 
 | Template | Shape | Tier |
 | :--- | :--- | :--- |
@@ -27,8 +27,6 @@ What earns a shape its place is knowledge a generic scaffolder doesn't have: the
 | `lib` | Reusable library package (pip-installable, PEP 561) | Product |
 | `astro` | Astrophysics data analysis (Astropy) | Workbench |
 | `ml` | Machine learning and data science (PyTorch, Jupyter) | Workbench |
-| `dsp` | Digital signal processing and audio | Workbench |
-| `embedded` | MicroPython and microcontroller development | Workbench |
 
 ## Admission Criteria
 
@@ -48,7 +46,7 @@ The default answer to a new-template proposal is therefore "publish it as a `--f
 
 Built-ins fall into two tiers that differ in how much tooling they turn on by default.
 
-| Flag | Product (`cli`, `api`, `lib`) | Workbench (`astro`, `ml`, `dsp`, `embedded`) |
+| Flag | Product (`cli`, `api`, `lib`) | Workbench (`astro`, `ml`) |
 | :--- | :---: | :---: |
 | `ruff`, `direnv`, `just` | on | on |
 | `mypy` | on | off |

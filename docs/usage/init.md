@@ -30,7 +30,7 @@ content. After initialization, use the [project lifecycle](lifecycle.md) command
 
 While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in templates that bundle domain-specific tools, directories, and AST configurations. Each one is a project *shape* (a command-line app, a web service, an analysis workbench), not a fixed stack of libraries.
 
-The shapes come in two kinds of default. __Product__ templates (`cli`, `api`, `lib`) start with the full quality gate: strict typing, tests, CI, and commit hooks. __Workbench__ templates (`astro`, `ml`, `dsp`, `embedded`) start lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Either kind is only a starting point: every tool can be overridden with the tri-state flags below.
+The shapes come in two kinds of default. __Product__ templates (`cli`, `api`, `lib`) start with the full quality gate: strict typing, tests, CI, and commit hooks. __Workbench__ templates (`astro`, `ml`) start lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Either kind is only a starting point: every tool can be overridden with the tri-state flags below.
 
 To scaffold from a template headlessly, pass `--template` (or `-t`):
 
@@ -206,55 +206,6 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - __Modular API Architecture:__ Establishes a clean directory layout separating routers (`src/demo_project/api/routers`), core application settings (`src/demo_project/core/config.py`), database models, and schemas.
     - __Async Toolchain:__ Pre-configures `fastapi`, `uvicorn`, `pydantic-settings`, and asynchronous test infrastructure powered by `pytest-asyncio` and `httpx`.
     - __Semantic Versioning & Changelogs:__ Integrates Commitizen changelog tooling and automated release tracking out of the box.
-
-=== "The DSP Pipeline (Audio Focus)"
-    __Command:__ `protostar init --template dsp`
-
-    This template focuses on audio signal processing, feature extraction, and exploratory analysis.
-
-    ```text
-    --8<-- "tree_dsp.txt"
-    ```
-
-    ??? abstract "Inspect Generated Files"
-        === "pyproject.toml"
-            ```toml
-            --8<-- "dsp/pyproject.toml"
-            ```
-        === "justfile"
-            ```just
-            --8<-- "dsp/justfile"
-            ```
-
-    __What Protostar sets up:__
-
-    - __Audio Pipeline Layout:__ Scaffolds dedicated sample directories (`data/samples/raw`, `data/samples/bounces`) alongside modular analysis and effects packages (`src/demo_project/analysis`, `src/demo_project/effects`).
-    - __Scientific Signal Stack:__ Locks in core numerical and audio processing libraries: `librosa`, `soundfile`, `pedalboard`, `scipy`, `numpy`, and `matplotlib`.
-    - __Notebook Prototyping:__ Prepares a `notebooks/` directory for visual spectrum inspection and rapid experimentation.
-
-=== "The Embedded System (MicroPython Focus)"
-    __Command:__ `protostar init --template embedded`
-
-    This template scaffolds an embedded hardware development environment optimized for MicroPython and circuit prototyping.
-
-    ```text
-    --8<-- "tree_embedded.txt"
-    ```
-
-    ??? abstract "Inspect Generated Files"
-        === "pyproject.toml"
-            ```toml
-            --8<-- "embedded/pyproject.toml"
-            ```
-        === "justfile"
-            ```just
-            --8<-- "embedded/justfile"
-            ```
-
-    __What Protostar sets up:__
-
-    - __Board & Host Decoupling:__ Separates on-device firmware code (`src/board/boot.py`, `src/board/main.py`) from host workstation tools (`src/host/`).
-    - __MicroPython Device Tooling:__ Bundles `mpremote` and `pyserial` for device communication, flashing, and interactive REPL sessions.
 
 ## Task Runner Orchestration (`justfile`)
 

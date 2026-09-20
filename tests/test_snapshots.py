@@ -23,7 +23,7 @@ _spec.loader.exec_module(_docs_mod)
 _calculate_content_width = _docs_mod._calculate_content_width
 _render_and_write_svg = _docs_mod._render_and_write_svg
 
-SCENARIO_FIXTURES = ("api", "astro", "cli", "dsp", "embedded", "lib", "ml", "ml_merged")
+SCENARIO_FIXTURES = ("api", "astro", "cli", "lib", "ml", "ml_merged")
 
 
 def test_calculate_content_width_plain_text():

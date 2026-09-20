@@ -262,7 +262,7 @@ writes through the transactional filesystem. No-op runs write nothing; failures
 restore exact file/state bytes and POSIX modes. Resolver completion and end-to-end
 Stage 1 acceptance remain PR G and PR H.
 
-Generated targets with declared append regions (the embedded justfile) checksum
+Generated targets with declared append regions (such as a template's justfile appends) checksum
 the complete desired file and also retain individual region digests. If user edits
 prevent whole-file regeneration, clean region updates can still apply independently.
 A pre-existing unowned generated target can own a newly appended region without

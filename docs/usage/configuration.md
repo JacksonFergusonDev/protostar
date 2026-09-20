@@ -75,7 +75,7 @@ When declaring a template using the `[templates.<alias>]` table format:
 
 Pin `source` to a tag or commit when new projects from this alias must be reproducible, and leave it on a branch when you want `protostar sync` to deliver template updates. See [Pinning a Template Revision](./templates.md) for the URL forms each host accepts and what ends up in `.protostar.lock.toml`.
 
-Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `dsp`, `embedded`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
+Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
 
 Templates declared here can be invoked directly with `protostar init --template <alias>`, appear automatically in the interactive wizard, and are dynamically surfaced in shell completions.
 

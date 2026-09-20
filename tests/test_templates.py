@@ -12,7 +12,7 @@ def test_discover_builtin_templates() -> None:
     templates = discover_templates(config=UserConfig())
     builtin_aliases = {t.alias: t for t in templates if t.type == TemplateType.BUILT_IN}
 
-    expected_aliases = {"api", "astro", "cli", "dsp", "embedded", "lib", "ml"}
+    expected_aliases = {"api", "astro", "cli", "lib", "ml"}
     assert expected_aliases.issubset(builtin_aliases.keys())
 
     # Verify FastAPI metadata
@@ -106,7 +106,7 @@ def test_discover_templates_execution_speed() -> None:
     templates = discover_templates(config=UserConfig())
     elapsed = time.perf_counter() - start
 
-    assert len(templates) >= 6
+    assert len(templates) >= 5
     assert elapsed < 0.05, f"Discovery took too long: {elapsed:.4f}s"
 
 

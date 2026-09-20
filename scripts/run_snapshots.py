@@ -99,16 +99,6 @@ SCENARIOS: dict[str, RegressionScenario] = {
         commands=(("--template", "api"),),
         description="FastAPI application template.",
     ),
-    "dsp": RegressionScenario(
-        name="dsp",
-        commands=(("--template", "dsp"),),
-        description="Digital Signal Processing template with audio data sample layouts.",
-    ),
-    "embedded": RegressionScenario(
-        name="embedded",
-        commands=(("--template", "embedded"),),
-        description="Embedded systems template with hardware board layout.",
-    ),
     "lib": RegressionScenario(
         name="lib",
         commands=(("--template", "lib"),),
