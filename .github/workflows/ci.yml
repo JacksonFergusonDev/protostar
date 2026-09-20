@@ -172,17 +172,8 @@ jobs:
         enable-cache: true
         python-version: "3.12"
 
-    - name: Install dependencies
-      run: uv sync --only-group ci --locked
-
-    - name: Add Protostar to PATH
-      shell: bash
-      run: |
-        if [ -d "$GITHUB_WORKSPACE/.venv/bin" ]; then
-          echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
-        elif [ -d "$GITHUB_WORKSPACE/.venv/Scripts" ]; then
-          echo "$GITHUB_WORKSPACE/.venv/Scripts" >> "$GITHUB_PATH"
-        fi
+    - name: Install Protostar
+      run: uv tool install --editable .
 
     - name: Mock direnv
       uses: ./.github/actions/mock-direnv
