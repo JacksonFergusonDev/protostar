@@ -141,10 +141,6 @@ addopts = "--strict-markers"
 testpaths = ["tests"]
 norecursedirs = ["snapshots", ".*", "build", "dist", "venv"]
 pythonpath = ["."]
-markers = [
-    "integration: marks tests that perform actual disk I/O and subprocess calls",
-    "exhaustive: marks heavy combinatorial tests",
-]
 
 [tool.coverage.run]
 source = ["src/protostar"]

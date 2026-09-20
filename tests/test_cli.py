@@ -1497,3 +1497,24 @@ def test_run_engine_collision_retry_replaces_request_flags(
     assert second_request.metadata == {"author_name": "Ada Lovelace"}
     assert second_request.is_external is True
     assert second_request.is_trusted is True
+
+
+def test_malformed_cli_arguments(run_cli):
+    """Verifies the CLI parser intercepts invalid boundaries and returns non-zero codes."""
+    # 1. Unrecognized CLI flag
+    code, *_ = run_cli("init", "--this-flag-is-completely-invalid")
+    assert code != 0
+
+    # 2. Mutually exclusive flags: --template and --from together
+    code, *_ = run_cli(
+        "init", "--template", "cli", "--from", "https://example.com/template.toml"
+    )
+    assert code != 0
+
+    # 3. Non-existent built-in template
+    code, *_ = run_cli("init", "--template", "non_existent_template_xyz")
+    assert code != 0
+
+    # 4. Unknown subcommand
+    code, *_ = run_cli("unknown_subcommand")
+    assert code != 0

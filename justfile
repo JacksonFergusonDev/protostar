@@ -41,12 +41,6 @@ typecheck: sync
     uv run mypy .
     @printf "{{ green }}✔ Type checking passed{{ nc }}\n"
 
-# Run only fast unit tests (excludes integration and exhaustive markers)
-test-unit: sync
-    @printf "\n{{ blue }}=== Running Unit Tests ==={{ nc }}\n"
-    uv run pytest -m "not integration and not exhaustive"
-    @printf "{{ green }}✔ Unit tests passed{{ nc }}\n"
-
 # Run the full automated testing matrix
 test: sync
     @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
@@ -82,7 +76,7 @@ test-benchmark-slower: sync
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test-unit check-snapshots check-doc-links check-schemas
+ci: lint typecheck test check-snapshots check-doc-links check-schemas
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
