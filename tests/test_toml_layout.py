@@ -21,6 +21,7 @@ from protostar.toml_layout import (
     format_document,
     insert_section,
     join_sections,
+    place_new_sections,
     section_rank,
     split_sections,
 )
@@ -358,3 +359,263 @@ def test_reconcile_reports_when_it_could_not_format_a_new_pyproject(mocker) -> N
 
     assert len(result.layout_notes) == 1
     assert "Parity mismatch" in result.layout_notes[0]
+
+
+# ---- placing the tables a merge adds ----
+
+
+def _merge_in(original: str, key: str) -> str:
+    """Adds ``[tool.<key>]`` the way a merge does, then places it."""
+    from copy import deepcopy
+
+    document = tomlkit.parse(original)
+    added = tomlkit.parse(_TABLE_FOR.get(key, f"[tool.{key}]\nvalue = 1\n"))["tool"][
+        key
+    ]
+    if "tool" not in document:
+        document["tool"] = tomlkit.table(is_super_table=True)
+    document["tool"][key] = deepcopy(added)
+    return place_new_sections(original, document)
+
+
+def _canonical(tools: tuple[str, ...]) -> str:
+    """A freshly formatted file holding exactly these tool tables, then Protostar."""
+    tables = [_TABLE_FOR.get(key, f"[tool.{key}]\nvalue = 1\n") for key in tools]
+    source = "\n".join(
+        [
+            '[project]\nname = "x"\nversion = "1"\n',
+            *tables,
+            "[tool.protostar]\nversion = 1\n",
+            '[dependency-groups]\ndev = ["ruff"]\n',
+        ]
+    )
+    return format_document(tomlkit.parse(source))
+
+
+_INSERTABLE = ("hatch", "ruff", "mypy", "pytest", "coverage", "rumdl")
+
+
+def _present_and_added() -> list[tuple[tuple[str, ...], str]]:
+    cases = []
+    for size in range(len(_INSERTABLE)):
+        for present in itertools.combinations(_INSERTABLE, size):
+            for added in _INSERTABLE:
+                if added not in present:
+                    cases.append((present, added))
+    return cases
+
+
+@pytest.mark.parametrize(
+    ("present", "added"),
+    _present_and_added(),
+    ids=lambda v: "+".join(v) if isinstance(v, tuple) else v,
+)
+def test_inserting_into_a_canonical_file_gives_the_canonical_file(
+    present: tuple[str, ...], added: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Placing a table must match formatting the whole file with it in."""
+    original = _canonical(present)
+    with caplog.at_level(logging.WARNING, logger="protostar"):
+        merged = _merge_in(original, added)
+
+    assert not caplog.records, [record.message for record in caplog.records]
+    assert merged == _canonical((*present, added))
+
+
+_ADD_PAIRS = [
+    (present, first, second)
+    for present in [(), ("ruff",), ("pytest",), ("mypy", "rumdl")]
+    for first, second in itertools.combinations(_INSERTABLE, 2)
+    if first not in present and second not in present
+]
+
+
+@pytest.mark.parametrize(
+    ("present", "first", "second"),
+    _ADD_PAIRS,
+    ids=lambda v: "+".join(v) if isinstance(v, tuple) else v,
+)
+def test_the_order_tables_are_added_in_does_not_matter(
+    present: tuple[str, ...], first: str, second: str
+) -> None:
+    original = _canonical(present)
+
+    one_way = _merge_in(_merge_in(original, first), second)
+    other_way = _merge_in(_merge_in(original, second), first)
+
+    assert one_way == other_way == _canonical((*present, first, second))
+
+
+def test_a_new_tool_lands_between_its_neighbours_and_keeps_protostar_last() -> None:
+    merged = _merge_in(_canonical(("ruff",)), "mypy")
+
+    assert (
+        merged.index("[tool.ruff]")
+        < merged.index("# ---- Mypy ---- #")
+        < merged.index("[tool.mypy]")
+        < merged.index("# ---- Protostar ---- #")
+        < merged.index("[tool.protostar]")
+    )
+    assert merged.rstrip().endswith("version = 1")
+
+
+CUSTOM = (
+    '# my project\n\n\n[project]\nname="x"   # inline\nversion = "1"\n\n\n\n'
+    "# about black\n[tool.black]\nline-length=99\n\n\n[tool.zz]\nvalue = 1\n"
+)
+
+
+def test_a_merge_into_a_users_file_keeps_their_bytes() -> None:
+    merged = _merge_in(CUSTOM, "ruff")
+
+    # Every line the user wrote is still there, in order, unmodified.
+    remaining = merged
+    for line in CUSTOM.splitlines():
+        if not line.strip():
+            continue
+        assert line in remaining, f"lost or altered: {line!r}"
+        remaining = remaining[remaining.index(line) + len(line) :]
+    assert tomllib.loads(merged)["tool"]["black"] == {"line-length": 99}
+    assert tomllib.loads(merged)["tool"]["ruff"]["line-length"] == 88
+
+
+def test_a_merge_labels_a_new_tool_and_adds_the_banner_only_once() -> None:
+    merged = _merge_in(_merge_in(CUSTOM, "ruff"), "mypy")
+
+    assert merged.count("# Tool Configuration") == 1
+    assert merged.count("# ---- Ruff ---- #") == 1
+    assert merged.count("# ---- Mypy ---- #") == 1
+    assert merged.index("# Tool Configuration") < merged.index("# ---- Ruff ---- #")
+    assert merged.index("[tool.ruff]") < merged.index("[tool.mypy]")
+    # Their own tables follow the known tools, untouched.
+    assert merged.index("[tool.mypy]") < merged.index("# about black")
+
+
+def test_a_merge_does_not_label_a_table_the_user_already_had() -> None:
+    original = '[project]\nname = "x"\n\n[tool.ruff]\nline-length = 99\n'
+
+    merged = _merge_in(original, "mypy")
+
+    assert "# ---- Ruff ---- #" not in merged
+    assert "# ---- Mypy ---- #" in merged
+    assert "[tool.ruff]\nline-length = 99" in merged
+
+
+def test_a_sibling_table_shares_the_existing_header() -> None:
+    merged = _merge_in(_canonical(("pytest",)), "coverage")
+
+    assert merged.count("# ---- Pytest ---- #") == 1
+    assert merged.index("[tool.pytest") < merged.index("[tool.coverage")
+
+
+def test_a_new_root_table_lands_after_project() -> None:
+    document = tomlkit.parse('[project]\nname = "x"\n\n[tool.ruff]\nline-length = 88\n')
+    document["build-system"] = tomlkit.parse('[build-system]\nrequires = ["h"]\n')[
+        "build-system"
+    ]
+
+    merged = place_new_sections(
+        '[project]\nname = "x"\n\n[tool.ruff]\nline-length = 88\n', document
+    )
+
+    assert (
+        merged.index("[project]")
+        < merged.index("[build-system]")
+        < merged.index("[tool.ruff]")
+    )
+
+
+def test_packaging_config_goes_above_a_banner_that_already_exists() -> None:
+    merged = _merge_in(_canonical(("ruff",)), "hatch")
+
+    assert merged.index("[tool.hatch") < merged.index("# Tool Configuration")
+    assert merged.count("# Tool Configuration") == 1
+
+
+def test_a_merge_follows_the_files_newline_style() -> None:
+    original = '[project]\r\nname = "x"\r\n\r\n[tool.ruff]\r\nline-length = 99\r\n'
+
+    merged = _merge_in(original, "mypy")
+
+    assert "\n" not in merged.replace("\r\n", "")
+    assert merged.startswith(original.rstrip("\r\n"))
+
+
+def test_a_merge_supplies_a_missing_final_newline() -> None:
+    merged = _merge_in('[project]\nname = "x"', "ruff")
+
+    assert merged.endswith("\n")
+    assert tomllib.loads(merged)["tool"]["ruff"]["line-length"] == 88
+
+
+def test_a_merge_that_adds_nothing_changes_no_byte() -> None:
+    document = tomlkit.parse(CUSTOM)
+    document["project"]["version"] = "2"
+
+    merged = place_new_sections(CUSTOM, document)
+
+    assert merged == CUSTOM.replace('version = "1"', 'version = "2"')
+
+
+def test_a_placement_that_cannot_be_proven_is_reported_and_falls_back(mocker) -> None:
+    original = _canonical(("ruff",))
+    document = tomlkit.parse(original)
+    document["tool"]["mypy"] = tomlkit.parse("[tool.mypy]\nstrict = true\n")["tool"][
+        "mypy"
+    ]
+    mocker.patch(
+        "protostar.toml_layout.join_sections", return_value='[project]\nname = "no"\n'
+    )
+    reasons: list[str] = []
+
+    result = place_new_sections(original, document, reasons.append)
+
+    assert result == tomlkit.dumps(document)
+    assert len(reasons) == 1
+    assert "placing new pyproject.toml sections" in reasons[0]
+
+
+def test_a_comment_directly_above_a_table_stays_with_it() -> None:
+    original = '[project]\nname = "x"\n\n# about black\n[tool.black]\nx = 1\n'
+
+    merged = _merge_in(original, "ruff")
+
+    assert merged.index("[tool.ruff]") < merged.index("# about black\n[tool.black]")
+    assert merged.endswith("# about black\n[tool.black]\nx = 1\n")
+
+
+def test_a_comment_set_apart_by_a_blank_line_is_not_moved() -> None:
+    original = (
+        '[project]\nname = "x"\n\n# a note about the project\n\n[tool.black]\nx = 1\n'
+    )
+
+    merged = _merge_in(original, "ruff")
+
+    assert merged.index("# a note about the project") < merged.index("[tool.ruff]")
+    assert merged.index("[tool.ruff]") < merged.index("[tool.black]")
+
+
+def test_a_header_between_a_comment_and_its_table_is_not_treated_as_that_comment() -> (
+    None
+):
+    """The comment sits above the managed header, so it does not describe what follows."""
+    original = (
+        '[project]\nname = "x"\n\n# ---- Ruff ---- #\n\n[tool.ruff]\nline-length = 88\n'
+    )
+
+    merged = _merge_in(original, "mypy")
+
+    assert merged.count("# ---- Ruff ---- #") == 1
+    assert merged.index("# ---- Ruff ---- #") < merged.index("[tool.ruff]")
+    assert merged.index("[tool.ruff]") < merged.index("[tool.mypy]")
+
+
+def test_a_merged_in_section_is_set_off_by_exactly_one_blank_line() -> None:
+    """The user's own run of blank lines at the seam is normalized, not doubled."""
+    merged = _merge_in(CUSTOM, "ruff")
+
+    assert 'version = "1"\n\n' + BANNER[0] in merged
+    assert (
+        "\n\n\n" not in merged[merged.index(BANNER[0]) : merged.index("# about black")]
+    )
+    assert '[tool.ruff.lint]\nselect = ["E"]\n\n# about black' in merged

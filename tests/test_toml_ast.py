@@ -380,3 +380,92 @@ def test_finalize_new_pyproject_fixes_the_layout_uv_and_the_recipe_leave():
 
     assert finalized == format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
     assert tomllib.loads(finalized) == tomllib.loads(UV_APPENDED_LAYOUT)
+
+
+CANONICAL_WITH_RECIPE = """[project]
+name = "demo"
+
+[dependency-groups]
+dev = ["ruff"]
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- Ruff ---- #
+
+[tool.ruff]
+line-length = 88
+
+# ---- Protostar ---- #
+
+[tool.protostar]
+version = 1
+"""
+
+
+def test_a_tool_added_to_an_existing_project_is_placed_before_protostar():
+    from protostar.merge import MergeLocation
+    from protostar.toml_ast import reconcile_toml
+
+    desired = tomlkit.parse("[tool.ruff]\nline-length=88\n[tool.mypy]\nstrict=true\n")
+    result = reconcile_toml(
+        CANONICAL_WITH_RECIPE,
+        desired.unwrap(),
+        {"tool": {"ruff": {"line-length": 88}}},
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+
+    content = result.content
+    assert (
+        content.index("[tool.ruff]")
+        < content.index("# ---- Mypy ---- #")
+        < content.index("[tool.mypy]")
+        < content.index("# ---- Protostar ---- #")
+        < content.index("[tool.protostar]")
+    )
+    assert content.count("# ---- Protostar ---- #") == 1
+    assert content.count("# Tool Configuration") == 1
+    assert not result.layout_notes
+
+
+def test_placing_a_new_tool_is_stable_when_repeated():
+    from protostar.merge import MergeLocation
+    from protostar.toml_ast import reconcile_toml
+
+    desired = tomlkit.parse("[tool.ruff]\nline-length=88\n[tool.mypy]\nstrict=true\n")
+    first = reconcile_toml(
+        CANONICAL_WITH_RECIPE,
+        desired.unwrap(),
+        {"tool": {"ruff": {"line-length": 88}}},
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+    repeated = reconcile_toml(
+        first.content,
+        desired.unwrap(),
+        first.baseline,
+        MergeLocation("pyproject.toml"),
+        desired_ast=desired,
+    )
+
+    assert repeated.content == first.content
+
+
+def test_a_non_pyproject_toml_target_is_left_to_a_plain_dump():
+    from protostar.merge import MergeLocation
+    from protostar.toml_ast import reconcile_toml
+
+    original = "[tool.a]\nx = 1\n\n[tool.zzz]\ny = 2\n"
+    desired = tomlkit.parse("[tool.a]\nx = 1\n[tool.b]\nz = 3\n")
+    result = reconcile_toml(
+        original,
+        desired.unwrap(),
+        {"tool": {"a": {"x": 1}}},
+        MergeLocation("ruff.toml"),
+        desired_ast=desired,
+    )
+
+    assert "# ----" not in result.content
+    assert result.content.startswith(original)

@@ -25,6 +25,7 @@ apart in ``Section.tail`` and are matched by exact line, never by pattern.
 
 import logging
 import tomllib
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -312,3 +313,158 @@ def compose_children(document: Any, path: SectionPath, order: tuple[str, ...]) -
         holder.append(path[-1], middle)
         parts.append(_trim(tomlkit.dumps(root)))
     return "\n\n".join(parts) + "\n"
+
+
+# ---- merging: placing the tables a merge adds ----
+
+_HEADER_LINES = frozenset(
+    f"# ---- {title} ---- #" for title in set(TOOL_SECTION_NAMES.values())
+)
+
+
+def _decoration(newline: str, banner: bool, headers: list[str]) -> str:
+    """The blank line, optional banner and headers, and blank line between sections."""
+    groups = [newline.join(BANNER)] if banner else []
+    groups.extend(headers)
+    if not groups:
+        return newline
+    return newline + (newline * 2).join(groups) + newline * 2
+
+
+def _announced(tail: str) -> tuple[bool, list[str]]:
+    """The banner and headers a section's tail announces for the section after it."""
+    lines = [line.strip() for line in tail.splitlines()]
+    headers = [line for line in dict.fromkeys(lines) if line in _HEADER_LINES]
+    return BANNER[1] in lines, headers
+
+
+def _take_leading_comments(previous: Section) -> str:
+    """Removes and returns the comment block directly above the next table.
+
+    tomlkit keeps a comment in the piece before the table it sits above. It describes
+    that table, so it must stay with it when something is inserted between them.
+    Comments separated from the table by a blank line, or by a managed header, are
+    left where they are.
+    """
+    if previous.tail:
+        return ""
+    lines = previous.body.split("\n")
+    end = len(lines) - 1 if lines[-1] == "" else len(lines)
+    start = end
+    while start > 0 and lines[start - 1].lstrip().startswith("#"):
+        start -= 1
+    if start == end:
+        return ""
+    previous.body = "\n".join(lines[:start]) + ("\n" if start else "")
+    return "\n".join(lines[start:end]) + "\n"
+
+
+def _insert_ranked(sections: list[Section], new: Section) -> None:
+    """Inserts one new section where the spec puts it, and labels it.
+
+    It goes after the last section that ranks at or below it, so the file's own order
+    is kept and only the two seams change. A header announces the section that follows
+    it, so it is re-homed: the banner and any header for a sibling table move to the
+    newcomer when it now comes first.
+    """
+    newline = _newline(sections)
+    key = section_rank(new.path)
+    index = 1 + max(
+        (i for i, s in enumerate(sections) if section_rank(s.path) <= key), default=-1
+    )
+    previous = sections[index - 1] if index else None
+    following = index < len(sections)
+    if previous is not None and following:
+        sections[index].body = _take_leading_comments(previous) + sections[index].body
+    in_file = {line.strip() for line in join_sections(sections).splitlines()}
+
+    banner, headers = (
+        _announced(previous.tail) if previous and following else (False, [])
+    )
+    title = section_title(new.path)
+    lead_banner, lead_headers = False, []
+    if title is not None:
+        own = f"# ---- {title} ---- #"
+        if own in headers:
+            headers.remove(own)  # it was announcing a sibling that now follows
+            lead_headers = [own]
+        elif own not in in_file:
+            lead_headers = [own]
+        if banner:
+            lead_banner, banner = True, False
+        elif BANNER[1] not in in_file and lead_headers:
+            lead_banner = True
+
+    body = _trim(new.body).replace("\r\n", "\n").replace("\n", newline)
+    new.body = body + newline
+    new.tail = _decoration(newline, banner, headers) if following else ""
+
+    lead = _decoration(newline, lead_banner, lead_headers)
+    if previous is not None:
+        if previous.body.strip():
+            previous.body = previous.body.rstrip("\r\n") + newline
+        previous.tail = lead
+    elif lead_banner or lead_headers:
+        new.body = lead.lstrip("\r\n") + new.body
+    sections.insert(index, new)
+
+
+def _keyless(path: SectionPath) -> bool:
+    return path in ((), ("tool", ""))
+
+
+def place_new_sections(
+    original: str, merged: Any, on_fallback: Callable[[str], None] | None = None
+) -> str:
+    """Dumps a merged document, placing every table the merge added by the spec.
+
+    Sections that already existed keep their text, so a merge changes no byte outside
+    the tables it edits and the seams around the ones it adds. If the result cannot be
+    proven to hold the same data as a plain dump, the plain dump is returned and the
+    reason reported.
+    """
+    raw = tomlkit.dumps(merged)
+    before = split_sections(tomlkit.parse(original))
+    by_path: dict[SectionPath, list[Section]] = {}
+    for section in before:
+        by_path.setdefault(section.path, []).append(section)
+
+    seen: Counter[SectionPath] = Counter()
+    kept: list[Section] = []
+    added: list[Section] = []
+    for section in split_sections(merged):
+        position = seen[section.path]
+        seen[section.path] += 1
+        matches = by_path.get(section.path, [])
+        if position < len(matches):
+            original_section = matches[position]
+            if section.body.rstrip() == original_section.body.rstrip():
+                kept.append(original_section)
+            else:
+                trailing = original_section.body[len(original_section.body.rstrip()) :]
+                kept.append(
+                    Section(
+                        section.path,
+                        section.body.rstrip() + trailing,
+                        original_section.tail,
+                    )
+                )
+        elif not _keyless(section.path):
+            added.append(section)
+
+    if not added:
+        return raw
+    for section in sorted(added, key=lambda s: section_rank(s.path)):
+        _insert_ranked(kept, section)
+
+    text = join_sections(kept)
+    try:
+        if tomllib.loads(text) == tomllib.loads(raw):
+            return text
+        reason = "AST Parity mismatch while placing new pyproject.toml sections"
+    except Exception as e:
+        reason = f"Validation error while placing new pyproject.toml sections ({e})"
+    logger.warning(f"{reason}; falling back to direct AST dump.")
+    if on_fallback is not None:
+        on_fallback(reason)
+    return raw

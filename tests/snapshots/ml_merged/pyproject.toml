@@ -55,6 +55,19 @@ ignore = [
 ]
 extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
 
+# ---- Mypy ---- #
+
+[tool.mypy]
+mypy_path = "src"
+python_version = "3.13"
+pretty = true
+show_error_codes = true
+show_error_context = true
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+explicit_package_bases = true
+
 # ---- Protostar ---- #
 
 [tool.protostar]
@@ -97,16 +110,3 @@ CURRENT_YEAR = "2026"
 PACKAGE_NAME = "demo_project"
 PROJECT_NAME = "demo-project"
 PYTHON_VERSION = "3.13"
-
-# ---- Mypy ---- #
-
-[tool.mypy]
-mypy_path = "src"
-python_version = "3.13"
-pretty = true
-show_error_codes = true
-show_error_context = true
-warn_return_any = true
-warn_unused_configs = true
-check_untyped_defs = true
-explicit_package_bases = true

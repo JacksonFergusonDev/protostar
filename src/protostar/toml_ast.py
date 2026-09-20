@@ -29,7 +29,7 @@ from .merge import (
     reconcile,
     semantic_equal,
 )
-from .toml_layout import TOOL_SECTION_NAMES, format_document
+from .toml_layout import format_document, place_new_sections
 
 logger = logging.getLogger("protostar")
 
@@ -218,30 +218,6 @@ def reconcile_toml(
             if isinstance(previous, dict) and isinstance(value, dict):
                 patch(ast[key], previous, value, path)
             elif previous is MISSING and isinstance(value, dict) and path == ("tool",):
-                styled_keys = (
-                    list(styled.keys())
-                    if styled is not None and hasattr(styled, "keys")
-                    else []
-                )
-                first_section = (
-                    TOOL_SECTION_NAMES.get(styled_keys[0]) if styled_keys else None
-                )
-                prior = next(
-                    (
-                        item
-                        for _, item in reversed(ast.body)
-                        if isinstance(item, tomlkit.items.AbstractTable)
-                    ),
-                    None,
-                )
-                if not initializing and prior is not None and first_section is not None:
-                    prior.add(tomlkit.nl())
-                    if "# Tool Configuration" not in original:
-                        prior.add(tomlkit.comment("=" * 50))
-                        prior.add(tomlkit.comment("Tool Configuration"))
-                        prior.add(tomlkit.comment("=" * 50))
-                        prior.add(tomlkit.nl())
-                    prior.add(tomlkit.comment(f"---- {first_section} ---- #"))
                 ast[key] = tomlkit.table(is_super_table=True)
                 patch(ast[key], {}, value, path)
             elif (
@@ -254,36 +230,6 @@ def reconcile_toml(
                 for member in value[len(previous) :]:
                     ast[key].append(tomlkit.item(member))
             elif styled is not None and semantic_equal(styled_value, value):
-                if previous is MISSING:
-                    section: str | None = None
-                    banner = False
-                    if len(path) == 2 and path[0] == "tool":
-                        section = TOOL_SECTION_NAMES.get(key)
-                    elif path == ("tool",) and hasattr(styled, "keys"):
-                        first_tool = cast(str | None, next(iter(styled.keys()), None))
-                        if first_tool is not None:
-                            section = TOOL_SECTION_NAMES.get(first_tool)
-                        banner = True
-                    if not initializing and section is not None:
-                        marker = f"# ---- {section} ---- #"
-                        body = ast.body if hasattr(ast, "body") else ast.value.body
-                        prior = next(
-                            (
-                                item
-                                for _, item in reversed(body)
-                                if isinstance(item, tomlkit.items.AbstractTable)
-                            ),
-                            None,
-                        )
-                        if prior is not None:
-                            prior.add(tomlkit.nl())
-                            if banner and "# Tool Configuration" not in original:
-                                prior.add(tomlkit.comment("=" * 50))
-                                prior.add(tomlkit.comment("Tool Configuration"))
-                                prior.add(tomlkit.comment("=" * 50))
-                                prior.add(tomlkit.nl())
-                            if marker not in original:
-                                prior.add(tomlkit.comment(f"---- {section} ---- #"))
                 ast[key] = deepcopy(styled)
             else:
                 ast[key] = tomlkit.item(value)
@@ -294,6 +240,8 @@ def reconcile_toml(
         content = original
     elif location.file == "pyproject.toml" and initializing:
         content = format_pyproject_toml(doc, layout_notes.append)
+    elif location.file == "pyproject.toml":
+        content = place_new_sections(original, doc, layout_notes.append)
     else:
         content = tomlkit.dumps(doc)
     return TomlReconciliation(content, baseline, conflicts, tuple(layout_notes))
