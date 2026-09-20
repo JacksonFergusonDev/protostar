@@ -218,16 +218,17 @@ jobs:
           cat .git/hooks/commit-msg
         fi
 
-        # Pre-warm hook environments
-        echo "=== Direct prek run --all-files ==="
-        uv run prek run --all-files || true
-
-        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
+        # Pre-stage all files and pre-warm hook environments
         echo "=== Staging all files ==="
         git add .
+
+        echo "=== Direct prek run --all-files --verbose ==="
+        uv run prek run --all-files --verbose
+
+        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
         if [ -f .git/hooks/commit-msg ]; then
           echo "=== Running commit-msg canary check ==="
-          if git commit -m "invalid non-conventional commit message"; then
+          if GIT_TRACE=1 git commit -m "invalid non-conventional commit message" < /dev/null; then
             echo "ERROR: commit-msg hook failed to reject invalid commit message"
             exit 1
           else
@@ -237,7 +238,7 @@ jobs:
 
         # 3. Verify clean first commit triggers prek hooks and succeeds
         echo "=== Running valid first commit ==="
-        commit_output=$(git commit -m "feat: initial scaffold" 2>&1)
+        commit_output=$(GIT_TRACE=1 git commit -m "feat: initial scaffold" < /dev/null 2>&1)
         commit_code=$?
         echo "$commit_output"
 
