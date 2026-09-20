@@ -12,7 +12,7 @@ def test_discover_builtin_templates() -> None:
     templates = discover_templates(config=UserConfig())
     builtin_aliases = {t.alias: t for t in templates if t.type == TemplateType.BUILT_IN}
 
-    expected_aliases = {"api", "astro", "cli", "dsp", "embedded", "ml"}
+    expected_aliases = {"api", "astro", "cli", "dsp", "embedded", "lib", "ml"}
     assert expected_aliases.issubset(builtin_aliases.keys())
 
     # Verify FastAPI metadata

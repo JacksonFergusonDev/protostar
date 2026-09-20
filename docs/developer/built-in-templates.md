@@ -4,7 +4,7 @@ description: "What a built-in Protostar template is, what deserves to ship as on
 
 # Built-in Templates
 
-Protostar ships six built-in templates: `api`, `astro`, `cli`, `dsp`, `embedded`, and `ml`. This page is the contract they share. It exists so that maintainers, contributors, and reviewers can answer three questions the same way every time:
+Protostar ships seven built-in templates: `api`, `astro`, `cli`, `dsp`, `embedded`, `lib`, and `ml`. This page is the contract they share. It exists so that maintainers, contributors, and reviewers can answer three questions the same way every time:
 
 - What deserves to be a built-in template?
 - What must a built-in template look like?
@@ -24,6 +24,7 @@ What earns a shape its place is knowledge a generic scaffolder doesn't have: the
 | :--- | :--- | :--- |
 | `cli` | Published command-line application (Typer, Rich) | Product |
 | `api` | Deployed web service (FastAPI, Uvicorn) | Product |
+| `lib` | Reusable library package (pip-installable, PEP 561) | Product |
 | `astro` | Astrophysics data analysis (Astropy) | Workbench |
 | `ml` | Machine learning and data science (PyTorch, Jupyter) | Workbench |
 | `dsp` | Digital signal processing and audio | Workbench |
@@ -47,7 +48,7 @@ The default answer to a new-template proposal is therefore "publish it as a `--f
 
 Built-ins fall into two tiers that differ in how much tooling they turn on by default.
 
-| Flag | Product (`cli`, `api`) | Workbench (`astro`, `ml`, `dsp`, `embedded`) |
+| Flag | Product (`cli`, `api`, `lib`) | Workbench (`astro`, `ml`, `dsp`, `embedded`) |
 | :--- | :---: | :---: |
 | `ruff`, `direnv`, `just` | on | on |
 | `mypy` | on | off |
@@ -56,7 +57,7 @@ Built-ins fall into two tiers that differ in how much tooling they turn on by de
 | `ci` | on | off |
 | `rumdl` | on | off |
 
-`cli` also turns on `release`, `readthedocs`, `zensical`, and `codecov`, because it is a package people install. `api` turns on `docker`, because it is a service people deploy.
+`cli` and `lib` also turn on `release`, `readthedocs`, `zensical`, and `codecov`, because they are packages people install. `api` turns on `docker`, because it is a service people deploy.
 
 **Product templates default to the full quality gate**, because a published package or a deployed service should not need a second pass to become production-ready.
 

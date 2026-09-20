@@ -1,0 +1,179 @@
+# Built-in template. Product tier: a published library package, full quality gate by default.
+# Contract: docs/developer/built-in-templates.md
+
+name = "Library"
+description = "Reusable Python library (pip-installable, PEP 561 typed)"
+
+# --- Directory Architecture ---
+directories = ["src/<% PACKAGE_NAME %>", "tests"]
+
+# --- Tooling Opinions ---
+ruff = true
+direnv = true
+mypy = true
+pytest = true
+prek = true
+commitizen = true
+renovate = true
+codecov = true
+just = true
+zensical = true
+ci = true
+release = true
+readthedocs = true
+rumdl = true
+
+# --- Development Dependencies ---
+# Tied to the tool that needs them, so `--no-pytest` does not install them.
+[dev.tool_dependencies]
+pytest = ["pytest-cov"]
+
+# --- pyproject.toml AST Injections ---
+# Payloads that are not tied to a tool are plain strings and are always injected.
+[dev.pyproject]
+# The scaffold is an installable package: src layout with a real build backend, so
+# tests import it like any consumer would and the pip install is correct.
+# Hatchling needs no version bound, unlike uv_build.
+lib_build_system = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/<% PACKAGE_NAME %>"]
+'''
+
+# Payloads that configure a tool declare `requires`, so they are injected only while
+# that tool is enabled (`--no-mypy` must not leave a [tool.mypy] behind).
+
+# Additive on top of the Ruff module's baseline (A, B, C4, E, F, I, RUF, UP).
+# TC (type-checking) is library-specific: it enforces TYPE_CHECKING guards so
+# type-only imports don't become runtime transitive dependencies for consumers.
+[dev.pyproject.lib_ruff_config]
+requires = "ruff"
+content = '''
+[tool.ruff.lint]
+extend-select = [
+    "D",   # pydocstyle
+    "N",   # pep8-naming
+    "PT",  # flake8-pytest
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "T20", # flake8-print
+    "TC",  # flake8-type-checking
+]
+ignore = [
+    "D100", # Missing docstring in public module
+    "D104", # Missing docstring in public package
+    "D107", # Missing docstring in __init__
+    "E501", # Line too long - handled automatically by `ruff format`
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["T201", "D"]
+'''
+
+# Only the delta from the Mypy module's baseline: strict mode for the package,
+# relaxed for tests. The tests override turns off warn_return_any, which the
+# baseline enables, because test doubles routinely return Any.
+[dev.pyproject.lib_mypy_config]
+requires = "mypy"
+content = '''
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+warn_return_any = false
+'''
+
+[dev.pyproject.lib_pytest_config]
+requires = "pytest"
+content = '''
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+omit = ["**/__init__.py"]
+show_missing = true
+skip_covered = true
+fail_under = 90
+'''
+
+# --- Static File Injections ---
+[files]
+"src/<% PACKAGE_NAME %>/__init__.py" = '''
+"""<% PROJECT_NAME %>."""
+
+import contextlib
+import importlib.metadata
+
+from <% PACKAGE_NAME %>.core import greet
+
+__all__ = ["greet"]
+
+__version__ = "unknown"
+with contextlib.suppress(importlib.metadata.PackageNotFoundError):
+    __version__ = importlib.metadata.version("<% PROJECT_NAME %>")
+'''
+
+"src/<% PACKAGE_NAME %>/core.py" = '''
+"""Core library logic."""
+
+
+def greet(name: str = "world") -> str:
+    """Return a greeting string.
+
+    Args:
+        name: The name to greet.
+
+    Returns:
+        A greeting of the form ``"Hello, <name>!"``.
+    """
+    return f"Hello, {name}!"
+'''
+
+"src/<% PACKAGE_NAME %>/py.typed" = ""
+
+"tests/test_core.py" = '''
+"""Tests for the core library module."""
+
+from <% PACKAGE_NAME %>.core import greet
+
+
+def test_greet_default() -> None:
+    """Default name produces the expected greeting."""
+    assert greet() == "Hello, world!"
+
+
+def test_greet_custom() -> None:
+    """Custom name is reflected in the greeting."""
+    assert greet("Ada") == "Hello, Ada!"
+'''
+
+"README.md" = '''
+# <% PROJECT_NAME %>
+
+Reusable Python library for <% PROJECT_NAME %>.
+
+## Installation
+
+```bash
+pip install <% PROJECT_NAME %>
+```
+
+## Usage
+
+```python
+from <% PACKAGE_NAME %> import greet
+
+result = greet("World")
+print(result)  # Hello, World!
+```
+'''

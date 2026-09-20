@@ -530,7 +530,9 @@ def test_late_bound_reserved_target_rejected_before_writes(
     write.assert_not_called()
 
 
-@pytest.mark.parametrize("name", ["api", "astro", "cli", "dsp", "embedded", "ml"])
+@pytest.mark.parametrize(
+    "name", ["api", "astro", "cli", "dsp", "embedded", "lib", "ml"]
+)
 def test_all_builtins_use_supported_typed_declarations(name):
     import importlib.resources
 
