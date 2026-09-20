@@ -63,26 +63,17 @@ def test_pre_commit_module_build_initializes_git(manifest, mocker):
 
 ## Test Categories
 
-We divide the test suite into three architectural tiers to balance coverage confidence with execution latency.
+The test suite is unified and runs rapidly (~30 seconds) across all platforms.
 
-### Unit Tests (`tests/test_*.py`)
+### Core Test Suite (`tests/test_*.py`)
 
-The vast majority of the suite. These run entirely in-memory or via mocked boundaries. They validate AST TOML merging algorithms, manifest deduplication logic, parser routing, and generator string formatting.
+The test suite validates AST TOML and JSONC merging algorithms, manifest deduplication logic, parser routing, generator string formatting, and transactional execution lifecycles in `tmp_path` sandboxes.
 
-### Integration Tests (`@pytest.mark.integration`)
+Repeatability and semantic-reconciliation acceptance live in `tests/test_template_repeatability.py` and the focused reconciliation suites: a tracked workspace is re-run with the same template, not a different template. Template switching is intentionally rejected rather than treated as a generic deep merge.
 
-Found in `tests/test_integration.py`, these tests bypass the subprocess mocks and execute real commands inside the `tmp_path` sandbox.
+### Template Hooks Smoke Matrix (CI)
 
-We use the custom `run_cli` fixture in `conftest.py` to spawn the `uv` toolchain dynamically. To prevent CI timeouts, these tests preserve the `UV_CACHE_DIR` across test permutations to avoid re-downloading massive ML libraries like `torch` when the `HOME` directory is mocked.
-
-### Exhaustive Tests (`@pytest.mark.exhaustive`)
-
-Found in `tests/test_exhaustive.py`, these tests validate that every built-in
-template scaffolds cleanly in isolation. Repeatability and semantic-reconciliation
-acceptance live in `tests/test_template_repeatability.py` and the focused
-reconciliation suites: a tracked workspace is re-run with the same template,
-not a different template. Template switching is intentionally rejected rather
-than treated as a generic deep merge.
+End-to-end template validation is offloaded to a dedicated parallel matrix job in CI (`template-hooks-smoke`). This job scaffolds each built-in template across operating systems, verifies that `prek` hooks are installed, runs a canary check ensuring non-conventional commit messages are rejected, and asserts that the first commit triggers and cleanly passes all pre-commit hooks.
 
 ### Crash Reporter Testing (`--crash-test`)
 
@@ -125,10 +116,9 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
     ```
 
 !!! tip "Manual Execution"
-    If you need to pass specific markers or flags directly to pytest (e.g., to run a single file or skip exhaustive tests), bypass the runner and use `uv` directly:
+    If you need to pass specific flags directly to pytest or run a single file, bypass the runner and use `uv` directly:
     ```bash
     uv run pytest tests/test_executor.py
-    uv run pytest -m "not exhaustive"
     ```
 
 ### TOML Merge Fixture Reference

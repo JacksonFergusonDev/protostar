@@ -163,7 +163,6 @@ def test_remote_hook_placeholders():
     assert RemoteHook.GITLEAKS.placeholder == "<% REV_GITLEAKS %>"
     assert RemoteHook.MARKDOWNLINT.placeholder == "<% REV_MARKDOWNLINT %>"
     assert RemoteHook.COMMITIZEN.placeholder == "<% REV_COMMITIZEN %>"
-    assert RemoteHook.RENOVATE.placeholder == "<% REV_RENOVATE %>"
 
 
 def test_resolve_placeholders_skips_fetch_when_no_placeholders(mocker):

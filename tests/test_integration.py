@@ -1,7 +1,10 @@
 """Integration tests for the Protostar execution lifecycle."""
 
 import argparse
+import os
+import re
 import shutil
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -12,8 +15,6 @@ from pytest_mock import MockerFixture
 
 from protostar.cli.main import handle_init
 from protostar.manifest import CollisionStrategy
-
-pytestmark = pytest.mark.integration
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
@@ -232,3 +233,39 @@ def test_crash_reporter_e2e(run_cli: Any) -> None:
 
     # Ensure it hard-fails with EX_SOFTWARE (70)
     assert code == 70
+
+
+def test_api_dockerfile_targets_an_importable_app(run_cli: Any) -> None:
+    """The container's uvicorn target must resolve inside the scaffolded project."""
+    # No --docker: the api template opts in to container scaffolding on its own.
+    code, stdout, stderr, workspace = run_cli(
+        "init", "--python-version", "3.12", "--template", "api"
+    )
+    assert code == 0, f"CLI Failed for template api.\n{stdout}\n{stderr}"
+
+    dockerfile = (workspace / "Dockerfile").read_text(encoding="utf-8")
+    match = re.search(r'CMD \["uvicorn", "([\w.]+):(\w+)"', dockerfile)
+    assert match, f"No uvicorn CMD in the generated Dockerfile:\n{dockerfile}"
+    module, attribute = match.groups()
+
+    # The image runs `uv sync --no-dev` and then starts uvicorn from that environment.
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "--no-dev",
+            "python",
+            "-c",
+            f"import importlib; getattr(importlib.import_module({module!r}), {attribute!r})",
+        ],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    assert result.returncode == 0, (
+        f"Dockerfile starts uvicorn on '{module}:{attribute}', which cannot be "
+        f"imported in the scaffolded project.\n{result.stderr}"
+    )

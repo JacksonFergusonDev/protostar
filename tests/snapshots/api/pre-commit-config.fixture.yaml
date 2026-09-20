@@ -79,10 +79,3 @@ repos:
     hooks:
       - id: commitizen
         stages: [commit-msg]
-
-  # Renovate config validation
-  - repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 44.65.5
-    hooks:
-      - id: renovate-config-validator
-        files: '.github/renovate.json'

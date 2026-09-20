@@ -110,15 +110,9 @@ jobs:
       run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-      if: matrix.os != 'windows-latest' && !matrix.coverage
-      run: uv run pytest
-
-    - name: Run tests (Windows) # (skip slow tests, but run one E2E smoke test)
-      if: matrix.os == 'windows-latest'
+      if: ${{ !matrix.coverage }}
       shell: bash
-      run: |
-        uv run pytest -m "not (integration or exhaustive)"
-        uv run pytest "tests/test_exhaustive.py::test_individual_template_scaffolding[cli]"
+      run: uv run pytest
 
     - name: Upload coverage to Codecov
       if: matrix.coverage
@@ -139,6 +133,119 @@ jobs:
         disable_search: true
         report_type: test_results
         name: test-results-ubuntu-py314
+
+  template-hooks-smoke:
+    name: Template Hooks Smoke (${{ matrix.os }} / ${{ matrix.template }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            template: cli
+          - os: ubuntu-latest
+            template: api
+          - os: ubuntu-latest
+            template: astro
+          - os: ubuntu-latest
+            template: dsp
+          - os: ubuntu-latest
+            template: embedded
+          - os: ubuntu-latest
+            template: ml
+          - os: macos-latest
+            template: cli
+          - os: macos-latest
+            template: api
+          - os: windows-latest
+            template: cli
+          - os: windows-latest
+            template: api
+
+    env:
+      GIT_TERMINAL_PROMPT: "0"
+      GCM_INTERACTIVE: "never"
+      PREK_COLOR: "never"
+
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      with:
+        enable-cache: true
+        python-version: "3.12"
+
+    - name: Install Protostar
+      run: |
+        uv tool install --editable .
+        uv tool install prek
+
+    - name: Mock direnv
+      uses: ./.github/actions/mock-direnv
+
+    - name: Configure Git Identity
+      shell: bash
+      run: |
+        git config --global user.name "Protostar Bot"
+        git config --global user.email "bot@protostar.dev"
+        git config --global init.defaultBranch main
+        git config --global core.autocrlf false
+        git config --global credential.helper ""
+
+    - name: Verify first commit triggers prek hooks
+      shell: bash
+      run: |
+        if command -v cygpath >/dev/null 2>&1; then
+          TEMP_BASE=$(cygpath -u "${{ runner.temp }}")
+        else
+          TEMP_BASE="${{ runner.temp }}"
+        fi
+        SMOKE_DIR="$TEMP_BASE/smoke_${{ matrix.template }}"
+        rm -rf "$SMOKE_DIR"
+        mkdir -p "$SMOKE_DIR"
+        cd "$SMOKE_DIR"
+
+        protostar init --template ${{ matrix.template }} --prek --python-version 3.12
+
+        # 1. Verify pre-commit hook script was installed by Protostar
+        test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
+
+        # Pre-stage all files so hooks have staged content to inspect
+        git add .
+
+        # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
+        if [ -f .git/hooks/commit-msg ]; then
+          echo "=== Running commit-msg hook canary test ==="
+          canary_code=0
+          canary_output=$(git commit -m "invalid non-conventional commit message" < /dev/null 2>&1) || canary_code=$?
+          if [ $canary_code -eq 0 ]; then
+            echo "ERROR: commit-msg hook failed to reject invalid commit message"
+            echo "$canary_output"
+            exit 1
+          else
+            echo "Canary commit correctly rejected by commit-msg hook (exit code $canary_code)"
+            echo "$canary_output"
+          fi
+        fi
+
+        # 3. Verify clean first commit triggers prek hooks and succeeds
+        echo "=== Running valid initial commit ==="
+        commit_code=0
+        commit_output=$(git commit -m "feat: initial scaffold" < /dev/null 2>&1) || commit_code=$?
+        echo "$commit_output"
+
+        if [ $commit_code -ne 0 ]; then
+          echo "ERROR: Initial commit failed with exit code $commit_code"
+          exit 1
+        fi
+
+        # 4. Verify hook execution output is present in commit output
+        echo "$commit_output" | grep -qE "(uv lock check|ruff check|ruff format|Passed)" || {
+          echo "ERROR: Prek hook execution not detected in commit output"
+          exit 1
+        }
 
   benchmark-gate:
     name: Benchmark Regression Check
