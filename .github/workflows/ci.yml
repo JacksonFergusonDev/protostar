@@ -212,16 +212,26 @@ jobs:
         # 1. Verify pre-commit hook script was installed by Protostar
         test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
 
+        # Pre-stage all files so hooks have staged content to inspect
+        git add .
+
         # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
         if [ -f .git/hooks/commit-msg ]; then
-          if git commit -m "invalid non-conventional commit message" < /dev/null; then
+          echo "=== Running commit-msg hook canary test ==="
+          canary_output=$(git commit -m "invalid non-conventional commit message" < /dev/null 2>&1)
+          canary_code=$?
+          if [ $canary_code -eq 0 ]; then
             echo "ERROR: commit-msg hook failed to reject invalid commit message"
+            echo "$canary_output"
             exit 1
+          else
+            echo "Canary commit correctly rejected by commit-msg hook (exit code $canary_code)"
+            echo "$canary_output"
           fi
         fi
 
         # 3. Verify clean first commit triggers prek hooks and succeeds
-        git add .
+        echo "=== Running valid initial commit ==="
         commit_output=$(git commit -m "feat: initial scaffold" < /dev/null 2>&1)
         commit_code=$?
         echo "$commit_output"
