@@ -100,6 +100,49 @@ class TemplateAliasConfig:
     trusted: bool = False
 
 
+def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> None:
+    """Rejects template aliases that cannot resolve to exactly one template.
+
+    Template lookup is case-insensitive and built-in templates are discovered
+    ahead of user aliases, so a shadowing alias resolves differently depending
+    on the call site (``--template`` finds the built-in, the wizard finds the
+    alias). Neither answer is correct, so the ambiguity is refused at load time.
+
+    Args:
+        templates: The normalized user alias table.
+
+    Raises:
+        ConfigurationError: If an alias shadows a built-in template, or if two
+            aliases differ only by letter case.
+    """
+    from protostar.templates import builtin_template_aliases
+
+    reserved = {alias.casefold(): alias for alias in builtin_template_aliases()}
+    seen: dict[str, str] = {}
+    for alias in sorted(templates):
+        folded = alias.casefold()
+        if folded in reserved:
+            raise ConfigurationError(
+                f"Template alias '{alias}' in '[templates]' is reserved by the "
+                f"built-in template '{reserved[folded]}'.",
+                hint=(
+                    f"Rename the alias in {CONFIG_FILE}. Built-in template names "
+                    "cannot be reused, because '--template' and the interactive "
+                    "wizard would resolve them to different templates."
+                ),
+            )
+        if folded in seen:
+            raise ConfigurationError(
+                f"Template aliases '{seen[folded]}' and '{alias}' in '[templates]' "
+                "differ only by letter case.",
+                hint=(
+                    f"Rename one of them in {CONFIG_FILE}. Template lookup is "
+                    "case-insensitive, so only one of the two is reachable."
+                ),
+            )
+        seen[folded] = alias
+
+
 @dataclass
 class UserConfig:
     """Global configuration settings for the Protostar CLI.
@@ -173,6 +216,7 @@ class UserConfig:
                 normalized[k] = TemplateAliasConfig(source=v, name=k)
             else:
                 normalized[k] = v
+        _validate_template_aliases(normalized)
         self.templates = normalized
 
     @classmethod

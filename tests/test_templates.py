@@ -108,3 +108,21 @@ def test_discover_templates_execution_speed() -> None:
 
     assert len(templates) >= 6
     assert elapsed < 0.05, f"Discovery took too long: {elapsed:.4f}s"
+
+
+def test_discovered_aliases_are_unique() -> None:
+    """Discovery never emits two templates under one alias.
+
+    Consumers index the result by alias (the wizard) or scan it for the first
+    match (``--template``). Those disagree whenever an alias appears twice, so
+    uniqueness is the invariant that keeps every call site resolving alike.
+    """
+    config = UserConfig(
+        templates={
+            "acme-api": TemplateAliasConfig(source="https://example.com/api.toml"),
+        }
+    )
+
+    aliases = [t.alias for t in discover_templates(config=config)]
+
+    assert len(aliases) == len(set(aliases))

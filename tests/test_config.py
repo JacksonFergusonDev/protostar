@@ -3,6 +3,7 @@ from collections.abc import Generator
 import pytest
 
 from protostar.config import (
+    TemplateAliasConfig,
     TemplateBlueprint,
     UserConfig,
     clear_user_config_cache,
@@ -636,3 +637,54 @@ mypy = []
 def test_template_blueprint_rejects_malformed_tool_dependencies(body, message):
     with pytest.raises(ConfigurationError, match=message):
         TemplateBlueprint._parse(body, source="test.toml")
+
+
+def test_template_alias_shadowing_a_builtin_is_rejected():
+    """A user alias may not reuse a built-in template name."""
+    with pytest.raises(ConfigurationError) as excinfo:
+        UserConfig(
+            templates={
+                "api": TemplateAliasConfig(source="https://example.com/api.toml")
+            }
+        )
+
+    assert "reserved by the built-in template 'api'" in str(excinfo.value)
+    assert excinfo.value.hint is not None
+
+
+def test_template_alias_shadowing_a_builtin_is_case_insensitive():
+    """Lookup folds case, so a case variant shadows the built-in just as badly."""
+    with pytest.raises(ConfigurationError) as excinfo:
+        UserConfig(
+            templates={
+                "API": TemplateAliasConfig(source="https://example.com/api.toml")
+            }
+        )
+
+    assert "'API'" in str(excinfo.value)
+    assert "built-in template 'api'" in str(excinfo.value)
+
+
+def test_template_aliases_differing_only_by_case_are_rejected():
+    """Two aliases that fold to one key leave the second unreachable."""
+    with pytest.raises(ConfigurationError) as excinfo:
+        UserConfig(
+            templates={
+                "acme": TemplateAliasConfig(source="https://example.com/one.toml"),
+                "ACME": TemplateAliasConfig(source="https://example.com/two.toml"),
+            }
+        )
+
+    assert "differ only by letter case" in str(excinfo.value)
+
+
+def test_template_aliases_that_do_not_collide_are_accepted():
+    """Distinct aliases alongside built-in names remain valid."""
+    config = UserConfig(
+        templates={
+            "acme-api": TemplateAliasConfig(source="https://example.com/one.toml"),
+            "acme-cli": TemplateAliasConfig(source="https://example.com/two.toml"),
+        }
+    )
+
+    assert sorted(config.templates) == ["acme-api", "acme-cli"]

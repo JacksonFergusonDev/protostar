@@ -73,6 +73,8 @@ When declaring a template using the `[templates.<alias>]` table format:
 - **`description`** *(optional)*: Short summary displayed in `protostar init --list-templates`, shell autocompletion, and the TUI wizard.
 - **`trusted`** *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning prompt.
 
+Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `dsp`, `embedded`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
+
 Templates declared here can be invoked directly with `protostar init --template <alias>`, appear automatically in the interactive wizard, and are dynamically surfaced in shell completions.
 
 ## Next Steps

@@ -128,6 +128,8 @@ When declaring a template via `[templates.<alias>]`, you can specify:
 - __`description`__ *(optional)*: A short explanation of the stack, displayed in `protostar init --list-templates`, shell auto-completion, and the interactive wizard.
 - __`trusted`__ *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning dialog.
 
+Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `dsp`, `embedded`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
+
 Once registered, you can reference them directly by alias with `--template` (or `-t`):
 
 ```bash

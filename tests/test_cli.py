@@ -1518,3 +1518,39 @@ def test_malformed_cli_arguments(run_cli):
     # 4. Unknown subcommand
     code, *_ = run_cli("unknown_subcommand")
     assert code != 0
+
+
+def test_main_renders_bracketed_error_text_literally(mocker):
+    """Domain error text is data: TOML table names must survive Rich rendering."""
+    import io
+
+    from rich.console import Console
+
+    from protostar.cli import main
+    from protostar.errors import ConfigurationError
+
+    mocker.patch("protostar.cli.main.parser.build_parser")
+    mocker.patch(
+        "protostar.cli.parser.intercept_interactive_wizards",
+        side_effect=ConfigurationError(
+            "Unrecognized fields in '[templates.backend]': bogus.",
+            hint="Fix '[templates.backend]' and re-run.",
+        ),
+    )
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
+    mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    panel_call = next(
+        call
+        for call in mock_print.call_args_list
+        if call.args and hasattr(call.args[0], "renderable")
+    )
+    buf = io.StringIO()
+    Console(file=buf, width=120, force_terminal=False).print(panel_call.args[0])
+    rendered_output = buf.getvalue()
+
+    assert "Unrecognized fields in '[templates.backend]': bogus." in rendered_output
+    assert "Hint: Fix '[templates.backend]' and re-run." in rendered_output

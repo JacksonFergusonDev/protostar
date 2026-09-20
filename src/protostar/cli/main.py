@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from protostar.orchestrator import Orchestrator
 from rich.console import Group
 from rich.logging import RichHandler
+from rich.markup import escape
 from rich.panel import Panel
 from rich.text import Text
 
@@ -539,11 +540,13 @@ def main() -> None:
             # Expected domain errors route here for clean terminal formatting
             ui.console.print()
 
-            body = str(e)
+            # Domain error text is data, not markup: escape it before composing
+            # the panel body so literal '[templates]' survives Rich rendering.
+            body = escape(str(e))
             if isinstance(e, CommandExecutionError) and e.output_detail:
-                body += f"\n\n[dim]{e.output_detail}[/dim]"
+                body += f"\n\n[dim]{escape(e.output_detail)}[/dim]"
             if e.hint:
-                body += f"\n\n[dim]Hint: {e.hint}[/dim]"
+                body += f"\n\n[dim]Hint: {escape(e.hint)}[/dim]"
             ctx = getattr(e, "rollback_context", None)
             from rich.console import RenderableType
 

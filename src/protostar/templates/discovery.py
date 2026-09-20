@@ -5,11 +5,13 @@ Built-in templates share one contract, described in
 ``tests/test_builtin_template_contract.py``.
 """
 
+import functools
 import importlib.resources
 import os
 import tomllib
 from dataclasses import dataclass
 from enum import StrEnum
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -56,6 +58,48 @@ class TemplateInfo:
         }
 
 
+_TEMPLATE_SUFFIX = ".toml"
+
+
+def _builtin_alias(path: Traversable) -> str:
+    """Returns the alias a packaged template resource is addressed by."""
+    return path.name[: -len(_TEMPLATE_SUFFIX)]
+
+
+def _builtin_template_files() -> tuple[Traversable, ...]:
+    """Enumerates the template resources packaged with Protostar.
+
+    Returns:
+        Every template resource in the ``protostar.templates`` package ordered
+        by file name, or an empty tuple when package resources are unreadable.
+    """
+    try:
+        template_dir = importlib.resources.files("protostar.templates")
+        items = [
+            path
+            for path in template_dir.iterdir()
+            if path.is_file() and path.name.endswith(_TEMPLATE_SUFFIX)
+        ]
+    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
+        return ()
+    return tuple(sorted(items, key=lambda path: path.name))
+
+
+@functools.cache
+def builtin_template_aliases() -> frozenset[str]:
+    """Returns the reserved alias of every template packaged with Protostar.
+
+    Built-in aliases are reserved because template lookup is case-insensitive
+    and built-ins are discovered ahead of user aliases. A user alias that
+    shadows one would resolve to a different template per call site, so
+    ``UserConfig`` rejects the collision at load time.
+
+    Returns:
+        The frozen set of built-in template aliases.
+    """
+    return frozenset(_builtin_alias(path) for path in _builtin_template_files())
+
+
 def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]:
     """Discovers all available built-in templates and configured global aliases.
 
@@ -73,36 +117,27 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
     discovered: list[TemplateInfo] = []
 
     # 1. Discover built-in templates from package resources
-    try:
-        template_dir = importlib.resources.files("protostar.templates")
-        items = [
-            p
-            for p in template_dir.iterdir()
-            if p.is_file() and p.name.endswith(".toml")
-        ]
-        for path in sorted(items, key=lambda p: p.name):
-            alias = path.name[:-5]  # strip .toml
-            try:
-                content = path.read_text(encoding="utf-8")
-                data = tomllib.loads(content)
-                name = data.get("name") or alias
-                description = data.get("description", "")
-            except (OSError, tomllib.TOMLDecodeError, AttributeError, TypeError):
-                name = alias
-                description = ""
+    for path in _builtin_template_files():
+        alias = _builtin_alias(path)
+        try:
+            content = path.read_text(encoding="utf-8")
+            data = tomllib.loads(content)
+            name = data.get("name") or alias
+            description = data.get("description", "")
+        except (OSError, tomllib.TOMLDecodeError, AttributeError, TypeError):
+            name = alias
+            description = ""
 
-            discovered.append(
-                TemplateInfo(
-                    alias=alias,
-                    name=name,
-                    description=description,
-                    type=TemplateType.BUILT_IN,
-                    source="protostar.templates",
-                    trusted=True,
-                )
+        discovered.append(
+            TemplateInfo(
+                alias=alias,
+                name=name,
+                description=description,
+                type=TemplateType.BUILT_IN,
+                source="protostar.templates",
+                trusted=True,
             )
-    except (OSError, TypeError, ValueError, AttributeError, ModuleNotFoundError):
-        pass
+        )
 
     # 2. Discover user aliases from UserConfig
     if config is None:
