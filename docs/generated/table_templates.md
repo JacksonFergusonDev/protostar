@@ -5,4 +5,5 @@
 | `cli` | Rich & Typer command-line application | `protostar init --template cli` | `typer`, `rich` |
 | `dsp` | Digital signal processing and audio analysis scaffold | `protostar init --template dsp` | `librosa`, `soundfile`, `scipy`, `numpy`, `matplotlib`, `pedalboard` |
 | `embedded` | Embedded Python development and microcontroller setup | `protostar init --template embedded` | `pyserial`, `mpremote` |
+| `lib` | Reusable Python library (pip-installable, PEP 561 typed) | `protostar init --template lib` | *None* |
 | `ml` | Machine learning & data science scaffold with PyTorch and Jupyter | `protostar init --template ml` | `torch`, `scikit-learn`, `pandas`, `numpy`, `matplotlib`, `tqdm` |

@@ -25,7 +25,7 @@ from protostar.orchestrator import Orchestrator
 from protostar.sync_state import FilePolicy, deserialize_state
 from protostar.system import ProcessRunner
 
-BUILTIN_TEMPLATES = ("cli", "astro", "ml", "api", "dsp", "embedded")
+BUILTIN_TEMPLATES = ("cli", "astro", "ml", "api", "dsp", "embedded", "lib")
 
 
 @pytest.fixture(autouse=True)

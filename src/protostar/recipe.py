@@ -284,7 +284,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
             raise _invalid() from e
         locator = raw["locator"]
         if origin is TemplateOrigin.BUILT_IN:
-            if locator not in {"api", "astro", "cli", "dsp", "embedded", "ml"}:
+            if locator not in {"api", "astro", "cli", "dsp", "embedded", "lib", "ml"}:
                 raise _invalid()
         elif origin is TemplateOrigin.LOCAL:
             if (

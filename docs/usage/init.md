@@ -30,7 +30,7 @@ content. After initialization, use the [project lifecycle](lifecycle.md) command
 
 While Protostar is fully modular, you often want a vetted, turnkey environment without selecting individual flags manually. Protostar ships with built-in templates that bundle domain-specific tools, directories, and AST configurations. Each one is a project *shape* (a command-line app, a web service, an analysis workbench), not a fixed stack of libraries.
 
-The shapes come in two kinds of default. __Product__ templates (`cli`, `api`) start with the full quality gate: strict typing, tests, CI, and commit hooks. __Workbench__ templates (`astro`, `ml`, `dsp`, `embedded`) start lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Either kind is only a starting point: every tool can be overridden with the tri-state flags below.
+The shapes come in two kinds of default. __Product__ templates (`cli`, `api`, `lib`) start with the full quality gate: strict typing, tests, CI, and commit hooks. __Workbench__ templates (`astro`, `ml`, `dsp`, `embedded`) start lean, with just Ruff, direnv, and `just`, so exploratory work isn't buried in opinions on day one. Either kind is only a starting point: every tool can be overridden with the tri-state flags below.
 
 To scaffold from a template headlessly, pass `--template` (or `-t`):
 
@@ -85,6 +85,40 @@ To understand how Protostar interprets your flags, observe what happens when we 
     - __Dependency Locking:__ Protostar locks `typer` and `rich` from the CLI template.
     - __AST Configuration:__ It constructs the TOML Abstract Syntax Tree (AST), configuring `[tool.ruff]`, `[tool.mypy]`, `[tool.pytest.ini_options]`, and `[tool.rumdl]` alongside development dependency groups.
     - __Local Toolchain Hooks:__ In `.pre-commit-config.yaml`, Protostar scaffolds local toolchain hooks (`ruff-check`, `ruff-format`, `mypy`, `rumdl-check`, `rumdl-fmt`) that execute directly in your project environment via `uv run`. When commit message validation (such as Commitizen) is included, top-level `default_install_hook_types` (`pre-commit`, `commit-msg`) and `default_stages` (`pre-commit`) are automatically declared.
+
+=== "The Reusable Library (Package Focus)"
+    __Command:__ `protostar init --template lib`
+
+    This template scaffolds a clean, reusable Python library package ready for distribution.
+
+    ```text
+    --8<-- "tree_lib.txt"
+    ```
+
+    ??? abstract "Inspect Generated Files"
+        === "pyproject.toml"
+            ```toml
+            --8<-- "lib/pyproject.toml"
+            ```
+        === "src/demo_project/__init__.py"
+            ```python
+            --8<-- "lib/src/demo_project/__init__.py"
+            ```
+        === ".pre-commit-config.yaml"
+            ```yaml
+            --8<-- "lib/pre-commit-config.fixture.yaml"
+            ```
+        === ".gitignore"
+            ```gitignore
+            --8<-- "lib/.gitignore"
+            ```
+
+    __What Protostar sets up:__
+
+    - __PEP 561 Typing:__ Injects `py.typed` to signal inline type annotations to downstream type checkers like Mypy and Pyright.
+    - __Package Packaging:__ Configures the `hatchling` build backend with a standard `src/` layout for wheel and sdist builds.
+    - __Public API Architecture:__ Scaffolds `__init__.py` with explicit `__all__` re-exports and dynamic `__version__` lookup via `importlib.metadata`.
+    - __Strict Typing & Quality:__ Enables strict Mypy checking, docstring linting (`D`), and `TC` (flake8-type-checking) to keep type-only imports from becoming runtime transitive dependencies.
 
 === "The Astrophysics Pipeline (Data Focus)"
     __Command:__ `protostar init --template astro`

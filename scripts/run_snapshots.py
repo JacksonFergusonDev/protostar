@@ -109,6 +109,11 @@ SCENARIOS: dict[str, RegressionScenario] = {
         commands=(("--template", "embedded"),),
         description="Embedded systems template with hardware board layout.",
     ),
+    "lib": RegressionScenario(
+        name="lib",
+        commands=(("--template", "lib"),),
+        description="Reusable Python library with PEP 561 typing and src-layout.",
+    ),
 }
 
 FIXTURES: dict[str, list[list[str]]] = {
