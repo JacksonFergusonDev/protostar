@@ -314,10 +314,6 @@ jobs:
         docker logs "$IMAGE"
         exit 1
 
-    - name: Clean up container
-      if: ${{ always() && matrix.template == 'api' }}
-      run: docker rm --force "$IMAGE"
-
   benchmark-gate:
     name: Benchmark Regression Check
     runs-on: ubuntu-latest
