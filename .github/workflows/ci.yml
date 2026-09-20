@@ -177,7 +177,9 @@ jobs:
         python-version: "3.12"
 
     - name: Install Protostar
-      run: uv tool install --editable .
+      run: |
+        uv tool install --editable .
+        uv tool install prek
 
     - name: Mock direnv
       uses: ./.github/actions/mock-direnv
@@ -194,7 +196,13 @@ jobs:
     - name: Verify first commit triggers prek hooks
       shell: bash
       run: |
-        SMOKE_DIR="${{ runner.temp }}/smoke_${{ matrix.template }}"
+        set -x
+        if command -v cygpath >/dev/null 2>&1; then
+          TEMP_BASE=$(cygpath -u "${{ runner.temp }}")
+        else
+          TEMP_BASE="${{ runner.temp }}"
+        fi
+        SMOKE_DIR="$TEMP_BASE/smoke_${{ matrix.template }}"
         rm -rf "$SMOKE_DIR"
         mkdir -p "$SMOKE_DIR"
         cd "$SMOKE_DIR"
@@ -203,10 +211,22 @@ jobs:
 
         # 1. Verify pre-commit hook script was installed by Protostar
         test -f .git/hooks/pre-commit || { echo "ERROR: .git/hooks/pre-commit missing"; exit 1; }
+        echo "=== Installed .git/hooks/pre-commit ==="
+        cat .git/hooks/pre-commit
+        if [ -f .git/hooks/commit-msg ]; then
+          echo "=== Installed .git/hooks/commit-msg ==="
+          cat .git/hooks/commit-msg
+        fi
+
+        # Pre-warm hook environments
+        echo "=== Direct prek run --all-files ==="
+        uv run prek run --all-files || true
 
         # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
+        echo "=== Staging all files ==="
         git add .
         if [ -f .git/hooks/commit-msg ]; then
+          echo "=== Running commit-msg canary check ==="
           if git commit -m "invalid non-conventional commit message"; then
             echo "ERROR: commit-msg hook failed to reject invalid commit message"
             exit 1
@@ -216,6 +236,7 @@ jobs:
         fi
 
         # 3. Verify clean first commit triggers prek hooks and succeeds
+        echo "=== Running valid first commit ==="
         commit_output=$(git commit -m "feat: initial scaffold" 2>&1)
         commit_code=$?
         echo "$commit_output"
