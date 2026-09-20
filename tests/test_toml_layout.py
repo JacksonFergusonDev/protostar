@@ -28,7 +28,7 @@ from protostar.toml_layout import (
 
 SNAPSHOTS = Path(__file__).parent / "snapshots"
 # ml_merged is the product of a merge, which never reformats; it is not a fresh layout.
-FRESH_SNAPSHOTS = ["api", "astro", "cli", "dsp", "embedded", "lib", "ml"]
+FRESH_SNAPSHOTS = ["api", "astro", "cli", "lib", "ml"]
 
 # Files a user might already have. Their bytes must survive a split and a join.
 FOREIGN_FILES = {

@@ -530,9 +530,7 @@ def test_late_bound_reserved_target_rejected_before_writes(
     write.assert_not_called()
 
 
-@pytest.mark.parametrize(
-    "name", ["api", "astro", "cli", "dsp", "embedded", "lib", "ml"]
-)
+@pytest.mark.parametrize("name", ["api", "astro", "cli", "lib", "ml"])
 def test_all_builtins_use_supported_typed_declarations(name):
     import importlib.resources
 
@@ -540,8 +538,3 @@ def test_all_builtins_use_supported_typed_declarations(name):
     blueprint = TemplateBlueprint.load(str(target), built_in=name)
     assert blueprint.reference is not None
     assert blueprint.reference.locator == name
-    if name == "embedded":
-        assert (
-            blueprint.appends["justfile"]["microcontroller_recipes"].id
-            == "microcontroller_recipes"
-        )

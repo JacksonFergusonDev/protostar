@@ -2,7 +2,7 @@
     "template_reference": {
         "origin": "built-in",
         "locator": "astro",
-        "digest": "ca7abbda8095b46f6bdb925f8d3fdeff6ec0ff24a72b61b0f13549cb8756a6f7",
+        "digest": "4fee3c38a8eaca5d6ef4f9c10bcd8c0e2518070dbd8408b19872e73e13e61356",
         "display_name": null,
         "version": null,
         "source_revision": null
@@ -16,11 +16,11 @@
             "astropy",
             "astroquery",
             "photutils",
-            "specutils",
-            "nbdime"
+            "specutils"
         ],
         "dev_dependencies": [
-            "ruff"
+            "ruff",
+            "nbdime"
         ],
         "docs_dependencies": [],
         "includes": [],

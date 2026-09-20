@@ -10,7 +10,7 @@ Protostar's template engine allows you to define declarative, reusable environme
 
 - :material-cube-outline: __Built-in Templates__
 
-    Turnkey environment matrices for common domains (e.g., `astro`, `cli`, `ml`, `dsp`) shipped natively with Protostar.
+    Turnkey environment matrices for common domains (e.g., `api`, `astro`, `cli`, `lib`, `ml`) shipped natively with Protostar.
 
 - :material-web: __External & Remote (`--from`)__
 
