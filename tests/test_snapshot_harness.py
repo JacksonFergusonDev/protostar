@@ -368,7 +368,7 @@ def test_check_snapshot_drift_filtered_scope(
     ls_call = next(cmd for cmd in captured_cmds if "ls-files" in cmd)
     assert "tests/snapshots/cli" in ls_call
     assert "docs/generated/tree_cli.txt" in ls_call
-    # Other scenarios like ml or dsp should not be present in the command
+    # Other scenarios like ml or api should not be present in the command
     assert "tests/snapshots/ml" not in ls_call
 
 

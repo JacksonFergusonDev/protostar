@@ -147,21 +147,23 @@ jobs:
           - os: ubuntu-latest
             template: api
           - os: ubuntu-latest
+            template: lib
+          - os: ubuntu-latest
             template: astro
-          - os: ubuntu-latest
-            template: dsp
-          - os: ubuntu-latest
-            template: embedded
           - os: ubuntu-latest
             template: ml
           - os: macos-latest
             template: cli
           - os: macos-latest
             template: api
+          - os: macos-latest
+            template: lib
           - os: windows-latest
             template: cli
           - os: windows-latest
             template: api
+          - os: windows-latest
+            template: lib
 
     env:
       GIT_TERMINAL_PROMPT: "0"
