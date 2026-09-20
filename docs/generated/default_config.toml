@@ -37,6 +37,6 @@ python_version = "3.13"
 #
 # [templates.enterprise-api]
 # name = "Enterprise API"
-# source = "https://github.com/myorg/enterprise-template.git"
+# source = "https://github.com/myorg/enterprise-template"
 # description = "Internal enterprise microservice scaffold with auth & tracing"
 # trusted = true

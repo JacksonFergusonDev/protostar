@@ -99,6 +99,46 @@ protostar init --from https://github.com/YourOrg/fastapi-template
 
 Protostar downloads the archive, extracts it safely using strict path traversal protection, resolves the contained `protostar.toml`, and injects all files from the `template/` directory into your workspace.
 
+### Pinning a Template Revision
+
+Every URL translation preserves the ref already in the path, so you pin a single-file template by pointing at a tag or commit instead of a branch:
+
+| Provider | Pinned web URL |
+| :--- | :--- |
+| __GitHub__ | `https://github.com/user/repo/blob/v1.2.0/api.toml` |
+| __GitLab__ | `https://gitlab.com/user/repo/-/blob/v1.2.0/api.toml` |
+| __Bitbucket__ | `https://bitbucket.org/user/repo/src/v1.2.0/api.toml` |
+| __Codeberg__ | `https://codeberg.org/user/repo/src/tag/v1.2.0/api.toml` |
+| __Sourcehut__ | `https://git.sr.ht/~user/repo/tree/v1.2.0/item/api.toml` |
+
+A bare repository URL is __not__ pinned: it always resolves to the default branch archive (`.../archive/refs/heads/main.zip`). To pin a multi-file template, name the tagged archive explicitly:
+
+```bash
+# Pinned to the v1.2.0 tag rather than whatever main holds today
+protostar init --from https://github.com/YourOrg/fastapi-template/archive/refs/tags/v1.2.0.zip
+```
+
+The equivalent forms are `/-/archive/v1.2.0/repo-v1.2.0.zip` on GitLab, `/archive/v1.2.0.zip` on Codeberg, and `/get/v1.2.0.zip` on Bitbucket. Template source URLs may not carry credentials or query parameters, so always pin through the path as shown above.
+
+#### Recorded Provenance
+
+Protostar records a SHA-256 digest of whichever template it resolved in `.protostar.lock.toml`, pinned or not, so `protostar status` can report when an unpinned source has drifted. A __full 40-character commit SHA__ in the URL is additionally recorded as the source revision; a tag is not, because a tag can be moved.
+
+```toml
+# Strongest pin: immutable, and recorded as the source revision
+[templates.backend]
+source = "https://raw.githubusercontent.com/YourOrg/standards/4f0b8c2d1e9a7b3c5d6e8f0a2b4c6d8e0f1a2b3c/backend.toml"
+```
+
+#### Choosing Whether to Pin
+
+The resolved locator is part of the project identity tracked in `.protostar.lock.toml`, so the choice is durable:
+
+- __Pin__ when reproducible scaffolds matter more than updates. Every `protostar init` from that alias produces the same result indefinitely.
+- __Leave floating__ (a branch ref, or a bare repository URL) when you want `protostar sync` to deliver template updates to existing projects.
+
+A project scaffolded from a pinned URL stays on that revision. Editing the recorded source in `pyproject.toml` to bump the pin changes the tracked identity, and `protostar sync` refuses it as template switching.
+
 ## The Global Alias Registry
 
 Instead of memorizing long URLs or local paths, you can register templates in your global configuration file (`~/.config/protostar/config.toml`). Protostar supports both shorthand string aliases and rich configuration tables:
@@ -114,7 +154,7 @@ local-ds = "~/Developer/templates/data-science.toml"
 # Rich configuration tables with explicit metadata and trust:
 [templates.enterprise-api]
 name = "Enterprise API"
-source = "https://github.com/YourOrg/enterprise-template.git"
+source = "https://github.com/YourOrg/enterprise-template"
 description = "Internal enterprise microservice scaffold with auth & tracing"
 trusted = true
 ```
