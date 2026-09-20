@@ -166,6 +166,7 @@ jobs:
     env:
       GIT_TERMINAL_PROMPT: "0"
       GCM_INTERACTIVE: "never"
+      PREK_COLOR: "never"
 
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -223,7 +224,7 @@ jobs:
         git add .
 
         echo "=== Direct prek run --all-files --verbose ==="
-        uv run prek run --all-files --verbose
+        uv run prek -vvv --no-progress run --all-files
 
         # 2. Canary test: verify commit-msg hook actively rejects non-conventional commit (when present)
         if [ -f .git/hooks/commit-msg ]; then
