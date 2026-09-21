@@ -86,7 +86,8 @@
                   "unowned",
                   "diverged",
                   "type-mismatch",
-                  "deleted-ancestor"
+                  "deleted-ancestor",
+                  "retracted"
                 ]
               }
             },

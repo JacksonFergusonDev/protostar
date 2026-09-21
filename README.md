@@ -79,7 +79,7 @@ Protostar is built to save you time and stay out of your way. It adheres to a st
 
 1. **Fail Loud, Fail Early:** Pre-flight checks ensure all system dependencies (like `uv`, `git`, or `direnv`) are present before any state is mutated.
 
-1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. In merge mode, it reconciles managed TOML and YAML contributions from recorded ownership baselines, checksum-gates generated files and named regions, and appends missing ignore patterns. Existing unowned content is not adopted; locally edited managed content is preserved with a diagnostic.
+1. **Non-Destructive by Default:** Protostar never blindly overwrites your existing work. In merge mode, it reconciles managed TOML and YAML contributions (including GitHub Actions workflows, by job and step) from recorded ownership baselines, checksum-gates other generated files and named regions, and appends missing ignore patterns. Existing unowned content is not adopted; locally edited managed content is preserved with a diagnostic.
 
 1. **Actionable Diagnostics:** When things break, Protostar bubbles up the exact `stderr` so you know immediately if a network request or dependency resolution failed. For unexpected internal crashes, it automatically generates a URL-encoded GitHub issue containing your system environment details to make debugging painless. You can also append the global `--verbose` (or `-v`) flag to any command to enable rich, detailed stack traces and debug-level logging.
 

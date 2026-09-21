@@ -29,7 +29,7 @@ def test_executor_ci_assembly(
     }
     manifest.tooling.ci_flags = {"pytest", "codecov"}
     manifest.tooling.ci_steps = [
-        "      - name: Run Ruff\\n        run: uv run ruff check"
+        "      - name: Run Ruff\n        run: uv run ruff check"
     ]
 
     executor = SystemExecutor(manifest, UserConfig())
@@ -45,11 +45,11 @@ def test_executor_ci_assembly(
     )
     assert '"ubuntu-latest", "macos-latest"' in content
     assert '"3.11", "3.12", "3.13", "3.14"' in content
-    assert "name: Run tests with coverage # (for Codecov)" in content
+    assert "name: Run tests\n" in content
+    assert "${{ matrix.coverage && '--cov " in content
     assert "name: Lint & Type Check" in content
     assert "coverage: true" in content
     assert "if: matrix.coverage" in content
-    assert "if: ${{ !matrix.coverage }}" in content
     assert "name: Run Ruff" in content
     assert "name: Upload coverage to Codecov" in content
     assert "name: Upload test analytics to Codecov" in content
@@ -66,7 +66,7 @@ def test_executor_ci_assembly_no_codecov(
     }
     manifest.tooling.ci_flags = {"pytest"}
     manifest.tooling.ci_steps = [
-        "      - name: Run Ruff\\n        run: uv run ruff check"
+        "      - name: Run Ruff\n        run: uv run ruff check"
     ]
 
     executor = SystemExecutor(manifest, UserConfig())
@@ -76,8 +76,8 @@ def test_executor_ci_assembly_no_codecov(
     mock_write.assert_called_once()
     args, _ = mock_write.call_args
     _path, content = args
-    assert "name: Run tests with coverage" not in content
-    assert "name: Run Tests" in content
+    assert "--cov" not in content
+    assert "name: Run tests\n        run: uv run pytest\n" in content
     assert "Upload coverage to Codecov" not in content
     assert "coverage: true" not in content
 
@@ -93,7 +93,7 @@ def test_executor_ci_assembly_no_pytest(
     }
     manifest.tooling.ci_flags = set()
     manifest.tooling.ci_steps = [
-        "      - name: Run Ruff\\n        run: uv run ruff check"
+        "      - name: Run Ruff\n        run: uv run ruff check"
     ]
 
     executor = SystemExecutor(manifest, UserConfig())
@@ -103,7 +103,7 @@ def test_executor_ci_assembly_no_pytest(
     mock_write.assert_called_once()
     args, _ = mock_write.call_args
     _path, content = args
-    assert "name: Run Tests" not in content
+    assert "name: Run tests" not in content
 
 
 def test_executor_release_assembly(

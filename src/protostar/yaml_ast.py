@@ -13,6 +13,7 @@ from types import MappingProxyType
 from typing import Any, cast
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.error import YAMLError
 from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 from ruamel.yaml.scalarstring import ScalarString
@@ -29,6 +30,7 @@ from .merge import (
     overlay_declared,
     prune_unapplied,
     reconcile,
+    retract_undeclared,
     semantic_equal,
     validate_value,
 )
@@ -286,8 +288,22 @@ PRE_COMMIT_SPEC = YamlDocumentSpec(
         KeyedSequence(("repos", WILDCARD, "hooks"), "id"),
     ),
 )
+CI_WORKFLOW_TARGET = ".github/workflows/ci.yml"
+RELEASE_WORKFLOW_TARGET = ".github/workflows/release.yml"
+# One GitHub Actions schema for every generated workflow: a workflow is one
+# generator's complete output, and steps are matched by the name Protostar wrote.
+WORKFLOW_SPEC = YamlDocumentSpec(
+    "GitHub Actions workflow",
+    keyed=(KeyedSequence(("jobs", WILDCARD, "steps"), "name"),),
+    policy=MergePolicy(complete=True),
+)
 YAML_DOCUMENTS: Mapping[str, YamlDocumentSpec] = MappingProxyType(
-    {CODECOV_TARGET: CODECOV_SPEC, PRE_COMMIT_TARGET: PRE_COMMIT_SPEC}
+    {
+        CODECOV_TARGET: CODECOV_SPEC,
+        PRE_COMMIT_TARGET: PRE_COMMIT_SPEC,
+        CI_WORKFLOW_TARGET: WORKFLOW_SPEC,
+        RELEASE_WORKFLOW_TARGET: WORKFLOW_SPEC,
+    }
 )
 
 
@@ -329,6 +345,15 @@ def reconcile_yaml(
         missing_file=missing_file,
         overwrite=overwrite,
     )
+
+
+def keyed_view(spec: YamlDocumentSpec, value: Value) -> Value:
+    """Presents a decoded local document with keyed sequences as identity mappings.
+
+    Duplicate identities map to the list of their records; records without an
+    identity are omitted. Paths into the result are the paths ``holds`` accept.
+    """
+    return _keyed(spec, value)
 
 
 def validate_yaml_baseline(spec: YamlDocumentSpec, value: Value) -> None:
@@ -483,6 +508,19 @@ def _omit(remote: dict[str, Value], path: tuple[str, ...]) -> None:
         parent.pop(path[-1], None)
 
 
+def _key_position(ast: CommentedMap, order: list[str], key: str) -> int:
+    """Places a new mapping key after its nearest earlier desired sibling present."""
+    present = list(ast)
+    position = order.index(key)
+    for earlier in reversed(order[:position]):
+        if earlier in ast:
+            return present.index(earlier) + 1
+    for later in order[position + 1 :]:
+        if later in ast:
+            return present.index(later)
+    return len(present)
+
+
 def _insertion_index(
     node: list[Any], sequence: KeyedSequence, order: list[str], name: str
 ) -> int:
@@ -546,6 +584,9 @@ def _reconcile_yaml(
     if overwrite:
         value = deepcopy(local)
         baseline = deepcopy(base) if isinstance(base, dict) else {}
+        if spec.policy.complete and isinstance(value, dict):
+            # Held paths keep their owned value in ``remote``, so they are not retracted.
+            retract_undeclared(value, baseline, remote)
         overlay_declared(value, declared)
         overlay_declared(baseline, declared)
         conflicts = list(ambiguities)
@@ -598,6 +639,20 @@ def _reconcile_yaml(
         styled: Any,
         keys: tuple[str, ...],
     ) -> None:
+        # Complete documents retract owned content; delete what the merge dropped.
+        for key in [k for k in before if k not in after]:
+            if hazardous(ast) or contains_hazard(ast.get(key)):
+                after[key] = deepcopy(before[key])
+                if key in previous:
+                    owned[key] = deepcopy(previous[key])
+                conflicts.append(
+                    MergeConflict(
+                        MergeLocation(location.file, (*keys, key)),
+                        ConflictReason.SHARED_STRUCTURE,
+                    )
+                )
+            else:
+                del ast[key]
         for key, child in list(after.items()):
             old = before.get(key, MISSING)
             if semantic_equal(old, child):
@@ -642,6 +697,18 @@ def _reconcile_yaml(
                     dict(zip(order, styled[key], strict=True)),
                     path,
                 )
+                removed = {
+                    name
+                    for name in cast(dict[str, Value], old)
+                    if name not in cast(dict[str, Value], child)
+                }
+                for index in reversed(range(len(node))):
+                    record = node[index]
+                    if (
+                        _identified(record, sequence)
+                        and str(record[sequence.identity]) in removed
+                    ):
+                        del node[index]
                 for name in order:
                     if name in cast(dict[str, Value], old) or name not in indexed:
                         continue
@@ -685,7 +752,10 @@ def _reconcile_yaml(
                         and anchor.value is not None
                     ):
                         replacement.yaml_set_anchor(anchor.value, always_dump=True)
-                ast[key] = replacement
+                if key not in ast and isinstance(ast, CommentedMap) and key in styled:
+                    ast.insert(_key_position(ast, list(styled), key), key, replacement)
+                else:
+                    ast[key] = replacement
 
     patch(
         doc,
@@ -713,6 +783,9 @@ def _reconcile_yaml(
         except (YAMLError, ValueError, TypeError, RecursionError) as error:
             raise _invalid() from error
         content = stream.getvalue()
+        if not original.endswith("\n\n"):
+            # A removed trailing item leaves its separator blank line on the item before.
+            content = content.rstrip("\n") + "\n"
     decoded = decode_yaml_baseline(content)
     if not semantic_equal(_keyed(spec, decoded), value):
         raise _invalid()

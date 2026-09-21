@@ -23,6 +23,7 @@ from .errors import (
     FileSystemError,
     UnsupportedFilesystemNodeError,
 )
+from .github_workflows import reconcile_workflow
 from .intent import (
     AppendContribution,
     ContributionPolicy,
@@ -92,7 +93,9 @@ from .workspace import (
     validate_resolver_workspace,
 )
 from .yaml_ast import (
+    CI_WORKFLOW_TARGET,
     CODECOV_TARGET,
+    RELEASE_WORKFLOW_TARGET,
     YAML_DOCUMENTS,
     YamlReconciliation,
     decode_yaml_baseline,
@@ -414,12 +417,9 @@ class Reconciliation:
             logger.debug(f"Scaffolded directory: {path}")
 
     def _write_ci_workflow(self) -> None:
-        """Assembles and writes the .github/workflows/ci.yml file if requested."""
+        """Assembles and reconciles the .github/workflows/ci.yml file if requested."""
         if not self.manifest.tooling.wants_ci:
             return
-
-        target = Path(".github/workflows/ci.yml")
-        enforce_path_jail(target, Path.cwd())
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
@@ -428,23 +428,54 @@ class Reconciliation:
                 ci_steps=self.manifest.tooling.ci_steps,
             )
         )
-        try:
-            self._write_generated(target, workflow)
-        except OSError as e:
-            raise FileSystemError("write CI workflow", str(target), e) from e
+        self._write_workflow(Path(CI_WORKFLOW_TARGET), workflow)
 
     def _write_release_workflow(self) -> None:
-        """Assembles and writes the .github/workflows/release.yml file if requested."""
+        """Assembles and reconciles the .github/workflows/release.yml file if requested."""
         if not self.manifest.tooling.wants_release:
             return
+        self._write_workflow(Path(RELEASE_WORKFLOW_TARGET), generate_release_workflow())
 
-        target = Path(".github/workflows/release.yml")
+    def _write_workflow(self, target: Path, workflow: str) -> None:
+        """Merges a generated workflow into the workspace by job and step."""
         enforce_path_jail(target, Path.cwd())
-        workflow = generate_release_workflow()
+        record = next(
+            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
+        )
+        if record is not None and record.policy is not FilePolicy.YAML:
+            raise ConfigurationError(
+                "Conflicting workflow ownership policy.",
+                hint="Keep the tracked file policy unchanged.",
+            )
+        self._validate_node(target)
         try:
-            self._write_generated(target, workflow)
-        except OSError as e:
-            raise FileSystemError("write release workflow", str(target), e) from e
+            exists = self.workspace.exists(target)
+            original = (
+                self.workspace.read_bytes(target).decode("utf-8") if exists else ""
+            )
+            result = reconcile_workflow(
+                target.as_posix(),
+                original,
+                workflow,
+                record,
+                missing_file=not exists,
+                overwrite=self.manifest.collision_strategy
+                is CollisionStrategy.OVERWRITE,
+            )
+            for conflict in result.conflicts:
+                self._merge_warning(conflict)
+            if result.baseline is not MISSING:
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(
+                        target.as_posix(),
+                        FilePolicy.YAML,
+                        encode_yaml_baseline(cast(dict[str, Value], result.baseline)),
+                    )
+                )
+            if result.content != original:
+                self.fs.write_text(target, result.content)
+        except (OSError, UnicodeError) as error:
+            raise FileSystemError("reconcile workflow", str(target), error) from error
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""

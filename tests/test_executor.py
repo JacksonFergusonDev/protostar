@@ -24,6 +24,8 @@ from protostar.manifest import (
     Severity,
     SystemTask,
 )
+from protostar.sync_state import FilePolicy
+from protostar.workflows import generate_release_workflow
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -1310,14 +1312,17 @@ def test_executor_writes_pre_commit_config_resolves_placeholders(mocker, mock_co
     assert "https://github.com/gitleaks/gitleaks" in written_data
 
 
-def test_executor_write_ci_workflow_skips_existing_merge(
+FOREIGN_WORKFLOW = "name: Custom\non: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo mine\n"
+
+
+def test_executor_write_ci_workflow_leaves_foreign_workflow_merge(
     tmp_path, monkeypatch, mock_config
 ):
-    """Test that CI workflow generation is skipped when target exists and strategy is MERGE."""
+    """An existing unowned workflow is not adopted; its job is never grafted into."""
     monkeypatch.chdir(tmp_path)
     ci_file = tmp_path / ".github" / "workflows" / "ci.yml"
     ci_file.parent.mkdir(parents=True, exist_ok=True)
-    ci_file.write_text("# Custom CI\n", encoding="utf-8")
+    ci_file.write_text(FOREIGN_WORKFLOW, encoding="utf-8")
 
     manifest = EnvironmentManifest()
     manifest.tooling.wants_ci = True
@@ -1326,21 +1331,21 @@ def test_executor_write_ci_workflow_skips_existing_merge(
 
     executor._write_ci_workflow()
 
-    assert ci_file.read_text(encoding="utf-8") == "# Custom CI\n"
-    assert len(executor.diagnostics) == 1
-    assert executor.diagnostics[0].phase == DiagnosticPhase.EXECUTOR
-    assert executor.diagnostics[0].severity == Severity.WARNING
-    assert "ci.yml" in executor.diagnostics[0].message
+    assert ci_file.read_text(encoding="utf-8") == FOREIGN_WORKFLOW
+    assert executor.diagnostics
+    assert all(d.phase == DiagnosticPhase.EXECUTOR for d in executor.diagnostics)
+    assert all(d.severity == Severity.WARNING for d in executor.diagnostics)
+    assert any("ci.yml: jobs.test" in d.message for d in executor.diagnostics)
 
 
-def test_executor_write_ci_workflow_overwrites_existing_overwrite(
+def test_executor_write_ci_workflow_overwrite_keeps_foreign_job(
     tmp_path, monkeypatch, mock_config
 ):
-    """Test that CI workflow generation overwrites when strategy is OVERWRITE."""
+    """Overwrite owns declared values but still never grafts into a foreign job."""
     monkeypatch.chdir(tmp_path)
     ci_file = tmp_path / ".github" / "workflows" / "ci.yml"
     ci_file.parent.mkdir(parents=True, exist_ok=True)
-    ci_file.write_text("# Custom CI\n", encoding="utf-8")
+    ci_file.write_text(FOREIGN_WORKFLOW, encoding="utf-8")
 
     manifest = EnvironmentManifest()
     manifest.tooling.wants_ci = True
@@ -1354,20 +1359,20 @@ def test_executor_write_ci_workflow_overwrites_existing_overwrite(
     executor._write_ci_workflow()
 
     content = ci_file.read_text(encoding="utf-8")
-    assert "# Custom CI" not in content
     assert "name: CI" in content
-    assert len(executor.diagnostics) == 0
+    assert "branches: [main]" in content
+    assert "echo mine" in content
+    assert "Checkout" not in content
+    assert [d.conflict.reason.value for d in executor.diagnostics if d.conflict] == [
+        "unowned"
+    ]
 
 
-def test_executor_write_release_workflow_skips_existing_merge(
+def test_executor_write_release_workflow_creates_missing_file(
     tmp_path, monkeypatch, mock_config
 ):
-    """Test that release workflow generation is skipped when target exists and strategy is MERGE."""
+    """A missing release workflow is written verbatim and becomes owned."""
     monkeypatch.chdir(tmp_path)
-    release_file = tmp_path / ".github" / "workflows" / "release.yml"
-    release_file.parent.mkdir(parents=True, exist_ok=True)
-    release_file.write_text("# Custom Release\n", encoding="utf-8")
-
     manifest = EnvironmentManifest()
     manifest.tooling.wants_release = True
     manifest.collision_strategy = CollisionStrategy.MERGE
@@ -1375,33 +1380,12 @@ def test_executor_write_release_workflow_skips_existing_merge(
 
     executor._write_release_workflow()
 
-    assert release_file.read_text(encoding="utf-8") == "# Custom Release\n"
-    assert len(executor.diagnostics) == 1
-    assert executor.diagnostics[0].phase == DiagnosticPhase.EXECUTOR
-    assert executor.diagnostics[0].severity == Severity.WARNING
-    assert "release.yml" in executor.diagnostics[0].message
-
-
-def test_executor_write_release_workflow_overwrites_existing_overwrite(
-    tmp_path, monkeypatch, mock_config
-):
-    """Test that release workflow generation overwrites when strategy is OVERWRITE."""
-    monkeypatch.chdir(tmp_path)
     release_file = tmp_path / ".github" / "workflows" / "release.yml"
-    release_file.parent.mkdir(parents=True, exist_ok=True)
-    release_file.write_text("# Custom Release\n", encoding="utf-8")
-
-    manifest = EnvironmentManifest()
-    manifest.tooling.wants_release = True
-    manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    executor = SystemExecutor(manifest, mock_config)
-
-    executor._write_release_workflow()
-
-    content = release_file.read_text(encoding="utf-8")
-    assert "# Custom Release" not in content
-    assert "pypa/gh-action-pypi-publish" in content
-    assert len(executor.diagnostics) == 0
+    assert release_file.read_text(encoding="utf-8") == generate_release_workflow()
+    assert not executor.diagnostics
+    [record] = executor.candidate_state.files
+    assert record.path == ".github/workflows/release.yml"
+    assert record.policy is FilePolicy.YAML
 
 
 def test_executor_write_ci_workflow_handles_os_error(
@@ -1427,7 +1411,7 @@ def test_executor_write_ci_workflow_handles_os_error(
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_ci_workflow()
 
-    assert "write generated file" in exc_info.value.operation
+    assert "reconcile workflow" in exc_info.value.operation
     assert "ci.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 
@@ -1451,7 +1435,7 @@ def test_executor_write_release_workflow_handles_os_error(
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_release_workflow()
 
-    assert "write generated file" in exc_info.value.operation
+    assert "reconcile workflow" in exc_info.value.operation
     assert "release.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 
