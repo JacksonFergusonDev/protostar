@@ -107,12 +107,12 @@ jobs:
 
     - name: Run tests with coverage # (for Codecov)
       if: matrix.coverage
-      run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+      run: uv run pytest -n auto --dist loadfile --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
 
     - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
       if: ${{ !matrix.coverage }}
       shell: bash
-      run: uv run pytest
+      run: uv run pytest -n auto --dist loadfile
 
     - name: Upload coverage to Codecov
       if: matrix.coverage
