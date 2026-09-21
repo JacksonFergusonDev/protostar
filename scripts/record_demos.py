@@ -34,7 +34,7 @@ DEFAULT_COLS = 105
 DEFAULT_ROWS = 30
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
-CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J")
+CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J", "\x1b[2J")
 
 
 @dataclass(frozen=True)
@@ -157,18 +157,32 @@ class PTYSession:
         # bootstrap command. Drain it before collecting the clean redraw.
         self._drain(0.4)
 
-        # Clear before recording, then retain only the terminal's clear-and-
-        # redraw output. Recording the command itself would expose "clear" in
-        # the first frame before the prompt is rendered.
-        self._silent_write("clear\n")
-        clear_output = self._drain(0.4)
+        # Trigger native shell clear-and-redraw via form-feed (Ctrl-L / \x0c).
+        # This completely avoids typing or echoing the command word "clear",
+        # prevents subprocess execution latency, and eliminates zsh's
+        # PROMPT_EOL_MARK inverted '%' line-fill artifacts.
+        self._silent_write("\x0c")
+        redraw_output = self._drain(0.4)
         screen_start = next(
             (
-                clear_output.find(marker)
+                redraw_output.find(marker)
                 for marker in CLEAR_SCREEN_MARKERS
-                if clear_output.find(marker) >= 0
+                if redraw_output.find(marker) >= 0
             ),
             -1,
+        )
+
+        initial_content = (
+            redraw_output[screen_start:] if screen_start >= 0 else redraw_output
+        )
+
+        if not initial_content.strip():
+            raise RuntimeError(
+                "Failed to capture clean prompt redraw for initial demo frame."
+            )
+
+        assert "clear" not in initial_content.lower()[:40], (
+            f"Command leak detected in initial demo frame: {initial_content!r}"
         )
 
         self.events.clear()
@@ -176,8 +190,7 @@ class PTYSession:
         self.start_time = time.time()
         self.recording = True
 
-        if screen_start >= 0:
-            self.events.append([0.0, "o", clear_output[screen_start:]])
+        self.events.append([0.0, "o", initial_content])
 
     def _silent_write(self, data: str) -> None:
         """Writes data directly to master fd without recording timestamps."""
