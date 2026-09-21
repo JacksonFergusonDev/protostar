@@ -7,7 +7,6 @@ import tomlkit.items
 
 from ..errors import ConfigurationError
 from ..intent import (
-    ContributionPolicy,
     DependencyInclude,
     ResolverFootprint,
     StructuredContribution,
@@ -19,8 +18,8 @@ from ..toml_ast import TomlDocumentSpec, TomlLayout
 from .pyproject_layout import format_document, place_new_sections
 
 TARGET = "pyproject.toml"
-# Classifiers and lint selections are sets in practice: a user's additions and
-# Protostar's merge by membership instead of replacing one another.
+# Lint selections are sets in practice: a user's additions and Protostar's merge by
+# membership instead of replacing one another.
 SPEC = TomlDocumentSpec(
     policy=MergePolicy(
         frozenset(
@@ -30,11 +29,27 @@ SPEC = TomlDocumentSpec(
                 ("tool", "ruff", "lint", "ignore"),
                 ("tool", "ruff", "lint", "extend-ignore"),
                 ("tool", "rumdl", "disable"),
-                ("project", "classifiers"),
             }
         )
     ),
     super_tables=frozenset({("tool",)}),
+    # Personal project metadata is filled in once; later edits are the user's.
+    seed_paths=frozenset(
+        ("project", key)
+        for key in (
+            "name",
+            "version",
+            "description",
+            "authors",
+            "maintainers",
+            "license",
+            "license-files",
+            "readme",
+            "urls",
+            "classifiers",
+            "keywords",
+        )
+    ),
     layout=TomlLayout(create=format_document, extend=place_new_sections),
 )
 
@@ -51,13 +66,22 @@ def finalize_new_pyproject(
     return format_document(tomlkit.parse(content), on_fallback)
 
 
-def declare_structured_contributions(
-    path: str, content: str, producer: str, policy: ContributionPolicy
-) -> tuple[StructuredContribution, ...]:
-    """Separates personal pyproject seeds from managed tooling/build intent.
+def declare_contribution(
+    path: str, content: str, producer: str
+) -> StructuredContribution:
+    """Validates a TOML contribution and marks one that moves the resolver.
 
     Placeholder substitution is temporary and reversible: declaration must retain
     late-bound values for execution, rather than persisting dummy interpolation.
+
+    Args:
+        path: Workspace-relative POSIX path of the TOML document.
+        content: TOML payload, possibly holding late-bound placeholders.
+        producer: Stable producer identity.
+
+    Returns:
+        The contribution, with a resolver footprint when it sets this file's
+        ``requires-python``.
     """
     variables = {v: f"PROTOSTAR_LATE_{v}" for v in extract_variables(content)}
     data = validate_configuration(render_template(content, variables))
@@ -69,54 +93,7 @@ def declare_structured_contributions(
         and "requires-python" in project_data
         else None
     )
-    personal = {
-        "name",
-        "version",
-        "description",
-        "authors",
-        "maintainers",
-        "license",
-        "license-files",
-        "readme",
-        "urls",
-        "classifiers",
-        "keywords",
-    }
-    if (
-        path != TARGET
-        or policy != ContributionPolicy.MANAGED
-        or not isinstance(project_data, dict)
-        or not personal.intersection(project_data)
-    ):
-        return (StructuredContribution(producer, content, policy, footprint),)
-    doc = tomlkit.parse(render_template(content, variables))
-    project = doc["project"]
-    seed = tomlkit.document()
-    seed_project = tomlkit.table()
-    for key in list(project):
-        if key in personal:
-            seed_project[key] = project.pop(key)
-    seed["project"] = seed_project
-    if not project:
-        del doc["project"]
-
-    def restore(text: str) -> str:
-        for variable, token in variables.items():
-            text = text.replace(token, f"<% {variable} %>")
-        return text
-
-    result = [
-        StructuredContribution(
-            producer, restore(tomlkit.dumps(seed)), ContributionPolicy.SEED_ONLY
-        )
-    ]
-    if doc:
-        result.append(
-            StructuredContribution(
-                producer, restore(tomlkit.dumps(doc)), policy, footprint
-            )
-        )
-    return tuple(result)
+    return StructuredContribution(producer, content, resolver_footprint=footprint)
 
 
 def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:

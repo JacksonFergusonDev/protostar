@@ -11,7 +11,7 @@ from types import MappingProxyType
 
 from ..toml_ast import DEFAULT_TOML_SPEC, TomlDocumentSpec
 from ..yaml_ast import YamlDocumentSpec
-from . import codecov, github_workflows, pre_commit, pyproject
+from . import codecov, github_workflows, pre_commit, pyproject, zensical
 
 YAML_DOCUMENTS: Mapping[str, YamlDocumentSpec] = MappingProxyType(
     {
@@ -25,7 +25,7 @@ YAML_DOCUMENTS: Mapping[str, YamlDocumentSpec] = MappingProxyType(
 # generated whole by Protostar and are never assembled from contributions.
 YAML_CONTRIBUTION_TARGETS = frozenset({codecov.TARGET})
 TOML_DOCUMENTS: Mapping[str, TomlDocumentSpec] = MappingProxyType(
-    {pyproject.TARGET: pyproject.SPEC}
+    {pyproject.TARGET: pyproject.SPEC, zensical.TARGET: zensical.SPEC}
 )
 
 

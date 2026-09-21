@@ -51,13 +51,6 @@ class TemplateReference:
         }
 
 
-class ContributionPolicy(StrEnum):
-    """Ownership intent, independent of the eventual merge algorithm."""
-
-    MANAGED = "managed"
-    SEED_ONLY = "seed-only"
-
-
 class StructuredFormat(StrEnum):
     """Explicit format of a managed structured contribution."""
 
@@ -71,7 +64,6 @@ class StructuredContribution:
 
     producer: str
     content: str
-    policy: ContributionPolicy = ContributionPolicy.MANAGED
     resolver_footprint: ResolverFootprint | None = None
     format: StructuredFormat = StructuredFormat.TOML
 
@@ -81,7 +73,6 @@ class StructuredContribution:
             "format": self.format.value,
             "producer": self.producer,
             "content": self.content,
-            "policy": self.policy.value,
             "resolver_footprint": self.resolver_footprint.to_dict()
             if self.resolver_footprint
             else None,

@@ -25,6 +25,8 @@ from .merge import (
     MergeLocation,
     MergePolicy,
     Value,
+    hold,
+    lookup,
     overlay_declared,
     prune_unapplied,
     reconcile,
@@ -432,28 +434,8 @@ def _ambiguous(
     return found
 
 
-def _lookup(value: Value, path: tuple[str, ...]) -> Value:
-    for key in path:
-        if not isinstance(value, dict) or key not in value:
-            return MISSING
-        value = value[key]
-    return value
-
-
-def _hold(remote: dict[str, Value], base: Value, path: tuple[str, ...]) -> None:
-    """Replaces the desired value at ``path`` by its baseline, or drops it."""
-    parent = _lookup(remote, path[:-1])
-    if not isinstance(parent, dict):
-        return
-    prior = _lookup(base, path)
-    if prior is MISSING:
-        parent.pop(path[-1], None)
-    else:
-        parent[path[-1]] = deepcopy(prior)
-
-
 def _omit(remote: dict[str, Value], path: tuple[str, ...]) -> None:
-    parent = _lookup(remote, path[:-1])
+    parent = lookup(remote, path[:-1])
     if isinstance(parent, dict):
         parent.pop(path[-1], None)
 
@@ -538,7 +520,7 @@ def reconcile_yaml(
     remote = deepcopy(wanted)
     declared = deepcopy(wanted)
     for held in (*guard.holds, *ambiguous):
-        _hold(remote, base, held)
+        hold(remote, base, held)
         _omit(declared, held)
     # Validate explicit membership policy even under overwrite authorization.
     result = reconcile(

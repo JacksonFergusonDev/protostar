@@ -24,6 +24,7 @@ from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
 from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
+from protostar.documents import pyproject
 from protostar.errors import WorkspaceCollisionError
 from protostar.fs import atomic_write_text
 from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
@@ -326,7 +327,11 @@ def generate_capability_tables() -> None:
     def _get_module_scaffolded_files(mod: BootstrapModule) -> str:
         test_manifest = EnvironmentManifest()
         mod.build(test_manifest)
-        files = sorted(test_manifest.filesystem.file_injections)
+        # pyproject.toml is shared by every tool rather than scaffolded by one.
+        files = sorted(
+            test_manifest.filesystem.file_injections.keys()
+            | (test_manifest.filesystem.structured.keys() - {pyproject.TARGET})
+        )
         if test_manifest.tooling.wants_hooks:
             files.append(".pre-commit-config.yaml")
         if test_manifest.tooling.wants_ci:

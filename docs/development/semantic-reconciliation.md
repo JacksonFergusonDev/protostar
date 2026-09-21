@@ -266,17 +266,38 @@ Document policies pass a `YamlGuard` to `reconcile_yaml`: keyed-view paths to ho
 
 Existing workflow files are parsed during preparation, before any batch mutates the workspace, so a malformed or unsupported workflow fails like any other structured YAML document.
 
+## TOML document specs
+
+A `TomlDocumentSpec` lives with its document in `src/protostar/documents/` and is looked up with `documents.toml_spec(path)`. Besides the kernel `MergePolicy`, super tables, and layout, it declares document policy as data:
+
+- `seed_paths` are written only while Protostar creates the document or explicit overwrite is selected. `reconcile_toml` holds every seed it has written at its owned value and drops every other seed, so a seed never merges into an existing document, editing or deleting one never conflicts, and a changed seed default is never applied. A written seed stays owned, so deleting its table still reads as a deletion (the dependency guards rely on an owned `project` table). pyproject's personal metadata is declared this way.
+- `root_table` names the table that holds every setting Protostar declares, for tools that also accept settings at the top level. An existing document with settings but without that table is left alone and reported as `unowned` at the file, because adding the table would hide those settings from the tool.
+- `displaces` lists configurations the tool reads only while this document is absent. Protostar does not create the document while one of them exists and reports `unowned` at the file instead.
+
+`Reconciliation._append_files` checks `root_table` and `displaces` before the merge. They apply under explicit overwrite too, because they protect what the tool reads rather than who owns a value. A document without a layout keeps its own end-of-file newlines: a desired table copied from the middle of a contribution would otherwise bring along the blank line that separated it from its next sibling.
+
+## zensical.toml
+
+Zensical reads its settings from `[project]`, or from the top level when that table is absent, and prefers `zensical.toml` over `mkdocs.yml`. `documents.zensical.SPEC` splits the document by what Protostar can change without changing the user's site:
+
+- Managed: `project.theme.features`, merged by membership, and `project.plugins.mkdocstrings`, which configures the `mkdocstrings[python]` package the module installs.
+- Seeded: `site_name`, `site_description`, `nav`, `theme.palette`, `theme.font`, `markdown_extensions`, and `extra`. They are the site's identity, content, and look. The extension table is all or nothing: listing extensions replaces Zensical's defaults, so adding entries to a document without the table would turn every other default off. Seeding it also keeps Protostar away from the two spellings Zensical accepts for one extension (dotted `pymdownx.details` and quoted `"pymdownx.details"`), which a key-level merge would duplicate.
+- `root_table` is `project`, and `displaces` is `mkdocs.yml` and `mkdocs.yaml`.
+
+The scaffold's extension list mirrors Zensical's `DEFAULT_MARKDOWN_EXTENSIONS`, spelled the way `zensical new` writes it, so a scaffolded site renders what a site without the table would. `tests/test_zensical_execution.py` compares the two whenever Zensical is installed.
+
 ## Document catalog
 
-The format engines (`toml_ast.py`, `yaml_ast.py`, `jsonc_ast.py`) know no file by name. Each one reconciles a document under a spec it is handed (`TomlDocumentSpec`, `YamlDocumentSpec`) and exposes one extension point for document policy, the `YamlGuard`. Everything specific to one file lives in its own module under `src/protostar/documents/`:
+The format engines (`toml_ast.py`, `yaml_ast.py`, `jsonc_ast.py`) know no file by name. Each one reconciles a document under a spec it is handed (`TomlDocumentSpec`, `YamlDocumentSpec`). The YAML engine exposes one extension point for document policy, the `YamlGuard`; a TOML spec declares its policy as data (see [TOML document specs](#toml-document-specs)). Everything specific to one file lives in its own module under `src/protostar/documents/`:
 
 | Module | Owns |
 | :--- | :--- |
-| `pyproject` | `TARGET`, `SPEC` (set-like lint selections and classifiers, the `tool` super table, the canonical layout), personal seed splitting, dependency-group includes. |
+| `pyproject` | `TARGET`, `SPEC` (set-like lint selections, personal metadata as seed paths, the `tool` super table, the canonical layout), the resolver footprint, dependency-group includes. |
 | `pyproject_layout` | The canonical `pyproject.toml` section order, banner, and headers. |
 | `pre_commit` | `TARGET`, `SPEC` (repos by `repo`, hooks by `id`), and `plan_hook_pins`, whose `HookPinPlan` guards unsafe automatic pins and advances pin provenance after the merge. |
 | `github_workflows` | `CI_TARGET`, `RELEASE_TARGET`, `SPEC`, and `guard_workflow`. |
 | `codecov` | `TARGET` and `SPEC` (set-like `ignore`). |
+| `zensical` | `TARGET` and `SPEC` (set-like `theme.features`, seed paths, the `project` root table, the MkDocs configurations it displaces). |
 | `renovate` | `TARGET` and the sibling locations that shadow it. |
 | `vscode` | The settings target and its default indentation. |
 
