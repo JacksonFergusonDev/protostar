@@ -8,9 +8,10 @@ from protostar.pre_commit import TARGET, reconcile_hook_config
 from protostar.registry import RemoteHook, ResolvedHookRevision
 from protostar.sync_state import FilePolicy, FileState, PinProvenance
 from protostar.yaml_ast import (
+    PRE_COMMIT_SPEC,
     decode_yaml_baseline,
     encode_yaml_baseline,
-    reconcile_pre_commit,
+    reconcile_yaml,
 )
 
 LOCATION = MergeLocation(TARGET)
@@ -30,7 +31,8 @@ repos:
 
 
 def merge(local, desired, base=BASE, **kwargs):
-    return reconcile_pre_commit(
+    return reconcile_yaml(
+        PRE_COMMIT_SPEC,
         local,
         desired,
         decode_yaml_baseline(base) if base is not MISSING else MISSING,
@@ -62,7 +64,7 @@ def test_update_pin_add_hook_preserve_comments_and_foreign_fields():
     result = merge(local, desired)
     updated = repo(result.content)
     assert updated["rev"] == "v2.0.0"
-    assert [h["id"] for h in updated["hooks"]] == ["managed", "custom", "added"]
+    assert [h["id"] for h in updated["hooks"]] == ["managed", "added", "custom"]
     assert updated["hooks"][0]["args"] == ["custom"]
     assert updated["hooks"][0]["stages"] == ["manual"]
     assert "# pin" in result.content

@@ -14,20 +14,21 @@ from protostar.sync_state import (
     serialize_state,
 )
 from protostar.yaml_ast import (
+    CODECOV_SPEC,
     DEFAULT_STYLE,
+    PRE_COMMIT_SPEC,
     YamlStyle,
     decode_yaml_baseline,
     detect_style,
     encode_yaml_baseline,
-    reconcile_codecov,
-    reconcile_pre_commit,
+    reconcile_yaml,
 )
 
 LOCATION = MergeLocation(".github/codecov.yml")
 
 
 def merge(local, remote, base=MISSING, **kwargs):
-    return reconcile_codecov(local, remote, base, LOCATION, **kwargs)
+    return reconcile_yaml(CODECOV_SPEC, local, remote, base, LOCATION, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -317,8 +318,8 @@ def test_pre_commit_hook_edit_changes_one_line():
     local = f"default_install_hook_types:\n  - pre-commit\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
     base = decode_yaml_baseline(local)
     desired = local.replace("tool-1 ", "tool-one ")
-    result = reconcile_pre_commit(
-        local, desired, base, MergeLocation(".pre-commit-config.yaml")
+    result = reconcile_yaml(
+        PRE_COMMIT_SPEC, local, desired, base, MergeLocation(".pre-commit-config.yaml")
     )
     assert not result.conflicts
     assert result.content == desired

@@ -45,7 +45,7 @@ enumerate set-like key paths in `MergePolicy`. These accept unique scalars only,
 retain local order and user deletions, retain omitted baseline members, and append
 new accepted members in desired order. Existing foreign equal members do not
 become owned. Policy validation examines all inputs before truth-table shortcuts,
-including lists inside unchanged mappings. Pre-commit supplies its file-specific keyed repository/hook policy in PR E.
+including lists inside unchanged mappings. Keyed record sequences are declared per YAML document; see [YAML document specs](#yaml-document-specs).
 
 ## State schema v1
 
@@ -231,6 +231,19 @@ filesystem. Unchanged runs write nothing. Failures, including a failure after th
 state write, restore exact configuration/state bytes and POSIX modes. Generated
 file and append-region checksum gates remain PR F; this milestone adds neither
 pruning nor a `sync` command.
+
+## YAML document specs
+
+Every YAML document the engine reconciles is described by a `YamlDocumentSpec` in `yaml_ast.py`, registered by path in `YAML_DOCUMENTS`. A spec names the document for domain errors, supplies the kernel `MergePolicy` (Codecov's set-like `ignore`), and declares its keyed sequences. Nothing outside the spec table compares against YAML file names: state validation, preserved-deviation inspection, and the structured contribution path all look up the spec by path. The structured contribution channel itself still accepts only Codecov, because pre-commit arrives through its own generator.
+
+A `KeyedSequence` gives a path pattern in the keyed view and an identity field. In the keyed view each record is presented under its identity, so an enclosing keyed record appears in the path as its identity, and the `WILDCARD` sentinel matches exactly one segment: pre-commit declares `repos` by `repo` and `repos.*.hooks` by `id`. Optional string fields (pre-commit's `rev`) must be non-empty strings whenever present.
+
+- Desired and owned snapshots must identify every record exactly once; anything else is a fatal domain error.
+- A local record without an identity is foreign. It is left out of the keyed view, never owned, and stays at its position in the file.
+- A repeated local identity is ambiguous. For a nested sequence the entry containing it is held (the repository owning duplicate hooks); for a top-level sequence only the repeated identity is held. Each hold reports one `duplicate-identity` conflict, and independent entries still merge.
+- A new record is inserted after its nearest earlier desired sibling that exists locally, otherwise before its nearest later one, otherwise at the end. Consecutive new records keep desired order.
+
+Callers can hold keyed-view paths. A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned, so the kernel sees unchanged intent: local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them. The pre-commit pin guard holds `repos.<repo>.rev` rather than rewriting the desired document, so other additions keep their desired key order and styling.
 
 ## PR F: Generated files, seeds, and regions
 

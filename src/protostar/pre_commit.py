@@ -9,14 +9,15 @@ from .merge import MISSING, ConflictReason, MergeConflict, MergeLocation, Value
 from .registry import ResolvedHookRevision
 from .sync_state import FileState, HookPinState, PinProvenance
 from .yaml_ast import (
+    PRE_COMMIT_SPEC,
+    PRE_COMMIT_TARGET,
     YamlReconciliation,
     decode_yaml_baseline,
-    encode_yaml_baseline,
-    reconcile_pre_commit,
-    validate_pre_commit_baseline,
+    reconcile_yaml,
+    validate_yaml_baseline,
 )
 
-TARGET = ".pre-commit-config.yaml"
+TARGET = PRE_COMMIT_TARGET
 
 
 def reconcile_hook_config(
@@ -41,10 +42,11 @@ def reconcile_hook_config(
         else MISSING
     )
     incoming = decode_yaml_baseline(desired)
-    validate_pre_commit_baseline(incoming)
+    validate_yaml_baseline(PRE_COMMIT_SPEC, incoming)
     old_pins = {pin.repo: pin for pin in previous_pins if pin.path == TARGET}
     conflicts: list[MergeConflict] = []
     guarded: set[str] = set()
+    holds: list[tuple[str, ...]] = []
     for repo in cast(list[dict[str, Value]], incoming.get("repos", [])):
         name = cast(str, repo.get("repo"))
         pin = automatic.get(name)
@@ -57,8 +59,8 @@ def reconcile_hook_config(
         except InvalidVersion:
             unsafe = True
         if unsafe:
-            # Omission preserves both local content and the prior owned baseline.
-            repo.pop("rev", None)
+            # Holding keeps both local content and the prior owned baseline.
+            holds.append(("repos", name, "rev"))
             guarded.add(name)
             conflicts.append(
                 MergeConflict(
@@ -66,11 +68,13 @@ def reconcile_hook_config(
                     ConflictReason.UNSAFE_PIN,
                 )
             )
-    result = reconcile_pre_commit(
+    result = reconcile_yaml(
+        PRE_COMMIT_SPEC,
         original,
-        encode_yaml_baseline(incoming) if guarded else desired,
+        desired,
         base,
         MergeLocation(TARGET),
+        holds=tuple(holds),
         missing_file=missing_file,
         overwrite=overwrite,
     )

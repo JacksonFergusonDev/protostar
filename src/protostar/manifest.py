@@ -291,12 +291,9 @@ class FilesystemManifest:
                 hint="Use one contribution policy per target.",
             )
         if document_format is StructuredFormat.YAML:
-            from .yaml_ast import decode_yaml_baseline
+            from .yaml_ast import CODECOV_TARGET, decode_yaml_baseline
 
-            if (
-                path != ".github/codecov.yml"
-                or policy is not ContributionPolicy.MANAGED
-            ):
+            if path != CODECOV_TARGET or policy is not ContributionPolicy.MANAGED:
                 raise ConfigurationError(
                     "Unsupported structured YAML target or policy.",
                     hint="Only managed .github/codecov.yml is supported by the YAML pilot.",
