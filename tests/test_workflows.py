@@ -1,9 +1,16 @@
+from dataclasses import replace
+
+import pytest
+
 from protostar.workflows import (
+    AgentsSpec,
+    CIFlag,
     CIWorkflowSpec,
     DockerfileSpec,
     HookRunner,
     JustfileSpec,
     YAMLBuilder,
+    generate_agents_md,
     generate_ci_workflow,
     generate_dockerfile,
     generate_dockerignore,
@@ -438,3 +445,105 @@ def test_yaml_builder():
     nested_builder.append_block("step: 1\nstep: 2", indent=2)
     nested_builder.append_block("")  # should be ignored
     assert nested_builder.build() == "  step: 1\n  step: 2\n"
+
+
+def _agents_spec(**overrides):
+    base = AgentsSpec(
+        python_version="3.13",
+        hook_runner=HookRunner.NONE,
+        wants_just=True,
+        format_commands=["uv run ruff format ."],
+        lint_commands=["uv run ruff check ."],
+        typecheck_commands=["uv run mypy ."],
+        ci_flags={CIFlag.PYTEST},
+    )
+    return replace(base, **overrides)
+
+
+def test_generate_agents_md_opens_with_a_heading_and_states_the_environment():
+    content = generate_agents_md(_agents_spec(python_version="3.12"))
+
+    assert content.startswith("# Agent Guide\n")
+    assert content.endswith("\n")
+    assert "Python 3.12, managed by uv" in content
+    assert "`uv add <package>`" in content
+    assert "`protostar sync`" in content
+
+
+def test_generate_agents_md_lists_just_recipes_matching_the_justfile():
+    content = generate_agents_md(_agents_spec())
+
+    for recipe in ("format", "lint", "typecheck", "test"):
+        assert f"`just {recipe}`" in content
+    assert "`just ci`: run lint, typecheck, test;" in content
+    assert "uv run ruff check ." not in content
+    assert "```" not in content
+
+
+def test_generate_agents_md_omits_recipes_the_justfile_lacks():
+    content = generate_agents_md(
+        _agents_spec(
+            format_commands=[], lint_commands=[], typecheck_commands=[], ci_flags=set()
+        )
+    )
+
+    assert "## Commands" not in content
+    assert "`just" not in content
+
+
+def test_generate_agents_md_ci_follows_available_recipes():
+    content = generate_agents_md(_agents_spec(typecheck_commands=[], ci_flags=set()))
+
+    assert "`just ci`: run lint;" in content
+    assert "`just typecheck`" not in content
+    assert "`just test`" not in content
+
+
+def test_generate_agents_md_without_just_renders_raw_commands():
+    multi_line = "if command -v tool; then \\\n        tool; \\\n    fi"
+    content = generate_agents_md(
+        _agents_spec(
+            wants_just=False, lint_commands=["uv run ruff check .", multi_line]
+        )
+    )
+
+    assert "`just" not in content
+    assert "### Format\n\n```bash\nuv run ruff format .\n```" in content
+    assert (
+        "### Lint\n\n```bash\nuv run ruff check .\n" + multi_line + "\n```" in content
+    )
+    assert "### Type Check\n\n```bash\nuv run mypy .\n```" in content
+    assert "### Test\n\n```bash\nuv run pytest\n```" in content
+
+
+def test_generate_agents_md_without_just_or_commands_has_no_commands_section():
+    content = generate_agents_md(
+        _agents_spec(
+            wants_just=False,
+            format_commands=[],
+            lint_commands=[],
+            typecheck_commands=[],
+            ci_flags=set(),
+        )
+    )
+
+    assert "## Commands" not in content
+
+
+@pytest.mark.parametrize("runner", [HookRunner.PRE_COMMIT, HookRunner.PREK])
+def test_generate_agents_md_names_the_hook_runner(runner):
+    content = generate_agents_md(_agents_spec(hook_runner=runner))
+
+    assert "## Git Hooks" in content
+    assert f"{runner.value} runs the hooks in `.pre-commit-config.yaml`" in content
+
+
+def test_generate_agents_md_omits_hooks_without_a_runner():
+    assert "## Git Hooks" not in generate_agents_md(_agents_spec())
+
+
+def test_generate_agents_md_never_contains_region_boundaries():
+    # The section is framed by region markers; boundary text inside it is rejected.
+    content = generate_agents_md(_agents_spec(hook_runner=HookRunner.PREK))
+
+    assert "region:" not in content

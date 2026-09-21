@@ -62,6 +62,7 @@ origin = "built-in"
 locator = "ml"
 
 [tool.protostar.fallback]
+agents = false
 ci = false
 codecov = false
 commitizen = false

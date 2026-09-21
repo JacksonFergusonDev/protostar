@@ -189,6 +189,7 @@ origin = "built-in"
 locator = "lib"
 
 [tool.protostar.fallback]
+agents = false
 ci = false
 codecov = false
 commitizen = false

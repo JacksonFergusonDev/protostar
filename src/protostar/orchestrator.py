@@ -18,6 +18,7 @@ from .errors import (
 from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
 from .modules import (
+    AgentsModule,
     BootstrapModule,
     PreCommitModule,
     PrekModule,
@@ -27,6 +28,7 @@ from .modules import (
 )
 from .preparation import ExecutionPolicy
 from .system_deps import GlobalExecutable
+from .workflows import AgentsSpec, generate_agents_md
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -34,7 +36,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("protostar")
 
-__all__ = ["Orchestrator"]
+__all__ = ["AGENTS_REGION_ID", "AGENTS_TARGET", "Orchestrator"]
+
+AGENTS_TARGET = "AGENTS.md"
+AGENTS_REGION_ID = "agents"
 
 
 class Orchestrator:
@@ -210,11 +215,34 @@ class Orchestrator:
                     observe(
                         "tooling", (key, hashlib.sha256(command.encode()).hexdigest())
                     )
-            if mod.config_key in {"ci", "release", "just"}:
+            if mod.config_key in {"ci", "release", "just", "agents"}:
                 observe("tooling", (f"wants_{mod.config_key}",))
             for key, value in manifest.ide_settings.items():
                 if before_ide.get(key) != value:
                     observe("ide_settings", (key,))
+
+        # Phase 3b: Documents derived from the aggregated tooling state. Rendered
+        # after every module builds so no module inspects its siblings, and
+        # before template appends so a template's own AGENTS.md regions follow it.
+        if manifest.tooling.wants_agents:
+            producer = f"module:{AgentsModule.__name__}"
+            tool = Tool.AGENTS
+            tooling = manifest.tooling
+            manifest.filesystem.add_region(
+                AGENTS_TARGET,
+                generate_agents_md(
+                    AgentsSpec(
+                        python_version=manifest.recipe.python,
+                        hook_runner=tooling.hook_runner,
+                        wants_just=tooling.wants_just,
+                        format_commands=tooling.just_format_commands,
+                        lint_commands=tooling.just_lint_commands,
+                        typecheck_commands=tooling.just_typecheck_commands,
+                        ci_flags=tooling.ci_flags,
+                    )
+                ),
+                identity=AGENTS_REGION_ID,
+            )
 
         # Phase 4: Blueprint injection
         blueprint = req.template_blueprint

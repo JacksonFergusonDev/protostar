@@ -236,7 +236,8 @@
                   "readthedocs",
                   "ci",
                   "release",
-                  "just"
+                  "just",
+                  "agents"
                 ]
               },
               "enabled": {
@@ -286,7 +287,8 @@
                   "readthedocs",
                   "ci",
                   "release",
-                  "just"
+                  "just",
+                  "agents"
                 ]
               },
               "path": {

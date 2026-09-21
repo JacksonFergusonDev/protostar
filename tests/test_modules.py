@@ -6,6 +6,7 @@ from protostar.config import UserConfig
 from protostar.errors import MissingDependencyError
 from protostar.manifest import EnvironmentManifest, HookRunner
 from protostar.modules import (
+    AgentsModule,
     CodecovModule,
     CommitizenModule,
     DirenvModule,
@@ -160,6 +161,22 @@ def test_direnv_build(manifest):
     assert any(
         t.command == ["direnv", "allow"] for t in manifest.tasks.post_install_tasks
     )
+
+
+# --- AgentsModule Tests ---
+
+
+def test_agents_module_only_flags_the_guide(manifest):
+    module = AgentsModule()
+    assert module.name == "Agents"
+    assert module.config_key == "agents"
+
+    module.build(manifest)
+
+    # Content depends on sibling modules, so the orchestrator renders it later.
+    assert manifest.tooling.wants_agents
+    assert not manifest.filesystem.regions
+    assert not manifest.filesystem.file_injections
 
 
 # --- MarkdownLintModule Tests ---

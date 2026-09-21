@@ -409,6 +409,7 @@ class ToolingManifest:
     just_lint_commands: list[str] = field(default_factory=list)
     just_typecheck_commands: list[str] = field(default_factory=list)
     just_clean_paths: list[str] = field(default_factory=list)
+    wants_agents: bool = False
     ide_extensions: set[str | tuple[str, ...]] = field(default_factory=set)
 
     @property
@@ -491,6 +492,7 @@ class ToolingManifest:
             "just_lint_commands": list(self.just_lint_commands),
             "just_typecheck_commands": list(self.just_typecheck_commands),
             "just_clean_paths": list(self.just_clean_paths),
+            "wants_agents": self.wants_agents,
             "ide_extensions": sorted(
                 (_serialize_extension(ext) for ext in self.ide_extensions),
                 key=lambda x: x[0] if isinstance(x, list) else x,

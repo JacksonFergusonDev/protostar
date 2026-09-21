@@ -918,3 +918,25 @@ class JustModule(BootstrapModule):
         """Flags justfile activation for execution."""
         logger.debug("Building Just tooling layer.")
         manifest.tooling.wants_just = True
+
+
+class AgentsModule(BootstrapModule):
+    """Configures a managed AGENTS.md guide for coding agents."""
+
+    cli_flags = ("--agents",)
+    cli_help = "Scaffold a managed AGENTS.md guide for coding agents"
+    config_key = "agents"
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return "Agents"
+
+    def build(self, manifest: EnvironmentManifest) -> None:
+        """Flags AGENTS.md activation for planning.
+
+        The guide describes the commands other modules contribute, so its content
+        is rendered from the aggregated manifest once every module has built.
+        """
+        logger.debug("Building Agents tooling layer.")
+        manifest.tooling.wants_agents = True

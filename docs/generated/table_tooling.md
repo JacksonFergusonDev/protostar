@@ -18,4 +18,5 @@
 | GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `.github/workflows/ci.yml` |
 | GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `.github/workflows/release.yml` |
 | Just | `--just` | Scaffold a justfile for command execution | `justfile` |
+| Agents | `--agents` | Scaffold a managed AGENTS.md guide for coding agents | `AGENTS.md` |
 | Docker | `--docker` | Multi-stage `Dockerfile` and `.dockerignore` container scaffolding | `Dockerfile`, `.dockerignore` |
