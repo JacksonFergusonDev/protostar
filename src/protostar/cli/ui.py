@@ -341,11 +341,10 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     table.add_column("Category", justify="right", style="bold")
     table.add_column("Details")
 
-    # Filesystem
-    files_to_create = len(manifest.filesystem.directories) + len(
-        manifest.filesystem.file_injections
-    )
-    table.add_row("Filesystem:", f"{files_to_create} files/directories to scaffold")
+    # Filesystem: one rendered path set feeds both the count and the tree.
+    directories = {path.as_posix() for path in manifest.target_directories()}
+    paths = sorted(directories | {path.as_posix() for path in manifest.written_files()})
+    table.add_row("Filesystem:", f"{len(paths)} files/directories to create or update")
 
     # Dependencies
     deps_total = (
@@ -419,18 +418,11 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
             )
         )
 
-    if files_to_create > 0:
+    if paths:
         tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
-        all_paths = set(manifest.filesystem.directories)
-        all_paths.update(manifest.filesystem.file_injections.keys())
-        all_paths.update(
-            manifest.filesystem.structured.keys() | manifest.filesystem.regions.keys()
-        )
-
-        sorted_paths = sorted(all_paths)
         nodes: dict[str, Tree] = {"": tree}
 
-        for path in sorted_paths:
+        for path in paths:
             parts = path.split("/")
             current = ""
             for idx, part in enumerate(parts):
@@ -438,9 +430,7 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
                 current = f"{current}/{part}" if current else part
 
                 if current not in nodes:
-                    is_file = (idx == len(parts) - 1) and (
-                        path not in manifest.filesystem.directories
-                    )
+                    is_file = (idx == len(parts) - 1) and (path not in directories)
                     if is_file:
                         nodes[current] = nodes[parent].add(f"{part}")
                     else:

@@ -325,3 +325,21 @@ def test_manifest_target_files_comprehensive():
     assert Path("docs") not in targets
     assert Path(".DS_Store") not in targets
     assert Path(".gitignore") not in targets
+
+
+def test_manifest_previews_rendered_directories_and_every_written_file():
+    """Previews add .gitignore and IDE settings; collision targets still exclude them."""
+    manifest = EnvironmentManifest()
+    manifest.metadata.update(cast(ProjectMetadata, {"package_name": "my_pkg"}))
+    manifest.filesystem.add_directory("src/<% PACKAGE_NAME %>")
+    manifest.filesystem.add_file_injection("README.md", "# Readme\n")
+    manifest.filesystem.add_vcs_ignore(".DS_Store")
+    manifest.add_ide_setting("python.terminal.activateEnvironment", True)
+
+    assert manifest.target_directories() == {Path("src/my_pkg")}
+    assert manifest.written_files() == {
+        Path("README.md"),
+        Path(".gitignore"),
+        Path(".vscode/settings.json"),
+    }
+    assert manifest.target_files() == {Path("README.md")}

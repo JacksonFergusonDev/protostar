@@ -1590,3 +1590,103 @@ def test_list_templates_surfaces_a_broken_config(mocker, tmp_path):
 
     with pytest.raises(ConfigurationError, match="does not exist"):
         discover_templates()
+
+
+def _render_dry_run(manifest, monkeypatch):
+    import io
+
+    from rich.console import Console
+
+    from protostar.cli import ui
+
+    buf = io.StringIO()
+    monkeypatch.setattr(ui, "console", Console(file=buf, width=120))
+    ui.print_dry_run_summary(manifest)
+    return buf.getvalue()
+
+
+def test_dry_run_count_includes_every_declared_path(monkeypatch):
+    """The summary counts merged documents and regions, matching the tree."""
+    from protostar.intent import StructuredFormat
+    from protostar.manifest import EnvironmentManifest
+
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_directory("docs")
+    manifest.filesystem.add_file_injection("docs/index.md", "# Docs\n")
+    manifest.filesystem.add_structured(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n", producer="module:test"
+    )
+    manifest.filesystem.add_structured(
+        ".readthedocs.yaml",
+        "version: 2\n",
+        producer="module:test",
+        document_format=StructuredFormat.YAML,
+    )
+    manifest.filesystem.add_region("AGENTS.md", "# Agents\n", identity="agents")
+
+    output = _render_dry_run(manifest, monkeypatch)
+
+    assert "5 files/directories to create or update" in output
+    for leaf in (
+        "docs/",
+        "index.md",
+        "pyproject.toml",
+        ".readthedocs.yaml",
+        "AGENTS.md",
+    ):
+        assert leaf in output
+
+
+def test_dry_run_without_paths_omits_the_filesystem_tree(monkeypatch):
+    from protostar.manifest import EnvironmentManifest
+
+    output = _render_dry_run(EnvironmentManifest(), monkeypatch)
+
+    assert "0 files/directories to create or update" in output
+    assert "Workspace Root" not in output
+
+
+def test_dry_run_renders_placeholder_paths(monkeypatch):
+    from typing import cast
+
+    from protostar.manifest import EnvironmentManifest, ProjectMetadata
+
+    manifest = EnvironmentManifest()
+    manifest.metadata.update(cast(ProjectMetadata, {"package_name": "demo_project"}))
+    manifest.filesystem.add_directory("src/<% PACKAGE_NAME %>")
+    manifest.filesystem.add_file_injection("src/<% PACKAGE_NAME %>/cli.py", "")
+
+    output = _render_dry_run(manifest, monkeypatch)
+
+    assert "demo_project/" in output
+    assert "<%" not in output
+    assert "2 files/directories to create or update" in output
+
+
+def test_dry_run_lists_files_generated_outside_the_filesystem_slice(monkeypatch):
+    """Generated files, .gitignore, and IDE settings are written, so they are listed."""
+    from protostar.manifest import EnvironmentManifest, HookRunner
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.set_hook_runner(HookRunner.PREK)
+    manifest.tooling.wants_ci = True
+    manifest.tooling.wants_release = True
+    manifest.tooling.wants_just = True
+    manifest.tooling.wants_docker = True
+    manifest.filesystem.add_vcs_ignore(".venv/")
+    manifest.add_ide_setting("python.terminal.activateEnvironment", True)
+
+    output = _render_dry_run(manifest, monkeypatch)
+
+    assert "8 files/directories to create or update" in output
+    for leaf in (
+        ".pre-commit-config.yaml",
+        "ci.yml",
+        "release.yml",
+        "justfile",
+        "Dockerfile",
+        ".dockerignore",
+        ".gitignore",
+        "settings.json",
+    ):
+        assert leaf in output
