@@ -14,6 +14,7 @@ from .workspace import (
 )
 
 __all__ = [
+    "AgentsSpec",
     "CIFlag",
     "CIWorkflowSpec",
     "DockerfileSpec",
@@ -21,6 +22,7 @@ __all__ = [
     "JustfileSpec",
     "TargetOS",
     "YAMLBuilder",
+    "generate_agents_md",
     "generate_ci_workflow",
     "generate_dockerfile",
     "generate_dockerignore",
@@ -122,6 +124,19 @@ class JustfileSpec:
     typecheck_commands: list[str]
     ci_flags: set[CIFlag | str]
     clean_paths: list[str]
+
+
+@dataclass(frozen=True)
+class AgentsSpec:
+    """AGENTS.md specification, derived from the aggregated tooling state."""
+
+    python_version: str
+    hook_runner: HookRunner
+    wants_just: bool
+    format_commands: list[str]
+    lint_commands: list[str]
+    typecheck_commands: list[str]
+    ci_flags: set[CIFlag | str]
 
 
 @dataclass(frozen=True)
@@ -568,14 +583,9 @@ def generate_justfile(spec: JustfileSpec) -> str:
         )
 
     # CI recipe
-    ci_deps = []
-    if spec.lint_commands:
-        ci_deps.append("lint")
-    if spec.typecheck_commands:
-        ci_deps.append("typecheck")
-    if CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags:
-        ci_deps.append("test")
-
+    ci_deps = _just_ci_dependencies(
+        spec.lint_commands, spec.typecheck_commands, spec.ci_flags
+    )
     if ci_deps:
         deps_str = " ".join(ci_deps)
         justfile_content.extend(
@@ -627,6 +637,107 @@ def generate_justfile(spec: JustfileSpec) -> str:
         )
 
     return "\n".join(justfile_content) + "\n"
+
+
+def _just_ci_dependencies(
+    lint_commands: list[str],
+    typecheck_commands: list[str],
+    ci_flags: set[CIFlag | str],
+) -> list[str]:
+    """Returns the recipes the justfile's ``ci`` recipe depends on, in run order."""
+    deps = []
+    if lint_commands:
+        deps.append("lint")
+    if typecheck_commands:
+        deps.append("typecheck")
+    if CIFlag.PYTEST in ci_flags:
+        deps.append("test")
+    return deps
+
+
+def _command_block(commands: list[str]) -> list[str]:
+    """Renders shell commands as a fenced Markdown block."""
+    return ["", "```bash", *commands, "```"]
+
+
+def generate_agents_md(spec: AgentsSpec) -> str:
+    """Assembles the Protostar-managed AGENTS.md section.
+
+    Every line states a fact about the scaffolded project, never general advice,
+    so the section stays accurate as long as Protostar keeps it in sync.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+
+    Returns:
+        The Markdown section, opening with the document's top-level heading so a
+        freshly scaffolded file satisfies first-line-heading lint rules.
+    """
+    lines = [
+        "# Agent Guide",
+        "",
+        "Protostar generates and updates this section from the project's tooling. "
+        "Keep project notes outside the surrounding Protostar markers.",
+        "",
+        "## Environment",
+        "",
+        f"- Python {spec.python_version}, managed by uv. "
+        "Run `uv sync` to create or update the environment.",
+        "- Add dependencies with `uv add <package>`, or `uv add --dev <package>` "
+        "for development tools. Do not edit dependency tables in `pyproject.toml` "
+        "by hand.",
+        "- Tooling is recorded in `[tool.protostar]` in `pyproject.toml`. "
+        "To change it, edit `[tool.protostar.tools]` and run `protostar sync`.",
+    ]
+
+    has_pytest = CIFlag.PYTEST in spec.ci_flags
+    if spec.wants_just:
+        commands: list[str] = []
+        if spec.format_commands:
+            commands.append("- `just format`: apply formatters and safe lint fixes.")
+        if spec.lint_commands:
+            commands.append("- `just lint`: run the linters.")
+        if spec.typecheck_commands:
+            commands.append("- `just typecheck`: run static type checks.")
+        if has_pytest:
+            commands.append("- `just test`: run the test suite.")
+        ci_deps = _just_ci_dependencies(
+            spec.lint_commands, spec.typecheck_commands, spec.ci_flags
+        )
+        if ci_deps:
+            commands.append(
+                f"- `just ci`: run {', '.join(ci_deps)}; "
+                "the local check to pass before pushing."
+            )
+        if commands:
+            lines.extend(["", "## Commands", "", *commands])
+    else:
+        sections = [
+            ("Format", spec.format_commands),
+            ("Lint", spec.lint_commands),
+            ("Type Check", spec.typecheck_commands),
+            ("Test", ["uv run pytest"] if has_pytest else []),
+        ]
+        if any(commands for _, commands in sections):
+            lines.extend(["", "## Commands"])
+            for title, commands in sections:
+                if commands:
+                    lines.extend(["", f"### {title}", *_command_block(commands)])
+
+    if spec.hook_runner is not HookRunner.NONE:
+        lines.extend(
+            [
+                "",
+                "## Git Hooks",
+                "",
+                f"{spec.hook_runner.value} runs the hooks in `.pre-commit-config.yaml` "
+                "on every commit. Let them run rather than invoking the same checks "
+                "by hand first. If a hook fails or rewrites a file, fix the cause, "
+                "restage, and commit again.",
+            ]
+        )
+
+    return "\n".join(lines) + "\n"
 
 
 def generate_dockerignore(

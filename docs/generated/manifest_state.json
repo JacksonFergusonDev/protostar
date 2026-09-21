@@ -113,6 +113,7 @@
         "just_clean_paths": [
             ".ruff_cache"
         ],
+        "wants_agents": false,
         "ide_extensions": [
             "charliermarsh.ruff"
         ]

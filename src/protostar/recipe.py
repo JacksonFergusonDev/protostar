@@ -54,6 +54,7 @@ class Tool(StrEnum):
     CI = "ci"
     RELEASE = "release"
     JUST = "just"
+    AGENTS = "agents"
 
 
 class SelectionLayer(StrEnum):

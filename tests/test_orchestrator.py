@@ -8,17 +8,20 @@ from protostar.errors import (
     ExecutionInterruptedError,
     WorkspaceCollisionError,
 )
-from protostar.intent import PyprojectPayload
+from protostar.intent import AppendContribution, PyprojectPayload
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
     EnvironmentManifest,
+    HookRunner,
     Severity,
 )
 from protostar.models import ExecutionResult, InitRequest
 from protostar.modules import (
+    AgentsModule,
     BootstrapModule,
     CommitizenModule,
+    JustModule,
     PreCommitModule,
     PrekModule,
     PythonCore,
@@ -26,7 +29,7 @@ from protostar.modules import (
     RuffModule,
     ZensicalModule,
 )
-from protostar.orchestrator import Orchestrator
+from protostar.orchestrator import AGENTS_REGION_ID, AGENTS_TARGET, Orchestrator
 
 
 @pytest.fixture
@@ -676,3 +679,130 @@ def test_plan_detects_blueprint_files_collision_with_interpolation(
         engine.plan()
 
     assert Path("src/my_pkg/main.py") in exc_info.value.paths
+
+
+# ---------------------------------------------------------------------------
+# AGENTS.md
+# ---------------------------------------------------------------------------
+
+
+class LintCommandModule(BootstrapModule):
+    @property
+    def name(self):
+        return "Lint Command"
+
+    def build(self, manifest):
+        manifest.tooling.just_lint_commands.append("uv run lint-tool .")
+
+
+class PrekRunnerModule(BootstrapModule):
+    @property
+    def name(self):
+        return "Prek Runner"
+
+    def build(self, manifest):
+        manifest.tooling.set_hook_runner(HookRunner.PREK)
+
+
+def _agents_region(manifest):
+    regions = manifest.filesystem.regions[AGENTS_TARGET]
+    return next(r for r in regions if r.id == AGENTS_REGION_ID)
+
+
+def test_plan_renders_agents_md_from_every_module(tmp_path, monkeypatch, mock_config):
+    """The guide sees commands from modules that build after AgentsModule."""
+    monkeypatch.chdir(tmp_path)
+    engine = Orchestrator(
+        [AgentsModule(), LintCommandModule(), PrekRunnerModule()], mock_config
+    )
+
+    content = _agents_region(engine.plan()).content
+
+    assert content.startswith("# Agent Guide")
+    assert "uv run lint-tool ." in content
+    assert "prek runs the hooks" in content
+
+
+def test_plan_agents_md_follows_just(tmp_path, monkeypatch, mock_config):
+    monkeypatch.chdir(tmp_path)
+    engine = Orchestrator(
+        [AgentsModule(), LintCommandModule(), JustModule()], mock_config
+    )
+
+    content = _agents_region(engine.plan()).content
+
+    assert "`just lint`" in content
+    assert "uv run lint-tool ." not in content
+
+
+def test_plan_omits_agents_md_unless_enabled(tmp_path, monkeypatch, mock_config):
+    monkeypatch.chdir(tmp_path)
+    manifest = Orchestrator([LintCommandModule()], mock_config).plan()
+
+    assert AGENTS_TARGET not in manifest.filesystem.regions
+
+
+def test_plan_attributes_agents_md_to_its_tool(tmp_path, monkeypatch, mock_config):
+    from protostar.recipe import Tool
+
+    monkeypatch.chdir(tmp_path)
+    manifest = Orchestrator([AgentsModule()], mock_config).plan()
+
+    region = [
+        c
+        for c in manifest.producer_contributions
+        if c.path == ("filesystem", "regions", AGENTS_TARGET, AGENTS_REGION_ID)
+    ]
+    assert [(c.producer, c.tool) for c in region] == [
+        ("module:AgentsModule", Tool.AGENTS)
+    ]
+
+
+def test_plan_places_template_agents_regions_after_the_guide(
+    tmp_path, monkeypatch, mock_config
+):
+    monkeypatch.chdir(tmp_path)
+    blueprint = TemplateBlueprint(
+        appends={
+            AGENTS_TARGET: {
+                "conventions": AppendContribution("conventions", "## Conventions")
+            }
+        }
+    )
+    engine = Orchestrator(
+        [AgentsModule()],
+        mock_config,
+        request=InitRequest(template_blueprint=blueprint),
+    )
+
+    regions = engine.plan().filesystem.regions[AGENTS_TARGET]
+
+    assert regions[0].id == AGENTS_REGION_ID
+    assert regions[1].id.endswith(":conventions")
+
+
+def test_plan_rejects_a_template_file_that_replaces_agents_md(
+    tmp_path, monkeypatch, mock_config
+):
+    monkeypatch.chdir(tmp_path)
+    blueprint = TemplateBlueprint(files={AGENTS_TARGET: "# Ours"})
+    engine = Orchestrator(
+        [AgentsModule()],
+        mock_config,
+        request=InitRequest(template_blueprint=blueprint),
+    )
+
+    with pytest.raises(ConfigurationError):
+        engine.plan()
+
+
+def test_plan_reports_an_existing_agents_md_as_a_collision(
+    tmp_path, monkeypatch, mock_config
+):
+    monkeypatch.chdir(tmp_path)
+    Path(AGENTS_TARGET).write_text("# Team notes\n")
+
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        Orchestrator([AgentsModule()], mock_config).plan()
+
+    assert Path(AGENTS_TARGET) in exc_info.value.paths

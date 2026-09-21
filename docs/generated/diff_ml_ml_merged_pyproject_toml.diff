@@ -53,5 +53,5 @@
 +mypy = true
 +
  [tool.protostar.fallback]
+ agents = false
  ci = false
- codecov = false

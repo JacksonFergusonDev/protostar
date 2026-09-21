@@ -30,6 +30,7 @@ python_version = "3.13"
 # ci = true            # Scaffold standard GitHub Actions CI workflows
 # release = true       # Scaffold GitHub Actions PyPI release workflows
 # just = true          # Scaffold a justfile for command execution
+# agents = true        # Scaffold a managed AGENTS.md guide for coding agents
 
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"

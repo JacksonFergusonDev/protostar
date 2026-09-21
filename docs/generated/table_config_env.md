@@ -25,3 +25,4 @@
 | `ci` | `bool` | Whether to auto-scaffold standard GitHub Actions CI workflows. |
 | `release` | `bool` | Whether to auto-scaffold GitHub Actions PyPI release workflows. |
 | `just` | `bool` | Whether to auto-scaffold a justfile for command execution. |
+| `agents` | `bool` | Whether to auto-scaffold a managed AGENTS.md guide for coding agents. |

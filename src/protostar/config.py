@@ -158,6 +158,7 @@ python_version = "3.13"
 # ci = true            # Scaffold standard GitHub Actions CI workflows
 # release = true       # Scaffold GitHub Actions PyPI release workflows
 # just = true          # Scaffold a justfile for command execution
+# agents = true        # Scaffold a managed AGENTS.md guide for coding agents
 
 # [templates]
 # my-org-api = "https://raw.githubusercontent.com/MyOrg/standards/main/api.toml"
@@ -262,6 +263,7 @@ class UserConfig:
         ci (bool): Whether to auto-scaffold standard GitHub Actions CI workflows.
         release (bool): Whether to auto-scaffold GitHub Actions PyPI release workflows.
         just (bool): Whether to auto-scaffold a justfile for command execution.
+        agents (bool): Whether to auto-scaffold a managed AGENTS.md guide for coding agents.
     """
 
     ide: IDEType | str | None = None
@@ -289,6 +291,7 @@ class UserConfig:
     ci: bool = False
     release: bool = False
     just: bool = False
+    agents: bool = False
     templates: dict[str, TemplateAliasConfig] = field(default_factory=dict)
 
     def __post_init__(self) -> None:

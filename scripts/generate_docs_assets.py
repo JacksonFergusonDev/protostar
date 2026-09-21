@@ -335,6 +335,8 @@ def generate_capability_tables() -> None:
             files.append(".github/workflows/release.yml")
         if test_manifest.tooling.wants_just:
             files.append("justfile")
+        if test_manifest.tooling.wants_agents:
+            files.append("AGENTS.md")
         return ", ".join(f"`{f}`" for f in files) if files else "*None*"
 
     # Tooling integration matrix

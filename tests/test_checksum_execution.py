@@ -338,3 +338,52 @@ def test_generated_region_omission_never_prunes(tmp_path, monkeypatch, mocker):
     run(mocker, lambda e: setattr(e.manifest.tooling, "wants_just", True))
     assert Path("justfile").read_bytes() == original
     assert Path(".protostar.lock.toml").read_bytes() == baseline
+
+
+def test_agents_md_region_merges_updates_and_protects_edits(
+    tmp_path, monkeypatch, mocker
+):
+    from protostar.models import InitRequest
+    from protostar.modules import AgentsModule, BootstrapModule
+    from protostar.orchestrator import Orchestrator
+
+    class Commands(BootstrapModule):
+        def __init__(self, *typecheck):
+            self.typecheck = list(typecheck)
+
+        @property
+        def name(self):
+            return "Commands"
+
+        def build(self, manifest):
+            manifest.tooling.just_lint_commands.append("uv run lint-tool .")
+            manifest.tooling.just_typecheck_commands.extend(self.typecheck)
+
+    def apply(*typecheck):
+        manifest = Orchestrator(
+            [AgentsModule(), Commands(*typecheck)],
+            UserConfig(),
+            InitRequest(force_merge=True),
+        ).plan()
+        executor = SystemExecutor(manifest, UserConfig())
+        mocker.patch.object(executor, "_check_ide_extensions")
+        executor.execute()
+        return executor
+
+    monkeypatch.chdir(tmp_path)
+    target = Path("AGENTS.md")
+    target.write_text("# Team notes\n\nUse feature branches.\n")
+
+    apply()
+    assert target.read_text().startswith("# Team notes\n\nUse feature branches.\n\n")
+    assert "uv run lint-tool ." in target.read_text()
+    assert "AGENTS.md" not in apply().journal.touched_paths
+
+    apply("uv run check-types .")
+    assert "uv run check-types ." in target.read_text()
+    assert "Use feature branches." in target.read_text()
+
+    target.write_text(target.read_text().replace("check-types", "local-types"))
+    conflict = apply("uv run check-types src")
+    assert conflict.diagnostics[0].conflict.location.file == "AGENTS.md"
+    assert "local-types" in target.read_text()
