@@ -128,13 +128,14 @@ class FileState:
                 decode_jsonc_baseline(self.baseline)
             else:
                 from .yaml_ast import (
+                    YAML_DOCUMENTS,
                     decode_yaml_baseline,
-                    validate_pre_commit_baseline,
+                    validate_yaml_baseline,
                 )
 
                 value = decode_yaml_baseline(self.baseline)
-                if self.path == ".pre-commit-config.yaml":
-                    validate_pre_commit_baseline(value)
+                if (spec := YAML_DOCUMENTS.get(self.path)) is not None:
+                    validate_yaml_baseline(spec, value)
         elif self.policy is FilePolicy.CHECKSUM:
             if self.digest is None or self.baseline is not None:
                 raise _invalid("checksum policy requires only a digest.")

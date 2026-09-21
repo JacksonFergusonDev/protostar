@@ -15,7 +15,7 @@ from .jsonc_ast import decode_jsonc
 from .merge import MISSING, MergeConflict, MergeLocation, Value, semantic_equal
 from .review_workspace import ReviewWorkspace
 from .sync_state import FilePolicy, SyncState, decode_toml_baseline
-from .yaml_ast import decode_yaml_baseline
+from .yaml_ast import YAML_DOCUMENTS, decode_yaml_baseline
 
 
 @dataclass(frozen=True)
@@ -68,13 +68,12 @@ def preserved_deviations(
                     local.get(key, MISSING) if isinstance(local, dict) else MISSING,
                 )
         elif (
-            location.file == ".pre-commit-config.yaml"
-            and location.keys
-            and location.keys[-1] in {"repos", "hooks"}
+            (spec := YAML_DOCUMENTS.get(location.file)) is not None
+            and (sequence := spec.sequence_at(location.keys)) is not None
             and isinstance(old, list)
             and isinstance(candidate, list)
         ):
-            identity = "repo" if location.keys[-1] == "repos" else "id"
+            identity = sequence.identity
             for record in old:
                 if not isinstance(record, dict):
                     continue

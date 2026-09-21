@@ -92,10 +92,12 @@ from .workspace import (
     validate_resolver_workspace,
 )
 from .yaml_ast import (
+    CODECOV_TARGET,
+    YAML_DOCUMENTS,
     YamlReconciliation,
     decode_yaml_baseline,
     encode_yaml_baseline,
-    reconcile_codecov,
+    reconcile_yaml,
 )
 
 logger = logging.getLogger("protostar")
@@ -225,7 +227,7 @@ class Reconciliation:
                         ) from error
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if any(c.format is StructuredFormat.YAML for c in contributions):
-                if len(contributions) != 1 or filepath != ".github/codecov.yml":
+                if len(contributions) != 1 or filepath != CODECOV_TARGET:
                     raise ConfigurationError(
                         "Unsupported YAML contributions.",
                         hint="Declare exactly one Codecov YAML producer.",
@@ -500,7 +502,8 @@ class Reconciliation:
             location = MergeLocation(target.as_posix())
             overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
             if policy is FilePolicy.YAML:
-                result: YamlReconciliation | JsoncReconciliation = reconcile_codecov(
+                result: YamlReconciliation | JsoncReconciliation = reconcile_yaml(
+                    YAML_DOCUMENTS[target.as_posix()],
                     original,
                     desired,
                     base,
@@ -541,7 +544,7 @@ class Reconciliation:
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if contributions[0].format is StructuredFormat.YAML:
                 self._reconcile_document(
-                    Path(".github/codecov.yml"),
+                    Path(filepath),
                     contributions[0].content,
                     FilePolicy.YAML,
                 )

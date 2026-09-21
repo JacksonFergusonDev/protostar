@@ -1,12 +1,15 @@
-"""Bounded YAML 1.2 round-trip codec and Codecov reconciliation adapter."""
+"""Bounded YAML 1.2 round-trip codec and spec-driven reconciliation adapter."""
 
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
+from enum import Enum
 from io import StringIO
 from itertools import pairwise
+from types import MappingProxyType
 from typing import Any, cast
 
 from ruamel.yaml import YAML
@@ -16,6 +19,7 @@ from ruamel.yaml.scalarstring import ScalarString
 
 from .errors import ConfigurationError
 from .merge import (
+    DEFAULT_POLICY,
     MISSING,
     ConflictReason,
     MergeConflict,
@@ -29,7 +33,6 @@ from .merge import (
     validate_value,
 )
 
-CODECOV_POLICY = MergePolicy(frozenset({("ignore",)}))
 _MAX_NODES = 10000
 _MAX_BYTES = 1_000_000
 _TAGS = {"map", "seq", "str", "null", "bool", "int", "float", "merge"}
@@ -221,116 +224,193 @@ class YamlReconciliation:
     conflicts: tuple[MergeConflict, ...]
 
 
-def reconcile_codecov(
+class Wildcard(Enum):
+    """Sentinel for a keyed-sequence path segment that matches any key."""
+
+    ANY = "*"
+
+
+WILDCARD = Wildcard.ANY
+type PathPattern = tuple[str | Wildcard, ...]
+
+
+@dataclass(frozen=True)
+class KeyedSequence:
+    """A sequence of mapping records merged by identity instead of by position.
+
+    Attributes:
+        path: Keyed-view path of the sequence. Enclosing keyed records appear as
+            their identity, so ``WILDCARD`` matches a record identity or any key.
+        identity: Field whose non-empty string value identifies a record.
+        string_fields: Fields that must be non-empty strings when present.
+    """
+
+    path: PathPattern
+    identity: str
+    string_fields: tuple[str, ...] = ()
+
+    def matches(self, path: tuple[str, ...]) -> bool:
+        """Reports whether a concrete keyed-view path names this sequence."""
+        return len(path) == len(self.path) and all(
+            pattern is WILDCARD or pattern == key
+            for pattern, key in zip(self.path, path, strict=True)
+        )
+
+
+@dataclass(frozen=True)
+class YamlDocumentSpec:
+    """How one YAML document merges beyond plain mappings and atomic sequences.
+
+    Attributes:
+        name: Human-readable document name used in domain errors.
+        keyed: Sequences whose records merge by identity.
+        policy: Kernel policy, including set-like scalar sequences.
+    """
+
+    name: str
+    keyed: tuple[KeyedSequence, ...] = ()
+    policy: MergePolicy = DEFAULT_POLICY
+
+    def sequence_at(self, path: tuple[str, ...]) -> KeyedSequence | None:
+        """Returns the keyed sequence declared at a concrete keyed-view path."""
+        return next((s for s in self.keyed if s.matches(path)), None)
+
+
+CODECOV_TARGET = ".github/codecov.yml"
+PRE_COMMIT_TARGET = ".pre-commit-config.yaml"
+CODECOV_SPEC = YamlDocumentSpec("Codecov", policy=MergePolicy(frozenset({("ignore",)})))
+PRE_COMMIT_SPEC = YamlDocumentSpec(
+    "pre-commit",
+    keyed=(
+        KeyedSequence(("repos",), "repo", string_fields=("rev",)),
+        KeyedSequence(("repos", WILDCARD, "hooks"), "id"),
+    ),
+)
+YAML_DOCUMENTS: Mapping[str, YamlDocumentSpec] = MappingProxyType(
+    {CODECOV_TARGET: CODECOV_SPEC, PRE_COMMIT_TARGET: PRE_COMMIT_SPEC}
+)
+
+
+def reconcile_yaml(
+    spec: YamlDocumentSpec,
     original: str,
     desired: str,
     base: Value,
     location: MergeLocation,
     *,
+    holds: tuple[tuple[str, ...], ...] = (),
     missing_file: bool = False,
     overwrite: bool = False,
 ) -> YamlReconciliation:
-    """Reconciles Codecov with explicit set-like ignore membership."""
+    """Reconciles a YAML document under its spec without owning foreign content.
+
+    Args:
+        spec: Keyed sequences and kernel policy for this document.
+        original: Current workspace text; ignored when ``missing_file`` is set.
+        desired: Desired contribution text.
+        base: Previously applied owned contributions, or ``MISSING``.
+        location: File location carried into conflicts.
+        holds: Keyed-view paths whose desired value is replaced by the owned
+            baseline (or dropped when unowned), so local content and previous
+            ownership are kept there without a conflict of their own.
+        missing_file: Whether the workspace file is absent.
+        overwrite: Whether explicit overwrite owns declared values.
+
+    Returns:
+        Emitted text, the composite owned baseline, and structured conflicts.
+    """
     return _reconcile_yaml(
+        spec,
         original,
         desired,
         base,
         location,
+        holds=holds,
         missing_file=missing_file,
         overwrite=overwrite,
     )
 
 
-def reconcile_pre_commit(
-    original: str,
-    desired: str,
-    base: Value,
-    location: MergeLocation,
+def validate_yaml_baseline(spec: YamlDocumentSpec, value: Value) -> None:
+    """Validates identities and fields of desired or owned snapshots strictly."""
+    _keyed(spec, value, strict=True)
+
+
+def _identified(record: Any, sequence: KeyedSequence) -> bool:
+    return (
+        isinstance(record, dict)
+        and isinstance(record.get(sequence.identity), str)
+        and bool(record[sequence.identity])
+    )
+
+
+def _keyed(
+    spec: YamlDocumentSpec,
+    value: Value,
+    path: tuple[str, ...] = (),
     *,
-    missing_file: bool = False,
-    overwrite: bool = False,
-) -> YamlReconciliation:
-    """Reconciles exact repository/hook identities without owning foreign fields."""
-    return _reconcile_yaml(
-        original,
-        desired,
-        base,
-        location,
-        missing_file=missing_file,
-        overwrite=overwrite,
-        keyed=True,
-    )
+    strict: bool = False,
+) -> Value:
+    """Presents keyed sequences as mappings from identity to record.
 
-
-def validate_pre_commit_baseline(value: Value) -> None:
-    """Validates unique repository/hook identities in desired or owned snapshots."""
-    _keyed(value, strict=True)
-
-
-def _identity_key(path: tuple[str, ...]) -> str | None:
-    if path == ("repos",):
-        return "repo"
-    if len(path) == 3 and path[0] == "repos" and path[2] == "hooks":
-        return "id"
-    return None
-
-
-def _keyed(value: Value, path: tuple[str, ...] = (), *, strict: bool = False) -> Value:
-    identity = _identity_key(path)
-    if identity is not None:
+    Duplicate local identities map to the list of their records, which marks them
+    ambiguous. Local records without an identity are foreign: they are left out of
+    the keyed view and stay in place in the round-trip AST. Desired and owned
+    snapshots (``strict``) must identify every record exactly once.
+    """
+    sequence = spec.sequence_at(path)
+    if sequence is not None:
         if not isinstance(value, list):
             raise ConfigurationError(
-                "Invalid pre-commit record sequence.",
-                hint="Use lists of repositories and hooks with non-empty repo/id strings.",
+                f"Invalid {spec.name} record sequence.",
+                hint=f"Use a list of mappings with non-empty '{sequence.identity}' strings.",
             )
         grouped: dict[str, list[Value]] = {}
         for record in value:
-            if (
-                not isinstance(record, dict)
-                or not isinstance(record.get(identity), str)
-                or not record[identity]
-            ):
-                raise ConfigurationError(
-                    "Invalid pre-commit identity.",
-                    hint="Give every repository/hook a non-empty repo/id string.",
-                )
-            if (
-                identity == "repo"
-                and "rev" in record
-                and (not isinstance(record["rev"], str) or not record["rev"])
-            ):
-                raise ConfigurationError(
-                    "Invalid pre-commit revision.",
-                    hint="Quote repository revisions as non-empty strings.",
-                )
-            name = cast(str, record[identity])
-            grouped.setdefault(name, []).append(record)
+            if not _identified(record, sequence):
+                if strict:
+                    raise ConfigurationError(
+                        f"Invalid {spec.name} identity.",
+                        hint=f"Give every record a non-empty '{sequence.identity}' string.",
+                    )
+                continue
+            record = cast(dict[str, Value], record)
+            for field in sequence.string_fields:
+                if field in record and (
+                    not isinstance(record[field], str) or not record[field]
+                ):
+                    raise ConfigurationError(
+                        f"Invalid {spec.name} field '{field}'.",
+                        hint=f"Quote '{field}' values as non-empty strings.",
+                    )
+            grouped.setdefault(cast(str, record[sequence.identity]), []).append(record)
         records: dict[str, Value] = {}
         for name, members in grouped.items():
             if len(members) > 1:
                 if strict:
                     raise ConfigurationError(
-                        "Duplicate desired or owned pre-commit identity.",
-                        hint="Declare each repository and hook ID once.",
+                        f"Duplicate desired or owned {spec.name} identity.",
+                        hint=f"Declare each '{sequence.identity}' once.",
                     )
                 records[name] = deepcopy(members)
             else:
                 record = cast(dict[str, Value], members[0])
                 records[name] = _keyed(
-                    {k: v for k, v in record.items() if k != identity},
+                    spec,
+                    {k: v for k, v in record.items() if k != sequence.identity},
                     (*path, name),
                     strict=strict,
                 )
         return records
     if isinstance(value, dict):
-        return {k: _keyed(v, (*path, k), strict=strict) for k, v in value.items()}
+        return {k: _keyed(spec, v, (*path, k), strict=strict) for k, v in value.items()}
     return deepcopy(value)
 
 
-def _unkeyed(value: Value, path: tuple[str, ...] = ()) -> Value:
+def _unkeyed(spec: YamlDocumentSpec, value: Value, path: tuple[str, ...] = ()) -> Value:
     if isinstance(value, dict):
-        identity = _identity_key(path)
-        if identity:
+        sequence = spec.sequence_at(path)
+        if sequence is not None:
             records: list[Value] = []
             for name, record in value.items():
                 if isinstance(record, list):
@@ -338,56 +418,127 @@ def _unkeyed(value: Value, path: tuple[str, ...] = ()) -> Value:
                 else:
                     records.append(
                         {
-                            identity: name,
-                            **cast(dict[str, Value], _unkeyed(record, (*path, name))),
+                            sequence.identity: name,
+                            **cast(
+                                dict[str, Value],
+                                _unkeyed(spec, record, (*path, name)),
+                            ),
                         }
                     )
             return records
-        return {k: _unkeyed(v, (*path, k)) for k, v in value.items()}
+        return {k: _unkeyed(spec, v, (*path, k)) for k, v in value.items()}
     return deepcopy(value)
 
 
+def _ambiguous(
+    spec: YamlDocumentSpec, value: Value, path: tuple[str, ...] = ()
+) -> list[tuple[str, ...]]:
+    """Finds the entries to hold because a keyed sequence repeats an identity.
+
+    A duplicate inside a nested sequence holds the entry that contains the
+    sequence (for example the repository owning duplicate hooks); a duplicate in
+    a top-level sequence holds only the repeated identity.
+    """
+    found: list[tuple[str, ...]] = []
+    if not isinstance(value, dict):
+        return found
+    keyed = spec.sequence_at(path) is not None
+    for key, child in value.items():
+        if keyed and isinstance(child, list):
+            held = path[:-1] if len(path) > 1 else (*path, key)
+            if held not in found:
+                found.append(held)
+        else:
+            found.extend(
+                held
+                for held in _ambiguous(spec, child, (*path, key))
+                if held not in found
+            )
+    return found
+
+
+def _lookup(value: Value, path: tuple[str, ...]) -> Value:
+    for key in path:
+        if not isinstance(value, dict) or key not in value:
+            return MISSING
+        value = value[key]
+    return value
+
+
+def _hold(remote: dict[str, Value], base: Value, path: tuple[str, ...]) -> None:
+    """Replaces the desired value at ``path`` by its baseline, or drops it."""
+    parent = _lookup(remote, path[:-1])
+    if not isinstance(parent, dict):
+        return
+    prior = _lookup(base, path)
+    if prior is MISSING:
+        parent.pop(path[-1], None)
+    else:
+        parent[path[-1]] = deepcopy(prior)
+
+
+def _omit(remote: dict[str, Value], path: tuple[str, ...]) -> None:
+    parent = _lookup(remote, path[:-1])
+    if isinstance(parent, dict):
+        parent.pop(path[-1], None)
+
+
+def _insertion_index(
+    node: list[Any], sequence: KeyedSequence, order: list[str], name: str
+) -> int:
+    """Places a new record after its nearest earlier desired sibling present."""
+    present = {
+        str(record[sequence.identity]): index
+        for index, record in enumerate(node)
+        if _identified(record, sequence)
+    }
+    position = order.index(name)
+    for earlier in reversed(order[:position]):
+        if earlier in present:
+            return present[earlier] + 1
+    for later in order[position + 1 :]:
+        if later in present:
+            return present[later]
+    return len(node)
+
+
 def _reconcile_yaml(
+    spec: YamlDocumentSpec,
     original: str,
     desired: str,
     base: Value,
     location: MergeLocation,
     *,
+    holds: tuple[tuple[str, ...], ...] = (),
     missing_file: bool = False,
     overwrite: bool = False,
-    keyed: bool = False,
 ) -> YamlReconciliation:
     """Confines accepted semantic edits to independent round-trip AST nodes."""
     desired_ast = _load(desired)
-    remote = cast(dict[str, Value], _plain(desired_ast))
+    wanted = cast(dict[str, Value], _keyed(spec, _plain(desired_ast), strict=True))
     doc = _load(original) if not missing_file else _load("{}\n")
-    local = cast(dict[str, Value], _plain(doc))
-    ambiguities: list[MergeConflict] = []
-    policy = MergePolicy() if keyed else CODECOV_POLICY
-    if keyed:
-        remote = cast(dict[str, Value], _keyed(remote, strict=True))
-        local = cast(dict[str, Value], _keyed(local))
-        base = _keyed(base, strict=True)
-        repositories = local.get("repos", MISSING)
-        if isinstance(repositories, dict):
-            for name, record in repositories.items():
-                hooks = record.get("hooks", {}) if isinstance(record, dict) else {}
-                if isinstance(record, list) or (
-                    isinstance(hooks, dict)
-                    and any(isinstance(hook, list) for hook in hooks.values())
-                ):
-                    planned = remote.get("repos")
-                    if isinstance(planned, dict):
-                        planned.pop(name, None)
-                    ambiguities.append(
-                        MergeConflict(
-                            MergeLocation(location.file, ("repos", name), name),
-                            ConflictReason.DUPLICATE_IDENTITY,
-                        )
-                    )
+    local = cast(dict[str, Value], _keyed(spec, _plain(doc)))
+    base = _keyed(spec, base, strict=True)
+    ambiguous = _ambiguous(spec, local)
+    ambiguities = [
+        MergeConflict(
+            MergeLocation(
+                location.file,
+                held,
+                held[-1] if spec.sequence_at(held[:-1]) else None,
+            ),
+            ConflictReason.DUPLICATE_IDENTITY,
+        )
+        for held in ambiguous
+    ]
+    remote = deepcopy(wanted)
+    declared = deepcopy(wanted)
+    for held in (*holds, *ambiguous):
+        _hold(remote, base, held)
+        _omit(declared, held)
     # Validate explicit membership policy even under overwrite authorization.
     result = reconcile(
-        base, MISSING if missing_file else local, remote, location, policy
+        base, MISSING if missing_file else local, remote, location, spec.policy
     )
     value = result.value
     baseline = result.baseline
@@ -395,13 +546,11 @@ def _reconcile_yaml(
     if overwrite:
         value = deepcopy(local)
         baseline = deepcopy(base) if isinstance(base, dict) else {}
-        overlay_declared(value, remote)
-        overlay_declared(baseline, remote)
+        overlay_declared(value, declared)
+        overlay_declared(baseline, declared)
         conflicts = list(ambiguities)
     if value is MISSING:
-        return YamlReconciliation(
-            original, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
-        )
+        return YamlReconciliation(original, _unkeyed(spec, baseline), tuple(conflicts))
 
     counts: dict[int, int] = {}
 
@@ -473,25 +622,32 @@ def _reconcile_yaml(
                         ConflictReason.SHARED_STRUCTURE,
                     )
                 )
-            elif recursive and keyed and _identity_key(path) and isinstance(node, list):
-                identity = _identity_key(path)
-                indexed = {str(record[identity]): record for record in node}
-                desired_index = {
-                    str(record[identity]): record for record in styled[key]
+            elif (
+                recursive
+                and (sequence := spec.sequence_at(path)) is not None
+                and isinstance(node, list)
+            ):
+                indexed = {
+                    str(record[sequence.identity]): record
+                    for record in node
+                    if _identified(record, sequence)
                 }
+                order = [str(record[sequence.identity]) for record in styled[key]]
                 patch(
                     indexed,
                     cast(dict[str, Value], old),
                     cast(dict[str, Value], child),
                     cast(dict[str, Value], owned.setdefault(key, {})),
                     cast(dict[str, Value], previous.get(key, {})),
-                    desired_index,
+                    dict(zip(order, styled[key], strict=True)),
                     path,
                 )
-                for name, record in indexed.items():
-                    if name not in cast(dict[str, Value], old):
-                        record[identity] = name
-                        node.append(record)
+                for name in order:
+                    if name in cast(dict[str, Value], old) or name not in indexed:
+                        continue
+                    record = indexed[name]
+                    record[sequence.identity] = name
+                    node.insert(_insertion_index(node, sequence, order, name), record)
             elif recursive:
                 patch(
                     node,
@@ -505,7 +661,7 @@ def _reconcile_yaml(
             elif (
                 isinstance(old, list)
                 and isinstance(child, list)
-                and path in policy.set_like_paths
+                and path in spec.policy.set_like_paths
                 and semantic_equal(old, child[: len(old)])
             ):
                 for member in child[len(old) :]:
@@ -515,12 +671,10 @@ def _reconcile_yaml(
                     deepcopy(styled[key])
                     if key in styled
                     and semantic_equal(
-                        _keyed(_plain(styled[key]), path)
-                        if keyed
-                        else _plain(styled[key]),
+                        _keyed(spec, _plain(styled[key]), path),
                         child,
                     )
-                    else deepcopy(_unkeyed(child, path) if keyed else child)
+                    else deepcopy(_unkeyed(spec, child, path))
                 )
                 if isinstance(node, str) and isinstance(child, str):
                     replacement = type(node)(child)
@@ -548,10 +702,8 @@ def _reconcile_yaml(
         if not baseline and base is MISSING and not missing_file:
             baseline = MISSING
     if semantic_equal(local, value) and not missing_file:
-        return YamlReconciliation(
-            original, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
-        )
-    if missing_file and semantic_equal(value, remote):
+        return YamlReconciliation(original, _unkeyed(spec, baseline), tuple(conflicts))
+    if missing_file and semantic_equal(value, wanted):
         # A fully accepted new file keeps the desired text, including its comments.
         content = desired
     else:
@@ -562,8 +714,6 @@ def _reconcile_yaml(
             raise _invalid() from error
         content = stream.getvalue()
     decoded = decode_yaml_baseline(content)
-    if not semantic_equal(_keyed(decoded) if keyed else decoded, value):
+    if not semantic_equal(_keyed(spec, decoded), value):
         raise _invalid()
-    return YamlReconciliation(
-        content, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
-    )
+    return YamlReconciliation(content, _unkeyed(spec, baseline), tuple(conflicts))
