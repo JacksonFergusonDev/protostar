@@ -80,11 +80,58 @@
 }
 
 /* --- Hero Install Box & Copy Button --- */
-.protostar-command-label {
+.protostar-install-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 32rem;
     margin: 2rem 0 0.5rem;
+}
+
+.protostar-command-label {
+    margin: 0;
     color: var(--md-default-fg-color);
     font-size: 0.75rem;
     font-weight: 700;
+}
+
+.protostar-pm-toggle {
+    display: inline-flex;
+    gap: 3px;
+    background: #e2e8f0;
+    border: 1px solid var(--protostar-code-border);
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.pm-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: var(--md-default-fg-color--light);
+    font-family: var(--md-code-font-family, monospace);
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 3px 9px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.pm-tab:hover {
+    color: var(--md-default-fg-color);
+}
+
+.pm-tab.is-active {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.pm-tab:focus-visible {
+    outline: 2px solid var(--protostar-cyan);
+    outline-offset: 1px;
 }
 
 .protostar-install {
@@ -106,6 +153,15 @@
     background: transparent;
     font-size: 0.78rem;
     transition: color 0.25s ease;
+    white-space: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent 100%);
+}
+
+.protostar-install code::-webkit-scrollbar {
+    display: none;
 }
 
 .protostar-install code::before {
@@ -311,6 +367,26 @@
     --md-footer-bg-color--dark: var(--protostar-bg-base);
     --md-code-bg-color: var(--protostar-code-bg);
     --md-code-fg-color: var(--protostar-code-fg);
+
+    /* --- Hero Install Toggle --- */
+    .protostar-pm-toggle {
+        background: #090e11;
+        border-color: var(--protostar-border);
+    }
+
+    .pm-tab {
+        color: var(--protostar-text-soft);
+    }
+
+    .pm-tab:hover {
+        color: #ffffff;
+    }
+
+    .pm-tab.is-active {
+        background: #151d24;
+        border-color: rgba(34, 211, 238, 0.3);
+        color: var(--protostar-cyan);
+    }
 
     /* --- Navigation & Headers --- */
     .md-nav__link--active,

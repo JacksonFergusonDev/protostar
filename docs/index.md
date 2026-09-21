@@ -21,9 +21,15 @@ hide:
     <p class="protostar-lede">
       Protostar sets up Python development environments cleanly and predictably—without overwriting existing work or leaving half-finished setups.
     </p>
-    <div class="protostar-command-label">Install globally via uv</div>
+    <div class="protostar-install-header">
+      <span class="protostar-command-label">Install globally</span>
+      <span class="protostar-pm-toggle" role="tablist" aria-label="Installation method">
+        <button type="button" role="tab" aria-selected="true" class="pm-tab is-active" data-pm="uv">uv</button>
+        <button type="button" role="tab" aria-selected="false" class="pm-tab" data-pm="brew">brew</button>
+      </span>
+    </div>
     <div class="protostar-install" aria-label="Install command">
-      <code>uv tool install protostar</code>
+      <code id="protostar-install-cmd">uv tool install protostar</code>
       <button type="button" class="protostar-copy" data-copy="uv tool install protostar" aria-label="Copy install command">Copy command</button>
     </div>
   </div>
@@ -93,6 +99,33 @@ This initializes a working environment quickly while preserving explicit control
           btn.textContent = "Failed";
         }
         window.setTimeout(() => { btn.textContent = idle; }, 1800);
+      });
+    });
+
+    const commands = {
+      uv: "uv tool install protostar",
+      brew: "brew install jacksonfergusondev/tap/protostar",
+    };
+    const codeEl = document.getElementById("protostar-install-cmd");
+    const copyBtn = document.querySelector(".protostar-copy");
+    const tabs = document.querySelectorAll(".pm-tab");
+
+    tabs.forEach((tab) => {
+      if (tab.dataset.psReady === "true") return;
+      tab.dataset.psReady = "true";
+      tab.addEventListener("click", () => {
+        tabs.forEach((t) => {
+          t.classList.remove("is-active");
+          t.setAttribute("aria-selected", "false");
+        });
+        tab.classList.add("is-active");
+        tab.setAttribute("aria-selected", "true");
+        const pm = tab.dataset.pm;
+        if (pm && commands[pm] && codeEl && copyBtn) {
+          codeEl.textContent = commands[pm];
+          copyBtn.dataset.copy = commands[pm];
+          codeEl.scrollLeft = 0;
+        }
       });
     });
   };
