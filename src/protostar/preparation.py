@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import UserConfig
+from .documents import vscode
 from .errors import ConfigurationError
 from .intent import DependencyGroup, ResolverFootprint
 from .manifest import (
@@ -246,7 +247,7 @@ def prepare_review(
     if manifest.filesystem.vcs_ignores:
         workspace.capture(Path(".gitignore"))
     if manifest.ide_settings:
-        workspace.capture(Path(".vscode/settings.json"))
+        workspace.capture(Path(vscode.SETTINGS_TARGET))
     for resolver_path in manifest.dependencies.resolver_footprint.paths:
         workspace.capture(Path(resolver_path))
     if phase in (PreparationPhase.COMPLETE, PreparationPhase.BEFORE_INITIALIZERS):

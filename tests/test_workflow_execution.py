@@ -6,19 +6,16 @@ from typing import Any
 import pytest
 
 from protostar.config import UserConfig
+from protostar.documents.github_workflows import CI_TARGET, RELEASE_TARGET
 from protostar.errors import ConfigurationError, FileSystemError
 from protostar.executor import SystemExecutor
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.sync_state import FilePolicy, deserialize_state
 from protostar.workflows import generate_release_workflow
-from protostar.yaml_ast import (
-    CI_WORKFLOW_TARGET,
-    RELEASE_WORKFLOW_TARGET,
-    decode_yaml_baseline,
-)
+from protostar.yaml_ast import decode_yaml_baseline
 
-CI = Path(CI_WORKFLOW_TARGET)
-RELEASE = Path(RELEASE_WORKFLOW_TARGET)
+CI = Path(CI_TARGET)
+RELEASE = Path(RELEASE_TARGET)
 STATE = Path(".protostar.lock.toml")
 
 
@@ -117,6 +114,6 @@ def test_failure_restores_exact_workflow_and_state_bytes_modes(
 def test_workflow_targets_reject_append_regions():
     intent = EnvironmentManifest()
     with pytest.raises(ConfigurationError):
-        intent.filesystem.add_region(CI_WORKFLOW_TARGET, "x: 1\n", identity="t:ci")
+        intent.filesystem.add_region(CI_TARGET, "x: 1\n", identity="t:ci")
     with pytest.raises(ConfigurationError):
-        intent.filesystem.add_region(RELEASE_WORKFLOW_TARGET, "x: 1\n", identity="t:r")
+        intent.filesystem.add_region(RELEASE_TARGET, "x: 1\n", identity="t:r")

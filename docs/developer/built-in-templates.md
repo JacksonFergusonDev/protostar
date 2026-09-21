@@ -119,7 +119,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 1. **Generated code formats cleanly for any project name.** Do not interpolate `<% PROJECT_NAME %>` into a line that `ruff format` would wrap for longer names. The `cli` template defines an `APP_NAME` constant for this reason: a version line that embedded the name failed `ruff format --check` for names over about 16 characters.
 1. **Tool configuration and tool packages declare the tool they need.** Test plugins such as `pytest-cov` go under `[dev.tool_dependencies]`, so disabling the tool installs none of them.
 1. **Development tooling goes in the dev group; the docs group is for the documentation toolchain.** Built-ins declare no `docs_dependencies` at all, because the Zensical module supplies `zensical` and `mkdocstrings`. `uv sync` installs the dev group by default but not docs, so a notebook tool placed in the docs group is removed by the first `just sync`.
-1. **A new tool table needs a layout entry.** If a template writes a `[tool.<name>]` that `TOOL_SECTIONS` in `toml_layout.py` does not list, it sorts unlabelled after the known tools. See [The pyproject.toml Layout](./pyproject-layout.md).
+1. **A new tool table needs a layout entry.** If a template writes a `[tool.<name>]` that `TOOL_SECTIONS` in `documents/pyproject_layout.py` does not list, it sorts unlabelled after the known tools. See [The pyproject.toml Layout](./pyproject-layout.md).
 1. **Tool configuration declares the tool it needs.** A payload that configures `ruff`, `mypy`, `pytest`, or another tool is a table with `requires = "<tool>"`, so disabling the tool leaves none of its configuration behind. Tool-agnostic payloads, such as `[build-system]`, stay plain strings.
 1. **Explain decisions in the template file, not the payload.** A comment inside a `[dev.pyproject]` string is copied into every user's `pyproject.toml`. Put maintainer-facing comments above the payload instead.
 1. **Web services expose `<package>.main:app`.** The generated `Dockerfile` starts `uvicorn <package>.main:app`. For projects that are not from the `api` template but list FastAPI or Uvicorn, this is the best available guess. If it is wrong for a project, the container fails at start with a clear `ModuleNotFoundError`.
@@ -153,7 +153,7 @@ Most of the contract is checked by tests, parametrized over discovered built-ins
 | Tool configuration declares its tool with `requires` | `test_tool_configuration_declares_the_tool_it_needs` |
 | Tool packages are installed only with their tool | `test_tool_packages_are_installed_only_with_their_tool` |
 | The docs group is left to the docs tooling | `test_docs_group_is_left_to_the_docs_tooling` |
-| Every tool table a template writes has a layout entry | `test_every_tool_table_a_built_in_template_writes_has_a_layout_entry` in `tests/test_toml_layout.py` |
+| Every tool table a template writes has a layout entry | `test_every_tool_table_a_built_in_template_writes_has_a_layout_entry` in `tests/test_pyproject_layout.py` |
 | Module baselines stay casual | `test_ruff_module_baseline_stays_casual`, `test_mypy_module_baseline_stays_casual` |
 | A fresh scaffold passes its enabled gates | `test_individual_template_scaffolding` (with `KNOWN_GATE_GAPS`) |
 | A plain `uv sync` keeps every package the template declares | `test_individual_template_scaffolding` |

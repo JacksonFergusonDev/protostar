@@ -4,6 +4,7 @@ import logging
 import shutil
 from typing import TYPE_CHECKING
 
+from protostar.documents import codecov, renovate
 from protostar.errors import MissingDependencyError
 from protostar.intent import DependencyGroup, StructuredFormat
 from protostar.registry import RemoteHook
@@ -726,7 +727,7 @@ class RenovateModule(BootstrapModule):
   ]
 }
 """
-        manifest.filesystem.add_file_injection(".github/renovate.json", config)
+        manifest.filesystem.add_file_injection(renovate.TARGET, config)
 
 
 class CodecovModule(BootstrapModule):
@@ -782,7 +783,7 @@ ignore:
   - "**/__init__.py"
 """
         manifest.filesystem.add_structured(
-            ".github/codecov.yml",
+            codecov.TARGET,
             config,
             producer="module:codecov",
             document_format=StructuredFormat.YAML,

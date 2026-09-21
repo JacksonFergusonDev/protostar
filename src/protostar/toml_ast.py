@@ -1,6 +1,5 @@
-"""AST-preserving TOML merging, manipulation, and formatting."""
+"""AST-preserving TOML aggregation and spec-driven reconciliation."""
 
-import logging
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
@@ -11,15 +10,9 @@ import tomlkit.items
 from tomlkit.items import AoT
 
 from .errors import ConfigurationError
-from .intent import (
-    ContributionPolicy,
-    DependencyInclude,
-    ResolverFootprint,
-    StructuredContribution,
-    validate_configuration,
-)
-from .interpolation import extract_variables, render_template
+from .intent import StructuredContribution, validate_configuration
 from .merge import (
+    DEFAULT_POLICY,
     MISSING,
     MergeConflict,
     MergeLocation,
@@ -29,20 +22,40 @@ from .merge import (
     reconcile,
     semantic_equal,
 )
-from .toml_layout import format_document, place_new_sections
 
-logger = logging.getLogger("protostar")
 
-SET_LIKE_TOML_PATHS = frozenset(
-    {
-        ("tool", "ruff", "lint", "select"),
-        ("tool", "ruff", "lint", "extend-select"),
-        ("tool", "ruff", "lint", "ignore"),
-        ("tool", "ruff", "lint", "extend-ignore"),
-        ("tool", "rumdl", "disable"),
-        ("project", "classifiers"),
-    }
-)
+@dataclass(frozen=True)
+class TomlLayout:
+    """How a document is laid out beyond tomlkit's own round-trip output.
+
+    Each callable receives a fallback sink for notes on layout it declined to apply.
+
+    Attributes:
+        create: Formats a document Protostar is creating from the merged AST.
+        extend: Places new sections of the merged AST into the original text.
+    """
+
+    create: Callable[[Any, Callable[[str], None]], str]
+    extend: Callable[[str, Any, Callable[[str], None]], str]
+
+
+@dataclass(frozen=True)
+class TomlDocumentSpec:
+    """How one TOML document merges beyond plain tables and atomic arrays.
+
+    Attributes:
+        policy: Kernel policy, including set-like arrays.
+        super_tables: Paths of new tables emitted as super tables, so only their
+            children get headers.
+        layout: Document layout; ``None`` keeps tomlkit's round-trip output.
+    """
+
+    policy: MergePolicy = DEFAULT_POLICY
+    super_tables: frozenset[tuple[str, ...]] = frozenset()
+    layout: TomlLayout | None = None
+
+
+DEFAULT_TOML_SPEC = TomlDocumentSpec()
 
 
 @dataclass(frozen=True)
@@ -148,6 +161,7 @@ def aggregate_toml(contributions: list[StructuredContribution]) -> dict[str, Val
 
 
 def reconcile_toml(
+    spec: TomlDocumentSpec,
     original: str,
     desired: dict[str, Value],
     base: Value,
@@ -158,7 +172,22 @@ def reconcile_toml(
     missing_file: bool = False,
     desired_ast: Any | None = None,
 ) -> TomlReconciliation:
-    """Applies semantic decisions to the local AST without global formatting."""
+    """Applies semantic decisions to the local AST, laid out by the document spec.
+
+    Args:
+        spec: Set-like arrays, super tables, and layout for this document.
+        original: Current workspace text.
+        desired: Aggregated desired value.
+        base: Previously applied owned contributions, or ``MISSING``.
+        location: File location carried into conflicts.
+        overwrite: Whether explicit overwrite owns declared values.
+        initializing: Whether Protostar is creating this document.
+        missing_file: Whether the workspace file is absent.
+        desired_ast: Desired AST whose styling is kept for accepted values.
+
+    Returns:
+        Emitted text, the composite owned baseline, conflicts, and layout notes.
+    """
     try:
         doc = tomlkit.parse(original)
     except tomlkit.exceptions.TOMLKitError as e:
@@ -181,7 +210,7 @@ def reconcile_toml(
             MISSING if missing_file else local,
             desired,
             location,
-            MergePolicy(SET_LIKE_TOML_PATHS),
+            spec.policy,
         )
         if result.value is MISSING:
             return TomlReconciliation(original, result.baseline, result.conflicts)
@@ -217,13 +246,17 @@ def reconcile_toml(
                 styled_value = cast(Value, styled.unwrap())
             if isinstance(previous, dict) and isinstance(value, dict):
                 patch(ast[key], previous, value, path)
-            elif previous is MISSING and isinstance(value, dict) and path == ("tool",):
+            elif (
+                previous is MISSING
+                and isinstance(value, dict)
+                and path in spec.super_tables
+            ):
                 ast[key] = tomlkit.table(is_super_table=True)
                 patch(ast[key], {}, value, path)
             elif (
                 isinstance(previous, list)
                 and isinstance(value, list)
-                and path in SET_LIKE_TOML_PATHS
+                and path in spec.policy.set_like_paths
                 and value[: len(previous)] == previous
             ):
                 # Preserve local member trivia before considering desired AST replacement.
@@ -238,145 +271,10 @@ def reconcile_toml(
     layout_notes: list[str] = []
     if semantic_equal(local, value):
         content = original
-    elif location.file == "pyproject.toml" and initializing:
-        content = format_pyproject_toml(doc, layout_notes.append)
-    elif location.file == "pyproject.toml":
-        content = place_new_sections(original, doc, layout_notes.append)
+    elif spec.layout is not None and initializing:
+        content = spec.layout.create(doc, layout_notes.append)
+    elif spec.layout is not None:
+        content = spec.layout.extend(original, doc, layout_notes.append)
     else:
         content = tomlkit.dumps(doc)
     return TomlReconciliation(content, baseline, conflicts, tuple(layout_notes))
-
-
-def format_pyproject_toml(
-    doc: Any, on_fallback: Callable[[str], None] | None = None
-) -> str:
-    """Formats a pyproject.toml document into the canonical Protostar layout."""
-    return format_document(doc, on_fallback)
-
-
-def finalize_new_pyproject(
-    content: str, on_fallback: Callable[[str], None] | None = None
-) -> str:
-    """Settles the layout of a pyproject.toml that Protostar created.
-
-    The managed merge formats the file, but `uv add` then appends
-    `[dependency-groups]` and the recipe is inserted after it, so the finished file
-    needs one more pass. Never call this on a project the user already had.
-    """
-    return format_pyproject_toml(tomlkit.parse(content), on_fallback)
-
-
-def declare_structured_contributions(
-    path: str, content: str, producer: str, policy: ContributionPolicy
-) -> tuple[StructuredContribution, ...]:
-    """Separates personal pyproject seeds from managed tooling/build intent.
-
-    Placeholder substitution is temporary and reversible: declaration must retain
-    late-bound values for execution, rather than persisting dummy interpolation.
-    """
-    variables = {v: f"PROTOSTAR_LATE_{v}" for v in extract_variables(content)}
-    data = validate_configuration(render_template(content, variables))
-    project_data = data.get("project")
-    footprint = (
-        ResolverFootprint()
-        if path == "pyproject.toml"
-        and isinstance(project_data, dict)
-        and "requires-python" in project_data
-        else None
-    )
-    personal = {
-        "name",
-        "version",
-        "description",
-        "authors",
-        "maintainers",
-        "license",
-        "license-files",
-        "readme",
-        "urls",
-        "classifiers",
-        "keywords",
-    }
-    if (
-        path != "pyproject.toml"
-        or policy != ContributionPolicy.MANAGED
-        or not isinstance(project_data, dict)
-        or not personal.intersection(project_data)
-    ):
-        return (StructuredContribution(producer, content, policy, footprint),)
-    doc = tomlkit.parse(render_template(content, variables))
-    project = doc["project"]
-    seed = tomlkit.document()
-    seed_project = tomlkit.table()
-    for key in list(project):
-        if key in personal:
-            seed_project[key] = project.pop(key)
-    seed["project"] = seed_project
-    if not project:
-        del doc["project"]
-
-    def restore(text: str) -> str:
-        for variable, token in variables.items():
-            text = text.replace(token, f"<% {variable} %>")
-        return text
-
-    result = [
-        StructuredContribution(
-            producer, restore(tomlkit.dumps(seed)), ContributionPolicy.SEED_ONLY
-        )
-    ]
-    if doc:
-        result.append(
-            StructuredContribution(
-                producer, restore(tomlkit.dumps(doc)), policy, footprint
-            )
-        )
-    return tuple(result)
-
-
-def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:
-    """Returns an AST-preserving additive application of typed group includes."""
-    try:
-        doc = tomlkit.parse(original)
-    except tomlkit.exceptions.ParseError as e:
-        raise ConfigurationError(
-            "Invalid dependency configuration.",
-            hint="Correct pyproject.toml before applying dependency includes.",
-        ) from e
-    groups = doc.get("dependency-groups")
-    if groups is not None and not isinstance(groups, tomlkit.items.AbstractTable):
-        raise ConfigurationError(
-            "dependency-groups must be a TOML table.",
-            hint="Correct the dependency-groups table.",
-        )
-    if groups is None:
-        groups = tomlkit.table()
-        if doc:
-            doc.add(tomlkit.nl())
-        doc["dependency-groups"] = groups
-    changed = False
-    for edge in edges:
-        if edge.group not in groups:
-            groups[edge.group] = tomlkit.array()
-            changed = True
-        if edge.include not in groups:
-            groups[edge.include] = tomlkit.array()
-            changed = True
-        entries = groups[edge.group]
-        if not isinstance(entries, tomlkit.items.Array) or not isinstance(
-            groups[edge.include], tomlkit.items.Array
-        ):
-            raise ConfigurationError(
-                "Dependency-group entries must be arrays.",
-                hint="Use requirement strings and include-group records inside each group array.",
-            )
-        if not any(
-            isinstance(e, dict) and e.get("include-group") == edge.include
-            for e in entries
-        ):
-            item = tomlkit.parse(
-                f'entry = {{ include-group = "{edge.include.value}" }}\n'
-            )["entry"]
-            entries.append(item)
-            changed = True
-    return tomlkit.dumps(doc) if changed else original

@@ -576,8 +576,8 @@ def test_every_generated_workflow_step_is_named_uniquely_and_stably():
     Every step needs a name unique within its job, and a logical step keeps its
     name in every variant, so switching variants updates steps in place.
     """
+    from protostar.documents.github_workflows import SPEC as WORKFLOW_SPEC
     from protostar.yaml_ast import (
-        WORKFLOW_SPEC,
         decode_yaml_baseline,
         validate_yaml_baseline,
     )

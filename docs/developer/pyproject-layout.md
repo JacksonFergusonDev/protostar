@@ -30,7 +30,7 @@ The order is a fixed property of the tool, not of when a section happened to be 
 
 ## One definition
 
-`src/protostar/toml_layout.py` is the only place that knows the layout:
+`src/protostar/documents/pyproject_layout.py` is the only place that knows the layout:
 
 | Name | Decides |
 | :--- | :--- |

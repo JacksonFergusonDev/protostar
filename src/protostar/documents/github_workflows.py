@@ -1,18 +1,26 @@
-"""GitHub Actions workflow policy; reconciliation runs through the YAML spec adapter."""
+"""GitHub Actions workflow merge spec and guards for foreign jobs and action refs."""
 
 from typing import cast
 
-from .merge import MISSING, ConflictReason, MergeConflict, MergeLocation, Value
-from .sync_state import FileState
-from .yaml_ast import (
-    WORKFLOW_SPEC,
-    YamlReconciliation,
-    decode_yaml_baseline,
-    keyed_view,
-    reconcile_yaml,
-    validate_yaml_baseline,
+from ..merge import (
+    MISSING,
+    ConflictReason,
+    MergeConflict,
+    MergeLocation,
+    MergePolicy,
+    Value,
 )
+from ..yaml_ast import WILDCARD, KeyedSequence, YamlDocumentSpec, YamlGuard, keyed_view
 
+CI_TARGET = ".github/workflows/ci.yml"
+RELEASE_TARGET = ".github/workflows/release.yml"
+# One GitHub Actions schema for every generated workflow: a workflow is one
+# generator's complete output, and steps are matched by the name Protostar wrote.
+SPEC = YamlDocumentSpec(
+    "GitHub Actions workflow",
+    keyed=(KeyedSequence(("jobs", WILDCARD, "steps"), "name"),),
+    policy=MergePolicy(complete=True),
+)
 _LOCAL_ACTION_PREFIXES = ("./", "docker://")
 
 
@@ -29,18 +37,8 @@ def _mapping(value: Value, key: str) -> dict[str, Value]:
     return child if isinstance(child, dict) else {}
 
 
-def reconcile_workflow(
-    target: str,
-    original: str,
-    desired: str,
-    record: FileState | None,
-    *,
-    missing_file: bool = False,
-    overwrite: bool = False,
-) -> YamlReconciliation:
-    """Reconciles a generated workflow, guarding foreign jobs and local action refs.
-
-    Two guards run before the merge, both as holds:
+def guard_workflow(target: str, desired: Value, local: Value, base: Value) -> YamlGuard:
+    """Holds foreign jobs and user-owned action refs before a workflow merge.
 
     - A job that exists locally but that Protostar does not own is left whole and
       reported as ``unowned``; Protostar never grafts its steps into it.
@@ -50,26 +48,16 @@ def reconcile_workflow(
 
     Args:
         target: Workspace-relative workflow path.
-        original: Current workspace text; ignored when ``missing_file`` is set.
-        desired: Generated workflow text.
-        record: Previously committed ownership for this path, if any.
-        missing_file: Whether the workspace file is absent.
-        overwrite: Whether explicit overwrite owns declared values.
+        desired: Decoded generated workflow.
+        local: Decoded workspace workflow, empty when the file is absent.
+        base: Previously owned baseline, or ``MISSING``.
 
     Returns:
-        Emitted text, the composite owned baseline, and structured conflicts.
+        The holds and ``unowned`` conflicts for this workflow.
     """
-    base: Value = (
-        decode_yaml_baseline(record.baseline)
-        if record and record.baseline is not None
-        else MISSING
-    )
-    validate_yaml_baseline(WORKFLOW_SPEC, decode_yaml_baseline(desired))
-    local = keyed_view(
-        WORKFLOW_SPEC, {} if missing_file else decode_yaml_baseline(original)
-    )
-    wanted = keyed_view(WORKFLOW_SPEC, decode_yaml_baseline(desired))
-    owned = keyed_view(WORKFLOW_SPEC, base) if base is not MISSING else {}
+    local = keyed_view(SPEC, local)
+    wanted = keyed_view(SPEC, desired, strict=True)
+    owned = keyed_view(SPEC, base) if base is not MISSING else {}
 
     holds: list[tuple[str, ...]] = []
     conflicts: list[MergeConflict] = []
@@ -105,16 +93,4 @@ def reconcile_workflow(
             ):
                 holds.append(step_path)
 
-    result = reconcile_yaml(
-        WORKFLOW_SPEC,
-        original,
-        desired,
-        base,
-        MergeLocation(target),
-        holds=tuple(holds),
-        missing_file=missing_file,
-        overwrite=overwrite,
-    )
-    return YamlReconciliation(
-        result.content, result.baseline, (*conflicts, *result.conflicts)
-    )
+    return YamlGuard(tuple(holds), tuple(conflicts))

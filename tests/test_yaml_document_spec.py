@@ -1,20 +1,17 @@
 """Spec-driven keyed sequences: identity, placement, holds, and ambiguity."""
 
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
+from protostar.documents import YAML_DOCUMENTS, codecov, github_workflows, pre_commit
 from protostar.errors import ConfigurationError
 from protostar.merge import MISSING, ConflictReason, MergeLocation
-from protostar.pre_commit import TARGET, reconcile_hook_config
-from protostar.registry import RemoteHook, ResolvedHookRevision
-from protostar.sync_state import FilePolicy, FileState, PinProvenance
 from protostar.yaml_ast import (
-    PRE_COMMIT_SPEC,
     WILDCARD,
-    YAML_DOCUMENTS,
     KeyedSequence,
     YamlDocumentSpec,
+    YamlGuard,
     decode_yaml_baseline,
     encode_yaml_baseline,
     reconcile_yaml,
@@ -72,8 +69,13 @@ def test_wildcard_matches_one_segment_of_the_same_depth():
 
 
 def test_registry_maps_each_supported_document_to_its_spec():
-    assert YAML_DOCUMENTS[TARGET] is PRE_COMMIT_SPEC
-    assert PRE_COMMIT_SPEC.sequence_at(("repos", "any-repo", "hooks")) is not None
+    assert YAML_DOCUMENTS == {
+        codecov.TARGET: codecov.SPEC,
+        pre_commit.TARGET: pre_commit.SPEC,
+        github_workflows.CI_TARGET: github_workflows.SPEC,
+        github_workflows.RELEASE_TARGET: github_workflows.SPEC,
+    }
+    assert pre_commit.SPEC.sequence_at(("repos", "any-repo", "hooks")) is not None
 
 
 def test_new_record_goes_after_its_nearest_earlier_sibling():
@@ -156,7 +158,7 @@ def test_hold_keeps_local_value_and_previous_ownership_silently():
         "checkout@v1", "checkout@v2"
     )
     held = ("jobs", "test", "steps", "test", "run")
-    result = merge(local, desired, holds=(held,))
+    result = merge(local, desired, guard=YamlGuard((held,)))
     assert steps(result.content)[2]["run"] == "pytest -x"
     assert steps(result.content)[0]["uses"] == "checkout@v2"
     assert steps(encode_yaml_baseline(result.baseline))[2]["run"] == "pytest"
@@ -165,44 +167,13 @@ def test_hold_keeps_local_value_and_previous_ownership_silently():
 
 def test_hold_on_unowned_path_adds_nothing_and_survives_overwrite():
     desired = DESIRED + "  lint:\n    steps:\n      - name: ruff\n"
-    result = merge(DESIRED, desired, holds=(("jobs", "lint"),))
+    result = merge(DESIRED, desired, guard=YamlGuard((("jobs", "lint"),)))
     assert "lint" not in load(result.content)["jobs"]
     local = DESIRED.replace("run: pytest", "run: pytest -x")
     overwritten = merge(
         local,
         DESIRED.replace("run: pytest", "run: pytest -q"),
-        holds=(("jobs", "test", "steps", "test", "run"),),
+        guard=YamlGuard((("jobs", "test", "steps", "test", "run"),)),
         overwrite=True,
     )
     assert steps(overwritten.content)[2]["run"] == "pytest -x"
-
-
-def test_guarded_pin_keeps_desired_styling_for_other_additions():
-    pinned = f"repos:\n  - repo: {RemoteHook.GITLEAKS.value}\n    rev: {RemoteHook.GITLEAKS.placeholder}\n    hooks: [{{id: gitleaks}}]\n"
-    first, pins = reconcile_hook_config(
-        "",
-        pinned,
-        None,
-        (ResolvedHookRevision(RemoteHook.GITLEAKS, "v1.0.0", PinProvenance.REGISTRY),),
-        (),
-        missing_file=True,
-    )
-    desired = (
-        pinned
-        + "  - repo: local\n    hooks:\n      - id: new-hook\n        name: New hook\n        entry: run\n        language: system\n"
-    )
-    result, _ = reconcile_hook_config(
-        first.content,
-        desired,
-        FileState(
-            TARGET,
-            FilePolicy.YAML,
-            encode_yaml_baseline(cast(dict[str, Any], first.baseline)),
-        ),
-        (ResolvedHookRevision(RemoteHook.GITLEAKS, "v0.5.0", PinProvenance.REGISTRY),),
-        pins,
-    )
-    repositories = load(result.content)["repos"]
-    assert repositories[0]["rev"] == "v1.0.0"
-    assert list(repositories[1]["hooks"][0]) == ["id", "name", "entry", "language"]
-    assert [c.reason for c in result.conflicts] == [ConflictReason.UNSAFE_PIN]
