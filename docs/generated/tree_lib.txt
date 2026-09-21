@@ -16,7 +16,6 @@
 ├── docs
 │   └── index.md
 ├── justfile
-├── mkdocs.yml
 ├── pyproject.toml
 ├── src
 │   └── demo_project
@@ -25,4 +24,5 @@
 │       └── py.typed
 ├── tests
 │   └── test_core.py
-└── uv.lock
+├── uv.lock
+└── zensical.toml

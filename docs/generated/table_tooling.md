@@ -13,7 +13,7 @@
 | Commitizen | `--commitizen` | Scaffold commitizen version bumping and changelog tooling | `CHANGELOG.md` |
 | Renovate | `--renovate` | Scaffold Renovate dependency update configuration | `.github/renovate.json` |
 | Codecov | `--codecov` | Scaffold Codecov configuration | *None* |
-| Zensical | `--zensical` | Scaffold Zensical documentation | `docs/index.md`, `mkdocs.yml` |
+| Zensical | `--zensical` | Scaffold Zensical documentation | `docs/index.md`, `zensical.toml` |
 | Read the Docs | `--readthedocs` | Scaffold Read the Docs configuration | `.readthedocs.yaml` |
 | GitHub Actions CI | `--ci` | Scaffold standard GitHub Actions CI workflows | `.github/workflows/ci.yml` |
 | GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `.github/workflows/release.yml` |

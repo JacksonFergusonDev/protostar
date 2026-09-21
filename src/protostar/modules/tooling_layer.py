@@ -820,44 +820,78 @@ Add your project overview and documentation here.
 """
         manifest.filesystem.add_file_injection("docs/index.md", index_content)
 
-        mkdocs_content = """site_name: <% PROJECT_NAME %>
-site_description: Add your project description here.
+        zensical_content = """[project]
+site_name = "<% PROJECT_NAME %>"
+site_description = "Add your project description here."
 
-nav:
-  - Home: index.md
+nav = [
+    { "Home" = "index.md" },
+]
 
-theme:
-  name: material
-  features:
-    - navigation.instant
-    - navigation.top
-    - navigation.footer
-    - search.suggest
-    - search.highlight
-    - content.code.copy
+[project.theme]
+features = [
+    "content.code.copy",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.footer",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.top",
+    "search.highlight",
+]
 
-markdown_extensions:
-  - admonition
-  - attr_list
-  - def_list
-  - pymdownx.details
-  - pymdownx.superfences
-  - toc:
-      permalink: true
+[project.theme.font]
+text = "Inter"
+code = "JetBrains Mono"
 
-plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          options:
-            show_root_heading: true
-            show_source: true
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "material/brightness-auto"
+toggle.name = "Switch to light mode"
 
-extra:
-  generator: false
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "white"
+accent = "cyan"
+toggle.icon = "material/weather-sunny"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "deep purple"
+accent = "cyan"
+toggle.icon = "material/weather-night"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+def_list = {}
+md_in_html = {}
+toc = { permalink = true }
+"pymdownx.details" = {}
+"pymdownx.highlight" = { anchor_linenums = true, line_spans = "__span", pygments_lang_class = true }
+"pymdownx.tabbed" = { alternate_style = true, combine_header_slug = true }
+
+[project.markdown_extensions."pymdownx.emoji"]
+emoji_index = "zensical.extensions.emoji.twemoji"
+emoji_generator = "zensical.extensions.emoji.to_svg"
+
+[project.markdown_extensions."pymdownx.superfences"]
+custom_fences = [
+    { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+
+[project.plugins.mkdocstrings]
+handlers.python.options.show_root_heading = true
+handlers.python.options.show_source = true
+
+[project.extra]
+generator = false
 """
-        manifest.filesystem.add_file_injection("mkdocs.yml", mkdocs_content)
+        manifest.filesystem.add_file_injection("zensical.toml", zensical_content)
 
 
 class ReadTheDocsModule(BootstrapModule):
