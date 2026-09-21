@@ -232,25 +232,29 @@ sandbox-linux-build:
     docker build -t protostar-test-harness - << 'EOF'
     FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     ENV DEBIAN_FRONTEND=noninteractive
-    RUN apt-get update -qq && \
+    COPY --from=node:22-bookworm-slim /usr/local/include/node /usr/local/include/node
+    COPY --from=node:22-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+    COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
+    RUN ln -s /usr/local/bin/node /usr/local/bin/nodejs && \
+        ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+        ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
+        apt-get update -qq && \
         apt-get install -qq -y \
             git \
             direnv \
-            nodejs \
-            npm \
             curl \
             bat \
             ripgrep \
             fd-find \
             nano && \
-            npm install -g markdownlint-cli2 && \
-            ln -s /usr/bin/batcat /usr/local/bin/bat && \
-            ln -s /usr/bin/fdfind /usr/local/bin/fd && \
-            # Install eza binary dynamically for current architecture
-            ARCH=$(uname -m) && \
-            curl -sL "https://github.com/eza-community/eza/releases/latest/download/eza_${ARCH}-unknown-linux-gnu.tar.gz" | tar xz -C /usr/local/bin && \
-            chmod +x /usr/local/bin/eza && \
-            apt-get clean && rm -rf /var/lib/apt/lists/*
+        npm install -g markdownlint-cli2 && \
+        ln -s /usr/bin/batcat /usr/local/bin/bat && \
+        ln -s /usr/bin/fdfind /usr/local/bin/fd && \
+        # Install eza binary dynamically for current architecture
+        ARCH=$(uname -m) && \
+        curl -sL "https://github.com/eza-community/eza/releases/latest/download/eza_${ARCH}-unknown-linux-gnu.tar.gz" | tar xz -C /usr/local/bin && \
+        chmod +x /usr/local/bin/eza && \
+        apt-get clean && rm -rf /var/lib/apt/lists/*
 
     # Bake native zshrc-style eza aliases into bashrc
     RUN echo 'alias ls="eza --icons --git"' >> /root/.bashrc && \
