@@ -21,6 +21,11 @@ function initAsciinemaPlayers() {
     // Warm the HTTP cache so playback starts without delay once scrolled into view
     fetch(src).catch(function () {});
 
+    // Pre-warm the symbols font in the background so glyphs render without pop-in
+    if (document.fonts) {
+      document.fonts.load("14px 'Symbols Nerd Font'").catch(function () {});
+    }
+
     var player = AsciinemaPlayer.create(src, el, {
       autoPlay: false,
       preload: true,
