@@ -18,7 +18,7 @@ function initAsciinemaPlayers() {
       autoPlay: true,
       loop: true,
       speed: 1,
-      terminalFontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      terminalFontFamily: "'JetBrains Mono', 'Symbols Nerd Font', 'Fira Code', monospace",
       terminalFontSize: "14px",
       fit: "width",
     });
