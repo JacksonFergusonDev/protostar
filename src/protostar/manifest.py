@@ -629,14 +629,7 @@ class EnvironmentManifest:
         from .documents import github_workflows, pre_commit, pyproject
 
         targets: set[Path] = set()
-        ctx = (
-            dict(self.recipe.context)
-            if self.recipe
-            else {
-                "PROJECT_NAME": resolve_project_name(self.metadata),
-                "PACKAGE_NAME": resolve_package_name(self.metadata),
-            }
-        )
+        ctx = self._path_context()
 
         for filepath in self.filesystem.file_injections:
             rendered = render_template(filepath, ctx, escape_toml=False)
@@ -668,6 +661,46 @@ class EnvironmentManifest:
             targets.add(Path(".dockerignore"))
 
         return targets
+
+    def target_directories(self) -> set[Path]:
+        """Returns the rendered workspace directories this manifest scaffolds.
+
+        Returns:
+            A set of Path objects representing target directories.
+        """
+        ctx = self._path_context()
+        return {
+            Path(render_template(path, ctx, escape_toml=False))
+            for path in self.filesystem.directories
+        }
+
+    def written_files(self) -> set[Path]:
+        """Returns every workspace file execution writes itself, for previews.
+
+        Adds the append-only .gitignore and the IDE settings, which
+        ``target_files`` leaves out because they never collide, to its targets.
+        Engine state and subprocess output (such as ``uv.lock``) are excluded.
+
+        Returns:
+            A set of Path objects representing written files.
+        """
+        from .documents import vscode
+
+        files = self.target_files()
+        if self.filesystem.vcs_ignores:
+            files.add(Path(".gitignore"))
+        if self.ide_settings:
+            files.add(Path(vscode.SETTINGS_TARGET))
+        return files
+
+    def _path_context(self) -> dict[str, str]:
+        """Returns the names that render target paths, without environment bindings."""
+        if self.recipe:
+            return dict(self.recipe.context)
+        return {
+            "PROJECT_NAME": resolve_project_name(self.metadata),
+            "PACKAGE_NAME": resolve_package_name(self.metadata),
+        }
 
     def should_skip_file(self, target: Path) -> bool:
         """Returns True if the file exists and collision strategy is not OVERWRITE."""

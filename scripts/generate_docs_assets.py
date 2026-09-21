@@ -979,7 +979,11 @@ def generate_cli_dry_run_svg() -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             orig_cwd = os.getcwd()
             try:
-                os.chdir(tmpdir)
+                # Paths render with the directory's name, so fix it for byte-stable
+                # output; the regression snapshots use the same name.
+                project_dir = Path(tmpdir) / "demo_project"
+                project_dir.mkdir()
+                os.chdir(project_dir)
                 target = importlib.resources.files("protostar.templates").joinpath(
                     "cli.toml"
                 )
