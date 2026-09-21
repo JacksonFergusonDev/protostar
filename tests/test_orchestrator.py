@@ -498,7 +498,7 @@ def test_plan_allows_readthedocs_with_zensical_order_independent(mock_config, mo
     engine = Orchestrator([ReadTheDocsModule(), ZensicalModule()], mock_config)
     manifest = engine.plan()
 
-    assert ".readthedocs.yaml" in manifest.filesystem.file_injections
+    assert ".readthedocs.yaml" in manifest.filesystem.structured
 
 
 def test_plan_detects_docker_collision_without_force_flag(

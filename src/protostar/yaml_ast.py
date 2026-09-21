@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
@@ -267,11 +268,15 @@ class YamlDocumentSpec:
         name: Human-readable document name used in domain errors.
         keyed: Sequences whose records merge by identity.
         policy: Kernel policy, including set-like scalar sequences.
+        displaces: Workspace paths of configurations the tool may read instead of
+            this document. Protostar never creates the document while one of them
+            exists, because it would replace or compete with that configuration.
     """
 
     name: str
     keyed: tuple[KeyedSequence, ...] = ()
     policy: MergePolicy = DEFAULT_POLICY
+    displaces: tuple[str, ...] = ()
 
     def sequence_at(self, path: tuple[str, ...]) -> KeyedSequence | None:
         """Returns the keyed sequence declared at a concrete keyed-view path."""
@@ -294,6 +299,9 @@ class YamlGuard:
 
 
 NO_GUARD = YamlGuard()
+# Decides where a YAML document's policy holds, from its decoded desired value,
+# local value, and owned baseline.
+type YamlGuardPolicy = Callable[[Value, Value, Value], YamlGuard]
 
 
 def validate_yaml_baseline(spec: YamlDocumentSpec, value: Value) -> None:

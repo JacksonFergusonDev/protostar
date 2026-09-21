@@ -4,7 +4,15 @@ from typing import Any
 
 import pytest
 
-from protostar.documents import YAML_DOCUMENTS, codecov, github_workflows, pre_commit
+from protostar.documents import (
+    YAML_CONTRIBUTION_TARGETS,
+    YAML_DOCUMENTS,
+    YAML_GUARDS,
+    codecov,
+    github_workflows,
+    pre_commit,
+    readthedocs,
+)
 from protostar.errors import ConfigurationError
 from protostar.merge import MISSING, ConflictReason, MergeLocation
 from protostar.yaml_ast import (
@@ -74,8 +82,17 @@ def test_registry_maps_each_supported_document_to_its_spec():
         pre_commit.TARGET: pre_commit.SPEC,
         github_workflows.CI_TARGET: github_workflows.SPEC,
         github_workflows.RELEASE_TARGET: github_workflows.SPEC,
+        readthedocs.TARGET: readthedocs.SPEC,
     }
     assert pre_commit.SPEC.sequence_at(("repos", "any-repo", "hooks")) is not None
+    assert set(YAML_CONTRIBUTION_TARGETS) == {codecov.TARGET, readthedocs.TARGET}
+    # Pre-commit's guard is planned per run, so it is passed rather than registered.
+    assert set(YAML_GUARDS) == {
+        github_workflows.CI_TARGET,
+        github_workflows.RELEASE_TARGET,
+        readthedocs.TARGET,
+    }
+    assert YAML_GUARDS[readthedocs.TARGET] is readthedocs.guard_build
 
 
 def test_new_record_goes_after_its_nearest_earlier_sibling():

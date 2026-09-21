@@ -4,6 +4,7 @@ import pytest
 
 from protostar.config import UserConfig
 from protostar.errors import MissingDependencyError
+from protostar.intent import StructuredFormat
 from protostar.manifest import EnvironmentManifest, HookRunner
 from protostar.modules import (
     AgentsModule,
@@ -563,13 +564,15 @@ def test_readthedocs_module_properties():
     assert module.config_key == "readthedocs"
 
 
-def test_readthedocs_module_injects_file():
+def test_readthedocs_module_declares_managed_yaml():
     manifest = EnvironmentManifest()
     module = ReadTheDocsModule()
     module.build(manifest)
 
-    assert ".readthedocs.yaml" in manifest.filesystem.file_injections
-    content = manifest.filesystem.file_injections[".readthedocs.yaml"]
+    assert ".readthedocs.yaml" not in manifest.filesystem.file_injections
+    [contribution] = manifest.filesystem.structured[".readthedocs.yaml"]
+    assert contribution.format is StructuredFormat.YAML
+    content = contribution.content
     assert "version: 2" in content
     assert "os: ubuntu-24.04" in content
     assert 'python: "3.12"' in content

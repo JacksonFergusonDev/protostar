@@ -4,7 +4,7 @@ import logging
 import shutil
 from typing import TYPE_CHECKING
 
-from protostar.documents import codecov, renovate, zensical
+from protostar.documents import codecov, readthedocs, renovate, zensical
 from protostar.errors import MissingDependencyError
 from protostar.intent import DependencyGroup, StructuredFormat
 from protostar.registry import RemoteHook
@@ -921,7 +921,7 @@ class ReadTheDocsModule(BootstrapModule):
         return "Read the Docs"
 
     def build(self, manifest: EnvironmentManifest) -> None:
-        """Queues .readthedocs.yaml file injection.
+        """Declares the managed Read the Docs build configuration.
 
         Args:
             manifest: The centralized state object.
@@ -947,7 +947,12 @@ build:
         - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv run zensical build
         - cp -r site/* "$READTHEDOCS_OUTPUT/html/"
 """
-        manifest.filesystem.add_file_injection(".readthedocs.yaml", config)
+        manifest.filesystem.add_structured(
+            readthedocs.TARGET,
+            config,
+            producer="module:ReadTheDocsModule",
+            document_format=StructuredFormat.YAML,
+        )
 
 
 class JustModule(BootstrapModule):
