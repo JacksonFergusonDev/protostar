@@ -809,7 +809,8 @@ def test_an_unformattable_new_pyproject_is_reported_as_a_diagnostic(
     """A layout problem must leave the file valid and say so, never stay silent."""
     monkeypatch.chdir(tmp_path)
     mocker.patch(
-        "protostar.toml_layout.format_sections", return_value='[project]\nname = "no"\n'
+        "protostar.documents.pyproject_layout.format_sections",
+        return_value='[project]\nname = "no"\n',
     )
     executor = SystemExecutor(EnvironmentManifest(recipe=recipe()), UserConfig())
     executor.fs.write_text(Path("pyproject.toml"), UV_LAYOUT)

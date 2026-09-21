@@ -15,17 +15,17 @@ from typing import TYPE_CHECKING, Any
 
 import tomlkit
 
-from .errors import ConfigurationError, UnsupportedFilesystemNodeError
-from .ide import IDEType
-from .intent import TemplateOrigin, TemplateReference
-from .manifest import ProjectMetadata
-from .toml_layout import (
+from .documents.pyproject_layout import (
     Section,
     compose_children,
     insert_section,
     join_sections,
     split_sections,
 )
+from .errors import ConfigurationError, UnsupportedFilesystemNodeError
+from .ide import IDEType
+from .intent import TemplateOrigin, TemplateReference
+from .manifest import ProjectMetadata
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:

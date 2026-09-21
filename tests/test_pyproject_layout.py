@@ -10,9 +10,7 @@ from pathlib import Path
 import pytest
 import tomlkit
 
-from protostar.manifest import EnvironmentManifest
-from protostar.modules import TOOLING_MODULES
-from protostar.toml_layout import (
+from protostar.documents.pyproject_layout import (
     BANNER,
     TOOL_SECTION_NAMES,
     TOOL_SECTIONS,
@@ -25,6 +23,8 @@ from protostar.toml_layout import (
     section_rank,
     split_sections,
 )
+from protostar.manifest import EnvironmentManifest
+from protostar.modules import TOOLING_MODULES
 
 SNAPSHOTS = Path(__file__).parent / "snapshots"
 # ml_merged is the product of a merge, which never reformats; it is not a fresh layout.
@@ -323,7 +323,9 @@ CORRUPTED = '[project]\nname = "corrupt"\n'
 
 
 def test_a_fallback_is_reported_to_the_caller_and_returns_the_input(mocker) -> None:
-    mocker.patch("protostar.toml_layout.format_sections", return_value=CORRUPTED)
+    mocker.patch(
+        "protostar.documents.pyproject_layout.format_sections", return_value=CORRUPTED
+    )
     reasons: list[str] = []
     document = tomlkit.parse('[project]\nname = "app"\n')
 
@@ -343,12 +345,16 @@ def test_a_successful_format_reports_nothing() -> None:
 
 
 def test_reconcile_reports_when_it_could_not_format_a_new_pyproject(mocker) -> None:
+    from protostar.documents import toml_spec
     from protostar.merge import MISSING, MergeLocation
     from protostar.toml_ast import reconcile_toml
 
-    mocker.patch("protostar.toml_layout.format_sections", return_value=CORRUPTED)
+    mocker.patch(
+        "protostar.documents.pyproject_layout.format_sections", return_value=CORRUPTED
+    )
 
     result = reconcile_toml(
+        toml_spec("pyproject.toml"),
         "",
         {"project": {"name": "app"}},
         MISSING,
@@ -564,7 +570,8 @@ def test_a_placement_that_cannot_be_proven_is_reported_and_falls_back(mocker) ->
         "mypy"
     ]
     mocker.patch(
-        "protostar.toml_layout.join_sections", return_value='[project]\nname = "no"\n'
+        "protostar.documents.pyproject_layout.join_sections",
+        return_value='[project]\nname = "no"\n',
     )
     reasons: list[str] = []
 

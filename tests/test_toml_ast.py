@@ -3,9 +3,7 @@ from pathlib import Path
 
 import tomlkit
 
-from protostar.toml_ast import (
-    format_pyproject_toml,
-)
+from protostar.documents.pyproject_layout import format_document
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -27,7 +25,7 @@ name = "test-pkg"
 version = "0.1.0"
 """)
 
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
 
     # 1. Verify [project] precedes [build-system] and [tool]
     proj_idx = formatted.find("[project]")
@@ -50,9 +48,9 @@ name = "test"
 [tool.ruff]
 line-length = 88
 """)
-    pass1 = format_pyproject_toml(doc)
+    pass1 = format_document(doc)
     doc2 = tomlkit.parse(pass1)
-    pass2 = format_pyproject_toml(doc2)
+    pass2 = format_document(doc2)
 
     assert pass1 == pass2
 
@@ -76,7 +74,7 @@ testpaths = ["tests"]
 strict = true
 """)
 
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
 
     assert formatted.count("# ---- Ruff ---- #") == 1
     assert formatted.count("# ---- Mypy ---- #") == 1
@@ -109,7 +107,7 @@ branch = true
 show_missing = true
 """
     doc = tomlkit.parse(raw)
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
 
     pytest_header_pos = formatted.find("# ---- Pytest ---- #")
     pytest_ini_pos = formatted.find("[tool.pytest.ini_options]")
@@ -145,7 +143,7 @@ name = "app"
 version = "0.1.0"
 """
     doc = tomlkit.parse(raw)
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
 
     project_pos = formatted.find("[project]")
     build_pos = formatted.find("[build-system]")
@@ -169,7 +167,7 @@ redundant-cast = "warn"
 fail_under = 80
 """
     doc = tomlkit.parse(raw)
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
 
     assert "# ---- Mypy ---- #\n\n[[tool.mypy.overrides]]" in formatted
     assert "# ---- Ty ---- #\n\n[tool.ty.rules]" in formatted
@@ -196,7 +194,7 @@ line-length = 88
     ]
     mocker.patch("tomllib.loads", side_effect=lambda _: calls.pop(0))
 
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
     assert "[tool.ruff]" in formatted
     assert formatted.endswith("\n")
     assert not formatted.endswith("\n\n")
@@ -210,7 +208,7 @@ name = "test"
     # Force tomllib.loads to throw or mismatch
     mocker.patch("tomllib.loads", side_effect=ValueError("Parity mismatch"))
 
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
     assert "[project]" in formatted
     assert 'name = "test"' in formatted
 
@@ -225,7 +223,7 @@ name = "demo"
 disable = ["MD013"]
 """
     doc = tomlkit.parse(raw)
-    formatted = format_pyproject_toml(doc)
+    formatted = format_document(doc)
 
     assert "# ---- rumdl ---- #" in formatted
     assert "# ---- rumdl ---- #\n\n[tool.rumdl]" in formatted
@@ -233,6 +231,7 @@ disable = ["MD013"]
 
 def test_set_extension_preserves_existing_member_comments():
     """Accepted set additions retain the local array's nodes and presentation."""
+    from protostar.documents import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -244,6 +243,7 @@ def test_set_extension_preserves_existing_member_comments():
     )
     desired = tomlkit.parse('[tool.ruff.lint]\nselect = ["E", "F", "I"]\n')
     result = reconcile_toml(
+        toml_spec("pyproject.toml"),
         original,
         desired.unwrap(),
         tomlkit.parse(original).unwrap(),
@@ -255,6 +255,7 @@ def test_set_extension_preserves_existing_member_comments():
     assert "] # local array comment\n" in result.content
     assert tomlkit.parse(result.content).unwrap() == desired.unwrap()
     repeated = reconcile_toml(
+        toml_spec("pyproject.toml"),
         result.content,
         desired.unwrap(),
         result.baseline,
@@ -266,6 +267,7 @@ def test_set_extension_preserves_existing_member_comments():
 
 def test_adding_tool_preserves_existing_document_presentation():
     """Semantic equality never authorizes reformatting pre-existing tables."""
+    from protostar.documents import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
@@ -278,6 +280,7 @@ def test_adding_tool_preserves_existing_document_presentation():
     base = tomlkit.parse(original).unwrap()
     del base["project"]
     result = reconcile_toml(
+        toml_spec("pyproject.toml"),
         original,
         desired.unwrap(),
         base,
@@ -287,6 +290,7 @@ def test_adding_tool_preserves_existing_document_presentation():
     assert result.content.startswith(original)
     assert "[tool.mypy]\nstrict=true\n" in result.content
     repeated = reconcile_toml(
+        toml_spec("pyproject.toml"),
         result.content,
         desired.unwrap(),
         result.baseline,
@@ -334,7 +338,7 @@ def _header_positions(formatted: str) -> dict[str, int]:
 
 def test_format_pyproject_toml_keeps_only_tooling_under_the_banner():
     """Dependency groups and packaging config sit above the Tool Configuration banner."""
-    formatted = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    formatted = format_document(tomlkit.parse(UV_APPENDED_LAYOUT))
     pos = _header_positions(formatted)
 
     assert -1 not in pos.values()
@@ -343,7 +347,7 @@ def test_format_pyproject_toml_keeps_only_tooling_under_the_banner():
 
 
 def test_format_pyproject_toml_labels_the_protostar_section_last():
-    formatted = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    formatted = format_document(tomlkit.parse(UV_APPENDED_LAYOUT))
     pos = _header_positions(formatted)
 
     assert (
@@ -355,7 +359,7 @@ def test_format_pyproject_toml_labels_the_protostar_section_last():
 
 
 def test_format_pyproject_toml_separates_every_table_with_a_blank_line():
-    formatted = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    formatted = format_document(tomlkit.parse(UV_APPENDED_LAYOUT))
     lines = formatted.split("\n")
 
     for index, line in enumerate(lines[1:], start=1):
@@ -367,18 +371,18 @@ def test_format_pyproject_toml_separates_every_table_with_a_blank_line():
 
 
 def test_format_pyproject_toml_layout_is_idempotent_with_protostar_section():
-    once = format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
-    twice = format_pyproject_toml(tomlkit.parse(once))
+    once = format_document(tomlkit.parse(UV_APPENDED_LAYOUT))
+    twice = format_document(tomlkit.parse(once))
 
     assert once == twice
 
 
 def test_finalize_new_pyproject_fixes_the_layout_uv_and_the_recipe_leave():
-    from protostar.toml_ast import finalize_new_pyproject
+    from protostar.documents.pyproject import finalize_new_pyproject
 
     finalized = finalize_new_pyproject(UV_APPENDED_LAYOUT)
 
-    assert finalized == format_pyproject_toml(tomlkit.parse(UV_APPENDED_LAYOUT))
+    assert finalized == format_document(tomlkit.parse(UV_APPENDED_LAYOUT))
     assert tomllib.loads(finalized) == tomllib.loads(UV_APPENDED_LAYOUT)
 
 
@@ -405,11 +409,13 @@ version = 1
 
 
 def test_a_tool_added_to_an_existing_project_is_placed_before_protostar():
+    from protostar.documents import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
     desired = tomlkit.parse("[tool.ruff]\nline-length=88\n[tool.mypy]\nstrict=true\n")
     result = reconcile_toml(
+        toml_spec("pyproject.toml"),
         CANONICAL_WITH_RECIPE,
         desired.unwrap(),
         {"tool": {"ruff": {"line-length": 88}}},
@@ -431,11 +437,13 @@ def test_a_tool_added_to_an_existing_project_is_placed_before_protostar():
 
 
 def test_placing_a_new_tool_is_stable_when_repeated():
+    from protostar.documents import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
     desired = tomlkit.parse("[tool.ruff]\nline-length=88\n[tool.mypy]\nstrict=true\n")
     first = reconcile_toml(
+        toml_spec("pyproject.toml"),
         CANONICAL_WITH_RECIPE,
         desired.unwrap(),
         {"tool": {"ruff": {"line-length": 88}}},
@@ -443,6 +451,7 @@ def test_placing_a_new_tool_is_stable_when_repeated():
         desired_ast=desired,
     )
     repeated = reconcile_toml(
+        toml_spec("pyproject.toml"),
         first.content,
         desired.unwrap(),
         first.baseline,
@@ -454,12 +463,14 @@ def test_placing_a_new_tool_is_stable_when_repeated():
 
 
 def test_a_non_pyproject_toml_target_is_left_to_a_plain_dump():
+    from protostar.documents import toml_spec
     from protostar.merge import MergeLocation
     from protostar.toml_ast import reconcile_toml
 
     original = "[tool.a]\nx = 1\n\n[tool.zzz]\ny = 2\n"
     desired = tomlkit.parse("[tool.a]\nx = 1\n[tool.b]\nz = 3\n")
     result = reconcile_toml(
+        toml_spec("ruff.toml"),
         original,
         desired.unwrap(),
         {"tool": {"a": {"x": 1}}},

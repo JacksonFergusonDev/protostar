@@ -279,9 +279,9 @@ class FilesystemManifest:
         policy: ContributionPolicy = ContributionPolicy.MANAGED,
         document_format: StructuredFormat = StructuredFormat.TOML,
     ) -> None:
-        """Declares explicit structured intent; YAML is limited to the Codecov pilot."""
+        """Declares explicit structured intent for a TOML or contributable YAML target."""
         self.observe(("structured", path, producer))
-        from .toml_ast import declare_structured_contributions
+        from .documents.pyproject import declare_structured_contributions
 
         validate_target(path)
         path = Path(path).as_posix()
@@ -291,18 +291,22 @@ class FilesystemManifest:
                 hint="Use one contribution policy per target.",
             )
         if document_format is StructuredFormat.YAML:
-            from .yaml_ast import CODECOV_TARGET, decode_yaml_baseline
+            from .documents import YAML_CONTRIBUTION_TARGETS
+            from .yaml_ast import decode_yaml_baseline
 
-            if path != CODECOV_TARGET or policy is not ContributionPolicy.MANAGED:
+            if (
+                path not in YAML_CONTRIBUTION_TARGETS
+                or policy is not ContributionPolicy.MANAGED
+            ):
                 raise ConfigurationError(
                     "Unsupported structured YAML target or policy.",
-                    hint="Only managed .github/codecov.yml is supported by the YAML pilot.",
+                    hint=f"Declare a managed contribution to one of: {', '.join(sorted(YAML_CONTRIBUTION_TARGETS))}.",
                 )
             decode_yaml_baseline(content)
             if path in self.structured:
                 raise ConfigurationError(
                     "Ambiguous YAML producers.",
-                    hint="Declare one Codecov contribution per manifest.",
+                    hint=f"Declare one contribution to '{path}' per manifest.",
                 )
             self.structured[path] = [
                 StructuredContribution(
@@ -330,7 +334,7 @@ class FilesystemManifest:
                 "TOML append regions are unsupported.",
                 hint="Use dev.pyproject structured configuration.",
             )
-        from .yaml_ast import YAML_DOCUMENTS
+        from .documents import YAML_DOCUMENTS
 
         if path in YAML_DOCUMENTS:
             raise ConfigurationError(
@@ -628,6 +632,8 @@ class EnvironmentManifest:
         Returns:
             A set of Path objects representing target files.
         """
+        from .documents import github_workflows, pre_commit, pyproject
+
         targets: set[Path] = set()
         ctx = (
             dict(self.recipe.context)
@@ -649,16 +655,16 @@ class EnvironmentManifest:
             targets.add(Path(rendered))
 
         if self.dependencies.includes:
-            targets.add(Path("pyproject.toml"))
+            targets.add(Path(pyproject.TARGET))
 
         if self.tooling.wants_hooks:
-            targets.add(Path(".pre-commit-config.yaml"))
+            targets.add(Path(pre_commit.TARGET))
 
         if self.tooling.wants_ci:
-            targets.add(Path(".github/workflows/ci.yml"))
+            targets.add(Path(github_workflows.CI_TARGET))
 
         if self.tooling.wants_release:
-            targets.add(Path(".github/workflows/release.yml"))
+            targets.add(Path(github_workflows.RELEASE_TARGET))
 
         if self.tooling.wants_just:
             targets.add(Path("justfile"))

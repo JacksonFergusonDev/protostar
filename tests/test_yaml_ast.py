@@ -4,6 +4,8 @@ import difflib
 
 import pytest
 
+from protostar.documents.codecov import SPEC as CODECOV_SPEC
+from protostar.documents.pre_commit import SPEC as PRE_COMMIT_SPEC
 from protostar.errors import ConfigurationError
 from protostar.merge import MISSING, ConflictReason, MergeLocation
 from protostar.sync_state import (
@@ -14,9 +16,7 @@ from protostar.sync_state import (
     serialize_state,
 )
 from protostar.yaml_ast import (
-    CODECOV_SPEC,
     DEFAULT_STYLE,
-    PRE_COMMIT_SPEC,
     YamlStyle,
     decode_yaml_baseline,
     detect_style,

@@ -1,20 +1,41 @@
 """Identity-aware pre-commit reconciliation and pin acceptance contracts."""
 
+from typing import Any, cast
+
 import pytest
 
+from protostar.documents.pre_commit import SPEC, TARGET, plan_hook_pins
 from protostar.errors import ConfigurationError
-from protostar.merge import MISSING, MergeLocation
-from protostar.pre_commit import TARGET, reconcile_hook_config
+from protostar.merge import MISSING, ConflictReason, MergeLocation
 from protostar.registry import RemoteHook, ResolvedHookRevision
 from protostar.sync_state import FilePolicy, FileState, PinProvenance
 from protostar.yaml_ast import (
-    PRE_COMMIT_SPEC,
     decode_yaml_baseline,
     encode_yaml_baseline,
     reconcile_yaml,
 )
 
 LOCATION = MergeLocation(TARGET)
+
+
+def reconcile_hook_config(
+    original, desired, record, revisions, pins, *, missing_file=False, overwrite=False
+):
+    """Runs the pin plan, its guarded merge, and pin advancement as execution does."""
+    plan = plan_hook_pins(desired, revisions, pins)
+    result = reconcile_yaml(
+        SPEC,
+        original,
+        plan.desired,
+        decode_yaml_baseline(record.baseline) if record else MISSING,
+        LOCATION,
+        guard=plan.guard,
+        missing_file=missing_file,
+        overwrite=overwrite,
+    )
+    return result, plan.advance(result.content, result.baseline)
+
+
 BASE = """# hooks
 repos:
   - repo: remote
@@ -32,7 +53,7 @@ repos:
 
 def merge(local, desired, base=BASE, **kwargs):
     return reconcile_yaml(
-        PRE_COMMIT_SPEC,
+        SPEC,
         local,
         desired,
         decode_yaml_baseline(base) if base is not MISSING else MISSING,
@@ -269,3 +290,34 @@ def test_invalid_pre_commit_shapes_raise_domain_errors(desired):
 def test_owned_duplicate_identities_are_invalid_state():
     with pytest.raises(ConfigurationError):
         FileState(TARGET, FilePolicy.YAML, BASE + "  - repo: local\n    hooks: []\n")
+
+
+def test_guarded_pin_keeps_desired_styling_for_other_additions():
+    pinned = f"repos:\n  - repo: {RemoteHook.GITLEAKS.value}\n    rev: {RemoteHook.GITLEAKS.placeholder}\n    hooks: [{{id: gitleaks}}]\n"
+    first, pins = reconcile_hook_config(
+        "",
+        pinned,
+        None,
+        (ResolvedHookRevision(RemoteHook.GITLEAKS, "v1.0.0", PinProvenance.REGISTRY),),
+        (),
+        missing_file=True,
+    )
+    desired = (
+        pinned
+        + "  - repo: local\n    hooks:\n      - id: new-hook\n        name: New hook\n        entry: run\n        language: system\n"
+    )
+    result, _ = reconcile_hook_config(
+        first.content,
+        desired,
+        FileState(
+            TARGET,
+            FilePolicy.YAML,
+            encode_yaml_baseline(cast(dict[str, Any], first.baseline)),
+        ),
+        (ResolvedHookRevision(RemoteHook.GITLEAKS, "v0.5.0", PinProvenance.REGISTRY),),
+        pins,
+    )
+    repositories: Any = decode_yaml_baseline(result.content)["repos"]
+    assert repositories[0]["rev"] == "v1.0.0"
+    assert list(repositories[1]["hooks"][0]) == ["id", "name", "entry", "language"]
+    assert [c.reason for c in result.conflicts] == [ConflictReason.UNSAFE_PIN]

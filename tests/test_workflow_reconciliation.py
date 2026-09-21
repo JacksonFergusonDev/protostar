@@ -4,20 +4,23 @@ from typing import Any, cast
 
 import pytest
 
-from protostar.github_workflows import reconcile_workflow
-from protostar.merge import ConflictReason, MergeConflict
-from protostar.sync_state import FilePolicy, FileState
+from protostar.documents.github_workflows import (
+    CI_TARGET,
+    RELEASE_TARGET,
+    SPEC,
+    guard_workflow,
+)
+from protostar.merge import MISSING, ConflictReason, MergeConflict, MergeLocation
 from protostar.workflows import (
     CIWorkflowSpec,
     generate_ci_workflow,
     generate_release_workflow,
 )
 from protostar.yaml_ast import (
-    CI_WORKFLOW_TARGET,
-    RELEASE_WORKFLOW_TARGET,
     YamlReconciliation,
     decode_yaml_baseline,
     encode_yaml_baseline,
+    reconcile_yaml,
 )
 
 RUFF = "      - name: Run Ruff Linter\n        run: uv run ruff check ."
@@ -36,23 +39,29 @@ def run(
     desired: str,
     previous: YamlReconciliation | None = None,
     *,
-    target: str = CI_WORKFLOW_TARGET,
+    target: str = CI_TARGET,
     overwrite: bool = False,
 ) -> YamlReconciliation:
-    record = (
-        FileState(
-            target,
-            FilePolicy.YAML,
-            encode_yaml_baseline(cast(dict[str, Any], previous.baseline)),
+    # Round-trip the baseline as the lockfile does between runs.
+    base = (
+        decode_yaml_baseline(
+            encode_yaml_baseline(cast(dict[str, Any], previous.baseline))
         )
         if previous is not None
-        else None
+        else MISSING
     )
-    return reconcile_workflow(
-        target,
+    return reconcile_yaml(
+        SPEC,
         local or "",
         desired,
-        record,
+        base,
+        MergeLocation(target),
+        guard=guard_workflow(
+            target,
+            decode_yaml_baseline(desired),
+            decode_yaml_baseline(local) if local is not None else {},
+            base,
+        ),
         missing_file=local is None,
         overwrite=overwrite,
     )
@@ -298,7 +307,7 @@ def test_deleted_file_and_deleted_job_stay_deleted():
 @pytest.mark.parametrize("overwrite", [False, True])
 def test_release_workflow_merges_by_job_and_step(overwrite):
     desired = generate_release_workflow()
-    first = run(None, desired, target=RELEASE_WORKFLOW_TARGET)
+    first = run(None, desired, target=RELEASE_TARGET)
     local = first.content.replace(
         '              - "v*"\n', '              - "v*"\n          workflow_dispatch:\n'
     ) + (
@@ -309,7 +318,7 @@ def test_release_workflow_merges_by_job_and_step(overwrite):
         local,
         desired.replace(SETUP_UV, BUMPED_UV),
         first,
-        target=RELEASE_WORKFLOW_TARGET,
+        target=RELEASE_TARGET,
         overwrite=overwrite,
     )
     assert not result.conflicts

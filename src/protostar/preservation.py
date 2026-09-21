@@ -11,11 +11,12 @@ from .dependencies import (
     requirement_entries,
     requirement_identity,
 )
+from .documents import YAML_DOCUMENTS, pyproject
 from .jsonc_ast import decode_jsonc
 from .merge import MISSING, MergeConflict, MergeLocation, Value, semantic_equal
 from .review_workspace import ReviewWorkspace
 from .sync_state import FilePolicy, SyncState, decode_toml_baseline
-from .yaml_ast import YAML_DOCUMENTS, decode_yaml_baseline
+from .yaml_ast import decode_yaml_baseline
 
 
 @dataclass(frozen=True)
@@ -164,7 +165,7 @@ def preserved_deviations(
                 )
                 if local_digest != region.digest:
                     preserved.append(PreservedDeviation(region_location, stop < 0))
-    target = Path("pyproject.toml")
+    target = Path(pyproject.TARGET)
     data = (
         tomllib.loads(workspace.read_text(target)) if workspace.exists(target) else {}
     )

@@ -157,7 +157,8 @@ domain error. Input is bounded to 1 MB, 100 nesting levels, and 10,000 expanded
 nodes; graph validation precedes construction to reject recursive aliases.
 
 Codecov declares `StructuredFormat.YAML` explicitly through `add_structured()`.
-The pilot accepts one managed producer at `.github/codecov.yml`; it does not infer
+The channel accepts one managed producer per target in
+`documents.YAML_CONTRIBUTION_TARGETS` (only `.github/codecov.yml`); it does not infer
 structured intent from free-form file extensions or expose arbitrary YAML template
 injections. TOML remains the default format. YAML baseline documents use the
 `structured-yaml` file policy in schema v1 and are canonically serialized from
@@ -236,7 +237,7 @@ pruning nor a `sync` command.
 
 ## YAML document specs
 
-Every YAML document the engine reconciles is described by a `YamlDocumentSpec` in `yaml_ast.py`, registered by path in `YAML_DOCUMENTS`. A spec names the document for domain errors, supplies the kernel `MergePolicy` (Codecov's set-like `ignore`), and declares its keyed sequences. Nothing outside the spec table compares against YAML file names: state validation, preserved-deviation inspection, and the structured contribution path all look up the spec by path. The structured contribution channel itself still accepts only Codecov, because pre-commit arrives through its own generator.
+Every YAML document the engine reconciles is described by a `YamlDocumentSpec`. The spec lives with its document in `src/protostar/documents/` (see [Document catalog](#document-catalog)) and is registered by path in `documents.YAML_DOCUMENTS`. A spec names the document for domain errors, supplies the kernel `MergePolicy` (Codecov's set-like `ignore`), and declares its keyed sequences. Nothing outside the catalog compares against YAML file names: state validation, preserved-deviation inspection, and the structured contribution path all look up the spec by path. The structured contribution channel accepts only the targets in `documents.YAML_CONTRIBUTION_TARGETS` (Codecov), because pre-commit and workflows arrive through their own generators.
 
 A `KeyedSequence` gives a path pattern in the keyed view and an identity field. In the keyed view each record is presented under its identity, so an enclosing keyed record appears in the path as its identity, and the `WILDCARD` sentinel matches exactly one segment: pre-commit declares `repos` by `repo` and `repos.*.hooks` by `id`. Optional string fields (pre-commit's `rev`) must be non-empty strings whenever present.
 
@@ -247,23 +248,39 @@ A `KeyedSequence` gives a path pattern in the keyed view and an identity field. 
 
 New mapping keys are inserted after their nearest earlier desired sibling that exists locally, by the same rule as new records. When the local file does not end with a blank line, an emitted document ends with exactly one newline: removing a trailing item would otherwise leave its separator blank line behind on the item before it. Append regions are rejected for every registered YAML document, because appended text cannot be merged by structure.
 
-Callers can hold keyed-view paths. A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned, so the kernel sees unchanged intent: local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them. The pre-commit pin guard holds `repos.<repo>.rev` rather than rewriting the desired document, so other additions keep their desired key order and styling.
+Document policies pass a `YamlGuard` to `reconcile_yaml`: keyed-view paths to hold, plus the conflicts the policy found, which are reported ahead of the merge's own. A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned, so the kernel sees unchanged intent: local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them. The pre-commit pin guard holds `repos.<repo>.rev` rather than rewriting the desired document, so other additions keep their desired key order and styling.
 
 ## GitHub Actions workflows
 
-`.github/workflows/ci.yml` and `release.yml` share one `WORKFLOW_SPEC`: there is no per-file behavior, only a different generator producing the desired document. Workflow files Protostar does not generate are never read or written.
+`.github/workflows/ci.yml` and `release.yml` share one `github_workflows.SPEC`: there is no per-file behavior, only a different generator producing the desired document. Workflow files Protostar does not generate are never read or written.
 
 - Mappings merge by key through the kernel, so user-added triggers, permissions, environment, jobs, and `with:` inputs are foreign siblings and never touched.
 - `jobs.*.steps` is keyed by step `name`. Every generated step is named, uniquely within its job, and a logical step keeps its name in every generator variant (`tests/test_workflows.py` enforces the exact set). Unnamed local steps are foreign and stay in place. A renamed step reads as a deletion of the old name plus a foreign step.
 - Every other sequence is atomic: branch filters, matrix axes, `include`, `needs`.
 - The policy is complete, so when the generator stops emitting something (for example Codecov upload steps after Codecov is turned off) unedited copies are removed and edited ones are kept with a `retracted` conflict. Turning the CI tool off produces no document, so nothing is touched.
 
-`github_workflows.reconcile_workflow` adds two guards, both implemented as holds:
+`github_workflows.guard_workflow` builds the workflow's `YamlGuard` from two rules, both implemented as holds:
 
 - A job that exists locally but is not owned is held whole and reported as `unowned` at `jobs.<id>`, including under explicit overwrite. Protostar never grafts its steps into a job it did not create; its other jobs are still added.
 - When an owned step's local `uses` names the same action as the owned baseline but a different ref, and the ref differs from the desired one too, the ref belongs to the user (a Renovate SHA pin, a manual bump or rollback). It is kept without a conflict, reported as a preserved deviation, and `sync --check` passes. If the local ref already equals the desired ref, ownership converges normally. Local (`./`) and `docker://` actions carry no ref and follow the ordinary rules; a changed action path is an ordinary conflict.
 
 Existing workflow files are parsed during preparation, before any batch mutates the workspace, so a malformed or unsupported workflow fails like any other structured YAML document.
+
+## Document catalog
+
+The format engines (`toml_ast.py`, `yaml_ast.py`, `jsonc_ast.py`) know no file by name. Each one reconciles a document under a spec it is handed (`TomlDocumentSpec`, `YamlDocumentSpec`) and exposes one extension point for document policy, the `YamlGuard`. Everything specific to one file lives in its own module under `src/protostar/documents/`:
+
+| Module | Owns |
+| :--- | :--- |
+| `pyproject` | `TARGET`, `SPEC` (set-like lint selections and classifiers, the `tool` super table, the canonical layout), personal seed splitting, dependency-group includes. |
+| `pyproject_layout` | The canonical `pyproject.toml` section order, banner, and headers. |
+| `pre_commit` | `TARGET`, `SPEC` (repos by `repo`, hooks by `id`), and `plan_hook_pins`, whose `HookPinPlan` guards unsafe automatic pins and advances pin provenance after the merge. |
+| `github_workflows` | `CI_TARGET`, `RELEASE_TARGET`, `SPEC`, and `guard_workflow`. |
+| `codecov` | `TARGET` and `SPEC` (set-like `ignore`). |
+| `renovate` | `TARGET` and the sibling locations that shadow it. |
+| `vscode` | The settings target and its default indentation. |
+
+The package's `__init__` assembles the registries callers look up by path: `YAML_DOCUMENTS`, `YAML_CONTRIBUTION_TARGETS`, and `toml_spec(path)`, which returns `DEFAULT_TOML_SPEC` (plain tables, atomic arrays, tomlkit's own output) for any TOML file without a spec. Every YAML document is applied through one path in `Reconciliation._reconcile_document`: read, build the guard from the decoded desired, local, and owned values, reconcile, record the baseline, write. Adding a document means adding a module and a registry entry, not a branch in an engine.
 
 ## PR F: Generated files, seeds, and regions
 

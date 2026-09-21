@@ -877,7 +877,7 @@ def test_executor_handles_write_permission_denied(mocker):
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_pre_commit_config()
 
-    assert "reconcile pre-commit configuration" in exc_info.value.operation
+    assert "reconcile .pre-commit-config.yaml" in exc_info.value.operation
     assert ".pre-commit-config.yaml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 
@@ -1411,7 +1411,7 @@ def test_executor_write_ci_workflow_handles_os_error(
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_ci_workflow()
 
-    assert "reconcile workflow" in exc_info.value.operation
+    assert "reconcile ci.yml" in exc_info.value.operation
     assert "ci.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 
@@ -1435,7 +1435,7 @@ def test_executor_write_release_workflow_handles_os_error(
     with pytest.raises(FileSystemError) as exc_info:
         executor._write_release_workflow()
 
-    assert "reconcile workflow" in exc_info.value.operation
+    assert "reconcile release.yml" in exc_info.value.operation
     assert "release.yml" in exc_info.value.path
     assert isinstance(exc_info.value.original, PermissionError)
 

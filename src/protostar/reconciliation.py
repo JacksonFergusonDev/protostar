@@ -6,6 +6,7 @@ import stat
 import tomllib
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import cast
 
@@ -18,12 +19,21 @@ from .dependencies import (
     requirement_identity,
     select_dependencies,
 )
+from .documents import (
+    YAML_CONTRIBUTION_TARGETS,
+    YAML_DOCUMENTS,
+    github_workflows,
+    pre_commit,
+    pyproject,
+    renovate,
+    toml_spec,
+    vscode,
+)
 from .errors import (
     ConfigurationError,
     FileSystemError,
     UnsupportedFilesystemNodeError,
 )
-from .github_workflows import reconcile_workflow
 from .intent import (
     AppendContribution,
     ContributionPolicy,
@@ -52,7 +62,6 @@ from .manifest import (
     Severity,
 )
 from .merge import MISSING, ConflictReason, MergeConflict, MergeLocation, Value
-from .pre_commit import reconcile_hook_config
 from .registry import ResolvedHookRevision
 from .review_workspace import ByteSink, PresenceReader, ReviewWorkspace, WorkspaceReader
 from .security import enforce_path_jail
@@ -67,13 +76,7 @@ from .sync_state import (
     deserialize_state,
     encode_toml_baseline,
 )
-from .toml_ast import (
-    aggregate_toml,
-    aggregate_toml_document,
-    apply_dependency_includes,
-    finalize_new_pyproject,
-    reconcile_toml,
-)
+from .toml_ast import aggregate_toml, aggregate_toml_document, reconcile_toml
 from .workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
@@ -93,10 +96,8 @@ from .workspace import (
     validate_resolver_workspace,
 )
 from .yaml_ast import (
-    CI_WORKFLOW_TARGET,
-    CODECOV_TARGET,
-    RELEASE_WORKFLOW_TARGET,
-    YAML_DOCUMENTS,
+    NO_GUARD,
+    YamlGuard,
     YamlReconciliation,
     decode_yaml_baseline,
     encode_yaml_baseline,
@@ -107,21 +108,9 @@ logger = logging.getLogger("protostar")
 
 __all__ = ["Reconciliation"]
 
-IDE_SETTINGS_TARGET = Path(".vscode/settings.json")
-IDE_SETTINGS_INDENT = "    "
-# Renovate uses the first configuration it finds, so a sibling location would
-# compete with (or shadow) the managed file.
-RENOVATE_TARGET = Path(".github/renovate.json")
-RENOVATE_ALTERNATIVES = (
-    "renovate.json",
-    "renovate.json5",
-    ".renovaterc",
-    ".renovaterc.json",
-    ".renovaterc.json5",
-    ".github/renovate.json5",
-    ".gitlab/renovate.json",
-    ".gitlab/renovate.json5",
-)
+# Decides where a YAML document's policy holds, from its decoded desired value,
+# local value, and owned baseline.
+type YamlGuardPolicy = Callable[[Value, Value, Value], YamlGuard]
 
 
 class Reconciliation:
@@ -208,7 +197,7 @@ class Reconciliation:
             )
         for path in self.manifest.filesystem.file_injections:
             if Path(render_template(path, self.interpolation_context)) == Path(
-                "pyproject.toml"
+                pyproject.TARGET
             ):
                 raise ConfigurationError(
                     "Free-form pyproject.toml replacement is unsupported.",
@@ -216,24 +205,28 @@ class Reconciliation:
                 )
         for filepath, content in self.manifest.filesystem.file_injections.items():
             if Path(render_template(filepath, self.interpolation_context)) == (
-                RENOVATE_TARGET
+                Path(renovate.TARGET)
             ):
                 decode_jsonc(render_template(content, self.interpolation_context))
-                if self.workspace.exists(RENOVATE_TARGET):
+                if self.workspace.exists(Path(renovate.TARGET)):
                     try:
                         decode_jsonc(
-                            self.workspace.read_bytes(RENOVATE_TARGET).decode("utf-8")
+                            self.workspace.read_bytes(Path(renovate.TARGET)).decode(
+                                "utf-8"
+                            )
                         )
                     except (OSError, UnicodeError) as error:
                         raise FileSystemError(
-                            "read JSONC configuration", str(RENOVATE_TARGET), error
+                            "read JSONC configuration",
+                            renovate.TARGET,
+                            error,
                         ) from error
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if any(c.format is StructuredFormat.YAML for c in contributions):
-                if len(contributions) != 1 or filepath != CODECOV_TARGET:
+                if len(contributions) != 1 or filepath not in YAML_CONTRIBUTION_TARGETS:
                     raise ConfigurationError(
                         "Unsupported YAML contributions.",
-                        hint="Declare exactly one Codecov YAML producer.",
+                        hint="Declare exactly one producer for a supported YAML target.",
                     )
                 decode_yaml_baseline(contributions[0].content)
                 target = Path(filepath)
@@ -278,7 +271,7 @@ class Reconciliation:
             or deps.dev_dependencies
             or deps.docs_dependencies
         ):
-            toml_targets.add("pyproject.toml")
+            toml_targets.add(pyproject.TARGET)
         for _group, packages in (
             (DependencyGroup.MAIN, deps.dependencies),
             (DependencyGroup.DEV, deps.dev_dependencies),
@@ -305,7 +298,7 @@ class Reconciliation:
         if not self.manifest.tooling.wants_hooks:
             return
 
-        target = Path(".pre-commit-config.yaml")
+        target = Path(pre_commit.TARGET)
         enforce_path_jail(target, Path.cwd())
         full_yaml = generate_pre_commit_config(
             local_hooks=self.manifest.tooling.pre_commit_local_hooks,
@@ -315,48 +308,17 @@ class Reconciliation:
             install_hook_types=self.manifest.tooling.pre_commit_install_hook_types,
         )
 
-        record = next(
-            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
-        )
-        if record is not None and record.policy is not FilePolicy.YAML:
-            raise ConfigurationError(
-                "Conflicting pre-commit ownership policy.",
-                hint="Keep the tracked file policy unchanged.",
-            )
         self._validate_node(target)
-        try:
-            original = (
-                self.workspace.read_bytes(target).decode("utf-8")
-                if self.workspace.exists(target)
-                else ""
-            )
-            result, pins = reconcile_hook_config(
-                original,
-                full_yaml,
-                record,
-                self.hook_revisions,
-                self.candidate_state.hook_pins,
-                missing_file=not self.workspace.exists(target),
-                overwrite=self.manifest.collision_strategy
-                is CollisionStrategy.OVERWRITE,
-            )
-            for conflict in result.conflicts:
-                self._merge_warning(conflict)
-            if result.baseline is not MISSING:
-                self.candidate_state = self.candidate_state.with_file(
-                    FileState(
-                        target.as_posix(),
-                        FilePolicy.YAML,
-                        encode_yaml_baseline(cast(dict[str, Value], result.baseline)),
-                    )
-                )
-            self.candidate_state = replace(self.candidate_state, hook_pins=pins)
-            if result.content != original:
-                self.fs.write_text(target, result.content)
-        except (OSError, UnicodeError) as error:
-            raise FileSystemError(
-                "reconcile pre-commit configuration", str(target), error
-            ) from error
+        plan = pre_commit.plan_hook_pins(
+            full_yaml, self.hook_revisions, self.candidate_state.hook_pins
+        )
+        result = self._reconcile_document(
+            target, plan.desired, FilePolicy.YAML, guard=lambda *_: plan.guard
+        )
+        self.candidate_state = replace(
+            self.candidate_state,
+            hook_pins=plan.advance(result.content, result.baseline),
+        )
 
     def _write_injected_files(self) -> None:
         """Writes all queued boilerplate files to the local workspace."""
@@ -370,8 +332,8 @@ class Reconciliation:
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
             enforce_path_jail(target, Path.cwd())
-            if target == RENOVATE_TARGET:
-                if any(self.workspace.exists(Path(p)) for p in RENOVATE_ALTERNATIVES):
+            if target == Path(renovate.TARGET):
+                if any(self.workspace.exists(Path(p)) for p in renovate.ALTERNATIVES):
                     self._merge_warning(
                         MergeConflict(
                             MergeLocation(target.as_posix()), ConflictReason.UNOWNED
@@ -428,54 +390,26 @@ class Reconciliation:
                 ci_steps=self.manifest.tooling.ci_steps,
             )
         )
-        self._write_workflow(Path(CI_WORKFLOW_TARGET), workflow)
+        self._write_workflow(Path(github_workflows.CI_TARGET), workflow)
 
     def _write_release_workflow(self) -> None:
         """Assembles and reconciles the .github/workflows/release.yml file if requested."""
         if not self.manifest.tooling.wants_release:
             return
-        self._write_workflow(Path(RELEASE_WORKFLOW_TARGET), generate_release_workflow())
+        self._write_workflow(
+            Path(github_workflows.RELEASE_TARGET), generate_release_workflow()
+        )
 
     def _write_workflow(self, target: Path, workflow: str) -> None:
         """Merges a generated workflow into the workspace by job and step."""
         enforce_path_jail(target, Path.cwd())
-        record = next(
-            (r for r in self.candidate_state.files if r.path == target.as_posix()), None
-        )
-        if record is not None and record.policy is not FilePolicy.YAML:
-            raise ConfigurationError(
-                "Conflicting workflow ownership policy.",
-                hint="Keep the tracked file policy unchanged.",
-            )
         self._validate_node(target)
-        try:
-            exists = self.workspace.exists(target)
-            original = (
-                self.workspace.read_bytes(target).decode("utf-8") if exists else ""
-            )
-            result = reconcile_workflow(
-                target.as_posix(),
-                original,
-                workflow,
-                record,
-                missing_file=not exists,
-                overwrite=self.manifest.collision_strategy
-                is CollisionStrategy.OVERWRITE,
-            )
-            for conflict in result.conflicts:
-                self._merge_warning(conflict)
-            if result.baseline is not MISSING:
-                self.candidate_state = self.candidate_state.with_file(
-                    FileState(
-                        target.as_posix(),
-                        FilePolicy.YAML,
-                        encode_yaml_baseline(cast(dict[str, Value], result.baseline)),
-                    )
-                )
-            if result.content != original:
-                self.fs.write_text(target, result.content)
-        except (OSError, UnicodeError) as error:
-            raise FileSystemError("reconcile workflow", str(target), error) from error
+        self._reconcile_document(
+            target,
+            workflow,
+            FilePolicy.YAML,
+            guard=partial(github_workflows.guard_workflow, target.as_posix()),
+        )
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""
@@ -502,7 +436,8 @@ class Reconciliation:
         policy: FilePolicy,
         *,
         indent: str = "  ",
-    ) -> None:
+        guard: YamlGuardPolicy | None = None,
+    ) -> YamlReconciliation | JsoncReconciliation:
         """Applies a YAML or JSONC document through the transaction and candidate state.
 
         Args:
@@ -510,6 +445,10 @@ class Reconciliation:
             desired: Desired contribution text.
             policy: ``FilePolicy.YAML`` or ``FilePolicy.JSONC``.
             indent: Indentation unit for JSONC edits when none can be inferred.
+            guard: The YAML document's policy for holding user-owned content.
+
+        Returns:
+            The applied reconciliation.
         """
         decode_baseline: Callable[[str], dict[str, Value]]
         encode_baseline: Callable[[dict[str, Value]], str]
@@ -539,6 +478,13 @@ class Reconciliation:
                     desired,
                     base,
                     location,
+                    guard=guard(
+                        decode_yaml_baseline(desired),
+                        decode_yaml_baseline(original) if exists else {},
+                        base,
+                    )
+                    if guard is not None
+                    else NO_GUARD,
                     missing_file=not exists,
                     overwrite=overwrite,
                 )
@@ -564,6 +510,7 @@ class Reconciliation:
                 )
             if result.content != original:
                 self.fs.write_text(target, result.content)
+            return result
         except (OSError, UnicodeError) as error:
             raise FileSystemError(
                 f"reconcile {target.name} configuration", str(target), error
@@ -603,7 +550,7 @@ class Reconciliation:
                     hint="Keep the tracked file policy unchanged.",
                 )
             deleted_project = (
-                target == Path("pyproject.toml") and self._preserve_deleted_pyproject
+                target == Path(pyproject.TARGET) and self._preserve_deleted_pyproject
             )
             initializing = (
                 not self.journal.was_present(target)
@@ -631,6 +578,7 @@ class Reconciliation:
                 )
                 continue
             result = reconcile_toml(
+                toml_spec(target.as_posix()),
                 original,
                 aggregated.value,
                 decode_toml_baseline(record.baseline)
@@ -675,7 +623,7 @@ class Reconciliation:
                     else None
                 )
                 if (
-                    target == Path("pyproject.toml")
+                    target == Path(pyproject.TARGET)
                     and any(c.resolver_footprint for c in contributions)
                     and original_python != updated_python
                 ):
@@ -852,18 +800,18 @@ class Reconciliation:
         """Applies typed include edges before uv add observes dependency metadata."""
         if not self.manifest.dependencies.includes:
             return
-        target = Path("pyproject.toml")
+        target = Path(pyproject.TARGET)
         if (
             not self.workspace.exists(target)
             and self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE
             and (
-                any(r.path == "pyproject.toml" for r in self.candidate_state.files)
+                any(r.path == pyproject.TARGET for r in self.candidate_state.files)
                 or self.candidate_state.dependencies
             )
         ):
             self._merge_warning(
                 MergeConflict(
-                    MergeLocation("pyproject.toml", ("dependency-groups",)),
+                    MergeLocation(pyproject.TARGET, ("dependency-groups",)),
                     ConflictReason.DELETED_ANCESTOR,
                 )
             )
@@ -921,7 +869,7 @@ class Reconciliation:
                     self._merge_warning(
                         MergeConflict(
                             MergeLocation(
-                                "pyproject.toml",
+                                pyproject.TARGET,
                                 ("dependency-groups", edge.group.value),
                                 edge.include.value,
                             ),
@@ -956,7 +904,7 @@ class Reconciliation:
                         self._merge_warning(
                             MergeConflict(
                                 MergeLocation(
-                                    "pyproject.toml",
+                                    pyproject.TARGET,
                                     ("dependency-groups", edge.group.value),
                                     edge.include.value,
                                 ),
@@ -974,7 +922,9 @@ class Reconciliation:
                     continue
                 accepted.append(edge)
             updated = (
-                apply_dependency_includes(original, accepted) if accepted else original
+                pyproject.apply_dependency_includes(original, accepted)
+                if accepted
+                else original
             )
             if updated != original:
                 self.fs.write_text(target, updated)
@@ -998,7 +948,7 @@ class Reconciliation:
                 baseline["dependency-groups"] = owned_groups
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
-                        "pyproject.toml",
+                        pyproject.TARGET,
                         FilePolicy.TOML,
                         encode_toml_baseline(baseline),
                     )
@@ -1074,7 +1024,7 @@ class Reconciliation:
         context = self.interpolation_context
         is_script_or_typer = "typer" in self.manifest.dependencies.dependencies or any(
             "project.scripts" in app.content
-            for app in self.manifest.filesystem.structured.get("pyproject.toml", [])
+            for app in self.manifest.filesystem.structured.get(pyproject.TARGET, [])
         )
         docker_port = (
             str(self.manifest.metadata.get("docker_port"))
@@ -1125,14 +1075,18 @@ class Reconciliation:
         if not settings:
             return
         try:
-            if self.workspace.exists(IDE_SETTINGS_TARGET):
+            if self.workspace.exists(Path(vscode.SETTINGS_TARGET)):
                 parse_jsonc(
-                    self.workspace.read_bytes(IDE_SETTINGS_TARGET).decode("utf-8"),
+                    self.workspace.read_bytes(Path(vscode.SETTINGS_TARGET)).decode(
+                        "utf-8"
+                    ),
                     allow_empty=True,
                 )
         except (OSError, UnicodeError) as error:
             raise FileSystemError(
-                "inspect active IDE settings files", str(IDE_SETTINGS_TARGET), error
+                "inspect active IDE settings files",
+                vscode.SETTINGS_TARGET,
+                error,
             ) from error
         except ConfigurationError:
             self.add_diagnostic(
@@ -1143,10 +1097,10 @@ class Reconciliation:
             )
             return
         self._reconcile_document(
-            IDE_SETTINGS_TARGET,
-            dumps_jsonc(cast(dict[str, Value], dict(settings)), IDE_SETTINGS_INDENT),
+            Path(vscode.SETTINGS_TARGET),
+            dumps_jsonc(cast(dict[str, Value], dict(settings)), vscode.SETTINGS_INDENT),
             FilePolicy.JSONC,
-            indent=IDE_SETTINGS_INDENT,
+            indent=vscode.SETTINGS_INDENT,
         )
 
     def _merge_warning(self, conflict: MergeConflict) -> None:
@@ -1219,8 +1173,8 @@ class Reconciliation:
                     self._validate_node(Path(path))
                 # Capture deletion before initializer tasks can recreate the file.
                 self._preserve_deleted_pyproject = (
-                    "pyproject.toml" in paths
-                    and not self.workspace.exists(Path("pyproject.toml"))
+                    pyproject.TARGET in paths
+                    and not self.workspace.exists(Path(pyproject.TARGET))
                     and self.manifest.collision_strategy
                     is not CollisionStrategy.OVERWRITE
                 )
@@ -1234,7 +1188,7 @@ class Reconciliation:
         """Commits requested intent separately from accepted ownership baselines."""
         from .recipe import edit_recipe
 
-        target = Path("pyproject.toml")
+        target = Path(pyproject.TARGET)
         if self.manifest.recipe is None or self._preserve_deleted_pyproject:
             return
         try:
@@ -1247,7 +1201,7 @@ class Reconciliation:
             if not self.journal.was_present(target):
                 # Protostar created this file, so it owns its layout; a project the
                 # user already had keeps whatever order they gave it.
-                content = finalize_new_pyproject(
+                content = pyproject.finalize_new_pyproject(
                     content, lambda reason: self._layout_warning(target, reason)
                 )
             if content != original:
@@ -1264,7 +1218,7 @@ class Reconciliation:
             or dependencies.docs_dependencies
         ):
             return DependencyManifest(), set()
-        target = Path("pyproject.toml")
+        target = Path(pyproject.TARGET)
         data = (
             tomllib.loads(self.workspace.read_text(target))
             if self.workspace.exists(target)
@@ -1279,7 +1233,7 @@ class Reconciliation:
         blocked: set[DependencyGroup] = set()
         for group, desired in groups:
             tracked_file = any(
-                r.path == "pyproject.toml" for r in self.candidate_state.files
+                r.path == pyproject.TARGET for r in self.candidate_state.files
             ) or bool(self.candidate_state.dependencies)
             table = data.get(
                 "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
@@ -1291,7 +1245,7 @@ class Reconciliation:
                 (
                     r
                     for r in self.candidate_state.files
-                    if r.path == "pyproject.toml" and r.baseline is not None
+                    if r.path == pyproject.TARGET and r.baseline is not None
                 ),
                 None,
             )
@@ -1352,7 +1306,7 @@ class Reconciliation:
                     self._merge_warning(
                         MergeConflict(
                             MergeLocation(
-                                "pyproject.toml",
+                                pyproject.TARGET,
                                 ("dependencies", group.value),
                                 ":".join(requirement_identity(package)),
                             ),
@@ -1383,7 +1337,7 @@ class Reconciliation:
         self, accepted: DependencyManifest, blocked: set[DependencyGroup]
     ) -> None:
         """Records actual workspace requirements after resolver execution or convergence."""
-        target = Path("pyproject.toml")
+        target = Path(pyproject.TARGET)
         dependencies = self.manifest.dependencies
         groups = (
             (DependencyGroup.MAIN, dependencies.dependencies),
@@ -1443,7 +1397,7 @@ class Reconciliation:
                 ]
                 if len(entries) == 1:
                     record = DependencyState(
-                        "pyproject.toml", group, name, marker, package, entries[0]
+                        pyproject.TARGET, group, name, marker, package, entries[0]
                     )
                     records = [r for r in records if r.identity != record.identity]
                     records.append(record)

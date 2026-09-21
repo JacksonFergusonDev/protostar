@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from io import StringIO
 from itertools import pairwise
-from types import MappingProxyType
 from typing import Any, cast
 
 from ruamel.yaml import YAML
@@ -278,87 +276,27 @@ class YamlDocumentSpec:
         return next((s for s in self.keyed if s.matches(path)), None)
 
 
-CODECOV_TARGET = ".github/codecov.yml"
-PRE_COMMIT_TARGET = ".pre-commit-config.yaml"
-CODECOV_SPEC = YamlDocumentSpec("Codecov", policy=MergePolicy(frozenset({("ignore",)})))
-PRE_COMMIT_SPEC = YamlDocumentSpec(
-    "pre-commit",
-    keyed=(
-        KeyedSequence(("repos",), "repo", string_fields=("rev",)),
-        KeyedSequence(("repos", WILDCARD, "hooks"), "id"),
-    ),
-)
-CI_WORKFLOW_TARGET = ".github/workflows/ci.yml"
-RELEASE_WORKFLOW_TARGET = ".github/workflows/release.yml"
-# One GitHub Actions schema for every generated workflow: a workflow is one
-# generator's complete output, and steps are matched by the name Protostar wrote.
-WORKFLOW_SPEC = YamlDocumentSpec(
-    "GitHub Actions workflow",
-    keyed=(KeyedSequence(("jobs", WILDCARD, "steps"), "name"),),
-    policy=MergePolicy(complete=True),
-)
-YAML_DOCUMENTS: Mapping[str, YamlDocumentSpec] = MappingProxyType(
-    {
-        CODECOV_TARGET: CODECOV_SPEC,
-        PRE_COMMIT_TARGET: PRE_COMMIT_SPEC,
-        CI_WORKFLOW_TARGET: WORKFLOW_SPEC,
-        RELEASE_WORKFLOW_TARGET: WORKFLOW_SPEC,
-    }
-)
+@dataclass(frozen=True)
+class YamlGuard:
+    """Document-policy input to a reconciliation: where to hold and what to report.
 
-
-def reconcile_yaml(
-    spec: YamlDocumentSpec,
-    original: str,
-    desired: str,
-    base: Value,
-    location: MergeLocation,
-    *,
-    holds: tuple[tuple[str, ...], ...] = (),
-    missing_file: bool = False,
-    overwrite: bool = False,
-) -> YamlReconciliation:
-    """Reconciles a YAML document under its spec without owning foreign content.
-
-    Args:
-        spec: Keyed sequences and kernel policy for this document.
-        original: Current workspace text; ignored when ``missing_file`` is set.
-        desired: Desired contribution text.
-        base: Previously applied owned contributions, or ``MISSING``.
-        location: File location carried into conflicts.
+    Attributes:
         holds: Keyed-view paths whose desired value is replaced by the owned
             baseline (or dropped when unowned), so local content and previous
             ownership are kept there without a conflict of their own.
-        missing_file: Whether the workspace file is absent.
-        overwrite: Whether explicit overwrite owns declared values.
-
-    Returns:
-        Emitted text, the composite owned baseline, and structured conflicts.
+        conflicts: Conflicts the policy found, reported ahead of the merge's own.
     """
-    return _reconcile_yaml(
-        spec,
-        original,
-        desired,
-        base,
-        location,
-        holds=holds,
-        missing_file=missing_file,
-        overwrite=overwrite,
-    )
+
+    holds: tuple[tuple[str, ...], ...] = ()
+    conflicts: tuple[MergeConflict, ...] = ()
 
 
-def keyed_view(spec: YamlDocumentSpec, value: Value) -> Value:
-    """Presents a decoded local document with keyed sequences as identity mappings.
-
-    Duplicate identities map to the list of their records; records without an
-    identity are omitted. Paths into the result are the paths ``holds`` accept.
-    """
-    return _keyed(spec, value)
+NO_GUARD = YamlGuard()
 
 
 def validate_yaml_baseline(spec: YamlDocumentSpec, value: Value) -> None:
     """Validates identities and fields of desired or owned snapshots strictly."""
-    _keyed(spec, value, strict=True)
+    keyed_view(spec, value, strict=True)
 
 
 def _identified(record: Any, sequence: KeyedSequence) -> bool:
@@ -369,7 +307,7 @@ def _identified(record: Any, sequence: KeyedSequence) -> bool:
     )
 
 
-def _keyed(
+def keyed_view(
     spec: YamlDocumentSpec,
     value: Value,
     path: tuple[str, ...] = (),
@@ -381,7 +319,17 @@ def _keyed(
     Duplicate local identities map to the list of their records, which marks them
     ambiguous. Local records without an identity are foreign: they are left out of
     the keyed view and stay in place in the round-trip AST. Desired and owned
-    snapshots (``strict``) must identify every record exactly once.
+    snapshots (``strict``) must identify every record exactly once. Paths into the
+    result are the paths a ``YamlGuard`` holds.
+
+    Args:
+        spec: Keyed sequences for this document.
+        value: Decoded document, or a subtree of one at ``path``.
+        path: Keyed-view path of ``value`` within its document.
+        strict: Whether every record must carry a unique identity.
+
+    Returns:
+        The value with each keyed sequence replaced by an identity mapping.
     """
     sequence = spec.sequence_at(path)
     if sequence is not None:
@@ -420,7 +368,7 @@ def _keyed(
                 records[name] = deepcopy(members)
             else:
                 record = cast(dict[str, Value], members[0])
-                records[name] = _keyed(
+                records[name] = keyed_view(
                     spec,
                     {k: v for k, v in record.items() if k != sequence.identity},
                     (*path, name),
@@ -428,7 +376,9 @@ def _keyed(
                 )
         return records
     if isinstance(value, dict):
-        return {k: _keyed(spec, v, (*path, k), strict=strict) for k, v in value.items()}
+        return {
+            k: keyed_view(spec, v, (*path, k), strict=strict) for k, v in value.items()
+        }
     return deepcopy(value)
 
 
@@ -540,23 +490,39 @@ def _insertion_index(
     return len(node)
 
 
-def _reconcile_yaml(
+def reconcile_yaml(
     spec: YamlDocumentSpec,
     original: str,
     desired: str,
     base: Value,
     location: MergeLocation,
     *,
-    holds: tuple[tuple[str, ...], ...] = (),
+    guard: YamlGuard = NO_GUARD,
     missing_file: bool = False,
     overwrite: bool = False,
 ) -> YamlReconciliation:
-    """Confines accepted semantic edits to independent round-trip AST nodes."""
+    """Reconciles a YAML document under its spec without owning foreign content.
+
+    Accepted semantic edits are confined to independent round-trip AST nodes.
+
+    Args:
+        spec: Keyed sequences and kernel policy for this document.
+        original: Current workspace text; ignored when ``missing_file`` is set.
+        desired: Desired contribution text.
+        base: Previously applied owned contributions, or ``MISSING``.
+        location: File location carried into conflicts.
+        guard: Document-policy holds and conflicts, applied ahead of the merge.
+        missing_file: Whether the workspace file is absent.
+        overwrite: Whether explicit overwrite owns declared values.
+
+    Returns:
+        Emitted text, the composite owned baseline, and structured conflicts.
+    """
     desired_ast = _load(desired)
-    wanted = cast(dict[str, Value], _keyed(spec, _plain(desired_ast), strict=True))
+    wanted = cast(dict[str, Value], keyed_view(spec, _plain(desired_ast), strict=True))
     doc = _load(original) if not missing_file else _load("{}\n")
-    local = cast(dict[str, Value], _keyed(spec, _plain(doc)))
-    base = _keyed(spec, base, strict=True)
+    local = cast(dict[str, Value], keyed_view(spec, _plain(doc)))
+    base = keyed_view(spec, base, strict=True)
     ambiguous = _ambiguous(spec, local)
     ambiguities = [
         MergeConflict(
@@ -571,7 +537,7 @@ def _reconcile_yaml(
     ]
     remote = deepcopy(wanted)
     declared = deepcopy(wanted)
-    for held in (*holds, *ambiguous):
+    for held in (*guard.holds, *ambiguous):
         _hold(remote, base, held)
         _omit(declared, held)
     # Validate explicit membership policy even under overwrite authorization.
@@ -580,7 +546,7 @@ def _reconcile_yaml(
     )
     value = result.value
     baseline = result.baseline
-    conflicts = [*ambiguities, *result.conflicts]
+    conflicts = [*guard.conflicts, *ambiguities, *result.conflicts]
     if overwrite:
         value = deepcopy(local)
         baseline = deepcopy(base) if isinstance(base, dict) else {}
@@ -589,7 +555,7 @@ def _reconcile_yaml(
             retract_undeclared(value, baseline, remote)
         overlay_declared(value, declared)
         overlay_declared(baseline, declared)
-        conflicts = list(ambiguities)
+        conflicts = [*guard.conflicts, *ambiguities]
     if value is MISSING:
         return YamlReconciliation(original, _unkeyed(spec, baseline), tuple(conflicts))
 
@@ -738,7 +704,7 @@ def _reconcile_yaml(
                     deepcopy(styled[key])
                     if key in styled
                     and semantic_equal(
-                        _keyed(spec, _plain(styled[key]), path),
+                        keyed_view(spec, _plain(styled[key]), path),
                         child,
                     )
                     else deepcopy(_unkeyed(spec, child, path))
@@ -787,6 +753,6 @@ def _reconcile_yaml(
             # A removed trailing item leaves its separator blank line on the item before.
             content = content.rstrip("\n") + "\n"
     decoded = decode_yaml_baseline(content)
-    if not semantic_equal(_keyed(spec, decoded), value):
+    if not semantic_equal(keyed_view(spec, decoded), value):
         raise _invalid()
     return YamlReconciliation(content, _unkeyed(spec, baseline), tuple(conflicts))

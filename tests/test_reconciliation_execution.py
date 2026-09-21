@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from protostar.config import UserConfig
+from protostar.documents import toml_spec
 from protostar.errors import (
     CommandExecutionError,
     ConfigurationError,
@@ -253,10 +254,17 @@ def test_aggregation_precedence_and_ambiguity():
 def test_atomic_arrays_and_noop_representation():
     original = '# custom header\r\n[tool.custom]\r\norder = ["a", "b"] # ordered\r\n'
     desired: dict[str, Value] = {"tool": {"custom": {"order": ["a", "b"]}}}
-    result = reconcile_toml(original, desired, MISSING, MergeLocation("custom.toml"))
+    result = reconcile_toml(
+        toml_spec("custom.toml"),
+        original,
+        desired,
+        MISSING,
+        MergeLocation("custom.toml"),
+    )
     assert result.content == original
     assert result.baseline is MISSING
     changed = reconcile_toml(
+        toml_spec("custom.toml"),
         original,
         {"tool": {"custom": {"order": ["b", "a"]}}},
         MISSING,
