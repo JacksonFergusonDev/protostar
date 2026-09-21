@@ -47,7 +47,7 @@ new accepted members in desired order. Existing foreign equal members do not
 become owned. Policy validation examines all inputs before truth-table shortcuts,
 including lists inside unchanged mappings. Keyed record sequences are declared per YAML document; see [YAML document specs](#yaml-document-specs).
 
-A policy with `complete` set treats the remote value as one generator's complete document, so an owned mapping key it no longer declares is retracted rather than retained. Unedited owned content is removed from the value and the baseline; content the user already deleted only leaves the baseline; content that differs from its baseline, including foreign keys added inside it, is kept with its previous ownership and a `retracted` conflict. Retraction happens once, at the highest key that disappeared, so a partly edited record is never reduced to a fragment. Only complete-document adapters set it (GitHub Actions workflows); every other adapter keeps the no-pruning default.
+A policy with `complete` set treats the remote value as one generator's complete document, so an owned mapping key it no longer declares is retracted rather than retained. Unedited owned content is removed from the value and the baseline; content the user already deleted only leaves the baseline; content that differs from its baseline, including foreign keys added inside it, is kept with its previous ownership and a `retracted` conflict. Retraction happens once, at the highest key that disappeared, so a partly edited record is never reduced to a fragment. Only complete-document adapters set it (GitHub Actions workflows and `.readthedocs.yaml`); every other adapter keeps the no-pruning default.
 
 ## State schema v1
 
@@ -158,7 +158,7 @@ nodes; graph validation precedes construction to reject recursive aliases.
 
 Codecov declares `StructuredFormat.YAML` explicitly through `add_structured()`.
 The channel accepts one managed producer per target in
-`documents.YAML_CONTRIBUTION_TARGETS` (only `.github/codecov.yml`); it does not infer
+`documents.YAML_CONTRIBUTION_TARGETS` (`.github/codecov.yml` and `.readthedocs.yaml`); it does not infer
 structured intent from free-form file extensions or expose arbitrary YAML template
 injections. TOML remains the default format. YAML baseline documents use the
 `structured-yaml` file policy in schema v1 and are canonically serialized from
@@ -237,7 +237,7 @@ pruning nor a `sync` command.
 
 ## YAML document specs
 
-Every YAML document the engine reconciles is described by a `YamlDocumentSpec`. The spec lives with its document in `src/protostar/documents/` (see [Document catalog](#document-catalog)) and is registered by path in `documents.YAML_DOCUMENTS`. A spec names the document for domain errors, supplies the kernel `MergePolicy` (Codecov's set-like `ignore`), and declares its keyed sequences. Nothing outside the catalog compares against YAML file names: state validation, preserved-deviation inspection, and the structured contribution path all look up the spec by path. The structured contribution channel accepts only the targets in `documents.YAML_CONTRIBUTION_TARGETS` (Codecov), because pre-commit and workflows arrive through their own generators.
+Every YAML document the engine reconciles is described by a `YamlDocumentSpec`. The spec lives with its document in `src/protostar/documents/` (see [Document catalog](#document-catalog)) and is registered by path in `documents.YAML_DOCUMENTS`. A spec names the document for domain errors, supplies the kernel `MergePolicy` (Codecov's set-like `ignore`), and declares its keyed sequences. Nothing outside the catalog compares against YAML file names: state validation, preserved-deviation inspection, and the structured contribution path all look up the spec by path. The structured contribution channel accepts only the targets in `documents.YAML_CONTRIBUTION_TARGETS` (Codecov and Read the Docs), because pre-commit and workflows arrive through their own generators. A spec may also list the configurations it `displaces`, with the TOML meaning (see [TOML document specs](#toml-document-specs)): `Reconciliation._append_files` does not create a contributed document while one of them exists and reports `unowned` at the file instead, under explicit overwrite too.
 
 A `KeyedSequence` gives a path pattern in the keyed view and an identity field. In the keyed view each record is presented under its identity, so an enclosing keyed record appears in the path as its identity, and the `WILDCARD` sentinel matches exactly one segment: pre-commit declares `repos` by `repo` and `repos.*.hooks` by `id`. Optional string fields (pre-commit's `rev`) must be non-empty strings whenever present.
 
@@ -248,7 +248,7 @@ A `KeyedSequence` gives a path pattern in the keyed view and an identity field. 
 
 New mapping keys are inserted after their nearest earlier desired sibling that exists locally, by the same rule as new records. When the local file does not end with a blank line, an emitted document ends with exactly one newline: removing a trailing item would otherwise leave its separator blank line behind on the item before it. Append regions are rejected for every registered YAML document, because appended text cannot be merged by structure.
 
-Document policies pass a `YamlGuard` to `reconcile_yaml`: keyed-view paths to hold, plus the conflicts the policy found, which are reported ahead of the merge's own. A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned, so the kernel sees unchanged intent: local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them. The pre-commit pin guard holds `repos.<repo>.rev` rather than rewriting the desired document, so other additions keep their desired key order and styling.
+Document policies pass a `YamlGuard` to `reconcile_yaml`: keyed-view paths to hold, plus the conflicts the policy found, which are reported ahead of the merge's own. A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned, so the kernel sees unchanged intent: local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them. The pre-commit pin guard holds `repos.<repo>.rev` rather than rewriting the desired document, so other additions keep their desired key order and styling. A guard that depends only on the decoded documents is registered by path in `documents.YAML_GUARDS` (the workflows and Read the Docs); pre-commit's is planned per run from registry responses, so its caller passes it directly.
 
 ## GitHub Actions workflows
 
@@ -265,6 +265,17 @@ Document policies pass a `YamlGuard` to `reconcile_yaml`: keyed-view paths to ho
 - When an owned step's local `uses` names the same action as the owned baseline but a different ref, and the ref differs from the desired one too, the ref belongs to the user (a Renovate SHA pin, a manual bump or rollback). It is kept without a conflict, reported as a preserved deviation, and `sync --check` passes. If the local ref already equals the desired ref, ownership converges normally. Local (`./`) and `docker://` actions carry no ref and follow the ordinary rules; a changed action path is an ordinary conflict.
 
 Existing workflow files are parsed during preparation, before any batch mutates the workspace, so a malformed or unsupported workflow fails like any other structured YAML document.
+
+## .readthedocs.yaml
+
+The Read the Docs module declares `.readthedocs.yaml` as a structured YAML contribution. Its build jobs install uv, sync the `docs` group, and run `zensical build`. `documents.readthedocs.SPEC` encodes two facts about how Read the Docs reads the file, both verified against its source:
+
+- Read the Docs loads the first file matching `^\.?readthedocs.ya?ml$` in directory-listing order, so `displaces` is `.readthedocs.yml`, `readthedocs.yaml`, and `readthedocs.yml`. Creating the managed file next to one of them would leave the choice to the filesystem.
+- The policy is complete. The configuration is the module's whole output, so a job Protostar stops generating is retracted instead of lingering to override the build. Every sequence is atomic: a job's commands are an ordered script.
+
+Protostar's jobs are not settings added next to the user's; they replace build steps. `build.jobs.create_environment`, `install`, and `build.html` each skip the default step that the `sphinx`, `mkdocs`, `python`, and `conda` settings configure, and Read the Docs rejects `build.jobs` next to `build.commands`. `readthedocs.guard_build` therefore holds `build.jobs` whenever the local configuration has a non-empty `build.commands` or any of those four settings, under explicit overwrite too, so Protostar never grafts its build onto one that already works another way. Other settings still merge by the ordinary rules.
+
+The hold reports `unowned` at `build.jobs` only when it withholds a change: the desired jobs differ from both the owned baseline and the local jobs. Adopting an existing Sphinx or MkDocs configuration reports it. A user who replaced Protostar's jobs with their own build after the scaffold is not warned, and `sync --check` passes, until a later Protostar release changes the jobs.
 
 ## TOML document specs
 
@@ -297,11 +308,12 @@ The format engines (`toml_ast.py`, `yaml_ast.py`, `jsonc_ast.py`) know no file b
 | `pre_commit` | `TARGET`, `SPEC` (repos by `repo`, hooks by `id`), and `plan_hook_pins`, whose `HookPinPlan` guards unsafe automatic pins and advances pin provenance after the merge. |
 | `github_workflows` | `CI_TARGET`, `RELEASE_TARGET`, `SPEC`, and `guard_workflow`. |
 | `codecov` | `TARGET` and `SPEC` (set-like `ignore`). |
+| `readthedocs` | `TARGET`, `SPEC` (complete, the sibling configurations it displaces), and `guard_build`. |
 | `zensical` | `TARGET` and `SPEC` (set-like `theme.features`, seed paths, the `project` root table, the MkDocs configurations it displaces). |
 | `renovate` | `TARGET` and the sibling locations that shadow it. |
 | `vscode` | The settings target and its default indentation. |
 
-The package's `__init__` assembles the registries callers look up by path: `YAML_DOCUMENTS`, `YAML_CONTRIBUTION_TARGETS`, and `toml_spec(path)`, which returns `DEFAULT_TOML_SPEC` (plain tables, atomic arrays, tomlkit's own output) for any TOML file without a spec. Every YAML document is applied through one path in `Reconciliation._reconcile_document`: read, build the guard from the decoded desired, local, and owned values, reconcile, record the baseline, write. Adding a document means adding a module and a registry entry, not a branch in an engine.
+The package's `__init__` assembles the registries callers look up by path: `YAML_DOCUMENTS`, `YAML_CONTRIBUTION_TARGETS`, `YAML_GUARDS`, and `toml_spec(path)`, which returns `DEFAULT_TOML_SPEC` (plain tables, atomic arrays, tomlkit's own output) for any TOML file without a spec. Every YAML document is applied through one path in `Reconciliation._reconcile_document`: read, build the guard from the decoded desired, local, and owned values, reconcile, record the baseline, write. Adding a document means adding a module and a registry entry, not a branch in an engine.
 
 ## PR F: Generated files, seeds, and regions
 

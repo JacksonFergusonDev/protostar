@@ -6,7 +6,6 @@ import stat
 import tomllib
 from collections.abc import Callable
 from dataclasses import replace
-from functools import partial
 from pathlib import Path
 from typing import cast
 
@@ -22,6 +21,7 @@ from .dependencies import (
 from .documents import (
     YAML_CONTRIBUTION_TARGETS,
     YAML_DOCUMENTS,
+    YAML_GUARDS,
     github_workflows,
     pre_commit,
     pyproject,
@@ -101,7 +101,7 @@ from .workspace import (
 )
 from .yaml_ast import (
     NO_GUARD,
-    YamlGuard,
+    YamlGuardPolicy,
     YamlReconciliation,
     decode_yaml_baseline,
     encode_yaml_baseline,
@@ -111,10 +111,6 @@ from .yaml_ast import (
 logger = logging.getLogger("protostar")
 
 __all__ = ["Reconciliation"]
-
-# Decides where a YAML document's policy holds, from its decoded desired value,
-# local value, and owned baseline.
-type YamlGuardPolicy = Callable[[Value, Value, Value], YamlGuard]
 
 
 class Reconciliation:
@@ -412,7 +408,7 @@ class Reconciliation:
             target,
             workflow,
             FilePolicy.YAML,
-            guard=partial(github_workflows.guard_workflow, target.as_posix()),
+            guard=YAML_GUARDS[target.as_posix()],
         )
 
     def _write_justfile(self) -> None:
@@ -525,10 +521,17 @@ class Reconciliation:
         is_overwrite = self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if contributions[0].format is StructuredFormat.YAML:
+                target = Path(filepath)
+                if self._displaced(target, YAML_DOCUMENTS[filepath].displaces):
+                    self._merge_warning(
+                        MergeConflict(MergeLocation(filepath), ConflictReason.UNOWNED)
+                    )
+                    continue
                 self._reconcile_document(
-                    Path(filepath),
+                    target,
                     contributions[0].content,
                     FilePolicy.YAML,
+                    guard=YAML_GUARDS.get(filepath),
                 )
                 continue
             target = Path(render_template(filepath, self.interpolation_context))
@@ -718,12 +721,26 @@ class Reconciliation:
             displaces, or when an existing document keeps its settings outside the
             spec's root table.
         """
-        if not self.workspace.exists(target):
-            return any(self.workspace.exists(Path(path)) for path in spec.displaces)
+        if self._displaced(target, spec.displaces):
+            return True
         if spec.root_table is None:
             return False
         local = tomllib.loads(original)
         return bool(local) and spec.root_table not in local
+
+    def _displaced(self, target: Path, displaces: tuple[str, ...]) -> bool:
+        """Returns whether creating a document would compete with another configuration.
+
+        Args:
+            target: Workspace-relative document path.
+            displaces: Paths of configurations the tool may read instead.
+
+        Returns:
+            True when the document is absent and one of ``displaces`` exists.
+        """
+        return not self.workspace.exists(target) and any(
+            self.workspace.exists(Path(path)) for path in displaces
+        )
 
     def _file_record(self, target: Path, policy: FilePolicy) -> FileState | None:
         """Returns ownership after checking that the policy has not changed."""
