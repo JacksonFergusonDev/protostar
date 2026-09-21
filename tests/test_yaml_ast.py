@@ -1,5 +1,7 @@
 """YAML codec safety, trivia, and Codecov semantic acceptance tests."""
 
+import difflib
+
 import pytest
 
 from protostar.errors import ConfigurationError
@@ -12,9 +14,13 @@ from protostar.sync_state import (
     serialize_state,
 )
 from protostar.yaml_ast import (
+    DEFAULT_STYLE,
+    YamlStyle,
     decode_yaml_baseline,
+    detect_style,
     encode_yaml_baseline,
     reconcile_codecov,
+    reconcile_pre_commit,
 )
 
 LOCATION = MergeLocation(".github/codecov.yml")
@@ -225,3 +231,94 @@ def test_changed_scalar_keeps_local_quote_style_and_unshared_anchor():
         "target: &choice '80%' # target\n", 'target: "85%"\n', {"target": "80%"}
     )
     assert "target: &choice '85%' # target" in result.content
+
+
+def changed_lines(before: str, after: str) -> list[str]:
+    return [
+        line
+        for line in difflib.unified_diff(
+            before.splitlines(), after.splitlines(), lineterm="", n=0
+        )
+        if line[:1] in "+-" and line[:3] not in ("+++", "---")
+    ]
+
+
+@pytest.mark.parametrize(
+    ("content", "style"),
+    [
+        pytest.param("", DEFAULT_STYLE, id="empty"),
+        pytest.param("a: 1\n", DEFAULT_STYLE, id="flat"),
+        pytest.param("a:\n  - x\n", YamlStyle(2, 4, 2), id="indented-sequence"),
+        pytest.param("a:\n- x\n", YamlStyle(2, 2, 0), id="indentless-sequence"),
+        pytest.param("a:\n    b: 1\n", YamlStyle(4, 6, 4), id="four-space-mapping"),
+        pytest.param(
+            "a:\n    b:\n    -   x\n", YamlStyle(4, 4, 0), id="wide-sequence-gap"
+        ),
+        pytest.param(
+            "# lead\n\na: # trailing\n  # between\n\n  b: 1\nc:\n- x\n",
+            YamlStyle(2, 2, 0),
+            id="comments-and-blank-lines",
+        ),
+        pytest.param(
+            "repos:\n  - repo: local\n    hooks:\n      - id: x\n",
+            YamlStyle(2, 4, 2),
+            id="key-inside-sequence-item",
+        ),
+        pytest.param(
+            "a:\n  - - x\n", YamlStyle(2, 4, 2), id="nested-sequence-dash-key"
+        ),
+    ],
+)
+def test_detect_style(content, style):
+    assert detect_style(content) == style
+
+
+def test_long_lines_are_not_rewrapped_on_merge():
+    command = "uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy ${{ matrix.python-version }}"
+    local = f"coverage: {{target: 80%}}\nforeign:\n  run: {command}\n"
+    result = merge(local, "coverage: {target: 85%}\n", {"coverage": {"target": "80%"}})
+    assert f"  run: {command}\n" in result.content
+    assert changed_lines(local, result.content) == [
+        "-coverage: {target: 80%}",
+        "+coverage: {target: 85%}",
+    ]
+    assert not any(line != line.rstrip() for line in result.content.splitlines())
+
+
+@pytest.mark.parametrize(
+    "local",
+    [
+        pytest.param("coverage:\n  target: 80%\nforeign:\n- a\n- b\n", id="indentless"),
+        pytest.param(
+            "coverage:\n    target: 80%\nforeign:\n    - a\n    - b\n",
+            id="four-space",
+        ),
+    ],
+)
+def test_merge_keeps_the_local_indentation_style(local):
+    result = merge(local, "coverage: {target: 85%}\n", {"coverage": {"target": "80%"}})
+    assert result.content == local.replace("80%", "85%")
+
+
+def test_missing_file_receives_desired_text_verbatim():
+    desired = "# Managed by Protostar\ncoverage:\n  target: 85% # floor\nignore:\n  - tests/**\n"
+    result = merge("", desired, missing_file=True)
+    assert result.content == desired
+    assert result.baseline == {"coverage": {"target": "85%"}, "ignore": ["tests/**"]}
+    overwritten = merge("", desired, missing_file=True, overwrite=True)
+    assert overwritten.content == desired
+
+
+def test_pre_commit_hook_edit_changes_one_line():
+    hooks = "".join(
+        f"      - id: hook-{index}\n        entry: uv run tool-{index} --flag --another-flag --output-format=github --config pyproject.toml\n"
+        for index in range(3)
+    )
+    local = f"default_install_hook_types:\n  - pre-commit\nrepos:\n  - repo: local\n    hooks:\n{hooks}"
+    base = decode_yaml_baseline(local)
+    desired = local.replace("tool-1 ", "tool-one ")
+    result = reconcile_pre_commit(
+        local, desired, base, MergeLocation(".pre-commit-config.yaml")
+    )
+    assert not result.conflicts
+    assert result.content == desired

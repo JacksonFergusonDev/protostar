@@ -175,9 +175,15 @@ retain their previous ownership and emit a `shared-structure` conflict, includin
 under overwrite. Independent sibling changes can still apply. Existing comments,
 quotes, flow/block styles, and anchors are retained where supported by the
 [round-trip implementation](https://yaml.dev/doc/ruamel.yaml/detail/).
-Semantic no-ops return the original bytes without dumping. Accepted edits can
-normalize indentation or other emitter formatting; universal byte preservation
-is not promised for changed documents.
+Semantic no-ops return the original bytes without dumping. A missing file that
+accepts the whole desired document receives the desired text verbatim, so its
+comments survive. A changed document is emitted in the block indentation detected
+from the local file (nested mapping indent, sequence dash offset, and item indent,
+including indentless sequences) with no line-width limit, so untouched long
+lines are never folded. The emitter applies one style per document: a file mixing
+indentation styles, or using non-default flow spacing such as `[ a ]`, can still
+be normalized outside the edited values, so universal byte preservation is not
+promised for changed documents.
 
 The executor validates YAML before workspace writes, applies accepted content
 through `TransactionAwareFS`, and writes candidate state only at transaction
