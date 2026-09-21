@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from dataclasses import dataclass
 from io import StringIO
+from itertools import pairwise
 from typing import Any, cast
 
 from ruamel.yaml import YAML
@@ -31,6 +33,75 @@ CODECOV_POLICY = MergePolicy(frozenset({("ignore",)}))
 _MAX_NODES = 10000
 _MAX_BYTES = 1_000_000
 _TAGS = {"map", "seq", "str", "null", "bool", "int", "float", "merge"}
+# The emitter folds plain scalars past its width, so a merge would rewrap every
+# long line in the file (leaving trailing spaces) rather than only the edited ones.
+_UNBOUNDED_WIDTH = 1 << 31
+_BLOCK_KEY = re.compile(r"^(?P<indent> *)(?P<dash>(?:- +)*)[^\s#-][^#]*:\s*(?:#.*)?$")
+_SEQUENCE_ITEM = re.compile(r"^(?P<indent> *)-(?P<gap> +)\S")
+
+
+@dataclass(frozen=True)
+class YamlStyle:
+    """Block indentation, in ruamel terms, that an emitted document follows.
+
+    Attributes:
+        mapping: Indent of a nested mapping relative to its parent key.
+        sequence: Indent of sequence item content relative to its parent key.
+        offset: Indent of the ``-`` indicator relative to its parent key.
+    """
+
+    mapping: int = 2
+    sequence: int = 4
+    offset: int = 2
+
+
+DEFAULT_STYLE = YamlStyle()
+
+
+def detect_style(content: str) -> YamlStyle:
+    """Infers block indentation from the first nested mapping and sequence.
+
+    The emitter applies one style to the whole document, so a merged file keeps
+    its own indentation (including indentless sequences) instead of being
+    re-indented wholesale. Mixed styles within one file follow the first match.
+
+    Args:
+        content: YAML document text.
+
+    Returns:
+        The detected style, with defaults for anything the document never shows.
+    """
+    mapping: int | None = None
+    sequence: tuple[int, int] | None = None
+    lines = [
+        line
+        for line in content.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    for parent, child in pairwise(lines):
+        key = _BLOCK_KEY.match(parent)
+        if key is None:
+            continue
+        column = len(key["indent"]) + len(key["dash"])
+        item = _SEQUENCE_ITEM.match(child)
+        if item is not None:
+            offset = len(item["indent"]) - column
+            content_indent = offset + 1 + len(item["gap"])
+            if sequence is None and offset >= 0:
+                sequence = (content_indent, offset)
+        elif mapping is None:
+            indent = len(child) - len(child.lstrip(" ")) - column
+            if indent > 0:
+                mapping = indent
+        if mapping is not None and sequence is not None:
+            break
+    mapping = mapping or DEFAULT_STYLE.mapping
+    if sequence is None:
+        # Keep the default dash placement relative to whatever mapping indent was found.
+        sequence = (mapping + 2, mapping)
+    if sequence[0] - sequence[1] < 2:
+        return YamlStyle(mapping, DEFAULT_STYLE.sequence, DEFAULT_STYLE.offset)
+    return YamlStyle(mapping, *sequence)
 
 
 def _invalid() -> ConfigurationError:
@@ -40,11 +111,12 @@ def _invalid() -> ConfigurationError:
     )
 
 
-def _codec() -> YAML:
+def _codec(style: YamlStyle = DEFAULT_STYLE) -> YAML:
     codec = YAML(typ="rt", pure=True)
     codec.preserve_quotes = True
     codec.allow_duplicate_keys = False
-    codec.indent(mapping=2, sequence=4, offset=2)
+    codec.width = _UNBOUNDED_WIDTH
+    codec.indent(mapping=style.mapping, sequence=style.sequence, offset=style.offset)
     return codec
 
 
@@ -479,12 +551,16 @@ def _reconcile_yaml(
         return YamlReconciliation(
             original, _unkeyed(baseline) if keyed else baseline, tuple(conflicts)
         )
-    stream = StringIO()
-    try:
-        _codec().dump(doc, stream)
-    except (YAMLError, ValueError, TypeError, RecursionError) as error:
-        raise _invalid() from error
-    content = stream.getvalue()
+    if missing_file and semantic_equal(value, remote):
+        # A fully accepted new file keeps the desired text, including its comments.
+        content = desired
+    else:
+        stream = StringIO()
+        try:
+            _codec(detect_style(original)).dump(doc, stream)
+        except (YAMLError, ValueError, TypeError, RecursionError) as error:
+            raise _invalid() from error
+        content = stream.getvalue()
     decoded = decode_yaml_baseline(content)
     if not semantic_equal(_keyed(decoded) if keyed else decoded, value):
         raise _invalid()
