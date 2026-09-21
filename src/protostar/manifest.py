@@ -330,6 +330,13 @@ class FilesystemManifest:
                 "TOML append regions are unsupported.",
                 hint="Use dev.pyproject structured configuration.",
             )
+        from .yaml_ast import YAML_DOCUMENTS
+
+        if path in YAML_DOCUMENTS:
+            raise ConfigurationError(
+                f"Append regions are unsupported for '{path}'.",
+                hint="Protostar merges this YAML file by structure; appended text cannot be merged.",
+            )
         if path in self.file_injections or path in self.structured:
             raise ConfigurationError(
                 f"Ambiguous contributions for '{path}'.",

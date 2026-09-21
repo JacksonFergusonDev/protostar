@@ -14,12 +14,7 @@ from protostar.intent import AppendContribution
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.sync_state import deserialize_state
 
-ARTIFACTS = [
-    ".github/workflows/ci.yml",
-    ".github/workflows/release.yml",
-    "Dockerfile",
-    "justfile",
-]
+ARTIFACTS = ["Dockerfile", "justfile"]
 
 
 def run(mocker, setup):
@@ -207,21 +202,12 @@ def test_gate_absence(local, base, remote, write, conflict):
 
 def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
-    mocker.patch(
-        "protostar.reconciliation.generate_ci_workflow", return_value="ci v1\n"
-    )
-    mocker.patch(
-        "protostar.reconciliation.generate_release_workflow",
-        return_value="release v1\n",
-    )
     mocker.patch("protostar.reconciliation.generate_justfile", return_value="just v1\n")
     mocker.patch(
         "protostar.reconciliation.generate_dockerfile", return_value="docker v1\n"
     )
 
     def setup(e):
-        e.manifest.tooling.wants_ci = True
-        e.manifest.tooling.wants_release = True
         e.manifest.tooling.wants_just = True
         e.manifest.tooling.wants_docker = True
         e.manifest.filesystem.add_region(".envrc", "v1", identity="test:region")
@@ -235,11 +221,9 @@ def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
     original = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert not run(mocker, setup).journal.touched_paths
     assert {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == original
-    mocker.patch(
-        "protostar.reconciliation.generate_ci_workflow", return_value="ci v2\n"
-    )
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="just v2\n")
     run(mocker, setup)
-    assert Path(".github/workflows/ci.yml").read_text() == "ci v2\n"
+    assert Path("justfile").read_text() == "just v2\n"
 
 
 def test_edited_dockerfile_still_appends_ignore_patterns(tmp_path, monkeypatch, mocker):

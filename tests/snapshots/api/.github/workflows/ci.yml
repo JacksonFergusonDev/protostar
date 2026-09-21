@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
@@ -47,7 +48,8 @@ jobs:
         python-version: ["3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
@@ -60,5 +62,5 @@ jobs:
           uv sync --all-extras --dev --locked
           uv pip install pytest-github-actions-annotate-failures
 
-      - name: Run Tests
+      - name: Run tests
         run: uv run pytest

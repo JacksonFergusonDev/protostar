@@ -47,6 +47,8 @@ new accepted members in desired order. Existing foreign equal members do not
 become owned. Policy validation examines all inputs before truth-table shortcuts,
 including lists inside unchanged mappings. Keyed record sequences are declared per YAML document; see [YAML document specs](#yaml-document-specs).
 
+A policy with `complete` set treats the remote value as one generator's complete document, so an owned mapping key it no longer declares is retracted rather than retained. Unedited owned content is removed from the value and the baseline; content the user already deleted only leaves the baseline; content that differs from its baseline, including foreign keys added inside it, is kept with its previous ownership and a `retracted` conflict. Retraction happens once, at the highest key that disappeared, so a partly edited record is never reduced to a fragment. Only complete-document adapters set it (GitHub Actions workflows); every other adapter keeps the no-pruning default.
+
 ## State schema v1
 
 `protostar.sync_state.SyncState` is a frozen candidate/committed model. It contains
@@ -243,12 +245,31 @@ A `KeyedSequence` gives a path pattern in the keyed view and an identity field. 
 - A repeated local identity is ambiguous. For a nested sequence the entry containing it is held (the repository owning duplicate hooks); for a top-level sequence only the repeated identity is held. Each hold reports one `duplicate-identity` conflict, and independent entries still merge.
 - A new record is inserted after its nearest earlier desired sibling that exists locally, otherwise before its nearest later one, otherwise at the end. Consecutive new records keep desired order.
 
+New mapping keys are inserted after their nearest earlier desired sibling that exists locally, by the same rule as new records. When the local file does not end with a blank line, an emitted document ends with exactly one newline: removing a trailing item would otherwise leave its separator blank line behind on the item before it. Append regions are rejected for every registered YAML document, because appended text cannot be merged by structure.
+
 Callers can hold keyed-view paths. A hold replaces the desired value at that path with the owned baseline value, or drops it when nothing there is owned, so the kernel sees unchanged intent: local content and previous ownership stay, and the hold adds no conflict of its own. Explicit overwrite omits held paths instead of overlaying them. The pre-commit pin guard holds `repos.<repo>.rev` rather than rewriting the desired document, so other additions keep their desired key order and styling.
+
+## GitHub Actions workflows
+
+`.github/workflows/ci.yml` and `release.yml` share one `WORKFLOW_SPEC`: there is no per-file behavior, only a different generator producing the desired document. Workflow files Protostar does not generate are never read or written.
+
+- Mappings merge by key through the kernel, so user-added triggers, permissions, environment, jobs, and `with:` inputs are foreign siblings and never touched.
+- `jobs.*.steps` is keyed by step `name`. Every generated step is named, uniquely within its job, and a logical step keeps its name in every generator variant (`tests/test_workflows.py` enforces the exact set). Unnamed local steps are foreign and stay in place. A renamed step reads as a deletion of the old name plus a foreign step.
+- Every other sequence is atomic: branch filters, matrix axes, `include`, `needs`.
+- The policy is complete, so when the generator stops emitting something (for example Codecov upload steps after Codecov is turned off) unedited copies are removed and edited ones are kept with a `retracted` conflict. Turning the CI tool off produces no document, so nothing is touched.
+
+`github_workflows.reconcile_workflow` adds two guards, both implemented as holds:
+
+- A job that exists locally but is not owned is held whole and reported as `unowned` at `jobs.<id>`, including under explicit overwrite. Protostar never grafts its steps into a job it did not create; its other jobs are still added.
+- When an owned step's local `uses` names the same action as the owned baseline but a different ref, and the ref differs from the desired one too, the ref belongs to the user (a Renovate SHA pin, a manual bump or rollback). It is kept without a conflict, reported as a preserved deviation, and `sync --check` passes. If the local ref already equals the desired ref, ownership converges normally. Local (`./`) and `docker://` actions carry no ref and follow the ordinary rules; a changed action path is an ordinary conflict.
+
+Existing workflow files are parsed during preparation, before any batch mutates the workspace, so a malformed or unsupported workflow fails like any other structured YAML document.
 
 ## PR F: Generated files, seeds, and regions
 
-CI/release workflows, Dockerfile, and justfile use one pure exact-byte
-SHA-256 gate. An absent never-owned target is created; an unchanged owned target
+Dockerfile and justfile use one pure exact-byte SHA-256 gate. (CI and release
+workflows used it too until they moved to the YAML adapter; see
+[GitHub Actions workflows](#github-actions-workflows).) An absent never-owned target is created; an unchanged owned target
 can update. Convergence advances an existing baseline without rewriting the file.
 Unowned existing files are never adopted, including when their bytes equal the
 desired output. Edited or deleted owned files remain untouched. A pending desired

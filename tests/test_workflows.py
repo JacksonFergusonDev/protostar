@@ -1,4 +1,5 @@
 from dataclasses import replace
+from typing import Any
 
 import pytest
 
@@ -228,7 +229,7 @@ def test_generate_ci_workflow_pytest_and_codecov():
             ci_steps=[],
         )
     )
-    assert "Run Tests" in content_pytest
+    assert "name: Run tests\n        run: uv run pytest\n" in content_pytest
     assert "Upload coverage to Codecov" not in content_pytest
 
     # Pytest with Codecov
@@ -240,11 +241,11 @@ def test_generate_ci_workflow_pytest_and_codecov():
             ci_steps=["      - name: Lint\n        run: uv run ruff check"],
         )
     )
-    assert "Run tests with coverage # (for Codecov)" in content_codecov
+    assert "name: Run tests\n" in content_codecov
+    assert "${{ matrix.coverage && '--cov " in content_codecov
     assert "name: Lint & Type Check" in content_codecov
     assert "coverage: true" in content_codecov
     assert "if: matrix.coverage" in content_codecov
-    assert "if: ${{ !matrix.coverage }}" in content_codecov
     assert "Upload coverage to Codecov" in content_codecov
     assert "Upload test analytics to Codecov" in content_codecov
     assert (
@@ -298,7 +299,7 @@ def test_generate_workflows_with_ciflag_enum():
             ci_steps=[],
         )
     )
-    assert "Run tests with coverage # (for Codecov)" in content_ci
+    assert "name: Run tests\n" in content_ci
     assert "Upload coverage to Codecov" in content_ci
 
     content_just = generate_justfile(
@@ -547,3 +548,60 @@ def test_generate_agents_md_never_contains_region_boundaries():
     content = generate_agents_md(_agents_spec(hook_runner=HookRunner.PREK))
 
     assert "region:" not in content
+
+
+def _all_ci_variants():
+    from itertools import product
+
+    lint_steps = [
+        "      - name: Run Ruff Linter\n        run: uv run ruff check .",
+        "      - name: Run Mypy\n        run: uv run mypy src/",
+    ]
+    for systems, python, pytest_on, codecov_on, lint in product(
+        (["Linux"], ["Linux", "MacOS", "Windows"]),
+        ("3.14", "3.12"),
+        (False, True),
+        (False, True),
+        ([], lint_steps[:1], lint_steps),
+    ):
+        flags = {"pytest"} if pytest_on else set()
+        if codecov_on:
+            flags.add("codecov")
+        yield generate_ci_workflow(CIWorkflowSpec(systems, python, flags, lint))
+
+
+def test_every_generated_workflow_step_is_named_uniquely_and_stably():
+    """The workflow merge matches steps by name, so names are a contract.
+
+    Every step needs a name unique within its job, and a logical step keeps its
+    name in every variant, so switching variants updates steps in place.
+    """
+    from protostar.yaml_ast import (
+        WORKFLOW_SPEC,
+        decode_yaml_baseline,
+        validate_yaml_baseline,
+    )
+
+    seen: dict[str, set[str]] = {}
+    for content in [*_all_ci_variants(), generate_release_workflow()]:
+        document: Any = decode_yaml_baseline(content)
+        validate_yaml_baseline(WORKFLOW_SPEC, document)
+        jobs = document["jobs"]
+        assert isinstance(jobs, dict)
+        for job_id, job in jobs.items():
+            assert isinstance(job, dict)
+            names = [step["name"] for step in job["steps"]]
+            assert len(names) == len(set(names))
+            seen.setdefault(job_id, set()).update(names)
+    # A rename in any single variant would add a second name for that step here.
+    setup = {"Checkout", "Install uv", "Install dependencies"}
+    assert seen == {
+        "lint": setup | {"Run Ruff Linter", "Run Mypy"},
+        "test": setup
+        | {
+            "Run tests",
+            "Upload coverage to Codecov",
+            "Upload test analytics to Codecov",
+        },
+        "pypi-publish": {"Checkout", "Install uv", "Build package", "Publish to PyPI"},
+    }

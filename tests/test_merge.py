@@ -15,6 +15,7 @@ from protostar.merge import (
     overlay_declared,
     prune_unapplied,
     reconcile,
+    retract_undeclared,
     semantic_equal,
 )
 
@@ -327,3 +328,62 @@ def test_prune_unapplied_drops_only_new_empty_owned_mappings():
     prune_unapplied(owned, previous, current)
 
     assert owned == {"old_empty": {}, "applied": {"k": 1}}
+
+
+COMPLETE = MergePolicy(complete=True)
+
+
+@pytest.mark.parametrize(
+    ("local", "value", "baseline", "reasons"),
+    [
+        pytest.param({"a": 1, "b": 2}, {"a": 1}, {"a": 1}, [], id="unedited-removed"),
+        pytest.param(
+            {"a": 1, "b": 3},
+            {"a": 1, "b": 3},
+            {"a": 1, "b": 2},
+            [ConflictReason.RETRACTED],
+            id="edited-kept-with-conflict",
+        ),
+        pytest.param({"a": 1}, {"a": 1}, {"a": 1}, [], id="already-deleted"),
+    ],
+)
+def test_complete_policy_retracts_undeclared_owned_keys(
+    local, value, baseline, reasons
+):
+    result = reconcile({"a": 1, "b": 2}, local, {"a": 1}, LOC, COMPLETE)
+    assert result.value == value
+    assert result.baseline == baseline
+    assert [c.reason for c in result.conflicts] == reasons
+    if reasons:
+        assert result.conflicts[0].location.keys == (*LOC.keys, "b")
+
+
+def test_complete_policy_retracts_nested_leaves_and_protects_foreign_content():
+    base: Value = {"x": {"a": 1, "b": 2}, "y": {"a": 1}}
+    result = reconcile(
+        base,
+        {"x": {"a": 1, "b": 2}, "y": {"a": 1, "mine": 0}, "foreign": 1},
+        {"x": {"a": 1}},
+        LOC,
+        COMPLETE,
+    )
+    assert result.value == {"x": {"a": 1}, "y": {"a": 1, "mine": 0}, "foreign": 1}
+    assert result.baseline == {"x": {"a": 1}, "y": {"a": 1}}
+    [conflict] = result.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.keys == (*LOC.keys, "y")
+
+
+def test_default_policy_never_retracts():
+    result = reconcile({"a": 1, "b": 2}, {"a": 1, "b": 2}, {"a": 1}, LOC)
+    assert result.value == {"a": 1, "b": 2}
+    assert result.baseline == {"a": 1, "b": 2}
+    assert not result.conflicts
+
+
+def test_retract_undeclared_removes_owned_keys_even_when_edited():
+    target: dict[str, Value] = {"x": {"a": 9, "b": 2, "mine": 0}, "gone": 5, "own": 1}
+    owned: dict[str, Value] = {"x": {"a": 1, "b": 2}, "gone": 1}
+    retract_undeclared(target, owned, {"x": {"b": 2}})
+    assert target == {"x": {"b": 2, "mine": 0}, "own": 1}
+    assert owned == {"x": {"b": 2}}

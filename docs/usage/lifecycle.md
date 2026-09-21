@@ -62,6 +62,14 @@ make checks fail. Deleted managed files stay deleted. Omitted template
 contributions retain their existing files and ownership; sync never prunes them.
 Equal foreign content remains unowned.
 
+GitHub Actions workflows are the exception to pruning, because each is one
+generator's complete output. When Protostar stops generating a step or key (for
+example the Codecov upload steps after you turn Codecov off), an unedited copy is
+removed and an edited copy is kept with a `retracted` conflict. Workflow files are
+merged by job and by step name, so your own jobs, steps, triggers, and inputs stay.
+An action version you or Renovate changed (including a SHA pin) is yours: a newer
+Protostar version of the same action does not conflict and `sync --check` passes.
+
 ## Edit the recipe deliberately
 
 Edit entries in `[tool.protostar]` using the

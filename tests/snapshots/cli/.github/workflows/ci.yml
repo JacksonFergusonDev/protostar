@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
@@ -51,7 +52,8 @@ jobs:
             coverage: true
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
@@ -64,13 +66,8 @@ jobs:
           uv sync --all-extras --dev --locked
           uv pip install pytest-github-actions-annotate-failures
 
-      - name: Run tests with coverage # (for Codecov)
-        if: matrix.coverage
-        run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
-
-      - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-        if: ${{ !matrix.coverage }}
-        run: uv run pytest
+      - name: Run tests
+        run: uv run pytest ${{ matrix.coverage && '--cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy' || '' }}
 
       - name: Upload coverage to Codecov
         if: matrix.coverage

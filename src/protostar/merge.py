@@ -41,6 +41,7 @@ class ConflictReason(StrEnum):
     DIVERGED = "diverged"
     TYPE_MISMATCH = "type-mismatch"
     DELETED_ANCESTOR = "deleted-ancestor"
+    RETRACTED = "retracted"
 
 
 @dataclass(frozen=True)
@@ -62,10 +63,19 @@ class MergeConflict:
 
 @dataclass(frozen=True)
 class MergePolicy:
-    """Explicit set-like paths; every other sequence is atomic."""
+    """Explicit set-like paths; every other sequence is atomic.
+
+    Attributes:
+        set_like_paths: Key paths whose scalar sequences merge by membership.
+        protected_ancestor: Whether the adapter operates under a deleted owned ancestor.
+        complete: Whether the remote value is one generator's complete document, so
+            owned mapping keys it no longer declares are retracted: removed when
+            unedited, kept with a ``retracted`` conflict when edited.
+    """
 
     set_like_paths: frozenset[tuple[str, ...]] = frozenset()
     protected_ancestor: bool = False
+    complete: bool = False
 
 
 DEFAULT_POLICY = MergePolicy()
@@ -248,6 +258,21 @@ def reconcile(
                 if child.baseline is not MISSING:
                     baseline[key] = child.baseline
                 conflicts.extend(child.conflicts)
+            if policy.complete and isinstance(previous, dict):
+                for key in [k for k in previous if k not in incoming]:
+                    local = values.get(key, MISSING)
+                    if local is MISSING:
+                        baseline.pop(key, None)
+                    elif semantic_equal(local, previous[key]):
+                        values.pop(key)
+                        baseline.pop(key, None)
+                    else:
+                        conflicts.append(
+                            MergeConflict(
+                                MergeLocation(loc.file, (*loc.keys, key), loc.identity),
+                                ConflictReason.RETRACTED,
+                            )
+                        )
             owned: Value = (
                 baseline
                 if baseline or previous is not MISSING or current is MISSING
@@ -336,6 +361,33 @@ def overlay_declared(target: dict[str, Value], incoming: dict[str, Value]) -> No
             overlay_declared(existing, child)
         else:
             target[key] = deepcopy(child)
+
+
+def retract_undeclared(
+    target: dict[str, Value], owned: dict[str, Value], incoming: dict[str, Value]
+) -> None:
+    """Removes owned keys that ``incoming`` no longer declares, in place.
+
+    Used for explicit overwrite of a complete document: retracted owned content is
+    removed from ``target`` and ``owned`` even when edited. Foreign keys, which
+    ``owned`` never contains, are untouched.
+
+    Args:
+        target: Mapping mutated in place.
+        owned: Owned baseline mutated in place.
+        incoming: Complete desired contribution.
+    """
+    for key in list(owned):
+        if key not in incoming:
+            target.pop(key, None)
+            owned.pop(key)
+        elif isinstance(owned[key], dict) and isinstance(incoming[key], dict):
+            child = target.get(key)
+            retract_undeclared(
+                child if isinstance(child, dict) else {},
+                cast(dict[str, Value], owned[key]),
+                cast(dict[str, Value], incoming[key]),
+            )
 
 
 def prune_unapplied(

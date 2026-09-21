@@ -297,75 +297,62 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
 
     is_single_matrix = len(os_matrix) == 1 and len(python_matrix) == 1
 
+    # Every step is named, and a logical step keeps its name across variants:
+    # the workflow merge matches steps by name, so a renamed step would be added
+    # alongside its old self instead of updated in place.
+    coverage_args = "--cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy"
     include_block = ""
     pytest_step = ""
     if has_pytest:
-        if has_codecov:
-            if is_single_matrix:
-                pytest_step = """      - name: Run tests with coverage
-        run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
-          disable_search: true
-          name: coverage
-          fail_ci_if_error: true
-
-      - name: Upload test analytics to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: junit.xml
-          disable_search: true
-          report_type: test_results
-          name: test-results"""
-            else:
-                include_block = f"""
+        if has_codecov and not is_single_matrix:
+            include_block = f"""
         include:
           - os: {primary_os}
             python-version: "{primary_python}"
             coverage: true"""
-                pytest_step = """      - name: Run tests with coverage # (for Codecov)
-        if: matrix.coverage
-        run: uv run pytest --cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy
+            # One step for every matrix entry; only the coverage entry pays for it.
+            pytest_run = (
+                f"uv run pytest ${{{{ matrix.coverage && '{coverage_args}' || '' }}}}"
+            )
+            coverage_if = "\n        if: matrix.coverage"
+            analytics_if = "${{ matrix.coverage && !cancelled() }}"
+        elif has_codecov:
+            pytest_run = f"uv run pytest {coverage_args}"
+            coverage_if = ""
+            analytics_if = "${{ !cancelled() }}"
+        else:
+            pytest_run = "uv run pytest"
+        pytest_step = f"""      - name: Run tests
+        run: {pytest_run}"""
+        if has_codecov:
+            pytest_step += f"""
 
-      - name: Run tests # (without coverage to avoid overhead on non-Codecov runs)
-        if: ${{ !matrix.coverage }}
-        run: uv run pytest
-
-      - name: Upload coverage to Codecov
-        if: matrix.coverage
+      - name: Upload coverage to Codecov{coverage_if}
         uses: codecov/codecov-action@v7
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{{{ secrets.CODECOV_TOKEN }}}}
           files: coverage.xml
           disable_search: true
           name: coverage
           fail_ci_if_error: true
 
       - name: Upload test analytics to Codecov
-        if: ${{ matrix.coverage && !cancelled() }}
+        if: {analytics_if}
         uses: codecov/codecov-action@v7
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{{{ secrets.CODECOV_TOKEN }}}}
           files: junit.xml
           disable_search: true
           report_type: test_results
           name: test-results"""
-        else:
-            pytest_step = """      - name: Run Tests
-        run: uv run pytest"""
 
     os_matrix_str = ", ".join(f'"{o}"' for o in os_matrix)
     python_matrix_str = ", ".join(f'"{p}"' for p in python_matrix)
 
     if is_single_matrix:
         test_steps_list = [
-            "      - uses: actions/checkout@v7",
+            "      - name: Checkout",
+            "        uses: actions/checkout@v7",
             "",
             "      - name: Install uv",
             "        uses: astral-sh/setup-uv@v10.0.0",
@@ -380,7 +367,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
         ]
     else:
         test_steps_list = [
-            "      - uses: actions/checkout@v7",
+            "      - name: Checkout",
+            "        uses: actions/checkout@v7",
             "",
             "      - name: Install uv",
             "        uses: astral-sh/setup-uv@v10.0.0",
@@ -410,7 +398,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     runs-on: {primary_os}
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v10.0.0
@@ -479,7 +468,8 @@ def generate_release_workflow() -> str:
             permissions:
               id-token: write
             steps:
-              - uses: actions/checkout@v7
+              - name: Checkout
+                uses: actions/checkout@v7
 
               - name: Install uv
                 uses: astral-sh/setup-uv@v10.0.0

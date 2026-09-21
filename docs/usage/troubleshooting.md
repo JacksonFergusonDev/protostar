@@ -48,7 +48,7 @@ Workspace Collision: Protostar detected existing configuration files in the work
 
 In interactive terminals, you can choose from three strategies:
 
-1. **Merge (Default):** Reconciles previously managed TOML/YAML contributions and checksum-gated generated content while preserving unowned content, local edits, and deletions. It also appends missing rules to `.gitignore`.
+1. **Merge (Default):** Reconciles previously managed TOML/YAML contributions (including GitHub Actions workflows) and checksum-gated generated content while preserving unowned content, local edits, and deletions. It also appends missing rules to `.gitignore`.
 1. **Overwrite:** Overwrites existing configuration keys with Protostar's baseline standards.
 1. **Abort:** Safely cancels the operation without making changes.
 

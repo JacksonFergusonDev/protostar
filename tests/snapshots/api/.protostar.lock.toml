@@ -22,8 +22,8 @@ baseline = "{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.jso
 
 [[files]]
 path = ".github/workflows/ci.yml"
-policy = "checksum"
-digest = "10f1587d9b25cbbf84e6e3d62d56465899055eae5632e5a281f98b139c4dca54"
+policy = "structured-yaml"
+baseline = "jobs:\n  lint:\n    name: Lint & Type Check\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v7\n      - name: Install uv\n        uses: astral-sh/setup-uv@v10.0.0\n        with:\n          enable-cache: true\n          python-version: '3.13'\n      - name: Install dependencies\n        run: uv sync --all-extras --dev --locked\n      - name: Lint Markdown with rumdl\n        run: uv run rumdl check --output-format github .\n      - name: Check Markdown formatting with rumdl\n        run: uv run rumdl fmt --check --output-format github .\n      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github .\n      - name: Run Mypy\n        run: uv run mypy src/\n  test:\n    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}\n    runs-on: ${{ matrix.os }}\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v7\n      - name: Install uv\n        uses: astral-sh/setup-uv@v10.0.0\n        with:\n          enable-cache: true\n          python-version: ${{ matrix.python-version }}\n      - name: Install dependencies\n        run: \"uv sync --all-extras --dev --locked\\nuv pip install pytest-github-actions-annotate-failures\\n\"\n      - name: Run tests\n        run: uv run pytest\n    strategy:\n      matrix:\n        os:\n          - macos-latest\n          - ubuntu-latest\n          - windows-latest\n        python-version:\n          - '3.13'\n          - '3.14'\nname: CI\non:\n  pull_request:\n    branches:\n      - main\n  push:\n    branches:\n      - main\n"
 
 [[files]]
 path = ".pre-commit-config.yaml"

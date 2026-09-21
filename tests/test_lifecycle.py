@@ -753,3 +753,35 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     prepared.apply()
     assert not Path(".github/renovate.json").exists()
     process.assert_not_called()
+
+
+def test_action_pin_by_renovate_keeps_sync_check_passing(
+    project, monkeypatch, capsys, mocker
+):
+    """A pinned action ref is the user's: a newer Protostar ref never conflicts."""
+    from protostar.lifecycle import prepare_project
+    from protostar.workflows import generate_ci_workflow
+
+    project.write_text("ci = true\n")
+    prepare_project().apply()
+    workflow = Path(".github/workflows/ci.yml")
+    pinned = workflow.read_text().replace(
+        "actions/checkout@v7", "actions/checkout@" + "0" * 40 + " # v7"
+    )
+    workflow.write_text(pinned)
+    assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
+
+    mocker.patch(
+        "protostar.reconciliation.generate_ci_workflow",
+        side_effect=lambda spec: generate_ci_workflow(spec).replace(
+            "actions/checkout@v7", "actions/checkout@v8"
+        ),
+    )
+    review = inspect_project()
+    assert not review.conflicts
+    assert not review.edits
+    assert ("jobs", "test", "steps", "Checkout", "uses") in [
+        item.location.keys for item in review.preserved
+    ]
+    assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
+    assert workflow.read_text() == pinned
