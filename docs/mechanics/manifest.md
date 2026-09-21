@@ -46,8 +46,8 @@ During the `build()` phase, modules route their state declarations through these
     Managed by `FilesystemManifest`. Manages physical directory scaffolding, seed-only file injections, structured contributions, named regions, and ignore configurations.
 
     * `directories`: A mathematical set of directories to be scaffolded via `mkdir -p` (`manifest.filesystem.add_directory()`).
-    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping configuration files like `zensical.toml` via `manifest.filesystem.add_file_injection()`).
-    * `structured`: Path-keyed typed TOML contributions with a stable producer, content, and managed or seed-only policy (`manifest.filesystem.add_structured()`). Dependency-affecting metadata declares a resolver footprint.
+    * `file_injections`: A 1:1 mapping of exact file paths to their raw string contents (e.g., dropping configuration files like `.readthedocs.yaml` via `manifest.filesystem.add_file_injection()`).
+    * `structured`: Path-keyed typed TOML contributions with a stable producer and content (`manifest.filesystem.add_structured()`). Which paths are seed-only is the target document's policy, not the contribution's. Dependency-affecting metadata declares a resolver footprint.
     * `regions`: Path-keyed non-TOML append contributions with stable IDs and content (`manifest.filesystem.add_region()`). IDs remain unchanged across payload revisions.
     * `vcs_ignores`: Deduplicated patterns for `.gitignore` and `.dockerignore` (`manifest.filesystem.add_vcs_ignore()`).
     * `workspace_hides`: Patterns hidden from IDE workspace file explorers (`manifest.filesystem.add_workspace_hide()`).

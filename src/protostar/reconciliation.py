@@ -36,7 +36,6 @@ from .errors import (
 )
 from .intent import (
     AppendContribution,
-    ContributionPolicy,
     DependencyGroup,
     DependencyInclude,
     StructuredFormat,
@@ -76,7 +75,12 @@ from .sync_state import (
     deserialize_state,
     encode_toml_baseline,
 )
-from .toml_ast import aggregate_toml, aggregate_toml_document, reconcile_toml
+from .toml_ast import (
+    TomlDocumentSpec,
+    aggregate_toml,
+    aggregate_toml_document,
+    reconcile_toml,
+)
 from .workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
@@ -557,18 +561,23 @@ class Reconciliation:
                 and record is None
                 and not deleted_project
             )
-            payloads = [
-                replace(
-                    c, content=render_template(c.content, self.interpolation_context)
+            spec = toml_spec(target.as_posix())
+            if self._toml_held(spec, target, original):
+                self._merge_warning(
+                    MergeConflict(
+                        MergeLocation(target.as_posix()), ConflictReason.UNOWNED
+                    )
                 )
-                for c in contributions
-                if c.policy is not ContributionPolicy.SEED_ONLY
-                or is_overwrite
-                or initializing
-            ]
-            if not payloads:
                 continue
-            aggregated = aggregate_toml_document(payloads)
+            aggregated = aggregate_toml_document(
+                [
+                    replace(
+                        c,
+                        content=render_template(c.content, self.interpolation_context),
+                    )
+                    for c in contributions
+                ]
+            )
             if deleted_project and record is None:
                 self._merge_warning(
                     MergeConflict(
@@ -578,7 +587,7 @@ class Reconciliation:
                 )
                 continue
             result = reconcile_toml(
-                toml_spec(target.as_posix()),
+                spec,
                 original,
                 aggregated.value,
                 decode_toml_baseline(record.baseline)
@@ -695,6 +704,26 @@ class Reconciliation:
                     raise FileSystemError(
                         "append configurations block", str(target), e
                     ) from e
+
+    def _toml_held(self, spec: TomlDocumentSpec, target: Path, original: str) -> bool:
+        """Returns whether a TOML document is left alone under every strategy.
+
+        Args:
+            spec: The document's merge spec.
+            target: Workspace-relative document path.
+            original: Current document text, empty when the file is absent.
+
+        Returns:
+            True when creating the document would replace a configuration it
+            displaces, or when an existing document keeps its settings outside the
+            spec's root table.
+        """
+        if not self.workspace.exists(target):
+            return any(self.workspace.exists(Path(path)) for path in spec.displaces)
+        if spec.root_table is None:
+            return False
+        local = tomllib.loads(original)
+        return bool(local) and spec.root_table not in local
 
     def _file_record(self, target: Path, policy: FilePolicy) -> FileState | None:
         """Returns ownership after checking that the policy has not changed."""

@@ -17,6 +17,7 @@ from protostar.merge import (
     reconcile,
     retract_undeclared,
     semantic_equal,
+    without_paths,
 )
 
 LOC = MergeLocation("pyproject.toml", ("tool", "example"), "module:example")
@@ -387,3 +388,25 @@ def test_retract_undeclared_removes_owned_keys_even_when_edited():
     retract_undeclared(target, owned, {"x": {"b": 2}})
     assert target == {"x": {"b": 2, "mine": 0}, "own": 1}
     assert owned == {"x": {"b": 2}}
+
+
+def test_without_paths_prunes_only_tables_it_empties():
+    value: dict[str, Value] = {
+        "project": {"name": "demo", "extra": {"generator": False}},
+        "theme": {"features": ["a"], "font": {"text": "Inter"}},
+        "empty": {},
+    }
+    result = without_paths(
+        value,
+        frozenset(
+            {
+                ("project", "name"),
+                ("project", "extra"),
+                ("theme", "font"),
+                ("empty", "missing"),
+                ("absent", "key"),
+            }
+        ),
+    )
+    assert result == {"theme": {"features": ["a"]}, "empty": {}}
+    assert value["project"] == {"name": "demo", "extra": {"generator": False}}

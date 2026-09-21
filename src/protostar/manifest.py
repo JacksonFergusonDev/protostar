@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 from .errors import ConfigurationError
 from .intent import (
     AppendContribution,
-    ContributionPolicy,
     DependencyGroup,
     DependencyInclude,
     ResolverFootprint,
@@ -23,6 +22,7 @@ from .intent import (
 from .interpolation import render_template
 from .merge import MergeConflict
 from .metadata import LicenseType
+from .sync_state import FilePolicy
 from .workflows import CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
 from .workspace import resolve_package_name, resolve_project_name
@@ -276,12 +276,11 @@ class FilesystemManifest:
         content: str,
         *,
         producer: str,
-        policy: ContributionPolicy = ContributionPolicy.MANAGED,
         document_format: StructuredFormat = StructuredFormat.TOML,
     ) -> None:
         """Declares explicit structured intent for a TOML or contributable YAML target."""
         self.observe(("structured", path, producer))
-        from .documents.pyproject import declare_structured_contributions
+        from .documents.pyproject import declare_contribution
 
         validate_target(path)
         path = Path(path).as_posix()
@@ -294,13 +293,10 @@ class FilesystemManifest:
             from .documents import YAML_CONTRIBUTION_TARGETS
             from .yaml_ast import decode_yaml_baseline
 
-            if (
-                path not in YAML_CONTRIBUTION_TARGETS
-                or policy is not ContributionPolicy.MANAGED
-            ):
+            if path not in YAML_CONTRIBUTION_TARGETS:
                 raise ConfigurationError(
-                    "Unsupported structured YAML target or policy.",
-                    hint=f"Declare a managed contribution to one of: {', '.join(sorted(YAML_CONTRIBUTION_TARGETS))}.",
+                    "Unsupported structured YAML target.",
+                    hint=f"Declare a contribution to one of: {', '.join(sorted(YAML_CONTRIBUTION_TARGETS))}.",
                 )
             decode_yaml_baseline(content)
             if path in self.structured:
@@ -309,9 +305,7 @@ class FilesystemManifest:
                     hint=f"Declare one contribution to '{path}' per manifest.",
                 )
             self.structured[path] = [
-                StructuredContribution(
-                    producer, content, policy, format=document_format
-                )
+                StructuredContribution(producer, content, format=document_format)
             ]
             return
         if not path.endswith(".toml"):
@@ -319,8 +313,8 @@ class FilesystemManifest:
                 "Structured contributions require TOML targets.",
                 hint="Use a named append region for non-TOML files.",
             )
-        self.structured.setdefault(path, []).extend(
-            declare_structured_contributions(path, content, producer, policy)
+        self.structured.setdefault(path, []).append(
+            declare_contribution(path, content, producer)
         )
 
     def add_region(self, path: str, content: str, *, identity: str) -> None:
@@ -389,7 +383,7 @@ class FilesystemManifest:
             "regions": {
                 k: [c.to_dict() for c in self.regions[k]] for k in sorted(self.regions)
             },
-            "file_policy": ContributionPolicy.SEED_ONLY.value,
+            "file_policy": FilePolicy.SEED.value,
             "vcs_ignores": sorted(self.vcs_ignores),
             "workspace_hides": sorted(self.workspace_hides),
         }

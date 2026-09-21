@@ -18,9 +18,12 @@ from .merge import (
     MergeLocation,
     MergePolicy,
     Value,
+    hold,
+    lookup,
     overlay_declared,
     reconcile,
     semantic_equal,
+    without_paths,
 )
 
 
@@ -47,11 +50,26 @@ class TomlDocumentSpec:
         policy: Kernel policy, including set-like arrays.
         super_tables: Paths of new tables emitted as super tables, so only their
             children get headers.
+        seed_paths: Paths written only while Protostar creates the document or
+            explicit overwrite is selected, and never merged into an existing
+            document. A written seed is owned, so deleting its table still reads as
+            a deletion, but Protostar never updates it afterwards.
+        root_table: Table that holds every setting Protostar declares, when the
+            tool also accepts its settings at the top level. An existing document
+            with settings but without this table is left alone, because adding the
+            table would hide those settings from the tool.
+        displaces: Workspace paths of configurations the tool reads only while
+            this document is absent. Protostar never creates the document while
+            one of them exists, because it would silently replace that
+            configuration.
         layout: Document layout; ``None`` keeps tomlkit's round-trip output.
     """
 
     policy: MergePolicy = DEFAULT_POLICY
     super_tables: frozenset[tuple[str, ...]] = frozenset()
+    seed_paths: frozenset[tuple[str, ...]] = frozenset()
+    root_table: str | None = None
+    displaces: tuple[str, ...] = ()
     layout: TomlLayout | None = None
 
 
@@ -160,6 +178,30 @@ def aggregate_toml(contributions: list[StructuredContribution]) -> dict[str, Val
     return aggregate_toml_document(contributions).value
 
 
+def _hold_seeds(
+    desired: dict[str, Value], base: Value, paths: frozenset[tuple[str, ...]]
+) -> dict[str, Value]:
+    """Holds each written seed at its owned value and drops every other seed.
+
+    A held seed reads as unchanged, so a seed the user edited or deleted never
+    conflicts, and a changed seed default is never applied. A seed Protostar never
+    wrote is dropped, so it is never merged into an existing document.
+
+    Args:
+        desired: Aggregated desired value.
+        base: Owned baseline, or ``MISSING``.
+        paths: The document's seed paths.
+
+    Returns:
+        A detached desired value.
+    """
+    owned = frozenset(path for path in paths if lookup(base, path) is not MISSING)
+    held = without_paths(desired, paths - owned)
+    for path in owned:
+        hold(held, base, path)
+    return held
+
+
 def reconcile_toml(
     spec: TomlDocumentSpec,
     original: str,
@@ -175,7 +217,8 @@ def reconcile_toml(
     """Applies semantic decisions to the local AST, laid out by the document spec.
 
     Args:
-        spec: Set-like arrays, super tables, and layout for this document.
+        spec: Set-like arrays, super tables, seed paths, and layout for this
+            document.
         original: Current workspace text.
         desired: Aggregated desired value.
         base: Previously applied owned contributions, or ``MISSING``.
@@ -208,7 +251,7 @@ def reconcile_toml(
         result = reconcile(
             base,
             MISSING if missing_file else local,
-            desired,
+            _hold_seeds(desired, base, spec.seed_paths),
             location,
             spec.policy,
         )
@@ -276,5 +319,8 @@ def reconcile_toml(
     elif spec.layout is not None:
         content = spec.layout.extend(original, doc, layout_notes.append)
     else:
-        content = tomlkit.dumps(doc)
+        # A copied desired table keeps the blank line that separated it from its
+        # next sibling; the document keeps its own ending instead.
+        ending = original[len(original.rstrip("\r\n")) :] if original else "\n"
+        content = tomlkit.dumps(doc).rstrip("\r\n") + ending
     return TomlReconciliation(content, baseline, conflicts, tuple(layout_notes))

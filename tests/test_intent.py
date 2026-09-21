@@ -13,7 +13,6 @@ from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
 from protostar.intent import (
     AppendContribution,
-    ContributionPolicy,
     DependencyGroup,
     TemplateOrigin,
     region_tag,
@@ -161,20 +160,14 @@ def test_anonymous_invalid_and_ambiguous_regions_rejected(content):
     assert error.value.hint
 
 
-def test_personal_metadata_is_seed_only_and_tooling_retains_variables():
+def test_declared_contribution_retains_late_bound_variables():
+    content = '[project]\ndescription = "personal"\n[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.main:app"\n[tool.ruff]\nline-length = 100'
     manifest = EnvironmentManifest()
     manifest.filesystem.add_structured(
-        "pyproject.toml",
-        '[project]\ndescription = "personal"\n[project.scripts]\n<% PROJECT_NAME %> = "<% PACKAGE_NAME %>.main:app"\n[tool.ruff]\nline-length = 100',
-        producer="template:test",
+        "pyproject.toml", content, producer="template:test"
     )
-    seed, managed = manifest.filesystem.structured["pyproject.toml"]
-    assert seed.policy == ContributionPolicy.SEED_ONLY
-    assert "description" in seed.content
-    assert managed.policy == ContributionPolicy.MANAGED
-    assert "description" not in managed.content
-    assert "<% PROJECT_NAME %>" in managed.content
-    assert "<% PACKAGE_NAME %>" in managed.content
+    [contribution] = manifest.filesystem.structured["pyproject.toml"]
+    assert contribution.content == content
 
 
 def test_existing_personal_metadata_is_preserved(tmp_path, monkeypatch):
@@ -334,10 +327,7 @@ def test_equivalent_path_spellings_share_policy_and_collision_checks():
         "./pyproject.toml", '[project]\ndescription = "seed"', producer="module:test"
     )
     assert "./pyproject.toml" not in manifest.filesystem.structured
-    assert (
-        manifest.filesystem.structured["pyproject.toml"][0].policy
-        == ContributionPolicy.SEED_ONLY
-    )
+    assert manifest.filesystem.structured["pyproject.toml"]
     with pytest.raises(ConfigurationError, match="Free-form pyproject"):
         manifest.filesystem.add_file_injection("pyproject.toml", "free-form")
     with pytest.raises(ConfigurationError, match="Ambiguous"):

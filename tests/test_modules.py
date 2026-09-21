@@ -548,7 +548,9 @@ def test_zensical_module_build():
     assert "site/" in manifest.filesystem.vcs_ignores
     assert "docs" in manifest.filesystem.directories
     assert "docs/index.md" in manifest.filesystem.file_injections
-    assert "zensical.toml" in manifest.filesystem.file_injections
+    assert "zensical.toml" not in manifest.filesystem.file_injections
+    [contribution] = manifest.filesystem.structured["zensical.toml"]
+    assert contribution.producer == "module:ZensicalModule"
     assert [e.to_dict() for e in manifest.dependencies.includes] == [
         {"group": "dev", "include": "docs"}
     ]

@@ -4,6 +4,8 @@ from pathlib import Path
 import tomlkit
 
 from protostar.documents.pyproject_layout import format_document
+from protostar.merge import MISSING, MergeLocation, MergePolicy
+from protostar.toml_ast import TomlDocumentSpec, reconcile_toml
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -480,3 +482,80 @@ def test_a_non_pyproject_toml_target_is_left_to_a_plain_dump():
 
     assert "# ----" not in result.content
     assert result.content.startswith(original)
+
+
+SEEDED = TomlDocumentSpec(
+    policy=MergePolicy(frozenset({("theme", "features")})),
+    seed_paths=frozenset({("site", "name"), ("site", "nav")}),
+)
+
+
+def test_seed_paths_are_written_only_when_creating_the_document():
+    desired = tomlkit.parse(
+        '[site]\nname = "demo"\nnav = ["index.md"]\n[theme]\nfeatures = ["a"]\n'
+    )
+    created = reconcile_toml(
+        SEEDED,
+        "",
+        desired.unwrap(),
+        MISSING,
+        MergeLocation("site.toml"),
+        initializing=True,
+        missing_file=True,
+        desired_ast=desired,
+    )
+    assert tomlkit.parse(created.content).unwrap() == desired.unwrap()
+    assert created.baseline == desired.unwrap()
+
+    edited = created.content.replace('"demo"', '"mine"').replace('["index.md"]', "[]")
+    changed = tomlkit.parse(
+        '[site]\nname = "renamed"\nnav = ["home.md"]\n[theme]\nfeatures = ["a", "b"]\n'
+    )
+    synced = reconcile_toml(
+        SEEDED,
+        edited,
+        changed.unwrap(),
+        created.baseline,
+        MergeLocation("site.toml"),
+        desired_ast=changed,
+    )
+    assert tomlkit.parse(synced.content).unwrap() == {
+        "site": {"name": "mine", "nav": []},
+        "theme": {"features": ["a", "b"]},
+    }
+    assert not synced.conflicts
+    assert synced.baseline == {
+        "site": {"name": "demo", "nav": ["index.md"]},
+        "theme": {"features": ["a", "b"]},
+    }
+
+
+def test_seed_paths_never_touch_an_existing_document():
+    desired = tomlkit.parse('[site]\nname = "demo"\n[theme]\nfeatures = ["a"]\n')
+    original = "[theme]\nfeatures = []\n"
+    result = reconcile_toml(
+        SEEDED,
+        original,
+        desired.unwrap(),
+        MISSING,
+        MergeLocation("site.toml"),
+        desired_ast=desired,
+    )
+    assert tomlkit.parse(result.content).unwrap() == {"theme": {"features": ["a"]}}
+    assert "[site]" not in result.content
+
+
+def test_overwrite_reapplies_seed_paths_and_keeps_foreign_keys():
+    desired = tomlkit.parse('[site]\nname = "demo"\n')
+    result = reconcile_toml(
+        SEEDED,
+        '[site]\nname = "mine"\nurl = "https://example.com"\n',
+        desired.unwrap(),
+        {"site": {"name": "demo"}},
+        MergeLocation("site.toml"),
+        overwrite=True,
+        desired_ast=desired,
+    )
+    assert tomlkit.parse(result.content).unwrap() == {
+        "site": {"name": "demo", "url": "https://example.com"}
+    }

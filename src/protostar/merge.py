@@ -363,6 +363,82 @@ def overlay_declared(target: dict[str, Value], incoming: dict[str, Value]) -> No
             target[key] = deepcopy(child)
 
 
+def lookup(value: Value, path: tuple[str, ...]) -> Value:
+    """Returns the value at a key path, or ``MISSING`` when any key is absent.
+
+    Args:
+        value: Decoded value to walk.
+        path: Mapping keys from the root.
+
+    Returns:
+        The value at ``path``, not copied, or ``MISSING``.
+    """
+    for key in path:
+        if not isinstance(value, dict) or key not in value:
+            return MISSING
+        value = value[key]
+    return value
+
+
+def hold(remote: dict[str, Value], base: Value, path: tuple[str, ...]) -> None:
+    """Replaces the desired value at ``path`` by its baseline, or drops it, in place.
+
+    A held value reads as unchanged to the kernel, so local content and previous
+    ownership there are kept without a conflict. Holding is never done by omission
+    alone, which would read as a retraction or change of an owned value.
+
+    Args:
+        remote: Desired value mutated in place.
+        base: Owned baseline, or ``MISSING``.
+        path: Key path to hold; nothing happens when its parent is not declared.
+    """
+    parent = lookup(remote, path[:-1])
+    if not isinstance(parent, dict):
+        return
+    prior = lookup(base, path)
+    if prior is MISSING:
+        parent.pop(path[-1], None)
+    else:
+        parent[path[-1]] = deepcopy(prior)
+
+
+def without_paths(
+    value: dict[str, Value], paths: frozenset[tuple[str, ...]]
+) -> dict[str, Value]:
+    """Returns a detached copy of ``value`` without the given key paths.
+
+    Used for seed paths, which never merge into an existing document. A mapping
+    left empty by a removal is removed too, so a contribution that declared only
+    seeds leaves no empty table behind; mappings that were already empty are kept.
+
+    Args:
+        value: Decoded mapping, such as a desired document or baseline.
+        paths: Key paths to remove.
+
+    Returns:
+        The copy without ``paths``.
+    """
+
+    def remove(node: dict[str, Value], path: tuple[str, ...]) -> bool:
+        key, *rest = path
+        if key not in node:
+            return False
+        if not rest:
+            del node[key]
+            return True
+        child = node[key]
+        if not isinstance(child, dict) or not remove(child, tuple(rest)):
+            return False
+        if not child:
+            del node[key]
+        return True
+
+    result = deepcopy(value)
+    for path in paths:
+        remove(result, path)
+    return result
+
+
 def retract_undeclared(
     target: dict[str, Value], owned: dict[str, Value], incoming: dict[str, Value]
 ) -> None:
