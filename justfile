@@ -44,19 +44,19 @@ typecheck: sync
 # Run the full automated testing matrix
 test: sync
     @printf "\n{{ blue }}=== Running Tests ==={{ nc }}\n"
-    uv run pytest
+    uv run pytest -n auto --dist loadfile
     @printf "{{ green }}✔ All tests passed{{ nc }}\n"
 
 # Run tests with coverage
 test-cov: sync
     @printf "\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\n"
-    uv run pytest --cov
+    uv run pytest -n auto --dist loadfile --cov
     @printf "{{ green }}✔ Coverage run complete{{ nc }}\n"
 
 # Generate detailed coverage reports
 test-cov-report: sync
     @printf "\n{{ blue }}=== Generating Coverage Reports ==={{ nc }}\n"
-    uv run pytest --cov --cov-report=term-missing --cov-report=annotate:coverage_annotations/ | tee coverage_report.txt
+    uv run pytest -n auto --dist loadfile --cov --cov-report=term-missing --cov-report=annotate:coverage_annotations/ | tee coverage_report.txt
     @printf "{{ green }}✔ Coverage reports generated{{ nc }}\n"
 
 # Run quick Hyperfine benchmarks
