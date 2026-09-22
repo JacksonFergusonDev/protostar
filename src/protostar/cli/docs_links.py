@@ -1,5 +1,6 @@
 from rich.text import Text
 
+from protostar.cli import ui
 from protostar.docs_registry import DocsPage
 
 
@@ -15,5 +16,6 @@ def format_docs_link(page: DocsPage, anchor: str | None = None) -> Text:
     """
     url = page.build_url(anchor)
     return Text.from_markup(
-        f"[bold cyan][link={url}]Docs: {page.label} ↗[/link][/bold cyan]"
+        f"[bold cyan][link={url}]Docs: {page.label} {ui.glyph('↗', '->')}"
+        "[/link][/bold cyan]"
     )

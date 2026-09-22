@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import io
 import json
 import shlex
 import sys
@@ -60,6 +61,47 @@ def emit_json(payload: dict[str, Any]) -> None:
     print(json.dumps(payload, sort_keys=True), flush=True)  # noqa: T201
 
 
+def replace_unencodable_output() -> None:
+    """Makes stdout and stderr replace characters their encoding cannot represent.
+
+    A redirected stream on Windows encodes with the locale code page, usually
+    cp1252. Under the default strict error handler, any path, template text, or
+    Rich traceback marker outside that code page raises ``UnicodeEncodeError``
+    mid-render and buries Protostar's own output under a Python traceback. A
+    handler chosen explicitly, e.g. through ``PYTHONIOENCODING``, is kept.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper) and stream.errors == "strict":
+            stream.reconfigure(errors="replace")
+
+
+def printable(text: str) -> str:
+    """Replaces the characters the CLI console's stream cannot encode with ``?``.
+
+    Args:
+        text: Text about to be printed to ``console``.
+
+    Returns:
+        ``text`` with each unencodable character replaced.
+    """
+    encoding = console.encoding
+    return text.encode(encoding, "replace").decode(encoding)
+
+
+def glyph(symbol: str, fallback: str) -> str:
+    """Picks a decorative symbol that the CLI console's stream can encode.
+
+    Args:
+        symbol: The preferred Unicode symbol.
+        fallback: An ASCII stand-in for streams that cannot encode ``symbol``,
+            such as a redirected cp1252 stream on Windows.
+
+    Returns:
+        ``symbol`` if the stream can encode it, otherwise ``fallback``.
+    """
+    return symbol if printable(symbol) == symbol else fallback
+
+
 @contextmanager
 def progress_trail(initial: str) -> Iterator[ProgressStep]:
     """Renders execution steps as a persistent checklist above a live spinner.
@@ -70,21 +112,18 @@ def progress_trail(initial: str) -> Iterator[ProgressStep]:
     checklist lines are written. A stream that cannot encode the marks, such as a
     redirected cp1252 stream on Windows, gets ``+`` and ``x`` instead.
 
+    Unlike other output, the trail sanitizes its labels itself instead of relying
+    on ``replace_unencodable_output``: a write error here would escape the step
+    and roll back the work the step just reported.
+
     Args:
         initial: Spinner text shown until the first step starts.
 
     Yields:
         The step hook to hand to the engine.
     """
-    encoding = console.encoding
-
-    def printable(text: str) -> str:
-        # A write error here would escape the step and roll back its work.
-        return text.encode(encoding, "replace").decode(encoding)
-
-    unicode_marks = printable("✔✖") == "✔✖"
-    done = ("✔" if unicode_marks else "+", "bold green")
-    failed = ("✖" if unicode_marks else "x", "bold red")
+    done = (glyph("✔", "+"), "bold green")
+    failed = (glyph("✖", "x"), "bold red")
 
     with console.status(initial) as status:
 
@@ -283,8 +322,9 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                     ),
                 )
 
+            warning = glyph("⚠️", "!")
             console.print(
-                "\n[bold red]⚠️  REMOTE TEMPLATE WARNING ⚠️[/bold red]\n\n"
+                f"\n[bold red]{warning}  REMOTE TEMPLATE WARNING {warning}[/bold red]\n\n"
                 "This template was loaded from an external source and will execute "
                 "the following shell commands on your system:"
             )
@@ -319,10 +359,13 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
         has_warnings = False
         if result.diagnostics:
             lines = []
+            warning = glyph("⚠", "!")
             for event in result.diagnostics:
                 if event.severity == Severity.WARNING:
                     has_warnings = True
-                    lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
+                    lines.append(
+                        f"[yellow]{warning} [{event.phase}][/yellow] {event.message}"
+                    )
                 elif event.severity == Severity.SKIP:
                     lines.append(
                         rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
