@@ -7,11 +7,13 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from dataclasses import fields, is_dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import tomlkit
 from rich.cells import cell_len
@@ -39,6 +41,7 @@ from protostar.modules import (
     SystemWorkspaceModule,
 )
 from protostar.orchestrator import Orchestrator
+from protostar.system import ProcessRunner
 
 _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
@@ -952,66 +955,124 @@ def generate_cli_help_svgs() -> None:
         protostar.cli.ui.console = original_global_console
 
 
-def generate_cli_dry_run_svg() -> None:
-    """Captures an SVG snapshot of the dry-run CLI diagnostics preview via Rich."""
-    original_global_console = protostar.cli.ui.console
-
-    record_console = Console(
+def _recording_console(*, terminal: bool = True) -> Console:
+    """Builds a byte-stable recording console for terminal SVG capture."""
+    return Console(
         record=True,
         width=100,
-        force_terminal=True,
+        force_terminal=terminal,
         color_system="truecolor",
         legacy_windows=False,
         file=io.StringIO(),
         _environ={},
     )
 
-    prompt = Text.assemble(
-        ("❯ ", "bold magenta"),  # noqa: RUF001
-        ("protostar ", "bold cyan"),
-        ("init --template cli --dry-run\n", "white"),
+
+def _print_prompt(console: Console, arguments: str) -> None:
+    """Prints a shell prompt invoking protostar with the given arguments."""
+    console.print(
+        Text.assemble(
+            ("❯ ", "bold magenta"),  # noqa: RUF001
+            ("protostar ", "bold cyan"),
+            (f"{arguments}\n", "white"),
+        )
     )
-    record_console.print(prompt)
+
+
+@contextmanager
+def _demo_project() -> Iterator[None]:
+    """Runs the body inside a fresh, fixed-name project directory.
+
+    Paths render with the directory's name, so it is fixed for byte-stable output;
+    the regression snapshots use the same name.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        orig_cwd = os.getcwd()
+        project_dir = Path(tmpdir) / "demo_project"
+        project_dir.mkdir()
+        os.chdir(project_dir)
+        try:
+            yield
+        finally:
+            os.chdir(orig_cwd)
+
+
+def _cli_template_engine() -> tuple[Orchestrator, InitRequest]:
+    """Builds the engine `protostar init --template cli` would run with defaults."""
+    target = importlib.resources.files("protostar.templates").joinpath("cli.toml")
+    blueprint = TemplateBlueprint.load(str(target), built_in="cli")
+    user_config = UserConfig()
+    modules: list[BootstrapModule] = [SystemWorkspaceModule(), PythonCore()]
+    for mod in TOOLING_MODULES:
+        is_active = getattr(user_config, mod.config_key, False)
+        if blueprint and mod.config_key in blueprint.tooling_overrides:
+            is_active = blueprint.tooling_overrides[mod.config_key]
+        if is_active:
+            modules.append(mod)
+    request = InitRequest(template_blueprint=blueprint)
+    return Orchestrator(modules, user_config, request=request), request
+
+
+def generate_cli_dry_run_svg() -> None:
+    """Captures an SVG snapshot of the dry-run CLI diagnostics preview via Rich."""
+    original_global_console = protostar.cli.ui.console
+    record_console = _recording_console()
+    _print_prompt(record_console, "init --template cli --dry-run")
 
     try:
         protostar.cli.ui.console = record_console
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            orig_cwd = os.getcwd()
-            try:
-                # Paths render with the directory's name, so fix it for byte-stable
-                # output; the regression snapshots use the same name.
-                project_dir = Path(tmpdir) / "demo_project"
-                project_dir.mkdir()
-                os.chdir(project_dir)
-                target = importlib.resources.files("protostar.templates").joinpath(
-                    "cli.toml"
-                )
-                blueprint = TemplateBlueprint.load(str(target), built_in="cli")
-                user_config = UserConfig()
-                modules: list[BootstrapModule] = [
-                    SystemWorkspaceModule(),
-                    PythonCore(),
-                ]
-                for mod in TOOLING_MODULES:
-                    is_active = getattr(user_config, mod.config_key, False)
-                    if blueprint and mod.config_key in blueprint.tooling_overrides:
-                        is_active = blueprint.tooling_overrides[mod.config_key]
-                    if is_active:
-                        modules.append(mod)
-
-                request = InitRequest(template_blueprint=blueprint)
-                engine = Orchestrator(modules, user_config, request=request)
-                manifest = engine.plan()
-                protostar.cli.ui.print_dry_run_summary(manifest)
-            finally:
-                os.chdir(orig_cwd)
+        with _demo_project():
+            engine, _ = _cli_template_engine()
+            protostar.cli.ui.print_dry_run_summary(engine.plan())
 
         _render_and_write_svg(
             record_console,
             title="zsh",
             filename="cli_dry_run.svg",
             unique_id="cli_dry_run",
+        )
+    finally:
+        protostar.cli.ui.console = original_global_console
+
+
+def _stub_subprocess(_runner: ProcessRunner, command: list[str], **_: Any) -> None:
+    """Stands in for every engine subprocess, creating only what later steps probe."""
+    if command[:2] == ["git", "init"]:
+        Path(".git").mkdir()
+
+
+def _stub_which(name: str) -> str | None:
+    """Reports every required binary present and no IDE CLI to probe."""
+    return None if name in ("code", "cursor") else f"/usr/bin/{name}"
+
+
+def generate_cli_init_svg() -> None:
+    """Captures the init progress trail by running the real engine on stubbed subprocesses.
+
+    The step labels come from the engine itself, so the image cannot drift from the
+    CLI. A non-terminal console keeps Rich's animated spinner out of the recording
+    while the checklist lines still print.
+    """
+    original_global_console = protostar.cli.ui.console
+    record_console = _recording_console(terminal=False)
+    _print_prompt(record_console, "init --template cli")
+
+    try:
+        protostar.cli.ui.console = record_console
+        with (
+            _demo_project(),
+            mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
+            mock.patch.object(ProcessRunner, "run", _stub_subprocess),
+            mock.patch("shutil.which", _stub_which),
+        ):
+            engine, request = _cli_template_engine()
+            protostar.cli.ui._run_engine(engine, request)
+
+        _render_and_write_svg(
+            record_console,
+            title="zsh",
+            filename="cli_init.svg",
+            unique_id="cli_init",
         )
     finally:
         protostar.cli.ui.console = original_global_console
@@ -1120,6 +1181,7 @@ def generate_docs_assets() -> None:
     print("Generating static documentation assets...")
     generate_cli_help_svgs()
     generate_cli_dry_run_svg()
+    generate_cli_init_svg()
     generate_default_config()
     generate_capability_tables()
     generate_manifest_state()

@@ -57,7 +57,7 @@ def test_python_module_uv_build(manifest, mocker):
 
     # Find the uv init task and verify its description
     task = next(t for t in manifest.tasks.system_tasks if t.command[0] == "uv")
-    assert task.description == "Scaffolding uv virtual environment"
+    assert task.description == "Initializing uv project"
 
 
 def test_python_module_uv_with_version(manifest, mocker):

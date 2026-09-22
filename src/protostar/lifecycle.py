@@ -18,6 +18,7 @@ from .models import ExecutionResult, InitRequest, RollbackContext
 from .modules import PythonCore, SystemWorkspaceModule
 from .orchestrator import Orchestrator
 from .preparation import ExecutionPolicy, PreparedReview, prepare_review
+from .progress import ProgressStep, no_progress
 from .recipe import read_recipe, select_tooling
 from .registry import resolve_hook_revisions
 from .review_workspace import capture_node
@@ -32,9 +33,15 @@ class PreparedProject:
     config: UserConfig
     review: PreparedReview
 
-    def apply(self) -> ExecutionResult:
-        """Applies lifecycle decisions atomically, with structured rollback reporting."""
-        executor = SystemExecutor(self.manifest, self.config, review=self.review)
+    def apply(self, *, progress: ProgressStep = no_progress) -> ExecutionResult:
+        """Applies lifecycle decisions atomically, with structured rollback reporting.
+
+        Args:
+            progress: Brackets each resolver subprocess for the caller.
+        """
+        executor = SystemExecutor(
+            self.manifest, self.config, review=self.review, progress=progress
+        )
         try:
             executor.execute()
         except (KeyboardInterrupt, ProtostarError) as error:

@@ -12,7 +12,7 @@ To guarantee idempotency and prevent partial initialization states (e.g., half-w
 
 The `Orchestrator` enforces a strict separation between read-only state aggregation and physical side effects (the [Headless Core](../design-principles.md#the-headless-core)). The core engine is purely headless: it ingests caller intent via an `InitRequest`, calculates the complete environment manifest via `plan()`, and mutates the workspace via `execute()`, returning an immutable `ExecutionResult`.
 
-All terminal interaction (collision prompts, remote trust confirmations, progress spinners) is isolated in the CLI presentation layer (`cli.py`).
+All terminal interaction (collision prompts, remote trust confirmations, the progress trail) is isolated in the CLI presentation layer (`cli.py`).
 
 ```mermaid
 flowchart TD
@@ -60,6 +60,8 @@ flowchart TD
     1. Writes local IDE settings.
     1. Executes system tasks and post-install subprocesses via `ProcessRunner`.
     1. Verifies IDE extensions and commits the transaction journal.
+
+    The initial scaffold and every subprocess run inside a step of the optional `progress` hook passed to `execute()`, which the CLI renders as a persistent checklist. The engine only names each step; it never renders one.
 
     If an exception occurs or the user interrupts execution (`KeyboardInterrupt`), the executor automatically terminates managed subprocesses and rolls back all journaled workspace paths. See [Rollback Internals](./rollback.md) for the full guarantee model and failure semantics.
 

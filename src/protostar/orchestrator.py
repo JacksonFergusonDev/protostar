@@ -27,6 +27,7 @@ from .modules import (
     ZensicalModule,
 )
 from .preparation import ExecutionPolicy
+from .progress import ProgressStep, no_progress
 from .system_deps import GlobalExecutable
 from .workflows import AgentsSpec, HookRunner, generate_agents_md
 
@@ -363,7 +364,9 @@ class Orchestrator:
 
         return manifest
 
-    def execute(self, manifest: EnvironmentManifest) -> ExecutionResult:
+    def execute(
+        self, manifest: EnvironmentManifest, *, progress: ProgressStep = no_progress
+    ) -> ExecutionResult:
         """Realizes the pre-built manifest on disk.
 
         Takes an already-built manifest from plan() and executes it. Performs no
@@ -371,6 +374,7 @@ class Orchestrator:
 
         Args:
             manifest: The populated EnvironmentManifest to execute.
+            progress: Brackets each presentable execution step for the caller.
 
         Raises:
             ExecutionInterruptedError: If the user interrupts execution after
@@ -398,7 +402,9 @@ class Orchestrator:
             )
 
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
-        executor = executor_cls(manifest, self.user_config, self.request.docker)
+        executor = executor_cls(
+            manifest, self.user_config, self.request.docker, progress=progress
+        )
 
         try:
             executor.execute()

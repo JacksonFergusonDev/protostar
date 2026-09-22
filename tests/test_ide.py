@@ -30,6 +30,65 @@ def test_ide_extension_check_with_enum(mocker):
     assert "Missing recommended vscode extensions" in msg
 
 
+def test_ide_extension_probe_runs_inside_a_step(mocker, progress):
+    """The IDE CLI probe is bracketed by a progress step."""
+    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch(
+        "protostar.ide.subprocess.run",
+        side_effect=lambda *_, **__: (
+            progress.events.append(("run", ""))
+            or MagicMock(stdout="charliermarsh.ruff\n")
+        ),
+    )
+
+    check_ide_extensions(
+        ide=IDEType.VSCODE,
+        ide_extensions={"charliermarsh.ruff"},
+        on_diagnostic=lambda msg, sev: None,
+        progress=progress,
+    )
+
+    assert progress.events == [
+        ("start", "Checking editor extensions"),
+        ("run", ""),
+        ("done", "Checking editor extensions"),
+    ]
+
+
+def test_ide_extension_probe_failure_completes_the_step(mocker, progress):
+    """A crashed probe is a skip diagnostic, so its step completes rather than fails."""
+    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch(
+        "protostar.ide.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(["code"], 5),
+    )
+    diagnostics = []
+
+    check_ide_extensions(
+        ide=IDEType.VSCODE,
+        ide_extensions={"charliermarsh.ruff"},
+        on_diagnostic=lambda msg, sev: diagnostics.append(sev),
+        progress=progress,
+    )
+
+    assert diagnostics == [Severity.SKIP]
+    assert progress.steps() == ["Checking editor extensions"]
+
+
+def test_ide_extension_check_without_cli_has_no_step(mocker, progress):
+    """No step is shown when the IDE CLI is absent and nothing is probed."""
+    mocker.patch("protostar.ide.shutil.which", return_value=None)
+
+    check_ide_extensions(
+        ide=IDEType.VSCODE,
+        ide_extensions={"charliermarsh.ruff"},
+        on_diagnostic=lambda msg, sev: None,
+        progress=progress,
+    )
+
+    assert progress.events == []
+
+
 def test_ide_extension_check_bypassed_if_wrong_ide(mocker):
     mock_which = mocker.patch("protostar.ide.shutil.which")
     diagnostics = []

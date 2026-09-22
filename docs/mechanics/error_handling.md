@@ -153,7 +153,7 @@ Raised when execution is interrupted by the user (`Ctrl+C`) after disk mutations
 
 ## Machine-Readable Error Envelopes (`--json`)
 
-When running in `--json` mode, Protostar suppresses all terminal UI formatting, spinners, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to `stdout`:
+When running in `--json` mode, Protostar suppresses all terminal UI formatting, progress output, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to `stdout`:
 
 ```json
 --8<-- "agent_payload_error.json"

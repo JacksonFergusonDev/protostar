@@ -3,7 +3,8 @@ import os
 os.environ["PYTHONIOENCODING"] = "utf-8"
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -102,3 +103,30 @@ def seed_global_config(tmp_path: Path) -> Callable[[str], None]:
         (config_dir / "config.toml").write_text(toml_content)
 
     return _seed
+
+
+class RecordedProgress:
+    """Progress hook that records each step's start and outcome in order."""
+
+    def __init__(self) -> None:
+        self.events: list[tuple[str, str]] = []
+
+    @contextmanager
+    def __call__(self, label: str) -> Iterator[None]:
+        self.events.append(("start", label))
+        try:
+            yield
+        except BaseException:
+            self.events.append(("fail", label))
+            raise
+        self.events.append(("done", label))
+
+    def steps(self) -> list[str]:
+        """Returns the labels of steps that completed, in order."""
+        return [label for event, label in self.events if event == "done"]
+
+
+@pytest.fixture
+def progress() -> RecordedProgress:
+    """Provides a progress hook that records the engine's execution steps."""
+    return RecordedProgress()

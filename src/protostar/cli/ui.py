@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import dataclasses
 import json
-import logging
 import shlex
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.status import Status
 from rich.table import Table
+from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import schema
@@ -24,6 +25,7 @@ from protostar.errors import (
 )
 from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
 from protostar.models import ExecutionResult, InitRequest
+from protostar.progress import ProgressStep
 from protostar.system import is_interactive
 from protostar.ui import Choice, confirm, select
 from protostar.ui import Style as UIStyle
@@ -58,18 +60,40 @@ def emit_json(payload: dict[str, Any]) -> None:
     print(json.dumps(payload, sort_keys=True), flush=True)  # noqa: T201
 
 
-class SpinnerHandler(logging.Handler):
-    """Routes INFO-level logs to update a rich Status spinner."""
+@contextmanager
+def progress_trail(initial: str) -> Iterator[ProgressStep]:
+    """Renders execution steps as a persistent checklist above a live spinner.
 
-    def __init__(self, status_obj: Status) -> None:
-        super().__init__(level=logging.INFO)
-        self.status_obj = status_obj
+    A running step's label animates in the spinner; when the step ends, a ``✔``
+    line (``✖`` if it raised) is printed above the spinner and stays on screen
+    after the spinner clears. Off a terminal, Rich draws no spinner and only the
+    checklist lines are written.
 
-    def emit(self, record: logging.LogRecord) -> None:
-        """Processes the log record and updates the status spinner if level is INFO."""
-        # Only update the spinner for INFO logs (ignore DEBUG)
-        if record.levelno == logging.INFO:
-            self.status_obj.update(record.getMessage())
+    Args:
+        initial: Spinner text shown until the first step starts.
+
+    Yields:
+        The step hook to hand to the engine.
+    """
+    with console.status(initial) as status:
+
+        @contextmanager
+        def step(label: str) -> Iterator[None]:
+            # Text, not markup: template-authored task descriptions reach here.
+            status.update(Text(label))
+            succeeded = False
+            try:
+                yield
+                succeeded = True
+            finally:
+                # Clear the label first, or the spinner redrawn beneath the new
+                # line would repeat the step that just finished. Rich ignores an
+                # empty update, so a blank stands in for no label.
+                status.update(Text(" "))
+                mark = ("✔", "bold green") if succeeded else ("✖", "bold red")
+                console.print(Text.assemble("  ", mark, f" {label}"))
+
+        yield step
 
 
 def _print_templates_and_exit(error_msg: str | None = None) -> None:
@@ -155,7 +179,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     - ``WorkspaceCollisionError`` re-raises immediately (no interactive prompt).
     - Untrusted external templates raise ``SecurityViolationError`` rather than
       prompting for confirmation.
-    - The Rich spinner and all human-readable output are suppressed to preserve
+    - The progress trail and all human-readable output are suppressed to preserve
       ``stdout`` for the JSON payload emitted by the caller.
 
     Args:
@@ -272,26 +296,12 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                 )
 
     # --- Execute ---
-    logger = logging.getLogger("protostar")
-    # Temporarily drop the log level to INFO so the spinner receives the events
-    previous_level = logger.level
-    if logger.getEffectiveLevel() > logging.INFO:
-        logger.setLevel(logging.INFO)
-
     if is_json_mode:
-        # Bypass the spinner entirely in JSON mode to keep stdout clean.
         result = engine.execute(manifest)
-        logger.setLevel(previous_level)
     else:
         console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
-        with console.status("Initializing...") as status:
-            spinner_handler = SpinnerHandler(status)
-            logger.addHandler(spinner_handler)
-            try:
-                result = engine.execute(manifest)
-            finally:
-                logger.removeHandler(spinner_handler)
-                logger.setLevel(previous_level)
+        with progress_trail("Preparing workspace") as progress:
+            result = engine.execute(manifest, progress=progress)
 
         # --- Render Diagnostics ---
         has_warnings = False

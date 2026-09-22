@@ -87,6 +87,8 @@ flowchart TD
 
 The engine's public surface — `Orchestrator.plan()` and `Orchestrator.execute()` — takes and returns pure data objects (`InitRequest` → `EnvironmentManifest` → `ExecutionResult`). It has no knowledge of terminal colors, interactive prompts, spinners, or `--json` formatting. Those concerns belong entirely to `cli.py`.
 
+Progress is the one thing that must cross the boundary *during* execution, and it crosses as a callback rather than a dependency. `execute()` accepts an optional `progress` hook (`ProgressStep` in `protostar.progress`): the engine enters `progress(label)` around each subprocess and the initial scaffold, naming the work in plain words. Only a fatal failure raises through a step, so a caller can mark it failed knowing rollback follows; non-fatal outcomes still arrive as diagnostics. What a step looks like is the caller's business. The CLI renders it as a spinner that leaves a permanent `✔` or `✖` line; library callers and `--json` pass nothing and get a no-op.
+
 ```mermaid
 flowchart LR
     classDef cli fill:#0f172a,stroke:#3b82f6,stroke-width:1px,color:#e2e8f0;
@@ -95,7 +97,7 @@ flowchart LR
     subgraph CLI ["CLI Presentation Layer (cli.py)"]
         direction LR
         TUI["Interactive Wizard"]:::cli
-        Spinner["Rich Progress Spinner"]:::cli
+        Trail["Progress Trail"]:::cli
         Collision["Collision Prompts"]:::cli
         JSON["--json Envelope Serializer"]:::cli
     end
@@ -107,6 +109,7 @@ flowchart LR
     end
 
     CLI --> Engine
+    Exec -.->|"progress(label)"| Trail
 ```
 
 **Why this matters:** Headless separation is what makes Protostar usable as a library and as a subprocess target for AI agents and CI pipelines. Because the engine accepts `InitRequest` and returns `ExecutionResult` without ever touching a terminal, it can be called programmatically, tested in isolation, and driven headlessly without stripping out interactive assumptions. The `--json` flag doesn't "disable" prompts — there were never any prompts inside the engine to begin with.

@@ -1,6 +1,6 @@
 """Transactional application of prepared byte and resolver decisions."""
 
-import logging
+import shlex
 from pathlib import Path
 
 from .config import UserConfig
@@ -24,6 +24,7 @@ from .preparation import (
     manifest_digest,
     prepare_review,
 )
+from .progress import ProgressStep, no_progress
 from .reconciliation import Reconciliation
 from .registry import resolve_hook_revisions
 from .review_workspace import LiveWorkspace
@@ -31,8 +32,6 @@ from .security import enforce_binary_safelist, enforce_path_jail
 from .sync_state import SyncState, serialize_state
 from .system import ProcessRunner, shield_sigint
 from .workspace import validate_resolver_workspace
-
-logger = logging.getLogger("protostar")
 
 __all__ = ["SystemExecutor"]
 
@@ -51,6 +50,7 @@ class SystemExecutor(Reconciliation):
         docker: bool = False,
         *,
         review: PreparedReview | None = None,
+        progress: ProgressStep = no_progress,
     ) -> None:
         """Initializes the executor with the target manifest state.
 
@@ -59,10 +59,12 @@ class SystemExecutor(Reconciliation):
             config: The active Protostar configuration instance.
             docker: If True, scaffolds a .dockerignore from the manifest ignores.
             review: Captured lifecycle decisions; consumes their frozen registry snapshot.
+            progress: Brackets each subprocess and the initial scaffold for a presenter.
         """
         self.workspace = LiveWorkspace()
         self.manifest = manifest
         self.review = review
+        self.progress = progress
         self.hook_revisions = (
             review.hook_revisions
             if review is not None
@@ -112,8 +114,9 @@ class SystemExecutor(Reconciliation):
                         "Initialization requires phased preparation.",
                         hint="Execute initialization without a lifecycle review.",
                     )
-                early = self._prepare(PreparationPhase.BEFORE_INITIALIZERS)
-                self._apply_review(early)
+                with self.progress("Writing project files"):
+                    early = self._prepare(PreparationPhase.BEFORE_INITIALIZERS)
+                    self._apply_review(early)
                 self._run_tasks(self.manifest.tasks.system_tasks)
                 resolver = self._prepare(PreparationPhase.BEFORE_RESOLVER)
                 self._apply_review(resolver)
@@ -152,6 +155,7 @@ class SystemExecutor(Reconciliation):
                 message=msg,
                 severity=sev,
             ),
+            progress=self.progress,
         )
 
     def _run_tasks(self, tasks: list[SystemTask]) -> None:
@@ -170,8 +174,6 @@ class SystemExecutor(Reconciliation):
                 self.journal.record_tree_creation(Path(t))
 
             enforce_binary_safelist(task.command)
-            binary_name = Path(task.command[0]).name
-            msg = task.description or f"Running: {binary_name}"
 
             # Prerequisite guards for post-install commands
             is_hook_install = (
@@ -186,9 +188,11 @@ class SystemExecutor(Reconciliation):
                 )
                 continue
 
-            logger.info(msg)
             try:
-                self.process_runner.run(task.command, timeout=task.timeout)
+                with self.progress(
+                    task.description or f"Running {shlex.join(task.command)}"
+                ):
+                    self.process_runner.run(task.command, timeout=task.timeout)
                 self.completed_tasks.append(task)
             except BaseException:
                 self.interrupted_task = task
@@ -216,7 +220,8 @@ class SystemExecutor(Reconciliation):
         for path in footprint.paths:
             enforce_path_jail(Path(path), Path.cwd())
             self.journal.record_mutation(Path(path))
-        self.process_runner.run(["uv", "lock"], timeout=600)
+        with self.progress("Refreshing uv.lock"):
+            self.process_runner.run(["uv", "lock"], timeout=600)
         self._resolution_dirty = False
 
     def _write_state(self) -> None:
@@ -275,7 +280,7 @@ class SystemExecutor(Reconciliation):
             self._validate_resolver_project()
             for path in action.footprint.paths:
                 self.journal.record_mutation(Path(path))
-            install_dependencies(accepted, self.process_runner)
+            install_dependencies(accepted, self.process_runner, self.progress)
         elif action.lock_required:
             self._run_lock(action.footprint)
         self._materialize_dependencies(accepted, set(action.blocked))
