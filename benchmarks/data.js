@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790113259825,
+  "lastUpdate": 1790114515585,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15815,6 +15815,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 265.1,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a13c978e5adcb157b0f670745972e108202e4a8c",
+          "message": "feat(recipe)!: persist template variables and drop --bind (#303)\n\nCustom template variables had three ways in and two persistence models:\nfree-form trailing flags, interactive answers, and --bind, which stored\nan environment-variable name in the recipe and read the value at replay.\nThe paths disagreed (the wizard prompted for values the flag path then\nrefused without bindings), and any mistyped flag silently became a\ntemplate variable.\n\nThere is now one mechanism. A template's variables get values from the\nrecipe, then --var NAME=VALUE flags, then a prompt in an interactive\nterminal, and every value persists in [tool.protostar.variables]. The\nrule is that template variables are non-secret: the recipe is committed,\nand the secret guard (previous PR) checks every value, including ones\nedited into the recipe by hand, since decode_recipe runs it too.\n\nThe engine no longer prompts. TemplateBlueprint.load's variable_resolver\ncallback is gone: TemplateSource.load() acquires a template once,\n.variables reports what it needs (checking names), and .render(context)\nraises MissingTemplateVariablesError listing every missing name. The CLI\nprompts between those steps, so a remote template is fetched once. In\n--json mode, off a terminal, and in sync, the error surfaces instead;\nits details() adds missing_variables to the JSON envelope.\n\n- --var replaces trailing dynamic flags and works with --template,\n  --from, or a recorded source; unknown names and repeats are rejected\n  without echoing values\n- argparse now parses strictly, so a mistyped flag is an error\n- one BUILT_IN_VARIABLES set and one identifier-shaped VARIABLE_NAME\n  pattern replace three separate copies\n- bindings, --bind, and their orchestrator and lifecycle checks are gone\n- docs teach non-secret examples instead of DATABASE_URL\n\nBREAKING CHANGE: --bind and [tool.protostar.bindings] are removed; pass\nvalues with --var or record them under [tool.protostar.variables].\nTrailing --NAME=value flags are no longer accepted.",
+          "timestamp": "2026-09-22T15:00:41-07:00",
+          "tree_id": "411202bdbed1ac8c51162c408dbd230e489f32e1",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a13c978e5adcb157b0f670745972e108202e4a8c"
+        },
+        "date": 1790114514771,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 203.6,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 272.84,
             "unit": "ms"
           }
         ]
