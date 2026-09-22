@@ -35,6 +35,7 @@ Execution is strictly split into two decoupled phases:
 - Terminal prompts, wizards, interactive conflict resolvers (`Merge`, `Overwrite`, `Abort`), and the progress trail belong exclusively to the CLI layer (`src/protostar/cli/`).
 - Engine code communicates via immutable request/result models and raises domain exceptions.
 - **The engine never prompts or calls back into the CLI for input.** Missing input is a domain error carrying structured data (e.g., `MissingTemplateVariablesError.variables`), and the CLI decides whether to ask. Split an operation so the CLI can learn what's needed first, as `TemplateSource.load()` / `.variables` / `.render()` do.
+- **No Textual app runs while `execute()` runs.** The app exits with an immutable decision result first; execution then runs on the main thread under the Rich progress trail so signal handling and rollback remain intact.
 - **Progress crosses the boundary only through `ProgressStep`** (`src/protostar/progress.py`). Wrap each new subprocess or slow operation in `with self.progress("<present-progressive label>"):`. Never use logging as a UI channel.
 - **Only a fatal failure (one that triggers rollback) may raise through a step.** Report non-fatal outcomes as diagnostics. A presenter must never raise on its own: the engine can't tell that apart from a failed step and will roll the work back.
 - Test steps with the `progress` fixture in `tests/conftest.py`, which records each step's start and outcome.
@@ -178,6 +179,7 @@ Scale or omit these sections based on the scope of the PR.
 
 ## Repository Layout Map
 
+- `src/protostar/cli/tui/`: Decision-only Textual app and recipe editor, accessed by the CLI exclusively through the lazy `launch.py` entry point.
 - `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).
 - `src/protostar/init_draft.py`: Shared init draft and resolver for flags and interactive choices.

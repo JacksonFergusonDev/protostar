@@ -18,10 +18,11 @@ repos:
       - id: check-case-conflict
       - id: check-symlinks
       - id: check-executables-have-shebangs
+      # Textual snapshots preserve the SVG serializer output byte-for-byte.
       - id: trailing-whitespace
-        exclude: \.py$
+        exclude: \.py$|^tests/__snapshots__/
       - id: end-of-file-fixer
-        exclude: \.py$|\.gitkeep$
+        exclude: \.py$|\.gitkeep$|^tests/__snapshots__/
       - id: check-yaml
       - id: check-json
       - id: check-toml
