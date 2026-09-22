@@ -34,6 +34,7 @@ Execution is strictly split into two decoupled phases:
 - **Never** import or call UI/terminal interaction packages (`rich.console`, `questionary`, progress spinners) inside engine modules. `tests/test_headless_boundary.py` enforces this: importing any module outside `protostar.cli` must not load `rich`, `questionary`, `prompt_toolkit`, or `textual`.
 - Terminal prompts, wizards, interactive conflict resolvers (`Merge`, `Overwrite`, `Abort`), and the progress trail belong exclusively to the CLI layer (`src/protostar/cli/`).
 - Engine code communicates via immutable request/result models and raises domain exceptions.
+- **The engine never prompts or calls back into the CLI for input.** Missing input is a domain error carrying structured data (e.g., `MissingTemplateVariablesError.variables`), and the CLI decides whether to ask. Split an operation so the CLI can learn what's needed first, as `TemplateSource.load()` / `.variables` / `.render()` do.
 - **Progress crosses the boundary only through `ProgressStep`** (`src/protostar/progress.py`). Wrap each new subprocess or slow operation in `with self.progress("<present-progressive label>"):`. Never use logging as a UI channel.
 - **Only a fatal failure (one that triggers rollback) may raise through a step.** Report non-fatal outcomes as diagnostics. A presenter must never raise on its own: the engine can't tell that apart from a failed step and will roll the work back.
 - Test steps with the `progress` fixture in `tests/conftest.py`, which records each step's start and outcome.
@@ -80,7 +81,7 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 
 ### 8. Template Variables Are Not Secrets
 
-- **Custom template variables are non-secret by definition.** Their values render into committed files. `check_variable_names` and `check_variable_values` (`src/protostar/secret_guard.py`) run in `TemplateBlueprint.from_sources` before anything renders.
+- **Custom template variables are non-secret by definition.** Their values persist in `[tool.protostar.variables]` and render into committed files. `check_variable_names` runs when `TemplateSource.variables` is first read; `check_variable_values` runs in `TemplateSource.render` before anything renders, and in `decode_recipe` for every recorded value. There is exactly one way to supply a value: the recipe, `--var`, or a CLI prompt, never an environment indirection.
 - **The guard has no override.** Never add a flag, marker, or allowlist entry that lets a flagged value through, and never echo a checked value in an error, log, or JSON payload; report the variable name and rule id only.
 - **The guard ports gitleaks, it doesn't extend it.** Don't add entropy-only or generic heuristics: every block must be near-certain because nothing can bypass it.
 - **`src/protostar/_secret_rules.py` is generated.** `scripts/sync_secret_rules.py` builds it from the gitleaks tag pinned in `_fallbacks.py`. Never hand-edit it; run `just sync-secret-rules` whenever that tag changes, and `--dump` to read the rules. Ruff is excluded from it because `--check` compares its text.

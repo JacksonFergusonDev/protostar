@@ -120,6 +120,15 @@ The agent can parse the `"paths"` array and choose how to proceed:
   adopting existing content, and append missing ignore rules.
 - Pass `--force-replace` to overwrite existing configuration files.
 
+#### Template Variables
+
+A template's custom variables are supplied with `--var NAME=VALUE`, once per
+variable. JSON mode never prompts, so a missing value returns a
+`MissingTemplateVariablesError` payload whose `missing_variables` array names every
+variable still needed; retry with a `--var` for each. Values are saved in the
+project recipe and must not be secrets: a credential-shaped value returns a
+`SecretDetectedError` whose `findings` name the variable and matching rule.
+
 ### 3. Headless Execution
 
 Once the plan is verified, the agent executes initialization:

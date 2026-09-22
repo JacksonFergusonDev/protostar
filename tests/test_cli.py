@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from protostar.cli.main import (
-    _parse_dynamic_kwargs,
+    _parse_var_flags,
     configure_logging,
     handle_config,
     handle_init,
@@ -373,7 +373,7 @@ def test_intercept_interactive_wizards_success(mocker):
     # Emulate running `protostar` with no arguments
     mocker.patch.object(sys, "argv", ["protostar"])
 
-    selections = WizardSelections(modules=[], docker=True)
+    selections = WizardSelections(modules=[], docker=True, variables={"REGION": "eu"})
     mocker.patch("protostar.cli.parser.run_init_wizard", return_value=selections)
     mocker.patch("protostar.cli.parser.UserConfig.load")
     mock_orchestrator = mocker.patch("protostar.cli.parser.Orchestrator")
@@ -407,6 +407,9 @@ def test_intercept_interactive_wizards_success(mocker):
     mock_orchestrator.return_value.plan.assert_called_once()
     mock_orchestrator.return_value.execute.assert_called_once()
     mock_exit.assert_called_once_with(0)
+    # Values entered in the wizard are recorded in the recipe, like --var values.
+    request = mock_orchestrator.call_args.kwargs["request"]
+    assert dict(request.recipe.variables) == {"REGION": "eu"}
 
 
 def test_print_table_help_execution(mocker):
@@ -780,24 +783,26 @@ def test_cli_handles_command_execution_error_output(mocker):
     assert "Network timeout" in panel_body
 
 
-def test_parse_dynamic_kwargs_valid():
-    """Test that dynamic CLI kwargs are parsed correctly."""
-    args = ["--project_name=orbit", "--author", "jackson", "--flag_without_value"]
-    kwargs = _parse_dynamic_kwargs(args)
+def test_parse_var_flags_splits_on_the_first_equals():
+    values = _parse_var_flags(["org=Acme", "url=https://x.test/?a=b", "note="])
 
-    assert kwargs == {
-        "project_name": "orbit",
-        "author": "jackson",
-        "flag_without_value": "",
-    }
+    assert values == {"org": "Acme", "url": "https://x.test/?a=b", "note": ""}
 
 
-def test_parse_dynamic_kwargs_rejects_positional():
-    """Test that positional arguments raise a ConfigurationError."""
-    args = ["--project_name", "orbit", "invalid_positional"]
+@pytest.mark.parametrize(
+    "entry", ["no-equals", "=value", "1st=value", "has-dash=value"]
+)
+def test_parse_var_flags_rejects_malformed_entries_without_echoing_them(entry):
+    with pytest.raises(InvalidUsageError) as caught:
+        _parse_var_flags([entry])
 
-    with pytest.raises(ConfigurationError, match="Unrecognized positional argument"):
-        _parse_dynamic_kwargs(args)
+    assert "value" not in str(caught.value).replace("VALUE", "")
+    assert entry not in str(caught.value)
+
+
+def test_parse_var_flags_rejects_repeated_names():
+    with pytest.raises(InvalidUsageError, match="org is given more than once"):
+        _parse_var_flags(["org=a", "org=b"])
 
 
 def test_handle_init_template_resolution(mocker):
@@ -810,7 +815,6 @@ def test_handle_init_template_resolution(mocker):
     args = argparse.Namespace(
         template_name="astro",
         from_path=None,
-        template_context={},
         python_version="3.12",
         docker=False,
     )
@@ -823,10 +827,13 @@ def test_handle_init_template_resolution(mocker):
     from protostar.config import TemplateBlueprint
     from protostar.intent import TemplateOrigin, TemplateReference
 
-    mock_bp_load = mocker.patch(
-        "protostar.cli.main.TemplateBlueprint.load",
-        return_value=TemplateBlueprint(
-            reference=TemplateReference(TemplateOrigin.BUILT_IN, "astro", "a" * 64)
+    blueprint = TemplateBlueprint(
+        reference=TemplateReference(TemplateOrigin.BUILT_IN, "astro", "a" * 64)
+    )
+    mock_source_load = mocker.patch(
+        "protostar.cli.main.TemplateSource.load",
+        return_value=mocker.Mock(
+            variables=frozenset(), render=mocker.Mock(return_value=blueprint)
         ),
     )
 
@@ -838,13 +845,10 @@ def test_handle_init_template_resolution(mocker):
     expected_path = str(
         importlib.resources.files("protostar.templates").joinpath("astro.toml")
     )
-    mock_bp_load.assert_any_call(
-        expected_path,
-        template_context={},
-        variable_resolver=mocker.ANY,
-        built_in="astro",
-        display_name="astro",
+    mock_source_load.assert_called_once_with(
+        expected_path, built_in="astro", display_name="astro"
     )
+    mock_source_load.return_value.render.assert_called_once_with({})
     assert mock_load.call_count >= 1
 
 
@@ -870,7 +874,6 @@ def test_handle_init_cli_template_resolution(mocker):
     args = argparse.Namespace(
         template_name="cli",
         from_path=None,
-        template_context={},
         python_version="3.12",
         docker=False,
     )
@@ -913,13 +916,17 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
         diagnostics=(), touched_paths=frozenset()
     )
 
-    # Mock TemplateBlueprint to prevent network calls during the test
-    mocker.patch("protostar.cli.main.TemplateBlueprint.load", return_value=None)
+    # Mock the template source to prevent network calls during the test
+    mocker.patch(
+        "protostar.cli.main.TemplateSource.load",
+        return_value=mocker.Mock(
+            variables=frozenset(), render=mocker.Mock(return_value=None)
+        ),
+    )
 
     args = argparse.Namespace(
         template_name="my-custom-org",
         from_path=None,
-        template_context={},
         docker=False,
         force_merge=False,
         force_replace=False,
@@ -965,7 +972,6 @@ def test_cli_rejects_unknown_templates(mocker) -> None:
     args = argparse.Namespace(
         template_name="non-existent-template",
         from_path=None,
-        template_context={},
     )
 
     with pytest.raises(
@@ -1364,7 +1370,7 @@ def test_version_flag_json_mode_subcommand_rejected(capsys, monkeypatch):
     payload = json.loads(captured.out)
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "InvalidUsageError"
-    assert "Unrecognized arguments: --version" in payload["error"]["message"]
+    assert "unrecognized arguments: --version" in payload["error"]["message"]
 
 
 def test_verbose_flag_suppressed_in_non_init_help(capsys, monkeypatch):

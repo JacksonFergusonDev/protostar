@@ -8,7 +8,6 @@ from .errors import (
     ConfigurationError,
     ExecutionInterruptedError,
     ProtostarError,
-    TemplateResolutionError,
 )
 from .executor import SystemExecutor
 from .intent import TemplateOrigin
@@ -96,34 +95,17 @@ def prepare_project() -> PreparedProject:
         ) from error
     context = recipe.rendering_context()
 
+    # sync never prompts: a variable the template gained since the recipe was
+    # written raises MissingTemplateVariablesError with every missing name.
     try:
-        blueprint = recipe.source.inspect(root, context) if recipe.source else None
-    except ProtostarError as error:
-        # Template parsing can mention rendered values; recipe bindings must
-        # never appear in diagnostic messages, even for invalid rendered input.
-        if isinstance(
-            error, TemplateResolutionError
-        ) and "Template requires variables:" in str(error):
-            raise ConfigurationError(
-                "Template variables lack environment bindings.",
-                hint="Add variable-to-environment-name entries under [tool.protostar.bindings].",
-            ) from error
-        if recipe.bindings:
-            raise ConfigurationError(
-                "Cannot load the recorded template with its environment bindings.",
-                hint="Verify the recorded source, [tool.protostar.bindings], and environment values.",
-            ) from error
-        raise
+        blueprint = (
+            recipe.source.inspect(root).render(context) if recipe.source else None
+        )
     except (OSError, UnicodeError) as error:
         raise ConfigurationError(
             "Cannot read the recorded template source.",
             hint="Verify its locator and UTF-8 source files.",
         ) from error
-    if blueprint and not blueprint.custom_variables <= set(dict(recipe.bindings)):
-        raise ConfigurationError(
-            "Template variables lack environment bindings.",
-            hint="Add variable-to-environment-name entries under [tool.protostar.bindings].",
-        )
     check_template_identity(state, blueprint.reference if blueprint else None)
     if blueprint and blueprint.reference and state.template:
         blueprint.reference = replace(

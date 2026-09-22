@@ -24,10 +24,10 @@ from rich.text import Text
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
 from protostar.cli.prompts import confirm
-from protostar.cli.wizard import resolve_missing_variables
+from protostar.cli.wizard import prompt_template_variables
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
-    TemplateBlueprint,
+    TemplateSource,
     UserConfig,
     active_config_source,
     select_config_source,
@@ -50,6 +50,7 @@ from protostar.errors import (
 )
 from protostar.fs import atomic_write_text
 from protostar.intent import TemplateOrigin
+from protostar.interpolation import VARIABLE_NAME
 from protostar.manifest import ProjectMetadata
 from protostar.metadata import resolve_auto_metadata
 from protostar.models import InitRequest
@@ -59,6 +60,7 @@ from protostar.modules import (
     PythonCore,
     SystemWorkspaceModule,
 )
+from protostar.system import is_interactive
 
 logger = logging.getLogger("protostar")
 
@@ -70,7 +72,7 @@ def handle_init(args: argparse.Namespace) -> None:
 
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
-    template_context = getattr(args, "template_context", {})
+    flag_values = _parse_var_flags(getattr(args, "variables", []))
 
     from dataclasses import replace
     from pathlib import Path
@@ -79,28 +81,6 @@ def handle_init(args: argparse.Namespace) -> None:
 
     user_config = UserConfig.load()
     existing_recipe = read_recipe(Path("pyproject.toml"))
-    bindings = dict(existing_recipe.bindings) if existing_recipe else {}
-    for binding in getattr(args, "bind", []):
-        variable, separator, environment = binding.partition("=")
-        if not separator:
-            raise ConfigurationError(
-                "Invalid environment binding.", hint="Use --bind VARIABLE=ENVIRONMENT."
-            )
-        bindings[variable] = environment
-    # Validate binding names before touching environment values.
-    binding_recipe = establish_recipe(user_config)
-    from protostar.recipe import decode_recipe
-
-    decode_recipe(
-        replace(binding_recipe, bindings=tuple(sorted(bindings.items()))).to_dict()
-    )
-    for variable, environment in bindings.items():
-        if environment not in os.environ:
-            raise ConfigurationError(
-                f"Missing environment binding for {variable}.",
-                hint=f"Set environment variable {environment}.",
-            )
-        template_context[variable] = os.environ[environment]
     if existing_recipe:
         user_config = replace(
             user_config, python_version=existing_recipe.python, ide=existing_recipe.ide
@@ -160,28 +140,24 @@ def handle_init(args: argparse.Namespace) -> None:
         else None
     )
 
-    def resolve_bound_variables(missing: list[str]) -> dict[str, str]:
-        if getattr(args, "dry_run", False):
-            return resolve_missing_variables(missing)
-        raise ConfigurationError(
-            "Custom interpolation requires environment bindings.",
-            hint="Provide --bind VARIABLE=ENVIRONMENT for every custom template variable.",
-        )
-
+    source: TemplateSource | None = None
+    render_context: dict[str, str] = {}
     if not override_target and existing_recipe and existing_recipe.source:
-        blueprint = existing_recipe.source.load(
-            Path.cwd(), existing_recipe.rendering_context()
-        )
+        source = existing_recipe.source.acquire(Path.cwd())
+        render_context = existing_recipe.rendering_context()
         is_external = existing_recipe.source.origin is not TemplateOrigin.BUILT_IN
         is_trusted = not is_external
     elif override_target:
-        blueprint = TemplateBlueprint.load(
-            override_target,
-            template_context=template_context,
-            variable_resolver=resolve_bound_variables,
-            built_in=built_in,
-            display_name=template_name,
+        source = TemplateSource.load(
+            override_target, built_in=built_in, display_name=template_name
         )
+    variables = _resolve_template_variables(
+        source,
+        dict(existing_recipe.variables) if existing_recipe else {},
+        flag_values,
+    )
+    if source is not None:
+        blueprint = source.render({**render_context, **variables})
 
     modules: list[BootstrapModule] = []
 
@@ -282,6 +258,7 @@ def handle_init(args: argparse.Namespace) -> None:
             cast(ProjectMetadata, resolved_metadata),
             docker,
             getattr(args, "python_version", None),
+            tuple(sorted(variables.items())),
         ),
     )
     from protostar.recipe import decode_recipe
@@ -290,7 +267,6 @@ def handle_init(args: argparse.Namespace) -> None:
         recipe,
         tools=tuple(sorted(overrides.items())),
         fallback=tuple(sorted(fallback.items())),
-        bindings=tuple(sorted(bindings.items())),
         context=existing_recipe.context if existing_recipe else recipe.context,
     )
     if getattr(args, "python_version", None):
@@ -299,13 +275,6 @@ def handle_init(args: argparse.Namespace) -> None:
         recipe = replace(recipe, context=tuple(sorted(context.items())))
     recipe = decode_recipe(recipe.to_dict())
 
-    # Custom answers must have replayable bindings; never persist their values.
-    custom = set(template_context) - set(dict(recipe.context))
-    if not custom <= set(bindings) and not getattr(args, "dry_run", False):
-        raise ConfigurationError(
-            "Custom interpolation requires environment bindings.",
-            hint="Use --bind VARIABLE=ENVIRONMENT instead of persisting interpolation answers.",
-        )
     request = InitRequest(
         recipe=recipe,
         python_version=recipe.python,
@@ -448,41 +417,83 @@ def configure_logging() -> None:
     )
 
 
-def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
-    """Parses trailing unknown CLI arguments into a variable dictionary.
+def _parse_var_flags(entries: list[str]) -> dict[str, str]:
+    """Parses repeated ``--var NAME=VALUE`` flags.
+
+    Error messages never repeat a value: one may be a secret passed by mistake.
 
     Args:
-        unknown_args: The trailing list of arguments rejected by the main parser.
+        entries: The raw ``--var`` arguments, in order.
 
     Returns:
-        A dictionary mapping the dynamic flag names to their values.
+        Each variable name mapped to its value.
 
     Raises:
-        ConfigurationError: If positional (non-flag) arguments are encountered.
+        InvalidUsageError: If an entry is malformed or a name repeats.
     """
-    kwargs = {}
-    i = 0
-    while i < len(unknown_args):
-        arg = unknown_args[i]
-        if arg.startswith("--"):
-            key = arg.lstrip("-")
-            if "=" in key:
-                k, v = key.split("=", 1)
-                kwargs[k] = v
-            else:
-                if i + 1 < len(unknown_args) and not unknown_args[i + 1].startswith(
-                    "--"
-                ):
-                    kwargs[key] = unknown_args[i + 1]
-                    i += 1
-                else:
-                    kwargs[key] = ""
-        else:
-            raise ConfigurationError(
-                f"Unrecognized positional argument for interpolation: {arg}"
+    values: dict[str, str] = {}
+    for entry in entries:
+        name, separator, value = entry.partition("=")
+        if not separator or not VARIABLE_NAME.fullmatch(name):
+            raise InvalidUsageError(
+                "Each --var must be NAME=VALUE.",
+                hint="NAME is a letter or underscore followed by letters, digits, or underscores.",
             )
-        i += 1
-    return kwargs
+        if name in values:
+            raise InvalidUsageError(
+                f"--var {name} is given more than once.",
+                hint="Pass each template variable once.",
+            )
+        values[name] = value
+    return values
+
+
+def _resolve_template_variables(
+    source: TemplateSource | None,
+    recorded: dict[str, str],
+    flags: dict[str, str],
+) -> dict[str, str]:
+    """Collects values for a template's variables.
+
+    Recorded values come first and ``--var`` flags override them. Any still
+    missing are prompted for in an interactive terminal; otherwise rendering
+    raises ``MissingTemplateVariablesError`` listing them all.
+
+    Args:
+        source: The template being applied, if any.
+        recorded: Values from the project's existing recipe.
+        flags: Values from ``--var`` flags.
+
+    Returns:
+        Values for the template's variables; recorded values the template no
+        longer uses are dropped.
+
+    Raises:
+        InvalidUsageError: If a flag names no variable of the template, or
+            flags are given without a template.
+    """
+    if source is None:
+        if flags:
+            raise InvalidUsageError(
+                "--var needs a template.",
+                hint="Pass --template or --from, or run init in a project that records one.",
+            )
+        return {}
+    unknown = sorted(set(flags) - source.variables)
+    if unknown:
+        known = ", ".join(sorted(source.variables)) or "none"
+        raise InvalidUsageError(
+            f"The template has no variable named {', '.join(unknown)}.",
+            hint=f"Its variables are: {known}.",
+        )
+    values = {
+        name: value for name, value in recorded.items() if name in source.variables
+    }
+    values.update(flags)
+    missing = sorted(source.variables - values.keys())
+    if missing and is_interactive() and not ui.is_json_mode:
+        values.update(prompt_template_variables(missing))
+    return values
 
 
 def main() -> None:
@@ -495,18 +506,7 @@ def main() -> None:
 
     try:
         parser.intercept_interactive_wizards(arg_parser)
-        args, unknown = arg_parser.parse_known_args()
-
-        if unknown and (
-            getattr(args, "command", None) != "init"
-            or not getattr(args, "from_path", None)
-        ):
-            raise InvalidUsageError(
-                f"Unrecognized arguments: {' '.join(unknown)}",
-                docs_path=parser._resolve_usage_doc_path(),
-            )
-
-        args.template_context = _parse_dynamic_kwargs(unknown)
+        args = arg_parser.parse_args()
 
         # Applied before any handler reads configuration.
         select_config_source(

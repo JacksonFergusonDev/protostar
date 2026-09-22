@@ -103,9 +103,9 @@ protostar init --template cli --force-merge
 
 Include the original tooling choices and source as appropriate. Protostar does not
 reconstruct a request from the ownership lock. Enrollment preserves existing
-ownership and does not adopt equal foreign content. Custom interpolation requires
-[environment bindings](../development/project-recipe.md#custom-interpolation).
-Missing recipes, malformed state, and missing bindings fail before mutation.
+ownership and does not adopt equal foreign content. Template variable values come
+from the recipe; see [template variables](../development/project-recipe.md#template-variables).
+Missing recipes, malformed state, and missing variable values fail before mutation.
 
 ## Use checks in CI
 
@@ -138,9 +138,10 @@ registry snapshot; apply uses those captured decisions without a second fetch.
 Trust is not inherited from the recipe or lock. Initialization-only tasks remain
 excluded even for trusted external templates.
 
-Custom environment values resolve in memory; bindings record environment names,
-not values. Generated files and review diffs contain project content, so diffs are
-not a secret-redaction system. Keep credentials out of rendered configuration.
+Template variable values are recorded in the recipe and pass the secret guard
+whenever it is read. Generated files and review diffs contain project content, so
+diffs are not a secret-redaction system. Keep credentials out of rendered
+configuration.
 
 Before mutation, sync checks captured bytes, existence, and modes. Changed inputs
 abort as a stale review before the first write. This protects the review/apply

@@ -736,7 +736,7 @@ class EnvironmentManifest:
         }
 
     def _path_context(self) -> dict[str, str]:
-        """Returns the names that render target paths, without environment bindings."""
+        """Returns the built-in names that render target paths."""
         if self.recipe:
             return dict(self.recipe.context)
         return {

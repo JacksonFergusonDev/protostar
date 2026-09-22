@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import importlib.resources
-import os
 import re
 import stat
 import tomllib
@@ -25,11 +24,13 @@ from .documents.pyproject_layout import (
 from .errors import ConfigurationError, UnsupportedFilesystemNodeError
 from .ide import IDEType
 from .intent import TemplateOrigin, TemplateReference
+from .interpolation import BUILT_IN_VARIABLES, VARIABLE_NAME
 from .manifest import ProjectMetadata
+from .secret_guard import check_variable_values
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
-    from .config import TemplateBlueprint, UserConfig
+    from .config import TemplateSource, UserConfig
     from .modules import BootstrapModule
 
 
@@ -81,9 +82,9 @@ class RecipeSource:
     origin: TemplateOrigin
     locator: str
 
-    def load(self, root: Path, context: dict[str, str]) -> TemplateBlueprint:
+    def acquire(self, root: Path) -> TemplateSource:
         """Acquires the recorded source, without consulting aliases."""
-        from .config import TemplateBlueprint
+        from .config import TemplateSource
 
         target = self.locator
         if self.origin is TemplateOrigin.BUILT_IN:
@@ -94,14 +95,13 @@ class RecipeSource:
             )
         elif self.origin is TemplateOrigin.LOCAL:
             target = str(root / target)
-        return TemplateBlueprint.load(
+        return TemplateSource.load(
             target,
-            template_context=context,
             built_in=self.locator if self.origin is TemplateOrigin.BUILT_IN else None,
         )
 
-    def inspect(self, root: Path, context: dict[str, str]) -> TemplateBlueprint:
-        """Loads the exact recorded revision with no remote disk acquisition."""
+    def inspect(self, root: Path) -> TemplateSource:
+        """Acquires the exact recorded revision with no remote disk acquisition."""
         if self.origin is not TemplateOrigin.REMOTE:
             from .review_workspace import capture_node
 
@@ -125,10 +125,10 @@ class RecipeSource:
             if template.is_dir():
                 for path in template.rglob("*"):
                     capture_node(path)
-            return self.load(root, context)
+            return self.acquire(root)
         import hashlib
 
-        from .config import TemplateBlueprint
+        from .config import TemplateSource
         from .network import acquire_inspection_source, resolve_remote_source
 
         source = resolve_remote_source(self.locator)
@@ -139,14 +139,16 @@ class RecipeSource:
             hashlib.sha256(acquired.template_bytes).hexdigest(),
             source_revision=source.revision,
         )
-        return TemplateBlueprint.from_sources(
-            acquired.template_bytes, acquired.files, reference, context
-        )
+        return TemplateSource(acquired.template_bytes, dict(acquired.files), reference)
 
 
 @dataclass(frozen=True)
 class ProjectRecipe:
-    """Immutable schema-v1 project recipe containing no trust or variable answers."""
+    """Immutable schema-v1 project recipe; it records no trust decisions.
+
+    Template variable values are recorded as given: they are non-secret by
+    definition, and every value passes the secret guard when decoded.
+    """
 
     source: RecipeSource | None
     python: str
@@ -156,7 +158,7 @@ class ProjectRecipe:
     fallback: tuple[tuple[Tool, bool], ...]
     context: tuple[tuple[str, str], ...]
     metadata: tuple[tuple[str, str | tuple[str, ...]], ...]
-    bindings: tuple[tuple[str, str], ...] = ()
+    variables: tuple[tuple[str, str], ...] = ()
 
     def selections(self, opinions: dict[str, bool]) -> tuple[ToolSelection, ...]:
         """Resolves overrides, current template opinions, then captured defaults."""
@@ -180,19 +182,11 @@ class ProjectRecipe:
         )
 
     def rendering_context(self) -> dict[str, str]:
-        """Resolves environment bindings in memory, without exposing values."""
-        context = dict(self.context)
-        for variable, environment in self.bindings:
-            if environment not in os.environ:
-                raise ConfigurationError(
-                    f"Missing environment binding for {variable}.",
-                    hint=f"Set environment variable {environment} before initializing this project.",
-                )
-            context[variable] = os.environ[environment]
-        return context
+        """Returns the built-in context plus the recorded template variables."""
+        return {**dict(self.context), **dict(self.variables)}
 
     def to_dict(self) -> dict[str, Any]:
-        """Returns deterministic public recipe data without environment values."""
+        """Returns deterministic public recipe data."""
         return {
             "version": 1,
             "mode": "template" if self.source else "tooling-only",
@@ -216,12 +210,12 @@ class ProjectRecipe:
                 k: list(v) if isinstance(v, tuple) else v
                 for k, v in sorted(self.metadata)
             },
-            "bindings": dict(sorted(self.bindings)),
+            "variables": dict(sorted(self.variables)),
         }
 
 
 # Tables that are omitted from pyproject.toml while empty; an absent one means empty.
-_OPTIONAL_TABLES = frozenset({"tools", "metadata", "bindings"})
+_OPTIONAL_TABLES = frozenset({"tools", "metadata", "variables"})
 
 # The order recipe entries are written in, and where a late-added table belongs.
 _RECIPE_ORDER = (
@@ -235,7 +229,7 @@ _RECIPE_ORDER = (
     "fallback",
     "context",
     "metadata",
-    "bindings",
+    "variables",
 )
 
 
@@ -247,7 +241,7 @@ def _invalid() -> ConfigurationError:
 
 
 def decode_recipe(data: object) -> ProjectRecipe:
-    """Strictly validates recipe fields, source identity, and binding names."""
+    """Strictly validates recipe fields, source identity, and template variables."""
     if not isinstance(data, dict):
         raise _invalid()
     required = {"version", "mode", "python", "docker", "ide", "fallback", "context"}
@@ -328,14 +322,8 @@ def decode_recipe(data: object) -> ProjectRecipe:
             raise _invalid()
         return tuple(sorted((Tool(k), v) for k, v in raw.items()))
 
-    context, metadata, bindings = data["context"], data["metadata"], data["bindings"]
-    names = {
-        "PROJECT_NAME",
-        "PACKAGE_NAME",
-        "PYTHON_VERSION",
-        "CURRENT_YEAR",
-        "AUTHOR_NAME",
-    }
+    context, metadata, variables = data["context"], data["metadata"], data["variables"]
+    names = BUILT_IN_VARIABLES
     if (
         not isinstance(context, dict)
         or set(context) != names
@@ -350,14 +338,13 @@ def decode_recipe(data: object) -> ProjectRecipe:
         or context["PYTHON_VERSION"] != data["python"]
     ):
         raise _invalid()
-    if not isinstance(bindings, dict) or any(
-        not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", k)
-        or k in names
-        or not isinstance(v, str)
-        or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", v)
-        for k, v in bindings.items()
+    if not isinstance(variables, dict) or any(
+        not VARIABLE_NAME.fullmatch(k) or k in names or not isinstance(v, str)
+        for k, v in variables.items()
     ):
         raise _invalid()
+    # A hand-edited recipe is guarded exactly like a prompted or flagged value.
+    check_variable_values(variables)
     allowed = {
         "description",
         "license",
@@ -399,7 +386,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
                 (k, tuple(v) if isinstance(v, list) else v) for k, v in metadata.items()
             )
         ),
-        tuple(sorted(bindings.items())),
+        tuple(sorted(variables.items())),
     )
 
 
@@ -503,6 +490,7 @@ class RecipeIntent:
     metadata: ProjectMetadata | None = None
     docker: bool = False
     python: str | None = None
+    variables: tuple[tuple[str, str], ...] = ()
 
 
 def establish_recipe(
@@ -552,6 +540,7 @@ def establish_recipe(
                 }
             )
         ),
+        tuple(sorted(intent.variables)),
     )
     return decode_recipe(recipe.to_dict())
 

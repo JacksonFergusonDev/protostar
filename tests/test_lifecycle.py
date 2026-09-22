@@ -1,7 +1,9 @@
 """Focused acceptance for read-only project lifecycle inspection."""
 
 import json
+import random
 import stat
+import string
 from dataclasses import replace
 from pathlib import Path
 
@@ -9,8 +11,14 @@ import pytest
 
 from protostar.cli import main, schema, ui
 from protostar.cli.reviews import review_payload
-from protostar.config import TemplateBlueprint, UserConfig
-from protostar.errors import ConfigurationError, InvalidUsageError, ProtostarError
+from protostar.config import TemplateSource, UserConfig
+from protostar.errors import (
+    ConfigurationError,
+    InvalidUsageError,
+    MissingTemplateVariablesError,
+    ProtostarError,
+    SecretDetectedError,
+)
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project
 from protostar.manifest import EnvironmentManifest
@@ -29,7 +37,7 @@ def project(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "source.toml"
     source.write_text(source_text("original"))
-    blueprint = TemplateBlueprint.load(str(source))
+    blueprint = TemplateSource.load(str(source)).render({})
     recipe = establish_recipe(UserConfig(), RecipeIntent(reference=blueprint.reference))
     recipe = replace(recipe, fallback=tuple((tool, False) for tool in Tool))
     manifest = EnvironmentManifest(
@@ -145,26 +153,58 @@ def test_capabilities_publish_review_schema():
     assert capabilities["review_schema"]["properties"]["status"]["const"] == "reviewed"
 
 
-def test_missing_bindings_and_values_are_actionable_and_private(project, monkeypatch):
+def _record_variables(variables):
     import tomlkit
 
-    project.write_text('[files]\n"secret.txt" = "<% CUSTOM %>"\n')
-    with pytest.raises(ProtostarError) as caught:
-        inspect_project()
-    assert caught.value.hint
     data = tomlkit.parse(Path("pyproject.toml").read_text())
-    data["tool"]["protostar"]["bindings"] = {"CUSTOM": "LIFECYCLE_TEST_SECRET"}
+    data["tool"]["protostar"]["variables"] = variables
     Path("pyproject.toml").write_text(tomlkit.dumps(data))
-    monkeypatch.delenv("LIFECYCLE_TEST_SECRET", raising=False)
-    with pytest.raises(ConfigurationError) as caught:
+
+
+def test_template_variables_render_from_the_recipe(project):
+    """sync never prompts: recorded values render, and a new variable fails loudly."""
+    project.write_text('[files]\n"custom.txt" = "<% REGION %> <% TIER %>"\n')
+
+    with pytest.raises(MissingTemplateVariablesError) as caught:
         inspect_project()
-    assert caught.value.hint is not None
-    assert "LIFECYCLE_TEST_SECRET" in caught.value.hint
-    monkeypatch.setenv("LIFECYCLE_TEST_SECRET", "private-value")
+    assert caught.value.variables == ("REGION", "TIER")
+    assert caught.value.details() == {"missing_variables": ["REGION", "TIER"]}
+    assert "[tool.protostar.variables]" in (caught.value.hint or "")
+
+    _record_variables({"REGION": "eu-west-1", "TIER": "gold"})
     review = inspect_project()
-    assert "private-value" not in __import__(
-        "protostar.sync_state", fromlist=["serialize_state"]
-    ).serialize_state(review.candidate_state)
+
+    edits = {edit.path: edit.after for edit in review.edits}
+    assert edits["custom.txt"] == b"eu-west-1 gold"
+
+
+def test_recorded_variable_values_pass_the_secret_guard(project):
+    """A hand-edited recipe is checked exactly like a flag or a prompt."""
+    # Built at test time; a literal would trip this repository's gitleaks hook.
+    rng = random.Random(20260922)
+    token = "ghp_" + "".join(
+        rng.choice(string.ascii_letters + string.digits) for _ in range(36)
+    )
+    project.write_text('[files]\n"custom.txt" = "<% REGION %>"\n')
+    _record_variables({"REGION": token})
+
+    with pytest.raises(SecretDetectedError) as caught:
+        inspect_project()
+    assert token not in str(caught.value)
+
+
+def test_sync_json_lists_missing_template_variables(project, monkeypatch, capsys):
+    project.write_text('[files]\n"custom.txt" = "<% REGION %>"\n')
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync", "--json"])
+
+    with pytest.raises(SystemExit) as caught:
+        main()
+
+    assert caught.value.code != 0
+    error = json.loads(capsys.readouterr().out)["error"]
+    assert error["type"] == "MissingTemplateVariablesError"
+    assert error["missing_variables"] == ["REGION"]
 
 
 @pytest.mark.parametrize("archive_kind", ["zip", "tar"])
@@ -231,7 +271,7 @@ def test_structured_conflict_has_safe_sibling_and_state_only_advancement(
     injection = "[tool.example]\nvalue = 1\n"
     project.write_text("[dev.pyproject]\nexample = " + "'''" + injection + "'''\n")
     manifest = EnvironmentManifest(
-        template_reference=TemplateBlueprint.load(str(project)).reference
+        template_reference=TemplateSource.load(str(project)).render({}).reference
     )
     assert manifest.template_reference is not None
     manifest.filesystem.add_structured(

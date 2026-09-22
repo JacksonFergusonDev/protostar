@@ -63,6 +63,7 @@ ProtostarError (Exception)
  ├── ConfigurationError
  ├── NetworkFetchError
  ├── TemplateResolutionError
+ │    └── MissingTemplateVariablesError
  ├── WorkspaceCollisionError
  ├── MissingDependencyError
  ├── AggregatedDependencyError
@@ -99,6 +100,10 @@ Raised when remote configuration or template downloads fail due to network disco
 ### `TemplateResolutionError`
 
 Raised when a template target is found but cannot be parsed, extracted, or resolved. Triggers on corrupt archive structures, unsupported archive formats, missing `protostar.toml` files within archives, or unsatisfied template placeholder variables.
+
+### `MissingTemplateVariablesError`
+
+Raised when a template is rendered without a value for one of its custom variables. The engine never prompts: the CLI prompts in an interactive terminal, and everywhere else, including `--json` and `sync`, this error names every missing variable at once through its `variables` attribute (`missing_variables` in the JSON envelope). See [Template variables](../development/project-recipe.md#template-variables).
 
 ### `WorkspaceCollisionError`
 
@@ -169,7 +174,7 @@ When running in `--json` mode, Protostar suppresses all terminal UI formatting, 
 The error envelope guarantees:
 
 - __Clean Parsing:__ `stdout` contains only valid JSON. Debug traces and logs are routed exclusively to `stderr`.
-- __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`), plus any error-specific fields from the exception's `details()`, such as `paths` for collisions and `findings` for detected secrets.
+- __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`), plus any error-specific fields from the exception's `details()`, such as `paths` for collisions, `findings` for detected secrets, and `missing_variables` for template variables without a value.
 - __POSIX Status Codes:__ The process exits with the exact same POSIX exit code defined in the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
 
 ## POSIX Exit Code Matrix

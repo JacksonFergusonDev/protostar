@@ -6,6 +6,7 @@ from protostar.config import (
     ConfigOrigin,
     TemplateAliasConfig,
     TemplateBlueprint,
+    TemplateSource,
     UserConfig,
     active_config_source,
     clear_user_config_cache,
@@ -13,6 +14,7 @@ from protostar.config import (
 )
 from protostar.errors import (
     ConfigurationError,
+    MissingTemplateVariablesError,
     TemplateResolutionError,
 )
 from protostar.intent import PyprojectPayload
@@ -123,7 +125,7 @@ def test_template_blueprint_load_remote_target(mocker, tmp_path):
         "protostar.config.resolve_remote_template", side_effect=mock_resolve
     )
 
-    config = TemplateBlueprint.load(target="https://example.com/config.toml")
+    config = TemplateSource.load("https://example.com/config.toml").render({})
 
     mock_resolve_patch.assert_called_once()
     assert mock_resolve_patch.call_args[0][0] == "https://example.com/config.toml"
@@ -135,7 +137,7 @@ def test_template_blueprint_load_local_target_missing(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
 
     with pytest.raises(TemplateResolutionError, match="Configuration file not found"):
-        TemplateBlueprint.load(target="definitely_does_not_exist_12345.toml")
+        TemplateSource.load("definitely_does_not_exist_12345.toml")
 
 
 def test_template_blueprint_load_local_target_with_context(mocker, tmp_path):
@@ -146,42 +148,33 @@ def test_template_blueprint_load_local_target_with_context(mocker, tmp_path):
     target = tmp_path / "custom.toml"
     target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
-    config = TemplateBlueprint.load(
-        target=str(target),
-        template_context={"py_ver": "3.14"},
-    )
+    config = TemplateSource.load(str(target)).render({"py_ver": "3.14"})
 
     assert isinstance(config, TemplateBlueprint)
 
 
-def test_template_blueprint_load_invokes_resolver_for_missing_vars(mocker, tmp_path):
-    """Test that missing template variables are requested from the variable resolver."""
+def test_template_source_reports_its_custom_variables(mocker, tmp_path):
+    """A caller can learn what to ask for before rendering anything."""
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
 
     target = tmp_path / "custom.toml"
-    target.write_text('[env]\npython_version = "<%py_ver%>"\n')
-
-    resolver = mocker.Mock(return_value={"py_ver": "3.15"})
-
-    config = TemplateBlueprint.load(
-        target=str(target),
-        variable_resolver=resolver,
+    target.write_text(
+        '[env]\npython_version = "<%py_ver%>"\nname = "<% PROJECT_NAME %>"\n'
     )
 
-    resolver.assert_called_once_with(["py_ver"])
-    assert isinstance(config, TemplateBlueprint)
+    assert TemplateSource.load(str(target)).variables == {"py_ver"}
 
 
-def test_template_blueprint_load_missing_vars_without_resolver_raises(mocker, tmp_path):
-    """Verify that missing template variables raise an error when no resolver is provided."""
+def test_template_source_render_missing_vars_raises(mocker, tmp_path):
+    """Verify that rendering without a value for a custom variable raises."""
     # Patch global config file so we don't pick up the user's actual config
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "nonexistent.toml")
 
     target = tmp_path / "templated.toml"
     target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
-    with pytest.raises(TemplateResolutionError, match="requires variables"):
-        TemplateBlueprint.load(target=str(target))
+    with pytest.raises(MissingTemplateVariablesError, match="py_ver"):
+        TemplateSource.load(str(target)).render({})
 
 
 def test_template_blueprint_load_late_binding_vars_do_not_prompt(mocker, tmp_path):
@@ -198,8 +191,9 @@ def test_template_blueprint_load_late_binding_vars_do_not_prompt(mocker, tmp_pat
         'author = "<%AUTHOR_NAME%>"\n'
     )
 
-    blueprint = TemplateBlueprint.load(target=str(target))
-    assert isinstance(blueprint, TemplateBlueprint)
+    source = TemplateSource.load(str(target))
+    assert source.variables == frozenset()
+    assert isinstance(source.render({}), TemplateBlueprint)
 
 
 def test_user_config_commitizen_defaults_to_false():
@@ -409,10 +403,7 @@ def test_template_blueprint_load_interpolation(tmp_path):
     target = tmp_path / "custom.toml"
     target.write_text('[files]\n"test.txt" = "<% greeting %>"\n')
 
-    blueprint = TemplateBlueprint.load(
-        target=str(target),
-        template_context={"greeting": "hello world"},
-    )
+    blueprint = TemplateSource.load(str(target)).render({"greeting": "hello world"})
 
     assert blueprint.files["test.txt"] == "hello world"
 

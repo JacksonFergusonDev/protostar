@@ -141,6 +141,37 @@ class TemplateResolutionError(ProtostarError):
         self.detail = detail
 
 
+class MissingTemplateVariablesError(TemplateResolutionError):
+    """Raised when a template needs variable values nobody supplied.
+
+    Protostar never prompts from the engine. The CLI prompts in an interactive
+    terminal; everywhere else, including ``--json`` and ``sync``, this error
+    lists every missing name so a caller can supply them all at once.
+    """
+
+    def __init__(self, target: str, variables: tuple[str, ...]) -> None:
+        """Initializes the error with every missing variable.
+
+        Args:
+            target: The template being rendered.
+            variables: The variables without a value, sorted.
+        """
+        super().__init__(
+            target,
+            f"Template needs values for: {', '.join(variables)}.",
+            hint=(
+                "Pass them with `protostar init --var NAME=VALUE`, or add them "
+                "under [tool.protostar.variables] in pyproject.toml."
+            ),
+            docs_path=DocsPage.RECIPE_VARIABLES,
+        )
+        self.variables = variables
+
+    def details(self) -> dict[str, Any]:
+        """Returns the missing variable names."""
+        return {"missing_variables": list(self.variables)}
+
+
 class MissingDependencyError(ProtostarError):
     """Raised during pre-flight checks when a system-level executable is absent."""
 
@@ -362,9 +393,10 @@ class SecretDetectedError(SecurityViolationError):
         super().__init__(
             f"Template variable values look like credentials:\n{listed}",
             hint=(
-                "Template variables are rendered into project files, so they "
-                "must not hold secrets. Enter a non-secret value, and have the "
-                "project read the secret from the environment at runtime."
+                "Template variables are saved to pyproject.toml and rendered into "
+                "project files, so they must not hold secrets. Enter a non-secret "
+                "value, and have the project read the secret from the environment "
+                "at runtime."
             ),
             docs_path=DocsPage.TEMPLATE_VARIABLES,
         )

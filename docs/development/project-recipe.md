@@ -12,11 +12,12 @@ For new uv projects, the captured project name uses uv normalization (`Demo_Proj
 becomes `demo-project`); the package identifier remains `demo_project`. This keeps
 early file rendering and later TOML rendering consistent.
 
-`[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.bindings]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
+`[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.variables]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
 
 The schema-v1 recipe captures the resolved template origin and locator (or explicit
 `mode = "tooling-only"`), Python version, Docker selection, IDE, original tooling
-fallbacks, built-in rendering context, and non-secret project metadata. Template
+fallbacks, built-in rendering context, template variable values, and non-secret
+project metadata. Template
 aliases are resolved when enrolled; the recipe records their exact source, not the
 alias. Local relative locators resolve against the project directory. Unknown
 fields, versions, tools, and unsafe source paths are rejected.
@@ -66,28 +67,37 @@ lock or adopting equal foreign content. Template identity checks still apply.
 Use `status`, `diff`, and `sync` after enrollment; see the
 [lifecycle walkthrough](../usage/lifecycle.md).
 
-## Custom interpolation
+## Template variables
 
-Custom variable answers are never stored in the recipe. Bind each custom template
-variable to an environment variable during initialization:
+A template's custom variables (every `<% NAME %>` placeholder that isn't a
+built-in) get their values when you initialize, and the recipe records them:
 
 ```bash
-export PROJECT_ENDPOINT="https://example.invalid"
-protostar init --from ./blueprint.toml --bind ENDPOINT=PROJECT_ENDPOINT
+protostar init --from ./blueprint.toml --var REGION=eu-west-1 --var TIER=gold
 ```
-
-The resulting recipe contains only the binding name:
 
 ```toml
-[tool.protostar.bindings]
-ENDPOINT = "PROJECT_ENDPOINT"
+[tool.protostar.variables]
+REGION = "eu-west-1"
+TIER = "gold"
 ```
 
-Subsequent initialization and lifecycle commands resolve these values in memory.
-Missing bindings or missing environment variables fail before workspace mutation. Arbitrary answers
-provided through dynamic interpolation flags cannot enroll a project unless the
-variables also have environment bindings. Interactive custom answers likewise
-cannot establish replayable intent; use explicit bindings instead. Trust
-permissions and command lines are never serialized. Generated project files and
-ownership baselines can contain rendered content; diffs are not a secret-redaction
-system.
+Values come from three places, each overriding the one before: the recipe from an
+earlier `init`, `--var NAME=VALUE` flags, and, in an interactive terminal, a prompt
+for anything still missing. A `--var` that names no variable of the template is an
+error, and so is a mistyped flag. Values the template no longer uses are dropped the
+next time you run `init`.
+
+Without a terminal, including under `--json`, a missing value stops `init` before
+anything is written, with a `MissingTemplateVariablesError` naming every missing
+variable (`error.missing_variables` in JSON). `sync` never prompts: when a template
+gains a variable, add its value under `[tool.protostar.variables]` or rerun `init`
+with `--var`.
+
+Template variables are non-secret by definition, because the recipe is committed.
+Every value, including one edited into the recipe by hand, passes the
+[secret guard](../usage/authoring-templates.md#variables-are-not-secrets), and a value
+that looks like a credential is refused. Keep secrets in the environment the
+project reads at runtime. Trust permissions and command lines are never
+serialized. Generated project files and ownership baselines contain rendered
+content; diffs are not a secret-redaction system.

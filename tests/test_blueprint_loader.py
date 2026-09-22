@@ -2,8 +2,8 @@ import sys
 
 import pytest
 
-from protostar.config import TemplateBlueprint, UserConfig
-from protostar.errors import TemplateResolutionError
+from protostar.config import TemplateSource, UserConfig
+from protostar.errors import MissingTemplateVariablesError
 from protostar.templates import TemplateType, discover_templates
 
 BUILTIN_TEMPLATES = sorted(
@@ -17,7 +17,7 @@ BUILTIN_TEMPLATES = sorted(
     sys.platform == "win32", reason="Windows does not support < or > in filenames"
 )
 def test_template_blueprint_load_local_directory(tmp_path):
-    """Test loading a TemplateBlueprint from a local directory."""
+    """Test loading a template from a local directory."""
     # Setup standard protostar.toml
     toml_path = tmp_path / "protostar.toml"
     toml_path.write_text("[env]\nruff = true\n\n[files]\n", encoding="utf-8")
@@ -34,9 +34,7 @@ def test_template_blueprint_load_local_directory(tmp_path):
     main_file.write_text("print('Hello from <% PACKAGE_NAME %>!')\n", encoding="utf-8")
 
     # Test loading
-    blueprint = TemplateBlueprint.load(
-        str(tmp_path), template_context={"PACKAGE_NAME": "my_app"}
-    )
+    blueprint = TemplateSource.load(str(tmp_path)).render({"PACKAGE_NAME": "my_app"})
 
     # Verify interpolation in paths and contents
     assert "src/my_app/main.py" in blueprint.files
@@ -54,19 +52,17 @@ def test_template_blueprint_variable_extraction_and_resolution(tmp_path):
     deep_file = template_dir / "config.yaml"
     deep_file.write_text("db_url: <% DATABASE_URL %>\n", encoding="utf-8")
 
-    # Resolver function
-    def mock_resolver(missing_vars):
-        assert "DATABASE_URL" in missing_vars
-        return {"DATABASE_URL": "postgresql://localhost:5432/db"}
+    source = TemplateSource.load(str(tmp_path))
+    assert source.variables == {"DATABASE_URL"}
 
-    blueprint = TemplateBlueprint.load(str(tmp_path), variable_resolver=mock_resolver)
+    blueprint = source.render({"DATABASE_URL": "postgresql://localhost:5432/db"})
 
     assert "config.yaml" in blueprint.files
     assert blueprint.files["config.yaml"] == "db_url: postgresql://localhost:5432/db\n"
 
 
 def test_template_blueprint_missing_variables_error(tmp_path):
-    """Test that missing variables without a resolver raise an error."""
+    """Test that rendering without a value raises, naming the variable."""
     toml_path = tmp_path / "protostar.toml"
     toml_path.write_text("[env]\nruff = true\n", encoding="utf-8")
 
@@ -76,10 +72,9 @@ def test_template_blueprint_missing_variables_error(tmp_path):
     deep_file = template_dir / "config.yaml"
     deep_file.write_text("db_url: <% DATABASE_URL %>\n", encoding="utf-8")
 
-    with pytest.raises(
-        TemplateResolutionError, match="requires variables: DATABASE_URL"
-    ):
-        TemplateBlueprint.load(str(tmp_path))
+    with pytest.raises(MissingTemplateVariablesError, match="DATABASE_URL") as caught:
+        TemplateSource.load(str(tmp_path)).render({})
+    assert caught.value.variables == ("DATABASE_URL",)
 
 
 @pytest.mark.parametrize("template_name", BUILTIN_TEMPLATES)

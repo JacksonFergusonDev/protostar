@@ -145,24 +145,24 @@ The execution engine automatically computes and injects the following variables 
 
 ### Custom Variables & Interactive Prompts
 
-You can define custom placeholders tailored to your domain footprint. For example, if your template configures a database connection, you might include:
+You can define custom placeholders tailored to your domain footprint. For example, if your template deploys to a configurable region, you might include:
 
 ```python
-# template/src/<% PACKAGE_NAME %>/database.py
-DATABASE_URL = "<% DATABASE_URL %>"
+# template/src/<% PACKAGE_NAME %>/settings.py
+DEFAULT_REGION = "<% DEFAULT_REGION %>"
 ```
 
-If you initialize the template headlessly via CLI flags:
+Users supply the value with `--var`:
 
 ```bash
-protostar init --from https://github.com/Org/template --DATABASE_URL="sqlite:///./test.db"
+protostar init --from https://github.com/Org/template --var DEFAULT_REGION=eu-west-1
 ```
 
-If you *omit* the flag, Protostar parses the AST, detects the unresolved `<% DATABASE_URL %>` placeholder, and automatically halts to prompt you via the interactive terminal wizard before any disk mutations occur.
+If they omit it, Protostar detects the unresolved `<% DEFAULT_REGION %>` placeholder and prompts for it in an interactive terminal before any disk mutations occur; without a terminal, it stops with an error naming the variable. The value is recorded in the project recipe, so later runs of `init` and `sync` reuse it. Variable names are identifiers: a letter or underscore, then letters, digits, or underscores.
 
 ### Variables Are Not Secrets
 
-A template's custom variables are non-secret by definition: their values are rendered into the project's files, which get committed. If a value must stay out of the repository, it isn't a template variable. Have the generated code read it from the environment at runtime, and ship a `.env.example` in `template/` that names it.
+A template's custom variables are non-secret by definition: their values are saved in the project recipe in `pyproject.toml` and rendered into the project's files, all of which get committed. If a value must stay out of the repository, it isn't a template variable. Have the generated code read it from the environment at runtime, and ship a `.env.example` in `template/` that names it.
 
 Protostar enforces this before anything renders:
 

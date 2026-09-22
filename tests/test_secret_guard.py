@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from protostar.cli.main import main
-from protostar.config import TemplateBlueprint
+from protostar.config import TemplateSource
 from protostar.errors import (
     ConfigurationError,
     ExitCode,
@@ -357,33 +357,24 @@ def test_template_load_rejects_secret_values_before_rendering(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
     render = mocker.patch("protostar.config.render_template")
 
+    source = TemplateSource.load(str(_template(tmp_path, "org_name")))
+
     with pytest.raises(SecretDetectedError, match="org_name"):
-        TemplateBlueprint.load(
-            target=str(_template(tmp_path, "org_name")),
-            template_context={"org_name": TOKENS["github-pat"]},
-        )
+        source.render({"org_name": TOKENS["github-pat"]})
 
     render.assert_not_called()
-
-
-def test_template_load_checks_resolver_answers(mocker, tmp_path):
-    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
-
-    with pytest.raises(SecretDetectedError):
-        TemplateBlueprint.load(
-            target=str(_template(tmp_path, "org_name")),
-            variable_resolver=lambda _: {"org_name": TOKENS["gitlab-pat"]},
-        )
 
 
 def test_template_load_rejects_credential_variable_names(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
 
+    source = TemplateSource.load(str(_template(tmp_path, "api_token")))
+
+    # Checked when the variables are first read, before anyone is prompted.
     with pytest.raises(TemplateResolutionError, match="api_token"):
-        TemplateBlueprint.load(
-            target=str(_template(tmp_path, "api_token")),
-            template_context={"api_token": "anything"},
-        )
+        _ = source.variables
+    with pytest.raises(TemplateResolutionError, match="api_token"):
+        source.render({"api_token": "anything"})
 
 
 def test_json_error_envelope_lists_findings_without_values(
@@ -395,7 +386,15 @@ def test_json_error_envelope_lists_findings_without_values(
     monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
     monkeypatch.setattr(
         "sys.argv",
-        ["protostar", "init", "--from", str(template), "--org_name", token, "--json"],
+        [
+            "protostar",
+            "init",
+            "--from",
+            str(template),
+            "--var",
+            f"org_name={token}",
+            "--json",
+        ],
     )
 
     with pytest.raises(SystemExit) as exc:
@@ -418,7 +417,8 @@ def test_human_error_names_variable_without_value(capsys, monkeypatch, tmp_path)
     template = _template(tmp_path, "org_name")
     token = TOKENS["npm-access-token"]
     monkeypatch.setattr(
-        "sys.argv", ["protostar", "init", "--from", str(template), "--org_name", token]
+        "sys.argv",
+        ["protostar", "init", "--from", str(template), "--var", f"org_name={token}"],
     )
 
     with pytest.raises(SystemExit):

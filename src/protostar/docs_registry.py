@@ -21,6 +21,10 @@ class DocsPage(Enum):
         "usage/authoring-templates/#variables-are-not-secrets",
         "Template Variables",
     )
+    RECIPE_VARIABLES = (
+        "development/project-recipe/#template-variables",
+        "Recipe Template Variables",
+    )
 
     # Troubleshooting Anchors
     TROUBLESHOOTING_DEPS = (
