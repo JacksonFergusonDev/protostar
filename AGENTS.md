@@ -78,6 +78,13 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 - **Decorative symbols go through `ui.glyph(symbol, ascii_fallback)`** (`src/protostar/cli/ui.py`). Windows encodes redirected stdout as cp1252. `main()` calls `ui.replace_unencodable_output()`, so characters it can't encode print as `?` instead of crashing, but a bare `✓` would then read as `?`.
 - **Test new output against a strict cp1252 stream** (see `tests/test_legacy_encoding.py`). macOS and Linux runs never hit this; only the Windows CI smoke jobs do.
 
+### 8. Template Variables Are Not Secrets
+
+- **Custom template variables are non-secret by definition.** Their values render into committed files. `check_variable_names` and `check_variable_values` (`src/protostar/secret_guard.py`) run in `TemplateBlueprint.from_sources` before anything renders.
+- **The guard has no override.** Never add a flag, marker, or allowlist entry that lets a flagged value through, and never echo a checked value in an error, log, or JSON payload; report the variable name and rule id only.
+- **The guard ports gitleaks, it doesn't extend it.** Don't add entropy-only or generic heuristics: every block must be near-certain because nothing can bypass it.
+- **`src/protostar/_secret_rules.py` is generated.** `scripts/sync_secret_rules.py` builds it from the gitleaks tag pinned in `_fallbacks.py`. Never hand-edit it; run `just sync-secret-rules` whenever that tag changes. Ruff is excluded from it because `--check` compares bytes.
+
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 
 The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated gating:
@@ -120,6 +127,7 @@ Use these commands when targeted verification or debugging is necessary:
   just check-schemas                  # Validate pre-commit, action, renovate, and metaschemas
   just demo-headless                  # Re-record the headless demo cast and GIF
   just demo-wizard                    # Re-record the wizard demo cast and GIF
+  just sync-secret-rules              # Regenerate _secret_rules.py after the pinned gitleaks tag changes
   ```
 
   `check-snapshots` regenerates the terminal SVGs but not the demo casts and GIFs, which go stale silently. Re-record both demos whenever CLI output changes. They do real installs and take several minutes. Don't `git add -A docs` while a recording runs: it leaves `.demo_*.tmp.cast` files there.

@@ -29,6 +29,7 @@ from .intent import (
 )
 from .interpolation import extract_variables, render_template
 from .network import resolve_remote_source, resolve_remote_template
+from .secret_guard import check_variable_names, check_variable_values
 
 logger = logging.getLogger("protostar")
 
@@ -821,9 +822,9 @@ class TemplateBlueprint:
             "CURRENT_YEAR",
             "AUTHOR_NAME",
         }
-        missing = [
-            v for v in variables if v not in context and v not in late_binding_vars
-        ]
+        custom_variables = [v for v in variables if v not in late_binding_vars]
+        check_variable_names(target, custom_variables)
+        missing = [v for v in custom_variables if v not in context]
 
         if missing:
             if variable_resolver is not None:
@@ -835,9 +836,12 @@ class TemplateBlueprint:
                     hint="Please provide them via CLI flags (e.g. --variable_name=value) or run in an interactive terminal.",
                 )
 
+        # Values render into committed files; check them before anything renders.
+        check_variable_values({name: context[name] for name in custom_variables})
+
         rendered_toml = render_template(toml_content, context, escape_toml=True)
         blueprint = cls._parse(rendered_toml, target)
-        blueprint.custom_variables = frozenset(variables) - late_binding_vars
+        blueprint.custom_variables = frozenset(custom_variables)
 
         interpolated_files: dict[str, str] = {}
         for rel_path, content in raw_files.items():

@@ -81,7 +81,8 @@ dev = [{ include-group = "ci" }, { include-group = "docs" }, "prek>=0.4.11"]
 
 [tool.ruff]
 target-version = "py312"
-extend-exclude = ["docs", "site", "tests/snapshots"]
+# _secret_rules.py is generated; its --check compares bytes, so formatters stay off it.
+extend-exclude = ["docs", "site", "tests/snapshots", "src/protostar/_secret_rules.py"]
 
 [tool.ruff.lint]
 select = [

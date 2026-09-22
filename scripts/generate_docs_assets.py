@@ -692,7 +692,7 @@ def generate_capability_tables() -> None:
             "`77`",
             "`os.EX_NOPERM`",
             "`SecurityViolationError`",
-            "Security violation (e.g., path traversal Zip Slip)",
+            "Security violation (e.g., path traversal Zip Slip, or a template variable value that looks like a credential)",
         ],
         [
             "`78`",

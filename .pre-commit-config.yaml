@@ -41,7 +41,7 @@ repos:
         entry: uv run ruff check --fix
         language: system
         types: [python]
-        exclude: ^(docs/|site/|tests/snapshots/)
+        exclude: ^(docs/|site/|tests/snapshots/|src/protostar/_secret_rules\.py$)
         require_serial: true
 
       - id: ruff-format
@@ -49,7 +49,7 @@ repos:
         entry: uv run ruff format
         language: system
         types: [python]
-        exclude: ^(docs/|site/|tests/snapshots/)
+        exclude: ^(docs/|site/|tests/snapshots/|src/protostar/_secret_rules\.py$)
         require_serial: true
 
       - id: mypy

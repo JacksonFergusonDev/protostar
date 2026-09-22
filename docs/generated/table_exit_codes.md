@@ -8,6 +8,6 @@
 | `70` | `os.EX_SOFTWARE` | *(Unhandled exception)* | Unhandled internal Python bug (prompts automated bug report) |
 | `74` | `os.EX_IOERR` | `FileSystemError` | Local filesystem read/write or permission failure |
 | `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` | Transient network failure during remote template download |
-| `77` | `os.EX_NOPERM` | `SecurityViolationError` | Security violation (e.g., path traversal Zip Slip) |
+| `77` | `os.EX_NOPERM` | `SecurityViolationError` | Security violation (e.g., path traversal Zip Slip, or a template variable value that looks like a credential) |
 | `78` | `os.EX_CONFIG` | `ConfigurationError` | Invalid TOML syntax or conflicting CLI configuration |
 | `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You aborted interactive wizard prompt or interrupted execution (Ctrl+C) |

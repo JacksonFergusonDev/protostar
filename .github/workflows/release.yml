@@ -25,6 +25,9 @@ jobs:
       - name: Verify registry fallbacks
         run: python scripts/sync_registry_fallbacks.py --check
 
+      - name: Verify secret-detection rules
+        run: python scripts/sync_secret_rules.py --check
+
       - name: Build distribution
         run: uv build
 

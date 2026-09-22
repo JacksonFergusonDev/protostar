@@ -94,6 +94,21 @@ trusted = true
 
 1. Invoke it via shorthand: `protostar init --template team-backend`. External templates configured with `trusted = true` bypass interactive confirmation dialogs and execute cleanly in non-interactive CI/CD pipelines.
 
+## Template Variables That Look Like Credentials
+
+Template variables are rendered into your project's files, so Protostar refuses values that look like credentials before anything is written:
+
+```text
+Template variable values look like credentials:
+  - org_name (gitleaks rule github-pat)
+```
+
+The error names the variable and the [gitleaks](https://github.com/gitleaks/gitleaks) rule it matched, never the value. In `--json` mode the same pairs appear under `error.findings`.
+
+- **You entered a secret:** enter a non-secret value instead, and supply the secret through the environment when the project runs.
+- **The template asks for a secret:** the template needs fixing; see [Variables Are Not Secrets](authoring-templates.md#variables-are-not-secrets).
+- **The value isn't a secret:** there is no override, so this is a bug. [File an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
+
 ## Editor Schema Setup for Custom Templates
 
 Protostar templates are pure TOML files validated against a JSON Schema. Configuring your editor provides instant autocompletion, hover tooltips, and real-time schema validation.

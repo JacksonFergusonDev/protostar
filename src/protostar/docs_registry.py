@@ -17,6 +17,10 @@ class DocsPage(Enum):
     CONFIGURATION = ("usage/configuration/", "Configuration")
     TEMPLATES = ("usage/templates/", "Templates")
     AUTHORING_TEMPLATES = ("usage/authoring-templates/", "Authoring Templates")
+    TEMPLATE_VARIABLES = (
+        "usage/authoring-templates/#variables-are-not-secrets",
+        "Template Variables",
+    )
 
     # Troubleshooting Anchors
     TROUBLESHOOTING_DEPS = (

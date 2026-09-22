@@ -1,0 +1,9 @@
+# Configuration for this repository's gitleaks pre-commit hook.
+[extend]
+useDefault = true
+
+# The generated secret-detection rules quote gitleaks' own patterns, and some
+# patterns contain literal token prefixes that the default rules flag.
+[[allowlists]]
+description = "Generated secret-detection rules"
+paths = ['''^src/protostar/_secret_rules\.py$''']
