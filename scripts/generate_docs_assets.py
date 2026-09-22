@@ -34,7 +34,12 @@ from protostar.config import (
 from protostar.documents import pyproject
 from protostar.errors import WorkspaceCollisionError
 from protostar.fs import atomic_write_text
-from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
+from protostar.manifest import (
+    CollisionStrategy,
+    DiagnosticEvent,
+    EnvironmentManifest,
+    Severity,
+)
 from protostar.metadata import METADATA_FIELDS
 from protostar.models import ExecutionResult, InitRequest
 from protostar.modules import (
@@ -97,8 +102,10 @@ class ManifestEncoder(json.JSONEncoder):
     """Custom JSON serialization encoder for the EnvironmentManifest datastructure."""
 
     def default(self, obj: Any) -> Any:
-        if isinstance(obj, set):
+        if isinstance(obj, (set, frozenset)):
             return sorted(obj)
+        if isinstance(obj, Path):
+            return obj.as_posix()
         if isinstance(obj, Enum):
             return obj.value
         if is_dataclass(obj) and not isinstance(obj, type):
@@ -827,7 +834,7 @@ def generate_agent_payloads() -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
         try:
             os.chdir(tmp_dir)
-            baseline = EnvironmentManifest(force_merge=True)
+            baseline = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
             baseline.filesystem.add_file_injection(
                 ".github/renovate.json", '{"value": "original"}\n'
             )
@@ -835,7 +842,7 @@ def generate_agent_payloads() -> None:
             Path(".protostar.lock.toml").write_text(
                 serialize_state(initial.candidate_state)
             )
-            manifest = EnvironmentManifest(force_merge=True)
+            manifest = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
             manifest.filesystem.add_file_injection("safe.txt", "accepted\n")
             manifest.filesystem.add_file_injection(
                 ".github/renovate.json", '{"value": "desired"}\n'

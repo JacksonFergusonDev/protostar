@@ -10,12 +10,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 from .errors import (
     AggregatedDependencyError,
-    ConfigurationError,
     ExecutionInterruptedError,
     MissingDependencyError,
     WorkspaceCollisionError,
 )
-from .manifest import CollisionStrategy, EnvironmentManifest, ProjectMetadata
+from .manifest import EnvironmentManifest, ProjectMetadata
 from .models import ExecutionResult, InitRequest
 from .modules import (
     AgentsModule,
@@ -23,8 +22,6 @@ from .modules import (
     PreCommitModule,
     PrekModule,
     PythonCore,
-    ReadTheDocsModule,
-    ZensicalModule,
 )
 from .preparation import ExecutionPolicy
 from .progress import ProgressStep, no_progress
@@ -97,8 +94,6 @@ class Orchestrator:
             policy: Lifecycle reviews skip execution prerequisite checks.
 
         Raises:
-            WorkspaceCollisionError: If collision targets exist on disk and no
-                force flag (force_merge / force_replace) was provided in the request.
             ConfigurationError: If conflicting modules or missing prerequisites are detected.
             AggregatedDependencyError: If a module pre-flight check fails.
 
@@ -111,8 +106,7 @@ class Orchestrator:
         manifest = EnvironmentManifest(
             template_reference=req.template_reference
             or (req.template_blueprint.reference if req.template_blueprint else None),
-            force_merge=req.force_merge,
-            force_replace=req.force_replace,
+            collision_strategy=req.collision_strategy,
         )
         if req.metadata:
             manifest.metadata.update(cast(ProjectMetadata, req.metadata))
@@ -135,7 +129,7 @@ class Orchestrator:
         manifest.recipe = decode_recipe(manifest.recipe.to_dict())
 
         # Phase 2: Resolve the diversion ledger before module validation/build
-        from .recipe import ProducerContribution, Tool
+        from .recipe import ProducerContribution, Tool, validate_tools
 
         opinions = (
             req.template_blueprint.tooling_overrides if req.template_blueprint else {}
@@ -152,21 +146,7 @@ class Orchestrator:
             or Tool(module.config_key) in enabled_tools
         ]
         # Pre-flight verification of effective producers only
-        has_pre_commit = any(isinstance(m, PreCommitModule) for m in active_modules)
-        has_prek = any(isinstance(m, PrekModule) for m in active_modules)
-        if has_pre_commit and has_prek:
-            raise ConfigurationError(
-                "Cannot use both '--pre-commit' and '--prek' simultaneously. Please choose one git hook manager.",
-                hint="Remove either --pre-commit or --prek from your selection.",
-            )
-
-        has_readthedocs = any(isinstance(m, ReadTheDocsModule) for m in active_modules)
-        has_zensical = any(isinstance(m, ZensicalModule) for m in active_modules)
-        if has_readthedocs and not has_zensical:
-            raise ConfigurationError(
-                "Read the Docs scaffolding requires the Zensical module to be enabled.",
-                hint="Enable the Zensical documentation module (--zensical or [tooling] zensical = true) or remove the Read the Docs module.",
-            )
+        validate_tools({Tool(m.config_key) for m in active_modules if m.config_key})
 
         missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
         for mod in active_modules if policy is ExecutionPolicy.INITIALIZATION else []:
@@ -345,22 +325,7 @@ class Orchestrator:
         manifest.tooling.observe = _ignore_contribution
 
         # Phase 5: Manifest-First Collision Intercept
-        collision_targets = self._detect_collisions(manifest)
-        if collision_targets:
-            if req.force_replace:
-                logger.debug(
-                    "--force-replace flag provided. Defaulting to OVERWRITE collision strategy."
-                )
-                manifest.collision_strategy = CollisionStrategy.OVERWRITE
-            elif req.force_merge:
-                logger.debug(
-                    "--force-merge flag provided. Defaulting to MERGE collision strategy."
-                )
-                manifest.collision_strategy = CollisionStrategy.MERGE
-            else:
-                raise WorkspaceCollisionError(
-                    paths=frozenset(collision_targets),
-                )
+        manifest.collisions = frozenset(self._detect_collisions(manifest))
 
         return manifest
 
@@ -386,6 +351,9 @@ class Orchestrator:
         from .errors import ProtostarError
         from .journal import TransactionState
         from .models import RollbackContext
+
+        if manifest.collisions and manifest.collision_strategy is None:
+            raise WorkspaceCollisionError(paths=manifest.collisions)
 
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
         executor = executor_cls(

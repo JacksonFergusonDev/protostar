@@ -139,6 +139,5 @@
         "python.terminal.activateEnvironment": true
     },
     "collision_strategy": "merge",
-    "force_merge": false,
-    "force_replace": false
+    "collisions": []
 }

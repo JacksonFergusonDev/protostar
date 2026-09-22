@@ -58,6 +58,33 @@ class Tool(StrEnum):
     AGENTS = "agents"
 
 
+EXCLUSIVE_TOOL_PAIRS: tuple[frozenset[Tool], ...] = (
+    frozenset({Tool.PRE_COMMIT, Tool.PREK}),
+)
+"""Tool pairs that cannot both be enabled."""
+
+TOOL_REQUIREMENTS: dict[Tool, frozenset[Tool]] = {
+    Tool.READTHEDOCS: frozenset({Tool.ZENSICAL}),
+}
+"""Tools required by another selected tool."""
+
+
+def validate_tools(enabled: set[Tool]) -> None:
+    """Reject incompatible effective tooling selections."""
+    for pair in EXCLUSIVE_TOOL_PAIRS:
+        if pair <= enabled:
+            raise ConfigurationError(
+                "Cannot use both '--pre-commit' and '--prek' simultaneously. Please choose one git hook manager.",
+                hint="Remove either --pre-commit or --prek from your selection.",
+            )
+    for tool, required in TOOL_REQUIREMENTS.items():
+        if tool in enabled and not required <= enabled:
+            raise ConfigurationError(
+                "Read the Docs scaffolding requires the Zensical module to be enabled.",
+                hint="Enable the Zensical documentation module (--zensical or [tooling] zensical = true) or remove the Read the Docs module.",
+            )
+
+
 class SelectionLayer(StrEnum):
     """Origin of an effective tooling selection."""
 

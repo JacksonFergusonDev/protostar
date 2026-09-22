@@ -309,6 +309,36 @@ def test_run_init_wizard_leaves_docker_unchecked_without_a_template(mocker):
     assert "Enforced by template" not in docker.title
 
 
+def test_run_init_wizard_preselects_recorded_recipe(mocker, tmp_path, monkeypatch):
+    """A project recipe supplies the defaults for an interactive re-init."""
+    from dataclasses import replace
+
+    from protostar.recipe import Tool, edit_recipe, establish_recipe
+
+    monkeypatch.chdir(tmp_path)
+    recipe = replace(
+        establish_recipe(UserConfig()),
+        docker=True,
+        tools=((Tool.RUFF, True),),
+    )
+    (tmp_path / "pyproject.toml").write_text(edit_recipe("", recipe))
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch.dict(os.environ, {}, clear=True)
+    mocker.patch("questionary.select").return_value.ask.return_value = "None"
+    mock_checkbox = mocker.patch("questionary.checkbox")
+    mock_checkbox.return_value.ask.return_value = []
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
+
+    run_init_wizard()
+
+    choices = mock_checkbox.call_args.kwargs["choices"]
+    docker = next(c for c in choices if getattr(c, "value", None) == "docker")
+    ruff = next(c for c in choices if getattr(c.value, "config_key", None) == "ruff")
+    assert docker.checked is True
+    assert ruff.checked is True
+
+
 def test_run_init_wizard_prompts_for_template_variables(mocker, tmp_path) -> None:
     """A template's variables are asked for once, then rendered and returned."""
     from protostar.config import TemplateAliasConfig

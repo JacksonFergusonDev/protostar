@@ -7,7 +7,7 @@ from typing import Any
 
 from .config import TemplateBlueprint
 from .intent import TemplateReference
-from .manifest import DiagnosticEvent, SystemTask
+from .manifest import CollisionStrategy, DiagnosticEvent, SystemTask
 from .recipe import ProjectRecipe
 
 __all__ = ["ExecutionResult", "InitRequest", "RollbackContext"]
@@ -43,8 +43,7 @@ class InitRequest:
         python_version: An optional Python version string (e.g. '3.13'). Informational;
             the modules list is already constructed with the resolved version.
         docker: If True, scaffolds container artifacts (.dockerignore, Dockerfile).
-        force_merge: If True, bypasses collision prompts and forces a merge strategy.
-        force_replace: If True, bypasses collision prompts and forces an overwrite strategy.
+        collision_strategy: Explicit policy for existing workspace files.
         metadata: Pre-resolved metadata dictionary to inject into the manifest.
         is_external: If True, the template was loaded from an external source.
         is_user_aliased: If True, the template was resolved via a global config alias.
@@ -56,8 +55,7 @@ class InitRequest:
     template_reference: TemplateReference | None = None
     python_version: str | None = None
     docker: bool = False
-    force_merge: bool = False
-    force_replace: bool = False
+    collision_strategy: CollisionStrategy | None = None
     metadata: dict[str, Any] | None = field(default=None)
     is_external: bool = False
     is_user_aliased: bool = False
@@ -72,8 +70,9 @@ class InitRequest:
             "template_reference": reference.to_dict() if reference else None,
             "python_version": self.python_version,
             "docker": self.docker,
-            "force_merge": self.force_merge,
-            "force_replace": self.force_replace,
+            "collision_strategy": self.collision_strategy.value
+            if self.collision_strategy
+            else None,
         }
 
 

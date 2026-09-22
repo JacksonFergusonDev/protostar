@@ -347,7 +347,7 @@ def test_agents_md_region_merges_updates_and_protects_edits(
         manifest = Orchestrator(
             [AgentsModule(), Commands(*typecheck)],
             UserConfig(),
-            InitRequest(force_merge=True),
+            InitRequest(collision_strategy=CollisionStrategy.MERGE),
         ).plan()
         executor = SystemExecutor(manifest, UserConfig())
         mocker.patch.object(executor, "_check_ide_extensions")

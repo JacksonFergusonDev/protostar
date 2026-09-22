@@ -1444,25 +1444,24 @@ def test_config_verbose_logging(capsys, monkeypatch, tmp_path, mocker):
         logger.handlers.clear()
 
 
-def test_run_engine_collision_retry_replaces_request_flags(
+def test_run_engine_collision_retry_sets_request_strategy(
     mocker, tmp_path, monkeypatch
 ):
-    """Verify _run_engine rebuilds request using dataclasses.replace on collision retry."""
+    """A collision decision updates the request and replans the same engine."""
     from pathlib import Path
 
     from protostar.cli.ui import _run_engine
     from protostar.config import UserConfig
-    from protostar.errors import WorkspaceCollisionError
     from protostar.manifest import CollisionStrategy, EnvironmentManifest
     from protostar.models import InitRequest
     from protostar.orchestrator import Orchestrator
 
     monkeypatch.chdir(tmp_path)
 
-    mock_manifest = mocker.MagicMock(
-        spec=EnvironmentManifest,
-        diagnostics=[],
-        tasks=mocker.MagicMock(system_tasks=[], post_install_tasks=[]),
+    collisions = frozenset({Path("pyproject.toml")})
+    pending = EnvironmentManifest(collision_strategy=None, collisions=collisions)
+    resolved = EnvironmentManifest(
+        collision_strategy=CollisionStrategy.MERGE, collisions=collisions
     )
     mock_result = mocker.MagicMock(diagnostics=())
 
@@ -1474,14 +1473,10 @@ def test_run_engine_collision_retry_replaces_request_flags(
         is_trusted=True,
     )
 
-    mock_orch_init = mocker.spy(Orchestrator, "__init__")
-    mocker.patch.object(
+    mock_plan = mocker.patch.object(
         Orchestrator,
         "plan",
-        side_effect=[
-            WorkspaceCollisionError(paths=frozenset([Path("pyproject.toml")])),
-            mock_manifest,
-        ],
+        side_effect=[pending, resolved],
     )
     mocker.patch.object(Orchestrator, "execute", return_value=mock_result)
     mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
@@ -1491,11 +1486,9 @@ def test_run_engine_collision_retry_replaces_request_flags(
     res = _run_engine(engine, initial_request)
 
     assert res is mock_result
-    assert mock_orch_init.call_count == 2
-    second_request = mock_orch_init.call_args_list[1].kwargs.get("request")
-    assert second_request is not None
-    assert second_request.force_merge is True
-    assert second_request.force_replace is False
+    assert mock_plan.call_count == 2
+    second_request = engine.request
+    assert second_request.collision_strategy is CollisionStrategy.MERGE
     assert second_request.docker is True
     assert second_request.python_version == "3.12"
     assert second_request.metadata == {"author_name": "Ada Lovelace"}

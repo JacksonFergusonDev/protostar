@@ -20,8 +20,9 @@ from protostar.cli.wizard import run_init_wizard
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import InvalidUsageError
-from protostar.models import InitRequest
-from protostar.modules import TOOLING_MODULES, PythonCore, SystemWorkspaceModule
+from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
+from protostar.modules import TOOLING_MODULES
+from protostar.recipe import Tool, read_recipe
 
 
 def _resolve_usage_doc_path() -> DocsPage:
@@ -633,68 +634,40 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             return
 
         user_config = UserConfig.load()
-        modules = selections.modules
-
-        # Inject mandatory universal layers implicitly
-        modules.insert(0, SystemWorkspaceModule())
-
-        min_py = selections.project_metadata.get("minimum_python")
-        min_py = str(min_py) if min_py else None
-        selected_license = selections.project_metadata.get("license")
-        selected_license = str(selected_license) if selected_license else None
-
-        modules.insert(
-            1, PythonCore(python_version=min_py, project_license=selected_license)
-        )
-
         from dataclasses import replace
 
-        from protostar.manifest import ProjectMetadata
-        from protostar.recipe import RecipeIntent, Tool, establish_recipe, read_recipe
-
         existing_recipe = read_recipe(Path("pyproject.toml"))
-        recipe = establish_recipe(
-            user_config,
-            RecipeIntent(
-                selections.blueprint.reference if selections.blueprint else None,
-                cast(ProjectMetadata, selections.project_metadata),
-                selections.docker,
-                min_py,
-                tuple(sorted(selections.variables.items())),
-            ),
-        )
+        min_py = selections.project_metadata.get("minimum_python")
+        min_py = str(min_py) if min_py else None
         if existing_recipe:
-            context = dict(recipe.context)
-            context["CURRENT_YEAR"] = dict(existing_recipe.context)["CURRENT_YEAR"]
-            recipe = replace(
-                recipe,
-                fallback=existing_recipe.fallback,
-                context=tuple(sorted(context.items())),
+            user_config = replace(
+                user_config,
+                python_version=existing_recipe.python,
+                ide=existing_recipe.ide,
             )
-        selected = {m.config_key for m in modules if m.config_key}
-        opinions = (
-            selections.blueprint.tooling_overrides if selections.blueprint else {}
-        )
-        tools = dict(existing_recipe.tools) if existing_recipe else {}
-        for tool in Tool:
-            enabled = tool in selected
-            if enabled != opinions.get(tool, dict(recipe.fallback)[tool]):
-                tools[tool] = enabled
-        recipe = replace(recipe, tools=tuple(sorted(tools.items())))
-        request = InitRequest(
-            recipe=recipe,
-            template_blueprint=selections.blueprint,
-            template_reference=selections.blueprint.reference
-            if selections.blueprint
+        selected = {Tool(m.config_key) for m in selections.modules}
+        draft = InitDraft(
+            template=DraftTemplate(
+                selections.source,
+                selections.is_external,
+                selections.is_user_aliased,
+                selections.is_trusted,
+            )
+            if selections.source
             else None,
+            tool_choices=tuple((tool, tool in selected) for tool in Tool),
             docker=selections.docker,
-            force_merge=False,
-            force_replace=False,
-            metadata=selections.project_metadata,
-            is_external=selections.is_external,
-            is_user_aliased=selections.is_user_aliased,
-            is_trusted=selections.is_trusted,
+            python_version=min_py,
+            metadata=tuple(
+                sorted(
+                    (key, tuple(value) if isinstance(value, list) else str(value))
+                    for key, value in selections.project_metadata.items()
+                )
+            ),
+            variables=tuple(sorted(selections.variables.items())),
+            existing_recipe=existing_recipe,
         )
+        modules, request = resolve_init(draft, user_config)
         orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
         engine = orchestrator_cls(modules, user_config, request=request)
         ui._run_engine(engine, request)

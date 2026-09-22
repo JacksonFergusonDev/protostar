@@ -218,7 +218,11 @@ def test_typed_include_applied_before_resolver_and_rolls_back(
         'dependency_includes = [{group = "dev", include = "docs"}]\ndocs_dependencies = ["zensical"]'
     )
     manifest = Orchestrator(
-        [], UserConfig(), InitRequest(template_blueprint=blueprint, force_merge=True)
+        [],
+        UserConfig(),
+        InitRequest(
+            template_blueprint=blueprint, collision_strategy=CollisionStrategy.MERGE
+        ),
     ).plan()
     executor = SystemExecutor(manifest, UserConfig())
 
@@ -482,7 +486,7 @@ def test_cli_resolution_passes_builtin_reference_to_request(mocker):
     engine = mocker.patch("protostar.cli.main.Orchestrator")
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("protostar.cli.main.ui._run_engine")
-    mocker.patch("protostar.cli.main.resolve_auto_metadata", return_value={})
+    mocker.patch("protostar.metadata.resolve_auto_metadata", return_value={})
     handle_init(
         argparse.Namespace(
             template_name="api",

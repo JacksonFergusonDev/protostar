@@ -333,7 +333,7 @@ class ExecutionInterruptedError(ProtostarError):
 
 
 class WorkspaceCollisionError(ProtostarError):
-    """Raised by plan() when collision markers exist and no force flag was provided.
+    """Raised before execution when collisions lack a chosen strategy.
 
     Carries a structured set of conflicting paths so callers can programmatically
     present the collision details or decide a resolution strategy without re-scanning

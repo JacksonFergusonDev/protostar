@@ -387,7 +387,7 @@ def test_builtin_complete_lifecycle_has_no_repeat_mutations(
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch.object(ProcessRunner, "run", side_effect=_mock_process_runner)
     mocker.patch(
-        "protostar.cli.main.resolve_auto_metadata",
+        "protostar.metadata.resolve_auto_metadata",
         return_value={
             "description": "Lifecycle acceptance",
             "author_name": "Test Author",

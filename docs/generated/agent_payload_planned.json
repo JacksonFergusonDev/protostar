@@ -4,8 +4,7 @@
   "manifest": {
     "template_reference": null,
     "collision_strategy": "merge",
-    "force_merge": false,
-    "force_replace": false,
+    "collisions": [],
     "metadata": {
       "description": "High-velocity CLI application.",
       "author_name": "Demo Author",

@@ -114,7 +114,6 @@ class CollisionStrategy(enum.Enum):
 
     MERGE = "merge"
     OVERWRITE = "overwrite"
-    ABORT = "abort"
 
 
 class ProjectMetadata(TypedDict, total=False):
@@ -610,9 +609,8 @@ class EnvironmentManifest:
 
     metadata: ProjectMetadata = field(default_factory=lambda: cast(ProjectMetadata, {}))
     ide_settings: IDESettings = field(default_factory=lambda: cast(IDESettings, {}))
-    collision_strategy: CollisionStrategy = CollisionStrategy.MERGE
-    force_merge: bool = False
-    force_replace: bool = False
+    collision_strategy: CollisionStrategy | None = CollisionStrategy.MERGE
+    collisions: frozenset[Path] = frozenset()
 
     def add_ide_setting(self, key: IDESettingKey, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""
@@ -765,9 +763,10 @@ class EnvironmentManifest:
             "template_reference": self.template_reference.to_dict()
             if self.template_reference
             else None,
-            "collision_strategy": self.collision_strategy.value,
-            "force_merge": self.force_merge,
-            "force_replace": self.force_replace,
+            "collision_strategy": self.collision_strategy.value
+            if self.collision_strategy
+            else None,
+            "collisions": sorted(path.as_posix() for path in self.collisions),
             "metadata": dict(self.metadata),
             "ide_settings": dict(self.ide_settings),
             "dependencies": self.dependencies.to_dict(),
