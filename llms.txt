@@ -1,0 +1,36 @@
+# Protostar
+
+> High-velocity, zero-friction Python environment scaffolding.
+
+## Pages
+
+- [Home](https://protostar.jacksonferguson.me/index.md)
+- [Getting Started](https://protostar.jacksonferguson.me/getting-started/index.md)
+- [Why Protostar?](https://protostar.jacksonferguson.me/why-protostar/index.md)
+- [Design Principles](https://protostar.jacksonferguson.me/design-principles/index.md)
+
+## User Guide
+
+- [Initialization](https://protostar.jacksonferguson.me/usage/init/index.md)
+- [Templates](https://protostar.jacksonferguson.me/usage/templates/index.md)
+- [Authoring Templates](https://protostar.jacksonferguson.me/usage/authoring-templates/index.md)
+- [Tooling & Flags Matrix](https://protostar.jacksonferguson.me/usage/tooling-matrix/index.md)
+- [Global Configuration](https://protostar.jacksonferguson.me/usage/configuration/index.md)
+- [Agent & Machine Interface](https://protostar.jacksonferguson.me/usage/agent-interface/index.md)
+- [CLI Reference](https://protostar.jacksonferguson.me/usage/cli-reference/index.md)
+- [Troubleshooting & FAQ](https://protostar.jacksonferguson.me/usage/troubleshooting/index.md)
+
+## Mechanics
+
+- [Manifest](https://protostar.jacksonferguson.me/mechanics/manifest/index.md)
+- [Orchestrator](https://protostar.jacksonferguson.me/mechanics/orchestrator/index.md)
+- [Executor](https://protostar.jacksonferguson.me/mechanics/executor/index.md)
+- [Modules](https://protostar.jacksonferguson.me/mechanics/modules/index.md)
+- [Error Handling](https://protostar.jacksonferguson.me/mechanics/error_handling/index.md)
+
+## Developer Guide
+
+- [Overview](https://protostar.jacksonferguson.me/developer/overview/index.md)
+- [Extending Protostar](https://protostar.jacksonferguson.me/developer/extending-protostar/index.md)
+- [Testing & Philosophy](https://protostar.jacksonferguson.me/developer/testing/index.md)
+- [API Reference](https://protostar.jacksonferguson.me/developer/api-reference/index.md)

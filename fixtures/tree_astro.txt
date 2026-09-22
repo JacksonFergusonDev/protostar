@@ -1,0 +1,13 @@
+.
+├── .envrc
+├── .gitattributes
+├── .gitignore
+├── .python-version
+├── data
+│   ├── catalogs
+│   └── fits
+├── justfile
+├── notebooks
+├── pyproject.toml
+├── src
+└── uv.lock
