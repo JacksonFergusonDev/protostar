@@ -132,7 +132,11 @@ def handle_sync(args: argparse.Namespace) -> None:
         if args.check and review.pending:
             sys.exit(1)
         return
-    result = project.apply()
+    if ui.is_json_mode:
+        result = project.apply()
+    else:
+        with ui.progress_trail("Applying changes") as progress:
+            result = project.apply(progress=progress)
     partial = bool(review.conflicts)
     if ui.is_json_mode:
         ui.emit_json(

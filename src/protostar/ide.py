@@ -6,6 +6,7 @@ import subprocess
 from collections.abc import Callable
 
 from .manifest import Severity
+from .progress import ProgressStep, no_progress
 
 __all__ = ["IDEType", "check_ide_extensions"]
 
@@ -32,6 +33,7 @@ def check_ide_extensions(
     ide: IDEType | str | None,
     ide_extensions: set[str | tuple[str, ...]],
     on_diagnostic: Callable[[str, Severity], None],
+    progress: ProgressStep = no_progress,
 ) -> None:
     """Verifies that the configured IDE has the recommended extensions installed.
 
@@ -43,6 +45,8 @@ def check_ide_extensions(
         ide_extensions: Set of required extension IDs or alternatives tuple.
         on_diagnostic: Callback invoked with (message, severity) when extensions are missing
             or check fails.
+        progress: Brackets the IDE CLI probe, which runs only when the CLI is installed.
+            A failed probe is reported as a skip and still completes the step.
     """
     if not ide_extensions or ide is None:
         return
@@ -59,34 +63,36 @@ def check_ide_extensions(
     if not ide_binary or not shutil.which(ide_binary):
         return
 
-    try:
-        result = subprocess.run(
-            [ide_binary, "--list-extensions"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=5,
-        )
-        # Normalize to lowercase for safe diffing
-        installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
-        missing = []
-
-        for ext_req in ide_extensions:
-            if isinstance(ext_req, tuple):
-                if not any(e.lower() in installed for e in ext_req):
-                    missing.append(f"{' or '.join(ext_req)}")
-            else:
-                if ext_req.lower() not in installed:
-                    missing.append(ext_req)
-
-        if missing:
-            on_diagnostic(
-                f"Missing recommended {ide_type.value} extensions: {', '.join(missing)}",
-                Severity.WARNING,
+    # A failed probe is a skip, not a failure, so it completes the step.
+    with progress("Checking editor extensions"):
+        try:
+            result = subprocess.run(
+                [ide_binary, "--list-extensions"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=5,
             )
-    except Exception as e:
-        # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
-        on_diagnostic(
-            f"IDE extension verification skipped due to an unexpected error: {e}",
-            Severity.SKIP,
-        )
+            # Normalize to lowercase for safe diffing
+            installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
+            missing = []
+
+            for ext_req in ide_extensions:
+                if isinstance(ext_req, tuple):
+                    if not any(e.lower() in installed for e in ext_req):
+                        missing.append(f"{' or '.join(ext_req)}")
+                else:
+                    if ext_req.lower() not in installed:
+                        missing.append(ext_req)
+
+            if missing:
+                on_diagnostic(
+                    f"Missing recommended {ide_type.value} extensions: {', '.join(missing)}",
+                    Severity.WARNING,
+                )
+        except Exception as e:
+            # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
+            on_diagnostic(
+                f"IDE extension verification skipped due to an unexpected error: {e}",
+                Severity.SKIP,
+            )

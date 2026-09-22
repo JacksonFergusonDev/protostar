@@ -430,7 +430,7 @@ def test_sync_modes_are_mutually_exclusive():
         build_parser().parse_args(["sync", "--check", "--dry-run"])
 
 
-def test_sync_accepted_dependencies_resolve_once(project, mocker):
+def test_sync_accepted_dependencies_resolve_once(project, mocker, progress):
     import tomlkit
 
     from protostar.lifecycle import prepare_project
@@ -449,8 +449,9 @@ def test_sync_accepted_dependencies_resolve_once(project, mocker):
     process = mocker.patch(
         "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
     )
-    prepared.apply()
+    prepared.apply(progress=progress)
     process.assert_called_once()
+    assert progress.steps() == ["Installing 1 standard dependency"]
     process.reset_mock()
     repeated = prepare_project()
     assert not repeated.review.pending
@@ -458,7 +459,29 @@ def test_sync_accepted_dependencies_resolve_once(project, mocker):
     process.assert_not_called()
 
 
-def test_sync_metadata_only_resolves_lock_once(project, mocker):
+def test_human_sync_leaves_resolver_steps_on_screen(
+    project, mocker, monkeypatch, capsys
+):
+    import tomlkit
+
+    project.write_text('dependencies = ["example"]\n' + source_text("updated"))
+
+    def resolve(_runner, command, *, timeout):
+        doc = tomlkit.parse(Path("pyproject.toml").read_text())
+        doc["project"]["dependencies"] = ["example>=3"]
+        Path("pyproject.toml").write_text(tomlkit.dumps(doc))
+        Path("uv.lock").write_text("resolved")
+
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+    )
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync"])
+    main()
+    assert capsys.readouterr().out.startswith("  ✔ Installing 1 standard dependency\n")
+
+
+def test_sync_metadata_only_resolves_lock_once(project, mocker, progress):
     from protostar.lifecycle import prepare_project
 
     project.write_text(
@@ -476,8 +499,9 @@ def test_sync_metadata_only_resolves_lock_once(project, mocker):
     process = mocker.patch(
         "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
     )
-    prepared.apply()
+    prepared.apply(progress=progress)
     process.assert_called_once()
+    assert progress.steps() == ["Refreshing uv.lock"]
     process.reset_mock()
     assert not prepare_project().apply().touched_paths
     process.assert_not_called()

@@ -1,6 +1,5 @@
 """Dependency resolution and package installation via uv."""
 
-import logging
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -12,10 +11,9 @@ from .errors import ConfigurationError
 from .intent import DependencyGroup
 from .manifest import DependencyManifest
 from .merge import ConflictReason, MergeConflict, MergeLocation
+from .progress import ProgressStep, no_progress
 from .sync_state import DependencyState
 from .system import ProcessRunner
-
-logger = logging.getLogger("protostar")
 
 __all__ = ["DependencyGroup", "install_dependencies"]
 
@@ -24,8 +22,9 @@ def _install_group(
     packages: list[str],
     group: DependencyGroup,
     process_runner: ProcessRunner,
+    progress: ProgressStep,
 ) -> None:
-    """Installs a specific group of packages using uv add.
+    """Installs a specific group of packages using uv add, as one progress step.
 
     Raises:
         CommandExecutionError | CommandTimeoutError: If installation fails.
@@ -34,34 +33,38 @@ def _install_group(
         return
 
     cmd = ["uv", "add", *group.cli_args, *packages]
-    logger.info(f"Resolving and installing {len(packages)} {group.label} dependencies")
-    process_runner.run(cmd, timeout=600)
+    noun = "dependency" if len(packages) == 1 else "dependencies"
+    with progress(f"Installing {len(packages)} {group.label} {noun}"):
+        process_runner.run(cmd, timeout=600)
 
 
 def install_dependencies(
     dependencies_manifest: DependencyManifest,
     process_runner: ProcessRunner,
+    progress: ProgressStep = no_progress,
 ) -> None:
-    """Installs queued dependencies using uv.
+    """Installs queued dependencies using uv, one progress step per group.
 
     Raises:
         CommandExecutionError | CommandTimeoutError: If any installation fails.
     """
-    if (
-        not dependencies_manifest.dependencies
-        and not dependencies_manifest.dev_dependencies
-        and not dependencies_manifest.docs_dependencies
-    ):
-        return
-
     _install_group(
-        dependencies_manifest.dependencies, DependencyGroup.MAIN, process_runner
+        dependencies_manifest.dependencies,
+        DependencyGroup.MAIN,
+        process_runner,
+        progress,
     )
     _install_group(
-        dependencies_manifest.dev_dependencies, DependencyGroup.DEV, process_runner
+        dependencies_manifest.dev_dependencies,
+        DependencyGroup.DEV,
+        process_runner,
+        progress,
     )
     _install_group(
-        dependencies_manifest.docs_dependencies, DependencyGroup.DOCS, process_runner
+        dependencies_manifest.docs_dependencies,
+        DependencyGroup.DOCS,
+        process_runner,
+        progress,
     )
 
 

@@ -778,38 +778,92 @@ def test_executor_run_tasks(mocker, mock_config):
     mock_execute.assert_any_call(["uv", "second_task"], timeout=45)
 
 
-def test_executor_uses_custom_task_description(mocker):
-    # Mock the logger and subprocess
-    mock_info = mocker.patch("protostar.executor.logger.info")
-
+def test_executor_task_step_uses_custom_description(mocker, progress):
+    """A described task runs inside a step named by its description."""
     manifest = EnvironmentManifest()
     manifest.tasks.add_system_task(["git", "init"], description="Initializing git repo")
 
-    # We only need a dummy config to init the executor
-    config = UserConfig()
-    executor = SystemExecutor(manifest, config)
-    mocker.patch.object(executor.process_runner, "run")
+    executor = SystemExecutor(manifest, UserConfig(), progress=progress)
+    mocker.patch.object(
+        executor.process_runner,
+        "run",
+        side_effect=lambda command, **_: progress.events.append(("run", command[0])),
+    )
 
     executor._run_tasks(manifest.tasks.system_tasks)
 
-    mock_info.assert_called_with("Initializing git repo")
+    assert progress.events == [
+        ("start", "Initializing git repo"),
+        ("run", "git"),
+        ("done", "Initializing git repo"),
+    ]
 
 
-def test_executor_task_description_fallback(mocker):
-    mock_info = mocker.patch("protostar.executor.logger.info")
-
+def test_executor_task_step_falls_back_to_the_command(mocker, progress):
+    """An undescribed task's step is named by its full, shell-quoted command."""
     manifest = EnvironmentManifest()
-    # Provide a command with a path, but NO description
     manifest.tasks.add_system_task([".venv/bin/pre-commit", "install"])
 
-    config = UserConfig()
-    executor = SystemExecutor(manifest, config)
+    executor = SystemExecutor(manifest, UserConfig(), progress=progress)
     mocker.patch.object(executor.process_runner, "run")
 
     executor._run_tasks(manifest.tasks.system_tasks)
 
-    # Verify the fallback logic stripped the path and grabbed the binary name
-    mock_info.assert_called_once_with("Running: pre-commit")
+    assert progress.steps() == ["Running .venv/bin/pre-commit install"]
+
+
+def test_executor_failed_task_fails_its_step(mocker, progress):
+    """A task that raises fails its step and is recorded as the interrupted task."""
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_system_task(["git", "init"], description="Initializing git repo")
+
+    executor = SystemExecutor(manifest, UserConfig(), progress=progress)
+    error = CommandExecutionError(command=["git", "init"], returncode=1, stderr="")
+    mocker.patch.object(executor.process_runner, "run", side_effect=error)
+
+    with pytest.raises(CommandExecutionError):
+        executor._run_tasks(manifest.tasks.system_tasks)
+
+    assert progress.events == [
+        ("start", "Initializing git repo"),
+        ("fail", "Initializing git repo"),
+    ]
+    assert executor.interrupted_task == manifest.tasks.system_tasks[0]
+
+
+def test_executor_skipped_task_has_no_step(mocker, progress):
+    """A guarded task that is skipped emits a diagnostic, not a checklist step."""
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_post_install_task(["uv", "run", "prek", "install"])
+
+    executor = SystemExecutor(manifest, UserConfig(), progress=progress)
+    mocker.patch.object(executor.process_runner, "run")
+
+    executor._run_tasks(manifest.tasks.post_install_tasks)
+
+    assert progress.events == []
+
+
+def test_executor_initialization_brackets_the_initial_scaffold(mocker, progress):
+    """Initialization writes its first batch of files inside one step."""
+    manifest = EnvironmentManifest()
+    executor = SystemExecutor(manifest, UserConfig(), progress=progress)
+    mocker.patch.object(executor, "_run_tasks")
+    mocker.patch.object(executor, "_resolve_review")
+    mocker.patch.object(
+        executor,
+        "_apply_review",
+        side_effect=lambda _review: progress.events.append(("apply", "")),
+    )
+
+    executor.execute()
+
+    assert progress.events[:3] == [
+        ("start", "Writing project files"),
+        ("apply", ""),
+        ("done", "Writing project files"),
+    ]
+    assert progress.steps() == ["Writing project files"]
 
 
 def test_executor_skips_hook_install_when_not_a_git_repo(

@@ -232,13 +232,24 @@ The following metadata fields are prompted during initialization or automaticall
 
 --8<-- "table_metadata.md"
 
+## Execution Progress
+
+Once planning succeeds, Protostar writes the project files and runs each subprocess
+(`git init`, `uv init`, one `uv add` per dependency group, hook installation) as a
+separate step. The running step animates in a spinner; each finished step leaves a
+permanent `✔` line, so the completed work stays on screen:
+
+![Protostar Init](../assets/terminals/cli_init.svg)
+
+If a step fails or you interrupt it, that step is marked `✖`, every tracked change
+is rolled back, and the error report follows. Piped output omits the spinner but
+keeps the checklist lines; `--json` suppresses the checklist entirely.
+
 ## Progressive Scaffolding & Collisions
 
 When Protostar detects existing configuration files (like `pyproject.toml`), it prompts you to choose how to handle the conflict:
 
 ```text
-Protostar Ignition Sequence Initiated
-
 Workspace Collision: Protostar detected existing configuration files in the workspace.
   - pyproject.toml
 

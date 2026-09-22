@@ -90,7 +90,7 @@ class PythonCore(BootstrapModule):
                 cmd.extend(["--python", self.python_version])
             manifest.tasks.add_system_task(
                 cmd,
-                description="Scaffolding uv virtual environment",
+                description="Initializing uv project",
                 owned_files=["pyproject.toml", ".python-version"],
             )
 

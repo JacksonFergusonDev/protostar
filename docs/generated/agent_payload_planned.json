@@ -132,7 +132,7 @@
             "--python",
             "3.13"
           ],
-          "description": "Scaffolding uv virtual environment",
+          "description": "Initializing uv project",
           "timeout": 30,
           "owned_files": [
             "pyproject.toml",

@@ -31,6 +31,8 @@ is unknown until application, so previews do not invent a resulting lockfile dif
 reruns project initialization, Git initialization, hook installation, arbitrary
 template tasks, or IDE extension probes. It is not an environment reinstall or a
 package upgrade command. An unchanged repeat writes nothing and runs no subprocess.
+Each resolver subprocess it does run (`uv add` per dependency group, or `uv lock`)
+leaves a `✔` line on screen as it finishes.
 
 Built-in templates come from the installed Protostar version. Local templates use
 the recorded locator; remote templates use the exact recorded source. A revision
