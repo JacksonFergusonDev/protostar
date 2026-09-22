@@ -1,6 +1,8 @@
-"""Pre-commit merge spec and pin policy over already resolved registry inputs."""
+"""Pre-commit merge spec, locations per hook runner, and pin policy."""
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, replace
+from types import MappingProxyType
 from typing import cast
 
 from packaging.version import InvalidVersion, Version
@@ -8,6 +10,7 @@ from packaging.version import InvalidVersion, Version
 from ..merge import ConflictReason, MergeConflict, MergeLocation, Value
 from ..registry import ResolvedHookRevision
 from ..sync_state import HookPinState, PinProvenance
+from ..workflows import HookRunner
 from ..yaml_ast import (
     WILDCARD,
     KeyedSequence,
@@ -16,8 +19,21 @@ from ..yaml_ast import (
     decode_yaml_baseline,
     validate_yaml_baseline,
 )
+from .locations import DocumentLocations
 
 TARGET = ".pre-commit-config.yaml"
+_YML = ".pre-commit-config.yml"
+# pre-commit reads only the canonical name. It ignores a `.yml` copy, but a lone
+# one means the user's hooks are not running, so Protostar reports it instead of
+# creating a second configuration. prek reads prek.toml first, then either name.
+LOCATIONS: Mapping[HookRunner, DocumentLocations] = MappingProxyType(
+    {
+        HookRunner.PRE_COMMIT: DocumentLocations(TARGET, competitors=(_YML,)),
+        HookRunner.PREK: DocumentLocations(
+            TARGET, aliases=(_YML,), competitors=("prek.toml",)
+        ),
+    }
+)
 SPEC = YamlDocumentSpec(
     "pre-commit",
     keyed=(
@@ -43,15 +59,23 @@ class HookPinPlan:
         guard: Holds for automatic pins that would move to an unsafe revision.
         automatic: Resolved pins by repository, for pins the configuration uses.
         previous: Pin provenance recorded before this run, for every file.
+        path: Workspace path of the configuration this run reconciles.
+        sources: Paths whose pins belong to this configuration: ``path`` and the
+            path it was followed from after a rename.
     """
 
     desired: str
     guard: YamlGuard
     automatic: dict[str, ResolvedHookRevision]
     previous: tuple[HookPinState, ...]
+    path: str
+    sources: frozenset[str]
 
     def advance(self, content: str, baseline: Value) -> tuple[HookPinState, ...]:
         """Advances pin provenance only for accepted, owned, unguarded revisions.
+
+        Pins recorded for the path the configuration was followed from move to
+        ``path`` with it.
 
         Args:
             content: Configuration text the reconciliation under ``guard`` emitted.
@@ -61,7 +85,11 @@ class HookPinPlan:
             The complete pin state, with this file's pins updated.
         """
         guarded = {held[1] for held in self.guard.holds}
-        pins = {pin.repo: pin for pin in self.previous if pin.path == TARGET}
+        pins = {
+            pin.repo: replace(pin, path=self.path)
+            for pin in self.previous
+            if pin.path in self.sources
+        }
         local = decode_yaml_baseline(content) if content else {}
         desired = decode_yaml_baseline(self.desired)
         for repo in _repos(baseline):
@@ -83,13 +111,13 @@ class HookPinPlan:
             if name in pins and pins[name].revision == revision:
                 continue
             pins[name] = HookPinState(
-                TARGET,
+                self.path,
                 name,
                 revision,
                 pin.provenance if pin else PinProvenance.TEMPLATE,
             )
         return (
-            *(pin for pin in self.previous if pin.path != TARGET),
+            *(pin for pin in self.previous if pin.path not in self.sources),
             *pins.values(),
         )
 
@@ -98,6 +126,8 @@ def plan_hook_pins(
     desired: str,
     revisions: tuple[ResolvedHookRevision, ...],
     previous: tuple[HookPinState, ...],
+    path: str = TARGET,
+    owner: str | None = None,
 ) -> HookPinPlan:
     """Substitutes resolved pins and holds any automatic pin that is unsafe to apply.
 
@@ -109,6 +139,9 @@ def plan_hook_pins(
         desired: Generated configuration text with pin placeholders.
         revisions: Pins resolved from the registry or its fallback.
         previous: Pin provenance recorded before this run.
+        path: Workspace path of the configuration being reconciled.
+        owner: Path of the ownership record the configuration was followed from,
+            whose pins move to ``path``.
 
     Returns:
         The resolved configuration, its guard, and what ``advance`` needs.
@@ -120,7 +153,8 @@ def plan_hook_pins(
         desired = desired.replace(resolved.hook.placeholder, resolved.revision)
     incoming = decode_yaml_baseline(desired)
     validate_yaml_baseline(SPEC, incoming)
-    old_pins = {pin.repo: pin for pin in previous if pin.path == TARGET}
+    sources = frozenset({path, owner or path})
+    old_pins = {pin.repo: pin for pin in previous if pin.path in sources}
     holds: list[tuple[str, ...]] = []
     conflicts: list[MergeConflict] = []
     for repo in _repos(incoming):
@@ -138,10 +172,15 @@ def plan_hook_pins(
             holds.append(("repos", name, "rev"))
             conflicts.append(
                 MergeConflict(
-                    MergeLocation(TARGET, ("repos", name, "rev"), name),
+                    MergeLocation(path, ("repos", name, "rev"), name),
                     ConflictReason.UNSAFE_PIN,
                 )
             )
     return HookPinPlan(
-        desired, YamlGuard(tuple(holds), tuple(conflicts)), automatic, previous
+        desired,
+        YamlGuard(tuple(holds), tuple(conflicts)),
+        automatic,
+        previous,
+        path,
+        sources,
     )

@@ -58,10 +58,6 @@ class TomlDocumentSpec:
             tool also accepts its settings at the top level. An existing document
             with settings but without this table is left alone, because adding the
             table would hide those settings from the tool.
-        displaces: Workspace paths of configurations the tool reads only while
-            this document is absent. Protostar never creates the document while
-            one of them exists, because it would silently replace that
-            configuration.
         layout: Document layout; ``None`` keeps tomlkit's round-trip output.
     """
 
@@ -69,7 +65,6 @@ class TomlDocumentSpec:
     super_tables: frozenset[tuple[str, ...]] = frozenset()
     seed_paths: frozenset[tuple[str, ...]] = frozenset()
     root_table: str | None = None
-    displaces: tuple[str, ...] = ()
     layout: TomlLayout | None = None
 
 

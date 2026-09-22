@@ -11,7 +11,7 @@ from .dependencies import (
     requirement_entries,
     requirement_identity,
 )
-from .documents import YAML_DOCUMENTS, pyproject
+from .documents import pyproject, yaml_spec
 from .jsonc_ast import decode_jsonc
 from .merge import MISSING, MergeConflict, MergeLocation, Value, semantic_equal
 from .review_workspace import ReviewWorkspace
@@ -69,7 +69,7 @@ def preserved_deviations(
                     local.get(key, MISSING) if isinstance(local, dict) else MISSING,
                 )
         elif (
-            (spec := YAML_DOCUMENTS.get(location.file)) is not None
+            (spec := yaml_spec(location.file)) is not None
             and (sequence := spec.sequence_at(location.keys)) is not None
             and isinstance(old, list)
             and isinstance(candidate, list)

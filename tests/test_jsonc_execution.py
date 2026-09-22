@@ -174,9 +174,9 @@ def test_renovate_overwrite_owns_declared_values(tmp_path, monkeypatch, mocker):
 
 
 @pytest.mark.parametrize(
-    "alternate", ["renovate.json", ".renovaterc.json5", ".github/renovate.json5"]
+    "alternate", ["renovate.json5", ".renovaterc.json5", ".github/renovate.json5"]
 )
-def test_renovate_alternative_configuration_is_preserved(
+def test_renovate_json5_configuration_is_preserved(
     tmp_path, monkeypatch, mocker, alternate
 ):
     monkeypatch.chdir(tmp_path)
@@ -186,9 +186,30 @@ def test_renovate_alternative_configuration_is_preserved(
 
     executor = run(renovate_manifest(), mocker)
 
-    assert executor.diagnostics[0].conflict
+    [conflict] = [d.conflict for d in executor.diagnostics if d.conflict]
+    assert conflict.reason is ConflictReason.UNOWNED
+    assert conflict.location.file == RENOVATE.as_posix()
     assert target.read_bytes() == b"// comments\n{}"
     assert not RENOVATE.exists()
+
+
+@pytest.mark.parametrize("alias", ["renovate.json", ".renovaterc", "renovate.jsonc"])
+def test_renovate_configuration_elsewhere_is_merged_in_place(
+    tmp_path, monkeypatch, mocker, alias
+):
+    monkeypatch.chdir(tmp_path)
+    target = Path(alias)
+    target.write_text('// mine\n{"custom": 1}\n')
+
+    executor = run(renovate_manifest(), mocker)
+
+    assert not [d for d in executor.diagnostics if d.conflict]
+    assert not RENOVATE.exists()
+    local = decode_jsonc(target.read_text())
+    assert local["custom"] == 1
+    assert local["extends"] == ["config:best-practices"]
+    assert "// mine" in target.read_text()
+    assert owned(target) == decode_jsonc(CONFIG_V1)
 
 
 @pytest.mark.parametrize("content", ["{broken", "[]", ""])
@@ -396,6 +417,8 @@ def direct(mocker, *, exists=True):
     decisions = Reconciliation(
         settings_manifest(), UserConfig(), workspace, fs, mocker.MagicMock()
     )
+    # A mock workspace has no filesystem nodes to validate.
+    mocker.patch.object(decisions, "_validate_node")
     return decisions, workspace, fs
 
 
