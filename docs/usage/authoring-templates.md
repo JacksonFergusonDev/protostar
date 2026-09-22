@@ -160,6 +160,17 @@ protostar init --from https://github.com/Org/template --DATABASE_URL="sqlite:///
 
 If you *omit* the flag, Protostar parses the AST, detects the unresolved `<% DATABASE_URL %>` placeholder, and automatically halts to prompt you via the interactive terminal wizard before any disk mutations occur.
 
+### Variables Are Not Secrets
+
+A template's custom variables are non-secret by definition: their values are rendered into the project's files, which get committed. If a value must stay out of the repository, it isn't a template variable. Have the generated code read it from the environment at runtime, and ship a `.env.example` in `template/` that names it.
+
+Protostar enforces this before anything renders:
+
+- **Names:** a placeholder named like a credential, such as `<% API_KEY %>`, `<% DB_PASSWORD %>`, or `<% GITHUB_TOKEN %>`, stops the template from loading.
+- **Values:** every value is checked against [gitleaks](https://github.com/gitleaks/gitleaks)' default rules, at the version Protostar pins for the gitleaks pre-commit hook it scaffolds. A value that looks like a credential, such as a GitHub token or a private key, stops initialization with an error that names the variable and the matching rule, never the value. Values are limited to 1,024 characters.
+
+There is no override. If an ordinary value is flagged, that's a false positive; see [Template Variables That Look Like Credentials](troubleshooting.md#template-variables-that-look-like-credentials).
+
 ## Level 4: Testing & Distribution
 
 ### Local Testing

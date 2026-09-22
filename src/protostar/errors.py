@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from enum import IntEnum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from protostar.docs_registry import DocsPage
 from protostar.system_deps import GlobalExecutable
@@ -13,6 +13,7 @@ from protostar.system_deps import GlobalExecutable
 if TYPE_CHECKING:
     from .journal import RollbackResult
     from .models import RollbackContext
+    from .secret_guard import SecretFinding
 
 
 class ExitCode(IntEnum):
@@ -53,6 +54,15 @@ class ProtostarError(Exception):
         if not self.docs_path:
             return None
         return self.docs_path.build_url(self.docs_anchor)
+
+    def details(self) -> dict[str, Any]:
+        """Returns structured fields for the machine-readable error envelope.
+
+        Returns:
+            JSON-safe fields merged into the ``--json`` error object; empty
+            unless a subclass carries data an agent can act on.
+        """
+        return {}
 
 
 class ConfigurationError(ProtostarError):
@@ -314,6 +324,10 @@ class WorkspaceCollisionError(ProtostarError):
         super().__init__(message, docs_path=DocsPage.TROUBLESHOOTING_COLLISIONS)
         self.paths = paths
 
+    def details(self) -> dict[str, Any]:
+        """Returns the colliding paths as sorted strings."""
+        return {"paths": sorted(str(p) for p in self.paths)}
+
 
 class SecurityViolationError(ProtostarError):
     """Raised when a template attempts an unauthorized system or filesystem operation."""
@@ -326,6 +340,44 @@ class SecurityViolationError(ProtostarError):
         docs_path: DocsPage | None = DocsPage.TROUBLESHOOTING_SECURITY,
     ) -> None:
         super().__init__(message, hint=hint, docs_path=docs_path)
+
+
+class SecretDetectedError(SecurityViolationError):
+    """Raised when template variable values look like credentials.
+
+    Carries the flagged variable names and the rules they matched, never the
+    values themselves.
+    """
+
+    def __init__(self, findings: tuple[SecretFinding, ...]) -> None:
+        """Initializes the error with one finding per flagged variable.
+
+        Args:
+            findings: The flagged variables, sorted by name.
+        """
+        listed = "\n".join(
+            f"  - {finding.variable} (gitleaks rule {finding.rule})"
+            for finding in findings
+        )
+        super().__init__(
+            f"Template variable values look like credentials:\n{listed}",
+            hint=(
+                "Template variables are rendered into project files, so they "
+                "must not hold secrets. Enter a non-secret value, and have the "
+                "project read the secret from the environment at runtime."
+            ),
+            docs_path=DocsPage.TEMPLATE_VARIABLES,
+        )
+        self.findings = findings
+
+    def details(self) -> dict[str, Any]:
+        """Returns each flagged variable and the rule it matched."""
+        return {
+            "findings": [
+                {"variable": finding.variable, "rule": finding.rule}
+                for finding in self.findings
+            ]
+        }
 
 
 class AggregatedDependencyError(ProtostarError):

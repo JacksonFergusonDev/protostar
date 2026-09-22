@@ -47,7 +47,6 @@ from protostar.errors import (
     ProtostarError,
     SecurityViolationError,
     TemplateResolutionError,
-    WorkspaceCollisionError,
 )
 from protostar.fs import atomic_write_text
 from protostar.intent import TemplateOrigin
@@ -543,8 +542,7 @@ def main() -> None:
                 docs_url = DocsPage.ROLLBACK.build_url()
             if docs_url:
                 error_dict["docs_url"] = docs_url
-            if isinstance(e, WorkspaceCollisionError):
-                error_dict["paths"] = sorted(str(p) for p in e.paths)
+            error_dict.update(e.details())
             ui.emit_json(
                 {
                     "api_version": schema.CLI_API_VERSION,

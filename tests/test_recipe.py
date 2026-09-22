@@ -266,7 +266,7 @@ def test_bound_template_and_optout_keep_independent_contributions(
     monkeypatch.setenv("PROJECT_TOKEN", "private-template-answer")
     source = tmp_path / "blueprint.toml"
     source.write_text(
-        'name="custom"\nruff=true\n[dev.pyproject]\nforeign="""[tool.ruff]\nline-length=99\n"""\n[files]\n"custom.txt"="<% TOKEN %>"\n'
+        'name="custom"\nruff=true\n[dev.pyproject]\nforeign="""[tool.ruff]\nline-length=99\n"""\n[files]\n"custom.txt"="<% ANSWER %>"\n'
     )
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("shutil.which", return_value="/mock/command")
@@ -280,7 +280,7 @@ def test_bound_template_and_optout_keep_independent_contributions(
     args = argparse.Namespace(
         from_path=str(source),
         template_context={},
-        bind=["TOKEN=PROJECT_TOKEN"],
+        bind=["ANSWER=PROJECT_TOKEN"],
         docker=None,
         RuffModule=False,
     )
@@ -310,7 +310,7 @@ def test_unbound_custom_template_fails_without_prompt_or_mutation(
 
     monkeypatch.chdir(tmp_path)
     source = tmp_path / "blueprint.toml"
-    source.write_text('[files]\n"custom.txt"="<% TOKEN %>"\n')
+    source.write_text('[files]\n"custom.txt"="<% ANSWER %>"\n')
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     prompt = mocker.patch(
         "protostar.cli.main.resolve_missing_variables",

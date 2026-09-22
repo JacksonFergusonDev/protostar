@@ -124,6 +124,11 @@ check-schemas: sync
 # Alias for check-schemas
 schema-check: check-schemas
 
+# Regenerate the secret-detection rules from the gitleaks tag pinned in _fallbacks.py
+sync-secret-rules: sync
+    @printf "\n{{ blue }}=== Regenerating Secret-Detection Rules ==={{ nc }}\n"
+    uv run python scripts/sync_secret_rules.py
+
 # Pre-warm environment and caches for demo generation
 demo-prewarm: sync
     @printf "\n{{ blue }}=== Pre-warming Demo Environment & Caches ==={{ nc }}\n"
@@ -176,6 +181,7 @@ serve: sync
 # Bump project version (part: major, minor, patch), sync lockfile, commit, tag, and atomic push
 bump part:
     uv run python scripts/sync_registry_fallbacks.py --check
+    uv run python scripts/sync_secret_rules.py --check
     uv run --refresh https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-release-infrastructure/refs/heads/main/scripts/release.py {{ part }}
 
 # Drop into an isolated macOS sandbox shell with a freshly built local Protostar on $PATH
