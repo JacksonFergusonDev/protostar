@@ -24,7 +24,7 @@ baseline = "{\n  \"$schema\": \"https://docs.renovatebot.com/renovate-schema.jso
 [[files]]
 path = ".github/workflows/ci.yml"
 policy = "structured-yaml"
-baseline = "jobs:\n  lint:\n    name: Lint & Type Check\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v7\n      - name: Install uv\n        uses: astral-sh/setup-uv@v10.0.0\n        with:\n          enable-cache: true\n          python-version: '3.13'\n      - name: Install dependencies\n        run: uv sync --all-extras --dev --locked\n      - name: Lint Markdown with rumdl\n        run: uv run rumdl check --output-format github .\n      - name: Check Markdown formatting with rumdl\n        run: uv run rumdl fmt --check --output-format github .\n      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github .\n      - name: Run Mypy\n        run: uv run mypy src/\n  test:\n    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}\n    runs-on: ${{ matrix.os }}\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v7\n      - name: Install uv\n        uses: astral-sh/setup-uv@v10.0.0\n        with:\n          enable-cache: true\n          python-version: ${{ matrix.python-version }}\n      - name: Install dependencies\n        run: \"uv sync --all-extras --dev --locked\\nuv pip install pytest-github-actions-annotate-failures\\n\"\n      - name: Run tests\n        run: uv run pytest ${{ matrix.coverage && '--cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy' || '' }}\n      - if: matrix.coverage\n        name: Upload coverage to Codecov\n        uses: codecov/codecov-action@v7\n        with:\n          disable_search: true\n          fail_ci_if_error: true\n          files: coverage.xml\n          name: coverage\n          token: ${{ secrets.CODECOV_TOKEN }}\n      - if: ${{ matrix.coverage && !cancelled() }}\n        name: Upload test analytics to Codecov\n        uses: codecov/codecov-action@v7\n        with:\n          disable_search: true\n          files: junit.xml\n          name: test-results\n          report_type: test_results\n          token: ${{ secrets.CODECOV_TOKEN }}\n    strategy:\n      matrix:\n        include:\n          - coverage: true\n            os: ubuntu-latest\n            python-version: '3.14'\n        os:\n          - macos-latest\n          - ubuntu-latest\n          - windows-latest\n        python-version:\n          - '3.13'\n          - '3.14'\nname: CI\non:\n  pull_request:\n    branches:\n      - main\n  push:\n    branches:\n      - main\n"
+baseline = "jobs:\n  lint:\n    name: Lint & Type Check\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v7\n      - name: Install uv\n        uses: astral-sh/setup-uv@v10.0.0\n        with:\n          enable-cache: true\n          python-version: '3.13'\n      - name: Install dependencies\n        run: uv sync --all-extras --dev --locked\n      - name: Lint Markdown with rumdl\n        run: uv run rumdl check --output-format github .\n      - name: Check Markdown formatting with rumdl\n        run: uv run rumdl fmt --check --output-format github .\n      - name: Run Ruff Linter\n        run: uv run ruff check --output-format=github .\n      - name: Run Ruff Formatter\n        run: uv run ruff format --check --output-format=github .\n      - name: Run Mypy\n        run: uv run mypy .\n      - name: Run actionlint\n        run: uv run actionlint\n  test:\n    name: Test on ${{ matrix.os }} with Python ${{ matrix.python-version }}\n    runs-on: ${{ matrix.os }}\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v7\n      - name: Install uv\n        uses: astral-sh/setup-uv@v10.0.0\n        with:\n          enable-cache: true\n          python-version: ${{ matrix.python-version }}\n      - name: Install dependencies\n        run: \"uv sync --all-extras --dev --locked\\nuv pip install pytest-github-actions-annotate-failures\\n\"\n      - name: Run tests\n        run: uv run pytest ${{ matrix.coverage && '--cov --cov-report=xml --junitxml=junit.xml -o junit_family=legacy' || '' }}\n      - if: matrix.coverage\n        name: Upload coverage to Codecov\n        uses: codecov/codecov-action@v7\n        with:\n          disable_search: true\n          fail_ci_if_error: true\n          files: coverage.xml\n          name: coverage\n          token: ${{ secrets.CODECOV_TOKEN }}\n      - if: ${{ matrix.coverage && !cancelled() }}\n        name: Upload test analytics to Codecov\n        uses: codecov/codecov-action@v7\n        with:\n          disable_search: true\n          files: junit.xml\n          name: test-results\n          report_type: test_results\n          token: ${{ secrets.CODECOV_TOKEN }}\n    strategy:\n      matrix:\n        include:\n          - coverage: true\n            os: ubuntu-latest\n            python-version: '3.14'\n        os:\n          - macos-latest\n          - ubuntu-latest\n          - windows-latest\n        python-version:\n          - '3.13'\n          - '3.14'\nname: CI\non:\n  pull_request:\n    branches:\n      - main\n  push:\n    branches:\n      - main\n"
 
 [[files]]
 path = ".github/workflows/release.yml"
@@ -34,7 +34,7 @@ baseline = "jobs:\n  pypi-publish:\n    environment:\n      name: pypi\n      ur
 [[files]]
 path = ".pre-commit-config.yaml"
 policy = "structured-yaml"
-baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\ndefault_stages:\n  - pre-commit\nrepos:\n  - hooks:\n      - id: check-added-large-files\n      - id: check-merge-conflict\n      - id: check-case-conflict\n      - id: check-symlinks\n      - id: check-executables-have-shebangs\n      - exclude: \\.py$\n        id: trailing-whitespace\n      - exclude: \\.py$\n        id: end-of-file-fixer\n      - id: check-yaml\n      - id: check-json\n      - id: check-toml\n    repo: builtin\n  - hooks:\n      - entry: uv lock --check\n        files: ^(pyproject\\.toml|uv\\.lock)$\n        id: uv-lock-check\n        language: system\n        name: uv lock check\n        pass_filenames: false\n      - entry: uv run rumdl check --fix\n        id: rumdl-check\n        language: system\n        name: rumdl check\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run rumdl fmt\n        id: rumdl-fmt\n        language: system\n        name: rumdl fmt\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run ruff check --fix\n        id: ruff-check\n        language: system\n        name: ruff check\n        require_serial: true\n        types:\n          - python\n      - entry: uv run ruff format\n        id: ruff-format\n        language: system\n        name: ruff format\n        require_serial: true\n        types:\n          - python\n      - entry: uv run mypy\n        id: mypy\n        language: system\n        name: mypy\n        require_serial: true\n        types:\n          - python\n    repo: local\n  - hooks:\n      - id: gitleaks\n    repo: https://github.com/gitleaks/gitleaks\n    rev: v8.30.1\n  - hooks:\n      - id: commitizen\n        stages:\n          - commit-msg\n    repo: https://github.com/commitizen-tools/commitizen\n    rev: v4.18.1\n"
+baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\n  - pre-push\ndefault_stages:\n  - pre-commit\nrepos:\n  - hooks:\n      - id: check-added-large-files\n      - id: check-merge-conflict\n      - id: check-case-conflict\n      - id: check-symlinks\n      - id: check-executables-have-shebangs\n      - exclude: \\.py$\n        id: trailing-whitespace\n      - exclude: \\.py$\n        id: end-of-file-fixer\n      - id: check-yaml\n      - id: check-json\n      - id: check-toml\n    repo: builtin\n  - hooks:\n      - entry: uv lock --check\n        files: ^(pyproject\\.toml|uv\\.lock)$\n        id: uv-lock-check\n        language: system\n        name: uv lock check\n        pass_filenames: false\n      - entry: uv run rumdl check --fix\n        id: rumdl-check\n        language: system\n        name: rumdl check\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run rumdl fmt\n        id: rumdl-fmt\n        language: system\n        name: rumdl fmt\n        require_serial: true\n        types:\n          - markdown\n      - entry: uv run ruff check --fix\n        id: ruff-check\n        language: system\n        name: ruff check\n        require_serial: true\n        types:\n          - python\n      - entry: uv run ruff format\n        id: ruff-format\n        language: system\n        name: ruff format\n        require_serial: true\n        types:\n          - python\n      - entry: uv run mypy .\n        id: mypy\n        language: system\n        name: mypy\n        pass_filenames: false\n        types:\n          - python\n      - entry: uv run pytest\n        files: ^(src/|tests/|pyproject\\.toml|uv\\.lock)\n        id: pytest\n        language: system\n        name: pytest\n        pass_filenames: false\n        stages:\n          - pre-push\n      - entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5\n        files: ^(\\.github/renovate\\.json|renovate\\.json|renovate\\.jsonc|\\.github/renovate\\.jsonc|\\.renovaterc|\\.renovaterc\\.json|\\.renovaterc\\.jsonc)$\n        id: check-renovate\n        language: system\n        name: check renovate config\n      - entry: uv run check-jsonschema --builtin-schema vendor.readthedocs\n        files: ^(\\.readthedocs\\.yaml|\\.readthedocs\\.yml|readthedocs\\.yaml|readthedocs\\.yml)$\n        id: check-readthedocs\n        language: system\n        name: check read the docs config\n      - entry: uv run actionlint\n        files: ^\\.github/workflows/.*\\.ya?ml$\n        id: actionlint\n        language: system\n        name: actionlint\n    repo: local\n  - hooks:\n      - id: gitleaks\n    repo: https://github.com/gitleaks/gitleaks\n    rev: v8.30.1\n  - hooks:\n      - id: commitizen\n        stages:\n          - commit-msg\n    repo: https://github.com/commitizen-tools/commitizen\n    rev: v4.18.1\n"
 
 [[files]]
 path = ".readthedocs.yaml"
@@ -56,7 +56,7 @@ policy = "seed-only"
 [[files]]
 path = "justfile"
 policy = "checksum"
-digest = "b1d382cbf1d5c7956bb6f0ea1ec0ea6cb3dd7880d8a5ca1b14838f0616707bde"
+digest = "9fb840e99999037ac6e468eb336d59ea08567a06d4aa66a09954cbf44a45874b"
 
 [[files]]
 path = "pyproject.toml"
@@ -87,10 +87,34 @@ baseline = "[project]\nsite_description = \"Add your project description here.\"
 [[dependencies]]
 path = "pyproject.toml"
 group = "dev"
+name = "actionlint-py"
+marker = ""
+declared = "actionlint-py"
+materialized = "actionlint-py>=1.7.12.24"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "check-jsonschema"
+marker = ""
+declared = "check-jsonschema"
+materialized = "check-jsonschema>=0.38.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
 name = "commitizen"
 marker = ""
 declared = "commitizen"
 materialized = "commitizen>=4.18.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
+name = "json5"
+marker = ""
+declared = "json5"
+materialized = "json5>=0.15.0"
 
 [[dependencies]]
 path = "pyproject.toml"

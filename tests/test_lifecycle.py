@@ -669,6 +669,19 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
     process.assert_not_called()
 
 
+def _resolve_dev_dependencies(_runner, command, *, timeout):
+    """Stands in for `uv add --dev`, recording each package in the dev group."""
+    import tomlkit
+
+    assert command[:3] == ["uv", "add", "--dev"]
+    doc = tomlkit.parse(Path("pyproject.toml").read_text())
+    groups = doc.setdefault("dependency-groups", {})
+    existing = groups.setdefault("dev", [])
+    existing.extend(package + ">=1" for package in command[3:])
+    Path("pyproject.toml").write_text(tomlkit.dumps(doc))
+    Path("uv.lock").write_text("resolved")
+
+
 def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     project, mocker
 ):
@@ -681,17 +694,10 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     from protostar.lifecycle import prepare_project
     from protostar.recipe import SelectionLayer
 
-    def resolve(_runner, command, *, timeout):
-        assert command[:3] == ["uv", "add", "--dev"]
-        doc = tomlkit.parse(Path("pyproject.toml").read_text())
-        groups = doc.setdefault("dependency-groups", {})
-        existing = groups.setdefault("dev", [])
-        existing.extend(package + ">=1" for package in command[3:])
-        Path("pyproject.toml").write_text(tomlkit.dumps(doc))
-        Path("uv.lock").write_text("resolved")
-
     process = mocker.patch(
-        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+        "protostar.system.ProcessRunner.run",
+        autospec=True,
+        side_effect=_resolve_dev_dependencies,
     )
     project.write_text("ruff = true\nprek = true\nrenovate = true\n")
     prepare_project().apply()
@@ -762,6 +768,12 @@ def test_action_pin_by_renovate_keeps_sync_check_passing(
     from protostar.lifecycle import prepare_project
     from protostar.workflows import generate_ci_workflow
 
+    # CI lints its workflows with actionlint, a dev dependency.
+    mocker.patch(
+        "protostar.system.ProcessRunner.run",
+        autospec=True,
+        side_effect=_resolve_dev_dependencies,
+    )
     project.write_text("ci = true\n")
     prepare_project().apply()
     workflow = Path(".github/workflows/ci.yml")

@@ -32,6 +32,7 @@ lint: sync
     uv run rumdl fmt --check .
     uv run ruff check .
     uv run ruff format --check .
+    uv run actionlint
     @printf "{{ green }}✔ Linting passed{{ nc }}\n"
 
 # Run static type checking

@@ -366,16 +366,18 @@ class MypyModule(BootstrapModule):
             ("ms-python.mypy-type-checker", "matangover.mypy")
         )
 
+        # Checking only the staged files misses errors they cause elsewhere, so
+        # the hook, CI, and `just typecheck` all check the whole project.
         hook_payload = """      - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: uv run mypy .
         language: system
         types: [python]
-        require_serial: true"""
+        pass_filenames: false"""
         manifest.tooling.add_pre_commit_local_hook(hook_payload)
 
         manifest.tooling.add_ci_step(
-            "      - name: Run Mypy\n        run: uv run mypy src/"
+            "      - name: Run Mypy\n        run: uv run mypy ."
         )
 
         manifest.tooling.just_typecheck_commands.append("uv run mypy .")
@@ -454,6 +456,18 @@ class PytestModule(BootstrapModule):
         manifest.dependencies.add_dev("pytest-mock")
         manifest.tooling.add_ci_flag(CIFlag.PYTEST)
 
+        # The suite runs before a push rather than on every commit, and only when
+        # a push changes code, tests, or the locked environment.
+        manifest.tooling.add_pre_commit_hook_type("pre-push")
+        hook_payload = """      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        files: ^(src/|tests/|pyproject\\.toml|uv\\.lock)
+        stages: [pre-push]"""
+        manifest.tooling.add_pre_commit_local_hook(hook_payload)
+
         # Deterministically scaffold the testing directory
         manifest.filesystem.add_directory("tests")
 
@@ -498,28 +512,16 @@ class PreCommitModule(BootstrapModule):
             )
 
     def build(self, manifest: EnvironmentManifest) -> None:
-        """Flags pre-commit activation, queues dependencies, and sets up git hooks.
+        """Flags pre-commit activation and queues its dependency.
 
-        Evaluates the local workspace for an existing Git repository before
-        queueing initialization commands to ensure idempotency.
+        The orchestrator installs the git hooks once every module has declared
+        the hook types it needs.
         """
         logger.debug("Building Pre-Commit tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
         manifest.tooling.set_hook_runner(HookRunner.PRE_COMMIT)
         manifest.dependencies.add_dev("pre-commit")
-
-        # `autoupdate` pulls remote git repositories to update hook definitions,
-        # requiring a wider time window than a local install.
-        hook_files = [".git/hooks/pre-commit"]
-        for hook_type in manifest.tooling.pre_commit_install_hook_types:
-            hook_files.append(f".git/hooks/{hook_type}")
-
-        manifest.tasks.add_post_install_task(
-            ["uv", "run", "pre-commit", "install"],
-            description="Installing pre-commit git hooks",
-            owned_files=hook_files,
-        )
 
 
 class PrekModule(BootstrapModule):
@@ -545,26 +547,16 @@ class PrekModule(BootstrapModule):
             )
 
     def build(self, manifest: EnvironmentManifest) -> None:
-        """Flags prek activation, queues dependencies, and sets up git hooks.
+        """Flags prek activation and queues its dependency.
 
-        Evaluates the local workspace for an existing Git repository before
-        queueing initialization commands to ensure idempotency.
+        The orchestrator installs the git hooks once every module has declared
+        the hook types it needs.
         """
         logger.debug("Building Prek tooling layer.")
 
         # Trigger the orchestrator to assemble and write the YAML file
         manifest.tooling.set_hook_runner(HookRunner.PREK)
         manifest.dependencies.add_dev("prek")
-
-        hook_files = [".git/hooks/pre-commit"]
-        for hook_type in manifest.tooling.pre_commit_install_hook_types:
-            hook_files.append(f".git/hooks/{hook_type}")
-
-        manifest.tasks.add_post_install_task(
-            ["uv", "run", "prek", "install"],
-            description="Installing prek git hooks",
-            owned_files=hook_files,
-        )
 
 
 class CommitizenModule(BootstrapModule):
@@ -730,6 +722,18 @@ class RenovateModule(BootstrapModule):
 }
 """
         manifest.filesystem.add_file_injection(renovate.TARGET, config)
+
+        # Renovate reads every one of its configuration names as JSON with
+        # comments, which only the JSON5 parser accepts.
+        manifest.dependencies.add_dev("check-jsonschema")
+        manifest.dependencies.add_dev("json5")
+        manifest.tooling.add_pre_commit_local_hook(
+            f"""      - id: check-renovate
+        name: check renovate config
+        entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5
+        language: system
+        files: {renovate.LOCATIONS.files_pattern}"""
+        )
 
 
 class CodecovModule(BootstrapModule):
@@ -965,6 +969,15 @@ build:
             config,
             producer="module:ReadTheDocsModule",
             document_format=StructuredFormat.YAML,
+        )
+
+        manifest.dependencies.add_dev("check-jsonschema")
+        manifest.tooling.add_pre_commit_local_hook(
+            f"""      - id: check-readthedocs
+        name: check read the docs config
+        entry: uv run check-jsonschema --builtin-schema vendor.readthedocs
+        language: system
+        files: {readthedocs.LOCATIONS.files_pattern}"""
         )
 
 

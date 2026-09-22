@@ -33,6 +33,8 @@ def duplicate(path, keys=()):
 def module_intent(module, strategy=CollisionStrategy.MERGE, content=None):
     intent = EnvironmentManifest(collision_strategy=strategy)
     module.build(intent)
+    # These runs exercise document placement; installing tools would need uv.
+    intent.dependencies.dev_dependencies.clear()
     if content is not None:
         [(target, [contribution])] = intent.filesystem.structured.items()
         intent.filesystem.structured[target] = [

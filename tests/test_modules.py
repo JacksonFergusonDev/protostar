@@ -277,10 +277,9 @@ def test_mypy_module_adds_pre_commit_hook():
     assert len(manifest.tooling.pre_commit_local_hooks) == 1
     hook = manifest.tooling.pre_commit_local_hooks[0]
     assert "id: mypy" in hook
-    assert "entry: uv run mypy" in hook
+    assert "entry: uv run mypy ." in hook
     assert "language: system" in hook
-    assert "require_serial: true" in hook
-    assert "pass_filenames" not in hook
+    assert "pass_filenames: false" in hook
 
 
 def test_ty_module_build():
@@ -337,10 +336,8 @@ def test_pre_commit_build_uv(manifest):
 
     assert manifest.tooling.hook_runner == HookRunner.PRE_COMMIT
     assert "pre-commit" in manifest.dependencies.dev_dependencies
-    assert any(
-        t.command == ["uv", "run", "pre-commit", "install"]
-        for t in manifest.tasks.post_install_tasks
-    )
+    # The orchestrator installs the hooks once every hook type is declared.
+    assert not manifest.tasks.post_install_tasks
 
 
 # --- PrekModule Tests ---
@@ -364,10 +361,8 @@ def test_prek_build_uv(manifest):
 
     assert manifest.tooling.hook_runner == HookRunner.PREK
     assert "prek" in manifest.dependencies.dev_dependencies
-    assert any(
-        t.command == ["uv", "run", "prek", "install"]
-        for t in manifest.tasks.post_install_tasks
-    )
+    # The orchestrator installs the hooks once every hook type is declared.
+    assert not manifest.tasks.post_install_tasks
 
 
 def test_markdownlint_module_injects_ide_extension():
