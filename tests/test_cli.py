@@ -19,7 +19,6 @@ from protostar.cli.parser import (
     build_parser,
     intercept_interactive_wizards,
 )
-from protostar.cli.wizard import WizardSelections
 from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
@@ -33,6 +32,8 @@ from protostar.errors import (
     NetworkFetchError,
     TemplateResolutionError,
 )
+from protostar.init_draft import InitDraft
+from protostar.recipe import Tool
 from protostar.system_deps import GlobalExecutable
 
 
@@ -76,10 +77,11 @@ def test_intercept_interactive_wizards_cancellations(mocker):
     """Test that cancelling wizards propagates ExecutionAbortedError."""
     parser = mocker.Mock()
 
+    mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
     # Init Wizard Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch(
-        "protostar.cli.parser.run_init_wizard",
+        "protostar.cli.parser.edit_recipe",
         side_effect=ExecutionAbortedError("Initialization wizard cancelled by user."),
     )
     with pytest.raises(ExecutionAbortedError):
@@ -91,7 +93,7 @@ def test_intercept_interactive_wizards_non_interactive_fallback(mocker):
     """Test that non-interactive execution returns cleanly without running orchestrator."""
     parser = mocker.Mock()
     mocker.patch.object(sys, "argv", ["protostar", "init"])
-    mocker.patch("protostar.cli.parser.run_init_wizard", return_value=None)
+    mocker.patch("protostar.cli.parser.is_interactive", return_value=False)
     mock_orch = mocker.patch("protostar.cli.main.Orchestrator")
 
     intercept_interactive_wizards(parser)
@@ -373,8 +375,17 @@ def test_intercept_interactive_wizards_success(mocker):
     # Emulate running `protostar` with no arguments
     mocker.patch.object(sys, "argv", ["protostar"])
 
-    selections = WizardSelections(modules=[], docker=True, variables={"REGION": "eu"})
-    mocker.patch("protostar.cli.parser.run_init_wizard", return_value=selections)
+    mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
+    selections = InitDraft(
+        tool_choices=tuple((tool, False) for tool in Tool),
+        docker=True,
+        variables=(("REGION", "eu"),),
+        metadata=(),
+    )
+    mocker.patch(
+        "protostar.cli.parser.complete_init_draft", side_effect=lambda draft: draft
+    )
+    mocker.patch("protostar.cli.parser.edit_recipe", return_value=selections)
     mocker.patch("protostar.cli.parser.UserConfig.load")
     mock_orchestrator = mocker.patch("protostar.cli.parser.Orchestrator")
     mocker.patch(

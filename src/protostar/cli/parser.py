@@ -1,5 +1,6 @@
 import argparse
 import difflib
+import os
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -16,13 +17,17 @@ from rich.table import Table
 from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
 from protostar.cli.completion import Shell
-from protostar.cli.wizard import run_init_wizard
+from protostar.cli.tui.launch import edit_recipe
+from protostar.cli.wizard import complete_init_draft
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
-from protostar.errors import InvalidUsageError
+from protostar.errors import ExecutionAbortedError, InvalidUsageError
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
+from protostar.intent import TemplateOrigin
 from protostar.modules import TOOLING_MODULES
-from protostar.recipe import Tool, read_recipe
+from protostar.recipe import read_recipe
+from protostar.system import is_interactive
+from protostar.templates import discover_templates
 
 
 def _resolve_usage_doc_path() -> DocsPage:
@@ -629,45 +634,31 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
 
     # Intercept parameter-less subcommands for interactive wizards
     if cmd == "init":
-        selections = run_init_wizard()
-        if not selections:
+        if not is_interactive():
             return
-
         user_config = UserConfig.load()
-        from dataclasses import replace
-
+        catalog = discover_templates(user_config)
+        # Keep the existing benchmark boundary before importing or launching Textual.
+        if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
+            sys.exit(0)
         existing_recipe = read_recipe(Path("pyproject.toml"))
-        min_py = selections.project_metadata.get("minimum_python")
-        min_py = str(min_py) if min_py else None
-        if existing_recipe:
-            user_config = replace(
-                user_config,
-                python_version=existing_recipe.python,
-                ide=existing_recipe.ide,
+        template = None
+        if existing_recipe and existing_recipe.source:
+            source = existing_recipe.source.acquire(Path.cwd())
+            external = source.reference.origin is not TemplateOrigin.BUILT_IN
+            template = DraftTemplate(
+                source, is_external=external, is_trusted=not external
             )
-        selected = {Tool(m.config_key) for m in selections.modules}
-        draft = InitDraft(
-            template=DraftTemplate(
-                selections.source,
-                selections.is_external,
-                selections.is_user_aliased,
-                selections.is_trusted,
-            )
-            if selections.source
-            else None,
-            tool_choices=tuple((tool, tool in selected) for tool in Tool),
-            docker=selections.docker,
-            python_version=min_py,
-            metadata=tuple(
-                sorted(
-                    (key, tuple(value) if isinstance(value, list) else str(value))
-                    for key, value in selections.project_metadata.items()
-                )
-            ),
-            variables=tuple(sorted(selections.variables.items())),
-            existing_recipe=existing_recipe,
+        draft = edit_recipe(
+            InitDraft(template=template, existing_recipe=existing_recipe),
+            catalog,
+            user_config,
         )
+        if draft is None:
+            raise ExecutionAbortedError("Recipe editing cancelled by user.")
+        draft = complete_init_draft(draft)
         modules, request = resolve_init(draft, user_config)
+        ui.print_recipe_summary(request)
         orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
         engine = orchestrator_cls(modules, user_config, request=request)
         ui._run_engine(engine, request)

@@ -512,3 +512,30 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
         )
 
     console.print("\n[dim]No changes were made to your system.[/dim]")
+
+
+def print_recipe_summary(request: InitRequest) -> None:
+    """Leave a literal, encoding-safe summary after the decision app exits."""
+    from rich.text import Text
+
+    reference = request.template_reference
+    template = (
+        (reference.display_name or reference.locator) if reference else "No template"
+    )
+    tools = ""
+    if request.recipe:
+        opinions = (
+            request.template_blueprint.tooling_overrides
+            if request.template_blueprint
+            else {}
+        )
+        tools = ", ".join(
+            selection.tool.value
+            for selection in request.recipe.selections(opinions)
+            if selection.enabled
+        )
+    console.print(
+        Text(
+            f"Recipe: {template}\nTools: {tools or 'None'}\nDocker: {'yes' if request.docker else 'no'}"
+        )
+    )

@@ -454,30 +454,6 @@ def test_export_schema_describes_named_records_and_excludes_runtime_provenance(
     ]
 
 
-def test_wizard_resolution_retains_builtin_reference(mocker, monkeypatch):
-    from protostar.cli.wizard import run_init_wizard
-
-    monkeypatch.delenv("PROTOSTAR_BENCHMARK_WIZARD", raising=False)
-    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
-    mocker.patch("protostar.cli.wizard.select", return_value="api")
-    mocker.patch("protostar.cli.wizard.checkbox", return_value=[])
-    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
-    selections = run_init_wizard()
-    assert selections is not None
-    assert selections.blueprint is not None
-    reference = selections.blueprint.reference
-    assert reference is not None
-    assert reference.origin == TemplateOrigin.BUILT_IN
-    assert reference.locator == "api"
-    assert (
-        InitRequest(template_blueprint=selections.blueprint).to_dict()[
-            "template_reference"
-        ]
-        == reference.to_dict()
-    )
-
-
 def test_cli_resolution_passes_builtin_reference_to_request(mocker):
     import argparse
 

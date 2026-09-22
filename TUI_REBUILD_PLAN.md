@@ -11,8 +11,8 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 | 1 | `refactor(cli): move prompt code out of the engine` | Merged (#301) |
 | 2 | `feat(security): secret guard for template variables` | Merged (#302) |
 | 3 | `feat(recipe)!: persist template variables and drop --bind` | Merged (#303) |
-| 4 | `refactor(cli): single init draft and resolver` | Next |
-| 5 | `feat(cli): Textual foundation and recipe editor` | Planned |
+| 4 | `refactor(cli): single init draft and resolver` | Merged (#304) |
+| 5 | `feat(cli): Textual foundation and recipe editor` | Complete |
 | 6 | `feat(cli): variables, metadata and live plan preview` | Planned |
 | 7 | `feat(cli): change review screen` | Planned |
 | 8 | `refactor(cli)!: remove questionary` | Planned |
@@ -95,6 +95,8 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 - `parser.py` no longer builds a recipe itself.
 
 ## PR 5: `feat(cli): Textual foundation and recipe editor`
+
+**Status: complete.** Added the lazy Textual launcher and recipe editor, draft-based bare-init flow, value-source labels, constraint-driven tool controls, Docker, Pilot tests, an SVG snapshot, and lazy-import checks. Metadata and variables remain questionary prompts after the app exits; execution remains under the Rich progress trail. Demos were deliberately not regenerated.
 
 **Goal:** add Textual and build the recipe editor (template and tools). Bare `protostar init` opens it.
 
