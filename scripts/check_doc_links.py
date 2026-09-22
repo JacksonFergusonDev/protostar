@@ -1,8 +1,8 @@
 """Validates that all documentation paths in DocsPage resolve to real files and anchors.
 
-Applies MkDocs URL routing convention:
-    /en/stable/usage/init/  ->  docs/usage/init.md
-    /en/stable/getting-started/  ->  docs/getting-started.md
+Applies documentation URL routing convention:
+    usage/init/  ->  docs/usage/init.md
+    getting-started/  ->  docs/getting-started.md
 
 Run:
     uv run python scripts/check_doc_links.py

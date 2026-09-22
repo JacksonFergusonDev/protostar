@@ -15,17 +15,17 @@
 [![Release](https://img.shields.io/github/actions/workflow/status/jacksonfergusondev/protostar/release.yml?color=22d3ee&labelColor=0A0A0A&label=release)](https://github.com/jacksonfergusondev/protostar/actions/workflows/release.yml)
 [![Codecov](https://img.shields.io/codecov/c/github/JacksonFergusonDev/protostar?color=22d3ee&labelColor=0A0A0A&logo=codecov&logoColor=white)](https://codecov.io/gh/JacksonFergusonDev/protostar)
 [![Python](https://img.shields.io/badge/python-3.12+-22d3ee?labelColor=0A0A0A&logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![Documentation](https://img.shields.io/readthedocs/protostar/stable?color=22d3ee&labelColor=0A0A0A&logo=readthedocs&logoColor=white)](https://protostar.readthedocs.io/stable/)
+[![Documentation](https://img.shields.io/badge/docs-gh--pages-22d3ee?labelColor=0A0A0A&logo=github&logoColor=white)](https://protostar.jacksonferguson.me/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
 
 ## Safe. Predictable. Clean
 
-| [**Get Started**](https://protostar.readthedocs.io/stable/getting-started/)
-| [**Docs**](https://protostar.readthedocs.io/stable/)
-| [**Why Protostar?**](https://protostar.readthedocs.io/stable/why-protostar/)
-| [**Design Principles**](https://protostar.readthedocs.io/stable/design-principles/)
-| [**Authoring Templates**](https://protostar.readthedocs.io/stable/usage/authoring-templates/)
-| [**Troubleshooting**](https://protostar.readthedocs.io/stable/usage/troubleshooting/) |
+| [**Get Started**](https://protostar.jacksonferguson.me/getting-started/)
+| [**Docs**](https://protostar.jacksonferguson.me/)
+| [**Why Protostar?**](https://protostar.jacksonferguson.me/why-protostar/)
+| [**Design Principles**](https://protostar.jacksonferguson.me/design-principles/)
+| [**Authoring Templates**](https://protostar.jacksonferguson.me/usage/authoring-templates/)
+| [**Troubleshooting**](https://protostar.jacksonferguson.me/usage/troubleshooting/) |
 
 </div>
 
@@ -57,7 +57,7 @@ While general-purpose template engines like **Copier** and **Cookiecutter** are 
 
 Ready to dive deeper? The README only scratches the surface.
 
-Head over to the **[Official Documentation](https://protostar.readthedocs.io/stable/)** for:
+Head over to the **[Official Documentation](https://protostar.jacksonferguson.me/)** for:
 
 - **Command Reference:** Full flags and capabilities for `init`.
 - **Agent & Machine Interface:** Driving Protostar programmatically via `--json` and `--dry-run`.
@@ -196,7 +196,7 @@ protostar init --template cli --dry-run --json
 protostar init --template cli --force-merge --json
 ```
 
-See the **[Agent & Machine Interface Guide](https://protostar.readthedocs.io/stable/usage/agent-interface/)** for complete protocol documentation.
+See the **[Agent & Machine Interface Guide](https://protostar.jacksonferguson.me/usage/agent-interface/)** for complete protocol documentation.
 
 ### Custom Templates & Global Aliases
 
@@ -245,7 +245,7 @@ ruff = true
 pytest = true
 ```
 
-For full template specifications, AST injections, and multi-file repository templating, visit the **[Template Authoring Guide](https://protostar.readthedocs.io/stable/usage/authoring-templates/)**.
+For full template specifications, AST injections, and multi-file repository templating, visit the **[Template Authoring Guide](https://protostar.jacksonferguson.me/usage/authoring-templates/)**.
 
 ---
 
@@ -258,7 +258,7 @@ This tool uses a highly decoupled, plugin-style architecture. The CLI parser dyn
 
 Protostar maintains strict engineering standards to ensure reliability, including 100% type-hinting, isolated `pytest` environments (mocked subprocesses and `tmp_path` disk isolation), and automated `ruff` formatting.
 
-Please see the [Documentation](https://protostar.readthedocs.io/stable/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
+Please see the [Documentation](https://protostar.jacksonferguson.me/developer/overview/) for full details on our development setup, architectural rules, and pull request guidelines.
 
 ---
 

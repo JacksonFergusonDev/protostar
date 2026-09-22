@@ -30,7 +30,7 @@ classifiers = [
 Repository = "https://github.com/jacksonfergusondev/protostar"
 Issues = "https://github.com/jacksonfergusondev/protostar/issues"
 PyPi = "https://pypi.org/project/protostar/"
-Documentation = "https://protostar.readthedocs.io/stable/"
+Documentation = "https://protostar.jacksonferguson.me/"
 
 [project.scripts]
 protostar = "protostar.cli:main"
@@ -66,7 +66,11 @@ ci = [
     "ruff>=0.14.13",
     "rumdl>=0.2.63",
 ]
-docs = ["mkdocstrings[python]>=1.0.3", "zensical>=0.0.26"]
+docs = [
+    "llmstxt-standalone>=0.2.0",
+    "mkdocstrings[python]>=1.0.3",
+    "zensical>=0.0.26",
+]
 dev = [{ include-group = "ci" }, { include-group = "docs" }, "prek>=0.4.11"]
 
 # ==================================================

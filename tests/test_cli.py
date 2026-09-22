@@ -534,9 +534,7 @@ def test_main_handles_rollback_error_with_documentation_hyperlink(mocker):
     rendered_output = buf.getvalue()
 
     assert "Docs: Rollback ↗" in rendered_output
-    assert (
-        "https://protostar.readthedocs.io/en/stable/usage/rollback/" in rendered_output
-    )
+    assert "https://protostar.jacksonferguson.me/usage/rollback/" in rendered_output
     assert "Note: Some standard artifacts" in rendered_output
 
 
@@ -571,7 +569,7 @@ def test_main_handles_rollback_error_json_mode(mocker, monkeypatch):
     assert payload["status"] == "error"
     assert (
         payload["error"]["docs_url"]
-        == "https://protostar.readthedocs.io/en/stable/usage/rollback/"
+        == "https://protostar.jacksonferguson.me/usage/rollback/"
     )
     assert "rollback_context" in payload["error"]
 

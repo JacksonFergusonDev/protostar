@@ -1,7 +1,7 @@
 [project]
 site_name = "Protostar"
 site_description = "High-velocity, zero-friction Python environment scaffolding."
-site_url = "https://protostar.readthedocs.io/stable/"
+site_url = "https://protostar.jacksonferguson.me/"
 repo_url = "https://github.com/jacksonfergusondev/protostar"
 repo_name = "jacksonfergusondev/protostar"
 copyright = "&copy; 2026 Jackson Ferguson. <a href=\"https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE\">License</a>"
@@ -101,6 +101,11 @@ handlers.python.options.members_order = "source"
 
 [project.extra]
 generator = false
+
+[project.extra.version]
+provider = "mike"
+default = "latest"
+alias = true
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"

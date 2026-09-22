@@ -331,7 +331,7 @@ The same structured information is available programmatically via `--json`, wher
     "type": "MissingDependencyError",
     "message": "Required dependency 'uv' is not installed or not found in $PATH.",
     "hint": "Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh",
-    "docs_url": "https://protostar.readthedocs.io/en/stable/usage/troubleshooting/"
+    "docs_url": "https://protostar.jacksonferguson.me/usage/troubleshooting/"
   }
 }
 ```

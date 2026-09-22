@@ -1,7 +1,7 @@
 import urllib.parse
 from enum import Enum
 
-DOCS_BASE_URL = "https://protostar.readthedocs.io/en/stable/"
+DOCS_BASE_URL = "https://protostar.jacksonferguson.me/"
 
 
 class DocsPage(Enum):
@@ -46,7 +46,7 @@ class DocsPage(Enum):
         return self.value[1]
 
     def build_url(self, anchor: str | None = None) -> str:
-        """Builds the full ReadTheDocs URL for this documentation page."""
+        """Builds the full documentation URL for this documentation page."""
         base = DOCS_BASE_URL if DOCS_BASE_URL.endswith("/") else f"{DOCS_BASE_URL}/"
         url = urllib.parse.urljoin(base, self.path.lstrip("/"))
         if anchor:
