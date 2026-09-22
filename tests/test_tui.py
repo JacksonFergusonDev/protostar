@@ -132,9 +132,9 @@ async def test_alias_and_load_error(tmp_path):
     assert app.return_value.docker
 
 
-def test_editor_snapshot(snap_compare):
+def test_editor_snapshot(snap_compare, monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
     app = make_app()
-    app.no_color = False
     assert snap_compare(app, terminal_size=(110, 50))
 
 
