@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790098677387,
+  "lastUpdate": 1790099412872,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15713,6 +15713,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 223.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "5d4ca63e9f38ce9034c1cff4174b2397abb62d4c",
+          "message": "fix(snapshots): freeze actionlint-py, check-jsonschema, and json5 in constraints",
+          "timestamp": "2026-09-22T10:47:39-07:00",
+          "tree_id": "584d7a6d635cbc10de213ff0b6c5cd60c9f9dfe4",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5d4ca63e9f38ce9034c1cff4174b2397abb62d4c"
+        },
+        "date": 1790099411469,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 195.74,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 264.53,
             "unit": "ms"
           }
         ]
