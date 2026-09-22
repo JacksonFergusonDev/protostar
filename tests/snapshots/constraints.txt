@@ -1,10 +1,13 @@
 # Pinned version constraints for deterministic snapshot regression testing
+actionlint-py==1.7.12.24
 astropy==8.0.1
 astroquery==0.4.11
+check-jsonschema==0.38.0
 commitizen==4.18.1
 fastapi==0.141.1
 httpx==0.28.1
 ipywidgets==8.1.9
+json5==0.15.0
 jupyterlab==4.6.3
 matplotlib==3.11.2
 mkdocstrings==1.0.6
