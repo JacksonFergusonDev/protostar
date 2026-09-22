@@ -107,6 +107,10 @@ icon = "fontawesome/brands/github"
 link = "https://github.com/jacksonfergusondev/protostar"
 
 [[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/protostar/"
+
+[[project.extra.social]]
 icon = "fontawesome/brands/linkedin"
 link = "https://www.linkedin.com/in/jackson--ferguson/"
 
