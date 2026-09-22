@@ -83,7 +83,8 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 - **Custom template variables are non-secret by definition.** Their values render into committed files. `check_variable_names` and `check_variable_values` (`src/protostar/secret_guard.py`) run in `TemplateBlueprint.from_sources` before anything renders.
 - **The guard has no override.** Never add a flag, marker, or allowlist entry that lets a flagged value through, and never echo a checked value in an error, log, or JSON payload; report the variable name and rule id only.
 - **The guard ports gitleaks, it doesn't extend it.** Don't add entropy-only or generic heuristics: every block must be near-certain because nothing can bypass it.
-- **`src/protostar/_secret_rules.py` is generated.** `scripts/sync_secret_rules.py` builds it from the gitleaks tag pinned in `_fallbacks.py`. Never hand-edit it; run `just sync-secret-rules` whenever that tag changes. Ruff is excluded from it because `--check` compares bytes.
+- **`src/protostar/_secret_rules.py` is generated.** `scripts/sync_secret_rules.py` builds it from the gitleaks tag pinned in `_fallbacks.py`. Never hand-edit it; run `just sync-secret-rules` whenever that tag changes, and `--dump` to read the rules. Ruff is excluded from it because `--check` compares its text.
+- **The rules are stored compressed, never as text.** Their patterns and allowlists quote token prefixes and publicly known keys that every secret scanner (gitleaks, GitHub, scanners of installed wheels) would report. Don't store them readably, and don't add per-scanner ignore files instead.
 
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 

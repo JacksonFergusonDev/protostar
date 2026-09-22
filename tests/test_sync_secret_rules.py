@@ -1,6 +1,12 @@
+import base64
+import dataclasses
+import json
 import re
 import string
+import tomllib
 import warnings
+import zlib
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +17,10 @@ from protostar.secret_guard import (
     AllowlistCondition,
     AllowlistTarget,
     Rule,
+    RuleSet,
+    _matches,
+    decode_rules,
+    load_rules,
 )
 from scripts import sync_secret_rules
 from scripts.sync_secret_rules import (
@@ -19,6 +29,8 @@ from scripts.sync_secret_rules import (
     compile_strict,
     convert,
     convert_allowlist,
+    generate,
+    read_payload,
     render,
     translate,
 )
@@ -231,11 +243,9 @@ def test_convert_honors_exclusions(monkeypatch):
     assert rule_set.omitted == (("bad", "needs \\p classes"),)
 
 
-# --- render ------------------------------------------------------------------
+# --- generate ----------------------------------------------------------------
 
-
-def test_render_round_trips_through_the_generated_module():
-    source = b"""
+_SOURCE = b"""
 title = "test"
 [[allowlists]]
 regexes = ['''(?i)^example$''']
@@ -250,32 +260,98 @@ condition = "AND"
 regexTarget = "line"
 regexes = ['''ignore''']
 stopwords = ["Test"]
+[[rules]]
+id = "scoped"
+regex = "x"
+path = '''\\.tf$'''
 """
-    module = render("v0.0.1", source, "MIT License\n\nCopyright (c) Someone")
+_LICENSE = "MIT License\n\nCopyright (c) Someone"
+
+
+def test_generate_stores_rules_encoded_with_readable_metadata():
+    module = generate("v0.0.1", _SOURCE, _LICENSE)
     namespace: dict[str, object] = {}
     exec(compile(module, "<generated>", "exec"), namespace)
 
     assert namespace["GITLEAKS_VERSION"] == "v0.0.1"
-    assert namespace["GLOBAL_ALLOWLISTS"] == (Allowlist(regexes=("(?i)^example$",)),)
-    assert namespace["RULES"] == (
-        Rule(
-            rule_id="demo",
-            pattern="demo-(?i:[a-z]{8})",
-            keywords=("demo",),
-            entropy=2.5,
-            secret_group=1,
-            allowlists=(
-                Allowlist(
-                    condition=AllowlistCondition.AND,
-                    target=AllowlistTarget.LINE,
-                    regexes=("ignore",),
-                    stopwords=("test",),
+    assert namespace["OMITTED"] == (
+        ("scoped", "applies only to files matching a path"),
+    )
+    payload = namespace["PAYLOAD"]
+    assert isinstance(payload, bytes)
+    assert read_payload(module) == payload
+    assert decode_rules(payload) == RuleSet(
+        rules=(
+            Rule(
+                rule_id="demo",
+                pattern="demo-(?i:[a-z]{8})",
+                keywords=("demo",),
+                entropy=2.5,
+                secret_group=1,
+                allowlists=(
+                    Allowlist(
+                        condition=AllowlistCondition.AND,
+                        target=AllowlistTarget.LINE,
+                        regexes=("ignore",),
+                        stopwords=("test",),
+                    ),
                 ),
             ),
         ),
+        global_allowlists=(Allowlist(regexes=("(?i)^example$",)),),
     )
+    # Patterns live only in the payload, never as text a scanner could read.
+    assert "demo-" not in module
     assert "Copyright (c) Someone" in module
-    assert module == render("v0.0.1", source, "MIT License\n\nCopyright (c) Someone")
+    assert module == generate("v0.0.1", _SOURCE, _LICENSE)
+
+
+def test_generate_keeps_a_committed_payload_that_decodes_to_the_same_rules():
+    """zlib builds can compress differently; equal rules must not churn the file."""
+    fresh = generate("v0.0.1", _SOURCE, _LICENSE)
+    payload = read_payload(fresh)
+    assert payload is not None
+    rule_set = decode_rules(payload)
+    document = json.dumps(
+        dataclasses.asdict(rule_set), sort_keys=True, separators=(",", ":")
+    )
+    other = base64.b64encode(zlib.compress(document.encode(), 1))
+    assert other != payload
+    translation = convert(tomllib.loads(_SOURCE.decode()))
+    committed = render("v0.0.1", _SOURCE, _LICENSE, translation, other)
+
+    assert generate("v0.0.1", _SOURCE, _LICENSE, committed) == committed
+
+
+def test_generate_replaces_a_stale_or_unreadable_payload():
+    fresh = generate("v0.0.1", _SOURCE, _LICENSE)
+    stale = fresh.replace("v0.0.1", "v0.0.0")
+
+    assert generate("v0.0.1", _SOURCE, _LICENSE, stale) == fresh
+    assert generate("v0.0.1", _SOURCE, _LICENSE, "PAYLOAD = b'bm90IHpsaWI='") == fresh
+    assert generate("v0.0.1", _SOURCE, _LICENSE, "not python (") == fresh
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("PAYLOAD = (b'ab' b'cd')", b"abcd"),
+        ("OTHER = b'x'", None),
+        ("PAYLOAD = 'text'", None),
+        ("def (", None),
+    ],
+)
+def test_read_payload(text, expected):
+    assert read_payload(text) == expected
+
+
+def test_dump_prints_the_committed_rules(capsys, monkeypatch):
+    monkeypatch.setattr("sys.argv", ["sync_secret_rules.py", "--dump"])
+
+    sync_secret_rules.main()
+
+    document = json.loads(capsys.readouterr().out)
+    assert len(document["rules"]) == len(load_rules().rules)
 
 
 # --- the committed module ----------------------------------------------------
@@ -292,27 +368,44 @@ def test_committed_rules_follow_the_pinned_gitleaks_hook():
 
 def test_committed_patterns_compile_cleanly_on_this_python():
     """CI runs this on every supported Python version."""
-    patterns = [rule.pattern for rule in _secret_rules.RULES]
+    rule_set = load_rules()
+    patterns = [rule.pattern for rule in rule_set.rules]
     patterns += [
         regex
         for allowlists in (
-            _secret_rules.GLOBAL_ALLOWLISTS,
-            *(rule.allowlists for rule in _secret_rules.RULES),
+            rule_set.global_allowlists,
+            *(rule.allowlists for rule in rule_set.rules),
         )
         for allowlist in allowlists
         for regex in allowlist.regexes
     ]
 
-    assert len(_secret_rules.RULES) > 150
+    assert len(rule_set.rules) > 150
     for pattern in patterns:
         compile_strict(pattern)
 
 
 def test_committed_rules_are_sorted_with_lowercase_keywords():
-    ids = [rule.rule_id for rule in _secret_rules.RULES]
+    rules = load_rules().rules
+    ids = [rule.rule_id for rule in rules]
 
     assert ids == sorted(ids)
     assert len(set(ids)) == len(ids)
-    for rule in _secret_rules.RULES:
+    for rule in rules:
         assert rule.keywords, rule.rule_id
         assert all(keyword == keyword.lower() for keyword in rule.keywords)
+
+
+def test_committed_module_contains_nothing_the_rules_flag():
+    """Secret scanners read the module as text; none of its lines may look like a leak."""
+    rule_set = load_rules()
+    text = Path(_secret_rules.__file__).read_text(encoding="utf-8")
+
+    for line in text.splitlines():
+        lowered = line.lower()
+        for rule in rule_set.rules:
+            if rule.keywords and not any(k in lowered for k in rule.keywords):
+                continue
+            assert not _matches(rule, line, rule_set.global_allowlists), (
+                f"{rule.rule_id} flags: {line[:60]}"
+            )

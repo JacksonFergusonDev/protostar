@@ -6,6 +6,11 @@ each variable name against a short list of names that read as credentials, and
 each value against gitleaks' default rule set, translated from Go to Python at
 build time into ``protostar._secret_rules`` by ``scripts/sync_secret_rules.py``.
 
+The generated module stores the rules compressed rather than as text, so that
+secret scanners, in this repository or in an installed wheel, do not mistake
+their patterns, or the publicly known keys some allowlists name, for leaked
+credentials. ``load_rules`` decodes them the first time a value is scanned.
+
 A block has no override, so the value check ports gitleaks' own detector
 (``detect/detect.go`` at the pinned tag) instead of adding heuristics: a rule
 runs only when one of its keywords appears, and secret groups, entropy
@@ -17,13 +22,18 @@ decoded, so a base64-wrapped token is checked as given.
 
 from __future__ import annotations
 
+import base64
+import dataclasses
 import functools
+import json
 import math
 import re
+import zlib
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 from .docs_registry import DocsPage
 from .errors import ConfigurationError, SecretDetectedError, TemplateResolutionError
@@ -93,6 +103,19 @@ class Rule:
     entropy: float | None = None
     secret_group: int = 0
     allowlists: tuple[Allowlist, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class RuleSet:
+    """Every detection rule, plus the allowlists that apply to all of them.
+
+    Attributes:
+        rules: The detection rules, sorted by id.
+        global_allowlists: Exceptions checked before each rule's own.
+    """
+
+    rules: tuple[Rule, ...]
+    global_allowlists: tuple[Allowlist, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,21 +199,84 @@ def scan_value(name: str, value: str) -> SecretFinding | None:
         A finding for the first matching rule, preferring a specific rule over
         a generic one, or None if no rule matches.
     """
-    from ._secret_rules import GLOBAL_ALLOWLISTS, RULES
-
+    rule_set = load_rules()
     line = f'{name} = "{value}"'
     lowered = line.lower()
     generic: SecretFinding | None = None
-    for rule in RULES:
+    for rule in rule_set.rules:
         if rule.keywords and not any(keyword in lowered for keyword in rule.keywords):
             continue
-        if _matches(rule, line, GLOBAL_ALLOWLISTS):
+        if _matches(rule, line, rule_set.global_allowlists):
             finding = SecretFinding(name, rule.rule_id)
             # Like gitleaks, report a specific rule over a generic one.
             if "generic" not in rule.rule_id:
                 return finding
             generic = generic or finding
     return generic
+
+
+@functools.cache
+def load_rules() -> RuleSet:
+    """Decodes the generated rule set, once per process.
+
+    Returns:
+        The rules stored in ``protostar._secret_rules``.
+    """
+    from ._secret_rules import PAYLOAD
+
+    return decode_rules(PAYLOAD)
+
+
+def encode_rules(rule_set: RuleSet) -> bytes:
+    """Serializes a rule set into the form the generated module stores.
+
+    Args:
+        rule_set: The rules to store.
+
+    Returns:
+        Base64 of the zlib-compressed JSON rule set.
+    """
+    document = json.dumps(
+        dataclasses.asdict(rule_set), sort_keys=True, separators=(",", ":")
+    )
+    return base64.b64encode(zlib.compress(document.encode(), 9))
+
+
+def decode_rules(payload: bytes) -> RuleSet:
+    """Reads a rule set stored by ``encode_rules``.
+
+    Args:
+        payload: Base64 of the zlib-compressed JSON rule set.
+
+    Returns:
+        The decoded rules.
+    """
+    document = json.loads(zlib.decompress(base64.b64decode(payload)))
+    return RuleSet(
+        rules=tuple(
+            Rule(
+                rule_id=rule["rule_id"],
+                pattern=rule["pattern"],
+                keywords=tuple(rule["keywords"]),
+                entropy=rule["entropy"],
+                secret_group=rule["secret_group"],
+                allowlists=tuple(_decode_allowlist(a) for a in rule["allowlists"]),
+            )
+            for rule in document["rules"]
+        ),
+        global_allowlists=tuple(
+            _decode_allowlist(a) for a in document["global_allowlists"]
+        ),
+    )
+
+
+def _decode_allowlist(document: dict[str, Any]) -> Allowlist:
+    return Allowlist(
+        condition=AllowlistCondition(document["condition"]),
+        target=AllowlistTarget(document["target"]),
+        regexes=tuple(document["regexes"]),
+        stopwords=tuple(document["stopwords"]),
+    )
 
 
 def shannon_entropy(data: str) -> float:

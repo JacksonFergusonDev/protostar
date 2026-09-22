@@ -6,7 +6,6 @@ import sys
 
 import pytest
 
-from protostar import _secret_rules
 from protostar.cli.main import main
 from protostar.config import TemplateBlueprint
 from protostar.errors import (
@@ -21,9 +20,13 @@ from protostar.secret_guard import (
     AllowlistCondition,
     AllowlistTarget,
     Rule,
+    RuleSet,
     SecretFinding,
     check_variable_names,
     check_variable_values,
+    decode_rules,
+    encode_rules,
+    load_rules,
     scan_value,
     shannon_entropy,
 )
@@ -209,8 +212,10 @@ def rules(mocker):
     """Replaces the generated rule set for one test."""
 
     def _install(*rules: Rule, global_allowlists: tuple[Allowlist, ...] = ()) -> None:
-        mocker.patch.object(_secret_rules, "RULES", rules)
-        mocker.patch.object(_secret_rules, "GLOBAL_ALLOWLISTS", global_allowlists)
+        mocker.patch(
+            "protostar.secret_guard.load_rules",
+            return_value=RuleSet(rules, global_allowlists),
+        )
 
     return _install
 
@@ -306,6 +311,37 @@ def test_specific_rule_is_reported_over_generic(rules):
     )
 
     assert scan_value("name", "zz1234") == SecretFinding("name", "zzz-specific")
+
+
+def test_rule_set_round_trips_through_its_stored_form():
+    rule_set = RuleSet(
+        rules=(
+            Rule(rule_id="plain", pattern="a+", keywords=("a",)),
+            Rule(
+                rule_id="full",
+                pattern=r"b(\w+)",
+                keywords=("b", "bee"),
+                entropy=2.5,
+                secret_group=1,
+                allowlists=(
+                    Allowlist(
+                        condition=AllowlistCondition.AND,
+                        target=AllowlistTarget.LINE,
+                        regexes=("x",),
+                        stopwords=("y",),
+                    ),
+                ),
+            ),
+        ),
+        global_allowlists=(Allowlist(regexes=("^z$",)),),
+    )
+
+    assert decode_rules(encode_rules(rule_set)) == rule_set
+    assert encode_rules(rule_set) == encode_rules(rule_set)
+
+
+def test_committed_rule_set_decodes():
+    assert len(load_rules().rules) > 150
 
 
 # --- Wiring ------------------------------------------------------------------

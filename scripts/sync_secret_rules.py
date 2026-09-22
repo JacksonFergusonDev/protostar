@@ -11,18 +11,23 @@ rule is listed in EXCLUDE with a reason; no rule is dropped silently.
 Usage:
     python scripts/sync_secret_rules.py          # regenerate the module
     python scripts/sync_secret_rules.py --check  # exit 1 if it is out of date
+    python scripts/sync_secret_rules.py --dump   # print the rules as JSON
 """
 
 from __future__ import annotations
 
 import argparse
+import ast
+import dataclasses
 import hashlib
+import json
 import re
 import sys
 import tomllib
 import urllib.error
 import urllib.request
 import warnings
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -41,6 +46,9 @@ from protostar.secret_guard import (
     AllowlistCondition,
     AllowlistTarget,
     Rule,
+    RuleSet,
+    decode_rules,
+    encode_rules,
 )
 
 GITLEAKS_REPO = "https://github.com/gitleaks/gitleaks"
@@ -102,12 +110,17 @@ class TranslationError(Exception):
 
 
 @dataclass(frozen=True)
-class RuleSet:
+class Translation:
     """The translated contents of one gitleaks configuration."""
 
     rules: tuple[Rule, ...]
     global_allowlists: tuple[Allowlist, ...]
     omitted: tuple[tuple[str, str], ...]
+
+    @property
+    def rule_set(self) -> RuleSet:
+        """The rules and allowlists the guard evaluates."""
+        return RuleSet(self.rules, self.global_allowlists)
 
 
 def translate(pattern: str) -> str:
@@ -302,7 +315,7 @@ def convert_allowlist(raw: dict[str, Any]) -> Allowlist | None:
     return Allowlist(condition, target, regexes, stopwords)
 
 
-def convert(config: dict[str, Any]) -> RuleSet:
+def convert(config: dict[str, Any]) -> Translation:
     """Converts a parsed gitleaks configuration into guard rules.
 
     Args:
@@ -377,25 +390,62 @@ def convert(config: dict[str, Any]) -> RuleSet:
         )
     if targeted:
         raise TranslationError(f"allowlists target unknown rules: {sorted(targeted)}")
-    return RuleSet(
+    return Translation(
         rules=tuple(sorted(rules, key=lambda rule: rule.rule_id)),
         global_allowlists=tuple(global_allowlists),
         omitted=tuple(sorted(omitted)),
     )
 
 
-def render(tag: str, source: bytes, license_text: str) -> str:
-    """Renders the generated module for one gitleaks tag.
+def generate(
+    tag: str, source: bytes, license_text: str, committed: str | None = None
+) -> str:
+    """Generates the rules module for one gitleaks tag.
+
+    zlib output can differ between builds of the same Python version, so the
+    committed payload is kept whenever it already decodes to the same rules.
+    That keeps regeneration, and ``--check``, stable across machines.
 
     Args:
         tag: The gitleaks tag the rules come from.
         source: The raw bytes of that tag's ``config/gitleaks.toml``.
         license_text: That tag's LICENSE file.
+        committed: The current module text, if one exists.
 
     Returns:
         The complete module source.
     """
-    rule_set = convert(tomllib.loads(source.decode("utf-8")))
+    translation = convert(tomllib.loads(source.decode("utf-8")))
+    payload = encode_rules(translation.rule_set)
+    previous = read_payload(committed) if committed is not None else None
+    if previous is not None:
+        try:
+            if decode_rules(previous) == translation.rule_set:
+                payload = previous
+        except (ValueError, KeyError, TypeError, zlib.error):
+            pass  # Unreadable: replace it with a fresh payload.
+    return render(tag, source, license_text, translation, payload)
+
+
+def render(
+    tag: str,
+    source: bytes,
+    license_text: str,
+    translation: Translation,
+    payload: bytes,
+) -> str:
+    """Renders the module around an encoded rule set.
+
+    Args:
+        tag: The gitleaks tag the rules come from.
+        source: The raw bytes of that tag's ``config/gitleaks.toml``.
+        license_text: That tag's LICENSE file.
+        translation: The translated configuration, for the omitted-rule table.
+        payload: The rule set as ``encode_rules`` stores it.
+
+    Returns:
+        The complete module source.
+    """
     lines = [
         '"""Secret-detection rules translated from gitleaks\' default configuration.',
         "",
@@ -405,80 +455,60 @@ def render(tag: str, source: bytes, license_text: str) -> str:
         f"Source: {RAW_URL.format(tag=tag, path='config/gitleaks.toml')}",
         f"SHA-256: {hashlib.sha256(source).hexdigest()}",
         "",
+        "The rules are stored compressed rather than as text, so that secret",
+        "scanners do not mistake their patterns, or the publicly known keys some",
+        "allowlists name, for leaked credentials. `python scripts/sync_secret_rules.py",
+        "--dump` prints them.",
+        "",
         "Patterns are translated from Go's regexp syntax to Python's. gitleaks is",
         "distributed under the following license:",
         "",
         *(f"    {line}".rstrip() for line in license_text.strip().splitlines()),
         '"""',
         "",
-        "from protostar.secret_guard import (",
-        "    Allowlist,",
-        "    AllowlistCondition,",
-        "    AllowlistTarget,",
-        "    Rule,",
-        ")",
-        "",
-        f"GITLEAKS_VERSION = {tag!r}",
-        "",
-        "GLOBAL_ALLOWLISTS: tuple[Allowlist, ...] = (",
-        *(
-            _render_allowlist(allowlist, "    ")
-            for allowlist in rule_set.global_allowlists
-        ),
-        ")",
-        "",
-        "RULES: tuple[Rule, ...] = (",
-        *(_render_rule(rule) for rule in rule_set.rules),
-        ")",
+        f"GITLEAKS_VERSION = {json.dumps(tag)}",
         "",
         "# gitleaks rules not carried over, with the reason.",
         "OMITTED: tuple[tuple[str, str], ...] = (",
-        *(f"    ({rule_id!r}, {reason!r})," for rule_id, reason in rule_set.omitted),
+        *(
+            f"    ({json.dumps(rule_id)}, {json.dumps(reason)}),"
+            for rule_id, reason in translation.omitted
+        ),
+        ")",
+        "",
+        "# Base64 of the zlib-compressed JSON rule set; see protostar.secret_guard.",
+        "PAYLOAD = (",
+        *(
+            f'    b"{payload[i : i + 76].decode("ascii")}"'
+            for i in range(0, len(payload), 76)
+        ),
         ")",
         "",
     ]
     return "\n".join(lines)
 
 
-def _render_allowlist(allowlist: Allowlist, indent: str) -> str:
-    fields = []
-    if allowlist.condition is not AllowlistCondition.OR:
-        fields.append(f"condition=AllowlistCondition.{allowlist.condition.name}")
-    if allowlist.target is not AllowlistTarget.SECRET:
-        fields.append(f"target=AllowlistTarget.{allowlist.target.name}")
-    if allowlist.regexes:
-        fields.append(_render_strings("regexes", allowlist.regexes, indent + "    "))
-    if allowlist.stopwords:
-        fields.append(
-            _render_strings("stopwords", allowlist.stopwords, indent + "    ")
-        )
-    body = "".join(f"{indent}    {field},\n" for field in fields)
-    return f"{indent}Allowlist(\n{body}{indent}),"
+def read_payload(module_text: str) -> bytes | None:
+    """Reads the PAYLOAD literal from generated module text without running it.
 
+    Args:
+        module_text: The source of a generated rules module.
 
-def _render_rule(rule: Rule) -> str:
-    fields = [
-        f"rule_id={rule.rule_id!r}",
-        f"pattern={rule.pattern!r}",
-        f"keywords={rule.keywords!r}",
-    ]
-    if rule.entropy is not None:
-        fields.append(f"entropy={rule.entropy!r}")
-    if rule.secret_group:
-        fields.append(f"secret_group={rule.secret_group!r}")
-    if rule.allowlists:
-        rendered = "\n".join(
-            _render_allowlist(allowlist, "            ")
-            for allowlist in rule.allowlists
-        )
-        fields.append(f"allowlists=(\n{rendered}\n        )")
-    body = "".join(f"        {field},\n" for field in fields)
-    return f"    Rule(\n{body}    ),"
-
-
-def _render_strings(name: str, values: tuple[str, ...], indent: str) -> str:
-    items = "".join(f"{indent}    {value!r},\n" for value in values)
-    return f"{name}=(\n{items}{indent})"
+    Returns:
+        The payload bytes, or None if the text has no valid PAYLOAD.
+    """
+    try:
+        tree = ast.parse(module_text)
+    except SyntaxError:
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "PAYLOAD"
+            for target in node.targets
+        ):
+            value = ast.literal_eval(node.value)
+            return value if isinstance(value, bytes) else None
+    return None
 
 
 def _fetch(tag: str, path: str) -> bytes:
@@ -492,29 +522,43 @@ def _fetch(tag: str, path: str) -> bytes:
 
 
 def main() -> None:
-    """Regenerates the rules module, or checks that it is current."""
+    """Regenerates the rules module, checks that it is current, or prints it."""
     parser = argparse.ArgumentParser(
         description="Regenerate the secret-detection rules from gitleaks."
     )
-    parser.add_argument(
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument(
         "--check",
         action="store_true",
         help="Exit 1 if the committed module differs from a fresh generation.",
     )
+    modes.add_argument(
+        "--dump",
+        action="store_true",
+        help="Print the committed rules as readable JSON and exit.",
+    )
     args = parser.parse_args()
+
+    current = RULES_FILE.read_text(encoding="utf-8") if RULES_FILE.exists() else None
+    if args.dump:
+        payload = read_payload(current) if current is not None else None
+        if payload is None:
+            print(f"No rules payload in {RULES_FILE.relative_to(_repo_root)}.")
+            sys.exit(1)
+        print(json.dumps(dataclasses.asdict(decode_rules(payload)), indent=2))
+        return
 
     tag = DEFAULT_REVISIONS[GITLEAKS_REPO]
     print(f"Fetching gitleaks {tag} rules...")
     source = _fetch(tag, "config/gitleaks.toml")
     license_text = _fetch(tag, "LICENSE").decode("utf-8")
     try:
-        content = render(tag, source, license_text)
+        content = generate(tag, source, license_text, current)
     except TranslationError as error:
         print(f"Cannot translate gitleaks {tag}: {error}", file=sys.stderr)
         print("Extend the translator, or add the rule to EXCLUDE with a reason.")
         sys.exit(1)
 
-    current = RULES_FILE.read_text(encoding="utf-8") if RULES_FILE.exists() else ""
     if args.check:
         if content != current:
             print(
