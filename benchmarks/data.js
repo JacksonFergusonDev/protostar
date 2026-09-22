@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790117825768,
+  "lastUpdate": 1790119155403,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15917,6 +15917,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 222.09,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd1700069fa0025051adfd76d921e2c28d1f37d7",
+          "message": "feat(cli): Textual foundation and recipe editor (#305)\n\n* feat(cli): add Textual foundation and recipe editor\n\n* test(cli): stabilize recipe snapshot color environment",
+          "timestamp": "2026-09-22T16:18:04-07:00",
+          "tree_id": "cf7397a8bd9e9cb6810ad432ec2b3ae2a2993b91",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/dd1700069fa0025051adfd76d921e2c28d1f37d7"
+        },
+        "date": 1790119153617,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 211.9,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 199.73,
             "unit": "ms"
           }
         ]
