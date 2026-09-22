@@ -23,6 +23,8 @@ from rich.text import Text
 
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
+from protostar.cli.prompts import confirm
+from protostar.cli.wizard import resolve_missing_variables
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
@@ -58,8 +60,6 @@ from protostar.modules import (
     PythonCore,
     SystemWorkspaceModule,
 )
-from protostar.ui import confirm
-from protostar.wizard import resolve_missing_variables
 
 logger = logging.getLogger("protostar")
 

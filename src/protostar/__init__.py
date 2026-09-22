@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from .modules.base import BootstrapModule
     from .network import GitHost
     from .security import SafelistBinary
-    from .wizard import WizardSelections
     from .workflows import CIFlag, TargetOS
     from .workspace import PackageName, ProjectName, PythonVersion
 from typing import Any
@@ -65,7 +64,6 @@ _MODULE_LOOKUP: dict[str, str] = {
     "Severity": ".manifest",
     "TargetOS": ".workflows",
     "TemplateResolutionError": ".errors",
-    "WizardSelections": ".wizard",
     "WorkspaceCollisionError": ".errors",
 }
 
@@ -99,7 +97,6 @@ __all__ = [
     "Severity",
     "TargetOS",
     "TemplateResolutionError",
-    "WizardSelections",
     "WorkspaceCollisionError",
     "__version__",
 ]

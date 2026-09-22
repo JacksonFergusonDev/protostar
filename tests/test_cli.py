@@ -19,6 +19,7 @@ from protostar.cli.parser import (
     build_parser,
     intercept_interactive_wizards,
 )
+from protostar.cli.wizard import WizardSelections
 from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
@@ -33,7 +34,6 @@ from protostar.errors import (
     TemplateResolutionError,
 )
 from protostar.system_deps import GlobalExecutable
-from protostar.wizard import WizardSelections
 
 
 def test_json_aware_parser_print_help_uses_table_renderer(mocker):

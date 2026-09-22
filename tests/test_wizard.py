@@ -3,24 +3,24 @@ from typing import Any
 
 import pytest
 
-from protostar.config import UserConfig
-from protostar.errors import ConfigurationError, ExecutionAbortedError
-from protostar.modules import TOOLING_MODULES, PreCommitModule, PrekModule
-from protostar.wizard import (
+from protostar.cli.wizard import (
     WizardSelections,
     _should_run_wizard,
     prompt_metadata,
     resolve_missing_variables,
     run_init_wizard,
 )
+from protostar.config import UserConfig
+from protostar.errors import ConfigurationError, ExecutionAbortedError
+from protostar.modules import TOOLING_MODULES, PreCommitModule, PrekModule
 
 
 def test_should_run_wizard_tty(mocker):
     """Test the TTY gate correctly identifies interactive terminals."""
-    mocker.patch("protostar.wizard.is_interactive", return_value=True)
+    mocker.patch("protostar.cli.wizard.is_interactive", return_value=True)
     assert _should_run_wizard() is True
 
-    mocker.patch("protostar.wizard.is_interactive", return_value=False)
+    mocker.patch("protostar.cli.wizard.is_interactive", return_value=False)
     assert _should_run_wizard() is False
 
 
@@ -33,7 +33,7 @@ def test_benchmark_env_bypasses_tty_check(mocker):
 
 def test_run_init_wizard_benchmark_abort(mocker):
     """Test that the init wizard correctly intercepts the benchmark flag and exits cleanly."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
     mocker.patch.dict(os.environ, {"PROTOSTAR_BENCHMARK_WIZARD": "1"})
 
     mock_select = mocker.patch("questionary.select")
@@ -47,8 +47,8 @@ def test_run_init_wizard_benchmark_abort(mocker):
 
 def test_run_init_wizard_cancellation(mocker):
     """Test that the init wizard safely handles component checklist cancellation."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     mock_select = mocker.patch("questionary.select")
@@ -65,8 +65,8 @@ def test_run_init_wizard_cancellation(mocker):
 
 def test_run_init_wizard_template_cancellation(mocker):
     """Test that cancelling the built-in template selection raises ExecutionAbortedError."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     # Ensure templates > 1
@@ -88,8 +88,8 @@ def test_run_init_wizard_template_cancellation(mocker):
 
 def test_run_init_wizard_success(mocker):
     """Test that the init wizard collects selections and metadata successfully."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     mock_select = mocker.patch("questionary.select")
@@ -99,7 +99,7 @@ def test_run_init_wizard_success(mocker):
     mock_checkbox.return_value.ask.return_value = ["docker"]
 
     mock_metadata = mocker.patch(
-        "protostar.wizard.prompt_metadata", return_value={"description": "Test App"}
+        "protostar.cli.wizard.prompt_metadata", return_value={"description": "Test App"}
     )
 
     result = run_init_wizard()
@@ -113,8 +113,8 @@ def test_run_init_wizard_success(mocker):
 
 def test_run_init_wizard_formats_template_choices_with_middle_dot(mocker) -> None:
     """Test that template choices are formatted using display names and a middle dot separator."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     captured_choices: list[Any] = []
@@ -127,7 +127,7 @@ def test_run_init_wizard_formats_template_choices_with_middle_dot(mocker) -> Non
 
     mocker.patch("questionary.select", side_effect=fake_select)
     mocker.patch("questionary.checkbox").return_value.ask.return_value = []
-    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
 
     run_init_wizard()
 
@@ -142,7 +142,7 @@ def test_run_init_wizard_formats_template_choices_with_middle_dot(mocker) -> Non
 
 def test_resolve_missing_variables_non_interactive(mocker):
     """Test that resolving variables fails in a non-interactive environment."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=False)
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=False)
 
     with pytest.raises(
         ConfigurationError, match="Non-interactive environment detected"
@@ -152,7 +152,7 @@ def test_resolve_missing_variables_non_interactive(mocker):
 
 def test_resolve_missing_variables_interactive(mocker):
     """Test that questionary successfully collects missing variables."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
 
     mock_ask = mocker.Mock(return_value="Orbit App")
     mock_text = mocker.Mock(return_value=mocker.Mock(ask=mock_ask))
@@ -166,7 +166,7 @@ def test_resolve_missing_variables_interactive(mocker):
 
 def test_resolve_missing_variables_cancellation(mocker):
     """Test that cancelling variable resolution raises ExecutionAbortedError."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
 
     mock_ask = mocker.Mock(return_value=None)
     mock_text = mocker.Mock(return_value=mocker.Mock(ask=mock_ask))
@@ -181,7 +181,7 @@ def test_resolve_missing_variables_cancellation(mocker):
 def test_prompt_metadata_success(mocker):
     """Test that prompt_metadata successfully gathers text and checkbox input."""
     mocker.patch(
-        "protostar.wizard.UserConfig.load",
+        "protostar.cli.wizard.UserConfig.load",
         return_value=UserConfig(author_name="Alice", supported_os=["Linux"]),
     )
 
@@ -207,7 +207,7 @@ def test_prompt_metadata_success(mocker):
 def test_prompt_metadata_cancellation_text(mocker):
     """Test that prompt_metadata raises ExecutionAbortedError when text prompt is cancelled."""
     mocker.patch(
-        "protostar.wizard.UserConfig.load",
+        "protostar.cli.wizard.UserConfig.load",
         return_value=UserConfig(),
     )
     mock_text = mocker.patch("questionary.text")
@@ -222,7 +222,7 @@ def test_prompt_metadata_cancellation_text(mocker):
 def test_prompt_metadata_cancellation_checkbox(mocker):
     """Test that prompt_metadata raises ExecutionAbortedError when checkbox prompt is cancelled."""
     mocker.patch(
-        "protostar.wizard.UserConfig.load",
+        "protostar.cli.wizard.UserConfig.load",
         return_value=UserConfig(),
     )
     mock_checkbox = mocker.patch("questionary.checkbox")
@@ -236,8 +236,8 @@ def test_prompt_metadata_cancellation_checkbox(mocker):
 
 def test_run_init_wizard_resolves_hook_runner_conflict(mocker):
     """Test that selecting both Pre-Commit and Prek prompts the user to resolve the conflict."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     pre_commit_mod = next(m for m in TOOLING_MODULES if isinstance(m, PreCommitModule))
@@ -251,7 +251,7 @@ def test_run_init_wizard_resolves_hook_runner_conflict(mocker):
     mock_checkbox = mocker.patch("questionary.checkbox")
     mock_checkbox.return_value.ask.return_value = [pre_commit_mod, prek_mod]
 
-    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
 
     result = run_init_wizard()
 
@@ -262,8 +262,8 @@ def test_run_init_wizard_resolves_hook_runner_conflict(mocker):
 
 def test_run_init_wizard_hook_runner_conflict_cancellation(mocker):
     """Test that cancelling the hook runner conflict prompt raises ExecutionAbortedError."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
 
     pre_commit_mod = next(m for m in TOOLING_MODULES if isinstance(m, PreCommitModule))
@@ -283,13 +283,13 @@ def test_run_init_wizard_hook_runner_conflict_cancellation(mocker):
 
 def test_run_init_wizard_preselects_docker_when_the_template_asks_for_it(mocker):
     """Built-in templates that declare docker = true arrive with it pre-checked."""
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch("questionary.select").return_value.ask.return_value = "api"
     mock_checkbox = mocker.patch("questionary.checkbox")
     mock_checkbox.return_value.ask.return_value = []
-    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
 
     run_init_wizard()
 
@@ -300,13 +300,13 @@ def test_run_init_wizard_preselects_docker_when_the_template_asks_for_it(mocker)
 
 
 def test_run_init_wizard_leaves_docker_unchecked_without_a_template(mocker):
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
     mocker.patch.dict(os.environ, {}, clear=True)
     mocker.patch("questionary.select").return_value.ask.return_value = "None"
     mock_checkbox = mocker.patch("questionary.checkbox")
     mock_checkbox.return_value.ask.return_value = []
-    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
 
     run_init_wizard()
 

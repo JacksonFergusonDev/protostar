@@ -154,24 +154,21 @@ def test_template_blueprint_load_local_target_with_context(mocker, tmp_path):
     assert isinstance(config, TemplateBlueprint)
 
 
-def test_template_blueprint_load_invokes_wizard_for_missing_vars(mocker, tmp_path):
-    """Test that missing template variables trigger the interactive wizard via lazy import."""
+def test_template_blueprint_load_invokes_resolver_for_missing_vars(mocker, tmp_path):
+    """Test that missing template variables are requested from the variable resolver."""
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
 
     target = tmp_path / "custom.toml"
     target.write_text('[env]\npython_version = "<%py_ver%>"\n')
 
-    # Patch the source of the lazy import
-    mock_wizard = mocker.patch(
-        "protostar.wizard.resolve_missing_variables", return_value={"py_ver": "3.15"}
-    )
+    resolver = mocker.Mock(return_value={"py_ver": "3.15"})
 
     config = TemplateBlueprint.load(
         target=str(target),
-        variable_resolver=mock_wizard,
+        variable_resolver=resolver,
     )
 
-    mock_wizard.assert_called_once_with(["py_ver"])
+    resolver.assert_called_once_with(["py_ver"])
     assert isinstance(config, TemplateBlueprint)
 
 

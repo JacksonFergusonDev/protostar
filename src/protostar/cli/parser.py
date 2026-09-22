@@ -16,12 +16,12 @@ from rich.table import Table
 from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
 from protostar.cli.completion import Shell
+from protostar.cli.wizard import run_init_wizard
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import InvalidUsageError
 from protostar.models import InitRequest
 from protostar.modules import TOOLING_MODULES, PythonCore, SystemWorkspaceModule
-from protostar.wizard import run_init_wizard
 
 
 def _resolve_usage_doc_path() -> DocsPage:
