@@ -13,7 +13,7 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 | 3 | `feat(recipe)!: persist template variables and drop --bind` | Merged (#303) |
 | 4 | `refactor(cli): single init draft and resolver` | Merged (#304) |
 | 5 | `feat(cli): Textual foundation and recipe editor` | Complete |
-| 6 | `feat(cli): variables, metadata and live plan preview` | Planned |
+| 6 | `feat(cli): variables, metadata and live plan preview` | Complete |
 | 7 | `feat(cli): change review screen` | Planned |
 | 8 | `refactor(cli)!: remove questionary` | Planned |
 
@@ -139,6 +139,8 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 
 ## PR 6: `feat(cli): variables, metadata and live plan preview`
 
+**Status: complete.** The recipe editor now holds template variables (checked by the secret guard on submit or blur, never per keystroke), metadata fields shown by the enabled tools and Docker, and a live preview pane that re-plans in an exclusive, debounced worker (a warm `plan()` measured 1–7 ms, so the debounce is 0.1 s). Template loads run in a worker with a loading line and inline errors. A flag-driven init missing variables in an interactive terminal opens `edit_variables`, the editor's variables step on its own. `cli/wizard.py` is deleted, and the app takes the screen to run (`DecisionApp`). The open question below was settled as names only.
+
 **Goal:** finish the recipe editor. Template variables and project metadata get fields, and a preview of the planned file tree updates as choices change.
 
 **Steps:**
@@ -164,7 +166,7 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 - a missing variable on the flag path lands on the variables step
 - snapshots of the finished editor
 
-**Open question to settle first:** should templates declare their variables with descriptions (e.g. a `[variables]` table)? Today variables are only extracted from `<% NAME %>`, so fields and `missing_variables` have names but no labels.
+**Open question (settled):** fields are labeled by variable name. Declaring variables with descriptions (e.g. a `[variables]` table) is deferred to a follow-up; see Open Questions.
 
 ## PR 7: `feat(cli): change review screen`
 
@@ -226,5 +228,5 @@ Order: three-way merge, then conflict resolution, then prune, then adopt.
 ## Open Questions
 
 - **Credentials inside URLs.** gitleaks has no general rule for `scheme://user:password@host`, and local-dev values like `postgres://postgres:postgres@localhost/app` are legitimate. Decide before adding a first-party rule.
-- **Declared template variables with descriptions** (settle before PR 6).
+- **Declared template variables with descriptions.** Deferred at PR 6, which labels fields by name. A later PR could add an optional `[variables]` table; the field widget takes a description without restructuring.
 - **What the wizard benchmark measures** (PR 8; time to first frame is the likely answer).

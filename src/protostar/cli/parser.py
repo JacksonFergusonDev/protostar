@@ -18,7 +18,6 @@ from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
 from protostar.cli.completion import Shell
 from protostar.cli.tui.launch import edit_recipe
-from protostar.cli.wizard import complete_init_draft
 from protostar.config import UserConfig
 from protostar.docs_registry import DocsPage
 from protostar.errors import ExecutionAbortedError, InvalidUsageError
@@ -656,7 +655,6 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
         )
         if draft is None:
             raise ExecutionAbortedError("Recipe editing cancelled by user.")
-        draft = complete_init_draft(draft)
         modules, request = resolve_init(draft, user_config)
         ui.print_recipe_summary(request)
         orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator

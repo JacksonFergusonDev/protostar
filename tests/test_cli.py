@@ -382,9 +382,6 @@ def test_intercept_interactive_wizards_success(mocker):
         variables=(("REGION", "eu"),),
         metadata=(),
     )
-    mocker.patch(
-        "protostar.cli.parser.complete_init_draft", side_effect=lambda draft: draft
-    )
     mocker.patch("protostar.cli.parser.edit_recipe", return_value=selections)
     mocker.patch("protostar.cli.parser.UserConfig.load")
     mock_orchestrator = mocker.patch("protostar.cli.parser.Orchestrator")

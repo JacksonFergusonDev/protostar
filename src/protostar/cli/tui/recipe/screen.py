@@ -1,12 +1,14 @@
 """Recipe decisions backed by the shared recipe precedence and constraints."""
 
+import asyncio
 import importlib.resources
 import tomllib
+from collections.abc import Mapping
 from dataclasses import replace
 from enum import Enum, auto
 
 from rich.text import Text
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
@@ -24,6 +26,7 @@ from textual.widgets import (
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDraft
+from protostar.metadata import MetadataKey
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
     EXCLUSIVE_TOOL_PAIRS,
@@ -34,6 +37,10 @@ from protostar.recipe import (
     validate_tools,
 )
 from protostar.templates import TemplateInfo, TemplateType
+
+from .metadata import MetadataFields, metadata_defaults, metadata_keys
+from .preview import PlanPreview
+from .variables import VariableFields, draft_variables
 
 _GROUPS = {
     "Quality": (
@@ -68,15 +75,18 @@ class _TemplateChoice(Enum):
 
 
 class RecipeScreen(Screen[InitDraft]):
-    """Select a template, tools, and Docker before the remaining prompts."""
+    """Edit the template, its variables, tools, and metadata beside a live preview."""
 
     def __init__(
         self, draft: InitDraft, catalog: list[TemplateInfo], config: UserConfig
     ) -> None:
         super().__init__()
         self.draft = draft
+        self.config = config
         self._recorded_template = draft.template
         self._template_error = False
+        self._loading = False
+        self._tools_invalid = False
         self.catalog = catalog
         self.base_recipe = draft.existing_recipe or establish_recipe(config)
         self.overrides = dict(draft.tool_overrides)
@@ -88,6 +98,10 @@ class RecipeScreen(Screen[InitDraft]):
         self.docker_override = draft.docker
         self._selected_template: TemplateInfo | _TemplateChoice | None = None
         self._resolve_selections()
+        self._variable_names = (
+            draft.template.source.variables if draft.template else frozenset()
+        )
+        self._metadata_defaults = metadata_defaults(draft, config)
 
     def _resolve_selections(self) -> None:
         source = self.draft.template.source if self.draft.template else None
@@ -135,73 +149,87 @@ class RecipeScreen(Screen[InitDraft]):
         return self.opinions.get("docker", False)
 
     def compose(self) -> ComposeResult:
-        """Compose the template selector and grouped tool decisions."""
+        """Compose the editor sections beside the plan preview."""
         yield Label("Build your recipe", id="title")
         yield Static(
-            "Choose a starting point and the tools for your project.", id="subtitle"
+            "Choose a starting point, tools, and project details.", id="subtitle"
         )
-        with VerticalScroll(id="editor"):
-            yield Label("Template", classes="section")
-            options: list[tuple[Text, TemplateInfo | _TemplateChoice]] = [
-                (Text("No template"), _TemplateChoice.NONE)
-            ]
-            options.extend(
-                (Text(f"{item.name} · {item.type.value} — {item.description}"), item)
-                for item in self.catalog
-            )
-            initial: TemplateInfo | _TemplateChoice = _TemplateChoice.NONE
-            if self.draft.template:
-                reference = self.draft.template.source.reference
-                initial = next(
-                    (
-                        item
-                        for item in self.catalog
-                        if item.alias == reference.display_name
-                        or item.source == reference.locator
-                        or (
-                            item.type is TemplateType.BUILT_IN
-                            and item.alias == reference.locator
-                        )
-                    ),
-                    _TemplateChoice.RECORDED,
-                )
-                if initial is _TemplateChoice.RECORDED:
-                    options.append(
-                        (Text(f"Recorded template · {reference.locator}"), initial)
-                    )
-            self._selected_template = initial
-            yield Select(options, value=initial, allow_blank=False, id="template")
-            yield Static("", id="error", markup=False)
-            yield Static("", id="constraints", markup=False)
-            yield Checkbox("Docker", value=self._docker(), id="docker")
-            for title, tools in _GROUPS.items():
-                yield Label(title, classes="section")
-                for tool in tools:
-                    yield Checkbox(
-                        self._label(tool), value=self.enabled[tool], id=f"tool-{tool}"
-                    )
-            yield Label("Git hook manager", classes="section")
-            for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
-                with RadioSet(id=f"exclusive-{index}"):
-                    yield RadioButton(
-                        "None",
-                        value=not any(self.enabled[tool] for tool in pair),
-                        id=f"none-{index}",
-                    )
-                    for tool in sorted(pair):
-                        yield RadioButton(
+        with Horizontal(id="body"):
+            with VerticalScroll(id="editor"):
+                yield Label("Template", classes="section")
+                yield self._template_select()
+                yield Static("", id="template-status", markup=False)
+                yield VariableFields(draft_variables(self.draft))
+                yield Label("Tools", classes="section")
+                yield Static("", id="constraints", markup=False)
+                yield Checkbox("Docker", value=self._docker(), id="docker")
+                for title, tools in _GROUPS.items():
+                    yield Label(title, classes="group")
+                    for tool in tools:
+                        yield Checkbox(
                             self._label(tool),
                             value=self.enabled[tool],
                             id=f"tool-{tool}",
                         )
+                yield Label("Git hook manager", classes="group")
+                for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
+                    with RadioSet(id=f"exclusive-{index}"):
+                        yield RadioButton(
+                            "None",
+                            value=not any(self.enabled[tool] for tool in pair),
+                            id=f"none-{index}",
+                        )
+                        for tool in sorted(pair):
+                            yield RadioButton(
+                                self._label(tool),
+                                value=self.enabled[tool],
+                                id=f"tool-{tool}",
+                            )
+                yield Label("Project details", classes="section")
+                yield MetadataFields(self._metadata_defaults)
+            yield PlanPreview(self.config)
         with Horizontal(id="actions"):
             yield Button("Cancel", id="cancel")
             yield Button("Continue", variant="primary", id="continue")
         yield Footer()
 
-    def on_mount(self) -> None:
-        """Apply requirement availability to the initial controls."""
+    def _template_select(self) -> Select[TemplateInfo | _TemplateChoice]:
+        options: list[tuple[Text, TemplateInfo | _TemplateChoice]] = [
+            (Text("No template"), _TemplateChoice.NONE)
+        ]
+        options.extend(
+            (Text(f"{item.name} · {item.type.value} — {item.description}"), item)
+            for item in self.catalog
+        )
+        initial: TemplateInfo | _TemplateChoice = _TemplateChoice.NONE
+        if self.draft.template:
+            reference = self.draft.template.source.reference
+            initial = next(
+                (
+                    item
+                    for item in self.catalog
+                    if item.alias == reference.display_name
+                    or item.source == reference.locator
+                    or (
+                        item.type is TemplateType.BUILT_IN
+                        and item.alias == reference.locator
+                    )
+                ),
+                _TemplateChoice.RECORDED,
+            )
+            if initial is _TemplateChoice.RECORDED:
+                options.append(
+                    (Text(f"Recorded template · {reference.locator}"), initial)
+                )
+        self._selected_template = initial
+        return Select(options, value=initial, allow_blank=False, id="template")
+
+    async def on_mount(self) -> None:
+        """Show the template's variables, then plan the initial draft."""
+        await self.query_one(VariableFields).show(self._variable_names)
+        self._status(Text(""))
         self._refresh_tools()
+        self._changed()
 
     def _refresh_tools(self) -> None:
         enabled = {tool for tool, value in self.enabled.items() if value}
@@ -222,49 +250,110 @@ class RecipeScreen(Screen[InitDraft]):
                 target = f"tool-{chosen[0]}" if chosen else f"none-{index}"
                 self.query_one(f"#{target}", RadioButton).value = True
         # Invalid inherited choices stay visible and must be resolved explicitly.
-        invalid = False
         message = ""
         try:
             validate_tools(enabled)
         except ConfigurationError as exc:
-            invalid = True
             message = str(exc)
-        self.query_one("#constraints", Static).update(Text(message))
-        self.query_one("#continue", Button).disabled = invalid or self._template_error
+        self._tools_invalid = bool(message)
+        constraints = self.query_one("#constraints", Static)
+        constraints.update(Text(message))
+        constraints.display = bool(message)
+        self._refresh_continue()
+
+    def _refresh_continue(self) -> None:
+        self.query_one("#continue", Button).disabled = (
+            self._tools_invalid or self._template_error or self._loading
+        )
+
+    def _current_draft(self, variables: Mapping[str, str] | None = None) -> InitDraft:
+        fields = self.query_one(VariableFields)
+        if variables is None:
+            variables = {
+                name: fields.committed[name]
+                for name in fields.names
+                if name in fields.committed
+            }
+        metadata = self.query_one(MetadataFields).values()
+        minimum = metadata.get(MetadataKey.MINIMUM_PYTHON)
+        return replace(
+            self.draft,
+            tool_choices=tuple(sorted(self.enabled.items())),
+            docker=self._docker(),
+            variables=tuple(sorted(variables.items())),
+            metadata=tuple(sorted(metadata.items())),
+            python_version=str(minimum) if minimum else None,
+        )
+
+    @on(VariableFields.Committed)
+    @on(MetadataFields.Changed)
+    def _changed(self) -> None:
+        """Show the metadata the current tools read, and re-plan the preview."""
+        self.query_one(MetadataFields).show(
+            metadata_keys(
+                (
+                    module
+                    for module in TOOLING_MODULES
+                    if self.enabled[Tool(module.config_key)]
+                ),
+                docker=self._docker(),
+            )
+        )
+        self.query_one(PlanPreview).update_plan(self._current_draft())
 
     @on(Select.Changed, "#template")
     def select_template(self, event: Select.Changed) -> None:
-        """Acquire the selected source, preserving explicit tool choices."""
+        """Acquire the selected source in a worker; remote templates take a while."""
         if not isinstance(event.value, (TemplateInfo, _TemplateChoice)):
             return
         if event.value == self._selected_template and not self._template_error:
+            # Returning to the current template abandons any load still running.
+            self.workers.cancel_group(self, "template")
+            self._loading = False
+            self._status(Text(""))
+            self._refresh_continue()
             return
+        self._loading = True
+        name = event.value.name if isinstance(event.value, TemplateInfo) else ""
+        self._status(Text(f"Loading {name}…" if name else "Loading…"))
+        self._refresh_continue()
+        self._load_template(event.value)
+
+    def _acquire(self, choice: TemplateInfo | _TemplateChoice) -> DraftTemplate | None:
+        # Runs in a thread: no widget access here.
         template = None
-        try:
-            if event.value is _TemplateChoice.RECORDED:
-                template = self._recorded_template
-            elif isinstance(event.value, TemplateInfo):
-                info = event.value
-                external = info.type is TemplateType.GLOBAL_ALIAS
-                target = (
-                    info.source
-                    if external
-                    else str(
-                        importlib.resources.files("protostar.templates").joinpath(
-                            f"{info.alias}.toml"
-                        )
+        if choice is _TemplateChoice.RECORDED:
+            template = self._recorded_template
+        elif isinstance(choice, TemplateInfo):
+            external = choice.type is TemplateType.GLOBAL_ALIAS
+            target = (
+                choice.source
+                if external
+                else str(
+                    importlib.resources.files("protostar.templates").joinpath(
+                        f"{choice.alias}.toml"
                     )
                 )
-                template = DraftTemplate(
-                    TemplateSource.load(
-                        target,
-                        built_in=None if external else info.alias,
-                        display_name=info.alias,
-                    ),
-                    external,
-                    external,
-                    info.trusted,
-                )
+            )
+            template = DraftTemplate(
+                TemplateSource.load(
+                    target,
+                    built_in=None if external else choice.alias,
+                    display_name=choice.alias,
+                ),
+                external,
+                external,
+                choice.trusted,
+            )
+        if template:
+            # Credential-shaped variable names are a template error, shown inline.
+            _ = template.source.variables
+        return template
+
+    @work(exclusive=True, group="template")
+    async def _load_template(self, choice: TemplateInfo | _TemplateChoice) -> None:
+        try:
+            template = await asyncio.to_thread(self._acquire, choice)
             old_draft = self.draft
             self.draft = replace(self.draft, template=template)
             try:
@@ -273,16 +362,28 @@ class RecipeScreen(Screen[InitDraft]):
                 self.draft = old_draft
                 raise
         except ProtostarError as exc:
+            self._loading = False
             self._template_error = True
-            self.query_one("#error", Static).update(Text(str(exc)))
-            self.query_one("#continue", Button).disabled = True
+            self._status(Text(str(exc)), error=True)
+            self._refresh_continue()
             return
+        self._loading = False
         self._template_error = False
-        self._selected_template = event.value
-        self.query_one("#error", Static).update("")
+        self._selected_template = choice
+        self._status(Text(""))
         with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
             self.query_one("#docker", Checkbox).value = self._docker()
+        await self.query_one(VariableFields).show(
+            template.source.variables if template else frozenset()
+        )
         self._refresh_tools()
+        self._changed()
+
+    def _status(self, message: Text, *, error: bool = False) -> None:
+        status = self.query_one("#template-status", Static)
+        status.update(message)
+        status.set_class(error, "-error")
+        status.display = bool(message)
 
     @on(Checkbox.Changed)
     def toggle_tool(self, event: Checkbox.Changed) -> None:
@@ -291,6 +392,7 @@ class RecipeScreen(Screen[InitDraft]):
             if event.value == self._docker():
                 return
             self.docker_override = event.value
+            self._changed()
             return
         tool = Tool(str(event.checkbox.id).removeprefix("tool-"))
         if self.enabled[tool] == event.value:
@@ -302,6 +404,7 @@ class RecipeScreen(Screen[InitDraft]):
                 self.overrides[dependent] = False
         self._resolve_selections()
         self._refresh_tools()
+        self._changed()
 
     @on(RadioSet.Changed)
     def choose_exclusive(self, event: RadioSet.Changed) -> None:
@@ -316,17 +419,14 @@ class RecipeScreen(Screen[InitDraft]):
         self.overrides.update(values)
         self._resolve_selections()
         self._refresh_tools()
+        self._changed()
 
     @on(Button.Pressed)
     def finish(self, event: Button.Pressed) -> None:
         """Return decisions only; execution starts after the app has exited."""
         if event.button.id == "cancel":
             self.app.exit(None)
-        else:
-            self.app.exit(
-                replace(
-                    self.draft,
-                    tool_choices=tuple(sorted(self.enabled.items())),
-                    docker=self._docker(),
-                )
-            )
+            return
+        variables = self.query_one(VariableFields).values()
+        if variables is not None:
+            self.app.exit(self._current_draft(variables))

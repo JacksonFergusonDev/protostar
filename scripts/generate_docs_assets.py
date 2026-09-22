@@ -423,9 +423,7 @@ def generate_capability_tables() -> None:
         metadata_rows.append(
             [
                 f"`{key}`",
-                field.label.replace(" (optional, press Enter to skip):", "").replace(
-                    ":", ""
-                ),
+                field.label,
                 f"`{field.prompt_type}`",
                 default_str,
             ]

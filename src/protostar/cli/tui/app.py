@@ -4,16 +4,13 @@ from typing import ClassVar
 
 from textual.app import App
 from textual.binding import Binding, BindingType
+from textual.screen import Screen
 
-from protostar.config import UserConfig
 from protostar.init_draft import InitDraft
-from protostar.templates import TemplateInfo
-
-from .recipe.screen import RecipeScreen
 
 
-class RecipeApp(App[InitDraft]):
-    """Edit a recipe and exit with an immutable draft."""
+class DecisionApp(App[InitDraft]):
+    """Run one decision screen and exit with its immutable draft."""
 
     CSS_PATH = "protostar.tcss"
     TITLE = "Protostar"
@@ -23,16 +20,14 @@ class RecipeApp(App[InitDraft]):
         Binding("ctrl+c", "cancel", "Cancel", show=False, priority=True),
     ]
 
-    def __init__(
-        self, draft: InitDraft, catalog: list[TemplateInfo], config: UserConfig
-    ) -> None:
+    def __init__(self, screen: Screen[InitDraft]) -> None:
         super().__init__()
         self.theme = "textual-dark"
-        self.recipe_screen = RecipeScreen(draft, catalog, config)
+        self.decision_screen = screen
 
     def on_mount(self) -> None:
-        """Open the recipe editor without starting engine execution."""
-        self.push_screen(self.recipe_screen)
+        """Open the decision screen without starting engine execution."""
+        self.push_screen(self.decision_screen)
 
     def action_cancel(self) -> None:
         """Leave the app without a result."""

@@ -330,7 +330,7 @@ def test_missing_variables_fail_without_prompt_or_mutation_off_a_terminal(
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("protostar.cli.main.is_interactive", return_value=False)
     prompt = mocker.patch(
-        "protostar.cli.main.prompt_template_variables",
+        "protostar.cli.main.edit_variables",
         side_effect=AssertionError("no prompts"),
     )
 
@@ -359,7 +359,7 @@ def test_json_mode_never_prompts_for_variables(tmp_path, monkeypatch, mocker):
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
-    prompt = mocker.patch("protostar.cli.main.prompt_template_variables")
+    prompt = mocker.patch("protostar.cli.main.edit_variables")
 
     with pytest.raises(MissingTemplateVariablesError):
         handle_init(argparse.Namespace(from_path=str(source), docker=None))
@@ -367,7 +367,9 @@ def test_json_mode_never_prompts_for_variables(tmp_path, monkeypatch, mocker):
     prompt.assert_not_called()
 
 
-def test_terminal_prompts_only_for_missing_variables(tmp_path, monkeypatch, mocker):
+def test_terminal_opens_the_variables_step_for_missing_variables(
+    tmp_path, monkeypatch, mocker
+):
     import argparse
 
     from protostar.cli.main import handle_init
@@ -376,15 +378,20 @@ def test_terminal_prompts_only_for_missing_variables(tmp_path, monkeypatch, mock
     source = _two_variable_template(tmp_path)
     engines = _capture_init_engines(mocker)
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
-    prompt = mocker.patch(
-        "protostar.cli.main.prompt_template_variables", return_value={"TIER": "gold"}
+    step = mocker.patch(
+        "protostar.cli.main.edit_variables",
+        side_effect=lambda draft, config: replace(
+            draft, variables=(*draft.variables, ("TIER", "gold"))
+        ),
     )
 
     handle_init(
         argparse.Namespace(from_path=str(source), variables=["REGION=eu"], docker=None)
     )
 
-    prompt.assert_called_once_with(["TIER"])
+    step.assert_called_once()
+    draft = step.call_args.args[0]
+    assert draft.template.source.variables - dict(draft.variables).keys() == {"TIER"}
     assert dict(engines[-1].request.recipe.variables) == {
         "REGION": "eu",
         "TIER": "gold",
@@ -407,8 +414,9 @@ def test_reinit_reuses_recorded_variables_and_flags_override_them(
     )
     (tmp_path / "pyproject.toml").write_text(edit_recipe("", recorded))
     engines = _capture_init_engines(mocker)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     prompt = mocker.patch(
-        "protostar.cli.main.prompt_template_variables",
+        "protostar.cli.main.edit_variables",
         side_effect=AssertionError("nothing is missing"),
     )
 

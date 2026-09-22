@@ -1,28 +1,92 @@
 """Recipe decisions, lazy CLI boundary, and terminal presentation."""
 
+import contextlib
 import io
 import os
+import random
+import shutil
+import string
 import subprocess
 import sys
+import threading
 from dataclasses import replace
 
 import pytest
 from rich.console import Console
-from textual.widgets import Button, Checkbox, RadioButton, Select
+from textual.widgets import (
+    Button,
+    Checkbox,
+    Input,
+    RadioButton,
+    Select,
+    SelectionList,
+    Static,
+)
+from textual.worker import WorkerCancelled
 
 from protostar.cli import parser, ui
-from protostar.cli.tui.app import RecipeApp
-from protostar.cli.tui.recipe.screen import _TemplateChoice
-from protostar.config import TemplateAliasConfig, UserConfig
+from protostar.cli.tui.app import DecisionApp
+from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
+from protostar.cli.tui.recipe.variables import VariablesScreen
+from protostar.config import TemplateAliasConfig, TemplateSource, UserConfig
 from protostar.errors import ExecutionAbortedError
-from protostar.init_draft import InitDraft, resolve_init
+from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.recipe import Tool, establish_recipe
 from protostar.templates import discover_templates
 
 
+@pytest.fixture(autouse=True)
+def workspace(tmp_path, monkeypatch):
+    """Plan in an empty directory, with no git subprocess and every tool installed."""
+    # A fixed directory name keeps the planned project name stable in snapshots.
+    project = tmp_path / "orbit"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    monkeypatch.setattr("protostar.metadata.get_git_config", lambda key: None)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    return project
+
+
 def make_app(draft=None, config=None):
     config = config or UserConfig()
-    return RecipeApp(draft or InitDraft(), discover_templates(config), config)
+    return DecisionApp(
+        RecipeScreen(draft or InitDraft(), discover_templates(config), config)
+    )
+
+
+def template_draft(path, text, **changes):
+    path.write_text(text)
+    source = TemplateSource.load(str(path), display_name="orbit-template")
+    return InitDraft(template=DraftTemplate(source), **changes)
+
+
+async def settle(pilot):
+    """Wait for workers, including those a finishing worker starts."""
+    # Handle pending messages first: they are what start the workers.
+    await pilot.pause()
+    for _ in range(10):
+        workers = list(pilot.app.workers)
+        if not workers:
+            break
+        for worker in workers:
+            # A newer exclusive run supersedes a debounced one; that is expected.
+            with contextlib.suppress(WorkerCancelled):
+                await worker.wait()
+        await pilot.pause()
+    await pilot.pause()
+
+
+def plain(app, selector):
+    console = Console(file=io.StringIO(), width=200, record=True, color_system=None)
+    console.print(app.screen.query_one(selector, Static).content)
+    return console.export_text()
+
+
+def github_token():
+    # Built at test time, never written as a literal: secret scanners flag them.
+    rng = random.Random(20260922)
+    alphabet = string.ascii_letters + string.digits
+    return "ghp_" + "".join(rng.choice(alphabet) for _ in range(36))
 
 
 @pytest.mark.asyncio
@@ -30,16 +94,16 @@ async def test_template_picker_and_docker():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         app.screen.query_one("#template", Select).value = next(
-            item for item in app.recipe_screen.catalog if item.alias == "api"
+            item for item in app.decision_screen.catalog if item.alias == "api"
         )
-        await pilot.pause()
+        await settle(pilot)
         assert app.screen.query_one("#docker", Checkbox).value
         assert (
             "from template" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         )
         await pilot.click("#continue")
     assert app.return_value.template.source.reference.locator == "api"
-    _, request = resolve_init(replace(app.return_value, metadata=()), UserConfig())
+    _, request = resolve_init(app.return_value, UserConfig())
     assert request.template_reference is not None
     assert request.template_reference.origin.value == "built-in"
 
@@ -55,12 +119,16 @@ async def test_tools_constraints_and_provenance():
         rtd = app.screen.query_one("#tool-readthedocs", Checkbox)
         assert rtd.disabled
         assert "requires Zensical" in rtd.label.plain
+        rtd.scroll_visible(immediate=True)
+        await pilot.pause()
         await pilot.click("#tool-zensical")
         assert not rtd.disabled
         await pilot.click("#tool-readthedocs")
         await pilot.click("#tool-zensical")
         assert rtd.disabled
         assert not rtd.value
+        app.screen.query_one("#tool-ruff").scroll_visible(immediate=True)
+        await pilot.pause()
         await pilot.click("#tool-ruff")
         assert "your choice" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         app.screen.query_one("#tool-prek", RadioButton).scroll_visible(immediate=True)
@@ -86,21 +154,29 @@ async def test_cancel(key):
 @pytest.mark.asyncio
 async def test_recorded_values_and_template_switch_preserve_choices():
     config = UserConfig(ruff=False)
-    recipe = replace(establish_recipe(config), tools=((Tool.RUFF, True),), docker=True)
+    recipe = replace(
+        establish_recipe(config),
+        tools=((Tool.RUFF, True),),
+        docker=True,
+        metadata=(("description", "Recorded"),),
+    )
     app = make_app(InitDraft(existing_recipe=recipe), config)
     async with app.run_test(size=(110, 45)) as pilot:
         assert "from recipe" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         assert app.screen.query_one("#docker", Checkbox).value
+        assert app.screen.query_one("#meta-description", Input).value == "Recorded"
+        app.screen.query_one("#tool-ruff").scroll_visible(immediate=True)
+        await pilot.pause()
         await pilot.click("#tool-ruff")
         app.screen.query_one("#template", Select).value = next(
-            item for item in app.recipe_screen.catalog if item.alias == "api"
+            item for item in app.decision_screen.catalog if item.alias == "api"
         )
-        await pilot.pause()
+        await settle(pilot)
         assert not app.screen.query_one("#tool-ruff", Checkbox).value
         app.screen.query_one("#template", Select).value = _TemplateChoice.NONE
-        await pilot.pause()
+        await settle(pilot)
         assert not app.screen.query_one("#tool-ruff", Checkbox).value
-        assert app.recipe_screen.draft.template is None
+        assert app.decision_screen.draft.template is None
 
 
 @pytest.mark.asyncio
@@ -116,14 +192,15 @@ async def test_alias_and_load_error(tmp_path):
     app = make_app(config=config)
     async with app.run_test() as pilot:
         app.screen.query_one("#template", Select).value = next(
-            item for item in app.recipe_screen.catalog if item.alias == "missing"
+            item for item in app.decision_screen.catalog if item.alias == "missing"
         )
-        await pilot.pause()
+        await settle(pilot)
         assert app.screen.query_one("#continue", Button).disabled
+        assert "not found" in plain(app, "#template-status")
         app.screen.query_one("#template", Select).value = next(
-            item for item in app.recipe_screen.catalog if item.alias == "team"
+            item for item in app.decision_screen.catalog if item.alias == "team"
         )
-        await pilot.pause()
+        await settle(pilot)
         assert not app.screen.query_one("#continue", Button).disabled
         await pilot.click("#continue")
     assert app.return_value.template.is_external
@@ -132,10 +209,195 @@ async def test_alias_and_load_error(tmp_path):
     assert app.return_value.docker
 
 
+@pytest.mark.asyncio
+async def test_remote_template_loads_in_a_worker(tmp_path, mocker):
+    local = tmp_path / "remote.toml"
+    local.write_text('name = "Remote"\ndocker = true\n')
+    release = threading.Event()
+    load = TemplateSource.load
+
+    def slow_load(target, **kwargs):
+        release.wait(timeout=5)
+        return load(str(local), **kwargs)
+
+    mocker.patch(
+        "protostar.cli.tui.recipe.screen.TemplateSource.load", side_effect=slow_load
+    )
+    config = UserConfig(
+        templates={"remote": TemplateAliasConfig(source="https://example.com/t.git")}
+    )
+    app = make_app(config=config)
+    async with app.run_test() as pilot:
+        app.screen.query_one("#template", Select).value = next(
+            item for item in app.decision_screen.catalog if item.alias == "remote"
+        )
+        await pilot.pause()
+        # The UI stays responsive while the fetch runs, and cannot continue.
+        assert "Loading" in plain(app, "#template-status")
+        assert app.screen.query_one("#continue", Button).disabled
+        release.set()
+        await settle(pilot)
+        assert plain(app, "#template-status").strip() == ""
+        assert app.screen.query_one("#docker", Checkbox).value
+        assert not app.screen.query_one("#continue", Button).disabled
+
+
+@pytest.mark.asyncio
+async def test_reselecting_the_current_template_abandons_a_load(tmp_path, mocker):
+    local = tmp_path / "remote.toml"
+    local.write_text('name = "Remote"\ndocker = true\n')
+    release = threading.Event()
+    load = TemplateSource.load
+    mocker.patch(
+        "protostar.cli.tui.recipe.screen.TemplateSource.load",
+        side_effect=lambda target, **kwargs: (
+            release.wait(timeout=5) and load(str(local), **kwargs)
+        ),
+    )
+    config = UserConfig(
+        templates={"remote": TemplateAliasConfig(source="https://example.com/t.git")}
+    )
+    app = make_app(config=config)
+    async with app.run_test() as pilot:
+        select = app.screen.query_one("#template", Select)
+        select.value = next(
+            item for item in app.decision_screen.catalog if item.alias == "remote"
+        )
+        await pilot.pause()
+        select.value = _TemplateChoice.NONE
+        await pilot.pause()
+        assert not app.screen.query_one("#continue", Button).disabled
+        release.set()
+        await settle(pilot)
+        assert app.decision_screen.draft.template is None
+        assert not app.screen.query_one("#docker", Checkbox).value
+
+
+@pytest.mark.asyncio
+async def test_credential_value_blocks_continue_and_names_the_rule(tmp_path):
+    draft = template_draft(tmp_path / "t.toml", 'name = "<% ORG %>"\n')
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert "Waiting for values: ORG" in plain(app, "#preview-summary")
+        field = app.screen.query_one("#var-ORG", Input)
+        field.focus()
+        field.value = github_token()
+        await pilot.press("enter")
+        await settle(pilot)
+        assert "gitleaks rule github-pat" in plain(app, "#var-ORG-error")
+        assert field.has_class("-invalid")
+        # A rejected value never reaches the preview.
+        assert "Waiting for values: ORG" in plain(app, "#preview-summary")
+        await pilot.click("#continue")
+        assert app.is_running
+        field.value = "orbit"
+        await pilot.click("#continue")
+    assert dict(app.return_value.variables) == {"ORG": "orbit"}
+
+
+@pytest.mark.asyncio
+async def test_metadata_defaults_follow_config_tools_and_docker():
+    config = UserConfig(
+        author_name="Ada Lovelace", license="Apache-2.0", supported_os=["Linux"]
+    )
+    app = make_app(config=config)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        assert screen.query_one("#meta-author_name", Input).value == "Ada Lovelace"
+        assert screen.query_one("#meta-license", Select).value == "Apache-2.0"
+        assert screen.query_one("#meta-minimum_python", Input).value == "3.13"
+        assert not screen.query_one("#meta-supported_os-row").display
+        assert not screen.query_one("#meta-docker_port-row").display
+        screen.query_one("#tool-ci", Checkbox).value = True
+        screen.query_one("#docker", Checkbox).value = True
+        await settle(pilot)
+        assert screen.query_one("#meta-supported_os-row").display
+        assert screen.query_one("#meta-supported_os", SelectionList).selected == [
+            "Linux"
+        ]
+        assert screen.query_one("#meta-docker_port", Input).value == "8000"
+        await pilot.click("#continue")
+    metadata = dict(app.return_value.metadata)
+    assert metadata["author_name"] == "Ada Lovelace"
+    assert metadata["supported_os"] == ("Linux",)
+    assert metadata["docker_port"] == "8000"
+    assert app.return_value.python_version == "3.13"
+
+
+@pytest.mark.asyncio
+async def test_toggling_a_tool_updates_the_preview():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert "pyproject.toml" in plain(app, "#preview-tree")
+        assert "zensical.toml" not in plain(app, "#preview-tree")
+        app.screen.query_one("#tool-zensical", Checkbox).value = True
+        await settle(pilot)
+        assert "zensical.toml" in plain(app, "#preview-tree")
+
+
+@pytest.mark.asyncio
+async def test_preview_lists_collisions(workspace):
+    (workspace / "pyproject.toml").write_text('[project]\nname = "existing"\n')
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert "Already exist: pyproject.toml" in plain(app, "#preview-collisions")
+
+
+@pytest.mark.asyncio
+async def test_variables_step_focuses_the_missing_value(tmp_path):
+    draft = template_draft(
+        tmp_path / "t.toml",
+        '[files]\n"custom.txt" = "<% REGION %> <% TIER %>"\n',
+        variables=(("REGION", "eu"),),
+    )
+    app = DecisionApp(VariablesScreen(draft, UserConfig()))
+    async with app.run_test(size=(110, 30)) as pilot:
+        await settle(pilot)
+        assert app.focused is app.screen.query_one("#var-TIER", Input)
+        assert app.screen.query_one("#var-REGION", Input).value == "eu"
+        assert "Waiting for values: TIER" in plain(app, "#preview-summary")
+        await pilot.press(*"gold", "enter")
+        await settle(pilot)
+        assert "custom.txt" in plain(app, "#preview-tree")
+        await pilot.click("#continue")
+    result = app.return_value
+    assert result is not None
+    assert dict(result.variables) == {"REGION": "eu", "TIER": "gold"}
+
+
 def test_editor_snapshot(snap_compare, monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
-    app = make_app()
-    assert snap_compare(app, terminal_size=(110, 50))
+    app = make_app(config=UserConfig(author_name="Ada Lovelace"))
+    assert snap_compare(app, terminal_size=(110, 50), run_before=settle)
+
+
+def test_editor_details_snapshot(snap_compare, monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    app = make_app(
+        InitDraft(docker=True), UserConfig(ci=True, author_name="Ada Lovelace")
+    )
+
+    async def details(pilot):
+        await settle(pilot)
+        pilot.app.screen.query_one("#editor").scroll_end(animate=False)
+        await pilot.pause()
+
+    assert snap_compare(app, terminal_size=(110, 50), run_before=details)
+
+
+def test_variables_step_snapshot(snap_compare, monkeypatch, tmp_path):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    draft = template_draft(
+        tmp_path / "t.toml",
+        'name = "Orbit"\n[files]\n"<% REGION %>/app.txt" = "<% TIER %>"\n',
+        variables=(("REGION", "eu"),),
+    )
+    app = DecisionApp(VariablesScreen(draft, UserConfig()))
+    assert snap_compare(app, terminal_size=(110, 30), run_before=settle)
 
 
 @pytest.mark.parametrize(
