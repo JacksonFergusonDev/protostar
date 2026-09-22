@@ -289,6 +289,7 @@ content, then repeats the ML template with `--mypy --docker --force-merge`:
 - __Machine-Readable Output__: Pass the position-independent `--json` flag to emit structured JSON envelopes to `stdout` and route logs to `stderr` (e.g., `protostar init --template cli --json`). See the __[Agent & Machine Interface](./agent-interface.md)__ for the full protocol specification.
 - __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).
 - __List Available Templates__: Run `protostar init --list-templates` to view all built-in templates and registered global aliases.
+- __Template Variables__: Supply a template's custom variables with `--var NAME=VALUE`, once per variable (e.g., `protostar init --from ./team.toml --var REGION=eu-west-1`). In a terminal, Protostar prompts for any you leave out; elsewhere, including under `--json`, a missing value is an error. Values are saved in the project recipe, so never pass secrets. See [Template variables](../development/project-recipe.md#template-variables).
 - __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.13`).
 - __Verbose Output__: Append `--verbose` (or `-v`) to enable debug logs and full tracebacks.
 
@@ -310,4 +311,4 @@ To view all supported subcommands and flags in your terminal, run `protostar hel
 Successful initialization records `[tool.protostar]` in `pyproject.toml` alongside
 the separate ownership ledger. Unspecified flags preserve recorded diversions on
 reinitialization. See [project recipes](../development/project-recipe.md) for
-enrollment, selection precedence, and custom environment bindings.
+enrollment, selection precedence, and template variables.

@@ -36,13 +36,15 @@ Every tooling module can be explicitly enabled (`--<flag>`) or disabled (`--no-<
 
 --8<-- "table_cli_tooling_flags.md"
 
-#### Dynamic Variables
+#### Template Variables
 
-Any template containing placeholders (e.g., `<% DATABASE_URL %>`) can receive values via trailing arguments:
+A template containing custom placeholders (e.g., `<% REGION %>`) receives their values through `--var`, repeated once per variable. Values are saved in the project recipe, so never pass secrets:
 
 ```bash
-protostar init --from ./api.toml --DATABASE_URL="postgresql://localhost:5432/db"
+protostar init --from ./api.toml --var REGION=eu-west-1 --var SERVICE_NAME=billing
 ```
+
+In a terminal, Protostar prompts for any variable left out. Elsewhere, including under `--json`, a missing value fails with `MissingTemplateVariablesError`.
 
 ### `protostar status` and `protostar diff`
 
@@ -73,7 +75,7 @@ The explicit current directory must contain `[tool.protostar]` in `pyproject.tom
 and `.protostar.lock.toml`. For a Stage 1 project, rerun the original explicit
 selection with `init --force-merge` to enroll it. Edit the recipe deliberately to
 change tool selections; global defaults are never consulted during review.
-Custom variables require `[tool.protostar.bindings]` and their environment values.
+Template variable values come from `[tool.protostar.variables]`; these commands never prompt.
 Recorded template identity changes are rejected.
 
 Valid reviews exit `0`, even with conflicts or pending work. Fatal errors use the

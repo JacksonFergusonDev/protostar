@@ -20,7 +20,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     dev_properties: dict[str, Any] = {}
 
     for f in dataclasses.fields(TemplateBlueprint):
-        if f.name in {"reference", "custom_variables"}:
+        if f.name == "reference":
             continue
         desc = f.metadata.get("description", "")
         if f.name == "tooling_overrides":

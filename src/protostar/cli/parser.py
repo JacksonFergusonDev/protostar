@@ -403,6 +403,15 @@ def build_parser() -> argparse.ArgumentParser:
         allowednames=[".toml"]
     )
 
+    base_group.add_argument(
+        "--var",
+        action="append",
+        default=[],
+        dest="variables",
+        metavar="NAME=VALUE",
+        help="Set a template variable; repeat for each. Values are saved to pyproject.toml, so never pass secrets.",
+    )
+
     python_version_action = base_group.add_argument(
         "--python-version",
         type=str,
@@ -435,14 +444,6 @@ def build_parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="Generate Dockerfile and .dockerignore container scaffolding",
-    )
-
-    tooling_group.add_argument(
-        "--bind",
-        action="append",
-        default=[],
-        metavar="VARIABLE=ENVIRONMENT",
-        help="Bind a custom template variable to an environment variable for replay.",
     )
 
     for mod in TOOLING_MODULES:
@@ -568,7 +569,7 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
     normal parsing: ``--version --json``, ``--help --json``, and bare ``--json``
     with no subcommand. Each path emits exactly one JSON document and exits.
 
-    Must be called after ``build_parser()`` but before ``parse_known_args()``.
+    Must be called after ``build_parser()`` but before ``parse_args()``.
 
     Args:
         parser: The fully constructed root argument parser, used to build the
@@ -659,6 +660,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 cast(ProjectMetadata, selections.project_metadata),
                 selections.docker,
                 min_py,
+                tuple(sorted(selections.variables.items())),
             ),
         )
         if existing_recipe:
@@ -668,7 +670,6 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
                 recipe,
                 fallback=existing_recipe.fallback,
                 context=tuple(sorted(context.items())),
-                bindings=existing_recipe.bindings,
             )
         selected = {m.config_key for m in modules if m.config_key}
         opinions = (

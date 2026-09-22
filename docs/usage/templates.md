@@ -182,19 +182,19 @@ In the interactive TUI wizard, your aliases are automatically discovered and dis
 
 ## Supplying Template Parameters
 
-Templates can define custom parameters (such as service names, database endpoints, or deployment settings).
+Templates can define custom parameters (such as service names, regions, or deployment settings). Their values are saved in the project recipe in `pyproject.toml`, so they must never be secrets.
 
 ### Passing Parameters via CLI
 
-You can pass parameter values directly as trailing CLI flags during initialization:
+Pass each value with `--var`, once per parameter:
 
 ```bash
-protostar init --from ./service.toml --DATABASE_URL="postgresql://localhost:5432/db"
+protostar init --from ./service.toml --var SERVICE_NAME=billing --var REGION=eu-west-1
 ```
 
 ### Interactive Resolution
 
-If a template requires parameters that were not supplied via CLI flags, Protostar automatically prompts you for the missing values in the terminal (both in headless and TUI modes) before any disk mutations occur.
+If a template requires parameters that were not supplied with `--var`, Protostar prompts for the missing values in an interactive terminal before any disk mutations occur. Without a terminal, including under `--json`, it stops with an error naming every missing parameter. Later runs of `init` reuse the recorded values.
 
 ### Automatic Metadata Resolution
 

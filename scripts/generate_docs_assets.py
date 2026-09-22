@@ -25,7 +25,12 @@ from rich.text import Text
 from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
-from protostar.config import DEFAULT_CONFIG_CONTENT, TemplateBlueprint, UserConfig
+from protostar.config import (
+    DEFAULT_CONFIG_CONTENT,
+    TemplateBlueprint,
+    TemplateSource,
+    UserConfig,
+)
 from protostar.documents import pyproject
 from protostar.errors import WorkspaceCollisionError
 from protostar.fs import atomic_write_text
@@ -740,7 +745,7 @@ def generate_manifest_state() -> None:
     # Load and apply the built-in astro template
     target = importlib.resources.files("protostar.templates").joinpath("astro.toml")
     if target.is_file():
-        blueprint = TemplateBlueprint.load(str(target), built_in="astro")
+        blueprint = TemplateSource.load(str(target), built_in="astro").render({})
         for dep in blueprint.dependencies:
             manifest.dependencies.add(dep)
         for dep in blueprint.dev_dependencies:
@@ -1000,7 +1005,7 @@ def _demo_project() -> Iterator[None]:
 def _cli_template_engine() -> tuple[Orchestrator, InitRequest]:
     """Builds the engine `protostar init --template cli` would run with defaults."""
     target = importlib.resources.files("protostar.templates").joinpath("cli.toml")
-    blueprint = TemplateBlueprint.load(str(target), built_in="cli")
+    blueprint = TemplateSource.load(str(target), built_in="cli").render({})
     user_config = UserConfig()
     modules: list[BootstrapModule] = [SystemWorkspaceModule(), PythonCore()]
     for mod in TOOLING_MODULES:

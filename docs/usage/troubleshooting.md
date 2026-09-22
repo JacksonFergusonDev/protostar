@@ -96,7 +96,7 @@ trusted = true
 
 ## Template Variables That Look Like Credentials
 
-Template variables are rendered into your project's files, so Protostar refuses values that look like credentials before anything is written:
+Template variables are saved to your project's recipe and rendered into its files, so Protostar refuses values that look like credentials before anything is written:
 
 ```text
 Template variable values look like credentials:

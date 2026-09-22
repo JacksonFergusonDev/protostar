@@ -3,7 +3,18 @@
 import re
 from typing import Final
 
-VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(r"<\%\s*([a-zA-Z0-9_]+)\s*\%>")
+# A variable name is an identifier. Placeholders, recorded variables, and
+# --var flags all use this one definition.
+VARIABLE_NAME: Final[re.Pattern[str]] = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(
+    rf"<\%\s*({VARIABLE_NAME.pattern})\s*\%>"
+)
+
+# Variables Protostar computes for every project. Templates use them without
+# declaring them, and they are never prompted for.
+BUILT_IN_VARIABLES: Final[frozenset[str]] = frozenset(
+    {"PROJECT_NAME", "PACKAGE_NAME", "PYTHON_VERSION", "CURRENT_YEAR", "AUTHOR_NAME"}
+)
 
 
 # --- Design Note: Lightweight Regex Interpolation vs Jinja2 ---

@@ -9,12 +9,16 @@ import tempfile
 import tomllib
 import types
 import typing
-from collections.abc import Callable
+from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from .errors import ConfigurationError, TemplateResolutionError
+from .errors import (
+    ConfigurationError,
+    MissingTemplateVariablesError,
+    TemplateResolutionError,
+)
 from .ide import IDEType
 from .intent import (
     AppendContribution,
@@ -27,7 +31,7 @@ from .intent import (
     validate_region_id,
     validate_target,
 )
-from .interpolation import extract_variables, render_template
+from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
 from .network import resolve_remote_source, resolve_remote_template
 from .secret_guard import check_variable_names, check_variable_values
 
@@ -587,7 +591,6 @@ def _parse_tool_dependencies(raw: object, source: str) -> dict[str, list[str]]:
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
 
-    custom_variables: frozenset[str] = field(default=frozenset(), repr=False)
     reference: TemplateReference | None = field(default=None, repr=False)
     version: str = field(
         default="",
@@ -710,149 +713,6 @@ class TemplateBlueprint:
             "example": None,
         },
     )
-
-    @classmethod
-    def load(
-        cls,
-        target: str,
-        template_context: dict[str, str] | None = None,
-        variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
-        *,
-        built_in: str | None = None,
-        display_name: str | None = None,
-    ) -> "TemplateBlueprint":
-        """Loads and parses a template blueprint."""
-        temp_dir: tempfile.TemporaryDirectory[str] | None = None
-        remote_source = None
-
-        try:
-            if target.startswith("http://") or target.startswith("https://"):
-                remote_source = resolve_remote_source(target)
-                temp_dir = tempfile.TemporaryDirectory()
-                temp_workspace = Path(temp_dir.name)
-                target_path = resolve_remote_template(
-                    remote_source.locator, temp_workspace
-                )
-            else:
-                target_path = Path(target).expanduser()
-                if not target_path.exists():
-                    raise TemplateResolutionError(
-                        target, f"Configuration file not found: {target_path}"
-                    )
-
-            if target_path.is_file():
-                toml_path = target_path
-                base_dir = target_path.parent
-            else:
-                toml_path = target_path / "protostar.toml"
-                if not toml_path.exists():
-                    raise TemplateResolutionError(
-                        target, f"Configuration file not found: {toml_path}"
-                    )
-                base_dir = target_path
-
-            template_bytes = toml_path.read_bytes()
-
-            raw_files: dict[str, str] = {}
-            template_dir = base_dir / "template"
-            if template_dir.exists() and template_dir.is_dir():
-                for file_path in template_dir.rglob("*"):
-                    if file_path.is_dir():
-                        continue
-                    if (
-                        ".DS_Store" in file_path.parts
-                        or "__pycache__" in file_path.parts
-                    ):
-                        continue
-                    rel_path = str(file_path.relative_to(template_dir))
-                    raw_files[rel_path] = file_path.read_text(encoding="utf-8")
-
-            origin = (
-                TemplateOrigin.BUILT_IN
-                if built_in
-                else TemplateOrigin.REMOTE
-                if remote_source
-                else TemplateOrigin.LOCAL
-            )
-            locator = built_in or (
-                remote_source.locator
-                if remote_source
-                else toml_path.expanduser().resolve().as_posix()
-            )
-            reference = TemplateReference(
-                origin,
-                locator,
-                hashlib.sha256(template_bytes).hexdigest(),
-                display_name,
-                source_revision=remote_source.revision if remote_source else None,
-            )
-            return cls.from_sources(
-                template_bytes,
-                raw_files,
-                reference,
-                template_context,
-                variable_resolver,
-            )
-        finally:
-            if temp_dir is not None:
-                temp_dir.cleanup()
-
-    @classmethod
-    def from_sources(
-        cls,
-        template_bytes: bytes,
-        raw_files: dict[str, str],
-        reference: TemplateReference,
-        template_context: dict[str, str] | None = None,
-        variable_resolver: Callable[[list[str]], dict[str, str]] | None = None,
-    ) -> "TemplateBlueprint":
-        """Renders one acquired source revision entirely in memory."""
-        target = reference.locator
-        toml_content = template_bytes.decode("utf-8")
-        all_text_sources = [toml_content, *raw_files.keys(), *raw_files.values()]
-        combined_text = "\n".join(all_text_sources)
-        variables = extract_variables(combined_text)
-
-        context = dict(template_context) if template_context else {}
-
-        late_binding_vars = {
-            "PYTHON_VERSION",
-            "PROJECT_NAME",
-            "PACKAGE_NAME",
-            "CURRENT_YEAR",
-            "AUTHOR_NAME",
-        }
-        custom_variables = [v for v in variables if v not in late_binding_vars]
-        check_variable_names(target, custom_variables)
-        missing = [v for v in custom_variables if v not in context]
-
-        if missing:
-            if variable_resolver is not None:
-                context.update(variable_resolver(missing))
-            else:
-                raise TemplateResolutionError(
-                    target,
-                    f"Template requires variables: {', '.join(missing)}.",
-                    hint="Please provide them via CLI flags (e.g. --variable_name=value) or run in an interactive terminal.",
-                )
-
-        # Values render into committed files; check them before anything renders.
-        check_variable_values({name: context[name] for name in custom_variables})
-
-        rendered_toml = render_template(toml_content, context, escape_toml=True)
-        blueprint = cls._parse(rendered_toml, target)
-        blueprint.custom_variables = frozenset(custom_variables)
-
-        interpolated_files: dict[str, str] = {}
-        for rel_path, content in raw_files.items():
-            new_path = render_template(rel_path, context, escape_toml=False)
-            new_content = render_template(content, context, escape_toml=False)
-            interpolated_files[new_path] = new_content
-
-        blueprint.files.update(interpolated_files)
-        blueprint.reference = replace(reference, version=blueprint.version or None)
-        blueprint._validate_declarations()
-        return blueprint
 
     @classmethod
     def _parse(cls, content: str, source: str = "unknown") -> "TemplateBlueprint":
@@ -1137,3 +997,167 @@ class TemplateBlueprint:
                 dict.fromkeys(extract_variables(payload.content), "placeholder"),
             )
             validate_configuration(rendered)
+
+
+@dataclass(frozen=True)
+class TemplateSource:
+    """One acquired template revision, held in memory until it is rendered.
+
+    Loading and rendering are separate steps so a caller can ask which
+    variables a template needs before supplying values: the engine never
+    prompts, and a remote template is fetched once.
+
+    Attributes:
+        template_bytes: The raw ``protostar.toml`` bytes.
+        files: Text files under ``template/``, keyed by relative path.
+        reference: The source identity recorded in the lock file.
+    """
+
+    template_bytes: bytes
+    files: dict[str, str]
+    reference: TemplateReference
+
+    @classmethod
+    def load(
+        cls,
+        target: str,
+        *,
+        built_in: str | None = None,
+        display_name: str | None = None,
+    ) -> "TemplateSource":
+        """Acquires a template from a local path, directory, or remote URL.
+
+        Args:
+            target: A ``protostar.toml`` path, a template directory, or a URL.
+            built_in: The built-in template alias, when ``target`` is one.
+            display_name: The name the user selected the template by.
+
+        Returns:
+            The acquired template, not yet rendered.
+
+        Raises:
+            TemplateResolutionError: If the target cannot be found or read.
+        """
+        temp_dir: tempfile.TemporaryDirectory[str] | None = None
+        remote_source = None
+
+        try:
+            if target.startswith("http://") or target.startswith("https://"):
+                remote_source = resolve_remote_source(target)
+                temp_dir = tempfile.TemporaryDirectory()
+                temp_workspace = Path(temp_dir.name)
+                target_path = resolve_remote_template(
+                    remote_source.locator, temp_workspace
+                )
+            else:
+                target_path = Path(target).expanduser()
+                if not target_path.exists():
+                    raise TemplateResolutionError(
+                        target, f"Configuration file not found: {target_path}"
+                    )
+
+            if target_path.is_file():
+                toml_path = target_path
+                base_dir = target_path.parent
+            else:
+                toml_path = target_path / "protostar.toml"
+                if not toml_path.exists():
+                    raise TemplateResolutionError(
+                        target, f"Configuration file not found: {toml_path}"
+                    )
+                base_dir = target_path
+
+            template_bytes = toml_path.read_bytes()
+
+            raw_files: dict[str, str] = {}
+            template_dir = base_dir / "template"
+            if template_dir.exists() and template_dir.is_dir():
+                for file_path in template_dir.rglob("*"):
+                    if file_path.is_dir():
+                        continue
+                    if (
+                        ".DS_Store" in file_path.parts
+                        or "__pycache__" in file_path.parts
+                    ):
+                        continue
+                    rel_path = str(file_path.relative_to(template_dir))
+                    raw_files[rel_path] = file_path.read_text(encoding="utf-8")
+
+            origin = (
+                TemplateOrigin.BUILT_IN
+                if built_in
+                else TemplateOrigin.REMOTE
+                if remote_source
+                else TemplateOrigin.LOCAL
+            )
+            locator = built_in or (
+                remote_source.locator
+                if remote_source
+                else toml_path.expanduser().resolve().as_posix()
+            )
+            reference = TemplateReference(
+                origin,
+                locator,
+                hashlib.sha256(template_bytes).hexdigest(),
+                display_name,
+                source_revision=remote_source.revision if remote_source else None,
+            )
+            return cls(template_bytes, raw_files, reference)
+        finally:
+            if temp_dir is not None:
+                temp_dir.cleanup()
+
+    @functools.cached_property
+    def variables(self) -> frozenset[str]:
+        """The template's custom variables, excluding built-in ones.
+
+        Raises:
+            TemplateResolutionError: If a variable is named like a credential.
+        """
+        text = "\n".join(
+            [self.template_bytes.decode("utf-8"), *self.files, *self.files.values()]
+        )
+        names = frozenset(extract_variables(text)) - BUILT_IN_VARIABLES
+        check_variable_names(self.reference.locator, names)
+        return names
+
+    def render(self, context: Mapping[str, str]) -> TemplateBlueprint:
+        """Renders the template entirely in memory.
+
+        Built-in variables absent from ``context`` stay as placeholders and are
+        filled in later, when the project's own values are known.
+
+        Args:
+            context: Values for the template's custom variables, and optionally
+                for built-in ones.
+
+        Returns:
+            The parsed, rendered blueprint.
+
+        Raises:
+            MissingTemplateVariablesError: If a custom variable has no value.
+            SecretDetectedError: If a value looks like a credential.
+        """
+        target = self.reference.locator
+        missing = tuple(sorted(self.variables - context.keys()))
+        if missing:
+            raise MissingTemplateVariablesError(target, missing)
+        # Values render into committed files; check them before anything renders.
+        check_variable_values({name: context[name] for name in self.variables})
+
+        values = dict(context)
+        rendered_toml = render_template(
+            self.template_bytes.decode("utf-8"), values, escape_toml=True
+        )
+        blueprint = TemplateBlueprint._parse(rendered_toml, target)
+        blueprint.files.update(
+            {
+                render_template(path, values, escape_toml=False): render_template(
+                    content, values, escape_toml=False
+                )
+                for path, content in self.files.items()
+            }
+        )
+        blueprint.reference = replace(self.reference, version=blueprint.version or None)
+        blueprint._validate_declarations()
+        return blueprint

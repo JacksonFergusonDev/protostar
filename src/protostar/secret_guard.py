@@ -1,7 +1,8 @@
 """Blocks credential-shaped template variables before they reach a project.
 
-Template variables are non-secret by definition: their values render into
-generated files that get committed. This guard backs that rule up. It checks
+Template variables are non-secret by definition: their values are recorded in
+the project recipe and rendered into generated files, all of which get
+committed. This guard backs that rule up. It checks
 each variable name against a short list of names that read as credentials, and
 each value against gitleaks' default rule set, translated from Go to Python at
 build time into ``protostar._secret_rules`` by ``scripts/sync_secret_rules.py``.
@@ -147,9 +148,10 @@ def check_variable_names(target: str, names: Iterable[str]) -> None:
             target,
             f"Template variables are named like credentials: {', '.join(flagged)}.",
             hint=(
-                "Template variables are rendered into project files, so they "
-                "must not hold secrets. Have the project read secrets from the "
-                "environment at runtime, and ship a .env.example that names them."
+                "Template variables are saved to pyproject.toml and rendered into "
+                "project files, so they must not hold secrets. Have the project "
+                "read secrets from the environment at runtime, and ship a "
+                ".env.example that names them."
             ),
             docs_path=DocsPage.TEMPLATE_VARIABLES,
         )

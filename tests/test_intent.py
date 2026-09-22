@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from protostar.appends import append_marker_blocks
-from protostar.config import TemplateBlueprint, UserConfig
+from protostar.config import TemplateBlueprint, TemplateSource, UserConfig
 from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
 from protostar.intent import (
@@ -27,8 +27,10 @@ def test_reference_hashes_raw_selected_bytes_before_interpolation(tmp_path):
     source = tmp_path / "template.toml"
     raw = b'name = "<% ANSWER %>"\r\nversion = "2.0"\r\n'
     source.write_bytes(raw)
-    first = TemplateBlueprint.load(str(source), {"ANSWER": "one"}, display_name="alias")
-    second = TemplateBlueprint.load(str(source), {"ANSWER": "two"})
+    first = TemplateSource.load(str(source), display_name="alias").render(
+        {"ANSWER": "one"}
+    )
+    second = TemplateSource.load(str(source)).render({"ANSWER": "two"})
     assert first.reference is not None
     assert second.reference is not None
     assert first.reference.origin == TemplateOrigin.LOCAL
@@ -46,7 +48,7 @@ def test_reference_hashes_raw_selected_bytes_before_interpolation(tmp_path):
 def test_builtin_reference_never_uses_installation_path(tmp_path):
     source = tmp_path / "api.toml"
     source.write_text('name = "API"')
-    blueprint = TemplateBlueprint.load(str(source), built_in="api")
+    blueprint = TemplateSource.load(str(source), built_in="api").render({})
     assert blueprint.reference is not None
     assert blueprint.reference.origin == TemplateOrigin.BUILT_IN
     assert blueprint.reference.locator == "api"
@@ -57,7 +59,7 @@ def test_remote_reference_never_uses_extraction_path(tmp_path, mocker):
     source.write_bytes(b'name = "remote"')
     mocker.patch("protostar.config.resolve_remote_template", return_value=source)
     url = "https://example.test/template.toml"
-    blueprint = TemplateBlueprint.load(url)
+    blueprint = TemplateSource.load(url).render({})
     assert blueprint.reference is not None
     assert blueprint.reference.origin == TemplateOrigin.REMOTE
     assert blueprint.reference.locator == url
@@ -72,7 +74,7 @@ def test_planning_preserves_reference_and_region_identity_without_side_effects(
     source.write_text(
         'name = "test"\n[appends.".envrc".environment]\ncontent = "export A=1"'
     )
-    blueprint = TemplateBlueprint.load(str(source))
+    blueprint = TemplateSource.load(str(source)).render({})
     request = InitRequest(template_blueprint=blueprint)
     write = mocker.patch.object(Path, "write_text")
     process = mocker.patch("subprocess.run")
@@ -341,12 +343,12 @@ def test_remote_equivalent_locators_and_immutable_revision(tmp_path, mocker):
     source.write_text('name = "remote"')
     mocker.patch("protostar.config.resolve_remote_template", return_value=source)
     commit = "a" * 40
-    blob = TemplateBlueprint.load(
+    blob = TemplateSource.load(
         f"https://github.com/user/repo/blob/{commit}/template.toml"
-    )
-    raw = TemplateBlueprint.load(
+    ).render({})
+    raw = TemplateSource.load(
         f"https://raw.githubusercontent.com/user/repo/{commit}/template.toml"
-    )
+    ).render({})
     assert blob.reference is not None
     assert raw.reference is not None
     assert blob.reference == raw.reference
@@ -364,7 +366,7 @@ def test_remote_equivalent_locators_and_immutable_revision(tmp_path, mocker):
 def test_remote_credentials_never_enter_provenance(url, mocker):
     fetch = mocker.patch("protostar.config.resolve_remote_template")
     with pytest.raises(ConfigurationError, match="credentials"):
-        TemplateBlueprint.load(url)
+        TemplateSource.load(url)
     fetch.assert_not_called()
 
 
@@ -485,7 +487,6 @@ def test_cli_resolution_passes_builtin_reference_to_request(mocker):
         argparse.Namespace(
             template_name="api",
             from_path=None,
-            template_context={},
             python_version=None,
             docker=False,
         )
@@ -525,6 +526,6 @@ def test_all_builtins_use_supported_typed_declarations(name):
     import importlib.resources
 
     target = importlib.resources.files("protostar.templates").joinpath(f"{name}.toml")
-    blueprint = TemplateBlueprint.load(str(target), built_in=name)
+    blueprint = TemplateSource.load(str(target), built_in=name).render({})
     assert blueprint.reference is not None
     assert blueprint.reference.locator == name

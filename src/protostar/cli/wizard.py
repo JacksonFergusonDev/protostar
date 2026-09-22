@@ -9,8 +9,8 @@ from typing import Any
 from rich.console import Console
 
 from protostar.cli.prompts import Choice, Separator, Style, checkbox, select, text
-from protostar.config import TemplateBlueprint, UserConfig
-from protostar.errors import ConfigurationError, ExecutionAbortedError
+from protostar.config import TemplateBlueprint, TemplateSource, UserConfig
+from protostar.errors import ExecutionAbortedError
 from protostar.metadata import METADATA_FIELDS, MetadataKey, PromptType
 from protostar.modules import (
     TOOLING_MODULES,
@@ -33,11 +33,13 @@ class WizardSelections:
         is_external: If True, the template was loaded from an external source.
         is_user_aliased: If True, the template was resolved via a global alias.
         is_trusted: If True, the template is explicitly trusted to run system tasks.
+        variables: Values entered for the template's custom variables.
     """
 
     modules: list[BootstrapModule] = field(default_factory=list)
     docker: bool = False
     project_metadata: dict[str, Any] = field(default_factory=dict)
+    variables: dict[str, str] = field(default_factory=dict)
     blueprint: TemplateBlueprint | None = None
     is_external: bool = False
     is_user_aliased: bool = False
@@ -120,6 +122,7 @@ def run_init_wizard() -> WizardSelections | None:
             raise ExecutionAbortedError("Template selection cancelled by user.")
 
     blueprint = None
+    variables: dict[str, str] = {}
     is_external = False
     is_user_aliased = False
     is_trusted = False
@@ -144,12 +147,14 @@ def run_init_wizard() -> WizardSelections | None:
                 f"Template selection '{answer}' could not be resolved."
             )
 
-        blueprint = TemplateBlueprint.load(
+        source = TemplateSource.load(
             target,
-            variable_resolver=resolve_missing_variables,
             built_in=answer if not is_external else None,
             display_name=answer,
         )
+        if source.variables:
+            variables = prompt_template_variables(sorted(source.variables))
+        blueprint = source.render(variables)
 
     choices: list[Choice | Separator] = []
 
@@ -254,6 +259,7 @@ def run_init_wizard() -> WizardSelections | None:
         docker=docker,
         project_metadata=resolved_metadata,
         blueprint=blueprint,
+        variables=variables,
         is_external=is_external,
         is_user_aliased=is_user_aliased,
         is_trusted=is_trusted,
@@ -345,35 +351,30 @@ def prompt_metadata(
     return resolved
 
 
-def resolve_missing_variables(variables: list[str]) -> dict[str, str]:
-    """Prompts the user for values to fill template placeholders.
+def prompt_template_variables(variables: list[str]) -> dict[str, str]:
+    """Prompts for values for a template's custom variables.
 
     Args:
-        variables: A list of variable keys missing from the template context.
+        variables: The variable names to ask for, in order.
 
     Returns:
-        A dictionary mapping the variables to the user's string inputs.
+        Each variable mapped to the value entered.
 
     Raises:
-        ConfigurationError: If the environment is non-interactive.
-        ExecutionAbortedError: If the user cancels variable input.
+        ExecutionAbortedError: If the user cancels a prompt.
     """
-    if not _should_run_wizard():
-        raise ConfigurationError(
-            "Non-interactive environment detected, but the configuration requires "
-            f"the following variables: {', '.join(variables)}\n"
-            'Please provide them via CLI flags (e.g. --variable_name="value").'
-        )
-
     console = Console()
-    console.print("\n[bold cyan]Configuration Variables Required[/bold cyan]")
-    console.print("The requested environment specification contains placeholders.\n")
+    console.print("\n[bold cyan]Template Variables[/bold cyan]")
+    console.print(
+        "Values are saved to pyproject.toml and rendered into project files, "
+        "so don't enter secrets.\n"
+    )
 
-    context = {}
-    for var in variables:
-        answer = text(f"{var}:")
+    values = {}
+    for variable in variables:
+        answer = text(f"{variable}:")
         if answer is None:
-            raise ExecutionAbortedError("Variable resolution cancelled by user.")
-        context[var] = answer
+            raise ExecutionAbortedError("Variable entry cancelled by user.")
+        values[variable] = answer
 
-    return context
+    return values

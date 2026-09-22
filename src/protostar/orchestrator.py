@@ -387,20 +387,6 @@ class Orchestrator:
         from .journal import TransactionState
         from .models import RollbackContext
 
-        if (
-            self.request.template_blueprint
-            and self.request.template_blueprint.custom_variables
-            and (
-                manifest.recipe is None
-                or not self.request.template_blueprint.custom_variables
-                <= set(dict(manifest.recipe.bindings))
-            )
-        ):
-            raise ConfigurationError(
-                "Custom interpolation requires environment bindings.",
-                hint="Enroll using init --bind VARIABLE=ENVIRONMENT for each custom template variable.",
-            )
-
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
         executor = executor_cls(
             manifest, self.user_config, self.request.docker, progress=progress

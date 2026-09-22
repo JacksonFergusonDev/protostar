@@ -7,11 +7,11 @@ from protostar.cli.wizard import (
     WizardSelections,
     _should_run_wizard,
     prompt_metadata,
-    resolve_missing_variables,
+    prompt_template_variables,
     run_init_wizard,
 )
 from protostar.config import UserConfig
-from protostar.errors import ConfigurationError, ExecutionAbortedError
+from protostar.errors import ExecutionAbortedError
 from protostar.modules import TOOLING_MODULES, PreCommitModule, PrekModule
 
 
@@ -140,42 +140,35 @@ def test_run_init_wizard_formats_template_choices_with_middle_dot(mocker) -> Non
     assert ")" not in fastapi_choice
 
 
-def test_resolve_missing_variables_non_interactive(mocker):
-    """Test that resolving variables fails in a non-interactive environment."""
-    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=False)
-
-    with pytest.raises(
-        ConfigurationError, match="Non-interactive environment detected"
-    ):
-        resolve_missing_variables(["project_name", "author"])
-
-
-def test_resolve_missing_variables_interactive(mocker):
-    """Test that questionary successfully collects missing variables."""
-    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
-
-    mock_ask = mocker.Mock(return_value="Orbit App")
-    mock_text = mocker.Mock(return_value=mocker.Mock(ask=mock_ask))
+def test_prompt_template_variables_collects_each_value(mocker, capsys):
+    """Each variable is asked for in order, after a note that values are saved."""
+    answers = iter(["Orbit App", "eu-west-1"])
+    mock_text = mocker.Mock(
+        side_effect=lambda *_: mocker.Mock(ask=mocker.Mock(return_value=next(answers)))
+    )
     mocker.patch("questionary.text", mock_text)
 
-    context = resolve_missing_variables(["project_name"])
+    values = prompt_template_variables(["project_title", "region"])
 
-    assert context == {"project_name": "Orbit App"}
-    mock_text.assert_called_once_with("project_name:")
+    assert values == {"project_title": "Orbit App", "region": "eu-west-1"}
+    assert [c.args[0] for c in mock_text.call_args_list] == [
+        "project_title:",
+        "region:",
+    ]
+    assert "saved to pyproject.toml" in capsys.readouterr().out
 
 
-def test_resolve_missing_variables_cancellation(mocker):
-    """Test that cancelling variable resolution raises ExecutionAbortedError."""
-    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
-
+def test_prompt_template_variables_cancellation(mocker):
+    """Cancelling a prompt aborts instead of rendering with a missing value."""
     mock_ask = mocker.Mock(return_value=None)
-    mock_text = mocker.Mock(return_value=mocker.Mock(ask=mock_ask))
-    mocker.patch("questionary.text", mock_text)
+    mocker.patch(
+        "questionary.text", mocker.Mock(return_value=mocker.Mock(ask=mock_ask))
+    )
 
     with pytest.raises(
-        ExecutionAbortedError, match=r"Variable resolution cancelled by user\."
+        ExecutionAbortedError, match=r"Variable entry cancelled by user\."
     ):
-        resolve_missing_variables(["project_name"])
+        prompt_template_variables(["project_title"])
 
 
 def test_prompt_metadata_success(mocker):
@@ -314,3 +307,29 @@ def test_run_init_wizard_leaves_docker_unchecked_without_a_template(mocker):
     docker = next(c for c in choices if getattr(c, "value", None) == "docker")
     assert not docker.checked
     assert "Enforced by template" not in docker.title
+
+
+def test_run_init_wizard_prompts_for_template_variables(mocker, tmp_path) -> None:
+    """A template's variables are asked for once, then rendered and returned."""
+    from protostar.config import TemplateAliasConfig
+
+    template = tmp_path / "team.toml"
+    template.write_text('[files]\n"region.txt" = "<% REGION %>"\n')
+    config = UserConfig(templates={"team": TemplateAliasConfig(source=str(template))})
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=config)
+    mocker.patch.dict(os.environ, {}, clear=True)
+    mocker.patch("questionary.select").return_value.ask.return_value = "team"
+    mocker.patch("questionary.checkbox").return_value.ask.return_value = []
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
+    prompt = mocker.patch(
+        "protostar.cli.wizard.prompt_template_variables", return_value={"REGION": "eu"}
+    )
+
+    selections = run_init_wizard()
+
+    assert selections is not None
+    prompt.assert_called_once_with(["REGION"])
+    assert selections.variables == {"REGION": "eu"}
+    assert selections.blueprint is not None
+    assert selections.blueprint.files["region.txt"] == "eu"
