@@ -80,7 +80,7 @@ repos:
         name: check renovate config
         entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5
         language: system
-        files: ^(\.github/renovate\.json|renovate\.json|renovate\.jsonc|\.github/renovate\.jsonc|\.renovaterc|\.renovaterc\.json|\.renovaterc\.jsonc)$
+        files: ^\.github/renovate\.json$
 
       - id: actionlint
         name: actionlint

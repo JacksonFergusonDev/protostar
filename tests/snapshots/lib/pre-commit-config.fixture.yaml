@@ -80,13 +80,13 @@ repos:
         name: check renovate config
         entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5
         language: system
-        files: ^(\.github/renovate\.json|renovate\.json|renovate\.jsonc|\.github/renovate\.jsonc|\.renovaterc|\.renovaterc\.json|\.renovaterc\.jsonc)$
+        files: ^\.github/renovate\.json$
 
       - id: check-readthedocs
         name: check read the docs config
         entry: uv run check-jsonschema --builtin-schema vendor.readthedocs
         language: system
-        files: ^(\.readthedocs\.yaml|\.readthedocs\.yml|readthedocs\.yaml|readthedocs\.yml)$
+        files: ^\.readthedocs\.yaml$
 
       - id: actionlint
         name: actionlint

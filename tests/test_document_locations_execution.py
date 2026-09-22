@@ -339,3 +339,51 @@ def test_yaml_contributions_are_declared_by_target():
             producer="test",
             document_format=StructuredFormat.YAML,
         )
+
+
+# --- Hooks that validate a document ----------------------------------------
+
+
+def rtd_with_hooks():
+    intent = rtd()
+    intent.tooling.hook_runner = HookRunner.PREK
+    return intent
+
+
+def rtd_hook_files():
+    local = next(repo for repo in load(HOOKS)["repos"] if repo["repo"] == "local")
+    return next(h for h in local["hooks"] if h["id"] == "check-readthedocs")["files"]
+
+
+def test_document_hook_names_the_file_protostar_creates(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    run(rtd_with_hooks(), mocker, REVISIONS)
+    assert rtd_hook_files() == r"^\.readthedocs\.yaml$"
+
+
+def test_document_hook_names_an_adopted_alias(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    RTD_YML.write_text("version: 2\n")
+    run(rtd_with_hooks(), mocker, REVISIONS)
+    assert rtd_hook_files() == r"^\.readthedocs\.yml$"
+
+
+def test_document_hook_follows_a_renamed_document(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    run(rtd_with_hooks(), mocker, REVISIONS)
+    RTD.rename(RTD_YML)
+    executor = run(rtd_with_hooks(), mocker, REVISIONS)
+    assert not conflicts(executor)
+    assert rtd_hook_files() == r"^\.readthedocs\.yml$"
+
+
+def test_document_hook_matches_every_candidate_while_the_document_is_held(
+    tmp_path, monkeypatch, mocker
+):
+    monkeypatch.chdir(tmp_path)
+    RTD.write_text("version: 2\n")
+    RTD_YML.write_text("version: 2\n")
+    run(rtd_with_hooks(), mocker, REVISIONS)
+    assert rtd_hook_files() == (
+        r"^(\.readthedocs\.yaml|\.readthedocs\.yml|readthedocs\.yaml|readthedocs\.yml)$"
+    )

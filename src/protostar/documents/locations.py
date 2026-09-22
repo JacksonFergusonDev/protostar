@@ -7,7 +7,6 @@ runs `ci.yml` and `ci.yaml` as two workflows. Each document therefore declares
 its tool's locations, and one resolver decides which file a run edits.
 """
 
-import re
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
 
@@ -44,15 +43,6 @@ class DocumentLocations:
     def paths(self) -> tuple[str, ...]:
         """Returns every path the tool may read, editable ones first."""
         return (*self.editable, *self.competitors)
-
-    @property
-    def files_pattern(self) -> str:
-        """Returns a hook ``files`` regex matching every editable path.
-
-        A hook that validates the document then runs wherever the document is,
-        including after Protostar follows a rename.
-        """
-        return "^(" + "|".join(re.escape(path) for path in self.editable) + ")$"
 
 
 @dataclass(frozen=True)

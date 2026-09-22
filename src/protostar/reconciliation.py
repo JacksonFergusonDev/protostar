@@ -322,6 +322,12 @@ class Reconciliation:
             hook_runner=self.manifest.tooling.hook_runner,
             install_hook_types=self.manifest.tooling.pre_commit_install_hook_types,
         )
+        # Hooks that validate a managed document name the file this run edits.
+        full_yaml = pre_commit.resolve_document_files(
+            full_yaml,
+            lambda target: self._resolve(target).path,
+            self.manifest.document_locations,
+        )
 
         located = self._locate(pre_commit.TARGET, FilePolicy.YAML)
         if located is None:

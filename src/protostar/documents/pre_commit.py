@@ -1,6 +1,7 @@
 """Pre-commit merge spec, locations per hook runner, and pin policy."""
 
-from collections.abc import Mapping
+import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from types import MappingProxyType
 from typing import cast
@@ -41,6 +42,53 @@ SPEC = YamlDocumentSpec(
         KeyedSequence(("repos", WILDCARD, "hooks"), "id"),
     ),
 )
+
+
+_DOCUMENT_FILES = re.compile(r"<% FILES (\S+) %>")
+
+
+def document_files(target: str) -> str:
+    """Returns a hook ``files`` placeholder for a managed document.
+
+    The placeholder is replaced with the path of the file that holds the document
+    in this run, so a hook that validates a configuration names exactly that file.
+
+    Args:
+        target: The document's canonical workspace path.
+
+    Returns:
+        The placeholder to use as the hook's ``files`` value.
+    """
+    return f"<% FILES {target} %>"
+
+
+def resolve_document_files(
+    content: str,
+    locate: Callable[[str], str | None],
+    locations: Callable[[str], DocumentLocations],
+) -> str:
+    """Replaces each document files placeholder with an anchored path regex.
+
+    Args:
+        content: Generated configuration text.
+        locate: Returns the path holding a document in this run, or ``None`` when
+            the document is held because Protostar cannot tell which file it is.
+        locations: Returns the locations a document's tool reads it from.
+
+    Returns:
+        The configuration with every placeholder resolved. A held document
+        matches each path the tool may read it from.
+    """
+
+    def files(match: re.Match[str]) -> str:
+        target = match.group(1)
+        path = locate(target)
+        if path is not None:
+            return f"^{re.escape(path)}$"
+        paths = locations(target).editable
+        return "^(" + "|".join(re.escape(p) for p in paths) + ")$"
+
+    return _DOCUMENT_FILES.sub(files, content)
 
 
 def _repos(document: Value) -> list[dict[str, Value]]:

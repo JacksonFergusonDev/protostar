@@ -4,7 +4,7 @@ import logging
 import shutil
 from typing import TYPE_CHECKING
 
-from protostar.documents import codecov, readthedocs, renovate, zensical
+from protostar.documents import codecov, pre_commit, readthedocs, renovate, zensical
 from protostar.errors import MissingDependencyError
 from protostar.intent import DependencyGroup, StructuredFormat
 from protostar.metadata import MetadataKey
@@ -732,7 +732,7 @@ class RenovateModule(BootstrapModule):
         name: check renovate config
         entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5
         language: system
-        files: {renovate.LOCATIONS.files_pattern}"""
+        files: {pre_commit.document_files(renovate.TARGET)}"""
         )
 
 
@@ -977,7 +977,7 @@ build:
         name: check read the docs config
         entry: uv run check-jsonschema --builtin-schema vendor.readthedocs
         language: system
-        files: {readthedocs.LOCATIONS.files_pattern}"""
+        files: {pre_commit.document_files(readthedocs.TARGET)}"""
         )
 
 
