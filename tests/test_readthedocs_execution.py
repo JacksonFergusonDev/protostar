@@ -30,7 +30,7 @@ version: 2
 build:
   os: ubuntu-24.04
   tools:
-    python: "3.12"
+    python: "3.13"
 
 sphinx:
   configuration: docs/conf.py
@@ -98,7 +98,7 @@ def test_existing_configuration_gains_the_build_and_keeps_its_settings(
         "build:\n"
         "  os: ubuntu-24.04\n"
         "  tools:\n"
-        '    python: "3.12"\n\n'
+        '    python: "3.13"\n\n'
         "search:\n"
         "  ranking:\n"
         "    api/*: -1\n"
@@ -227,7 +227,7 @@ def test_custom_build_commands_are_never_combined_with_jobs(
         "build:\n"
         "  os: ubuntu-24.04\n"
         "  tools:\n"
-        '    python: "3.12"\n'
+        '    python: "3.13"\n'
         "  commands:\n"
         "    - make html\n"
     )
@@ -253,7 +253,7 @@ def test_default_build_steps_are_not_replaced(
 ):
     monkeypatch.chdir(tmp_path)
     original = (
-        'version: 2\nbuild:\n  os: ubuntu-24.04\n  tools:\n    python: "3.12"\n'
+        'version: 2\nbuild:\n  os: ubuntu-24.04\n  tools:\n    python: "3.13"\n'
         + setting
     )
     TARGET.write_text(original)
@@ -277,7 +277,7 @@ def test_build_taken_over_after_scaffold_is_quiet_until_jobs_change(
     monkeypatch.chdir(tmp_path)
     run(mocker)
     taken_over = (
-        'version: 2\nbuild:\n  os: ubuntu-24.04\n  tools:\n    python: "3.12"\n'
+        'version: 2\nbuild:\n  os: ubuntu-24.04\n  tools:\n    python: "3.13"\n'
         "  commands:\n    - make html\n"
     )
     TARGET.write_text(taken_over)
@@ -318,10 +318,18 @@ def test_overwrite_restores_edited_settings_and_keeps_foreign_ones(
     monkeypatch.chdir(tmp_path)
     run(mocker)
     TARGET.write_text(
-        TARGET.read_text().replace('python: "3.12"', 'python: "3.11"')
+        TARGET.read_text().replace('python: "3.13"', 'python: "3.11"')
         + "formats:\n  - pdf\n"
     )
     run(mocker, strategy=CollisionStrategy.OVERWRITE)
     document = local()
-    assert document["build"]["tools"]["python"] == "3.12"
+    assert document["build"]["tools"]["python"] == "3.13"
     assert document["formats"] == ["pdf"]
+
+
+def test_scaffold_follows_manifest_minimum_python():
+    intent = EnvironmentManifest()
+    intent.metadata["minimum_python"] = "3.12"
+    ReadTheDocsModule().build(intent)
+    [contribution] = intent.filesystem.structured[readthedocs.TARGET]
+    assert 'python: "3.12"' in contribution.content

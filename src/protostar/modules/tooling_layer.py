@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING
 from protostar.documents import codecov, readthedocs, renovate, zensical
 from protostar.errors import MissingDependencyError
 from protostar.intent import DependencyGroup, StructuredFormat
+from protostar.metadata import MetadataKey
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag, HookRunner
+from protostar.workspace import PythonVersion
 
 from .base import BootstrapModule
 
@@ -914,6 +916,7 @@ class ReadTheDocsModule(BootstrapModule):
     cli_flags = ("--readthedocs",)
     cli_help = "Scaffold Read the Docs configuration"
     config_key = "readthedocs"
+    required_metadata = (MetadataKey.MINIMUM_PYTHON,)
 
     @property
     def name(self) -> str:
@@ -928,23 +931,33 @@ class ReadTheDocsModule(BootstrapModule):
         """
         logger.debug("Building Read the Docs tooling layer.")
 
-        config = """version: 2
+        raw_python = (
+            manifest.metadata.get("minimum_python")
+            or manifest.metadata.get("python_version")
+            or "3.13"
+        )
+        try:
+            min_python = str(PythonVersion.from_string(str(raw_python)))
+        except ValueError:
+            min_python = str(raw_python)
+
+        config = f"""version: 2
 
 build:
   os: ubuntu-24.04
   tools:
-    python: "3.12"
+    python: "{min_python}"
   jobs:
     pre_create_environment:
       - pip install uv
     create_environment:
-      - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
+      - uv venv "${{READTHEDOCS_VIRTUALENV_PATH}}"
     install:
-      - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --only-group docs
+      - UV_PROJECT_ENVIRONMENT="${{READTHEDOCS_VIRTUALENV_PATH}}" uv sync --only-group docs
     build:
       html:
         - mkdir -p "$READTHEDOCS_OUTPUT/html"
-        - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv run zensical build
+        - UV_PROJECT_ENVIRONMENT="${{READTHEDOCS_VIRTUALENV_PATH}}" uv run zensical build
         - cp -r site/* "$READTHEDOCS_OUTPUT/html/"
 """
         manifest.filesystem.add_structured(

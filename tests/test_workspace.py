@@ -6,6 +6,7 @@ from protostar.workspace import (
     generate_python_version_range,
     resolve_package_name,
     resolve_project_name,
+    resolve_python_version,
     sanitize_package_name,
 )
 
@@ -119,3 +120,29 @@ def test_project_name_value_object() -> None:
 
     with pytest.raises(ValueError, match="Project name cannot be empty"):
         ProjectName("   ")
+
+
+def test_resolve_python_version(tmp_path: Path) -> None:
+    # Resolves from minimum_python
+    assert resolve_python_version({"minimum_python": "3.12"}) == "3.12"
+    assert resolve_python_version({"minimum_python": ">=3.14"}) == "3.14"
+
+    # Resolves from python_version
+    assert resolve_python_version({"python_version": "3.11"}) == "3.11"
+
+    # Resolves from pyproject.toml
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\nrequires-python = ">=3.12"\n')
+    assert resolve_python_version(pyproject_path=pyproject) == "3.12"
+
+    # Fallback to default or 3.13
+    assert (
+        resolve_python_version(
+            metadata={}, pyproject_path=tmp_path / "absent.toml", default="3.10"
+        )
+        == "3.10"
+    )
+    assert (
+        resolve_python_version(metadata={}, pyproject_path=tmp_path / "absent.toml")
+        == "3.13"
+    )

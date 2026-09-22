@@ -575,7 +575,7 @@ def test_readthedocs_module_declares_managed_yaml():
     content = contribution.content
     assert "version: 2" in content
     assert "os: ubuntu-24.04" in content
-    assert 'python: "3.12"' in content
+    assert 'python: "3.13"' in content
     assert "pip install uv" in content
     assert 'uv venv "${READTHEDOCS_VIRTUALENV_PATH}"' in content
     assert (
@@ -588,6 +588,16 @@ def test_readthedocs_module_declares_managed_yaml():
         in content
     )
     assert 'cp -r site/* "$READTHEDOCS_OUTPUT/html/"' in content
+
+
+def test_readthedocs_module_follows_minimum_python():
+    manifest = EnvironmentManifest()
+    manifest.metadata["minimum_python"] = "3.14"
+    module = ReadTheDocsModule()
+    module.build(manifest)
+
+    [contribution] = manifest.filesystem.structured[".readthedocs.yaml"]
+    assert 'python: "3.14"' in contribution.content
 
 
 def test_python_core_declarative_license_injection(mocker):

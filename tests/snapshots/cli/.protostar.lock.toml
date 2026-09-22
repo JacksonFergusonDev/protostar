@@ -39,7 +39,7 @@ baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\ndefault
 [[files]]
 path = ".readthedocs.yaml"
 policy = "structured-yaml"
-baseline = "build:\n  jobs:\n    build:\n      html:\n        - mkdir -p \"$READTHEDOCS_OUTPUT/html\"\n        - UV_PROJECT_ENVIRONMENT=\"${READTHEDOCS_VIRTUALENV_PATH}\" uv run zensical build\n        - cp -r site/* \"$READTHEDOCS_OUTPUT/html/\"\n    create_environment:\n      - uv venv \"${READTHEDOCS_VIRTUALENV_PATH}\"\n    install:\n      - UV_PROJECT_ENVIRONMENT=\"${READTHEDOCS_VIRTUALENV_PATH}\" uv sync --only-group docs\n    pre_create_environment:\n      - pip install uv\n  os: ubuntu-24.04\n  tools:\n    python: '3.12'\nversion: 2\n"
+baseline = "build:\n  jobs:\n    build:\n      html:\n        - mkdir -p \"$READTHEDOCS_OUTPUT/html\"\n        - UV_PROJECT_ENVIRONMENT=\"${READTHEDOCS_VIRTUALENV_PATH}\" uv run zensical build\n        - cp -r site/* \"$READTHEDOCS_OUTPUT/html/\"\n    create_environment:\n      - uv venv \"${READTHEDOCS_VIRTUALENV_PATH}\"\n    install:\n      - UV_PROJECT_ENVIRONMENT=\"${READTHEDOCS_VIRTUALENV_PATH}\" uv sync --only-group docs\n    pre_create_environment:\n      - pip install uv\n  os: ubuntu-24.04\n  tools:\n    python: '3.13'\nversion: 2\n"
 
 [[files]]
 path = "CHANGELOG.md"

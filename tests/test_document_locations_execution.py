@@ -107,12 +107,12 @@ def test_edits_made_before_a_rename_are_kept(tmp_path, monkeypatch, mocker):
     run(rtd(), mocker)
     RTD_YML.write_text(RTD.read_text().replace("ubuntu-24.04", "ubuntu-lts-latest"))
     RTD.unlink()
-    changed = scaffold(ReadTheDocsModule()).replace("3.12", "3.13")
+    changed = scaffold(ReadTheDocsModule()).replace("3.13", "3.14")
     executor = run(rtd(changed), mocker)
     assert not conflicts(executor)
     document = load(RTD_YML)
     assert document["build"]["os"] == "ubuntu-lts-latest"
-    assert document["build"]["tools"]["python"] == "3.13"
+    assert document["build"]["tools"]["python"] == "3.14"
 
 
 # --- Competing copies ------------------------------------------------------
@@ -124,11 +124,11 @@ def test_competing_copy_next_to_the_owned_file_is_reported(
     monkeypatch.chdir(tmp_path)
     run(rtd(), mocker)
     RTD_YML.write_text("version: 2\n")
-    changed = scaffold(ReadTheDocsModule()).replace("3.12", "3.13")
+    changed = scaffold(ReadTheDocsModule()).replace("3.13", "3.14")
     executor = run(rtd(changed), mocker)
     assert conflicts(executor) == [duplicate(RTD_YML.as_posix())]
     assert RTD_YML.read_text() == "version: 2\n"
-    assert '"3.13"' in RTD.read_text()
+    assert '"3.14"' in RTD.read_text()
 
 
 @pytest.mark.parametrize(

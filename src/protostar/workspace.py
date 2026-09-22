@@ -126,12 +126,13 @@ def resolve_python_version(
     Returns:
         The resolved python version string.
     """
-    if metadata and metadata.get("python_version"):
-        raw = str(metadata["python_version"])
-        try:
-            return str(PythonVersion.from_string(raw))
-        except ValueError:
-            return raw
+    if metadata:
+        raw = metadata.get("minimum_python") or metadata.get("python_version")
+        if raw:
+            try:
+                return str(PythonVersion.from_string(str(raw)))
+            except ValueError:
+                return str(raw)
 
     target_pyproject = pyproject_path or Path("pyproject.toml")
     if target_pyproject.exists():
