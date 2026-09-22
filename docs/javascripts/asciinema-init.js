@@ -18,6 +18,40 @@ function initAsciinemaPlayers() {
     var src = el.getAttribute("data-asciinema");
     if (!src) return;
 
+    // Wrap in terminal shell frame if not already wrapped
+    if (!el.closest(".protostar-demo-shell")) {
+      var shell = document.createElement("div");
+      shell.className = "protostar-demo-shell";
+
+      var panelTop = document.createElement("div");
+      panelTop.className = "panel-top";
+
+      var dots = document.createElement("span");
+      dots.className = "terminal-dots";
+      dots.setAttribute("aria-hidden", "true");
+      dots.innerHTML = '<span class="dot dot-close"></span><span class="dot dot-minimize"></span><span class="dot dot-maximize"></span>';
+
+      var title = document.createElement("span");
+      title.className = "terminal-title";
+      var customTitle = el.getAttribute("data-title");
+      if (customTitle) {
+        title.textContent = customTitle;
+      } else if (src.indexOf("wizard") !== -1) {
+        title.textContent = "PROTOSTAR / INTERACTIVE WIZARD";
+      } else if (src.indexOf("headless") !== -1) {
+        title.textContent = "PROTOSTAR / HEADLESS DEMO";
+      } else {
+        title.textContent = "PROTOSTAR / TERMINAL";
+      }
+
+      panelTop.appendChild(dots);
+      panelTop.appendChild(title);
+
+      el.parentNode.insertBefore(shell, el);
+      shell.appendChild(panelTop);
+      shell.appendChild(el);
+    }
+
     // Warm the HTTP cache so playback starts without delay once scrolled into view
     fetch(src).catch(function () {});
 

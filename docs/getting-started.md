@@ -37,7 +37,21 @@ cd orbital-mechanics-sim
 protostar init
 ```
 
-<div class="protostar-asciinema" data-asciinema="../assets/demo_wizard.cast"></div>
+<div class="protostar-demo-shell">
+  <div class="panel-top">
+    <span class="terminal-dots" aria-hidden="true">
+      <span class="dot dot-close"></span>
+      <span class="dot dot-minimize"></span>
+      <span class="dot dot-maximize"></span>
+    </span>
+    <span class="terminal-title">PROTOSTAR / INTERACTIVE WIZARD</span>
+  </div>
+  <div class="protostar-asciinema" data-asciinema="../assets/demo_wizard.cast">
+    <noscript>
+      <a href="../assets/demo_wizard.cast">Download the Protostar terminal recording</a>
+    </noscript>
+  </div>
+</div>
 
 ## Headless Scaffolding
 
@@ -59,7 +73,21 @@ In a fraction of a second, Protostar:
 - **Provisioned CI/CD & Documentation**: Scaffolded GitHub Actions workflows (`.github/workflows/ci.yml`, `release.yml`, `codecov.yml`, `renovate.json`) alongside a ready-to-publish Zensical documentation site (`zensical.toml`, `docs/index.md`, `.readthedocs.yaml`).
 - **Applied Universal Workspace Hygiene**: Evaluated the virtual environment via `.envrc` (direnv), locked dependencies with `uv.lock`, and safely deduplicated `.gitignore` without overwriting existing entries.
 
-<div class="protostar-asciinema" data-asciinema="../assets/demo_headless.cast"></div>
+<div class="protostar-demo-shell">
+  <div class="panel-top">
+    <span class="terminal-dots" aria-hidden="true">
+      <span class="dot dot-close"></span>
+      <span class="dot dot-minimize"></span>
+      <span class="dot dot-maximize"></span>
+    </span>
+    <span class="terminal-title">PROTOSTAR / HEADLESS DEMO</span>
+  </div>
+  <div class="protostar-asciinema" data-asciinema="../assets/demo_headless.cast">
+    <noscript>
+      <a href="../assets/demo_headless.cast">Download the Protostar terminal recording</a>
+    </noscript>
+  </div>
+</div>
 
 ## Exploration & Help
 

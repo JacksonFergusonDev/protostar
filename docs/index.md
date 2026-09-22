@@ -73,7 +73,21 @@ cd hyperdrive-cli
 protostar init --template cli  # (a Typer-based CLI application)
 ```
 
-<div class="protostar-asciinema" data-asciinema="./assets/demo_headless.cast"></div>
+<div class="protostar-demo-shell">
+  <div class="panel-top">
+    <span class="terminal-dots" aria-hidden="true">
+      <span class="dot dot-close"></span>
+      <span class="dot dot-minimize"></span>
+      <span class="dot dot-maximize"></span>
+    </span>
+    <span class="terminal-title">PROTOSTAR / HEADLESS DEMO</span>
+  </div>
+  <div class="protostar-asciinema" data-asciinema="./assets/demo_headless.cast">
+    <noscript>
+      <a href="./assets/demo_headless.cast">Download the Protostar terminal recording</a>
+    </noscript>
+  </div>
+</div>
 
 This initializes a working environment quickly while preserving explicit control over tools and context.
 
