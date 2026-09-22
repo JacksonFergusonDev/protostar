@@ -488,6 +488,7 @@ def _parse_dynamic_kwargs(unknown_args: list[str]) -> dict[str, str]:
 
 def main() -> None:
     """Main execution pipeline for the Protostar CLI."""
+    ui.replace_unencodable_output()
     ui.is_json_mode = ui.is_json_mode or ("--json" in sys.argv)
 
     arg_parser = parser.build_parser()
@@ -580,7 +581,8 @@ def main() -> None:
 
                     rb_group.append(
                         Text.from_markup(
-                            "[bold green]✓ Protostar successfully rolled back all tracked workspace changes:[/bold green]\n"
+                            f"[bold green]{ui.glyph('✓', '+')} Protostar successfully "
+                            "rolled back all tracked workspace changes:[/bold green]\n"
                         )
                     )
                     rb_group.append(Columns(display_paths, padding=(0, 2)))

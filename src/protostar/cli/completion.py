@@ -183,7 +183,8 @@ def print_completion_guide() -> None:
     env = detect_environment()
 
     ui.console.print(
-        f"[bold green]✓ Detected Environment: {env.description}[/bold green]\n"
+        f"[bold green]{ui.glyph('✓', '+')} Detected Environment: "
+        f"{env.description}[/bold green]\n"
     )
 
     if env.shell == Shell.POWERSHELL:
