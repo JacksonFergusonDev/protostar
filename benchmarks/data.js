@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790110065413,
+  "lastUpdate": 1790113259825,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15781,6 +15781,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 279.37,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "22c5a0b11db0f0a75df7358a2dd1538beaae0723",
+          "message": "feat(security): secret guard for template variables (#302)\n\n* feat(security): secret guard for template variables\n\nCustom template variables are non-secret by definition: their values\nrender into committed files, and the next change persists them in the\nproject recipe too. This guard backs that rule up before any of that\nhappens, and it lands first so no commit ever writes an unchecked value.\n\nValues are checked against gitleaks' default rules at the tag already\npinned for the scaffolded gitleaks pre-commit hook, so the guard and the\nhook agree. scripts/sync_secret_rules.py fetches that tag's config and\ntranslates it at build time into src/protostar/_secret_rules.py. Python\nreads several RE2 constructs differently, so the translator:\n\n- rewrites \\z as \\Z (Python before 3.14 rejects it)\n- expands POSIX classes such as [[:alnum:]], which Python compiles with\n  only a warning and never matches (the Airtable rule was dead this way)\n- rescopes mid-pattern flags like (?i) with Go's semantics, including\n  later alternation branches (curl-auth-header)\n\nEvery translated pattern must compile without a warning; anything else\nstops the script unless the rule is excluded with a reason. `--check`\nregenerates and compares bytes, and runs in `just bump` and the release\nworkflow. The generated module is excluded from ruff for that reason,\nand allowlisted in a new .gitleaks.toml because it quotes gitleaks' own\npatterns, some of which contain literal token prefixes.\n\nAt runtime, secret_guard ports gitleaks' detector: a rule runs only when\none of its keywords appears (which is also what keeps unrelated values\nlike a v1.0-<hex> tag from reading as a Sourcegraph token), secret\ngroups and entropy thresholds apply as in gitleaks, and allowlists keep\nonly the checks a value without a path or commit can meet. A\ngitleaks:allow marker is deliberately ignored, since it would be an\noverride. Rules compile on first use; CLI startup never loads them.\n\nVariable names that read as credentials stop a template from loading.\nValues over 1,024 characters are refused, bounding scan time.\n\nSecretDetectedError names each variable and rule, never the value. It\nexits 77 like other security violations, and ProtostarError.details()\nnow carries error-specific JSON fields, replacing the isinstance special\ncase for collision paths.\n\n* refactor(security): store secret rules compressed so scanners skip them\n\nThe generated rules module held gitleaks' patterns as text, and some of\nthat text is exactly what secret scanners look for. gitleaks flagged the\nBedrock rule's literal token prefix, and GitHub secret scanning raised\n16 alerts on the Google API key rule's allowlist, which lists publicly\nknown keys. Every scanner has its own ignore mechanism, and none of them\ntravel with the wheel, so users scanning an environment with Protostar\ninstalled would see the same alerts.\n\nThe module now stores the rule set as base64 of zlib-compressed JSON:\nno scanner can find key-shaped text in it, and .gitleaks.toml is gone.\nMetadata (the gitleaks version, source hash, license, omitted rules)\nstays readable, and `sync_secret_rules.py --dump` prints the rules.\nload_rules() decodes them on first use, in about half a millisecond.\n\nzlib output can differ between builds of the same Python, so the script\nkeeps the committed payload whenever it decodes to the same rules; that\nkeeps regeneration and `--check` stable across machines. A test scans\nevery line of the committed module with the rules themselves.",
+          "timestamp": "2026-09-22T14:39:43-07:00",
+          "tree_id": "3918707702d5209297d1df1aba8a11239988755e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/22c5a0b11db0f0a75df7358a2dd1538beaae0723"
+        },
+        "date": 1790113258026,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 195.1,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 265.1,
             "unit": "ms"
           }
         ]
