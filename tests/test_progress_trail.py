@@ -47,11 +47,13 @@ def test_trail_leaves_a_check_for_each_completed_step(screen):
     )
 
 
-def _fail_second_step(error: BaseException) -> None:
+def _fail_second_step(
+    error: BaseException, label: str = "Installing 1 standard dependency"
+) -> None:
     with ui.progress_trail("Preparing workspace") as step:
         with step("Initializing git repository"):
             pass
-        with step("Installing 1 standard dependency"):
+        with step(label):
             raise error
 
 
@@ -82,6 +84,28 @@ def test_trail_prints_template_labels_literally(screen):
         pass
 
     assert screen.getvalue() == f"  ✔ {label}\n"
+
+
+def test_trail_degrades_on_a_legacy_encoded_stream(monkeypatch):
+    """A cp1252 stream, as on Windows when output is piped, gets ASCII marks.
+
+    Nothing the trail prints may raise: an exception escaping a step would roll
+    back the work it just reported.
+    """
+    stream = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", newline="\n")
+    console = Console(
+        file=stream, width=80, force_terminal=False, color_system=None, _environ={}
+    )
+    monkeypatch.setattr(ui, "console", console)
+
+    with pytest.raises(KeyboardInterrupt):
+        _fail_second_step(KeyboardInterrupt(), "Running seed → cache")
+
+    stream.flush()
+    assert stream.buffer.getvalue().decode("cp1252").splitlines() == [
+        "  + Initializing git repository",
+        "  x Running seed ? cache",
+    ]
 
 
 def test_trail_animates_only_the_running_step(screen, mocker):

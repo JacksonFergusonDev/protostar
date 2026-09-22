@@ -67,7 +67,8 @@ def progress_trail(initial: str) -> Iterator[ProgressStep]:
     A running step's label animates in the spinner; when the step ends, a ``✔``
     line (``✖`` if it raised) is printed above the spinner and stays on screen
     after the spinner clears. Off a terminal, Rich draws no spinner and only the
-    checklist lines are written.
+    checklist lines are written. A stream that cannot encode the marks, such as a
+    redirected cp1252 stream on Windows, gets ``+`` and ``x`` instead.
 
     Args:
         initial: Spinner text shown until the first step starts.
@@ -75,12 +76,23 @@ def progress_trail(initial: str) -> Iterator[ProgressStep]:
     Yields:
         The step hook to hand to the engine.
     """
+    encoding = console.encoding
+
+    def printable(text: str) -> str:
+        # A write error here would escape the step and roll back its work.
+        return text.encode(encoding, "replace").decode(encoding)
+
+    unicode_marks = printable("✔✖") == "✔✖"
+    done = ("✔" if unicode_marks else "+", "bold green")
+    failed = ("✖" if unicode_marks else "x", "bold red")
+
     with console.status(initial) as status:
 
         @contextmanager
         def step(label: str) -> Iterator[None]:
             # Text, not markup: template-authored task descriptions reach here.
-            status.update(Text(label))
+            shown = printable(label)
+            status.update(Text(shown))
             succeeded = False
             try:
                 yield
@@ -90,8 +102,8 @@ def progress_trail(initial: str) -> Iterator[ProgressStep]:
                 # line would repeat the step that just finished. Rich ignores an
                 # empty update, so a blank stands in for no label.
                 status.update(Text(" "))
-                mark = ("✔", "bold green") if succeeded else ("✖", "bold red")
-                console.print(Text.assemble("  ", mark, f" {label}"))
+                mark = done if succeeded else failed
+                console.print(Text.assemble("  ", mark, f" {shown}"))
 
         yield step
 
