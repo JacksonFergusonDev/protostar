@@ -17,6 +17,7 @@ from typing import Any
 import pytest
 import tomlkit
 from pytest_mock import MockerFixture
+from ruamel.yaml import YAML
 
 from protostar.cli.main import handle_init
 from protostar.config import UserConfig
@@ -128,9 +129,12 @@ def _mock_process_runner(cmd: list[str], *args: Any, **kwargs: Any) -> None:
     elif len(cmd) >= 2 and cmd[0] == "git" and cmd[1] == "init":
         Path(".git").mkdir(exist_ok=True)
     elif "install" in cmd and any(tool in cmd for tool in ("pre-commit", "prek")):
-        hook_path = Path(".git/hooks/pre-commit")
-        hook_path.parent.mkdir(parents=True, exist_ok=True)
-        hook_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        # Like the real runners, install one script per declared hook type.
+        config = YAML(typ="safe").load(Path(".pre-commit-config.yaml"))
+        for hook_type in config["default_install_hook_types"]:
+            hook_path = Path(".git/hooks") / hook_type
+            hook_path.parent.mkdir(parents=True, exist_ok=True)
+            hook_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
 
 
 @pytest.mark.parametrize("template_alias", BUILTIN_TEMPLATES)
@@ -240,7 +244,11 @@ def test_template_initial_and_repeat_merge_convergence(
     phase2_result = results[1]
     assert phase2_result.created_paths == frozenset()
     # Any touched path on repeat must be restricted to external subprocess hook registration
-    assert phase2_result.touched_paths <= {".git/hooks/pre-commit"}
+    assert phase2_result.touched_paths <= {
+        ".git/hooks/pre-commit",
+        ".git/hooks/commit-msg",
+        ".git/hooks/pre-push",
+    }
 
     disk_phase2 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert disk_phase1 == disk_phase2
@@ -252,7 +260,11 @@ def test_template_initial_and_repeat_merge_convergence(
     assert len(results) == 3
     phase3_result = results[2]
     assert phase3_result.created_paths == frozenset()
-    assert phase3_result.touched_paths <= {".git/hooks/pre-commit"}
+    assert phase3_result.touched_paths <= {
+        ".git/hooks/pre-commit",
+        ".git/hooks/commit-msg",
+        ".git/hooks/pre-push",
+    }
 
     disk_phase3 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert disk_phase1 == disk_phase3

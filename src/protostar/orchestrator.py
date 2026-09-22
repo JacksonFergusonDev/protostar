@@ -28,7 +28,7 @@ from .modules import (
 )
 from .preparation import ExecutionPolicy
 from .system_deps import GlobalExecutable
-from .workflows import AgentsSpec, generate_agents_md
+from .workflows import AgentsSpec, HookRunner, generate_agents_md
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -221,9 +221,21 @@ class Orchestrator:
                 if before_ide.get(key) != value:
                     observe("ide_settings", (key,))
 
-        # Phase 3b: Documents derived from the aggregated tooling state. Rendered
-        # after every module builds so no module inspects its siblings, and
-        # before template appends so a template's own AGENTS.md regions follow it.
+        # Phase 3b: Documents and tasks derived from the aggregated tooling state.
+        # Rendered after every module builds so no module inspects its siblings,
+        # and before template appends so a template's own AGENTS.md regions follow it.
+        if manifest.tooling.wants_hooks:
+            runner = manifest.tooling.hook_runner
+            runner_module = PrekModule if runner is HookRunner.PREK else PreCommitModule
+            producer = f"module:{runner_module.__name__}"
+            tool = Tool(runner_module.config_key)
+            # Every hook type is known only now, so each installed script is owned.
+            hook_types = {"pre-commit", *manifest.tooling.pre_commit_install_hook_types}
+            manifest.tasks.add_post_install_task(
+                ["uv", "run", runner.value, "install"],
+                description=f"Installing {runner.value} git hooks",
+                owned_files=[f".git/hooks/{kind}" for kind in sorted(hook_types)],
+            )
         if manifest.tooling.wants_agents:
             producer = f"module:{AgentsModule.__name__}"
             tool = Tool.AGENTS

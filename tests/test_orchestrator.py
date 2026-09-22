@@ -479,6 +479,32 @@ def test_plan_raises_on_conflicting_hook_runners(mock_config, mocker):
         engine.plan()
 
 
+@pytest.mark.parametrize(
+    ("runner", "command"),
+    [(PrekModule, "prek"), (PreCommitModule, "pre-commit")],
+)
+def test_plan_hook_install_owns_hook_types_declared_after_the_runner(
+    tmp_path, monkeypatch, mock_config, mocker, runner, command
+):
+    """The hook install owns every script, including types declared by later modules."""
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("shutil.which", return_value="/usr/bin/git")
+    engine = Orchestrator([runner(), CommitizenModule()], mock_config)
+
+    manifest = engine.plan()
+
+    installs = [
+        task
+        for task in manifest.tasks.post_install_tasks
+        if task.command == ["uv", "run", command, "install"]
+    ]
+    assert len(installs) == 1
+    assert installs[0].owned_files == [
+        ".git/hooks/commit-msg",
+        ".git/hooks/pre-commit",
+    ]
+
+
 def test_plan_raises_on_readthedocs_without_zensical(mock_config, mocker):
     """plan() must raise ConfigurationError if ReadTheDocsModule is passed without ZensicalModule."""
     mocker.patch.object(Path, "exists", return_value=False)

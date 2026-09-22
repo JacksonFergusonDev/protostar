@@ -1,6 +1,7 @@
 default_install_hook_types:
   - pre-commit
   - commit-msg
+  - pre-push
 
 default_stages:
   - pre-commit
@@ -62,10 +63,36 @@ repos:
 
       - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: uv run mypy .
         language: system
         types: [python]
-        require_serial: true
+        pass_filenames: false
+
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        files: ^(src/|tests/|pyproject\.toml|uv\.lock)
+        stages: [pre-push]
+
+      - id: check-renovate
+        name: check renovate config
+        entry: uv run check-jsonschema --builtin-schema vendor.renovate --force-filetype json5
+        language: system
+        files: ^\.github/renovate\.json$
+
+      - id: check-readthedocs
+        name: check read the docs config
+        entry: uv run check-jsonschema --builtin-schema vendor.readthedocs
+        language: system
+        files: ^\.readthedocs\.yaml$
+
+      - id: actionlint
+        name: actionlint
+        entry: uv run actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
 
   # Check for accidental commits of secrets
   - repo: https://github.com/gitleaks/gitleaks

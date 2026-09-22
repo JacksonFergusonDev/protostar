@@ -715,15 +715,21 @@ def generate_agents_md(spec: AgentsSpec) -> str:
                     lines.extend(["", f"### {title}", *_command_block(commands)])
 
     if spec.hook_runner is not HookRunner.NONE:
+        # The pytest module adds a pre-push hook alongside its CI flag.
+        push = (
+            " and runs the tests before every push"
+            if CIFlag.PYTEST in spec.ci_flags
+            else ""
+        )
         lines.extend(
             [
                 "",
                 "## Git Hooks",
                 "",
                 f"{spec.hook_runner.value} runs the hooks in `.pre-commit-config.yaml` "
-                "on every commit. Let them run rather than invoking the same checks "
-                "by hand first. If a hook fails or rewrites a file, fix the cause, "
-                "restage, and commit again.",
+                f"on every commit{push}. Let them run rather than invoking the same "
+                "checks by hand first. If a hook fails or rewrites a file, fix the "
+                "cause, restage, and commit again.",
             ]
         )
 

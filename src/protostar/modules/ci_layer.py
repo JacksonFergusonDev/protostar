@@ -12,6 +12,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("protostar")
 
+_ACTIONLINT_HOOK = """      - id: actionlint
+        name: actionlint
+        entry: uv run actionlint
+        language: system
+        files: ^\\.github/workflows/.*\\.ya?ml$"""
+
+
+def _declare_actionlint(manifest: EnvironmentManifest) -> None:
+    """Lints the generated workflows with the locked actionlint binary.
+
+    Args:
+        manifest: The centralized state object.
+    """
+    manifest.dependencies.add_dev("actionlint-py")
+    manifest.tooling.add_pre_commit_local_hook(_ACTIONLINT_HOOK)
+    manifest.tooling.add_ci_step(
+        "      - name: Run actionlint\n        run: uv run actionlint"
+    )
+    if "uv run actionlint" not in manifest.tooling.just_lint_commands:
+        manifest.tooling.just_lint_commands.append("uv run actionlint")
+
 
 class CIModule(BootstrapModule):
     """Configures standard GitHub Actions CI workflows for testing and linting."""
@@ -31,6 +52,7 @@ class CIModule(BootstrapModule):
         logger.debug("Building CI tooling layer.")
         manifest.tooling.wants_ci = True
         manifest.filesystem.add_directory(".github/workflows")
+        _declare_actionlint(manifest)
 
 
 class ReleaseModule(BootstrapModule):
@@ -50,3 +72,4 @@ class ReleaseModule(BootstrapModule):
         logger.debug("Building Release tooling layer.")
         manifest.tooling.wants_release = True
         manifest.filesystem.add_directory(".github/workflows")
+        _declare_actionlint(manifest)
