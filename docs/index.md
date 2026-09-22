@@ -19,7 +19,8 @@ hide:
   <div class="hero-content">
     <h1>Safe. Predictable. Clean.</h1>
     <p class="protostar-lede">
-      Protostar sets up Python development environments cleanly and predictably—without overwriting existing work or leaving half-finished setups.
+      <strong>A plan before a single side effect.</strong><br>
+      Deterministic, transaction-aware environment scaffolding for Python projects—setting up modern tooling without overwriting existing work or leaving half-finished setups.
     </p>
     <div class="protostar-install-header">
       <span class="protostar-command-label">Install globally</span>
@@ -34,7 +35,9 @@ hide:
     </div>
   </div>
   <div class="hero-preview">
-    <img src="assets/terminals/cli_init.svg" alt="Protostar CLI Init" class="hero-preview__img" />
+    <a href="usage/init.md" class="hero-preview__link" title="Explore the init workflow" aria-label="Environment initialization documentation">
+      <img src="assets/terminals/cli_init.svg" alt="Protostar CLI Init" class="hero-preview__img" />
+    </a>
   </div>
 </div>
 

@@ -249,6 +249,16 @@
     width: 100%;
 }
 
+.hero-preview__link {
+    display: block;
+    width: 100%;
+    text-decoration: none;
+}
+
+.hero-preview__link:hover {
+    text-decoration: none;
+}
+
 .hero-preview__img {
     width: 100%;
     max-width: 100%;
@@ -259,6 +269,7 @@
     transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
+.hero-preview__link:hover .hero-preview__img,
 .hero-preview__img:hover {
     transform: translateY(-2px);
     box-shadow: 0 14px 38px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
@@ -426,6 +437,7 @@
         box-shadow: 0 0 35px rgba(34, 211, 238, 0.1), 0 12px 30px rgba(0, 0, 0, 0.4);
     }
 
+    .hero-preview__link:hover .hero-preview__img,
     .hero-preview__img:hover {
         box-shadow: 0 0 45px rgba(34, 211, 238, 0.18), 0 16px 36px rgba(0, 0, 0, 0.5);
     }
