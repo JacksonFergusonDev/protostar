@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from protostar._fallbacks import DEFAULT_REVISIONS
+from protostar.manifest import CollisionStrategy
 from protostar.registry import (
     HookRegistry,
     RemoteHook,
@@ -215,7 +216,7 @@ def test_plan_phase_makes_zero_network_requests(mocker):
     orchestrator = Orchestrator(
         modules=[m for m in TOOLING_MODULES if not isinstance(m, PreCommitModule)],
         user_config=UserConfig(),
-        request=InitRequest(force_merge=True),
+        request=InitRequest(collision_strategy=CollisionStrategy.MERGE),
     )
 
     manifest = orchestrator.plan()

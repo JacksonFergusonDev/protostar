@@ -4,6 +4,7 @@ import importlib.resources
 import os
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from rich.console import Console
@@ -15,8 +16,13 @@ from protostar.metadata import METADATA_FIELDS, MetadataKey, PromptType
 from protostar.modules import (
     TOOLING_MODULES,
     BootstrapModule,
-    PreCommitModule,
-    PrekModule,
+)
+from protostar.recipe import (
+    EXCLUSIVE_TOOL_PAIRS,
+    SelectionLayer,
+    Tool,
+    establish_recipe,
+    read_recipe,
 )
 from protostar.system import is_interactive
 
@@ -41,6 +47,7 @@ class WizardSelections:
     project_metadata: dict[str, Any] = field(default_factory=dict)
     variables: dict[str, str] = field(default_factory=dict)
     blueprint: TemplateBlueprint | None = None
+    source: TemplateSource | None = None
     is_external: bool = False
     is_user_aliased: bool = False
     is_trusted: bool = False
@@ -122,6 +129,7 @@ def run_init_wizard() -> WizardSelections | None:
             raise ExecutionAbortedError("Template selection cancelled by user.")
 
     blueprint = None
+    source = None
     variables: dict[str, str] = {}
     is_external = False
     is_user_aliased = False
@@ -157,27 +165,36 @@ def run_init_wizard() -> WizardSelections | None:
         blueprint = source.render(variables)
 
     choices: list[Choice | Separator] = []
+    existing_recipe = read_recipe(Path("pyproject.toml"))
+    opinions = blueprint.tooling_overrides if blueprint else {}
+    selection_recipe = existing_recipe or establish_recipe(config)
+    selected_by_tool = {
+        selection.tool: selection for selection in selection_recipe.selections(opinions)
+    }
 
     # Context & Tooling
     choices.append(Separator("--- Context & Tooling ---"))
     docker_from_template = bool(blueprint and blueprint.tooling_overrides.get("docker"))
+    docker_checked = existing_recipe.docker if existing_recipe else docker_from_template
     choices.append(
         Choice(
             title="Docker (Dockerfile & .dockerignore)"
             + (" (Enforced by template)" if docker_from_template else ""),
             value="docker",
-            checked=docker_from_template,
+            checked=docker_checked,
         )
     )
 
     for tool_mod in TOOLING_MODULES:
-        is_checked = getattr(config, tool_mod.config_key, False)
+        selection = selected_by_tool[Tool(tool_mod.config_key)]
+        is_checked = selection.enabled
         label_suffix = ""
 
         if blueprint and tool_mod.config_key in blueprint.tooling_overrides:
             blueprint_val = blueprint.tooling_overrides[tool_mod.config_key]
-            if blueprint_val != is_checked:
-                is_checked = blueprint_val
+            if selection.layer is SelectionLayer.TEMPLATE and blueprint_val != getattr(
+                config, tool_mod.config_key, False
+            ):
                 label_suffix = " (Enforced by template)"
 
         choices.append(
@@ -202,11 +219,12 @@ def run_init_wizard() -> WizardSelections | None:
     modules = [item for item in selected if item in TOOLING_MODULES]
     docker = "docker" in selected
 
-    has_pre_commit = any(isinstance(m, PreCommitModule) for m in modules)
-    has_prek = any(isinstance(m, PrekModule) for m in modules)
-    if has_pre_commit and has_prek:
-        prek_mod = next(m for m in modules if isinstance(m, PrekModule))
-        pre_commit_mod = next(m for m in modules if isinstance(m, PreCommitModule))
+    selected_tools = {Tool(m.config_key) for m in modules}
+    for pair in EXCLUSIVE_TOOL_PAIRS:
+        if not pair <= selected_tools:
+            continue
+        prek_mod = next(m for m in modules if m.config_key == Tool.PREK)
+        pre_commit_mod = next(m for m in modules if m.config_key == Tool.PRE_COMMIT)
         chosen = select(
             "Both Pre-Commit and Prek were selected. Which Git hook manager would you like to use?",
             choices=[
@@ -259,6 +277,7 @@ def run_init_wizard() -> WizardSelections | None:
         docker=docker,
         project_metadata=resolved_metadata,
         blueprint=blueprint,
+        source=source,
         variables=variables,
         is_external=is_external,
         is_user_aliased=is_user_aliased,

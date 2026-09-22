@@ -9,7 +9,7 @@ import subprocess
 import sys
 import traceback
 import urllib.parse
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from rich.columns import Columns
 
@@ -49,16 +49,13 @@ from protostar.errors import (
     TemplateResolutionError,
 )
 from protostar.fs import atomic_write_text
+from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin
 from protostar.interpolation import VARIABLE_NAME
-from protostar.manifest import ProjectMetadata
-from protostar.metadata import resolve_auto_metadata
-from protostar.models import InitRequest
+from protostar.manifest import CollisionStrategy
 from protostar.modules import (
     TOOLING_MODULES,
     BootstrapModule,
-    PythonCore,
-    SystemWorkspaceModule,
 )
 from protostar.system import is_interactive
 
@@ -77,7 +74,7 @@ def handle_init(args: argparse.Namespace) -> None:
     from dataclasses import replace
     from pathlib import Path
 
-    from protostar.recipe import RecipeIntent, Tool, establish_recipe, read_recipe
+    from protostar.recipe import Tool, read_recipe
 
     user_config = UserConfig.load()
     existing_recipe = read_recipe(Path("pyproject.toml"))
@@ -133,18 +130,14 @@ def handle_init(args: argparse.Namespace) -> None:
                 f"Template '{template_name}' not found in built-ins or global configuration aliases."
             )
 
-    blueprint = None
     built_in = (
         matched_info.alias
         if template_name and matched_info and not is_external
         else None
     )
-
     source: TemplateSource | None = None
-    render_context: dict[str, str] = {}
     if not override_target and existing_recipe and existing_recipe.source:
         source = existing_recipe.source.acquire(Path.cwd())
-        render_context = existing_recipe.rendering_context()
         is_external = existing_recipe.source.origin is not TemplateOrigin.BUILT_IN
         is_trusted = not is_external
     elif override_target:
@@ -156,63 +149,32 @@ def handle_init(args: argparse.Namespace) -> None:
         dict(existing_recipe.variables) if existing_recipe else {},
         flag_values,
     )
-    if source is not None:
-        blueprint = source.render({**render_context, **variables})
-
-    modules: list[BootstrapModule] = []
-
-    # 1. Universal System Layer
-    modules.append(SystemWorkspaceModule())
-
-    # 2. Mandatory Python Core
-    python_core = PythonCore(
-        python_version=getattr(args, "python_version", None)
-        or user_config.python_version,
+    tool_overrides = tuple(
+        (Tool(mod.config_key), value)
+        for mod in TOOLING_MODULES
+        if (value := getattr(args, mod.__class__.__name__, None)) is not None
     )
-    modules.append(python_core)
-
-    overrides = dict(existing_recipe.tools) if existing_recipe else {}
-    for mod in TOOLING_MODULES:
-        cli_override = getattr(args, mod.__class__.__name__, None)
-        if cli_override is not None:
-            overrides[Tool(mod.config_key)] = cli_override
-    fallback = (
-        dict(existing_recipe.fallback)
-        if existing_recipe
-        else {tool: bool(getattr(user_config, tool)) for tool in Tool}
+    if getattr(args, "force_merge", False) and getattr(args, "force_replace", False):
+        raise ConfigurationError("Choose either --force-merge or --force-replace.")
+    strategy = (
+        CollisionStrategy.MERGE
+        if getattr(args, "force_merge", False)
+        else CollisionStrategy.OVERWRITE
+        if getattr(args, "force_replace", False)
+        else None
     )
-    selection_recipe = establish_recipe(
-        user_config, RecipeIntent(reference=blueprint.reference if blueprint else None)
+    draft = InitDraft(
+        template=DraftTemplate(source, is_external, is_user_aliased, is_trusted)
+        if source
+        else None,
+        tool_overrides=tool_overrides,
+        docker=getattr(args, "docker", None),
+        python_version=getattr(args, "python_version", None),
+        variables=tuple(sorted(variables.items())),
+        collision_strategy=strategy,
+        existing_recipe=existing_recipe,
     )
-    selection_recipe = replace(
-        selection_recipe,
-        tools=tuple(sorted(overrides.items())),
-        fallback=tuple(sorted(fallback.items())),
-    )
-    from protostar.recipe import select_tooling
-
-    opinions = blueprint.tooling_overrides if blueprint else {}
-    modules.extend(select_tooling(selection_recipe, opinions))
-
-    # Validate mutually exclusive tooling modules
-    active_tooling_names = [type(mod).__name__ for mod in modules]
-    if (
-        "PreCommitModule" in active_tooling_names
-        and "PrekModule" in active_tooling_names
-    ):
-        raise ConfigurationError(
-            "Cannot use both '--pre-commit' and '--prek' simultaneously. "
-            "Please choose one git hook manager."
-        )
-
-    if (
-        "ReadTheDocsModule" in active_tooling_names
-        and "ZensicalModule" not in active_tooling_names
-    ):
-        raise ConfigurationError(
-            "Cannot scaffold Read the Docs without the Zensical module enabled. "
-            "Please enable '--zensical' or configure 'zensical = true'."
-        )
+    modules, request = resolve_init(draft, user_config)
 
     # 4. Undocumented Crash Test Injection
     if getattr(args, "crash_test", False):
@@ -230,64 +192,6 @@ def handle_init(args: argparse.Namespace) -> None:
 
         modules.append(CrashModule())
 
-    required_keys: set[str] = set()
-    for mod in modules:
-        required_keys.update(mod.required_metadata)
-
-    resolved_metadata = (
-        {k: list(v) if isinstance(v, tuple) else v for k, v in existing_recipe.metadata}
-        if existing_recipe
-        else resolve_auto_metadata(required_keys, config=user_config)
-    )
-    if "license" in resolved_metadata:
-        python_core.license = str(resolved_metadata["license"])
-
-    # Precedence mirrors tooling flags: explicit flag > captured recipe > template.
-    template_docker = (
-        blueprint.tooling_overrides.get("docker", False) if blueprint else False
-    )
-    docker = (
-        args.docker
-        if args.docker is not None
-        else (existing_recipe.docker if existing_recipe else template_docker)
-    )
-    recipe = establish_recipe(
-        user_config,
-        RecipeIntent(
-            blueprint.reference if blueprint else None,
-            cast(ProjectMetadata, resolved_metadata),
-            docker,
-            getattr(args, "python_version", None),
-            tuple(sorted(variables.items())),
-        ),
-    )
-    from protostar.recipe import decode_recipe
-
-    recipe = replace(
-        recipe,
-        tools=tuple(sorted(overrides.items())),
-        fallback=tuple(sorted(fallback.items())),
-        context=existing_recipe.context if existing_recipe else recipe.context,
-    )
-    if getattr(args, "python_version", None):
-        context = dict(recipe.context)
-        context["PYTHON_VERSION"] = args.python_version
-        recipe = replace(recipe, context=tuple(sorted(context.items())))
-    recipe = decode_recipe(recipe.to_dict())
-
-    request = InitRequest(
-        recipe=recipe,
-        python_version=recipe.python,
-        template_blueprint=blueprint,
-        template_reference=blueprint.reference if blueprint else None,
-        docker=docker,
-        force_merge=getattr(args, "force_merge", False),
-        force_replace=getattr(args, "force_replace", False),
-        metadata=resolved_metadata,
-        is_external=is_external,
-        is_user_aliased=is_user_aliased,
-        is_trusted=is_trusted,
-    )
     orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
     engine = orchestrator_cls(modules, user_config, request=request)
 

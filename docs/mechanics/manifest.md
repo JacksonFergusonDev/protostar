@@ -71,7 +71,8 @@ During the `build()` phase, modules route their state declarations through these
 
     * `metadata`: Structured `ProjectMetadata` dictionary defining author, licensing, and package specs.
     * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs via `manifest.add_ide_setting()`.
-    * `collision_strategy`: Active `CollisionStrategy` (`MERGE`, `OVERWRITE`, `ABORT`).
+    * `collision_strategy`: Chosen `CollisionStrategy` (`MERGE` or `OVERWRITE`), or `null` while a collision decision is pending.
+    * `collisions`: Existing workspace paths that intersect planned file writes.
     * `target_files()`: Pure method returning the complete set of concrete `Path` objects Protostar intends to create or mutate (file injections, TOML targets, Dockerfiles, lockfiles, `.gitignore`, and templated blueprint files). Used by the Orchestrator for dynamic collision detection.
 
 ## State Serialization
@@ -97,16 +98,17 @@ Below is an example JSON representation of an aggregate state during a dry-run o
 
 Template references retain source identity and raw-template SHA-256 through request and manifest serialization. Tooling-only runs carry no template reference. Template secrets and trust authorization are excluded.
 
-When the Orchestrator detects that files in the target workspace collide with the manifest's planned targets (`manifest.target_files()`, e.g., an existing `pyproject.toml` or blueprint template file), it alters the manifest's `collision_strategy` attribute based on your input or `--force-merge` / `--force-replace` flags.
+The Orchestrator records existing files that intersect planned targets in `manifest.collisions`. `plan()` returns this data even when no decision has been made. `--force-merge` and `--force-replace` choose a strategy in advance; otherwise the CLI can ask for one. `execute()` raises `WorkspaceCollisionError` before any mutation if collisions remain unresolved.
 
 The `SystemExecutor` reads this enum to govern its AST mutation logic:
 
-- __`MERGE` (Default):__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Previously applied tooling values can update when local content still matches
+- __`MERGE`:__ Safely injects missing configurations. If you have a custom line-length defined in your `pyproject.toml`, it is preserved. Previously applied tooling values can update when local content still matches
   the owned baseline in `.protostar.lock.toml`. Local edits and deletions survive;
   conflicts produce structured warnings. Known lint lists accept new members,
   while other arrays are atomic. Personal project metadata remains seed-only.
 - __`OVERWRITE`:__ Forces Protostar's configuration onto the AST. Keys conflicting with Protostar's payload will be updated to match the tool's baseline.
-- __`ABORT`:__ Halts execution completely.
+
+Aborting is a CLI outcome and leaves the workspace untouched.
 
 ## API Reference
 

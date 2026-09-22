@@ -12,7 +12,7 @@ from .errors import (
 from .executor import SystemExecutor
 from .intent import TemplateOrigin
 from .journal import TransactionState
-from .manifest import EnvironmentManifest
+from .manifest import CollisionStrategy, EnvironmentManifest
 from .models import ExecutionResult, InitRequest, RollbackContext
 from .modules import PythonCore, SystemWorkspaceModule
 from .orchestrator import Orchestrator
@@ -122,7 +122,7 @@ def prepare_project() -> PreparedProject:
         template_blueprint=blueprint,
         python_version=recipe.python,
         docker=recipe.docker,
-        force_merge=True,
+        collision_strategy=CollisionStrategy.MERGE,
         metadata={
             key: list(value) if isinstance(value, tuple) else value
             for key, value in recipe.metadata

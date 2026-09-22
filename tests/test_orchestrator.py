@@ -69,19 +69,20 @@ def test_plan_calls_pre_flight_and_build(tmp_path, monkeypatch, mock_config):
     assert "dummy-pkg" in manifest.dependencies.dependencies
 
 
-def test_plan_raises_on_collision_without_force_flag(
-    tmp_path, monkeypatch, mock_config
-):
-    """plan() raises WorkspaceCollisionError when markers exist and no force flag is set."""
+def test_plan_records_collision_without_strategy(tmp_path, monkeypatch, mock_config):
+    """plan() exposes collisions without requiring an execution decision."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "dummy_marker.txt").write_text("existing content")
     dummy_mod = DummyModule()
     engine = Orchestrator([dummy_mod], mock_config)
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("dummy_marker.txt") in exc_info.value.paths
+    assert Path("dummy_marker.txt") in manifest.collisions
+    assert manifest.collision_strategy is None
+    with pytest.raises(WorkspaceCollisionError) as exc_info:
+        engine.execute(manifest)
+    assert exc_info.value.details() == {"paths": ["dummy_marker.txt"]}
 
 
 def test_plan_force_replace_sets_overwrite_strategy(tmp_path, monkeypatch, mock_config):
@@ -90,7 +91,9 @@ def test_plan_force_replace_sets_overwrite_strategy(tmp_path, monkeypatch, mock_
     (tmp_path / "dummy_marker.txt").write_text("existing content")
     dummy_mod = DummyModule()
     engine = Orchestrator(
-        [dummy_mod], mock_config, request=InitRequest(force_replace=True)
+        [dummy_mod],
+        mock_config,
+        request=InitRequest(collision_strategy=CollisionStrategy.OVERWRITE),
     )
 
     manifest = engine.plan()
@@ -103,11 +106,14 @@ def test_plan_force_merge_sets_merge_strategy(tmp_path, monkeypatch, mock_config
     (tmp_path / "dummy_marker.txt").write_text("existing content")
     dummy_mod = DummyModule()
     engine = Orchestrator(
-        [dummy_mod], mock_config, request=InitRequest(force_merge=True)
+        [dummy_mod],
+        mock_config,
+        request=InitRequest(collision_strategy=CollisionStrategy.MERGE),
     )
 
     manifest = engine.plan()
     assert manifest.collision_strategy == CollisionStrategy.MERGE
+    assert Path("dummy_marker.txt") in manifest.collisions
 
 
 def test_plan_returns_fresh_manifest_on_each_call(tmp_path, monkeypatch, mock_config):
@@ -401,8 +407,7 @@ def test_init_request_defaults():
     assert req.template_blueprint is None
     assert req.python_version is None
     assert req.docker is False
-    assert req.force_merge is False
-    assert req.force_replace is False
+    assert req.collision_strategy is None
     assert req.metadata is None
     assert req.is_external is False
     assert req.is_user_aliased is False
@@ -535,10 +540,9 @@ def test_plan_detects_docker_collision_without_force_flag(
     (tmp_path / "Dockerfile").touch()
     engine = Orchestrator([], mock_config, request=InitRequest(docker=True))
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("Dockerfile") in exc_info.value.paths
+    assert Path("Dockerfile") in manifest.collisions
 
 
 def test_plan_detects_dockerignore_collision_without_force_flag(
@@ -549,10 +553,9 @@ def test_plan_detects_dockerignore_collision_without_force_flag(
     (tmp_path / ".dockerignore").touch()
     engine = Orchestrator([], mock_config, request=InitRequest(docker=True))
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path(".dockerignore") in exc_info.value.paths
+    assert Path(".dockerignore") in manifest.collisions
 
 
 def test_plan_ignores_docker_collision_when_docker_disabled(
@@ -564,7 +567,8 @@ def test_plan_ignores_docker_collision_when_docker_disabled(
     engine = Orchestrator([], mock_config, request=InitRequest(docker=False))
 
     manifest = engine.plan()
-    assert manifest.collision_strategy == CollisionStrategy.MERGE
+    assert manifest.collision_strategy is None
+    assert manifest.collisions == frozenset()
 
 
 def test_plan_resolves_docker_collision_with_force_merge(
@@ -574,7 +578,9 @@ def test_plan_resolves_docker_collision_with_force_merge(
     monkeypatch.chdir(tmp_path)
     (tmp_path / "Dockerfile").touch()
     engine = Orchestrator(
-        [], mock_config, request=InitRequest(docker=True, force_merge=True)
+        [],
+        mock_config,
+        request=InitRequest(docker=True, collision_strategy=CollisionStrategy.MERGE),
     )
 
     manifest = engine.plan()
@@ -593,10 +599,9 @@ def test_plan_detects_license_collision_from_python_core(
         request=InitRequest(metadata={"license": "MIT"}),
     )
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("LICENSE") in exc_info.value.paths
+    assert Path("LICENSE") in manifest.collisions
 
 
 def test_plan_ignores_license_collision_when_license_none(
@@ -612,7 +617,7 @@ def test_plan_ignores_license_collision_when_license_none(
     )
 
     manifest = engine.plan()
-    assert manifest.collision_strategy == CollisionStrategy.MERGE
+    assert manifest.collision_strategy is None
 
 
 def test_plan_ignores_docs_directory_collision_when_index_absent(
@@ -626,7 +631,7 @@ def test_plan_ignores_docs_directory_collision_when_index_absent(
 
     engine = Orchestrator([ZensicalModule()], mock_config)
     manifest = engine.plan()
-    assert manifest.collision_strategy == CollisionStrategy.MERGE
+    assert manifest.collision_strategy is None
 
 
 def test_plan_detects_docs_index_collision_from_zensical(
@@ -639,10 +644,9 @@ def test_plan_detects_docs_index_collision_from_zensical(
     (docs_dir / "index.md").touch()
 
     engine = Orchestrator([ZensicalModule()], mock_config)
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("docs/index.md") in exc_info.value.paths
+    assert Path("docs/index.md") in manifest.collisions
 
 
 def test_plan_detects_commitizen_changelog_collision(
@@ -653,10 +657,9 @@ def test_plan_detects_commitizen_changelog_collision(
     (tmp_path / "CHANGELOG.md").touch()
 
     engine = Orchestrator([CommitizenModule()], mock_config)
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("CHANGELOG.md") in exc_info.value.paths
+    assert Path("CHANGELOG.md") in manifest.collisions
 
 
 def test_plan_detects_blueprint_files_collision(tmp_path, monkeypatch, mock_config):
@@ -673,10 +676,9 @@ def test_plan_detects_blueprint_files_collision(tmp_path, monkeypatch, mock_conf
         [], mock_config, request=InitRequest(template_blueprint=blueprint)
     )
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("README.md") in exc_info.value.paths
+    assert Path("README.md") in manifest.collisions
 
 
 def test_plan_detects_blueprint_files_collision_with_interpolation(
@@ -701,10 +703,9 @@ def test_plan_detects_blueprint_files_collision_with_interpolation(
         ),
     )
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        engine.plan()
+    manifest = engine.plan()
 
-    assert Path("src/my_pkg/main.py") in exc_info.value.paths
+    assert Path("src/my_pkg/main.py") in manifest.collisions
 
 
 # ---------------------------------------------------------------------------
@@ -828,7 +829,6 @@ def test_plan_reports_an_existing_agents_md_as_a_collision(
     monkeypatch.chdir(tmp_path)
     Path(AGENTS_TARGET).write_text("# Team notes\n")
 
-    with pytest.raises(WorkspaceCollisionError) as exc_info:
-        Orchestrator([AgentsModule()], mock_config).plan()
+    manifest = Orchestrator([AgentsModule()], mock_config).plan()
 
-    assert Path(AGENTS_TARGET) in exc_info.value.paths
+    assert Path(AGENTS_TARGET) in manifest.collisions

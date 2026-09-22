@@ -241,19 +241,19 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     Returns:
         The ExecutionResult produced by the engine.
     """
-    # --- Collision Loop ---
-    try:
-        manifest = engine.plan()
-    except WorkspaceCollisionError as e:
+    # --- Collision Decision ---
+    manifest = engine.plan()
+    if manifest.collisions and manifest.collision_strategy is None:
+        error = WorkspaceCollisionError(paths=manifest.collisions)
         # JSON mode: let the error bubble to main()'s ProtostarError handler.
         if is_json_mode:
-            raise
+            raise error
 
         console.print(
             "\n[bold yellow]Workspace Collision:[/bold yellow] Protostar detected "
             "existing configuration files in the workspace."
         )
-        for path in sorted(e.paths):
+        for path in sorted(manifest.collisions):
             console.print(f"  - {path}")
 
         if not is_interactive():
@@ -261,7 +261,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                 "Workspace collision detected: The target workspace is not empty.\n"
                 "Aborting to prevent destructive mutations in a non-interactive context.\n"
                 "Use the --force-merge or --force-replace flag to bypass this check."
-            ) from e
+            ) from error
 
         choice = select(
             "\nHow would you like to proceed?",
@@ -276,7 +276,7 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
                 ),
                 Choice(
                     title="Abort     (Safely exit without modifying the environment)",
-                    value=CollisionStrategy.ABORT,
+                    value=None,
                 ),
             ],
             style=UIStyle(
@@ -288,21 +288,13 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
             ),
         )
 
-        if not choice or choice == CollisionStrategy.ABORT:
+        if choice is None:
             raise ExecutionAbortedError(
                 "Environment initialization cancelled by user."
             ) from None
 
-        # Rebuild engine with updated force flag and re-plan with a fresh manifest
-        if choice == CollisionStrategy.MERGE:
-            request = dataclasses.replace(
-                request, force_merge=True, force_replace=False
-            )
-        else:
-            request = dataclasses.replace(
-                request, force_merge=False, force_replace=True
-            )
-        engine = type(engine)(engine.modules, engine.user_config, request=request)
+        request = dataclasses.replace(request, collision_strategy=choice)
+        engine.request = request
         manifest = engine.plan()
 
     # --- Trust Boundary ---
@@ -426,7 +418,14 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     table.add_row("Tasks:", f"{tasks_total} system commands to execute")
 
     # Collision Strategy
-    table.add_row("Collision Strategy:", manifest.collision_strategy.value.title())
+    table.add_row(
+        "Collision Strategy:",
+        manifest.collision_strategy.value.title()
+        if manifest.collision_strategy
+        else "Unresolved"
+        if manifest.collisions
+        else "Not needed",
+    )
 
     console.print()
     console.print(

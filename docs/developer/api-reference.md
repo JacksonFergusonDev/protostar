@@ -14,7 +14,8 @@ classDiagram
         +ToolingManifest tooling
         +TaskManifest tasks
         +ProjectMetadata metadata
-        +CollisionStrategy collision_strategy
+        +CollisionStrategy | None collision_strategy
+        +frozenset~Path~ collisions
         +add_ide_setting(key: IDESettingKey, value: Any)
         +target_files() set~Path~
     }

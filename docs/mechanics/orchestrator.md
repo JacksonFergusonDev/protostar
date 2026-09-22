@@ -41,16 +41,18 @@ flowchart TD
     1. **Pre-Flight Verification:** Asserts workspace accessibility, clean/git repository status, and runs `pre_flight()` across all loaded modules to assert that required binaries (`uv`, `git`, etc.) exist in `$PATH`.
     2. **Manifest Aggregation:** Evaluates language and tooling modules to populate an `EnvironmentManifest` with file injections, AST merge payloads, ignore patterns, and system tasks.
     3. **Blueprint Injection:** Injects any template blueprint files and configurations into the manifest with variable interpolation.
-    4. **Manifest-First Collision Check:** Derives all planned target files dynamically via `manifest.target_files()` and inspects the workspace. If collisions exist and no force flag is active, raises `WorkspaceCollisionError(paths=...)`.
+    4. **Manifest-First Collision Check:** Derives planned target files via `manifest.target_files()` and records existing targets in `manifest.collisions`. Planning returns the manifest even if a collision choice is pending.
 
 === "2. Interactive Resolution (CLI Layer)"
-    When `WorkspaceCollisionError` or untrusted external templates are encountered:
+    When the manifest lists collisions or an external template has untrusted tasks:
 
-    * **Interactive TUI:** In interactive terminals, `cli.py` prompts you to `Merge`, `Overwrite`, or `Abort`. If authorized, it generates a fresh `InitRequest` with updated force flags and calls `plan()` again.
+    * **Interactive CLI:** In interactive terminals, the CLI prompts you to `Merge`, `Overwrite`, or `Abort`. If authorized, it updates the request's collision strategy and calls `plan()` again.
     * **Headless Contexts:** In non-interactive environments (CI/CD), `cli.py` aborts safely with an error message instructing you to supply `--force-merge` or `--force-replace`.
 
 === "3. Execution (`execute(manifest)`)"
     The `execute()` phase hands the calculated manifest to `SystemExecutor` to apply all side effects in a deterministic, transaction-managed sequence:
+
+    Before creating the executor, it raises `WorkspaceCollisionError(paths=...)` if the manifest has collisions and no strategy.
 
     1. Validates existing TOML files for syntax errors.
     1. Scaffolds directories and writes files via `TransactionAwareFS`.

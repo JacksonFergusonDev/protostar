@@ -180,6 +180,7 @@ Scale or omit these sections based on the scope of the PR.
 
 - `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).
+- `src/protostar/init_draft.py`: Shared init draft and resolver for flags and interactive choices.
 - `src/protostar/manifest.py`: `EnvironmentManifest` definition and aggregation state.
 - `src/protostar/executor.py`: `SystemExecutor` coordinating transactional side-effects and rollback.
 - `src/protostar/progress.py`: `ProgressStep` hook through which the engine names execution steps for the CLI to render.
