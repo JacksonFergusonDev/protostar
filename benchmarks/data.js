@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790099412872,
+  "lastUpdate": 1790110065413,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15747,6 +15747,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 264.53,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c50f8d57427642bb9db5bb8e0664d4609b9534bd",
+          "message": "refactor(cli): move prompt code out of the engine (#301)\n\nThe headless-core rule says engine modules never import terminal UI\npackages, but the questionary wrappers (protostar/ui.py) and the init\nwizard (protostar/wizard.py, which builds a Rich console) lived in the\nengine package. Move them under cli/ as cli/prompts.py and cli/wizard.py,\nunchanged apart from imports: both are replaced by the Textual rebuild,\nand prompts.py is deleted whole once questionary goes.\n\nWizardSelections leaves the package's public exports; it is a CLI type.\n\ntests/test_headless_boundary.py now enforces the rule. In a fresh\ninterpreter it imports every module outside protostar.cli and fails if\nrich, questionary, prompt_toolkit, or textual was loaded, naming the\nengine module whose import first pulled it in. It replaces the narrower\nquestionary check in test_metadata.py.",
+          "timestamp": "2026-09-22T13:46:25-07:00",
+          "tree_id": "5ad5131a36ffc38e5a93338925c7ce18d21a6bf8",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c50f8d57427642bb9db5bb8e0664d4609b9534bd"
+        },
+        "date": 1790110064427,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 203.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 279.37,
             "unit": "ms"
           }
         ]
