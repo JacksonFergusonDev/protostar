@@ -11,9 +11,18 @@ from ..merge import (
     Value,
 )
 from ..yaml_ast import WILDCARD, KeyedSequence, YamlDocumentSpec, YamlGuard, keyed_view
+from .locations import DocumentLocations
 
 CI_TARGET = ".github/workflows/ci.yml"
 RELEASE_TARGET = ".github/workflows/release.yml"
+# GitHub runs every `.yml` and `.yaml` file as its own workflow, so the other
+# extension is followed and adopted but never reported as a competing copy.
+CI_LOCATIONS = DocumentLocations(
+    CI_TARGET, aliases=(".github/workflows/ci.yaml",), exclusive=False
+)
+RELEASE_LOCATIONS = DocumentLocations(
+    RELEASE_TARGET, aliases=(".github/workflows/release.yaml",), exclusive=False
+)
 # One GitHub Actions schema for every generated workflow: a workflow is one
 # generator's complete output, and steps are matched by the name Protostar wrote.
 SPEC = YamlDocumentSpec(

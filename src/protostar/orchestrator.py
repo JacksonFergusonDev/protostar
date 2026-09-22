@@ -82,7 +82,7 @@ class Orchestrator:
         Returns:
             A set of existing Path objects that collide with planned files.
         """
-        return {target for target in manifest.target_files() if target.exists()}
+        return manifest.colliding_files()
 
     def plan(
         self, *, policy: ExecutionPolicy = ExecutionPolicy.INITIALIZATION

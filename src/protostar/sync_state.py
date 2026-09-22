@@ -129,11 +129,11 @@ class FileState:
             elif self.policy is FilePolicy.JSONC:
                 decode_jsonc_baseline(self.baseline)
             else:
-                from .documents import YAML_DOCUMENTS
+                from .documents import yaml_spec
                 from .yaml_ast import decode_yaml_baseline, validate_yaml_baseline
 
                 value = decode_yaml_baseline(self.baseline)
-                if (spec := YAML_DOCUMENTS.get(self.path)) is not None:
+                if (spec := yaml_spec(self.path)) is not None:
                     validate_yaml_baseline(spec, value)
         elif self.policy is FilePolicy.CHECKSUM:
             if self.digest is None or self.baseline is not None:
@@ -264,6 +264,10 @@ class SyncState:
             self,
             files=(*(item for item in self.files if item.path != record.path), record),
         )
+
+    def without_file(self, path: str) -> SyncState:
+        """Stages the removal of one file record, such as one a rename moved."""
+        return replace(self, files=tuple(r for r in self.files if r.path != path))
 
 
 def check_template_identity(

@@ -1,15 +1,20 @@
-"""Renovate configuration target and the sibling locations that shadow it."""
+"""Renovate configuration target and the locations Renovate reads it from."""
+
+from .locations import DocumentLocations
 
 TARGET = ".github/renovate.json"
-# Renovate uses the first configuration it finds, so a sibling location would
-# compete with (or shadow) the managed file.
-ALTERNATIVES = (
-    "renovate.json",
-    "renovate.json5",
-    ".renovaterc",
-    ".renovaterc.json",
-    ".renovaterc.json5",
-    ".github/renovate.json5",
-    ".gitlab/renovate.json",
-    ".gitlab/renovate.json5",
+# Renovate uses the first configuration file it finds. It parses every name but
+# `.json5` as JSON with comments, which Protostar edits; JSON5 it cannot. On
+# GitHub, Renovate ignores the `.gitlab/` locations.
+LOCATIONS = DocumentLocations(
+    TARGET,
+    aliases=(
+        "renovate.json",
+        "renovate.jsonc",
+        ".github/renovate.jsonc",
+        ".renovaterc",
+        ".renovaterc.json",
+        ".renovaterc.jsonc",
+    ),
+    competitors=("renovate.json5", ".github/renovate.json5", ".renovaterc.json5"),
 )

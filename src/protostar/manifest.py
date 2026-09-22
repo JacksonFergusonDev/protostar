@@ -28,6 +28,7 @@ from .workflows import HookRunner as HookRunner
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
+    from .documents.locations import DocumentLocations
     from .recipe import ProducerContribution, ProjectRecipe, ToolSelection
 
 
@@ -328,9 +329,9 @@ class FilesystemManifest:
                 "TOML append regions are unsupported.",
                 hint="Use dev.pyproject structured configuration.",
             )
-        from .documents import YAML_DOCUMENTS
+        from .documents import yaml_spec
 
-        if path in YAML_DOCUMENTS:
+        if yaml_spec(path) is not None:
             raise ConfigurationError(
                 f"Append regions are unsupported for '{path}'.",
                 hint="Protostar merges this YAML file by structure; appended text cannot be merged.",
@@ -617,6 +618,19 @@ class EnvironmentManifest:
         """Sets a key-value configuration for the requested IDE."""
         self.ide_settings[key] = value
 
+    def document_locations(self, target: str) -> DocumentLocations:
+        """Returns the paths the tool behind a planned document reads it from.
+
+        Args:
+            target: The document's canonical workspace path.
+
+        Returns:
+            The document's locations under this manifest's hook runner.
+        """
+        from .documents import document_locations
+
+        return document_locations(target, self.tooling.hook_runner)
+
     def target_files(self) -> set[Path]:
         """Returns all concrete workspace file paths that this manifest intends to create or mutate.
 
@@ -679,19 +693,47 @@ class EnvironmentManifest:
 
         Adds the append-only .gitignore and the IDE settings, which
         ``target_files`` leaves out because they never collide, to its targets.
+        A document found under another name its tool reads is listed there.
         Engine state and subprocess output (such as ``uv.lock``) are excluded.
 
         Returns:
             A set of Path objects representing written files.
         """
         from .documents import vscode
+        from .documents.locations import resolve_location
 
         files = self.target_files()
         if self.filesystem.vcs_ignores:
             files.add(Path(".gitignore"))
         if self.ide_settings:
             files.add(Path(vscode.SETTINGS_TARGET))
-        return files
+        return {
+            Path(
+                resolve_location(
+                    self.document_locations(file.as_posix()),
+                    (),
+                    lambda path: Path(path).exists(),
+                ).path
+                or file
+            )
+            for file in files
+        }
+
+    def colliding_files(self) -> set[Path]:
+        """Returns the existing workspace files this manifest would edit.
+
+        A document counts under every name its tool reads it from that Protostar
+        edits, so an existing alias is a collision like the canonical file.
+
+        Returns:
+            A set of Path objects that already exist.
+        """
+        return {
+            Path(path)
+            for file in self.target_files()
+            for path in self.document_locations(file.as_posix()).editable
+            if Path(path).exists()
+        }
 
     def _path_context(self) -> dict[str, str]:
         """Returns the names that render target paths, without environment bindings."""

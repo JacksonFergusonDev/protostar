@@ -5,7 +5,7 @@ import logging
 import stat
 import tomllib
 from collections.abc import Callable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
 
@@ -29,6 +29,7 @@ from .documents import (
     toml_spec,
     vscode,
 )
+from .documents.locations import Resolution, resolve_location
 from .errors import (
     ConfigurationError,
     FileSystemError,
@@ -111,6 +112,22 @@ from .yaml_ast import (
 logger = logging.getLogger("protostar")
 
 __all__ = ["Reconciliation"]
+
+
+@dataclass(frozen=True)
+class _Located:
+    """The workspace file that holds one managed document in this run.
+
+    Attributes:
+        target: The document's canonical path, which keys its spec and guard.
+        path: The file to reconcile, possibly an alias of ``target``.
+        record: The ownership record the baseline comes from, which may name the
+            path a renamed document was followed from.
+    """
+
+    target: str
+    path: Path
+    record: FileState | None
 
 
 class Reconciliation:
@@ -208,18 +225,15 @@ class Reconciliation:
                 Path(renovate.TARGET)
             ):
                 decode_jsonc(render_template(content, self.interpolation_context))
-                if self.workspace.exists(Path(renovate.TARGET)):
+                existing = self._existing(renovate.TARGET)
+                if existing is not None:
                     try:
                         decode_jsonc(
-                            self.workspace.read_bytes(Path(renovate.TARGET)).decode(
-                                "utf-8"
-                            )
+                            self.workspace.read_bytes(existing).decode("utf-8")
                         )
                     except (OSError, UnicodeError) as error:
                         raise FileSystemError(
-                            "read JSONC configuration",
-                            renovate.TARGET,
-                            error,
+                            "read JSONC configuration", str(existing), error
                         ) from error
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if any(c.format is StructuredFormat.YAML for c in contributions):
@@ -229,8 +243,7 @@ class Reconciliation:
                         hint="Declare exactly one producer for a supported YAML target.",
                     )
                 decode_yaml_baseline(contributions[0].content)
-                target = Path(filepath)
-                if self.workspace.exists(target):
+                if (target := self._existing(filepath)) is not None:
                     try:
                         decode_yaml_baseline(
                             self.workspace.read_bytes(target).decode("utf-8")
@@ -280,7 +293,11 @@ class Reconciliation:
             for package in packages:
                 requirement_identity(package)
         for filepath in sorted(toml_targets):
-            target = Path(render_template(filepath, self.interpolation_context))
+            rendered = render_template(filepath, self.interpolation_context)
+            resolved = self._resolve(rendered).path
+            if resolved is None:
+                continue
+            target = Path(resolved)
             self._validate_node(target)
             if target.suffix == ".toml" and self.workspace.exists(target):
                 try:
@@ -298,8 +315,6 @@ class Reconciliation:
         if not self.manifest.tooling.wants_hooks:
             return
 
-        target = Path(pre_commit.TARGET)
-        enforce_path_jail(target, Path.cwd())
         full_yaml = generate_pre_commit_config(
             local_hooks=self.manifest.tooling.pre_commit_local_hooks,
             remote_hooks=self.manifest.tooling.pre_commit_hooks,
@@ -308,12 +323,18 @@ class Reconciliation:
             install_hook_types=self.manifest.tooling.pre_commit_install_hook_types,
         )
 
-        self._validate_node(target)
+        located = self._locate(pre_commit.TARGET, FilePolicy.YAML)
+        if located is None:
+            return
         plan = pre_commit.plan_hook_pins(
-            full_yaml, self.hook_revisions, self.candidate_state.hook_pins
+            full_yaml,
+            self.hook_revisions,
+            self.candidate_state.hook_pins,
+            located.path.as_posix(),
+            located.record.path if located.record else None,
         )
         result = self._reconcile_document(
-            target, plan.desired, FilePolicy.YAML, guard=lambda *_: plan.guard
+            located, plan.desired, FilePolicy.YAML, guard=lambda *_: plan.guard
         )
         self.candidate_state = replace(
             self.candidate_state,
@@ -333,14 +354,8 @@ class Reconciliation:
             target = Path(interpolated_filepath)
             enforce_path_jail(target, Path.cwd())
             if target == Path(renovate.TARGET):
-                if any(self.workspace.exists(Path(p)) for p in renovate.ALTERNATIVES):
-                    self._merge_warning(
-                        MergeConflict(
-                            MergeLocation(target.as_posix()), ConflictReason.UNOWNED
-                        )
-                    )
-                    continue
-                self._reconcile_document(target, content, FilePolicy.JSONC)
+                if located := self._locate(renovate.TARGET, FilePolicy.JSONC):
+                    self._reconcile_document(located, content, FilePolicy.JSONC)
                 continue
             record = self._file_record(target, FilePolicy.SEED)
             if self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE and (
@@ -390,26 +405,22 @@ class Reconciliation:
                 ci_steps=self.manifest.tooling.ci_steps,
             )
         )
-        self._write_workflow(Path(github_workflows.CI_TARGET), workflow)
+        self._write_workflow(github_workflows.CI_TARGET, workflow)
 
     def _write_release_workflow(self) -> None:
         """Assembles and reconciles the .github/workflows/release.yml file if requested."""
         if not self.manifest.tooling.wants_release:
             return
         self._write_workflow(
-            Path(github_workflows.RELEASE_TARGET), generate_release_workflow()
+            github_workflows.RELEASE_TARGET, generate_release_workflow()
         )
 
-    def _write_workflow(self, target: Path, workflow: str) -> None:
+    def _write_workflow(self, target: str, workflow: str) -> None:
         """Merges a generated workflow into the workspace by job and step."""
-        enforce_path_jail(target, Path.cwd())
-        self._validate_node(target)
-        self._reconcile_document(
-            target,
-            workflow,
-            FilePolicy.YAML,
-            guard=YAML_GUARDS[target.as_posix()],
-        )
+        if located := self._locate(target, FilePolicy.YAML):
+            self._reconcile_document(
+                located, workflow, FilePolicy.YAML, guard=YAML_GUARDS[target]
+            )
 
     def _write_justfile(self) -> None:
         """Assembles and writes the justfile if requested."""
@@ -431,7 +442,7 @@ class Reconciliation:
 
     def _reconcile_document(
         self,
-        target: Path,
+        located: _Located,
         desired: str,
         policy: FilePolicy,
         *,
@@ -441,7 +452,7 @@ class Reconciliation:
         """Applies a YAML or JSONC document through the transaction and candidate state.
 
         Args:
-            target: Workspace-relative document path.
+            located: The file that holds the document and the ownership it continues.
             desired: Desired contribution text.
             policy: ``FilePolicy.YAML`` or ``FilePolicy.JSONC``.
             indent: Indentation unit for JSONC edits when none can be inferred.
@@ -458,7 +469,8 @@ class Reconciliation:
         else:
             decode_baseline = decode_jsonc_baseline
             encode_baseline = encode_jsonc_baseline
-        record = self._file_record(target, policy)
+        target = located.path
+        record = located.record
         try:
             exists = self.workspace.exists(target)
             original = (
@@ -473,12 +485,13 @@ class Reconciliation:
             overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
             if policy is FilePolicy.YAML:
                 result: YamlReconciliation | JsoncReconciliation = reconcile_yaml(
-                    YAML_DOCUMENTS[target.as_posix()],
+                    YAML_DOCUMENTS[located.target],
                     original,
                     desired,
                     base,
                     location,
                     guard=guard(
+                        target.as_posix(),
                         decode_yaml_baseline(desired),
                         decode_yaml_baseline(original) if exists else {},
                         base,
@@ -501,12 +514,13 @@ class Reconciliation:
             for conflict in result.conflicts:
                 self._merge_warning(conflict)
             if result.baseline is not MISSING:
-                self.candidate_state = self.candidate_state.with_file(
+                self._own(
+                    located,
                     FileState(
                         target.as_posix(),
                         policy,
                         encode_baseline(cast(dict[str, Value], result.baseline)),
-                    )
+                    ),
                 )
             if result.content != original:
                 self.fs.write_text(target, result.content)
@@ -521,22 +535,21 @@ class Reconciliation:
         is_overwrite = self.manifest.collision_strategy == CollisionStrategy.OVERWRITE
         for filepath, contributions in self.manifest.filesystem.structured.items():
             if contributions[0].format is StructuredFormat.YAML:
-                target = Path(filepath)
-                if self._displaced(target, YAML_DOCUMENTS[filepath].displaces):
-                    self._merge_warning(
-                        MergeConflict(MergeLocation(filepath), ConflictReason.UNOWNED)
+                if located := self._locate(filepath, FilePolicy.YAML):
+                    self._reconcile_document(
+                        located,
+                        contributions[0].content,
+                        FilePolicy.YAML,
+                        guard=YAML_GUARDS.get(filepath),
                     )
-                    continue
-                self._reconcile_document(
-                    target,
-                    contributions[0].content,
-                    FilePolicy.YAML,
-                    guard=YAML_GUARDS.get(filepath),
-                )
                 continue
-            target = Path(render_template(filepath, self.interpolation_context))
-            validate_target(target.as_posix())
-            enforce_path_jail(target, Path.cwd())
+            rendered = render_template(filepath, self.interpolation_context)
+            validate_target(rendered)
+            toml_located = self._locate(rendered, FilePolicy.TOML)
+            if toml_located is None:
+                continue
+            target = toml_located.path
+            record = toml_located.record
             try:
                 original = (
                     self.workspace.read_bytes(target).decode("utf-8")
@@ -547,15 +560,6 @@ class Reconciliation:
                 raise FileSystemError(
                     "read structured configuration", str(target), e
                 ) from e
-            record = next(
-                (r for r in self.candidate_state.files if r.path == target.as_posix()),
-                None,
-            )
-            if record is not None and record.policy is not FilePolicy.TOML:
-                raise ConfigurationError(
-                    "Conflicting structured ownership policy.",
-                    hint="Keep the tracked file policy unchanged.",
-                )
             deleted_project = (
                 target == Path(pyproject.TARGET) and self._preserve_deleted_pyproject
             )
@@ -564,8 +568,8 @@ class Reconciliation:
                 and record is None
                 and not deleted_project
             )
-            spec = toml_spec(target.as_posix())
-            if self._toml_held(spec, target, original):
+            spec = toml_spec(rendered)
+            if self._outside_root_table(spec, original):
                 self._merge_warning(
                     MergeConflict(
                         MergeLocation(target.as_posix()), ConflictReason.UNOWNED
@@ -607,12 +611,13 @@ class Reconciliation:
             for note in result.layout_notes:
                 self._layout_warning(target, note)
             if result.baseline is not MISSING:
-                self.candidate_state = self.candidate_state.with_file(
+                self._own(
+                    toml_located,
                     FileState(
                         target.as_posix(),
                         FilePolicy.TOML,
                         encode_toml_baseline(cast(dict[str, Value], result.baseline)),
-                    )
+                    ),
                 )
             new_content = result.content
             if new_content != original:
@@ -708,39 +713,84 @@ class Reconciliation:
                         "append configurations block", str(target), e
                     ) from e
 
-    def _toml_held(self, spec: TomlDocumentSpec, target: Path, original: str) -> bool:
-        """Returns whether a TOML document is left alone under every strategy.
+    def _outside_root_table(self, spec: TomlDocumentSpec, original: str) -> bool:
+        """Returns whether a TOML document keeps its settings outside its root table.
+
+        Such a document is left alone under every strategy, because adding the
+        root table would hide the existing settings from the tool.
 
         Args:
             spec: The document's merge spec.
-            target: Workspace-relative document path.
             original: Current document text, empty when the file is absent.
 
         Returns:
-            True when creating the document would replace a configuration it
-            displaces, or when an existing document keeps its settings outside the
-            spec's root table.
+            True when the document has settings but not the spec's root table.
         """
-        if self._displaced(target, spec.displaces):
-            return True
         if spec.root_table is None:
             return False
         local = tomllib.loads(original)
         return bool(local) and spec.root_table not in local
 
-    def _displaced(self, target: Path, displaces: tuple[str, ...]) -> bool:
-        """Returns whether creating a document would compete with another configuration.
+    def _resolve(self, target: str) -> Resolution:
+        """Resolves which workspace file holds a document, without reporting.
 
         Args:
-            target: Workspace-relative document path.
-            displaces: Paths of configurations the tool may read instead.
+            target: The document's canonical workspace path.
 
         Returns:
-            True when the document is absent and one of ``displaces`` exists.
+            The resolution under the current candidate ownership.
         """
-        return not self.workspace.exists(target) and any(
-            self.workspace.exists(Path(path)) for path in displaces
+        return resolve_location(
+            self.manifest.document_locations(target),
+            {record.path for record in self.candidate_state.files},
+            lambda path: self.workspace.exists(Path(path)),
         )
+
+    def _existing(self, target: str) -> Path | None:
+        """Returns the existing file a document would be reconciled in, if any."""
+        resolved = self._resolve(target).path
+        if resolved is None or not self.workspace.exists(Path(resolved)):
+            return None
+        return Path(resolved)
+
+    def _locate(self, target: str, policy: FilePolicy) -> _Located | None:
+        """Finds the file that holds a document and reports competing configurations.
+
+        Args:
+            target: The document's canonical workspace path.
+            policy: The document's ownership policy.
+
+        Returns:
+            The file to reconcile and the ownership it continues, or ``None`` when
+            the document is held.
+        """
+        resolution = self._resolve(target)
+        for conflict in resolution.conflicts:
+            self._merge_warning(conflict)
+        if resolution.path is None:
+            return None
+        path = Path(resolution.path)
+        enforce_path_jail(path, Path.cwd())
+        self._validate_node(path)
+        record = (
+            self._file_record(Path(resolution.owner), policy)
+            if resolution.owner is not None
+            else None
+        )
+        return _Located(target, path, record)
+
+    def _own(self, located: _Located, record: FileState) -> None:
+        """Records ownership of the reconciled file, moving it from a followed path.
+
+        Args:
+            located: The file the reconciliation edited.
+            record: The ownership accepted for that file.
+        """
+        self.candidate_state = self.candidate_state.with_file(record)
+        if located.record is not None and located.record.path != record.path:
+            self.candidate_state = self.candidate_state.without_file(
+                located.record.path
+            )
 
     def _file_record(self, target: Path, policy: FilePolicy) -> FileState | None:
         """Returns ownership after checking that the policy has not changed."""
@@ -1142,12 +1192,15 @@ class Reconciliation:
                 Severity.WARNING,
             )
             return
-        self._reconcile_document(
-            Path(vscode.SETTINGS_TARGET),
-            dumps_jsonc(cast(dict[str, Value], dict(settings)), vscode.SETTINGS_INDENT),
-            FilePolicy.JSONC,
-            indent=vscode.SETTINGS_INDENT,
-        )
+        if located := self._locate(vscode.SETTINGS_TARGET, FilePolicy.JSONC):
+            self._reconcile_document(
+                located,
+                dumps_jsonc(
+                    cast(dict[str, Value], dict(settings)), vscode.SETTINGS_INDENT
+                ),
+                FilePolicy.JSONC,
+                indent=vscode.SETTINGS_INDENT,
+            )
 
     def _merge_warning(self, conflict: MergeConflict) -> None:
         """Exposes a concrete preserved conflict to headless callers."""

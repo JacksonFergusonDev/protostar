@@ -187,15 +187,33 @@ def test_edited_retracted_setting_is_kept_with_a_conflict(
 @pytest.mark.parametrize(
     "sibling", [".readthedocs.yml", "readthedocs.yaml", "readthedocs.yml"]
 )
-def test_sibling_configuration_is_not_competed_with(
+def test_configuration_under_another_name_is_merged_in_place(
     tmp_path, monkeypatch, mocker, sibling, strategy
 ):
     monkeypatch.chdir(tmp_path)
-    Path(sibling).write_text(SPHINX)
+    Path(sibling).write_text("# mine\nversion: 2\nformats:\n  - pdf\n")
     executor = run(mocker, strategy=strategy)
     assert not TARGET.exists()
+    assert not conflicts(executor)
+    document = decode_yaml_baseline(Path(sibling).read_text())
+    assert document == {**decode_yaml_baseline(scaffold()), "formats": ["pdf"]}
+    assert "# mine" in Path(sibling).read_text()
+    [record] = deserialize_state(STATE.read_text()).files
+    assert record.path == sibling
+
+
+def test_existing_sphinx_build_under_another_name_keeps_its_steps(
+    tmp_path, monkeypatch, mocker
+):
+    monkeypatch.chdir(tmp_path)
+    sibling = Path(".readthedocs.yml")
+    sibling.write_text(SPHINX)
+    executor = run(mocker)
+    assert sibling.read_text() == SPHINX
     assert conflicts(executor) == [
-        MergeConflict(MergeLocation(readthedocs.TARGET), ConflictReason.UNOWNED)
+        MergeConflict(
+            MergeLocation(sibling.as_posix(), ("build", "jobs")), ConflictReason.UNOWNED
+        )
     ]
 
 

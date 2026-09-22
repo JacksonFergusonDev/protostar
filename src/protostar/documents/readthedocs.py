@@ -17,6 +17,7 @@ from ..merge import (
     semantic_equal,
 )
 from ..yaml_ast import NO_GUARD, YamlDocumentSpec, YamlGuard
+from .locations import DocumentLocations
 
 TARGET = ".readthedocs.yaml"
 SPEC = YamlDocumentSpec(
@@ -24,16 +25,18 @@ SPEC = YamlDocumentSpec(
     # The configuration is the module's complete output, so a setting it stops
     # generating is retracted instead of lingering to override the build.
     policy=MergePolicy(complete=True),
-    # Read the Docs reads the first file matching `^\.?readthedocs.ya?ml$` in
-    # directory-listing order, so a sibling would compete with the managed file.
-    displaces=(".readthedocs.yml", "readthedocs.yaml", "readthedocs.yml"),
+)
+# Read the Docs reads the first file matching `^\.?readthedocs.ya?ml$` in
+# directory-listing order, so any of them is the configuration.
+LOCATIONS = DocumentLocations(
+    TARGET, aliases=(".readthedocs.yml", "readthedocs.yaml", "readthedocs.yml")
 )
 JOBS = ("build", "jobs")
 # Top-level settings that configure the default steps Protostar's jobs replace.
 _DEFAULT_STEP_SETTINGS = ("sphinx", "mkdocs", "python", "conda")
 
 
-def guard_build(desired: Value, local: Value, base: Value) -> YamlGuard:
+def guard_build(file: str, desired: Value, local: Value, base: Value) -> YamlGuard:
     """Holds ``build.jobs`` when the local configuration builds another way.
 
     A configuration builds another way when a non-empty ``build.commands``
@@ -44,6 +47,7 @@ def guard_build(desired: Value, local: Value, base: Value) -> YamlGuard:
     not warned until Protostar's jobs change.
 
     Args:
+        file: Workspace path of the configuration being reconciled.
         desired: Decoded generated configuration.
         local: Decoded workspace configuration, empty when the file is absent.
         base: Previously owned baseline, or ``MISSING``.
@@ -62,5 +66,5 @@ def guard_build(desired: Value, local: Value, base: Value) -> YamlGuard:
     withheld = not semantic_equal(wanted, lookup(base, JOBS)) and not semantic_equal(
         wanted, lookup(local, JOBS)
     )
-    conflict = MergeConflict(MergeLocation(TARGET, JOBS), ConflictReason.UNOWNED)
+    conflict = MergeConflict(MergeLocation(file, JOBS), ConflictReason.UNOWNED)
     return YamlGuard((JOBS,), (conflict,) if withheld else ())
