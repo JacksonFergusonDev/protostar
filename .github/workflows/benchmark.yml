@@ -51,7 +51,7 @@ jobs:
         name: Protostar Initialization Latency
         tool: 'customSmallerIsBetter'
         output-file-path: benchmark-gh.json
-        gh-pages-branch: 'performance-benchmarks'
+        gh-pages-branch: 'gh-pages'
         benchmark-data-dir-path: 'benchmarks'
         github-token: ${{ secrets.GITHUB_TOKEN }}
         fail-on-alert: true

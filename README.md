@@ -96,7 +96,7 @@ Protostar is built to be lightweight, so Python's startup overhead never slows d
 
 Our CI pipeline enforces a strict performance budget using `hyperfine`, gating any PR that introduces significant regressions in either path. We maintain historical tracking to ensure long-term architectural stability rather than chasing absolute CI metrics (which are subject to heavy VM variance).
 
-- **View CI Trends:** [Performance Dashboard](https://jacksonfergusondev.github.io/protostar/benchmarks/)
+- **View CI Trends:** [Performance Dashboard](https://protostar.jacksonferguson.me/benchmarks/)
 
 ---
 
