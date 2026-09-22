@@ -1,0 +1,13 @@
+{
+  "api_version": 0,
+  "status": "success",
+  "result": {
+    "touched_paths": [
+      ".gitignore",
+      "pyproject.toml",
+      "src/my_app/__init__.py",
+      "tests/test_cli.py"
+    ],
+    "diagnostics": []
+  }
+}

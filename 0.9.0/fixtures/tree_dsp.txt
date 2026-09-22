@@ -1,0 +1,19 @@
+.
+├── .envrc
+├── .gitignore
+├── .python-version
+├── data
+│   └── samples
+│       ├── bounces
+│       │   └── .gitkeep
+│       └── raw
+│           └── .gitkeep
+├── justfile
+├── notebooks
+├── pyproject.toml
+├── src
+│   └── demo_project
+│       ├── analysis
+│       └── effects
+├── tests
+└── uv.lock

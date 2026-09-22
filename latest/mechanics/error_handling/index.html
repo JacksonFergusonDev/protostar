@@ -1,0 +1,2038 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="High-velocity, zero-friction Python environment scaffolding.">
+      
+      
+      
+        <link rel="canonical" href="https://protostar.jacksonferguson.me/0.9.0/mechanics/error_handling/">
+      
+      
+        <link rel="prev" href="../modules/">
+      
+      
+        <link rel="next" href="../../developer/overview/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="zensical-0.0.59">
+    
+    
+      
+        <title>Error Handling - Protostar</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.5da3a30f.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.812a03bb.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m11.62%201%205.66%205.67-2.12%202.12-2.12-2.12-1.42%201.42%202.33%202.32-1.16%201.17.45.46a2.5%202.5%200%200%201%202.83.5l-3.53%203.53a2.5%202.5%200%200%201-.5-2.83l-.46-.45-1.17%201.16-2.32-2.33-1.42%201.42%202.12%202.12-2.12%202.12L1%2011.62%203.14%209.5l2.12%202.12%201.41-1.41-2.83-2.83c-.78-.78-.78-2.05%200-2.83l.71-.71c.78-.78%202.05-.78%202.83%200l2.83%202.83%201.41-1.41L9.5%203.14zM18%2014a4%204%200%200%201-4%204v-2a2%202%200%200%200%202-2zm4%200a8%208%200%200%201-8%208v-2a6%206%200%200%200%206-6z%22/%3E%3C/svg%3E');--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m21.9%208.9-1.7%201-4-6.9%201.7-1zm-12.1-1%203%205.2%206.1-3.5-3-5.2zm1.6%204.8-2-3.5-4.3%202.5%202%203.5zm-9.3%201.9%201%201.7%202.6-1.5-1-1.7zm10-.6-.3-.4-4.3%202.5.3.4c.2.3.5.6.8.8L7%2022h2l1.4-4.3h.1L12%2022h2l-1.9-5.6c.5-.7.5-1.6%200-2.4%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22m13.13%2022.19-1.63-3.83c1.57-.58%203.04-1.36%204.4-2.27zM5.64%2012.5l-3.83-1.63%206.1-2.77C7%209.46%206.22%2010.93%205.64%2012.5M21.61%202.39S16.66.269%2011%205.93c-2.19%202.19-3.5%204.6-4.35%206.71-.28.75-.09%201.57.46%202.13l2.13%202.12c.55.56%201.37.74%202.12.46A19.1%2019.1%200%200%200%2018.07%2013c5.66-5.66%203.54-10.61%203.54-10.61m-7.07%207.07c-.78-.78-.78-2.05%200-2.83s2.05-.78%202.83%200c.77.78.78%202.05%200%202.83s-2.05.78-2.83%200m-5.66%207.07-1.41-1.41zM6.24%2022l3.64-3.64c-.34-.09-.67-.24-.97-.45L4.83%2022zM2%2022h1.41l4.77-4.76-1.42-1.41L2%2020.59zm0-2.83%204.09-4.08c-.21-.3-.36-.62-.45-.97L2%2017.76z%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M13%2014h-2V9h2m0%209h-2v-2h2M1%2021h22L12%202z%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#error-handling-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Protostar" class="md-header__button md-logo" aria-label="Protostar" data-md-component="logo">
+      
+  <img src="../../assets/favicon.svg" alt="Protostar">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Protostar
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Error Handling
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/jacksonfergusondev/protostar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M96 256h32v256H0V352h32v-32h32v-32h32zm416 96v160H384V256h32v32h32v32h32v32zM320 64h32v384h-32v-32H192v32h-32V64h32V32h32V0h64v32h32zm-32 64h-64v64h64z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jacksonfergusondev/protostar
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Protostar" class="md-nav__button md-logo" aria-label="Protostar" data-md-component="logo">
+      
+  <img src="../../assets/favicon.svg" alt="Protostar">
+
+    </a>
+    Protostar
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jacksonfergusondev/protostar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M96 256h32v256H0V352h32v-32h32v-32h32zm416 96v160H384V256h32v32h32v32h32v32zM320 64h32v384h-32v-32H192v32h-32V64h32V32h32V0h64v32h32zm-32 64h-64v64h64z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jacksonfergusondev/protostar
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20 22-3.86-1.55c.7-1.53 1.2-3.11 1.51-4.72zM7.86 20.45 4 22l2.35-6.27c.31 1.61.81 3.19 1.51 4.72M12 2s5 2 5 10c0 3.1-.75 5.75-1.67 7.83A2 2 0 0 1 13.5 21h-3a2 2 0 0 1-1.83-1.17C7.76 17.75 7 15.1 7 12c0-8 5-10 5-10m0 10c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Getting Started
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why-protostar/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m13.13 22.19-1.63-3.83c1.57-.58 3.04-1.36 4.4-2.27zM5.64 12.5l-3.83-1.63 6.1-2.77C7 9.46 6.22 10.93 5.64 12.5M21.61 2.39S16.66.269 11 5.93c-2.19 2.19-3.5 4.6-4.35 6.71-.28.75-.09 1.57.46 2.13l2.13 2.12c.55.56 1.37.74 2.12.46A19.1 19.1 0 0 0 18.07 13c5.66-5.66 3.54-10.61 3.54-10.61m-7.07 7.07c-.78-.78-.78-2.05 0-2.83s2.05-.78 2.83 0c.77.78.78 2.05 0 2.83s-2.05.78-2.83 0m-5.66 7.07-1.41-1.41zM6.24 22l3.64-3.64c-.34-.09-.67-.24-.97-.45L4.83 22zM2 22h1.41l4.77-4.76-1.42-1.41L2 20.59zm0-2.83 4.09-4.08c-.21-.3-.36-.62-.45-.97L2 17.76z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Why Protostar?
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../design-principles/" class="md-nav__link">
+        
+  
+  
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11h3v2h-3zM1 11h3v2H1zM13 1v3h-2V1zM4.92 3.5l2.13 2.14-1.42 1.41L3.5 4.93zm12.03 2.13 2.12-2.13 1.43 1.43-2.13 2.12zM12 6a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.8c-1.79-1.04-3-2.98-3-5.2a6 6 0 0 1 6-6m2 15v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1zm-3-3h2v-2.13c1.73-.44 3-2.01 3-3.87a4 4 0 0 0-4-4 4 4 0 0 0-4 4c0 1.86 1.27 3.43 3 3.87z"/></svg>
+  
+  <span class="md-ellipsis">
+    
+  
+  Design Principles
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  User Guide
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  User Guide
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/init/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Initialization
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Templates & Portable Configs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/authoring-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authoring Templates
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/tooling-matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Tooling & Flags Matrix
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Global Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/agent-interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Agent & Machine Interface
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CLI Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Troubleshooting & FAQ
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Mechanics
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Mechanics
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manifest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Manifest
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../orchestrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Orchestrator
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../executor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Executor
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Modules
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Error Handling
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Error Handling
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-errors-propagate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How Errors Propagate
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Exception Hierarchy
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Exception Hierarchy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protostarerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>ProtostarError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configurationerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>ConfigurationError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkfetcherror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>NetworkFetchError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templateresolutionerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>TemplateResolutionError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspacecollisionerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>WorkspaceCollisionError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#missingdependencyerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>MissingDependencyError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commandexecutionerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>CommandExecutionError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commandtimeouterror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>CommandTimeoutError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filesystemerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>FileSystemError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#securityviolationerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>SecurityViolationError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executionabortederror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>ExecutionAbortedError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partialexecutionabortederror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>PartialExecutionAbortedError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#machine-readable-error-envelopes-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Machine-Readable Error Envelopes (<code>--json</code>)
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#posix-exit-code-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        POSIX Exit Code Matrix
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crash-diagnostics-and-telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Crash Diagnostics and Telemetry
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Crash Diagnostics and Telemetry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verbose-logging-verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Verbose Logging (<code>--verbose</code>)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-bug-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Automated Bug Reporting
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        API Reference
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-guides-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Related Guides &amp; References
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Developer Guide
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Developer Guide
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Overview
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/extending-protostar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Extending Protostar
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Testing & Philosophy
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../developer/api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API Reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-errors-propagate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How Errors Propagate
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The Exception Hierarchy
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The Exception Hierarchy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#protostarerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>ProtostarError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configurationerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>ConfigurationError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkfetcherror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>NetworkFetchError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templateresolutionerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>TemplateResolutionError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workspacecollisionerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>WorkspaceCollisionError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#missingdependencyerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>MissingDependencyError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commandexecutionerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>CommandExecutionError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commandtimeouterror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>CommandTimeoutError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filesystemerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>FileSystemError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#securityviolationerror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>SecurityViolationError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executionabortederror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>ExecutionAbortedError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#partialexecutionabortederror" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        <code>PartialExecutionAbortedError</code>
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#machine-readable-error-envelopes-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Machine-Readable Error Envelopes (<code>--json</code>)
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#posix-exit-code-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        POSIX Exit Code Matrix
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#crash-diagnostics-and-telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Crash Diagnostics and Telemetry
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Crash Diagnostics and Telemetry">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#verbose-logging-verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Verbose Logging (<code>--verbose</code>)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#automated-bug-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Automated Bug Reporting
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        API Reference
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-guides-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Related Guides &amp; References
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../manifest/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Mechanics
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+<h1 id="error-handling-architecture">Error Handling Architecture<a class="headerlink" href="#error-handling-architecture" title="Permanent link">&para;</a></h1>
+<p>Protostar handles errors predictably so that failed runs never leave your workspace broken or half-configured.</p>
+<p>During standard CLI usage, operational errors are caught at the top level of the CLI, displayed in clean terminal panels with helpful installation hints, and routed to standard POSIX exit codes.</p>
+<div class="grid cards">
+<ul>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 11c0 5.55-3.84 10.74-9 12-5.16-1.26-9-6.45-9-12V5l9-4 9 4zm-9 10c3.75-1 7-5.46 7-9.78V6.3l-7-3.12L5 6.3v4.92C5 15.54 8.25 20 12 21M11 7h2v6h-2zm0 8h2v2h-2z"/></svg></span> <strong>Fail-Fast Verification</strong></p>
+<p>System dependencies and configuration constraints are verified during the <code>pre_flight()</code> phase <em>before</em> any disk mutations occur. If a binary is missing, execution halts immediately with <code>MissingDependencyError</code> before creating files or directories.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 19v-3h8v3zm-4.5-6L2.47 7h4.24l4.96 4.95c.58.59.58 1.55 0 2.12L6.74 19H2.5z"/></svg></span> <strong>Rich Terminal Formatting</strong></p>
+<p>All operational failures inherit from <code>ProtostarError</code>. The CLI entry point traps these exceptions and renders them as styled Rich panels with explicit titles, captured subprocess output, and decoupled remediation hints.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 3h2v2H5v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5h2v2H5c-1.07-.27-2-.9-2-2v-4a2 2 0 0 0-2-2H0v-2h1a2 2 0 0 0 2-2V5a2 2 0 0 1 2-2m14 0a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1v2h-1a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-2v-2h2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5h-2V3zm-7 12a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m-4 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1m8 0a1 1 0 0 1 1 1 1 1 0 0 1-1 1 1 1 0 0 1-1-1 1 1 0 0 1 1-1"/></svg></span> <strong>Subprocess Telemetry</strong></p>
+<p>Subprocess calls executed by <code>system.run_command</code> capture both <code>stdout</code> and <code>stderr</code>. On non-zero exits or timeouts, detailed output streams are preserved in <code>CommandExecutionError</code> or <code>CommandTimeoutError</code> without flattening diagnostic context.</p>
+</li>
+<li>
+<p><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 17V9H2V7h4v10zm18-2a2 2 0 0 1-2 2h-4v-2h4v-2h-2v-2h2V9h-4V7h4a2 2 0 0 1 2 2v1.5a1.5 1.5 0 0 1-1.5 1.5 1.5 1.5 0 0 1 1.5 1.5zm-8 0v2H8v-4a2 2 0 0 1 2-2h2V9H8V7h4a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2v2z"/></svg></span> <strong>POSIX Exit Code Compliance</strong></p>
+<p>Protostar maps domain exception types directly to standard POSIX exit codes (e.g., <code>EX_CONFIG</code>, <code>EX_UNAVAILABLE</code>, <code>EX_IOERR</code>), ensuring seamless integration with CI/CD runners and shell scripts.</p>
+</li>
+</ul>
+</div>
+<hr />
+<h2 id="how-errors-propagate">How Errors Propagate<a class="headerlink" href="#how-errors-propagate" title="Permanent link">&para;</a></h2>
+<p>The flow below illustrates how errors propagate from deep pipeline operations (pre-flight checks, AST validation, shell subprocesses) up to the top-level CLI boundary in <code>cli.py</code>:</p>
+<pre class="mermaid"><code>flowchart TD
+    %%{init: {'flowchart': {'useMaxWidth': false}}}%%
+    %% Styling
+    classDef core fill:#1e293b,stroke:#00e5ff,stroke-width:2px,color:#fff;
+    classDef phase fill:#334155,stroke:#475569,stroke-width:1px,color:#e2e8f0;
+    classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
+    classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
+
+    Start([CLI Invocation]) --&gt; PreFlight
+
+    subgraph PreFlight [1. Pre-Flight Checks]
+        direction TB
+        PF{Missing Dependency?}:::phase
+        PF -- Yes --&gt; E_Dep["Missing&lt;br/&gt;DependencyError"]:::error
+        PF -- No --&gt; Config["2. Config &amp;&lt;br/&gt;Manifest Parsing"]:::phase
+    end
+
+    subgraph Parsing [2. Configuration &amp; AST]
+        direction TB
+        Config{Malformed TOML / Spec?}:::phase
+        Config -- Yes --&gt; E_Cfg["Configuration&lt;br/&gt;Error"]:::error
+        Config -- No --&gt; Net{"Remote Template&lt;br/&gt;/ Network?"}:::phase
+        Net -- "Network Drop&lt;br/&gt;/ Insecure" --&gt; E_Net["Network&lt;br/&gt;FetchError"]:::error
+        Net -- "Bad Zip&lt;br/&gt;/ Missing Vars" --&gt; E_Tmpl["Template&lt;br/&gt;ResolutionError"]:::error
+        Net -- Success --&gt; Execution["3. Side-Effect&lt;br/&gt;Realization"]:::phase
+    end
+
+    subgraph SideEffects [3. Disk &amp; Subprocess Execution]
+        direction TB
+        Execution --&gt; Disk{Disk I/O Fault?}:::phase
+        Disk -- Yes --&gt; E_FS["FileSystem&lt;br/&gt;Error"]:::error
+        Disk -- No --&gt; Sub{Subprocess Fault?}:::phase
+        Sub -- Exit != 0 --&gt; E_Exec["Command&lt;br/&gt;ExecutionError"]:::error
+        Sub -- Timeout --&gt; E_Time["Command&lt;br/&gt;TimeoutError"]:::error
+        Sub -- Success --&gt; End([Environment Stabilized]):::success
+    end
+
+    E_Dep &amp; E_Cfg &amp; E_Net &amp; E_Tmpl &amp; E_FS &amp; E_Exec &amp; E_Time --&gt; Handler[cli.py :: main Trap]:::core
+
+    Handler --&gt; Panel[Format Rich Error Panel &amp; Output Detail]
+    Panel --&gt; POSIX{POSIX Exit Code Router}
+
+    POSIX -- ConfigurationError --&gt; EX78([os.EX_CONFIG: 78]):::error
+    POSIX -- NetworkFetchError --&gt; EX75([os.EX_TEMPFAIL: 75]):::error
+    POSIX -- TemplateResolutionError --&gt; EX65([os.EX_DATAERR: 65]):::error
+    POSIX -- MissingDependencyError --&gt; EX69([os.EX_UNAVAILABLE: 69]):::error
+    POSIX -- FileSystemError --&gt; EX74([os.EX_IOERR: 74]):::error
+    POSIX -- SecurityViolationError --&gt; EX77([os.EX_NOPERM: 77]):::error
+    POSIX -- ExecutionAbortedError --&gt; EX130([Exit Code 130]):::error
+    POSIX -- Other ProtostarError --&gt; EX1([Exit Code 1]):::error</code></pre>
+<hr />
+<h2 id="the-exception-hierarchy">The Exception Hierarchy<a class="headerlink" href="#the-exception-hierarchy" title="Permanent link">&para;</a></h2>
+<p>All domain-modeled operational exceptions inherit from <code>ProtostarError</code> in <code>protostar.errors</code>.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>ProtostarError (Exception)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a> ├── ConfigurationError
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a> ├── NetworkFetchError
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a> ├── TemplateResolutionError
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a> ├── WorkspaceCollisionError
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a> ├── MissingDependencyError
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a> ├── CommandExecutionError
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a> ├── CommandTimeoutError
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a> ├── FileSystemError
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a> ├── SecurityViolationError
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a> └── ExecutionAbortedError
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>      └── PartialExecutionAbortedError
+</span></code></pre></div>
+<h3 id="protostarerror"><code>ProtostarError</code><a class="headerlink" href="#protostarerror" title="Permanent link">&para;</a></h3>
+<p>Base exception for all expected operational failures in Protostar. Accepts a descriptive <code>message</code> and an optional <code>hint</code> parameter containing actionable installation or remediation instructions.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">ProtostarError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">hint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<h3 id="configurationerror"><code>ConfigurationError</code><a class="headerlink" href="#configurationerror" title="Permanent link">&para;</a></h3>
+<p>Raised when a configuration file (such as <code>protostar.toml</code> or <code>pyproject.toml</code>) is malformed, invalid, or contains type/syntax mismatches. Also raised for invalid configuration flags or CLI parameter collisions.</p>
+<h3 id="networkfetcherror"><code>NetworkFetchError</code><a class="headerlink" href="#networkfetcherror" title="Permanent link">&para;</a></h3>
+<p>Raised when remote configuration or template downloads fail due to network disconnection, SSL errors, or attempts to fetch resources across unencrypted <code>http://</code> protocols.</p>
+<h3 id="templateresolutionerror"><code>TemplateResolutionError</code><a class="headerlink" href="#templateresolutionerror" title="Permanent link">&para;</a></h3>
+<p>Raised when a template target is found but cannot be parsed, extracted, or resolved. Triggers on corrupt archive structures, unsupported archive formats, missing <code>protostar.toml</code> files within archives, or unsatisfied template placeholder variables.</p>
+<h3 id="workspacecollisionerror"><code>WorkspaceCollisionError</code><a class="headerlink" href="#workspacecollisionerror" title="Permanent link">&para;</a></h3>
+<p>Raised during the engine's <code>plan()</code> phase when existing workspace configuration markers (such as <code>pyproject.toml</code>) are detected and no explicit <code>--force-merge</code> or <code>--force-replace</code> flag is active. Exposes structured collision data via its <code>paths: frozenset[Path]</code> attribute.</p>
+<h3 id="missingdependencyerror"><code>MissingDependencyError</code><a class="headerlink" href="#missingdependencyerror" title="Permanent link">&para;</a></h3>
+<p>Raised during pre-flight checks when a system-level binary (such as <code>uv</code>, <code>cargo</code>, <code>git</code>, <code>direnv</code>, or <code>just</code>) is missing from <code>$PATH</code>. Stores the missing dependency name, its operational purpose, and an installation hint.</p>
+<h3 id="commandexecutionerror"><code>CommandExecutionError</code><a class="headerlink" href="#commandexecutionerror" title="Permanent link">&para;</a></h3>
+<p>Raised when a managed shell subprocess returns a non-zero exit code. Captures the command line list, return code, <code>stdout</code>, and <code>stderr</code>. Provides a display-ready <code>output_detail</code> property for terminal rendering.</p>
+<h3 id="commandtimeouterror"><code>CommandTimeoutError</code><a class="headerlink" href="#commandtimeouterror" title="Permanent link">&para;</a></h3>
+<p>Raised when a subprocess exceeds its allotted execution window. Automatically attaches a remediation hint regarding network stalls or unresponsive package registries.</p>
+<h3 id="filesystemerror"><code>FileSystemError</code><a class="headerlink" href="#filesystemerror" title="Permanent link">&para;</a></h3>
+<p>Raised when a local disk operation (read, write, directory creation, or serialization) fails due to an <code>OSError</code> or encoding exception. Preserves the operation name, target file path, and original cause.</p>
+<h3 id="securityviolationerror"><code>SecurityViolationError</code><a class="headerlink" href="#securityviolationerror" title="Permanent link">&para;</a></h3>
+<p>Raised when a template or archive attempts an unauthorized filesystem operation (such as Zip Slip path traversal).</p>
+<h3 id="executionabortederror"><code>ExecutionAbortedError</code><a class="headerlink" href="#executionabortederror" title="Permanent link">&para;</a></h3>
+<p>Raised when you explicitly abort execution via an interactive prompt.</p>
+<h3 id="partialexecutionabortederror"><code>PartialExecutionAbortedError</code><a class="headerlink" href="#partialexecutionabortederror" title="Permanent link">&para;</a></h3>
+<p>Subclass of <code>ExecutionAbortedError</code>. Raised when execution is interrupted after disk mutations have begun, formatting and reporting all touched/scaffolded workspace paths via an immutable <code>frozenset[str]</code>.</p>
+<hr />
+<h2 id="machine-readable-error-envelopes-json">Machine-Readable Error Envelopes (<code>--json</code>)<a class="headerlink" href="#machine-readable-error-envelopes-json" title="Permanent link">&para;</a></h2>
+<p>When running in <code>--json</code> mode, Protostar suppresses all terminal UI formatting, spinners, and interactive prompts. Instead, exceptions are intercepted and emitted as structured single-line JSON envelopes to <code>stdout</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">"api_version"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"error"</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">"error"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"WorkspaceCollisionError"</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Workspace collision detected: existing configuration files found in the workspace:\n  - pyproject.toml\nUse --force-merge or --force-replace to bypass, or resolve interactively."</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">    </span><span class="nt">"docs_url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://protostar.readthedocs.io/en/stable/usage/troubleshooting/#workspace-collisions"</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nt">"paths"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="s2">"pyproject.toml"</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="p">]</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>The error envelope guarantees:</p>
+<ul>
+<li><strong>Clean Parsing:</strong> <code>stdout</code> contains only valid JSON. Debug traces and logs are routed exclusively to <code>stderr</code>.</li>
+<li><strong>Structured Fields:</strong> Error objects include <code>type</code>, <code>message</code>, and optional contextual helpers (<code>hint</code>, <code>docs_url</code>, and <code>paths</code> for collisions).</li>
+<li><strong>POSIX Status Codes:</strong> The process exits with the exact same POSIX exit code defined in the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.</li>
+</ul>
+<hr />
+<h2 id="posix-exit-code-matrix">POSIX Exit Code Matrix<a class="headerlink" href="#posix-exit-code-matrix" title="Permanent link">&para;</a></h2>
+<p>Protostar routes operational exceptions to standard UNIX exit codes (defined in <code>os</code>), allowing automation tooling and CI pipelines to programmatically identify failure causes:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Exit Code</th>
+<th style="text-align: left;">POSIX Name</th>
+<th style="text-align: left;">Exception Class</th>
+<th style="text-align: left;">Trigger Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>0</code></td>
+<td style="text-align: left;"><code>EX_OK</code></td>
+<td style="text-align: left;"><em>None</em></td>
+<td style="text-align: left;">Successful execution</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;">Generic Exit</td>
+<td style="text-align: left;"><code>CommandExecutionError</code><br><code>CommandTimeoutError</code></td>
+<td style="text-align: left;">Subprocess failure or command timeout</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>64</code></td>
+<td style="text-align: left;"><code>os.EX_USAGE</code></td>
+<td style="text-align: left;"><code>InvalidUsageError</code></td>
+<td style="text-align: left;">Invalid CLI arguments or command usage syntax</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>65</code></td>
+<td style="text-align: left;"><code>os.EX_DATAERR</code></td>
+<td style="text-align: left;"><code>TemplateResolutionError</code></td>
+<td style="text-align: left;">Template resolution error (corrupted archive, missing variables)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>69</code></td>
+<td style="text-align: left;"><code>os.EX_UNAVAILABLE</code></td>
+<td style="text-align: left;"><code>MissingDependencyError</code></td>
+<td style="text-align: left;">Missing required system binary (<code>uv</code>, <code>git</code>, etc.)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>70</code></td>
+<td style="text-align: left;"><code>os.EX_SOFTWARE</code></td>
+<td style="text-align: left;"><em>(Unhandled exception)</em></td>
+<td style="text-align: left;">Unhandled internal Python bug (prompts automated bug report)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>74</code></td>
+<td style="text-align: left;"><code>os.EX_IOERR</code></td>
+<td style="text-align: left;"><code>FileSystemError</code></td>
+<td style="text-align: left;">Local filesystem read/write or permission failure</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>75</code></td>
+<td style="text-align: left;"><code>os.EX_TEMPFAIL</code></td>
+<td style="text-align: left;"><code>NetworkFetchError</code></td>
+<td style="text-align: left;">Transient network failure during remote template download</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>77</code></td>
+<td style="text-align: left;"><code>os.EX_NOPERM</code></td>
+<td style="text-align: left;"><code>SecurityViolationError</code></td>
+<td style="text-align: left;">Security violation (e.g., path traversal Zip Slip)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>78</code></td>
+<td style="text-align: left;"><code>os.EX_CONFIG</code></td>
+<td style="text-align: left;"><code>ConfigurationError</code></td>
+<td style="text-align: left;">Invalid TOML syntax or conflicting CLI configuration</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>130</code></td>
+<td style="text-align: left;">Shell Signal</td>
+<td style="text-align: left;"><code>ExecutionAbortedError</code></td>
+<td style="text-align: left;">You aborted interactive wizard prompt (Ctrl+C)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="crash-diagnostics-and-telemetry">Crash Diagnostics and Telemetry<a class="headerlink" href="#crash-diagnostics-and-telemetry" title="Permanent link">&para;</a></h2>
+<p>Protostar cleanly separates expected operational failures from unexpected internal crashes:</p>
+<h3 id="verbose-logging-verbose">Verbose Logging (<code>--verbose</code>)<a class="headerlink" href="#verbose-logging-verbose" title="Permanent link">&para;</a></h3>
+<p>By default, expected operational failures output a clean Rich error panel without stack trace noise. Running any command with <code>--verbose</code> enables full debug logging and displays the full Python traceback:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>protostar<span class="w"> </span>init<span class="w"> </span>--verbose
+</span></code></pre></div>
+<h3 id="automated-bug-reporting">Automated Bug Reporting<a class="headerlink" href="#automated-bug-reporting" title="Permanent link">&para;</a></h3>
+<p>When Protostar encounters an unhandled internal exception (an unexpected bug or crash), it captures the traceback, gathers basic system details (OS, Python version, command run), generates a pre-filled GitHub issue URL, and exits with <code>os.EX_SOFTWARE</code> (<code>70</code>). Clicking the link opens a pre-formatted issue so bugs can be reported instantly.</p>
+<hr />
+<h2 id="api-reference">API Reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h2>
+<p>For detailed docstrings and class signatures, see the <a href="../../developer/api-reference/#class-definitions">Error Handling API Reference</a>.</p>
+<hr />
+<h2 id="related-guides-references">Related Guides &amp; References<a class="headerlink" href="#related-guides-references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../../usage/troubleshooting/">Troubleshooting &amp; FAQ</a>:</strong> Remediation steps for missing dependencies, collisions, and editor setups.</li>
+<li><strong><a href="../../usage/agent-interface/">Agent &amp; Machine Interface</a>:</strong> Learn how AI coding agents and CI runners parse machine error envelopes.</li>
+<li><strong><a href=".././orchestrator/">The Orchestrator</a>:</strong> Understand the top-level exception trap and diagnostic telemetry gathering.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../modules/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Modules">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Modules
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../developer/overview/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Overview
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      &copy; 2026 Jackson Ferguson. <a href="https://github.com/jacksonfergusondev/protostar/blob/main/LICENSE">License</a>
+    </div>
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jacksonfergusondev/protostar" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/jackson--ferguson/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:jackson.ferguson0@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l208 156a48 48 0 0 0 57.6 0l208-156c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48zM0 196v188c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V196L313.6 344.8c-34.1 25.6-81.1 25.6-115.2 0z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.copy","content.tabs.link","content.tooltips","navigation.footer","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.sections","navigation.top","search.highlight"],"search":"../../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":{"generator":false,"provider":"mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.6970bfe9.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.1/dist/bundle/asciinema-player.min.js" defer></script>
+      
+        <script src="../../javascripts/asciinema-init.js" defer></script>
+      
+    
+  </body>
+</html>

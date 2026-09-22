@@ -1,0 +1,382 @@
+:root {
+    --protostar-cyan: #22d3ee;
+    --protostar-radius: 8px;
+    --protostar-code-bg: #f8fafc;
+    --protostar-code-fg: #1e293b;
+    --protostar-code-border: #e2e8f0;
+    --protostar-term-prompt: #16a34a;
+
+    --md-code-bg-color: var(--protostar-code-bg);
+    --md-code-fg-color: var(--protostar-code-fg);
+}
+
+/* ====================================================================
+    1. UNIVERSAL LAYOUT (Always On)
+    Structure: Grids, flex, padding, margins, base typography.
+==================================================================== */
+
+/* --- Base Typography & Elements --- */
+.md-typeset h1 {
+    letter-spacing: 0.02em;
+}
+
+.md-typeset h2 {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+    padding-bottom: 0.35rem;
+    margin-top: 2.2rem;
+}
+
+.md-typeset code {
+    border-radius: 0.35rem;
+}
+
+/* --- Homepage Navigation --- */
+.protostar-home-nav {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+    margin-bottom: 3rem;
+}
+
+.md-typeset .protostar-home-nav a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0.55rem 0.8rem;
+    border-radius: var(--protostar-radius);
+    color: var(--md-default-fg-color--light);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.md-typeset .protostar-home-nav a:hover {
+    color: var(--protostar-cyan);
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.md-typeset .protostar-home-nav .protostar-home-nav__docs {
+    color: var(--md-default-fg-color);
+}
+
+.md-typeset .protostar-home-nav .protostar-home-nav__docs::after {
+    width: 5px;
+    height: 5px;
+    margin-left: 0.6rem;
+    border-radius: 50%;
+    background: var(--protostar-cyan);
+    content: "";
+}
+
+/* --- Hero Install Box & Copy Button --- */
+.protostar-command-label {
+    margin: 2rem 0 0.5rem;
+    color: var(--md-default-fg-color);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.protostar-install {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    max-width: 32rem;
+    min-height: 48px;
+    overflow: hidden;
+    border: 1px solid var(--protostar-code-border);
+    border-radius: var(--protostar-radius);
+    background: var(--protostar-code-bg);
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.protostar-install code {
+    padding: 0.75rem 0.9rem;
+    color: var(--protostar-code-fg);
+    background: transparent;
+    font-size: 0.78rem;
+    transition: color 0.25s ease;
+}
+
+.protostar-install code::before {
+    margin-right: 0.6rem;
+    color: var(--protostar-term-prompt);
+    /* Terminal green */
+    content: "$";
+    transition: color 0.25s ease;
+}
+
+.protostar-copy {
+    align-self: stretch;
+    min-width: 7.25rem;
+    border: 0;
+    border-left: 1px solid var(--protostar-code-border);
+    color: #000;
+    background: var(--protostar-cyan);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease, border-color 0.25s ease;
+}
+
+.protostar-copy:hover {
+    background: #00e5ff;
+}
+
+/* --- Left Nav Visual Hierarchy --- */
+
+/* Top-level page titles – bold & accented */
+.md-sidebar .md-nav--primary>.md-nav__list>.md-nav__item--nested>.md-nav__link {
+    font-weight: 700;
+    color: var(--protostar-cyan);
+    padding-left: 0.75rem;
+}
+
+/* --- Hero Section --- */
+.protostar-hero {
+    position: relative;
+    padding: 1rem 0 2rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    align-items: center;
+}
+
+@media (min-width: 960px) {
+    .protostar-hero {
+        grid-template-columns: 1fr 1fr;
+        gap: 3.5rem;
+    }
+}
+
+.hero-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Fluid, massive typography */
+.md-typeset .hero-content h1 {
+    max-width: 10ch;
+    margin: 0 0 1.25rem;
+    font-size: clamp(2.6rem, 4.8vw, 4.2rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    text-wrap: balance;
+    color: #0f172a;
+}
+
+.protostar-lede {
+    max-width: 54ch;
+    margin: 0;
+    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    line-height: 1.65;
+    color: var(--md-default-fg-color--light);
+}
+
+/* --- Hero Graphic Preview --- */
+.hero-preview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.hero-preview__img {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--protostar-radius);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero-preview__img:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* --- Card Grids --- */
+.protostar-grid,
+.md-typeset .grid.cards {
+    margin: 1.8rem 0;
+}
+
+.protostar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.protostar-card,
+.md-typeset .grid.cards>ul>li,
+.md-typeset .grid.cards>ol>li {
+    padding: 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid transparent;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease-in-out;
+}
+
+.protostar-card h3 {
+    margin-top: 0;
+    margin-bottom: 0.4rem;
+}
+
+/* --- Code Blocks --- */
+.md-typeset .highlight {
+    margin: 1.2rem 0;
+    border: 1px solid var(--protostar-code-border);
+    border-radius: var(--protostar-radius);
+    overflow: hidden;
+    transition: border-color 0.25s ease;
+}
+
+.md-typeset .highlight pre {
+    margin: 0;
+    line-height: 1.6;
+}
+
+.md-typeset .highlight pre code {
+    padding: 0.75rem 0.9rem;
+}
+
+/* Tab and Admonition Nested Code Block Spacing */
+.md-typeset .tabbed-content .highlight,
+.md-typeset .admonition .highlight {
+    margin: 0.8rem 0;
+}
+
+.protostar-asciinema {
+    width: 100%;
+    max-width: 820px;
+    margin: 1.5rem 0;
+    border-radius: 0.9rem;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.protostar-home .highlight {
+    max-width: 820px;
+}
+
+/* --- Footers --- */
+.md-footer,
+.md-footer-meta {
+    border-top: none;
+    background-color: var(--md-default-bg-color);
+}
+
+.md-footer__inner {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+}
+
+
+/* ====================================================================
+   2. DARK MODE THEMING (Slate Only)
+   Paint: Colors, shadows, gradients, opacity.
+   ==================================================================== */
+
+[data-md-color-scheme="slate"] {
+
+    /* Custom Variables */
+    --protostar-bg-base: #0a0a0a;
+    --protostar-text-soft: #a9b7d0;
+    --protostar-border: rgba(34, 211, 238, 0.14);
+    --protostar-card-bg: rgba(255, 255, 255, 0.025);
+    --protostar-code-bg: #0a0f1f;
+    --protostar-code-fg: #cdd6f4;
+    --protostar-code-border: var(--protostar-border);
+    --protostar-term-prompt: #a6e3a1;
+
+    /* MkDocs Overrides */
+    --md-default-bg-color: var(--protostar-bg-base);
+    --md-default-fg-color--light: var(--protostar-text-soft);
+    --md-typeset-a-color: var(--protostar-cyan);
+    --md-footer-bg-color: var(--protostar-bg-base);
+    --md-footer-bg-color--dark: var(--protostar-bg-base);
+    --md-code-bg-color: var(--protostar-code-bg);
+    --md-code-fg-color: var(--protostar-code-fg);
+
+    /* --- Navigation & Headers --- */
+    .md-nav__link--active,
+    .md-typeset a:hover {
+        text-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+    }
+
+    .md-typeset .hero-content h1 {
+        color: #ffffff;
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.12);
+    }
+
+
+    /* --- Cards & Grids --- */
+    .protostar-card,
+    .md-typeset .grid.cards>ul>li,
+    .md-typeset .grid.cards>ol>li {
+        background: var(--protostar-card-bg);
+        border: 1px solid rgba(34, 211, 238, 0.08);
+        backdrop-filter: blur(4px);
+    }
+
+    .protostar-card:hover,
+    .md-typeset .grid.cards>ul>li:hover,
+    .md-typeset .grid.cards>ol>li:hover {
+        border-color: rgba(34, 211, 238, 0.15);
+        box-shadow: 0 0 30px rgba(34, 211, 238, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .protostar-asciinema {
+        border: 1px solid var(--protostar-border);
+        box-shadow: 0 0 45px rgba(34, 211, 238, 0.08);
+    }
+
+    .hero-preview__img {
+        box-shadow: 0 0 35px rgba(34, 211, 238, 0.1), 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .hero-preview__img:hover {
+        box-shadow: 0 0 45px rgba(34, 211, 238, 0.18), 0 16px 36px rgba(0, 0, 0, 0.5);
+    }
+
+    /* --- Tables --- */
+    .md-typeset table tr:nth-child(even) td {
+        background-color: rgba(40, 8, 130, 0.06);
+    }
+
+    .md-typeset table tr:nth-child(odd) td {
+        background-color: #00000005;
+    }
+
+    .md-typeset table thead tr th {
+        border-bottom: 1px solid var(--protostar-border);
+        color: white;
+        letter-spacing: 0.03em;
+    }
+
+    /* --- Footers --- */
+    .md-footer,
+    .md-footer-meta {
+        background-color: var(--protostar-bg-base);
+    }
+}
+
+.mermaid {
+    overflow: auto;
+    max-width: 100%;
+    margin: 1.2em 0;
+    background: transparent;
+    border: none;
+}
+
+.mermaid svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
