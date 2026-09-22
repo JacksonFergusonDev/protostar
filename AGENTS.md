@@ -31,7 +31,7 @@ Execution is strictly split into two decoupled phases:
 ### 2. The Headless Core
 
 - The core engine (`Orchestrator`, `SystemExecutor`, `BootstrapModule`, etc.) is **strictly headless**.
-- **Never** import or call UI/terminal interaction packages (`rich.console`, `questionary`, progress spinners) inside engine modules.
+- **Never** import or call UI/terminal interaction packages (`rich.console`, `questionary`, progress spinners) inside engine modules. `tests/test_headless_boundary.py` enforces this: importing any module outside `protostar.cli` must not load `rich`, `questionary`, `prompt_toolkit`, or `textual`.
 - Terminal prompts, wizards, interactive conflict resolvers (`Merge`, `Overwrite`, `Abort`), and the progress trail belong exclusively to the CLI layer (`src/protostar/cli/`).
 - Engine code communicates via immutable request/result models and raises domain exceptions.
 - **Progress crosses the boundary only through `ProgressStep`** (`src/protostar/progress.py`). Wrap each new subprocess or slow operation in `with self.progress("<present-progressive label>"):`. Never use logging as a UI channel.

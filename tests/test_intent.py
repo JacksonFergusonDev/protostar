@@ -449,14 +449,14 @@ def test_export_schema_describes_named_records_and_excludes_runtime_provenance(
 
 
 def test_wizard_resolution_retains_builtin_reference(mocker, monkeypatch):
-    from protostar.wizard import run_init_wizard
+    from protostar.cli.wizard import run_init_wizard
 
     monkeypatch.delenv("PROTOSTAR_BENCHMARK_WIZARD", raising=False)
-    mocker.patch("protostar.wizard._should_run_wizard", return_value=True)
-    mocker.patch("protostar.wizard.UserConfig.load", return_value=UserConfig())
-    mocker.patch("protostar.wizard.select", return_value="api")
-    mocker.patch("protostar.wizard.checkbox", return_value=[])
-    mocker.patch("protostar.wizard.prompt_metadata", return_value={})
+    mocker.patch("protostar.cli.wizard._should_run_wizard", return_value=True)
+    mocker.patch("protostar.cli.wizard.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.wizard.select", return_value="api")
+    mocker.patch("protostar.cli.wizard.checkbox", return_value=[])
+    mocker.patch("protostar.cli.wizard.prompt_metadata", return_value={})
     selections = run_init_wizard()
     assert selections is not None
     assert selections.blueprint is not None

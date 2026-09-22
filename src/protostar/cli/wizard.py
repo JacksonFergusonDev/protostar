@@ -8,12 +8,17 @@ from typing import Any
 
 from rich.console import Console
 
-from .config import TemplateBlueprint, UserConfig
-from .errors import ConfigurationError, ExecutionAbortedError
-from .metadata import METADATA_FIELDS, MetadataKey, PromptType
-from .modules import TOOLING_MODULES, BootstrapModule, PreCommitModule, PrekModule
-from .system import is_interactive
-from .ui import Choice, Separator, Style, checkbox, select, text
+from protostar.cli.prompts import Choice, Separator, Style, checkbox, select, text
+from protostar.config import TemplateBlueprint, UserConfig
+from protostar.errors import ConfigurationError, ExecutionAbortedError
+from protostar.metadata import METADATA_FIELDS, MetadataKey, PromptType
+from protostar.modules import (
+    TOOLING_MODULES,
+    BootstrapModule,
+    PreCommitModule,
+    PrekModule,
+)
+from protostar.system import is_interactive
 
 
 @dataclass
@@ -61,7 +66,7 @@ def run_init_wizard() -> WizardSelections | None:
     if not _should_run_wizard():
         return None
 
-    from .templates import TemplateType, discover_templates
+    from protostar.templates import TemplateType, discover_templates
 
     config = UserConfig.load()
     discovered = discover_templates(config=config)

@@ -1,5 +1,3 @@
-import sys
-
 from protostar.config import UserConfig
 from protostar.metadata import resolve_auto_metadata
 
@@ -58,17 +56,6 @@ def test_resolve_auto_metadata_subset_keys():
 
     assert metadata == {"author_name": "Bob"}
     assert "docker_port" not in metadata
-
-
-def test_metadata_layer_has_no_questionary_dependency():
-    """Verify that metadata module does not depend on or expose questionary."""
-    import protostar.metadata
-
-    assert not hasattr(protostar.metadata, "questionary")
-    assert (
-        "questionary" not in sys.modules
-        or "questionary" not in protostar.metadata.__dict__
-    )
 
 
 def test_resolve_auto_metadata_with_enum_keys():

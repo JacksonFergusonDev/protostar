@@ -17,6 +17,8 @@ from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import schema
+from protostar.cli.prompts import Choice, confirm, select
+from protostar.cli.prompts import Style as UIStyle
 from protostar.config import active_config_source
 from protostar.errors import (
     ExecutionAbortedError,
@@ -28,8 +30,6 @@ from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
 from protostar.models import ExecutionResult, InitRequest
 from protostar.progress import ProgressStep
 from protostar.system import is_interactive
-from protostar.ui import Choice, confirm, select
-from protostar.ui import Style as UIStyle
 
 if TYPE_CHECKING:
     from protostar.orchestrator import Orchestrator

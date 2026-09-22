@@ -1,29 +1,37 @@
 import questionary
 
-from protostar.ui import Choice, Separator, Style, checkbox, confirm, select, text
+from protostar.cli.prompts import (
+    Choice,
+    Separator,
+    Style,
+    checkbox,
+    confirm,
+    select,
+    text,
+)
 
 
-def test_ui_lazy_choice():
-    """Verify that ui.Choice returns a native questionary Choice instance."""
+def test_prompts_lazy_choice():
+    """Verify that prompts.Choice returns a native questionary Choice instance."""
     choice = Choice("Title", value="val")
     assert isinstance(choice, questionary.Choice)
     assert choice.title == "Title"
     assert choice.value == "val"
 
 
-def test_ui_lazy_separator():
-    """Verify that ui.Separator returns a native questionary Separator instance."""
+def test_prompts_lazy_separator():
+    """Verify that prompts.Separator returns a native questionary Separator instance."""
     sep = Separator("--- separator ---")
     assert isinstance(sep, questionary.Separator)
 
 
-def test_ui_lazy_style():
-    """Verify that ui.Style returns a native questionary Style instance."""
+def test_prompts_lazy_style():
+    """Verify that prompts.Style returns a native questionary Style instance."""
     st = Style([("qmark", "fg:#ff0000 bold")])
     assert isinstance(st, questionary.Style)
 
 
-def test_ui_select(mocker):
+def test_prompts_select(mocker):
     """Verify that select forwards message and choices to questionary and returns answer."""
     mock_question = mocker.MagicMock()
     mock_question.ask.return_value = "selected_item"
@@ -36,7 +44,7 @@ def test_ui_select(mocker):
     mock_question.ask.assert_called_once_with(kbi_msg="")
 
 
-def test_ui_confirm(mocker):
+def test_prompts_confirm(mocker):
     """Verify that confirm forwards parameters to questionary and returns bool."""
     mock_question = mocker.MagicMock()
     mock_question.ask.return_value = True
@@ -49,7 +57,7 @@ def test_ui_confirm(mocker):
     mock_question.ask.assert_called_once_with(kbi_msg="")
 
 
-def test_ui_checkbox(mocker):
+def test_prompts_checkbox(mocker):
     """Verify that checkbox forwards parameters to questionary and returns list."""
     mock_question = mocker.MagicMock()
     mock_question.ask.return_value = ["item1", "item2"]
@@ -64,7 +72,7 @@ def test_ui_checkbox(mocker):
     mock_question.ask.assert_called_once_with(kbi_msg="")
 
 
-def test_ui_text(mocker):
+def test_prompts_text(mocker):
     """Verify that text forwards parameters to questionary and returns str."""
     mock_question = mocker.MagicMock()
     mock_question.ask.return_value = "entered text"
