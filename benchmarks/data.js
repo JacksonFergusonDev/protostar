@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790191875844,
+  "lastUpdate": 1790199457822,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16155,6 +16155,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 704.63,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4f68ead9aa3c2e4bf1528f121a3156e59889248",
+          "message": "feat(cli): mission-control theme for the TUI and printed output (#312)\n\n* feat(cli): mission-control theme for the TUI and printed output\n\nMatch the TUI and every printed CLI surface to the zensical docs' dark\n\nscheme: one shared palette with cyan as the only accent, ruled panels\nand headings instead of boxes, the ❊ mark in a masthead, and a tree\ncolored by kind. The recipe editor gains vertical space with a one-line\nheadline and buttons moved under the preview.\n\n* fix(cli): let a late preview plan survive app teardown\n\nOn exit Textual removes PlanPreview's children before cancelling its\nworker, so a debounced plan finishing in that window hit NoMatches on\n'#preview-summary' and failed the run (flaky on ubuntu / py3.12). The\npreview now holds its three lines instead of querying for them.",
+          "timestamp": "2026-09-23T14:35:47-07:00",
+          "tree_id": "4e6fc03d5949ed9f4866eea7cba15a917fa8fc7f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b4f68ead9aa3c2e4bf1528f121a3156e59889248"
+        },
+        "date": 1790199456346,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 156.9,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 599.05,
             "unit": "ms"
           }
         ]
