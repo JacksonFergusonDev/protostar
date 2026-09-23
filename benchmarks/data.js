@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790199457822,
+  "lastUpdate": 1790203038214,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16189,6 +16189,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 599.05,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "812f3c52868f8bd6886d0fb456bed09ea93195c3",
+          "message": "feat(sync)!: merge managed regions three ways (#315)\n\nAppend regions (AGENTS.md, template appends) record their last applied\nframed text instead of a SHA-256 digest and reconcile through the same\nreconcile_text gate as whole generated files: edits inside a region merge\nwith desired updates, overlaps keep the block whole and report their lines\nnumbered in the final file. CRLF files no longer freeze their regions.\nchecksum.py is deleted; no digest-based ownership remains.\n\nBREAKING CHANGE: region records store `baseline` instead of `digest`;\nolder lock files fail as unknown fields.",
+          "timestamp": "2026-09-23T15:34:58-07:00",
+          "tree_id": "afd55e20c39486b9b462363c02e9dfbc13a91975",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/812f3c52868f8bd6886d0fb456bed09ea93195c3"
+        },
+        "date": 1790203037469,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 209.25,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 795.76,
             "unit": "ms"
           }
         ]
