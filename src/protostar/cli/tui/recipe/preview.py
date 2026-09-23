@@ -35,12 +35,17 @@ class PlanPreview(VerticalScroll):
     def __init__(self, config: UserConfig) -> None:
         super().__init__()
         self.config = config
+        # Held, not queried: a plan can finish while the app tears its
+        # children down, and updating a removed line is harmless.
+        self._summary = Static("Planning…", id="preview-summary")
+        self._collisions = Static("", id="preview-collisions")
+        self._tree = Static("", id="preview-tree")
 
     def compose(self) -> ComposeResult:
         """Compose the summary, collision, and tree lines."""
-        yield Static("Planning…", id="preview-summary")
-        yield Static("", id="preview-collisions")
-        yield Static("", id="preview-tree")
+        yield self._summary
+        yield self._collisions
+        yield self._tree
 
     @work(exclusive=True, group="preview")
     async def update_plan(self, draft: InitDraft) -> None:
@@ -94,8 +99,7 @@ class PlanPreview(VerticalScroll):
         tree: RenderableType = "",
         error: bool = False,
     ) -> None:
-        line = self.query_one("#preview-summary", Static)
-        line.update(summary)
-        line.set_class(error, "-error")
-        self.query_one("#preview-collisions", Static).update(collisions or Text(""))
-        self.query_one("#preview-tree", Static).update(tree)
+        self._summary.update(summary)
+        self._summary.set_class(error, "-error")
+        self._collisions.update(collisions or Text(""))
+        self._tree.update(tree)
