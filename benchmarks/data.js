@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790126731161,
+  "lastUpdate": 1790133827414,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16019,6 +16019,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 201.36,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "22f2947848c2e41343bd4595b49ee9e616272914",
+          "message": "refactor(cli)!: remove questionary (#308)\n\nconfig --reset confirms with rich.prompt.Confirm, the wizard benchmark\nmeasures time to the recipe editor's first frame, the docs show Textual\nscreenshots of the editor and change review, and record_wizard drives the\nTextual key flow.",
+          "timestamp": "2026-09-22T20:21:37-07:00",
+          "tree_id": "16ec3c4f5e18d90950e3816b5b8db00843bed901",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/22f2947848c2e41343bd4595b49ee9e616272914"
+        },
+        "date": 1790133826603,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 207.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 718.05,
             "unit": "ms"
           }
         ]
