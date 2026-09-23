@@ -395,52 +395,40 @@ def record_headless(session: PTYSession) -> None:
 
 
 def record_wizard(session: PTYSession) -> None:
-    """Script for the interactive wizard CLI initialization demo using the Astro template."""
+    """Script for the interactive recipe editor demo using the Astro template."""
+    # Textual reads Enter as a carriage return; a bare newline is ctrl+j.
+    enter = b"\r"
+    shift_tab = b"\x1b[Z"
+
     session.sleep(0.5)
     session.type("protostar init", char_delay=0.035, post_delay=0.3)
     session.enter(wait=0.0)
-    session.wait_for("Start from a template?", timeout=8.0, post_wait=0.3)
+    session.wait_for("Build your recipe", timeout=8.0, post_wait=0.6)
 
-    # 1. Template selection: "Start from a template?" -> Navigate down and select "astro"
-    session.sleep(0.4)
-    session.down(count=2, wait=0.2)
-    session.sleep(0.4)
-    session.enter(wait=0.8)
+    # 1. The template picker has focus: open it and pick "Astro" (after
+    #    "No template" and "FastAPI").
+    session.key(enter, wait=0.5)
+    session.down(count=2, wait=0.25)
+    session.key(enter, wait=0.4)
+    # The template loads in a worker, and the preview re-plans.
+    session.sleep(1.6)
 
-    # 2. Component selection: "Select the components for your new environment:"
-    # In the astro template, defaults (direnv, Ruff, just) are pre-selected.
-    # Pause briefly to showcase the pre-checked template tooling, then submit defaults:
-    session.sleep(0.8)
-    session.enter(wait=0.8)
+    # 2. Focus wraps backwards from the picker to "Continue".
+    session.key(shift_tab, wait=0.5)
+    session.key(enter, wait=0.0)
+    session.wait_for("Commands and packages", timeout=15.0, post_wait=0.6)
 
-    # 3. Project Metadata prompts
-    # Description (press Enter to skip)
-    session.sleep(0.4)
-    session.enter(wait=0.5)
+    # 3. The change review focuses the file tree: step down it to show diffs.
+    session.down(count=3, wait=0.5)
+    session.sleep(1.2)
 
-    # License (MIT selected by default, press Enter to confirm)
-    session.sleep(0.4)
-    session.enter(wait=0.5)
-
-    # Author Name (press Enter to accept default or skip)
-    session.sleep(0.3)
-    session.enter(wait=0.4)
-
-    # Author Email (press Enter to accept default or skip)
-    session.sleep(0.3)
-    session.enter(wait=0.4)
-
-    # GitHub Username (press Enter to skip)
-    session.sleep(0.3)
-    session.enter(wait=0.4)
-
-    # Minimum Python version (3.13 default, press Enter to confirm and begin scaffolding)
-    session.sleep(0.3)
-    session.enter(wait=0.0)
-    session.wait_for("Accretion disk stabilized", timeout=15.0, post_wait=0.4)
+    # 4. Focus wraps backwards from the file tree to "Apply".
+    session.key(shift_tab, wait=0.5)
+    session.key(enter, wait=0.0)
+    session.wait_for("Accretion disk stabilized", timeout=20.0, post_wait=0.4)
     session.sleep(0.6)  # Viewing pause after initialization completes
 
-    # 4. Post-generation inspection using astro fixture line metrics
+    # 5. Post-generation inspection using astro fixture line metrics
     inspect_project_file(session, template="astro")
 
 

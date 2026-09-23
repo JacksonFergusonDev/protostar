@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # Terminal UI libraries that belong to the CLI layer (protostar.cli) only.
-UI_PACKAGES = frozenset({"rich", "questionary", "prompt_toolkit", "textual"})
+UI_PACKAGES = frozenset({"rich", "textual"})
 
 # Runs in a fresh interpreter. pkgutil.walk_packages would import protostar.cli
 # to recurse into it, so the walk uses iter_modules and never touches the CLI.

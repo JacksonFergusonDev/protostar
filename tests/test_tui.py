@@ -663,16 +663,28 @@ assert not any(name == "textual" or name.startswith("textual.") for name in sys.
     assert result.returncode == 0, result.stderr
 
 
-def test_benchmark_exits_before_launch(mocker, monkeypatch, tmp_path):
+def test_benchmark_exits_after_first_frame(mocker, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PROTOSTAR_BENCHMARK_WIZARD", "1")
     monkeypatch.setattr(sys, "argv", ["protostar", "init"])
     mocker.patch.object(UserConfig, "load", return_value=UserConfig())
-    launch = mocker.patch.object(parser, "edit_recipe")
+    launch = mocker.patch.object(parser, "edit_recipe", return_value=None)
+    execute = mocker.patch.object(ui, "_run_engine")
     with pytest.raises(SystemExit) as exc:
         parser.intercept_interactive_wizards(mocker.Mock())
     assert exc.value.code == 0
-    launch.assert_not_called()
+    assert launch.call_args.kwargs["exit_after_first_frame"] is True
+    execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_app_exits_after_first_frame():
+    from textual.screen import Screen
+
+    app: DecisionApp[None] = DecisionApp(Screen(), exit_after_first_frame=True)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+    assert app.return_value is None
 
 
 def test_cancelled_editor_never_executes(mocker, monkeypatch, tmp_path):

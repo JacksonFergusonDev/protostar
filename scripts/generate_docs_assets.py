@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import importlib.resources
 import io
 import json
@@ -1183,6 +1184,63 @@ def generate_diff_fixtures() -> None:
                 _write_generated_doc(output_name, clean_diff)
 
 
+async def _settle(pilot: Any) -> None:
+    """Waits for the app's workers, including those a finishing worker starts."""
+    from textual.worker import WorkerCancelled
+
+    await pilot.pause()
+    for _ in range(10):
+        workers = list(pilot.app.workers)
+        if not workers:
+            break
+        for worker in workers:
+            try:
+                await worker.wait()
+            except WorkerCancelled:
+                pass
+        await pilot.pause()
+    await pilot.pause()
+
+
+def _write_tui_svg(app: Any, filename: str) -> None:
+    """Writes the app's current screen to DOCS_TERMINALS_DIR."""
+    svg_content = app.export_screenshot(title="protostar init")
+    clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
+    atomic_write_text(DOCS_TERMINALS_DIR / filename, clean_svg)
+
+
+async def _capture_tui_screens() -> None:
+    """Drives the recipe editor to the change review, capturing each screen."""
+    from protostar.cli.tui.app import DecisionApp
+    from protostar.cli.tui.recipe.screen import RecipeScreen
+    from protostar.init_draft import DraftTemplate, InitDraft
+    from protostar.templates import discover_templates
+
+    config = UserConfig()
+    target = importlib.resources.files("protostar.templates").joinpath("cli.toml")
+    template = DraftTemplate(TemplateSource.load(str(target), built_in="cli"))
+    app = DecisionApp(
+        RecipeScreen(InitDraft(template=template), discover_templates(config), config)
+    )
+    async with app.run_test(size=(120, 40)) as pilot:
+        await _settle(pilot)
+        _write_tui_svg(app, "tui_recipe_editor.svg")
+        await pilot.click("#continue")
+        await _settle(pilot)
+        _write_tui_svg(app, "tui_change_review.svg")
+        app.exit(None)
+
+
+def generate_tui_svgs() -> None:
+    """Captures the recipe editor and change review with Textual's own screenshots."""
+    with (
+        _demo_project(),
+        mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
+        mock.patch("protostar.metadata.get_git_config", return_value=None),
+    ):
+        asyncio.run(_capture_tui_screens())
+
+
 def generate_docs_assets() -> None:
     """Generates all static documentation assets (SVGs, Markdown tables, schemas, payloads)."""
     DOCS_GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -1192,6 +1250,7 @@ def generate_docs_assets() -> None:
     generate_cli_help_svgs()
     generate_cli_dry_run_svg()
     generate_cli_init_svg()
+    generate_tui_svgs()
     generate_default_config()
     generate_capability_tables()
     generate_manifest_state()

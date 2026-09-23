@@ -416,7 +416,7 @@ def test_builtin_complete_lifecycle_has_no_repeat_mutations(
     )
     mocker.patch("subprocess.run", side_effect=AssertionError("subprocess"))
     mocker.patch("subprocess.Popen", side_effect=AssertionError("subprocess"))
-    mocker.patch("questionary.confirm", side_effect=AssertionError("prompt"))
+    mocker.patch("rich.prompt.Confirm.ask", side_effect=AssertionError("prompt"))
     mocker.patch(
         "protostar.config.UserConfig.load", side_effect=AssertionError("defaults")
     )

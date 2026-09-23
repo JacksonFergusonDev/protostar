@@ -23,7 +23,6 @@ from rich.text import Text
 
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
-from protostar.cli.prompts import confirm
 from protostar.cli.tui.launch import edit_variables, review_changes
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
@@ -276,12 +275,16 @@ def handle_config(args: argparse.Namespace) -> None:
 
     if getattr(args, "reset", False):
         if not getattr(args, "force", False):
-            confirmed = confirm(
-                "Warning: this will erase your current configuration, are you sure you want to do this?",
-                default=False,
-            )
-            if confirmed is None:
-                raise ExecutionAbortedError("Configuration reset aborted.")
+            from rich.prompt import Confirm
+
+            try:
+                confirmed = Confirm.ask(
+                    "Warning: this will erase your current configuration, are you sure you want to do this?",
+                    default=False,
+                    console=ui.console,
+                )
+            except (KeyboardInterrupt, EOFError) as e:
+                raise ExecutionAbortedError("Configuration reset aborted.") from e
             if not confirmed:
                 ui.console.print("[yellow]Configuration reset aborted.[/yellow]")
                 return
