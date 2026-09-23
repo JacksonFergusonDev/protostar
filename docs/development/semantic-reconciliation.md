@@ -528,3 +528,34 @@ preserved with a warning rather than overwritten. A settings file that is not a
 valid JSONC object is an editor convenience: it is skipped with a warning and never
 aborts the run. Writes use the transaction-aware filesystem, candidate state is
 committed only at transaction completion, and failures restore exact bytes and modes.
+
+## Text merge engine
+
+`text_merge.py` merges free-form text line by line, for managed files that have no
+structured format to reconcile semantically. It is pure: no subprocess, filesystem
+access, or terminal output, so planning and change review call it like the
+semantic kernel. It depends only on the standard library. `git merge-file` was
+rejected because the merge must run during planning, where no subprocess may run,
+and tests could only mock it; merge3 was rejected for its GPL license.
+
+`merge_text(base, local, remote)` is diff3 (Khanna, Kunal & Pierce, 2007) over
+patience-diff alignments. Stretches with no line unique to both sides fall back to
+`difflib` alignment within a bounded cost; past the bound a stretch is treated as
+wholly changed, which can only coarsen hunks into a conflict, never produce a wrong
+merge. Lines split on `\n` alone and keep their terminators, so a missing final
+newline is an edit. When the local text uses one newline style throughout, base and
+remote texts that consistently use the other are converted first: a checkout that
+rewrites line endings is not an edit, and the merged text keeps the local style.
+
+Hunks changed by one side take that side; identical changes on both sides merge.
+Overlapping and adjacent edits conflict, as in git. Lines both sides added
+identically at the edges of a conflict leave it (git's `zdiff3` refinement), so a
+`TextConflict` spans only disagreeing lines: its zero-based `start` in the local
+text and the base, local, and remote lines. A conflicted merge returns no text.
+Two hunks of one generator change can depend on each other, so adapters keep the
+local file whole or accept the merged file whole; they never write a partial merge.
+
+Clean merges match `git merge-file` byte for byte. Where the two disagree on
+whether a merge is clean (a fraction of a percent of randomized cases), the cause is
+ambiguous placement among repeated lines, where patience and Myers alignments
+legitimately differ. `scripts/compare_text_merge.py` reruns that comparison.
