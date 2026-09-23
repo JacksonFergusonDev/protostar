@@ -56,6 +56,7 @@ from protostar.modules import (
     TOOLING_MODULES,
     BootstrapModule,
 )
+from protostar.secret_guard import credential_named
 from protostar.system import is_interactive
 
 logger = logging.getLogger("protostar")
@@ -148,6 +149,11 @@ def handle_init(args: argparse.Namespace) -> None:
         dict(existing_recipe.variables) if existing_recipe else {},
         flag_values,
     )
+    allowed_secrets = _check_allowed_secrets(
+        source, getattr(args, "allowed_secrets", [])
+    )
+    if source and (flagged := credential_named(source.variables)):
+        ui.warn_credential_names(flagged)
     tool_overrides = tuple(
         (Tool(mod.config_key), value)
         for mod in TOOLING_MODULES
@@ -170,6 +176,7 @@ def handle_init(args: argparse.Namespace) -> None:
         docker=getattr(args, "docker", None),
         python_version=getattr(args, "python_version", None),
         variables=tuple(sorted(variables.items())),
+        allowed_secrets=allowed_secrets,
         collision_strategy=strategy,
         existing_recipe=existing_recipe,
     )
@@ -422,6 +429,37 @@ def _resolve_template_variables(
     }
     values.update(flags)
     return values
+
+
+def _check_allowed_secrets(
+    source: TemplateSource | None, names: list[str]
+) -> frozenset[str]:
+    """Validates ``--allow-secret`` names against the template's variables.
+
+    Args:
+        source: The template being applied, if any.
+        names: The raw ``--allow-secret`` arguments.
+
+    Returns:
+        The variables whose flagged values the user confirmed are not secrets.
+
+    Raises:
+        InvalidUsageError: If a name is no variable of the template, or names
+            are given without a template.
+    """
+    if names and source is None:
+        raise InvalidUsageError(
+            "--allow-secret needs a template.",
+            hint="Pass --template or --from, or run init in a project that records one.",
+        )
+    unknown = sorted(set(names) - (source.variables if source else frozenset()))
+    if unknown:
+        known = ", ".join(sorted(source.variables)) if source else ""
+        raise InvalidUsageError(
+            f"The template has no variable named {', '.join(unknown)}.",
+            hint=f"Its variables are: {known or 'none'}.",
+        )
+    return frozenset(names)
 
 
 def main() -> None:

@@ -127,7 +127,8 @@ variable. JSON mode never prompts, so a missing value returns a
 `MissingTemplateVariablesError` payload whose `missing_variables` array names every
 variable still needed; retry with a `--var` for each. Values are saved in the
 project recipe and must not be secrets: a credential-shaped value returns a
-`SecretDetectedError` whose `findings` name the variable and matching rule.
+`SecretDetectedError` whose `findings` name the variable and matching rule. If the
+value isn't a secret, retry with `--allow-secret NAME` for that variable.
 
 ### 3. Headless Execution
 

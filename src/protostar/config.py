@@ -33,7 +33,6 @@ from .intent import (
 )
 from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
 from .network import resolve_remote_source, resolve_remote_template
-from .secret_guard import check_variable_names, check_variable_values
 
 logger = logging.getLogger("protostar")
 
@@ -702,7 +701,9 @@ class TemplateBlueprint:
         metadata={
             "description": "Named non-TOML regions with stable IDs and content.",
             "example": {
-                ".envrc": {"project_environment": {"content": "export PROJECT=example"}}
+                ".envrc": {
+                    "project_environment": {"content": "export REGION=<% REGION %>"}
+                }
             },
         },
     )
@@ -1109,17 +1110,54 @@ class TemplateSource:
 
     @functools.cached_property
     def variables(self) -> frozenset[str]:
-        """The template's custom variables, excluding built-in ones.
-
-        Raises:
-            TemplateResolutionError: If a variable is named like a credential.
-        """
+        """The template's custom variables, excluding built-in ones."""
         text = "\n".join(
             [self.template_bytes.decode("utf-8"), *self.files, *self.files.values()]
         )
-        names = frozenset(extract_variables(text)) - BUILT_IN_VARIABLES
-        check_variable_names(self.reference.locator, names)
-        return names
+        return frozenset(extract_variables(text)) - BUILT_IN_VARIABLES
+
+    @functools.cached_property
+    def descriptions(self) -> dict[str, str]:
+        """Descriptions the template's ``[variables]`` table declares, by name.
+
+        Declarations are read from the raw template, before any value renders,
+        so a caller can explain each variable while asking for its value.
+
+        Raises:
+            ConfigurationError: If the template is not valid TOML.
+            TemplateResolutionError: If the table is malformed or declares a
+                variable the template never uses.
+        """
+        target = self.reference.locator
+        try:
+            data = tomllib.loads(self.template_bytes.decode("utf-8"))
+        except tomllib.TOMLDecodeError as e:
+            raise ConfigurationError(
+                f"Syntax error in configuration source '{target}'.\n"
+                f"Details: {e}\n"
+                "Please fix the syntax error to proceed."
+            ) from e
+        declared = data.get("variables", {})
+        hint = 'Declare each variable as [variables.NAME] with description = "...".'
+        if not isinstance(declared, dict) or any(
+            not isinstance(entry, dict)
+            or set(entry) != {"description"}
+            or not isinstance(entry["description"], str)
+            for entry in declared.values()
+        ):
+            raise TemplateResolutionError(
+                target, "The [variables] table is malformed.", hint=hint
+            )
+        unused = sorted(declared.keys() - self.variables)
+        if unused:
+            raise TemplateResolutionError(
+                target,
+                f"[variables] declares variables the template never uses: "
+                f"{', '.join(unused)}.",
+                hint="Remove the declarations, or use each as <% NAME %>. "
+                "Built-in variables need no declaration.",
+            )
+        return {name: entry["description"] for name, entry in sorted(declared.items())}
 
     def render(self, context: Mapping[str, str]) -> TemplateBlueprint:
         """Renders the template entirely in memory.
@@ -1136,14 +1174,13 @@ class TemplateSource:
 
         Raises:
             MissingTemplateVariablesError: If a custom variable has no value.
-            SecretDetectedError: If a value looks like a credential.
+            TemplateResolutionError: If the ``[variables]`` table is invalid.
         """
         target = self.reference.locator
+        _ = self.descriptions
         missing = tuple(sorted(self.variables - context.keys()))
         if missing:
             raise MissingTemplateVariablesError(target, missing)
-        # Values render into committed files; check them before anything renders.
-        check_variable_values({name: context[name] for name in self.variables})
 
         values = dict(context)
         rendered_toml = render_template(

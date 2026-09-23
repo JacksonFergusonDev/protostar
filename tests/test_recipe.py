@@ -16,7 +16,6 @@ from protostar.errors import (
     FileSystemError,
     InvalidUsageError,
     MissingTemplateVariablesError,
-    SecretDetectedError,
     UnsupportedFilesystemNodeError,
 )
 from protostar.executor import SystemExecutor
@@ -108,12 +107,11 @@ def _token():
     )
 
 
-def test_decoding_guards_recorded_variable_values():
-    """A hand-edited recipe is checked exactly like a flag or a prompt."""
+def test_decoding_accepts_recorded_variable_values_the_guard_would_flag():
+    """Values are checked when entered; a recorded one never blocks later runs."""
     data = recipe().to_dict() | {"variables": {"REGION": _token()}}
 
-    with pytest.raises(SecretDetectedError, match="REGION"):
-        decode_recipe(data)
+    assert dict(decode_recipe(data).variables) == {"REGION": _token()}
 
 
 def test_template_opinions_evolve_only_under_omitted_overrides():

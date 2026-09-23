@@ -417,6 +417,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Set a template variable; repeat for each. Values are saved to pyproject.toml, so never pass secrets.",
     )
 
+    base_group.add_argument(
+        "--allow-secret",
+        action="append",
+        default=[],
+        dest="allowed_secrets",
+        metavar="NAME",
+        help="Keep a variable's value even though it looks like a credential; repeat for each.",
+    )
+
     python_version_action = base_group.add_argument(
         "--python-version",
         type=str,

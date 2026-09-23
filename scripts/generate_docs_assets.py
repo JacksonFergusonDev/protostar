@@ -330,6 +330,16 @@ def generate_template_schema_fixture() -> None:
                 doc.add(f.name, _python_to_tomlkit(example))
             doc.add(tomlkit.nl())
 
+    doc.add(tomlkit.comment("--- Custom Variables ---"))
+    doc.add(
+        tomlkit.comment(
+            "Optional descriptions shown when asking for a custom variable's value."
+        )
+    )
+    variables = tomlkit.table(is_super_table=True)
+    variables.add("REGION", {"description": "Deployment region, e.g. eu-west-1"})
+    doc.add("variables", variables)
+
     out_str = doc.as_string().strip() + "\n"
     _write_generated_doc("template_schema.toml", out_str)
 

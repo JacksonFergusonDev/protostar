@@ -534,6 +534,25 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     console.print("\n[dim]No changes were made to your system.[/dim]")
 
 
+def warn_credential_names(names: tuple[str, ...]) -> None:
+    """Warns that a template asks for variables named like credentials.
+
+    Args:
+        names: The flagged variable names.
+    """
+    from rich.text import Text
+
+    target = _stderr_console if is_json_mode else console
+    target.print(
+        Text(
+            f"{glyph('⚠', '!')} Template variables named like credentials: "
+            f"{', '.join(names)}. Their values are saved to pyproject.toml; "
+            "don't enter secrets.",
+            style="yellow",
+        )
+    )
+
+
 def print_recipe_summary(request: InitRequest) -> None:
     """Leave a literal, encoding-safe summary after the decision app exits."""
     from rich.text import Text
@@ -575,6 +594,11 @@ def print_review_summary(decision: InitDecision) -> None:
         lines.append(
             f"Confirmed {count} command{'' if count == 1 else 's'} "
             "from an untrusted template"
+        )
+    if decision.draft.allowed_secrets:
+        lines.append(
+            "Kept values flagged as credentials: "
+            + ", ".join(sorted(decision.draft.allowed_secrets))
         )
     if lines:
         console.print(Text("\n".join(lines)))

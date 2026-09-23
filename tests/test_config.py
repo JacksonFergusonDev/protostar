@@ -196,6 +196,45 @@ def test_template_blueprint_load_late_binding_vars_do_not_prompt(mocker, tmp_pat
     assert isinstance(source.render({}), TemplateBlueprint)
 
 
+def test_variables_table_declares_descriptions(tmp_path):
+    target = tmp_path / "template.toml"
+    target.write_text(
+        '[files]\n"a.txt" = "<% REGION %> <% TIER %>"\n'
+        '[variables.REGION]\ndescription = "Deployment region"\n'
+    )
+
+    source = TemplateSource.load(str(target))
+
+    assert source.variables == frozenset({"REGION", "TIER"})
+    assert source.descriptions == {"REGION": "Deployment region"}
+    assert source.render({"REGION": "eu", "TIER": "gold"}).files == {"a.txt": "eu gold"}
+
+
+@pytest.mark.parametrize(
+    ("table", "message"),
+    [
+        ('variables = "REGION"\n', "malformed"),
+        ('[variables]\nREGION = "Deployment region"\n', "malformed"),
+        ("[variables.REGION]\ndescription = 3\n", "malformed"),
+        ('[variables.REGION]\ndescription = "x"\ndefault = "eu"\n', "malformed"),
+        (
+            '[variables.REGION]\ndescription = "x"\n[variables.ZONE]\ndescription = "y"\n',
+            "never uses: ZONE",
+        ),
+        ('[variables.PROJECT_NAME]\ndescription = "x"\n', "never uses: PROJECT_NAME"),
+    ],
+)
+def test_invalid_variables_table_stops_rendering(tmp_path, table, message):
+    target = tmp_path / "template.toml"
+    target.write_text(f'{table}[files]\n"a.txt" = "<% REGION %>"\n')
+    source = TemplateSource.load(str(target))
+
+    with pytest.raises(TemplateResolutionError, match=message):
+        _ = source.descriptions
+    with pytest.raises(TemplateResolutionError, match=message):
+        source.render({"REGION": "eu"})
+
+
 def test_user_config_commitizen_defaults_to_false():
     """Test that commitizen defaults to False when not set in config."""
     config = UserConfig()

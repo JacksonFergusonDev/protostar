@@ -374,10 +374,10 @@ class SecurityViolationError(ProtostarError):
 
 
 class SecretDetectedError(SecurityViolationError):
-    """Raised when template variable values look like credentials.
+    """Raised when newly entered template variable values look like credentials.
 
     Carries the flagged variable names and the rules they matched, never the
-    values themselves.
+    values themselves. The user can confirm a flagged value per variable.
     """
 
     def __init__(self, findings: tuple[SecretFinding, ...]) -> None:
@@ -396,7 +396,8 @@ class SecretDetectedError(SecurityViolationError):
                 "Template variables are saved to pyproject.toml and rendered into "
                 "project files, so they must not hold secrets. Enter a non-secret "
                 "value, and have the project read the secret from the environment "
-                "at runtime."
+                "at runtime. If a flagged value isn't a secret, keep it with "
+                "--allow-secret NAME."
             ),
             docs_path=DocsPage.TEMPLATE_VARIABLES,
         )

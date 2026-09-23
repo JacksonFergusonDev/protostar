@@ -486,6 +486,13 @@ def test_generated_schema_example_parses_without_legacy_declarations():
     assert blueprint.dependency_includes[0].group == DependencyGroup.DEV
 
 
+def test_generated_schema_example_declares_the_variables_it_uses():
+    fixture = Path(__file__).parents[1] / "docs" / "generated" / "template_schema.toml"
+    source = TemplateSource.load(str(fixture))
+    assert source.variables == frozenset({"REGION"})
+    assert source.descriptions == {"REGION": "Deployment region, e.g. eu-west-1"}
+
+
 def test_late_bound_reserved_target_rejected_before_writes(
     tmp_path, monkeypatch, mocker
 ):

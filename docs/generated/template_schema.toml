@@ -131,4 +131,10 @@ extend-select = ["I", "UP", "B"]
 # Named non-TOML regions with stable IDs and content.
 
 [appends.".envrc".project_environment]
-content = "export PROJECT=example"
+content = "export REGION=<% REGION %>"
+
+# --- Custom Variables ---
+# Optional descriptions shown when asking for a custom variable's value.
+
+[variables.REGION]
+description = "Deployment region, e.g. eu-west-1"

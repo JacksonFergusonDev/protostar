@@ -99,9 +99,6 @@ class RecipeScreen(Screen[InitDecision]):
         self.docker_override = draft.docker
         self._selected_template: TemplateInfo | _TemplateChoice | None = None
         self._resolve_selections()
-        self._variable_names = (
-            draft.template.source.variables if draft.template else frozenset()
-        )
         self._metadata_defaults = metadata_defaults(draft, config)
 
     def _resolve_selections(self) -> None:
@@ -160,7 +157,9 @@ class RecipeScreen(Screen[InitDecision]):
                 yield Label("Template", classes="section")
                 yield self._template_select()
                 yield Static("", id="template-status", markup=False)
-                yield VariableFields(draft_variables(self.draft))
+                yield VariableFields(
+                    draft_variables(self.draft), self.draft.allowed_secrets
+                )
                 yield Label("Tools", classes="section")
                 yield Static("", id="constraints", markup=False)
                 yield Checkbox("Docker", value=self._docker(), id="docker")
@@ -227,7 +226,9 @@ class RecipeScreen(Screen[InitDecision]):
 
     async def on_mount(self) -> None:
         """Show the template's variables, then plan the initial draft."""
-        await self.query_one(VariableFields).show(self._variable_names)
+        await self.query_one(VariableFields).show(
+            self.draft.template.source if self.draft.template else None
+        )
         self._status(Text(""))
         self._refresh_tools()
         self._changed()
@@ -282,6 +283,7 @@ class RecipeScreen(Screen[InitDecision]):
             tool_choices=tuple(sorted(self.enabled.items())),
             docker=self._docker(),
             variables=tuple(sorted(variables.items())),
+            allowed_secrets=fields.allowed_secrets,
             metadata=tuple(sorted(metadata.items())),
             python_version=str(minimum) if minimum else None,
         )
@@ -347,8 +349,8 @@ class RecipeScreen(Screen[InitDecision]):
                 choice.trusted,
             )
         if template:
-            # Credential-shaped variable names are a template error, shown inline.
-            _ = template.source.variables
+            # An invalid [variables] table is a template error, shown inline.
+            _ = template.source.descriptions
         return template
 
     @work(exclusive=True, group="template")
@@ -374,9 +376,7 @@ class RecipeScreen(Screen[InitDecision]):
         self._status(Text(""))
         with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
             self.query_one("#docker", Checkbox).value = self._docker()
-        await self.query_one(VariableFields).show(
-            template.source.variables if template else frozenset()
-        )
+        await self.query_one(VariableFields).show(template.source if template else None)
         self._refresh_tools()
         self._changed()
 
