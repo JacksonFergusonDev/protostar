@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790133827414,
+  "lastUpdate": 1790184922534,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16053,6 +16053,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 718.05,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e1a00be94fefeeaa4b0341ad396275b85c7c232c",
+          "message": "perf(sync): memoize baseline decoding and balance xdist workers (#309)\n\n* perf(sync): memoize baseline decoding and balance xdist workers\n\nOne sync decoded the same owned YAML/TOML baselines hundreds of times\nthrough ruamel's pure-Python round-trip parser, and serialize_state\nre-canonicalized every baseline on each call. Memoize the decoders\n(callers receive a deep copy) and the canonicalization step.\n\nSwitch pytest-xdist from loadfile to worksteal so the slowest file no\nlonger sets the wall-clock floor.\n\nParallel suite: 57.5s -> ~14s. Serial: 100s -> 55s.\n\n* ci(test): report slowest tests and dump stacks of hung ones",
+          "timestamp": "2026-09-23T10:33:15-07:00",
+          "tree_id": "e3ab02aa58ac10e82f55bb514221f29686647f7a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e1a00be94fefeeaa4b0341ad396275b85c7c232c"
+        },
+        "date": 1790184921718,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 208.88,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 712.76,
             "unit": "ms"
           }
         ]
