@@ -14,6 +14,45 @@ from .errors import CommandExecutionError, CommandTimeoutError, ProcessTerminati
 
 logger = logging.getLogger("protostar")
 
+# Git's repository-local variables, as listed by `git rev-parse --local-env-vars`:
+# the ones git itself clears before operating on another repository. Inherited
+# from a git hook, alias, or linked worktree, they would point `git init` and
+# hook installation at the caller's repository instead of the project.
+GIT_REPOSITORY_VARIABLES = frozenset(
+    {
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_CONFIG",
+        "GIT_CONFIG_COUNT",
+        "GIT_CONFIG_PARAMETERS",
+        "GIT_DIR",
+        "GIT_GRAFT_FILE",
+        "GIT_IMPLICIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_NO_REPLACE_OBJECTS",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_PREFIX",
+        "GIT_REPLACE_REF_BASE",
+        "GIT_SHALLOW_FILE",
+        "GIT_WORK_TREE",
+    }
+)
+
+
+def subprocess_environment() -> dict[str, str]:
+    """Returns the inherited environment a managed subprocess starts from.
+
+    Drops the active Python environment, so tools resolve the project's own,
+    and git's repository-local variables, so every git operation targets the
+    repository in the working directory. Git configuration such as
+    ``GIT_CONFIG_GLOBAL`` and identity variables are kept.
+
+    Returns:
+        A copy of ``os.environ`` without those variables.
+    """
+    removed = {"VIRTUAL_ENV", "PYTHONHOME", *GIT_REPOSITORY_VARIABLES}
+    return {key: value for key, value in os.environ.items() if key not in removed}
+
 
 class ProcessRunner:
     """Owns and safely terminates managed subprocesses."""
@@ -41,8 +80,9 @@ class ProcessRunner:
     ) -> None:
         """Executes a subprocess and captures diagnostic output on failure.
 
-        Sanitizes environment variables inherited from an active Python environment,
-        while allowing explicit caller overrides.
+        Starts from ``subprocess_environment()``, so neither an active Python
+        environment nor a caller's git repository leaks in, while allowing
+        explicit caller overrides.
 
         Args:
             cmd: The command and its arguments.
@@ -59,9 +99,7 @@ class ProcessRunner:
         if exe:
             resolved_cmd[0] = exe
 
-        clean_env = dict(os.environ)
-        clean_env.pop("VIRTUAL_ENV", None)
-        clean_env.pop("PYTHONHOME", None)
+        clean_env = subprocess_environment()
         if env is not None:
             clean_env.update(env)
 
@@ -223,6 +261,7 @@ def get_git_config(key: str) -> str | None:
             text=True,
             encoding="utf-8",
             check=True,
+            env=subprocess_environment(),
         )
         val = result.stdout.strip()
         return val if val else None

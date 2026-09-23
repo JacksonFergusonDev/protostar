@@ -9,7 +9,13 @@ from protostar.errors import (
     CommandTimeoutError,
     ProcessTerminationError,
 )
-from protostar.system import ProcessRunner, execute_subprocess, shield_sigint
+from protostar.system import (
+    GIT_REPOSITORY_VARIABLES,
+    ProcessRunner,
+    execute_subprocess,
+    get_git_config,
+    shield_sigint,
+)
 
 
 def _mock_process(mocker, *, returncode=0, output=("out", "err")):
@@ -63,6 +69,38 @@ def test_process_runner_sanitizes_environment(mocker, monkeypatch):
     assert child_env["VIRTUAL_ENV"] == "/target/.venv"
     assert "PYTHONHOME" not in child_env
     assert child_env["KEEP_ME"] == "yes"
+
+
+def test_process_runner_drops_the_callers_git_repository(mocker, monkeypatch):
+    # A git hook in a linked worktree exports these; `git init` would then
+    # reinitialize the caller's repository instead of the project.
+    for name in GIT_REPOSITORY_VARIABLES:
+        monkeypatch.setenv(name, "/caller/repo.git")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/caller/gitconfig")
+    monkeypatch.setenv("GIT_AUTHOR_NAME", "Ada")
+    process = _mock_process(mocker)
+    popen = mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+
+    ProcessRunner().run(["git", "init"])
+    ProcessRunner().run(["uv", "sync"], env={"GIT_DIR": "/explicit/.git"})
+
+    inherited, explicit = (call.kwargs["env"] for call in popen.call_args_list)
+    assert not GIT_REPOSITORY_VARIABLES & inherited.keys()
+    # Configuration and identity are the user's, not a repository location.
+    assert inherited["GIT_CONFIG_GLOBAL"] == "/caller/gitconfig"
+    assert inherited["GIT_AUTHOR_NAME"] == "Ada"
+    assert explicit["GIT_DIR"] == "/explicit/.git"
+
+
+def test_git_config_lookup_ignores_the_callers_repository(mocker, monkeypatch):
+    monkeypatch.setenv("GIT_DIR", "/caller/repo.git")
+    run = mocker.patch(
+        "protostar.system.subprocess.run",
+        return_value=subprocess.CompletedProcess([], 0, stdout="Ada\n"),
+    )
+
+    assert get_git_config("user.name") == "Ada"
+    assert "GIT_DIR" not in run.call_args.kwargs["env"]
 
 
 @pytest.mark.skipif(

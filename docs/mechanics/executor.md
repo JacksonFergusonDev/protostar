@@ -136,7 +136,7 @@ Directly calling `subprocess.run` in a CLI tool often leads to silent failures, 
 
 - **Process Group Isolation:** Subprocesses are launched in their own session (`start_new_session=True` on POSIX, `CREATE_NEW_PROCESS_GROUP` on Windows) so child trees can be reliably signaled and reaped.
 - **Two-Stage Graceful Termination:** When execution is interrupted or aborted, `ProcessRunner` sends `SIGTERM` (or `CTRL_BREAK_EVENT`), waits for a configurable grace period, and escalates to `SIGKILL` if the process tree fails to exit. If a process cannot be reaped, it raises `ProcessTerminationError`.
-- **Environment Sanitization:** Strips active virtual environment variables (`VIRTUAL_ENV`, `PYTHONHOME`) to prevent ambient interpreter contamination while accepting explicit caller overrides.
+- **Environment Sanitization:** Strips active virtual environment variables (`VIRTUAL_ENV`, `PYTHONHOME`) to prevent ambient interpreter contamination, and git's repository-local variables (`GIT_DIR`, `GIT_WORK_TREE`, and the rest of `git rev-parse --local-env-vars`) so git always targets the project, while accepting explicit caller overrides.
 - **Structured Diagnostic Capture:** Captures `stdout` and `stderr` silently during execution, attaching raw diagnostic streams to `CommandExecutionError` if a process returns a non-zero exit code.
 
 !!! example "Simulated Subprocess Diagnostic Output"

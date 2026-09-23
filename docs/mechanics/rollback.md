@@ -157,6 +157,8 @@ This sequence ensures no subprocess is still writing to disk while rollback is i
 
 `ProcessRunner.run()` strips `VIRTUAL_ENV` and `PYTHONHOME` from the inherited environment before launching any subprocess. This prevents an ambient Python virtual environment from contaminating the subprocess's interpreter resolution (e.g., `uv` resolving the wrong Python).
 
+It also strips git's repository-local variables, the set `git rev-parse --local-env-vars` lists (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, and the rest). Git exports these to hooks and aliases, and a linked worktree's hooks point `GIT_DIR` into the parent repository. Inherited, they would make `git init` or hook installation act on the caller's repository instead of the project, outside the declared `.git/` tree and therefore outside rollback. Git configuration (`GIT_CONFIG_GLOBAL`) and identity variables are kept.
+
 ## `shield_sigint`
 
 Rollback itself is wrapped in the `shield_sigint()` context manager (`src/protostar/system.py`). This temporarily replaces the `SIGINT` handler with a no-op for the duration of `journal.rollback()`.
