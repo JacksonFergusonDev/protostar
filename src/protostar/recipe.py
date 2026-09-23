@@ -26,7 +26,6 @@ from .ide import IDEType
 from .intent import TemplateOrigin, TemplateReference
 from .interpolation import BUILT_IN_VARIABLES, VARIABLE_NAME
 from .manifest import ProjectMetadata
-from .secret_guard import check_variable_values
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
@@ -370,8 +369,6 @@ def decode_recipe(data: object) -> ProjectRecipe:
         for k, v in variables.items()
     ):
         raise _invalid()
-    # A hand-edited recipe is guarded exactly like a prompted or flagged value.
-    check_variable_values(variables)
     allowed = {
         "description",
         "license",

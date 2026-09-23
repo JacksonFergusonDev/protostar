@@ -148,6 +148,18 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         else:
             properties[f.name] = prop
 
+    properties["variables"] = {
+        "type": "object",
+        "description": "Descriptions shown when asking for custom variables' values.",
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+        "additionalProperties": {
+            "type": "object",
+            "properties": {"description": {"type": "string"}},
+            "required": ["description"],
+            "additionalProperties": False,
+        },
+    }
+
     if dev_properties:
         properties["dev"] = {
             "type": "object",

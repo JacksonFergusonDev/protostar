@@ -1,24 +1,27 @@
-"""Blocks credential-shaped template variables before they reach a project.
+"""Flags credential-shaped template variables before they reach a project.
 
 Template variables are non-secret by definition: their values are recorded in
 the project recipe and rendered into generated files, all of which get
-committed. This guard backs that rule up. It checks
-each variable name against a short list of names that read as credentials, and
-each value against gitleaks' default rule set, translated from Go to Python at
-build time into ``protostar._secret_rules`` by ``scripts/sync_secret_rules.py``.
+committed. This guard is a safety net for that rule, not its enforcement. It
+flags each variable name that reads as a credential, as a warning, and checks
+each newly entered value against gitleaks' default rule set, translated from Go
+to Python at build time into ``protostar._secret_rules`` by
+``scripts/sync_secret_rules.py``.
 
 The generated module stores the rules compressed rather than as text, so that
 secret scanners, in this repository or in an installed wheel, do not mistake
 their patterns, or the publicly known keys some allowlists name, for leaked
 credentials. ``load_rules`` decodes them the first time a value is scanned.
 
-A block has no override, so the value check ports gitleaks' own detector
-(``detect/detect.go`` at the pinned tag) instead of adding heuristics: a rule
-runs only when one of its keywords appears, and secret groups, entropy
-thresholds, and allowlists apply exactly as gitleaks applies them. Two gitleaks
-behaviors are deliberately absent. A ``gitleaks:allow`` marker in a value is
-ignored, since honoring it would be an override. Encoded segments are not
-decoded, so a base64-wrapped token is checked as given.
+A flagged value blocks until the person entering it confirms, for that one
+variable, that it is not a secret. Every block interrupts someone, so the value
+check ports gitleaks' own detector (``detect/detect.go`` at the pinned tag)
+instead of adding heuristics: a rule runs only when one of its keywords
+appears, and secret groups, entropy thresholds, and allowlists apply exactly as
+gitleaks applies them. Two gitleaks behaviors are deliberately absent. A
+``gitleaks:allow`` marker in a value is ignored, since the confirmation must
+come from the person entering the value, not from the value itself. Encoded
+segments are not decoded, so a base64-wrapped token is checked as given.
 """
 
 from __future__ import annotations
@@ -31,20 +34,19 @@ import math
 import re
 import zlib
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from .docs_registry import DocsPage
-from .errors import ConfigurationError, SecretDetectedError, TemplateResolutionError
+from .errors import ConfigurationError, SecretDetectedError
 
 # Bounds scan time: matching cost grows with length, reaching about half a
 # second across all rules for a 2,000-character value.
 MAX_VALUE_LENGTH = 1024
 
 # Names that read as credentials. Matched against the lowercased name; widen
-# only on evidence, since every hit blocks a template from loading.
+# only on evidence, since every hit warns about an ordinary template.
 _CREDENTIAL_NAME = re.compile(
     r"(?:^|_)(?:password|passwd|secret|secret_?key|token|api_?key|access_?key"
     r"|private_?key|credentials?)$"
@@ -132,36 +134,32 @@ class SecretFinding:
     rule: str
 
 
-def check_variable_names(target: str, names: Iterable[str]) -> None:
-    """Rejects template variables whose names read as credentials.
+def credential_named(names: Iterable[str]) -> tuple[str, ...]:
+    """Returns the variable names that read as credentials.
+
+    A template asking for a credential is the author's mistake, which the
+    person applying the template can't fix, so callers warn rather than block.
 
     Args:
-        target: The template being loaded, named in the error.
         names: The template's custom variable names.
 
-    Raises:
-        TemplateResolutionError: If any name reads as a credential.
+    Returns:
+        The flagged names, sorted.
     """
-    flagged = sorted(name for name in names if _CREDENTIAL_NAME.search(name.lower()))
-    if flagged:
-        raise TemplateResolutionError(
-            target,
-            f"Template variables are named like credentials: {', '.join(flagged)}.",
-            hint=(
-                "Template variables are saved to pyproject.toml and rendered into "
-                "project files, so they must not hold secrets. Have the project "
-                "read secrets from the environment at runtime, and ship a "
-                ".env.example that names them."
-            ),
-            docs_path=DocsPage.TEMPLATE_VARIABLES,
-        )
+    return tuple(
+        sorted(name for name in names if _CREDENTIAL_NAME.search(name.lower()))
+    )
 
 
-def check_variable_values(values: Mapping[str, str]) -> None:
+def check_variable_values(
+    values: Mapping[str, str], *, allowed: Collection[str] = frozenset()
+) -> None:
     """Rejects template variable values that are too long or look like credentials.
 
     Args:
         values: Custom template variable names mapped to their values.
+        allowed: Variables whose values the user confirmed are not secrets.
+            They skip the credential scan but not the length limit.
 
     Raises:
         ConfigurationError: If any value exceeds ``MAX_VALUE_LENGTH``.
@@ -180,7 +178,8 @@ def check_variable_values(values: Mapping[str, str]) -> None:
     findings = tuple(
         finding
         for name in sorted(values)
-        if (finding := scan_value(name, values[name])) is not None
+        if name not in allowed
+        and (finding := scan_value(name, values[name])) is not None
     )
     if findings:
         raise SecretDetectedError(findings)

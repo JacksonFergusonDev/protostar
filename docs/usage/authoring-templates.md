@@ -158,18 +158,29 @@ Users supply the value with `--var`:
 protostar init --from https://github.com/Org/template --var DEFAULT_REGION=eu-west-1
 ```
 
-If they omit it, Protostar detects the unresolved `<% DEFAULT_REGION %>` placeholder and prompts for it in an interactive terminal before any disk mutations occur; without a terminal, it stops with an error naming the variable. The value is recorded in the project recipe, so later runs of `init` and `sync` reuse it. Variable names are identifiers: a letter or underscore, then letters, digits, or underscores.
+If they omit it, Protostar detects the unresolved `<% DEFAULT_REGION %>` placeholder and asks for it in an interactive terminal before any disk mutations occur; without a terminal, it stops with an error naming the variable. The value is recorded in the project recipe, so later runs of `init` and `sync` reuse it. Variable names are identifiers: a letter or underscore, then letters, digits, or underscores.
+
+### Describing Variables
+
+Protostar labels each field with the variable's name. To explain what a value should be, declare the variable in an optional `[variables]` table:
+
+```toml
+[variables.DEFAULT_REGION]
+description = "Deployment region, e.g. eu-west-1"
+```
+
+The description appears under the field when Protostar asks for the value. Declarations are optional, and `description` is the only key. Declare only placeholders the template uses; declaring an unused or built-in variable stops the template from loading.
 
 ### Variables Are Not Secrets
 
 A template's custom variables are non-secret by definition: their values are saved in the project recipe in `pyproject.toml` and rendered into the project's files, all of which get committed. If a value must stay out of the repository, it isn't a template variable. Have the generated code read it from the environment at runtime, and ship a `.env.example` in `template/` that names it.
 
-Protostar enforces this before anything renders:
+Protostar backs this up with a safety net, not a guarantee:
 
-- **Names:** a placeholder named like a credential, such as `<% API_KEY %>`, `<% DB_PASSWORD %>`, or `<% GITHUB_TOKEN %>`, stops the template from loading.
-- **Values:** every value is checked against [gitleaks](https://github.com/gitleaks/gitleaks)' default rules, at the version Protostar pins for the gitleaks pre-commit hook it scaffolds. A value that looks like a credential, such as a GitHub token or a private key, stops initialization with an error that names the variable and the matching rule, never the value. Values are limited to 1,024 characters.
+- **Names:** a placeholder named like a credential, such as `<% API_KEY %>`, `<% DB_PASSWORD %>`, or `<% GITHUB_TOKEN %>`, draws a warning beside its field and in the terminal. Rename it, or better, read the secret from the environment instead.
+- **Values:** each newly entered value is checked against [gitleaks](https://github.com/gitleaks/gitleaks)' default rules, at the version Protostar pins for the gitleaks pre-commit hook it scaffolds. A value that looks like a credential, such as a GitHub token or a private key, is held back until the user confirms it isn't a secret, for that variable only: a checkbox beside the field, or `--allow-secret NAME` on the command line. The error names the variable and the matching rule, never the value. Values are limited to 1,024 characters.
 
-There is no override. If an ordinary value is flagged, that's a false positive; see [Template Variables That Look Like Credentials](troubleshooting.md#template-variables-that-look-like-credentials).
+Values already recorded in the recipe are not checked again, so a confirmed value never blocks a later `init` or `sync`. The guard misses secrets gitleaks has no rule for, such as a password inside a database URL, so it never replaces keeping secrets out of variables. See [Template Variables That Look Like Credentials](troubleshooting.md#template-variables-that-look-like-credentials).
 
 ## Level 4: Testing & Distribution
 

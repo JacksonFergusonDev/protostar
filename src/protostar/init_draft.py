@@ -18,6 +18,7 @@ from .recipe import (
     select_tooling,
 )
 from .registry import ResolvedHookRevision
+from .secret_guard import check_variable_values
 
 
 @dataclass(frozen=True)
@@ -41,6 +42,7 @@ class InitDraft:
     python_version: str | None = None
     metadata: tuple[tuple[str, str | tuple[str, ...]], ...] | None = None
     variables: tuple[tuple[str, str], ...] = ()
+    allowed_secrets: frozenset[str] = frozenset()
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
 
@@ -73,9 +75,16 @@ def resolve_init(
     )
     source = draft.template.source if draft.template else None
     context = existing.rendering_context() if existing else {}
+    recorded = dict(existing.variables) if existing else {}
+    # Only newly entered values are scanned; a recorded value was accepted
+    # when it was entered, and blocking it later would break the project.
+    check_variable_values(
+        {name: value for name, value in draft.variables if recorded.get(name) != value},
+        allowed=draft.allowed_secrets,
+    )
     variables = {
         name: value
-        for name, value in (existing.variables if existing else ())
+        for name, value in recorded.items()
         if source and name in source.variables
     }
     variables.update(draft.variables)

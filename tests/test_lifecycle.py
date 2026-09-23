@@ -17,7 +17,6 @@ from protostar.errors import (
     InvalidUsageError,
     MissingTemplateVariablesError,
     ProtostarError,
-    SecretDetectedError,
 )
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project
@@ -178,8 +177,8 @@ def test_template_variables_render_from_the_recipe(project):
     assert edits["custom.txt"] == b"eu-west-1 gold"
 
 
-def test_recorded_variable_values_pass_the_secret_guard(project):
-    """A hand-edited recipe is checked exactly like a flag or a prompt."""
+def test_recorded_variable_values_skip_the_secret_guard(project):
+    """A value accepted at init, even a confirmed one, never blocks a sync."""
     # Built at test time; a literal would trip this repository's gitleaks hook.
     rng = random.Random(20260922)
     token = "ghp_" + "".join(
@@ -188,9 +187,7 @@ def test_recorded_variable_values_pass_the_secret_guard(project):
     project.write_text('[files]\n"custom.txt" = "<% REGION %>"\n')
     _record_variables({"REGION": token})
 
-    with pytest.raises(SecretDetectedError) as caught:
-        inspect_project()
-    assert token not in str(caught.value)
+    inspect_project()
 
 
 def test_sync_json_lists_missing_template_variables(project, monkeypatch, capsys):

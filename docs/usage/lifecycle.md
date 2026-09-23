@@ -138,8 +138,8 @@ registry snapshot; apply uses those captured decisions without a second fetch.
 Trust is not inherited from the recipe or lock. Initialization-only tasks remain
 excluded even for trusted external templates.
 
-Template variable values are recorded in the recipe and pass the secret guard
-whenever it is read. Generated files and review diffs contain project content, so
+Template variable values are recorded in the recipe after passing the secret guard
+when they were entered; sync does not check them again. Generated files and review diffs contain project content, so
 diffs are not a secret-redaction system. Keep credentials out of rendered
 configuration.
 

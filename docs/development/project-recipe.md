@@ -95,9 +95,10 @@ gains a variable, add its value under `[tool.protostar.variables]` or rerun `ini
 with `--var`.
 
 Template variables are non-secret by definition, because the recipe is committed.
-Every value, including one edited into the recipe by hand, passes the
+Each newly entered value passes the
 [secret guard](../usage/authoring-templates.md#variables-are-not-secrets), and a value
-that looks like a credential is refused. Keep secrets in the environment the
+that looks like a credential is held back until the user confirms it isn't a secret.
+Recorded values are not checked again. Keep secrets in the environment the
 project reads at runtime. Trust permissions and command lines are never
 serialized. Generated project files and ownership baselines contain rendered
 content; diffs are not a secret-redaction system.

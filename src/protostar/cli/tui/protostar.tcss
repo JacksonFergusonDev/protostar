@@ -10,6 +10,7 @@ PlanPreview { width: 2fr; padding: 0 1; border-left: vkey $panel; }
 .note { color: $text-muted; }
 .field-label { margin-top: 1; }
 .field-error { height: auto; color: $error; }
+.field-warning { color: $warning; }
 VariableFields, MetadataFields, MetadataFields .field { height: auto; }
 Checkbox { width: 1fr; height: auto; min-height: 1; border: none; padding: 0 1; }
 RadioSet { width: 1fr; height: auto; }

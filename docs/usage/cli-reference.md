@@ -44,6 +44,8 @@ A template containing custom placeholders (e.g., `<% REGION %>`) receives their 
 protostar init --from ./api.toml --var REGION=eu-west-1 --var SERVICE_NAME=billing
 ```
 
+A value that looks like a credential stops init. If it isn't a secret, keep it with `--allow-secret NAME`, repeated once per variable.
+
 In a terminal, Protostar prompts for any variable left out. Elsewhere, including under `--json`, a missing value fails with `MissingTemplateVariablesError`.
 
 ### `protostar status` and `protostar diff`

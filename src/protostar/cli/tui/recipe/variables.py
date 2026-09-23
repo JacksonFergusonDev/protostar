@@ -1,6 +1,6 @@
 """Template variable fields, checked by the secret guard when submitted."""
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import replace
 
 from rich.text import Text
@@ -10,12 +10,12 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.screen import Screen
 from textual.validation import ValidationResult, Validator
-from textual.widgets import Button, Footer, Input, Label, Static
+from textual.widgets import Button, Checkbox, Footer, Input, Label, Static
 
-from protostar.config import UserConfig
-from protostar.errors import ConfigurationError, SecretDetectedError
+from protostar.config import TemplateSource, UserConfig
+from protostar.errors import ConfigurationError, ProtostarError, SecretDetectedError
 from protostar.init_draft import InitDraft
-from protostar.secret_guard import check_variable_values
+from protostar.secret_guard import check_variable_values, credential_named
 
 from .preview import PlanPreview
 
@@ -27,17 +27,26 @@ def draft_variables(draft: InitDraft) -> dict[str, str]:
 
 
 class _NotACredential(Validator):
-    """Rejects a value the secret guard flags, naming the rule but never the value."""
+    """Rejects a value the secret guard flags, naming the rule but never the value.
 
-    def __init__(self, name: str) -> None:
+    A flagged value passes once the user confirms it is not a secret.
+    """
+
+    def __init__(self, name: str, allowed: Collection[str]) -> None:
         super().__init__()
         self.name = name
+        self.allowed = allowed
+        self.flagged = False
 
     def validate(self, value: str) -> ValidationResult:
         """Runs the secret guard on one variable's value."""
+        self.flagged = False
         try:
             check_variable_values({self.name: value})
         except SecretDetectedError as exc:
+            self.flagged = True
+            if self.name in self.allowed:
+                return self.success()
             rule = exc.findings[0].rule
             return self.failure(f"Looks like a credential (gitleaks rule {rule}).")
         except ConfigurationError as exc:
@@ -51,32 +60,63 @@ class VariableFields(Vertical):
     class Committed(Message):
         """A value passed the secret guard and now feeds the preview."""
 
-    def __init__(self, values: Mapping[str, str]) -> None:
+    def __init__(
+        self, values: Mapping[str, str], allowed: Collection[str] = frozenset()
+    ) -> None:
         super().__init__()
         self.names: tuple[str, ...] = ()
+        self.descriptions: dict[str, str] = {}
+        self.credential_names: tuple[str, ...] = ()
         # Accepted values feed the preview; typed text survives a template switch.
         self.committed = dict(values)
         self._typed = dict(values)
+        self._allowed = set(allowed)
+
+    @property
+    def allowed_secrets(self) -> frozenset[str]:
+        """The shown variables whose flagged values the user kept."""
+        return frozenset(self._allowed & set(self.names))
 
     def compose(self) -> ComposeResult:
-        """Compose a field and an error line for each variable."""
+        """Compose a field, its notes, and an error line for each variable."""
         yield Label("Template variables", classes="section")
         yield Static("Saved to pyproject.toml; don't enter secrets.", classes="note")
         for name in self.names:
             yield Label(name, classes="field-label")
+            if name in self.descriptions:
+                yield Static(Text(self.descriptions[name]), classes="note")
+            if name in self.credential_names:
+                yield Static(
+                    "Named like a credential; enter a non-secret value.",
+                    classes="field-warning",
+                )
             yield Input(
                 self._typed.get(name, ""),
                 id=f"var-{name}",
-                validators=[_NotACredential(name)],
+                validators=[_NotACredential(name, self._allowed)],
                 validate_on=["submitted", "blur"],
             )
             error = Static("", id=f"var-{name}-error", classes="field-error")
             error.display = False
             yield error
+            allow = Checkbox(
+                "Not a secret; keep this value",
+                name in self._allowed,
+                id=f"var-{name}-allow",
+            )
+            allow.display = name in self._allowed
+            yield allow
 
-    async def show(self, names: frozenset[str]) -> None:
+    async def show(self, source: TemplateSource | None) -> None:
         """Replace the fields with those of a newly chosen template."""
+        names = source.variables if source else frozenset()
+        try:
+            self.descriptions = source.descriptions if source else {}
+        except ProtostarError:
+            # The preview reports an invalid declaration; the fields still work.
+            self.descriptions = {}
         self.names = tuple(sorted(names))
+        self.credential_names = credential_named(names)
         self.display = bool(self.names)
         await self.recompose()
 
@@ -107,11 +147,40 @@ class VariableFields(Vertical):
         for error in self.query(f"#var-{name}-error").results(Static):
             error.update(Text(message))
             error.display = bool(message)
+        field = self.query_one(f"#var-{name}", Input)
+        validator = next(v for v in field.validators if isinstance(v, _NotACredential))
+        self.query_one(f"#var-{name}-allow", Checkbox).display = validator.flagged
 
     @on(Input.Changed)
     def _remember(self, event: Input.Changed) -> None:
         event.stop()
-        self._typed[str(event.input.id).removeprefix("var-")] = event.value
+        name = str(event.input.id).removeprefix("var-")
+        if self._typed.get(name) == event.value:
+            return
+        self._typed[name] = event.value
+        # A confirmation covers the value the user saw flagged, not its edits.
+        if name in self._allowed:
+            self._allowed.discard(name)
+            allow = self.query_one(f"#var-{name}-allow", Checkbox)
+            with allow.prevent(Checkbox.Changed):
+                allow.value = False
+
+    @on(Checkbox.Changed)
+    def _allow(self, event: Checkbox.Changed) -> None:
+        event.stop()
+        name = str(event.checkbox.id).removeprefix("var-").removesuffix("-allow")
+        if event.value:
+            self._allowed.add(name)
+        else:
+            self._allowed.discard(name)
+        field = self.query_one(f"#var-{name}", Input)
+        result = field.validate(field.value)
+        self._report(name, result)
+        if result is not None and not result.is_valid:
+            if self.committed.pop(name, None) is not None:
+                self.post_message(self.Committed())
+            return
+        self._accept(name, field.value)
 
     @on(Input.Submitted)
     @on(Input.Blurred)
@@ -123,8 +192,11 @@ class VariableFields(Vertical):
             return
         if isinstance(event, Input.Submitted):
             self.screen.focus_next()
-        if self.committed.get(name) != event.value:
-            self.committed[name] = event.value
+        self._accept(name, event.value)
+
+    def _accept(self, name: str, value: str) -> None:
+        if self.committed.get(name) != value:
+            self.committed[name] = value
             self.post_message(self.Committed())
 
 
@@ -148,7 +220,9 @@ class VariablesScreen(Screen[InitDraft]):
         )
         with Horizontal(id="body"):
             with VerticalScroll(id="editor"):
-                yield VariableFields(draft_variables(self.draft))
+                yield VariableFields(
+                    draft_variables(self.draft), self.draft.allowed_secrets
+                )
             yield PlanPreview(self.config)
         with Horizontal(id="actions"):
             yield Button("Cancel", id="cancel")
@@ -158,9 +232,7 @@ class VariablesScreen(Screen[InitDraft]):
     async def on_mount(self) -> None:
         """Show the template's variables and focus the first without a value."""
         fields = self.query_one(VariableFields)
-        await fields.show(
-            self.draft.template.source.variables if self.draft.template else frozenset()
-        )
+        await fields.show(self.draft.template.source if self.draft.template else None)
         if fields.missing:
             self.query_one(f"#var-{fields.missing[0]}", Input).focus()
         self.refresh_preview()
@@ -175,7 +247,11 @@ class VariablesScreen(Screen[InitDraft]):
             if name in fields.committed
         }
         self.query_one(PlanPreview).update_plan(
-            replace(self.draft, variables=tuple(sorted(committed.items())))
+            replace(
+                self.draft,
+                variables=tuple(sorted(committed.items())),
+                allowed_secrets=fields.allowed_secrets,
+            )
         )
 
     @on(Button.Pressed)
@@ -184,6 +260,13 @@ class VariablesScreen(Screen[InitDraft]):
         if event.button.id == "cancel":
             self.app.exit(None)
             return
-        values = self.query_one(VariableFields).values()
+        fields = self.query_one(VariableFields)
+        values = fields.values()
         if values is not None:
-            self.app.exit(replace(self.draft, variables=tuple(sorted(values.items()))))
+            self.app.exit(
+                replace(
+                    self.draft,
+                    variables=tuple(sorted(values.items())),
+                    allowed_secrets=fields.allowed_secrets,
+                )
+            )

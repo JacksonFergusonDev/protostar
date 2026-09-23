@@ -6,14 +6,16 @@ import sys
 
 import pytest
 
-from protostar.cli.main import main
-from protostar.config import TemplateSource
+from protostar.cli.main import handle_init, main
+from protostar.cli.parser import build_parser
+from protostar.config import TemplateSource, UserConfig
 from protostar.errors import (
     ConfigurationError,
     ExitCode,
+    InvalidUsageError,
     SecretDetectedError,
-    TemplateResolutionError,
 )
+from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.secret_guard import (
     MAX_VALUE_LENGTH,
     Allowlist,
@@ -22,8 +24,8 @@ from protostar.secret_guard import (
     Rule,
     RuleSet,
     SecretFinding,
-    check_variable_names,
     check_variable_values,
+    credential_named,
     decode_rules,
     encode_rules,
     load_rules,
@@ -158,6 +160,23 @@ def test_check_variable_values_accepts_clean_values():
     check_variable_values({"project_slug": "my-cool-app", "port": "8080"})
 
 
+def test_check_variable_values_skips_allowed_variables():
+    values = {"alpha": TOKENS["github-pat"], "zeta": TOKENS["npm-access-token"]}
+
+    with pytest.raises(SecretDetectedError) as caught:
+        check_variable_values(values, allowed={"alpha"})
+
+    assert caught.value.findings == (SecretFinding("zeta", "npm-access-token"),)
+    check_variable_values(values, allowed={"alpha", "zeta"})
+
+
+def test_allowed_variables_still_obey_the_length_limit():
+    with pytest.raises(ConfigurationError, match="notes"):
+        check_variable_values(
+            {"notes": "a" * (MAX_VALUE_LENGTH + 1)}, allowed={"notes"}
+        )
+
+
 def test_check_variable_values_caps_length_before_scanning(mocker):
     scan = mocker.patch("protostar.secret_guard.scan_value")
 
@@ -182,17 +201,16 @@ def test_check_variable_values_caps_length_before_scanning(mocker):
         "credentials",
     ],
 )
-def test_check_variable_names_rejects_credential_names(name):
-    with pytest.raises(TemplateResolutionError, match=name):
-        check_variable_names("template.toml", [name, "project_slug"])
+def test_credential_named_flags_credential_names(name):
+    assert credential_named([name, "project_slug"]) == (name,)
 
 
 @pytest.mark.parametrize(
     "name",
     ["token_limit", "max_tokens", "password_min_length", "keyboard", "api_base_url"],
 )
-def test_check_variable_names_allows_ordinary_names(name):
-    check_variable_names("template.toml", [name])
+def test_credential_named_ignores_ordinary_names(name):
+    assert credential_named([name]) == ()
 
 
 @pytest.mark.parametrize(
@@ -353,28 +371,132 @@ def _template(tmp_path, variable: str):
     return target
 
 
-def test_template_load_rejects_secret_values_before_rendering(mocker, tmp_path):
+def _draft(tmp_path, variable: str, value: str, **changes) -> InitDraft:
+    source = TemplateSource.load(str(_template(tmp_path, variable)))
+    return InitDraft(
+        template=DraftTemplate(source), variables=((variable, value),), **changes
+    )
+
+
+def test_resolve_init_rejects_entered_secret_values_before_rendering(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
     render = mocker.patch("protostar.config.render_template")
 
-    source = TemplateSource.load(str(_template(tmp_path, "org_name")))
-
     with pytest.raises(SecretDetectedError, match="org_name"):
-        source.render({"org_name": TOKENS["github-pat"]})
+        resolve_init(_draft(tmp_path, "org_name", TOKENS["github-pat"]), UserConfig())
 
     render.assert_not_called()
 
 
-def test_template_load_rejects_credential_variable_names(mocker, tmp_path):
+def test_resolve_init_keeps_an_allowed_value(mocker, tmp_path):
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
+    token = TOKENS["github-pat"]
+    draft = _draft(tmp_path, "org_name", token, allowed_secrets=frozenset({"org_name"}))
+
+    _, request = resolve_init(draft, UserConfig())
+
+    assert request.recipe is not None
+    assert dict(request.recipe.variables) == {"org_name": token}
+
+
+def test_resolve_init_scans_only_values_that_differ_from_the_recipe(mocker, tmp_path):
+    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
+    token = TOKENS["github-pat"]
+    draft = _draft(tmp_path, "org_name", token, allowed_secrets=frozenset({"org_name"}))
+    _, request = resolve_init(draft, UserConfig())
+
+    # Re-applying the recorded value needs no new confirmation.
+    rerun = _draft(tmp_path, "org_name", token, existing_recipe=request.recipe)
+    resolve_init(rerun, UserConfig())
+
+    changed = _draft(
+        tmp_path, "org_name", TOKENS["npm-access-token"], existing_recipe=request.recipe
+    )
+    with pytest.raises(SecretDetectedError, match="org_name"):
+        resolve_init(changed, UserConfig())
+
+
+def test_credential_variable_names_load_and_render(mocker, tmp_path):
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "global.toml")
 
     source = TemplateSource.load(str(_template(tmp_path, "api_token")))
 
-    # Checked when the variables are first read, before anyone is prompted.
-    with pytest.raises(TemplateResolutionError, match="api_token"):
-        _ = source.variables
-    with pytest.raises(TemplateResolutionError, match="api_token"):
-        source.render({"api_token": "anything"})
+    assert source.variables == frozenset({"api_token"})
+    source.render({"api_token": "anything"})
+
+
+def test_init_warns_about_credential_variable_names(capsys, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    template = _template(tmp_path, "api_token")
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "protostar",
+            "init",
+            "--from",
+            str(template),
+            "--var",
+            "api_token=placeholder",
+            "--dry-run",
+            "--json",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    captured = capsys.readouterr()
+    assert json.loads(captured.out)["status"] == "planned"
+    assert "named like credentials: api_token" in captured.err
+
+
+def test_allow_secret_flag_keeps_a_flagged_value(capsys, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    template = _template(tmp_path, "org_name")
+    token = TOKENS["github-pat"]
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", True)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "protostar",
+            "init",
+            "--from",
+            str(template),
+            "--var",
+            f"org_name={token}",
+            "--allow-secret",
+            "org_name",
+            "--dry-run",
+            "--json",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "planned"
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [["--allow-secret", "nope"], ["--template", "cli", "--allow-secret", "org_name"]],
+)
+def test_allow_secret_rejects_names_the_template_lacks(
+    monkeypatch, tmp_path, arguments
+):
+    monkeypatch.chdir(tmp_path)
+    source = (
+        []
+        if "--template" in arguments
+        else ["--from", str(_template(tmp_path, "org_name"))]
+    )
+    args = build_parser().parse_args(["init", *source, *arguments, "--dry-run"])
+
+    with pytest.raises(InvalidUsageError, match="no variable named"):
+        handle_init(args)
 
 
 def test_json_error_envelope_lists_findings_without_values(

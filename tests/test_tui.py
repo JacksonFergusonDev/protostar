@@ -318,6 +318,83 @@ async def test_credential_value_blocks_continue_and_names_the_rule(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_confirming_a_flagged_value_keeps_it(tmp_path):
+    draft = template_draft(tmp_path / "t.toml", 'name = "<% ORG %>"\n')
+    token = github_token()
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        allow = screen.query_one("#var-ORG-allow", Checkbox)
+        assert not allow.display
+        field = screen.query_one("#var-ORG", Input)
+        field.focus()
+        field.value = token
+        await pilot.press("enter")
+        await settle(pilot)
+        assert allow.display
+        allow.value = True
+        await settle(pilot)
+        assert not screen.query_one("#var-ORG-error").display
+        assert "Waiting for values" not in plain(app, "#preview-summary")
+        # Editing the value withdraws the confirmation it was given for.
+        field.value = token + "x"
+        await pilot.pause()
+        assert not allow.value
+        field.value = token
+        await pilot.pause()
+        await pilot.click("#continue")
+        await settle(pilot)
+        assert "gitleaks rule github-pat" in plain(app, "#var-ORG-error")
+        allow.value = True
+        await settle(pilot)
+        await apply(pilot)
+    result = app.return_value.draft
+    assert dict(result.variables) == {"ORG": token}
+    assert result.allowed_secrets == frozenset({"ORG"})
+
+
+@pytest.mark.asyncio
+async def test_fields_show_descriptions_and_credential_names(tmp_path):
+    draft = template_draft(
+        tmp_path / "t.toml",
+        '[variables.REGION]\ndescription = "Deployment region, e.g. eu-west-1"\n'
+        '[files]\n"custom.txt" = "<% REGION %> <% api_token %>"\n',
+    )
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        text = "\n".join(
+            str(widget.content) for widget in app.screen.query("VariableFields Static")
+        )
+        assert "Deployment region, e.g. eu-west-1" in text
+        assert "Named like a credential" in text
+        assert len(app.screen.query(".field-warning")) == 1
+
+
+@pytest.mark.asyncio
+async def test_variables_step_keeps_a_value_allowed_by_flag(tmp_path):
+    token = github_token()
+    draft = template_draft(
+        tmp_path / "t.toml",
+        '[files]\n"custom.txt" = "<% ORG %> <% TIER %>"\n',
+        variables=(("ORG", token),),
+        allowed_secrets=frozenset({"ORG"}),
+    )
+    app = DecisionApp(VariablesScreen(draft, UserConfig()))
+    async with app.run_test(size=(110, 30)) as pilot:
+        await settle(pilot)
+        assert app.screen.query_one("#var-ORG-allow", Checkbox).value
+        await pilot.press(*"gold", "enter")
+        await settle(pilot)
+        await pilot.click("#continue")
+    result = app.return_value
+    assert result is not None
+    assert dict(result.variables) == {"ORG": token, "TIER": "gold"}
+    assert result.allowed_secrets == frozenset({"ORG"})
+
+
+@pytest.mark.asyncio
 async def test_metadata_defaults_follow_config_tools_and_docker():
     config = UserConfig(
         author_name="Ada Lovelace", license="Apache-2.0", supported_os=["Linux"]
@@ -415,7 +492,8 @@ def test_variables_step_snapshot(snap_compare, monkeypatch, tmp_path):
     monkeypatch.delenv("NO_COLOR", raising=False)
     draft = template_draft(
         tmp_path / "t.toml",
-        'name = "Orbit"\n[files]\n"<% REGION %>/app.txt" = "<% TIER %>"\n',
+        'name = "Orbit"\n[files]\n"<% REGION %>/app.txt" = "<% TIER %>"\n'
+        '[variables.TIER]\ndescription = "Service tier: free or gold"\n',
         variables=(("REGION", "eu"),),
     )
     app = DecisionApp(VariablesScreen(draft, UserConfig()))
@@ -724,7 +802,10 @@ def test_review_summary_is_cp1252_safe(mocker):
     mocker.patch.object(ui, "console", Console(file=stream, force_terminal=False))
     ui.print_review_summary(
         InitDecision(
-            InitDraft(collision_strategy=CollisionStrategy.MERGE),
+            InitDraft(
+                collision_strategy=CollisionStrategy.MERGE,
+                allowed_secrets=frozenset({"ORG", "BETA"}),
+            ),
             (),
             (("git", "init"), ("uv", "run", "setup")),
         )
@@ -734,4 +815,22 @@ def test_review_summary_is_cp1252_safe(mocker):
     assert output.getvalue().decode("cp1252").splitlines() == [
         "Existing files: merge",
         "Confirmed 2 commands from an untrusted template",
+        "Kept values flagged as credentials: BETA, ORG",
     ]
+
+
+def test_credential_name_warning_is_cp1252_safe(mocker):
+    output = io.BytesIO()
+    stream = io.TextIOWrapper(output, encoding="cp1252", errors="strict")
+    console = Console(file=stream, force_terminal=False, width=200)
+    mocker.patch.object(ui, "console", console)
+    mocker.patch.object(ui, "is_json_mode", False)
+    ui.warn_credential_names(("[red]api_token[/red]",))
+    stream.flush()
+    assert (
+        output.getvalue()
+        .decode("cp1252")
+        .startswith(
+            "! Template variables named like credentials: [red]api_token[/red]."
+        )
+    )

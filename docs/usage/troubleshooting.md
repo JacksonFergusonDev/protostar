@@ -87,7 +87,7 @@ trusted = true
 
 ## Template Variables That Look Like Credentials
 
-Template variables are saved to your project's recipe and rendered into its files, so Protostar refuses values that look like credentials before anything is written:
+Template variables are saved to your project's recipe and rendered into its files, so Protostar holds back a newly entered value that looks like a credential before anything is written:
 
 ```text
 Template variable values look like credentials:
@@ -98,7 +98,7 @@ The error names the variable and the [gitleaks](https://github.com/gitleaks/gitl
 
 - **You entered a secret:** enter a non-secret value instead, and supply the secret through the environment when the project runs.
 - **The template asks for a secret:** the template needs fixing; see [Variables Are Not Secrets](authoring-templates.md#variables-are-not-secrets).
-- **The value isn't a secret:** there is no override, so this is a bug. [File an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
+- **The value isn't a secret:** keep it. In the editor, tick **Not a secret; keep this value** under the field. On the command line, add `--allow-secret NAME` for that variable. The confirmation covers only that variable, and once the value is recorded, later runs don't ask again. If a rule flags ordinary values often, [file an issue](https://github.com/JacksonFergusonDev/protostar/issues) with the rule id and the value's shape (not the value).
 
 ## Editor Schema Setup for Custom Templates
 
