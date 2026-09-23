@@ -112,6 +112,7 @@ def github_token():
 async def test_template_picker_and_docker():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
         app.screen.query_one("#template", Select).value = next(
             item for item in app.decision_screen.catalog if item.alias == "api"
         )
@@ -371,6 +372,7 @@ async def test_alias_and_load_error(tmp_path):
     )
     app = make_app(config=config)
     async with app.run_test() as pilot:
+        await settle(pilot)
         app.screen.query_one("#template", Select).value = next(
             item for item in app.decision_screen.catalog if item.alias == "missing"
         )
@@ -411,6 +413,7 @@ async def test_remote_template_loads_in_a_worker(tmp_path, mocker):
     )
     app = make_app(config=config)
     async with app.run_test() as pilot:
+        await settle(pilot)
         app.screen.query_one("#template", Select).value = next(
             item for item in app.decision_screen.catalog if item.alias == "remote"
         )
@@ -442,6 +445,7 @@ async def test_reselecting_the_current_template_abandons_a_load(tmp_path, mocker
     )
     app = make_app(config=config)
     async with app.run_test() as pilot:
+        await settle(pilot)
         select = app.screen.query_one("#template", Select)
         select.value = next(
             item for item in app.decision_screen.catalog if item.alias == "remote"
