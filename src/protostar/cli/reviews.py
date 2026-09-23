@@ -10,11 +10,22 @@ from protostar.lifecycle import inspect_project, prepare_project
 from protostar.preparation import PreparedEdit, PreparedReview
 
 
+def _diff_lines(content: bytes | None) -> list[str]:
+    if not content:
+        return []
+    return (
+        content.decode()
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+        .splitlines(keepends=True)
+    )
+
+
 def unified_diff(edit: PreparedEdit) -> str:
     """Formats only accepted byte edits, including newly created files."""
     lines = difflib.unified_diff(
-        (edit.before or b"").decode().splitlines(keepends=True),
-        edit.after.decode().splitlines(keepends=True),
+        _diff_lines(edit.before),
+        _diff_lines(edit.after),
         fromfile=f"a/{edit.path}" if edit.before is not None else "/dev/null",
         tofile=f"b/{edit.path}",
     )

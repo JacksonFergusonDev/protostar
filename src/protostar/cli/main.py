@@ -24,7 +24,7 @@ from rich.text import Text
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
 from protostar.cli.prompts import confirm
-from protostar.cli.tui.launch import edit_variables
+from protostar.cli.tui.launch import edit_variables, review_changes
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateSource,
@@ -219,7 +219,20 @@ def handle_init(args: argparse.Namespace) -> None:
             ui.print_dry_run_summary(manifest)
         sys.exit(0)
 
-    result = ui._run_engine(engine, request)
+    decision = None
+    if (
+        is_interactive()
+        and not ui.is_json_mode
+        and ui.needs_review(request, engine.plan())
+    ):
+        decision = review_changes(draft, user_config)
+        if decision is None:
+            raise ExecutionAbortedError("Change review cancelled by user.")
+        ui.print_review_summary(decision)
+        request = replace(request, collision_strategy=decision.draft.collision_strategy)
+        engine.request = request
+
+    result = ui._run_engine(engine, request, decision)
     if ui.is_json_mode:
         ui.emit_json(
             {

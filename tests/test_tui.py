@@ -21,6 +21,7 @@ from textual.widgets import (
     Select,
     SelectionList,
     Static,
+    Tree,
 )
 from textual.worker import WorkerCancelled
 
@@ -28,10 +29,15 @@ from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.variables import VariablesScreen
+from protostar.cli.tui.review.screen import ReviewScreen
 from protostar.config import TemplateAliasConfig, TemplateSource, UserConfig
 from protostar.errors import ExecutionAbortedError
+from protostar.executor import SystemExecutor
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
+from protostar.manifest import CollisionStrategy
+from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
+from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
 from protostar.templates import discover_templates
 
 
@@ -44,6 +50,7 @@ def workspace(tmp_path, monkeypatch):
     monkeypatch.chdir(project)
     monkeypatch.setattr("protostar.metadata.get_git_config", lambda key: None)
     monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setenv("PROTOSTAR_OFFLINE_HOOK_REGISTRY", "1")
     return project
 
 
@@ -76,6 +83,16 @@ async def settle(pilot):
     await pilot.pause()
 
 
+async def apply(pilot, *, trust=False):
+    """Continue from the editor, then apply the change review."""
+    await pilot.click("#continue")
+    await settle(pilot)
+    assert isinstance(pilot.app.screen, ReviewScreen)
+    if trust:
+        await pilot.click("#trust")
+    await pilot.click("#apply")
+
+
 def plain(app, selector):
     console = Console(file=io.StringIO(), width=200, record=True, color_system=None)
     console.print(app.screen.query_one(selector, Static).content)
@@ -101,9 +118,10 @@ async def test_template_picker_and_docker():
         assert (
             "from template" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         )
-        await pilot.click("#continue")
-    assert app.return_value.template.source.reference.locator == "api"
-    _, request = resolve_init(app.return_value, UserConfig())
+        await apply(pilot)
+    draft = app.return_value.draft
+    assert draft.template.source.reference.locator == "api"
+    _, request = resolve_init(draft, UserConfig())
     assert request.template_reference is not None
     assert request.template_reference.origin.value == "built-in"
 
@@ -135,8 +153,8 @@ async def test_tools_constraints_and_provenance():
         await pilot.pause()
         await pilot.click("#tool-prek")
         assert not app.screen.query_one("#tool-pre_commit", RadioButton).value
-        await pilot.click("#continue")
-    choices = dict(app.return_value.tool_choices)
+        await apply(pilot)
+    choices = dict(app.return_value.draft.tool_choices)
     assert choices[Tool.PREK]
     assert not choices[Tool.PRE_COMMIT]
     assert not choices[Tool.READTHEDOCS]
@@ -202,11 +220,12 @@ async def test_alias_and_load_error(tmp_path):
         )
         await settle(pilot)
         assert not app.screen.query_one("#continue", Button).disabled
-        await pilot.click("#continue")
-    assert app.return_value.template.is_external
-    assert app.return_value.template.is_user_aliased
-    assert not app.return_value.template.is_trusted
-    assert app.return_value.docker
+        await apply(pilot, trust=True)
+    draft = app.return_value.draft
+    assert draft.template.is_external
+    assert draft.template.is_user_aliased
+    assert not draft.template.is_trusted
+    assert draft.docker
 
 
 @pytest.mark.asyncio
@@ -294,9 +313,8 @@ async def test_credential_value_blocks_continue_and_names_the_rule(tmp_path):
         field.value = "orbit"
         await pilot.press("enter")
         await settle(pilot)
-        await pilot.click("#continue")
-        await settle(pilot)
-    assert dict(app.return_value.variables) == {"ORG": "orbit"}
+        await apply(pilot)
+    assert dict(app.return_value.draft.variables) == {"ORG": "orbit"}
 
 
 @pytest.mark.asyncio
@@ -321,12 +339,13 @@ async def test_metadata_defaults_follow_config_tools_and_docker():
             "Linux"
         ]
         assert screen.query_one("#meta-docker_port", Input).value == "8000"
-        await pilot.click("#continue")
-    metadata = dict(app.return_value.metadata)
+        await apply(pilot)
+    draft = app.return_value.draft
+    metadata = dict(draft.metadata)
     assert metadata["author_name"] == "Ada Lovelace"
     assert metadata["supported_os"] == ("Linux",)
     assert metadata["docker_port"] == "8000"
-    assert app.return_value.python_version == "3.13"
+    assert draft.python_version == "3.13"
 
 
 @pytest.mark.asyncio
@@ -403,6 +422,220 @@ def test_variables_step_snapshot(snap_compare, monkeypatch, tmp_path):
     assert snap_compare(app, terminal_size=(110, 30), run_before=settle)
 
 
+REMOTE_TASK = ("uv", "run", "nbdime", "config-git", "--enable")
+
+
+def make_review(draft=None, config=None):
+    return DecisionApp(ReviewScreen(draft or InitDraft(), config or UserConfig()))
+
+
+def untrusted_draft(path):
+    """An external template that is not trusted, with its own post-install task."""
+    draft = template_draft(
+        path,
+        f'name = "Remote"\npost_install_tasks = [{list(REMOTE_TASK)!r}]\n'.replace(
+            "'", '"'
+        )
+        + '[files]\n"notes.txt" = "Launch checklist\\n"\n',
+    )
+    return replace(draft, template=replace(draft.template, is_external=True))
+
+
+@pytest.fixture
+def collisions(workspace):
+    """An unmanaged justfile, pre-commit config, and pyproject.toml already exist."""
+    (workspace / "pyproject.toml").write_text(
+        '[project]\nname = "existing"\n', newline="\n"
+    )
+    (workspace / "justfile").write_text("default:\n    echo hi\n", newline="\n")
+    (workspace / ".pre-commit-config.yaml").write_text(
+        "repos:\n  - repo: local\n    hooks:\n      - id: mine\n"
+        "        name: mine\n        entry: mine\n        language: system\n",
+        newline="\n",
+    )
+    return UserConfig(ci=True, just=True, prek=True)
+
+
+def file_nodes(app):
+    """Each planned path's tree node, by path."""
+    nodes, stack = {}, [app.screen.query_one("#files", Tree).root]
+    while stack:
+        node = stack.pop()
+        stack.extend(node.children)
+        if node.data is not None:
+            nodes[node.data.path] = node
+    return nodes
+
+
+async def highlight(pilot, path):
+    pilot.app.screen.query_one("#files", Tree).move_cursor(file_nodes(pilot.app)[path])
+    await pilot.pause()
+
+
+def execute_decision(decision, config, mocker):
+    """Runs the CLI's execution path for a decision; the executor applies nothing."""
+    execute = mocker.patch.object(SystemExecutor, "execute", autospec=True)
+    modules, request = resolve_init(decision.draft, config)
+    ui._run_engine(Orchestrator(modules, config, request=request), request, decision)
+    return execute.call_args.args[0]
+
+
+@pytest.mark.asyncio
+async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        assert {path: node.label.plain for path, node in file_nodes(app).items()} == {
+            ".github/workflows": "workflows/  new",
+            ".github/workflows/ci.yml": "ci.yml  new",
+            ".gitignore": ".gitignore  after setup",
+            ".pre-commit-config.yaml": ".pre-commit-config.yaml  modified",
+            "justfile": "justfile  conflict",
+            "pyproject.toml": "pyproject.toml  existing",
+        }
+        assert "Already in the workspace: .pre-commit-config.yaml, justfile, " in (
+            plain(app, "#collision-note")
+        )
+        await highlight(pilot, ".pre-commit-config.yaml")
+        diff = plain(app, "#diff")
+        assert "+++ b/.pre-commit-config.yaml" in diff
+        assert "\n   - repo: local\n" in diff
+        assert "+    repo: https://github.com/gitleaks/gitleaks" in diff
+        await highlight(pilot, "justfile")
+        assert "Your version of the file is kept (unowned)." in plain(app, "#diff")
+        await highlight(pilot, "pyproject.toml")
+        assert "Nothing is written to it before setup" in plain(app, "#diff")
+        await highlight(pilot, ".gitignore")
+        assert "so it can't be shown yet" in plain(app, "#diff")
+
+        await highlight(pilot, "justfile")
+        await pilot.click("#strategy-overwrite")
+        await settle(pilot)
+        assert file_nodes(app)["justfile"].label.plain == "justfile  modified"
+        # The highlighted file stays in view while the batch is re-prepared.
+        diff = plain(app, "#diff")
+        assert "-    echo hi" in diff
+        assert "+    @just --list" in diff
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("strategy", list(CollisionStrategy))
+async def test_the_chosen_strategy_reaches_execution(collisions, mocker, strategy):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        await pilot.click(f"#strategy-{strategy.value}")
+        await settle(pilot)
+        await pilot.click("#apply")
+    decision = app.return_value
+    assert decision.draft.collision_strategy is strategy
+    executor = execute_decision(decision, collisions, mocker)
+    assert executor.manifest.collision_strategy is strategy
+
+
+@pytest.mark.asyncio
+async def test_trust_gate_blocks_until_the_commands_are_confirmed(tmp_path, mocker):
+    app = make_review(untrusted_draft(tmp_path / "t.toml"))
+    async with app.run_test(size=(120, 50)) as pilot:
+        await settle(pilot)
+        note = plain(app, "#trust-note")
+        assert "\n  git init" in note
+        assert "\n  uv run nbdime config-git --enable" in note
+        apply_button = app.screen.query_one("#apply", Button)
+        assert apply_button.disabled
+        await pilot.click("#trust")
+        assert not apply_button.disabled
+        await pilot.click("#trust")
+        assert apply_button.disabled
+        await pilot.click("#apply")
+        assert app.is_running
+        await pilot.click("#trust")
+        await pilot.click("#apply")
+    decision = app.return_value
+    commands = decision.confirmed_commands
+    assert commands[0] == ("git", "init")
+    assert commands[-1] == REMOTE_TASK
+    # The confirmation is what lets the CLI run exactly these commands.
+    executor = execute_decision(decision, UserConfig(), mocker)
+    assert [tuple(task.command) for task in executor.manifest.tasks.post_install_tasks][
+        -1
+    ] == REMOTE_TASK
+
+
+@pytest.mark.asyncio
+async def test_review_and_execution_share_one_hook_snapshot(collisions, mocker):
+    snapshot = tuple(
+        ResolvedHookRevision(hook, "v9.9.9", PinProvenance.REGISTRY)
+        for hook in RemoteHook
+    )
+    take = mocker.patch(
+        "protostar.cli.tui.review.screen.resolve_hook_revisions",
+        return_value=snapshot,
+    )
+    fresh = mocker.patch("protostar.executor.resolve_hook_revisions")
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        await highlight(pilot, ".pre-commit-config.yaml")
+        assert "+  - rev: v9.9.9" in plain(app, "#diff")
+        # Re-preparing for another strategy reuses the snapshot.
+        await pilot.click("#strategy-overwrite")
+        await settle(pilot)
+        await pilot.click("#apply")
+    take.assert_called_once()
+    decision = app.return_value
+    assert decision.hook_revisions is snapshot
+    executor = execute_decision(decision, collisions, mocker)
+    assert executor.hook_revisions is snapshot
+    fresh.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_back_returns_to_the_editor_with_its_choices():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#tool-just", Checkbox).value = True
+        await settle(pilot)
+        await pilot.click("#continue")
+        await settle(pilot)
+        assert "justfile" in file_nodes(app)
+        await pilot.press("escape")
+        assert isinstance(app.screen, RecipeScreen)
+        assert app.screen.query_one("#tool-just", Checkbox).value
+        await apply(pilot)
+    assert dict(app.return_value.draft.tool_choices)[Tool.JUST]
+
+
+@pytest.mark.asyncio
+async def test_escape_cancels_a_review_with_no_editor_behind_it(collisions):
+    app = make_review(config=collisions)
+    async with app.run_test() as pilot:
+        await settle(pilot)
+        await pilot.press("escape")
+    assert app.return_value is None
+
+
+def test_review_snapshot(snap_compare, monkeypatch, mocker, collisions):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    # Fixed pins: fallback revisions move with every registry bump.
+    mocker.patch(
+        "protostar.cli.tui.review.screen.resolve_hook_revisions",
+        return_value=tuple(
+            ResolvedHookRevision(hook, "v1.0.0", PinProvenance.REGISTRY)
+            for hook in RemoteHook
+        ),
+    )
+    app = make_review(config=UserConfig(just=True, prek=True))
+    assert snap_compare(app, terminal_size=(110, 45), run_before=settle)
+
+
+def test_trust_gate_snapshot(snap_compare, monkeypatch, tmp_path):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    app = make_review(untrusted_draft(tmp_path / "t.toml"))
+    assert snap_compare(app, terminal_size=(110, 45), run_before=settle)
+
+
 @pytest.mark.parametrize(
     "args", [["help", "init"], ["init", "--json", "--dry-run"], ["init", "--dry-run"]]
 )
@@ -469,3 +702,24 @@ def test_summary_is_literal_and_cp1252_safe(mocker):
     ui.print_recipe_summary(request)
     stream.flush()
     assert "[red]API[/red]" in output.getvalue().decode("cp1252")
+
+
+def test_review_summary_is_cp1252_safe(mocker):
+    from protostar.init_draft import InitDecision
+
+    output = io.BytesIO()
+    stream = io.TextIOWrapper(output, encoding="cp1252", errors="strict")
+    mocker.patch.object(ui, "console", Console(file=stream, force_terminal=False))
+    ui.print_review_summary(
+        InitDecision(
+            InitDraft(collision_strategy=CollisionStrategy.MERGE),
+            (),
+            (("git", "init"), ("uv", "run", "setup")),
+        )
+    )
+    ui.print_review_summary(InitDecision(InitDraft(), ()))
+    stream.flush()
+    assert output.getvalue().decode("cp1252").splitlines() == [
+        "Existing files: merge",
+        "Confirmed 2 commands from an untrusted template",
+    ]
