@@ -7,6 +7,7 @@ without requiring a headless browser or ffmpeg.
 from __future__ import annotations
 
 import argparse
+import builtins
 import codecs
 import contextlib
 import fcntl
@@ -15,11 +16,13 @@ import os
 import pty
 import select
 import shutil
+import signal
 import struct
 import subprocess
 import sys
 import termios
 import time
+import types
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -123,8 +126,10 @@ class PTYSession:
             close_fds=True,
             env=env,
             cwd=self.workspace,
+            start_new_session=True,
         )
         os.close(self.slave_fd)
+        self.slave_fd = -1
 
         # Perform silent bootstrap (unset host venv, enforce local venv priority, load direnv & starship hooks)
         self._silent_write(f'export PATH="{venv_bin}:$PATH"\n')
@@ -306,24 +311,53 @@ class PTYSession:
         """Pauses the timeline while continuing to drain any background stream output."""
         self._drain(seconds)
 
-    def save(self, output_path: str | Path) -> None:
-        """Closes the shell and saves the recorded events to an asciicast v2 file."""
+    def __enter__(self) -> PTYSession:
+        """Starts the session when entering context."""
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: builtins.type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
+        """Ensures the session and all child processes are terminated on exit."""
+        self.close()
+
+    def close(self) -> None:
+        """Terminates the shell and all child processes, and closes open file descriptors."""
         self.recording = False
-        with contextlib.suppress(Exception):
-            self._silent_write("q\nexit\n")
-            self._drain(0.2)
-            if self.proc:
+        if self.proc is not None and self.proc.poll() is None:
+            pid = self.proc.pid
+            with contextlib.suppress(Exception):
+                self._silent_write("q\nexit\n")
+                self._drain(0.1)
+
+            if self.proc.poll() is None:
+                # Terminate the entire process group
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.killpg(pid, signal.SIGTERM)
                 try:
                     self.proc.wait(timeout=0.5)
-                except Exception:
-                    self.proc.kill()
+                except (subprocess.TimeoutExpired, Exception):
+                    with contextlib.suppress(ProcessLookupError, PermissionError):
+                        os.killpg(pid, signal.SIGKILL)
+                    with contextlib.suppress(Exception):
+                        self.proc.wait(timeout=0.5)
+
+        if self.master_fd >= 0:
+            with contextlib.suppress(OSError):
+                os.close(self.master_fd)
+            self.master_fd = -1
+
+    def save(self, output_path: str | Path) -> None:
+        """Closes the shell and saves the recorded events to an asciicast v2 file."""
+        self.close()
         if self.events:
             total_duration = round(time.time() - self.start_time, 4)
             if total_duration > float(self.events[-1][0]):
                 self.events.append([total_duration, "o", ""])
-
-        with contextlib.suppress(OSError):
-            os.close(self.master_fd)
 
         header = {
             "version": 2,
@@ -478,10 +512,9 @@ def main() -> None:
 
         if trials_count == 1:
             print(f"🎬 Recording demo '{target}' -> {out_path} ...")
-            session = PTYSession(cols=args.cols, rows=args.rows)
-            session.start()
-            SCENARIOS[target](session)
-            session.save(out_path)
+            with PTYSession(cols=args.cols, rows=args.rows) as session:
+                SCENARIOS[target](session)
+                session.save(out_path)
             duration = float(session.events[-1][0]) if session.events else 0.0
             print(
                 f"✔ Recorded '{target}' successfully in {duration:.2f}s "
@@ -502,11 +535,10 @@ def main() -> None:
                 )
                 trial_paths.append(tmp_cast)
                 print(f"  ↳ [Trial {trial_idx}/{trials_count}] Recording ...")
-                session = PTYSession(cols=args.cols, rows=args.rows)
-                session.start()
                 try:
-                    SCENARIOS[target](session)
-                    session.save(tmp_cast)
+                    with PTYSession(cols=args.cols, rows=args.rows) as session:
+                        SCENARIOS[target](session)
+                        session.save(tmp_cast)
                     duration = float(session.events[-1][0]) if session.events else 0.0
                     event_count = len(session.events)
                     trial_results.append(
