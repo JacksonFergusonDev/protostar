@@ -45,12 +45,53 @@ class ConflictReason(StrEnum):
 
 
 @dataclass(frozen=True)
+class LineSpan:
+    """Lines of a local text file, numbered as in a unified diff hunk header.
+
+    Attributes:
+        start: One-based number of the first line, or, when ``count`` is zero,
+            of the line after which the span sits (zero before the first line).
+        count: Number of lines, zero when the local side has none there.
+    """
+
+    start: int
+    count: int
+
+    def to_dict(self) -> dict[str, int]:
+        """Returns the span as a JSON-ready mapping."""
+        return {"start": self.start, "count": self.count}
+
+
+@dataclass(frozen=True)
 class MergeLocation:
-    """Concrete file, semantic key path, and optional adapter record identity."""
+    """Concrete file, semantic key path, optional record identity, and text lines."""
 
     file: str
     keys: tuple[str, ...] = ()
     identity: str | None = None
+    lines: LineSpan | None = None
+
+
+def describe_location(location: MergeLocation) -> str:
+    """Returns a plain-text label for a location within its file, or ``""``.
+
+    Args:
+        location: The location to describe.
+
+    Returns:
+        The dotted key path, the line numbers, or an empty string for the
+        whole file.
+    """
+    if location.keys:
+        return ".".join(location.keys)
+    span = location.lines
+    if span is None:
+        return ""
+    if span.count == 0:
+        return f"after line {span.start}" if span.start else "at the start"
+    if span.count == 1:
+        return f"line {span.start}"
+    return f"lines {span.start}-{span.start + span.count - 1}"
 
 
 @dataclass(frozen=True)

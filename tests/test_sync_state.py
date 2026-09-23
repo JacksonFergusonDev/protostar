@@ -2,6 +2,8 @@ from dataclasses import replace
 from datetime import UTC, date, datetime, time
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from protostar.errors import ConfigurationError
 from protostar.intent import (
@@ -28,6 +30,7 @@ from protostar.sync_state import (
 )
 
 DIGEST = "a" * 64
+PROPERTY = settings(max_examples=200, deadline=None)
 REF = TemplateReference(
     TemplateOrigin.BUILT_IN, "api", DIGEST, "my-alias", "v1", "revision"
 )
@@ -45,7 +48,7 @@ def sample_state():
                     {"tool": {"example": {"enabled": True, "select": ["A", "B"]}}}
                 ),
             ),
-            FileState(".github/ci.yml", FilePolicy.CHECKSUM, digest=DIGEST),
+            FileState("justfile", FilePolicy.TEXT, 'build:\n    uv build "."\r\n'),
             FileState("src/app.py", FilePolicy.SEED),
             FileState(
                 ".envrc",
@@ -200,11 +203,12 @@ def test_corrupt_state_is_fatal_with_actionable_hint(content):
 @pytest.mark.parametrize(
     "record",
     [
-        lambda: FileState("file", FilePolicy.CHECKSUM),
-        lambda: FileState("file", FilePolicy.CHECKSUM, digest="bad"),
+        lambda: FileState("file", FilePolicy.TEXT),
         lambda: FileState("file", FilePolicy.SEED, baseline="x = 1"),
-        lambda: FileState("file", FilePolicy.TOML, "x = 1", DIGEST),
-        lambda: FileState("file", FilePolicy.REGIONS, digest=DIGEST),
+        lambda: FileState(
+            "file", FilePolicy.TOML, "x = 1", (RegionState("12345678", "a", DIGEST),)
+        ),
+        lambda: FileState("file", FilePolicy.REGIONS, baseline="text"),
         lambda: FileState(
             "file",
             FilePolicy.REGIONS,
@@ -240,6 +244,24 @@ def test_corrupt_state_is_fatal_with_actionable_hint(content):
 def test_invalid_policy_fields_and_records_are_rejected(record):
     with pytest.raises(ConfigurationError):
         record()
+
+
+@PROPERTY
+@given(st.text())
+def test_text_baselines_round_trip_exactly(text):
+    state = SyncState("0.9.0", files=(FileState("justfile", FilePolicy.TEXT, text),))
+
+    assert deserialize_state(serialize_state(state)).files[0].baseline == text
+
+
+def test_digest_only_generated_records_are_rejected():
+    content = (
+        'schema_version = 1\nproducer_version = "x"\n[[files]]\npath = "justfile"\n'
+        f'policy = "checksum"\ndigest = "{DIGEST}"\n'
+    )
+
+    with pytest.raises(ConfigurationError):
+        deserialize_state(content)
 
 
 @pytest.mark.parametrize("field", ["files", "dependencies", "hook_pins"])
@@ -387,7 +409,6 @@ def test_jsonc_baseline_must_be_a_strict_json_object(baseline):
 @pytest.mark.parametrize(
     "fields",
     [
-        {"digest": DIGEST},
         {"regions": (RegionState("12345678", "test:id", DIGEST),)},
         {},
     ],

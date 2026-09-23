@@ -16,6 +16,7 @@ from .jsonc_ast import decode_jsonc
 from .merge import MISSING, MergeConflict, MergeLocation, Value, semantic_equal
 from .review_workspace import ReviewWorkspace
 from .sync_state import FilePolicy, SyncState, decode_toml_baseline
+from .text_merge import is_edited
 from .yaml_ast import decode_yaml_baseline
 
 
@@ -133,10 +134,13 @@ def preserved_deviations(
             inspect(
                 location, decode(record.baseline), decode(candidate.baseline), local
             )
-        elif record.digest and record.digest == candidate.digest:
-            content = workspace.read_bytes(target) if exists else None
+        elif (
+            record.policy is FilePolicy.TEXT
+            and record.baseline is not None
+            and record.baseline == candidate.baseline
+        ):
             if (
-                content is None or hashlib.sha256(content).hexdigest() != record.digest
+                not exists or is_edited(workspace.read_bytes(target), record.baseline)
             ) and not blocked(location):
                 preserved.append(PreservedDeviation(location, not exists))
         elif record.policy is FilePolicy.SEED and not exists and not blocked(location):

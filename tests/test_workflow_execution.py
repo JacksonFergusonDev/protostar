@@ -48,7 +48,6 @@ def owned(path: Path) -> Any:
     )
     assert record.policy is FilePolicy.YAML
     assert record.baseline is not None
-    assert record.digest is None
     return decode_yaml_baseline(record.baseline)
 
 

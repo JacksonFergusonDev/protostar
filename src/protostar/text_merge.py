@@ -1,9 +1,10 @@
-"""Pure line-based three-way text merge; adapters decide what a conflict does to a file.
+"""Pure line-based three-way text merge and the ownership gate for owned text.
 
 The merge is diff3 (Khanna, Kunal & Pierce, "A Formal Investigation of Diff3",
 2007) over patience-diff alignments (Bram Cohen), with ``difflib`` aligning the
 stretches between unique anchor lines. It runs in-process with no subprocess,
 filesystem access, or terminal output, so planning and review can call it.
+``reconcile_text`` applies Protostar's ownership rules around the merge.
 """
 
 from __future__ import annotations
@@ -14,7 +15,16 @@ from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-__all__ = ["TextConflict", "TextMerge", "merge_text"]
+from .merge import LineSpan
+
+__all__ = [
+    "TextConflict",
+    "TextMerge",
+    "TextReconciliation",
+    "is_edited",
+    "merge_text",
+    "reconcile_text",
+]
 
 type _Lines = Sequence[str]
 type _Match = tuple[int, int]
@@ -49,6 +59,12 @@ class TextConflict:
         """Returns the zero-based index just past the region in the local text."""
         return self.start + len(self.local)
 
+    @property
+    def lines(self) -> LineSpan:
+        """Returns the region's one-based line span in the local text."""
+        count = len(self.local)
+        return LineSpan(self.start + 1 if count else self.start, count)
+
 
 @dataclass(frozen=True)
 class TextMerge:
@@ -69,6 +85,69 @@ class TextMerge:
     def clean(self) -> bool:
         """Returns whether the merge produced text."""
         return self.content is not None
+
+
+@dataclass(frozen=True)
+class TextReconciliation:
+    """An ownership decision for one owned text file or region.
+
+    Attributes:
+        content: Text to write, or ``None`` to leave the local text untouched.
+        baseline: Ownership to record: the accepted desired text, the previous
+            baseline when an update is refused, or ``None`` while unowned.
+        conflict: Whether a pending desired change was refused.
+        conflicts: The overlapping edits that refused it, when a merge ran.
+    """
+
+    content: str | None
+    baseline: str | None
+    conflict: bool = False
+    conflicts: tuple[TextConflict, ...] = ()
+
+
+def reconcile_text(
+    local: bytes | None,
+    desired: str,
+    baseline: str | None,
+    *,
+    overwrite: bool = False,
+) -> TextReconciliation:
+    """Decides an owned text update, merging local edits with desired changes.
+
+    An absent never-owned target is created and owned. Existing unowned text is
+    never adopted, even when it equals the desired text. An owned target the
+    user deleted stays deleted. An owned target the user edited is merged three
+    ways against its baseline; overlapping edits keep the local text whole and
+    the previous baseline, so the change stays pending. Local bytes that are not
+    UTF-8 cannot be merged and are treated as edited. Explicit overwrite writes
+    and owns the desired text.
+
+    Args:
+        local: The workspace bytes, or ``None`` when the file is absent.
+        desired: The newly generated text.
+        baseline: The last accepted generated text, or ``None`` if unowned.
+        overwrite: Whether the collision strategy replaces local content.
+
+    Returns:
+        What to write, what to own, and any refused change.
+    """
+    target = desired.encode("utf-8")
+    if overwrite or (baseline is None and local is None):
+        return TextReconciliation(None if local == target else desired, desired)
+    if baseline is None:
+        return TextReconciliation(None, None, conflict=local != target)
+    if local is None:
+        return TextReconciliation(None, baseline, conflict=desired != baseline)
+    try:
+        text = local.decode("utf-8")
+    except UnicodeDecodeError:
+        return TextReconciliation(None, baseline, conflict=desired != baseline)
+    merged = merge_text(baseline, text, desired)
+    if merged.content is None:
+        return TextReconciliation(None, baseline, True, merged.conflicts)
+    return TextReconciliation(
+        None if merged.content == text else merged.content, desired
+    )
 
 
 def merge_text(base: str, local: str, remote: str) -> TextMerge:
@@ -111,6 +190,24 @@ def merge_text(base: str, local: str, remote: str) -> TextMerge:
     if conflicts:
         return TextMerge(None, tuple(conflicts))
     return TextMerge("".join(merged))
+
+
+def is_edited(local: bytes, baseline: str) -> bool:
+    """Returns whether local bytes differ from a baseline beyond newline style.
+
+    Args:
+        local: The workspace bytes.
+        baseline: The last accepted text.
+
+    Returns:
+        Whether the merge would treat the local text as edited.
+    """
+    try:
+        text = local.decode("utf-8")
+    except UnicodeDecodeError:
+        return True
+    newline = _newline(text)
+    return text != (baseline if newline is None else _restyle(baseline, newline))
 
 
 def _split(text: str) -> list[str]:

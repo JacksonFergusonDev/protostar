@@ -35,7 +35,7 @@ from protostar.errors import ProtostarError
 from protostar.init_draft import InitDecision, InitDraft, resolve_init
 from protostar.intent import DependencyGroup
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.merge import MergeConflict
+from protostar.merge import MergeConflict, describe_location
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
 from protostar.preparation import (
@@ -214,10 +214,14 @@ def describe(entry: Entry) -> RenderableType:
     """
     parts: list[RenderableType] = []
     for conflict in entry.conflicts:
-        keys = ".".join(conflict.location.keys) or "the file"
-        parts.append(
-            Text(f"Your version of {keys} is kept ({conflict.reason.value}).", "red")
-        )
+        where = describe_location(conflict.location)
+        reason = conflict.reason.value
+        if conflict.location.lines is not None:
+            # Both sides edited these lines, so the whole file is kept.
+            message = f"{where[:1].upper()}{where[1:]}: your edit is kept ({reason})."
+        else:
+            message = f"Your version of {where or 'the file'} is kept ({reason})."
+        parts.append(Text(message, "red"))
     if entry.edit is not None:
         parts.append(diff_text(unified_diff(entry.edit)))
     elif entry.directory:

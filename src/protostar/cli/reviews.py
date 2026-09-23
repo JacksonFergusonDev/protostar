@@ -7,6 +7,7 @@ from typing import Any
 
 from protostar.cli import schema, ui
 from protostar.lifecycle import inspect_project, prepare_project
+from protostar.merge import describe_location
 from protostar.preparation import PreparedEdit, PreparedReview
 
 
@@ -73,7 +74,7 @@ def render_review(
     for path in review.directories:
         ui.console.print(f"Accepted directory: {path}", markup=False)
     for conflict in review.conflicts:
-        location = ".".join(conflict.location.keys)
+        location = describe_location(conflict.location)
         identity = conflict.location.identity or ""
         ui.console.print(
             f"Conflict: {conflict.location.file} {location} {identity}: {conflict.reason.value}",

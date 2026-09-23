@@ -18,8 +18,8 @@ policy = "seed-only"
 
 [[files]]
 path = "Dockerfile"
-policy = "checksum"
-digest = "939ff4782c2ac5025855e03ed675c1ae74bea412b7b2ea7d2421c64d892f4c96"
+policy = "text"
+baseline = "# syntax=docker/dockerfile:1\n\n# --- Builder Stage ---\nFROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder\n\nWORKDIR /app\n\n# Enable bytecode compilation and copy mode for uv\nENV UV_COMPILE_BYTECODE=1\nENV UV_LINK_MODE=copy\n\n# Install dependencies using cache and bind mounts for optimal layer caching\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    --mount=type=bind,source=uv.lock,target=uv.lock \\\n    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \\\n    uv sync --frozen --no-install-project --no-dev\n\n# Copy application source and build the environment\nADD . /app\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    uv sync --frozen --no-dev\n\n# --- Runtime Stage ---\nFROM python:3.13-slim-bookworm AS runtime\n\nWORKDIR /app\n\n# Security: Run as a non-privileged user\nRUN useradd -m -u 10001 appuser\nUSER appuser\n\n# Copy virtual environment and application code from builder\nCOPY --from=builder --chown=appuser:appuser /app /app\n\nENV PATH=\"/app/.venv/bin:$PATH\"\nENV PYTHONUNBUFFERED=1\n\nCMD [\"python\", \"-m\", \"demo_project\"]\n"
 
 [[files]]
 path = "data/01_raw/.gitkeep"
@@ -35,8 +35,8 @@ policy = "seed-only"
 
 [[files]]
 path = "justfile"
-policy = "checksum"
-digest = "9f4b2fb4b0af95bc52718e71f0aedb56c59c07e595de391c444199c5ded13c5c"
+policy = "text"
+baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run ruff check .\n    uv run ruff format --check .\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .ruff_cache\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n"
 
 [[files]]
 path = "models/weights/.gitkeep"

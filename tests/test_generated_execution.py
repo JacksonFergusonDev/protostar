@@ -1,4 +1,4 @@
-"""Exact-byte generated-file and append-region acceptance tests."""
+"""Three-way generated-file and exact-byte append-region acceptance tests."""
 
 from hashlib import sha256
 from pathlib import Path
@@ -12,7 +12,9 @@ from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
 from protostar.intent import AppendContribution
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.sync_state import deserialize_state
+from protostar.merge import ConflictReason, LineSpan
+from protostar.models import ExecutionResult
+from protostar.sync_state import FilePolicy, deserialize_state
 
 ARTIFACTS = ["Dockerfile", "justfile"]
 
@@ -27,28 +29,38 @@ def run(mocker, setup):
     return executor
 
 
+def apply_generated(mocker, target, value, strategy=CollisionStrategy.MERGE):
+    """Runs one execution that generates ``value`` at ``target``."""
+
+    def setup(executor):
+        executor.manifest.collision_strategy = strategy
+        mocker.patch(
+            "protostar.reconciliation.Reconciliation._write_ci_workflow",
+            lambda decisions: decisions._write_generated(target, value),
+        )
+
+    return run(mocker, setup)
+
+
+def baseline_of(path):
+    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    return next(r for r in state.files if r.path == path).baseline
+
+
 @pytest.mark.parametrize("path", ARTIFACTS)
 def test_generated_lifecycle(tmp_path, monkeypatch, mocker, path):
     monkeypatch.chdir(tmp_path)
     target = Path(path)
 
     def apply(value):
-        return run(
-            mocker,
-            lambda e: mocker.patch(
-                "protostar.reconciliation.Reconciliation._write_ci_workflow",
-                lambda decisions: decisions._write_generated(target, value),
-            ),
-        )
+        return apply_generated(mocker, target, value)
 
     apply("v1\r\n")
     state = Path(".protostar.lock.toml")
+    assert baseline_of(path) == "v1\r\n"
     initial = state.read_bytes()
-    assert (
-        deserialize_state(initial.decode()).files[0].digest
-        == sha256(target.read_bytes()).hexdigest()
-    )
     assert not apply("v1\r\n").journal.touched_paths
+    assert state.read_bytes() == initial
     apply("v2\n")
     assert target.read_bytes() == b"v2\n"
     baseline = state.read_bytes()
@@ -56,15 +68,13 @@ def test_generated_lifecycle(tmp_path, monkeypatch, mocker, path):
     assert not apply("v2\n").diagnostics
     conflict = apply("v3\n")
     assert conflict.diagnostics[0].conflict.location.file == path
+    assert conflict.diagnostics[0].conflict.location.lines == LineSpan(1, 1)
     assert target.read_bytes() == b"local\r\n"
     assert state.read_bytes() == baseline
     target.write_bytes(b"v3\n")
     converged = apply("v3\n")
     assert target.as_posix() not in converged.journal.touched_paths
-    assert (
-        deserialize_state(state.read_text()).files[0].digest
-        == sha256(b"v3\n").hexdigest()
-    )
+    assert baseline_of(path) == "v3\n"
     target.unlink()
     assert not apply("v3\n").journal.touched_paths
     assert apply("v4\n").diagnostics
@@ -76,6 +86,101 @@ def test_generated_lifecycle(tmp_path, monkeypatch, mocker, path):
     target.write_bytes(b"// commented JSONC\n{}")
     assert apply("v5\n").diagnostics
     assert target.read_bytes() == b"// commented JSONC\n{}"
+
+
+GENERATED = "build:\n    uv build\n\ntest:\n    uv run pytest\n\nlint:\n    uv run ruff check .\n"
+
+
+def test_local_edits_merge_with_generator_updates(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    apply_generated(mocker, target, GENERATED)
+    target.write_text(GENERATED.replace("uv build", "uv build --sdist"))
+    update = GENERATED.replace("ruff check .", "ruff check --fix .")
+
+    result = apply_generated(mocker, target, update)
+
+    assert not result.diagnostics
+    assert target.read_text() == update.replace("uv build", "uv build --sdist")
+    # The baseline is the generated text, so the local edit stays a local edit.
+    assert baseline_of("justfile") == update
+    assert not apply_generated(mocker, target, update).journal.touched_paths
+
+
+def test_overlapping_edits_keep_the_whole_file_and_report_lines(
+    tmp_path, monkeypatch, mocker
+):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    apply_generated(mocker, target, GENERATED)
+    edited = GENERATED.replace("uv run pytest", "uv run pytest -x").replace(
+        "uv build", "uv build --sdist"
+    )
+    target.write_text(edited)
+    state = Path(".protostar.lock.toml").read_bytes()
+    update = GENERATED.replace("uv run pytest", "uv run pytest -q").replace(
+        "ruff check .", "ruff check --fix ."
+    )
+
+    result = apply_generated(mocker, target, update)
+
+    # The clean lint hunk is not applied alone: the file is kept whole.
+    assert target.read_text() == edited
+    assert Path(".protostar.lock.toml").read_bytes() == state
+    (event,) = [d for d in result.diagnostics if d.conflict]
+    assert event.conflict.reason is ConflictReason.DIVERGED
+    assert event.conflict.location.lines == LineSpan(5, 1)
+    assert event.message == "Preserving local contribution in justfile: line 5."
+    payload = ExecutionResult(
+        result.journal.created_paths,
+        result.journal.mutated_paths,
+        tuple(result.diagnostics),
+    ).to_dict()
+    assert payload["diagnostics"][0]["conflict"]["lines"] == {"start": 5, "count": 1}
+    # Resolving the conflict by hand lets the next run finish the update.
+    target.write_text(update.replace("uv build", "uv build --sdist"))
+    assert not apply_generated(mocker, target, update).diagnostics
+    assert baseline_of("justfile") == update
+
+
+def test_crlf_checkout_merges_in_its_own_newline_style(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    apply_generated(mocker, target, GENERATED)
+    # A checkout with core.autocrlf rewrites every line ending, not the content.
+    target.write_bytes(GENERATED.replace("\n", "\r\n").encode())
+    update = GENERATED.replace("uv build", "uv build --wheel")
+
+    assert not apply_generated(mocker, target, update).diagnostics
+    assert target.read_bytes() == update.replace("\n", "\r\n").encode()
+    assert baseline_of("justfile") == update
+
+
+def test_undecodable_local_bytes_are_kept(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    apply_generated(mocker, target, GENERATED)
+    target.write_bytes(b"\xff\xfe not utf-8\n")
+
+    result = apply_generated(mocker, target, GENERATED + "extra:\n    true\n")
+
+    assert target.read_bytes() == b"\xff\xfe not utf-8\n"
+    (event,) = [d for d in result.diagnostics if d.conflict]
+    assert event.conflict.location.lines is None
+    assert event.conflict.reason is ConflictReason.DIVERGED
+
+
+def test_overwrite_replaces_local_edits(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    apply_generated(mocker, target, GENERATED)
+    target.write_text("local\n")
+    update = GENERATED + "extra:\n    true\n"
+
+    apply_generated(mocker, target, update, CollisionStrategy.OVERWRITE)
+
+    assert target.read_text() == update
+    assert baseline_of("justfile") == update
 
 
 @pytest.mark.parametrize("suffix", [".py", ".md", ".css", ".js"])
@@ -214,10 +319,10 @@ def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
 
     run(mocker, setup)
     state = deserialize_state(Path(".protostar.lock.toml").read_text())
-    assert {r.path for r in state.files if r.digest is not None} == set(ARTIFACTS)
-    for record in state.files:
-        if record.digest:
-            assert record.digest == sha256(Path(record.path).read_bytes()).hexdigest()
+    text = [r for r in state.files if r.policy is FilePolicy.TEXT]
+    assert {r.path for r in text} == set(ARTIFACTS)
+    for record in text:
+        assert record.baseline == Path(record.path).read_bytes().decode()
     original = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert not run(mocker, setup).journal.touched_paths
     assert {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == original
@@ -250,37 +355,70 @@ def test_desired_region_cannot_inject_boundaries(content):
         append_marker_blocks("", [AppendContribution("test:id", content)], Path("x.py"))
 
 
-def test_generated_justfile_with_regions(tmp_path, monkeypatch, mocker):
+def justfile_regions(mocker, base, recipe):
+    """Runs one execution generating ``base`` with a template recipe region."""
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value=base)
+
+    def configure(e):
+        e.manifest.tooling.wants_just = True
+        e.manifest.filesystem.add_region(
+            "justfile", recipe, identity="template:recipes"
+        )
+
+    return run(mocker, configure)
+
+
+def test_generated_justfile_with_regions_merges(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
-    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v1\n")
-
-    def setup(value):
-        def configure(e):
-            e.manifest.tooling.wants_just = True
-            e.manifest.filesystem.add_region(
-                "justfile", value, identity="template:recipes"
-            )
-
-        return configure
-
-    run(mocker, setup("recipe v1"))
-    assert not run(mocker, setup("recipe v1")).journal.touched_paths
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    assert not justfile_regions(mocker, "base v1\n", "recipe v1").journal.touched_paths
     target = Path("justfile")
     target.write_bytes(target.read_bytes().replace(b"base v1", b"user base"))
-    run(mocker, setup("recipe v2"))
+
+    justfile_regions(mocker, "base v1\n", "recipe v2")
+
     assert "user base" in target.read_text()
     assert "recipe v2" in target.read_text()
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
-    record = next(r for r in state.files if r.path == "justfile")
-    assert record.regions
-    assert record.digest != sha256(target.read_bytes()).hexdigest()
     region = append_marker_blocks(
         "base v1\n", [AppendContribution("template:recipes", "recipe v2")], target
     )
+    record = next(
+        r
+        for r in deserialize_state(Path(".protostar.lock.toml").read_text()).files
+        if r.path == "justfile"
+    )
+    assert record.baseline == region.content
     assert record.regions[0].digest == region.digests["template:recipes"]
     target.unlink()
-    run(mocker, setup("recipe v3"))
+    justfile_regions(mocker, "base v1\n", "recipe v3")
     assert not target.exists()
+
+
+def test_regions_update_while_the_generated_file_conflicts(
+    tmp_path, monkeypatch, mocker
+):
+    monkeypatch.chdir(tmp_path)
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    target = Path("justfile")
+    target.write_bytes(target.read_bytes().replace(b"base v1", b"user base"))
+
+    result = justfile_regions(mocker, "base v2\n", "recipe v2")
+
+    # The base line conflicts, so the file is not merged, but the unedited
+    # region is owned on its own and still updates.
+    assert [d.conflict.location.lines for d in result.diagnostics if d.conflict] == [
+        LineSpan(1, 1)
+    ]
+    assert "user base" in target.read_text()
+    assert "recipe v2" in target.read_text()
+    record = next(
+        r
+        for r in deserialize_state(Path(".protostar.lock.toml").read_text()).files
+        if r.path == "justfile"
+    )
+    assert record.baseline is not None
+    assert "base v1" in record.baseline
+    assert "recipe v1" in record.baseline
 
 
 def test_unowned_generated_file_can_manage_new_region(tmp_path, monkeypatch, mocker):
@@ -298,7 +436,8 @@ def test_unowned_generated_file_can_manage_new_region(tmp_path, monkeypatch, moc
     run(mocker, setup)
     assert Path("justfile").read_bytes() == original
     record = deserialize_state(Path(".protostar.lock.toml").read_text()).files[0]
-    assert record.digest is None
+    assert record.policy is FilePolicy.REGIONS
+    assert record.baseline is None
     assert record.regions
     Path("justfile").unlink()
     run(mocker, setup)
@@ -371,3 +510,48 @@ def test_agents_md_region_merges_updates_and_protects_edits(
     conflict = apply("uv run check-types src")
     assert conflict.diagnostics[0].conflict.location.file == "AGENTS.md"
     assert "local-types" in target.read_text()
+
+
+def test_review_reports_line_conflicts_and_preserved_edits(
+    tmp_path, monkeypatch, mocker, capsys
+):
+    from protostar.cli.reviews import render_review
+    from protostar.preparation import prepare_review
+
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value=GENERATED)
+
+    def desired():
+        manifest = EnvironmentManifest()
+        manifest.tooling.wants_just = True
+        return manifest
+
+    run(mocker, lambda e: setattr(e.manifest.tooling, "wants_just", True))
+    # A CRLF checkout is not a local edit.
+    target.write_bytes(GENERATED.replace("\n", "\r\n").encode())
+    assert not prepare_review(desired(), UserConfig()).preserved
+    target.write_text(GENERATED.replace("uv run pytest", "uv run pytest -x"))
+    (preserved,) = prepare_review(desired(), UserConfig()).preserved
+    assert preserved.location.file == "justfile"
+    assert not preserved.deleted
+
+    mocker.patch(
+        "protostar.reconciliation.generate_justfile",
+        return_value=GENERATED.replace("uv run pytest", "uv run pytest -q"),
+    )
+    review = prepare_review(desired(), UserConfig())
+
+    assert not review.edits
+    assert not review.preserved
+    assert review.to_dict()["conflicts"] == [
+        {
+            "file": "justfile",
+            "keys": [],
+            "identity": None,
+            "lines": {"start": 5, "count": 1},
+            "reason": "diverged",
+        }
+    ]
+    render_review(review)
+    assert "Conflict: justfile line 5 : diverged" in capsys.readouterr().out

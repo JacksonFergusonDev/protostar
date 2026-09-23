@@ -144,6 +144,9 @@ class PreparedReview:
                     "file": conflict.location.file,
                     "keys": list(conflict.location.keys),
                     "identity": conflict.location.identity,
+                    "lines": conflict.location.lines.to_dict()
+                    if conflict.location.lines
+                    else None,
                     "reason": conflict.reason.value,
                 }
                 for conflict in self.conflicts
@@ -310,6 +313,7 @@ def prepare_review(
                 conflict.location.file,
                 conflict.location.keys,
                 conflict.location.identity or "",
+                conflict.location.lines.start if conflict.location.lines else 0,
                 conflict.reason.value,
             ),
         )

@@ -8,10 +8,12 @@ from protostar.errors import ConfigurationError
 from protostar.merge import (
     MISSING,
     ConflictReason,
+    LineSpan,
     MergeDecision,
     MergeLocation,
     MergePolicy,
     Value,
+    describe_location,
     overlay_declared,
     prune_unapplied,
     reconcile,
@@ -410,3 +412,18 @@ def test_without_paths_prunes_only_tables_it_empties():
     )
     assert result == {"theme": {"features": ["a"]}, "empty": {}}
     assert value["project"] == {"name": "demo", "extra": {"generator": False}}
+
+
+@pytest.mark.parametrize(
+    ("location", "label"),
+    [
+        (MergeLocation("pyproject.toml", ("tool", "ruff")), "tool.ruff"),
+        (MergeLocation("justfile"), ""),
+        (MergeLocation("justfile", lines=LineSpan(5, 1)), "line 5"),
+        (MergeLocation("justfile", lines=LineSpan(5, 3)), "lines 5-7"),
+        (MergeLocation("justfile", lines=LineSpan(5, 0)), "after line 5"),
+        (MergeLocation("justfile", lines=LineSpan(0, 0)), "at the start"),
+    ],
+)
+def test_describe_location(location, label):
+    assert describe_location(location) == label

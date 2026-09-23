@@ -120,6 +120,7 @@ class ExecutionResult:
                     "file": location.file,
                     "keys": list(location.keys),
                     "identity": location.identity,
+                    "lines": location.lines.to_dict() if location.lines else None,
                     "reason": event.conflict.reason.value,
                 }
             diagnostics.append(entry)

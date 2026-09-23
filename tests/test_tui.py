@@ -1078,3 +1078,26 @@ def test_credential_name_warning_is_cp1252_safe(mocker):
             "! Template variables named like credentials: [red]api_token[/red]."
         )
     )
+
+
+def test_line_conflicts_name_the_kept_lines():
+    from protostar.cli.tui.review.screen import Change, Entry, describe
+    from protostar.merge import ConflictReason, LineSpan, MergeConflict, MergeLocation
+
+    def conflict(lines):
+        return MergeConflict(
+            MergeLocation("justfile", lines=lines), ConflictReason.DIVERGED
+        )
+
+    entry = Entry(
+        "justfile",
+        Change.CONFLICT,
+        conflicts=(conflict(LineSpan(5, 3)), conflict(LineSpan(9, 0))),
+    )
+    console = Console(file=io.StringIO(), width=80, record=True)
+    console.print(describe(entry))
+
+    assert console.export_text().splitlines() == [
+        "Lines 5-7: your edit is kept (diverged).",
+        "After line 9: your edit is kept (diverged).",
+    ]

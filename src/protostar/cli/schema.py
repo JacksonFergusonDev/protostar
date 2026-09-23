@@ -277,6 +277,7 @@ def review_schema() -> dict[str, Any]:
     strings = {"type": "array", "items": string}
     boolean = {"type": "boolean"}
     nullable_string = {"type": ["string", "null"]}
+    count = {"type": "integer", "minimum": 0}
 
     def record(properties: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -299,6 +300,12 @@ def review_schema() -> dict[str, Any]:
             "conflicts": records(
                 {
                     **location,
+                    "lines": {
+                        "oneOf": [
+                            record({"start": count, "count": count}),
+                            {"type": "null"},
+                        ]
+                    },
                     "reason": {"enum": [reason.value for reason in ConflictReason]},
                 }
             ),

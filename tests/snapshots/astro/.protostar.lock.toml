@@ -18,8 +18,8 @@ policy = "seed-only"
 
 [[files]]
 path = "justfile"
-policy = "checksum"
-digest = "9f4b2fb4b0af95bc52718e71f0aedb56c59c07e595de391c444199c5ded13c5c"
+policy = "text"
+baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run ruff check .\n    uv run ruff format --check .\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .ruff_cache\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n"
 
 [[files]]
 path = "pyproject.toml"
