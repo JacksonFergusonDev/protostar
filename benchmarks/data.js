@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790184922534,
+  "lastUpdate": 1790188078074,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16087,6 +16087,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 712.76,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7093ae5ac2ef3e4df498a620943642baf04f153b",
+          "message": "feat(security): confirmable secret guard and variable descriptions (#310)\n\nThe secret guard becomes a safety net instead of a hard wall:\n\n- A newly entered value that looks like a credential is held back until\n  the user confirms it isn't a secret, per variable: --allow-secret NAME,\n  or a checkbox beside the TUI field that resets when the value changes.\n- Only values that differ from the recipe are scanned, in resolve_init.\n  decode_recipe and sync no longer check recorded values.\n- Credential-shaped variable names warn instead of stopping the template.\n\nTemplates can declare [variables.NAME] description = \"...\" to explain a\nvariable; the TUI shows it under the field. Declaring an unused or\nbuilt-in variable is an error.\n\nAlso deletes TUI_REBUILD_PLAN.md: every PR in it has merged.",
+          "timestamp": "2026-09-23T11:25:42-07:00",
+          "tree_id": "3a4a1d7e6644d57fedc951723f8ec2b57fd4feec",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7093ae5ac2ef3e4df498a620943642baf04f153b"
+        },
+        "date": 1790188077345,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 213.14,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 780.7,
             "unit": "ms"
           }
         ]
