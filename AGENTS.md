@@ -200,6 +200,7 @@ Scale or omit these sections based on the scope of the PR.
 - `src/protostar/fs_transaction.py`: `TransactionAwareFS` ensuring transactional disk operations.
 - `src/protostar/system.py`: `ProcessRunner` managing subprocess lifecycles and process-tree termination.
 - `src/protostar/merge.py`: Format-neutral three-way reconciliation kernel shared by every structured format.
+- `src/protostar/text_merge.py`: Pure line-based three-way text merge (diff3 over patience diff) for free-form managed files.
 - `src/protostar/toml_ast.py`: `tomlkit` aggregation and `TomlDocumentSpec`-driven reconciliation.
 - `src/protostar/yaml_ast.py`: Bounded `ruamel.yaml` round-trip codec and `YamlDocumentSpec`-driven reconciliation.
 - `src/protostar/jsonc_ast.py`: Stdlib-only lossless JSONC codec, byte-splice editor, and reconciliation adapter.

@@ -58,6 +58,7 @@ include = ["src/protostar/**/*.py", "src/protostar/**/*.toml"]
 ci = [
     "actionlint-py>=1.7.12.24",
     "check-jsonschema>=0.38.0",
+    "hypothesis>=6.168.1",
     "mypy>=1.19.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
