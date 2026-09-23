@@ -116,7 +116,7 @@ repos:
 
       - id: pytest
         name: pytest
-        entry: uv run pytest -n auto --dist loadfile
+        entry: uv run pytest -n auto --dist worksteal
         language: system
         pass_filenames: false
         files: ^(src/|tests/|pyproject\.toml|uv\.lock)

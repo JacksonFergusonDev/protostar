@@ -7,6 +7,7 @@ from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
+from functools import lru_cache
 from io import StringIO
 from itertools import pairwise
 from typing import Any, cast
@@ -192,6 +193,13 @@ def _plain(node: Any) -> Value:
 
 def decode_yaml_baseline(content: str) -> dict[str, Value]:
     """Decodes a bounded YAML mapping into detached, type-aware semantic values."""
+    return deepcopy(_decode_yaml_baseline(content))
+
+
+@lru_cache(maxsize=256)
+def _decode_yaml_baseline(content: str) -> dict[str, Value]:
+    # The pure-Python round-trip parser is slow, and one sync decodes the same
+    # baselines hundreds of times; callers get a copy, so sharing is safe.
     value = cast(dict[str, Value], _plain(_load(content)))
     validate_value(value)
     return value

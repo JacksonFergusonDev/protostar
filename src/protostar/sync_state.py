@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from functools import lru_cache
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import cast
 from urllib.parse import urlsplit
@@ -287,6 +289,12 @@ def check_template_identity(
 
 def decode_toml_baseline(content: str) -> dict[str, Value]:
     """Decodes owned TOML snapshots while retaining native date/time scalar types."""
+    return deepcopy(_decode_toml_baseline(content))
+
+
+@lru_cache(maxsize=256)
+def _decode_toml_baseline(content: str) -> dict[str, Value]:
+    # One sync decodes the same baselines hundreds of times; callers get a copy.
     try:
         value = cast(dict[str, Value], tomlkit.parse(content).unwrap())
     except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
@@ -430,6 +438,17 @@ def deserialize_state(content: str) -> SyncState:
         raise _invalid("malformed or unsupported record.") from e
 
 
+@lru_cache(maxsize=256)
+def _canonical_baseline(policy: FilePolicy, baseline: str) -> str:
+    if policy is FilePolicy.YAML:
+        from .yaml_ast import decode_yaml_baseline, encode_yaml_baseline
+
+        return encode_yaml_baseline(decode_yaml_baseline(baseline))
+    if policy is FilePolicy.JSONC:
+        return encode_jsonc_baseline(decode_jsonc_baseline(baseline))
+    return encode_toml_baseline(decode_toml_baseline(baseline))
+
+
 def serialize_state(state: SyncState) -> str:
     """Returns deterministic TOML bytes-as-text without timestamps or secrets."""
     data: dict[str, object] = {
@@ -446,23 +465,7 @@ def serialize_state(state: SyncState) -> str:
     for record in sorted(state.files, key=lambda item: item.path):
         fields: dict[str, object] = {"path": record.path, "policy": record.policy.value}
         if record.baseline is not None:
-            if record.policy is FilePolicy.YAML:
-                from .yaml_ast import (
-                    decode_yaml_baseline,
-                    encode_yaml_baseline,
-                )
-
-                fields["baseline"] = encode_yaml_baseline(
-                    decode_yaml_baseline(record.baseline)
-                )
-            elif record.policy is FilePolicy.JSONC:
-                fields["baseline"] = encode_jsonc_baseline(
-                    decode_jsonc_baseline(record.baseline)
-                )
-            else:
-                fields["baseline"] = encode_toml_baseline(
-                    decode_toml_baseline(record.baseline)
-                )
+            fields["baseline"] = _canonical_baseline(record.policy, record.baseline)
         if record.digest is not None:
             fields["digest"] = record.digest
         if record.regions:
