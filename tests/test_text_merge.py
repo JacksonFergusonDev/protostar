@@ -130,6 +130,10 @@ class TestNewlineStyle:
 
         assert result.content == "a\nB\n"
 
+    def test_an_unedited_text_takes_the_remote_style(self) -> None:
+        # The old CRLF style came from the base, not from a local checkout.
+        assert merge_text("a\r\nb\r\n", "a\r\nb\r\n", "a\nB\n").content == "a\nB\n"
+
     def test_compares_mixed_endings_exactly(self) -> None:
         # One CRLF line makes the local style ambiguous, so nothing is converted
         # and the rewritten line counts as a local edit.

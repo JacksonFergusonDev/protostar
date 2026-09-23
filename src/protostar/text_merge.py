@@ -75,10 +75,11 @@ def merge_text(base: str, local: str, remote: str) -> TextMerge:
     """Merges the local and remote edits of a common ancestor, line by line.
 
     Lines keep their terminators, so a missing final newline is a change like
-    any other. When the local text uses one newline style throughout, base and
-    remote texts that consistently use the other style are converted to it
-    first; a checkout that rewrites line endings is therefore not an edit, and
-    the result keeps the local style. Texts with mixed endings compare exactly.
+    any other. An unedited local text takes the remote text exactly. Otherwise,
+    when the local text uses one newline style throughout, base and remote texts
+    that consistently use the other style are converted to it first; a checkout
+    that rewrites line endings is therefore not an edit, and the result keeps
+    the local style. Texts with mixed endings compare exactly.
 
     Args:
         base: The common ancestor, such as the last accepted generated text.
@@ -88,6 +89,8 @@ def merge_text(base: str, local: str, remote: str) -> TextMerge:
     Returns:
         The merged text, or the conflicting regions.
     """
+    if local == base:
+        return TextMerge(remote)
     newline = _newline(local)
     if newline is not None:
         base, remote = _restyle(base, newline), _restyle(remote, newline)
