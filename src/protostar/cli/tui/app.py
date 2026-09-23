@@ -14,8 +14,10 @@ class DecisionApp[ResultT](App[ResultT]):
     TITLE = "Protostar"
     ENABLE_COMMAND_PALETTE = False
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("escape", "cancel", "Cancel"),
-        Binding("ctrl+c", "cancel", "Cancel", show=False, priority=True),
+        # A screen asks before leaving; one with somewhere to go back to binds
+        # escape itself.
+        Binding("escape", "screen.cancel", "Cancel", show=False),
+        Binding("ctrl+c", "abort", "Quit", show=False, priority=True),
     ]
 
     def __init__(
@@ -32,6 +34,6 @@ class DecisionApp[ResultT](App[ResultT]):
         if self.exit_after_first_frame:
             self.call_after_refresh(self.exit, None)
 
-    def action_cancel(self) -> None:
-        """Leave the app without a result."""
+    def action_abort(self) -> None:
+        """Leave at once without a result; ctrl+c never asks."""
         self.exit(None)

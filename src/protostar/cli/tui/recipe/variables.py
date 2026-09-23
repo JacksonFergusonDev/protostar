@@ -2,13 +2,14 @@
 
 from collections.abc import Collection, Mapping
 from dataclasses import replace
+from typing import ClassVar
 
 from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.binding import Binding, BindingType
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
-from textual.screen import Screen
 from textual.validation import ValidationResult, Validator
 from textual.widgets import Button, Checkbox, Footer, Input, Label, Static
 
@@ -17,6 +18,7 @@ from protostar.errors import ConfigurationError, ProtostarError, SecretDetectedE
 from protostar.init_draft import InitDraft
 from protostar.secret_guard import check_variable_values, credential_named
 
+from ..keys import ActionBar, Field, Form, KeyboardScreen, Toggle, key_label, move
 from .preview import PlanPreview
 
 
@@ -90,7 +92,7 @@ class VariableFields(Vertical):
                     "Named like a credential; enter a non-secret value.",
                     classes="field-warning",
                 )
-            yield Input(
+            yield Field(
                 self._typed.get(name, ""),
                 id=f"var-{name}",
                 validators=[_NotACredential(name, self._allowed)],
@@ -99,7 +101,7 @@ class VariableFields(Vertical):
             error = Static("", id=f"var-{name}-error", classes="field-error")
             error.display = False
             yield error
-            allow = Checkbox(
+            allow = Toggle(
                 "Not a secret; keep this value",
                 name in self._allowed,
                 id=f"var-{name}-allow",
@@ -191,7 +193,7 @@ class VariableFields(Vertical):
         if event.validation_result is not None and not event.validation_result.is_valid:
             return
         if isinstance(event, Input.Submitted):
-            self.screen.focus_next()
+            move(self.screen, 1)
         self._accept(name, event.value)
 
     def _accept(self, name: str, value: str) -> None:
@@ -200,8 +202,12 @@ class VariableFields(Vertical):
             self.post_message(self.Committed())
 
 
-class VariablesScreen(Screen[InitDraft]):
+class VariablesScreen(KeyboardScreen[InitDraft]):
     """The editor's variables step alone, for a flag-driven init missing values."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("ctrl+s", "continue", "Continue", show=False),
+    ]
 
     def __init__(self, draft: InitDraft, config: UserConfig) -> None:
         super().__init__()
@@ -219,14 +225,14 @@ class VariablesScreen(Screen[InitDraft]):
             Text(f"{name} uses variables that have no value yet."), id="subtitle"
         )
         with Horizontal(id="body"):
-            with VerticalScroll(id="editor"):
+            with Form(id="editor"):
                 yield VariableFields(
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
             yield PlanPreview(self.config)
-        with Horizontal(id="actions"):
-            yield Button("Cancel", id="cancel")
-            yield Button("Continue", variant="primary", id="continue")
+        with ActionBar(id="actions"):
+            yield Button(key_label("Cancel", "esc"), id="cancel")
+            yield Button(key_label("Continue", "^s"), variant="primary", id="continue")
         yield Footer()
 
     async def on_mount(self) -> None:
@@ -254,12 +260,13 @@ class VariablesScreen(Screen[InitDraft]):
             )
         )
 
-    @on(Button.Pressed)
-    def finish(self, event: Button.Pressed) -> None:
+    @on(Button.Pressed, "#cancel")
+    def _cancel_pressed(self) -> None:
+        self.action_cancel()
+
+    @on(Button.Pressed, "#continue")
+    def action_continue(self) -> None:
         """Exit with every value once each passes the secret guard."""
-        if event.button.id == "cancel":
-            self.app.exit(None)
-            return
         fields = self.query_one(VariableFields)
         values = fields.values()
         if values is not None:

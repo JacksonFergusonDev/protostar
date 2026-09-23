@@ -28,3 +28,11 @@ SelectionList { height: auto; }
 #decisions, #collision-choice, #trust-gate { height: auto; }
 #decisions { margin: 0 2; }
 #collision-note { color: $warning; }
+ChoiceGroup { height: auto; }
+LeaveScreen, KeysScreen { align: center middle; background: $background 60%; }
+#dialog { width: auto; max-width: 90; height: auto; padding: 1 2; border: round $accent; background: $panel; }
+#dialog .section { margin-top: 0; }
+#dialog .note { margin-top: 1; }
+.dialog-actions { width: auto; height: auto; margin-top: 1; }
+.dialog-actions Button { margin-right: 1; }
+KeysScreen #dialog { width: 72; max-width: 100%; }
