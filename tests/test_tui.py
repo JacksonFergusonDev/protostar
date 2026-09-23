@@ -292,7 +292,10 @@ async def test_credential_value_blocks_continue_and_names_the_rule(tmp_path):
         await pilot.click("#continue")
         assert app.is_running
         field.value = "orbit"
+        await pilot.press("enter")
+        await settle(pilot)
         await pilot.click("#continue")
+        await settle(pilot)
     assert dict(app.return_value.variables) == {"ORG": "orbit"}
 
 
@@ -422,6 +425,7 @@ assert not any(name == "textual" or name.startswith("textual.") for name in sys.
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     assert result.returncode == 0, result.stderr
 
