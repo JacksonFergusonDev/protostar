@@ -16,11 +16,11 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.content import Content
 from textual.widgets import (
     Button,
     Checkbox,
     Footer,
-    Label,
     RadioButton,
     RadioSet,
     Static,
@@ -29,7 +29,7 @@ from textual.widgets import (
 from textual.widgets.tree import TreeNode
 
 from protostar.cli.reviews import unified_diff
-from protostar.cli.ui import planned_paths, untrusted_commands
+from protostar.cli.ui import path_style, planned_paths, untrusted_commands
 from protostar.config import UserConfig
 from protostar.errors import ProtostarError
 from protostar.init_draft import InitDecision, InitDraft, resolve_init
@@ -47,6 +47,7 @@ from protostar.preparation import (
 )
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
 
+from ..chrome import Heading, Headline, Masthead, Panel
 from ..keys import (
     MOVE,
     ActionBar,
@@ -75,6 +76,8 @@ _STYLES = {
     Change.EXISTS: "dim",
     Change.LATER: "dim",
 }
+
+_FOLDER = path_style("", directory=True)
 
 
 @dataclass(frozen=True)
@@ -207,12 +210,9 @@ def describe(entry: Entry) -> RenderableType:
         entry: The planned path to describe.
 
     Returns:
-        The path, any conflicts kept as they are, and its diff or a note.
+        Any conflicts kept as they are, then the diff or a note.
     """
-    parts: list[RenderableType] = [
-        Text(entry.path + ("/" if entry.directory else ""), style="bold"),
-        Text(""),
-    ]
+    parts: list[RenderableType] = []
     for conflict in entry.conflicts:
         keys = ".".join(conflict.location.keys) or "the file"
         parts.append(
@@ -330,7 +330,11 @@ def _label(entry: Entry) -> Text:
     )
     if entry.conflicts and entry.change is not Change.CONFLICT:
         marker += " · conflict"
-    return Text.assemble(name, (f"  {marker}", _STYLES[entry.change]) if marker else "")
+    # Color here means change, so only directories keep their kind's color.
+    return Text.assemble(
+        (name, _FOLDER if entry.directory else ""),
+        (f"  {marker}", _STYLES[entry.change]) if marker else "",
+    )
 
 
 def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
@@ -390,53 +394,64 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self._loading = True
 
     def compose(self) -> ComposeResult:
-        """Compose the file tree and steps beside the diff, above the decisions."""
-        yield Label("Review changes", id="title")
-        yield Static("Preparing review…", id="subtitle")
+        """Compose the file tree and steps beside the diff, the decisions below it."""
+        yield Masthead("init", "review")
+        yield Headline("Review changes", "Preparing review…")
         with Horizontal(id="body"):
             with Vertical(id="review"):
-                yield Label("Files", classes="section")
-                yield FileTree(Text("."), id="files")
-                yield Label("Commands and packages", classes="section")
-                with VerticalScroll(id="steps"):
+                with Panel("Files", id="files-panel"):
+                    yield FileTree(Text("."), id="files")
+                with (
+                    Panel("Commands & packages", id="steps-panel"),
+                    VerticalScroll(id="steps"),
+                ):
                     yield Static("", id="steps-list")
-            with VerticalScroll(id="diff-pane"):
-                yield Static("", id="diff")
-        with Vertical(id="decisions"):
-            with Vertical(id="collision-choice"):
-                yield Label("Existing files", classes="section")
-                yield Static("", id="collision-note")
-                with Choice(id="collision"):
-                    yield RadioButton(
-                        key_label(
-                            "Merge · keep your values and add what's missing", "m"
-                        ),
-                        value=self.strategy is CollisionStrategy.MERGE,
-                        id="strategy-merge",
+            with Vertical(id="diff-column"):
+                with Panel("Diff", id="diff-panel"), VerticalScroll(id="diff-pane"):
+                    yield Static("", id="diff")
+                with Vertical(id="decisions"):
+                    with Vertical(id="collision-choice"):
+                        yield Heading("Existing files")
+                        yield Static("", id="collision-note")
+                        with Choice(id="collision"):
+                            yield RadioButton(
+                                key_label(
+                                    "Merge · keep your values and add what's missing",
+                                    "m",
+                                ),
+                                value=self.strategy is CollisionStrategy.MERGE,
+                                id="strategy-merge",
+                            )
+                            yield RadioButton(
+                                key_label(
+                                    "Overwrite · replace them with Protostar's version",
+                                    "o",
+                                ),
+                                value=self.strategy is CollisionStrategy.OVERWRITE,
+                                id="strategy-overwrite",
+                            )
+                    with Vertical(id="trust-gate"):
+                        yield Heading("Untrusted template")
+                        yield Static("", id="trust-note")
+                        yield Toggle(
+                            key_label(
+                                "I trust this template to run these commands", "t"
+                            ),
+                            id="trust",
+                        )
+                with ActionBar(id="actions"):
+                    if self.can_go_back:
+                        yield Button(key_label("Back", "esc"), id="back")
+                    yield Button(
+                        key_label("Cancel", "q" if self.can_go_back else "esc"),
+                        id="cancel",
                     )
-                    yield RadioButton(
-                        key_label(
-                            "Overwrite · replace them with Protostar's version", "o"
-                        ),
-                        value=self.strategy is CollisionStrategy.OVERWRITE,
-                        id="strategy-overwrite",
+                    yield Button(
+                        key_label("Apply", "a"),
+                        variant="primary",
+                        id="apply",
+                        disabled=True,
                     )
-            with Vertical(id="trust-gate"):
-                yield Label("Untrusted template", classes="section")
-                yield Static("", id="trust-note")
-                yield Toggle(
-                    key_label("I trust this template to run these commands", "t"),
-                    id="trust",
-                )
-        with ActionBar(id="actions"):
-            if self.can_go_back:
-                yield Button(key_label("Back", "esc"), id="back")
-            yield Button(
-                key_label("Cancel", "q" if self.can_go_back else "esc"), id="cancel"
-            )
-            yield Button(
-                key_label("Apply", "a"), variant="primary", id="apply", disabled=True
-            )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -515,7 +530,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                 folder = "/".join(parts[:index])
                 if folder not in nodes:
                     nodes[folder] = nodes[parent].add(
-                        Text(f"{parts[index - 1]}/"), expand=True
+                        Text(f"{parts[index - 1]}/", _FOLDER), expand=True
                     )
                 parent = folder
             label = _label(entry)
@@ -534,6 +549,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             files.call_after_refresh(files.move_cursor, nodes[target.path])
 
     def _describe(self, entry: Entry | None) -> None:
+        title = Content("DIFF")
+        if entry:
+            # A path is data: Content never reads it as markup.
+            name = entry.path + ("/" if entry.directory else "")
+            title = Content.assemble(title, ("  ", ""), (name, "$foreground"))
+        self.query_one("#diff-panel", Panel).retitle(title)
         self.query_one("#diff", Static).update(
             describe(entry)
             if entry

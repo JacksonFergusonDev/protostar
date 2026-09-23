@@ -4,13 +4,13 @@ import io
 import json
 import shlex
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
-from rich import box
-from rich.console import Console
-from rich.panel import Panel
+from rich.console import Console, Group, RenderableType
+from rich.padding import Padding
+from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
@@ -23,7 +23,7 @@ from protostar.errors import (
     WorkspaceCollisionError,
 )
 from protostar.init_draft import InitDecision
-from protostar.manifest import EnvironmentManifest, Severity
+from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
 from protostar.models import ExecutionResult, InitRequest
 from protostar.progress import ProgressStep
 
@@ -98,6 +98,63 @@ def glyph(symbol: str, fallback: str) -> str:
     return symbol if printable(symbol) == symbol else fallback
 
 
+def heading(title: str, style: str = "bold cyan") -> Rule:
+    """Builds a section heading in the TUI's style: the title, then a rule.
+
+    Args:
+        title: The section's name, shown in capitals.
+        style: The title's style; errors pass ``bold red``.
+
+    Returns:
+        A rule from the title to the console's edge. A stream that cannot
+        encode box drawing, such as a redirected cp1252 stream, gets dashes.
+    """
+    rule = "red" if "red" in style else "bright_black"
+    return Rule(Text(title.upper(), style), align="left", style=rule)
+
+
+def indented(renderable: RenderableType) -> Padding:
+    """Indents a section's body under its heading.
+
+    Args:
+        renderable: The section's body.
+
+    Returns:
+        The body, two columns in.
+    """
+    return Padding(renderable, (0, 0, 0, 2), expand=False)
+
+
+_CONFIG_SUFFIXES = frozenset(
+    {".cfg", ".ini", ".json", ".jsonc", ".lock", ".toml", ".yaml", ".yml"}
+)
+_CONFIG_NAMES = frozenset({"Dockerfile", "Justfile", "Makefile", "justfile"})
+
+
+def path_style(name: str, *, directory: bool) -> str:
+    """Styles a path by kind, as ``eza`` does, so a tree can be skimmed.
+
+    Directories are bold blue, configuration is yellow, and hidden paths are
+    dimmed; everything else, mostly source and docs, keeps the default color.
+
+    Args:
+        name: The path's last component.
+        directory: Whether the path is a directory.
+
+    Returns:
+        A Rich style, empty for the default.
+    """
+    if directory:
+        style = "bold blue"
+    elif name in _CONFIG_NAMES or any(
+        name.endswith(suffix) for suffix in _CONFIG_SUFFIXES
+    ):
+        style = "yellow"
+    else:
+        style = ""
+    return f"{style} dim".strip() if name.startswith(".") else style
+
+
 @contextmanager
 def progress_trail(initial: str) -> Iterator[ProgressStep]:
     """Renders execution steps as a persistent checklist above a live spinner.
@@ -118,10 +175,10 @@ def progress_trail(initial: str) -> Iterator[ProgressStep]:
     Yields:
         The step hook to hand to the engine.
     """
-    done = (glyph("✔", "+"), "bold green")
+    done = (glyph("✔", "+"), "green")
     failed = (glyph("✖", "x"), "bold red")
 
-    with console.status(initial) as status:
+    with console.status(initial, spinner_style="cyan") as status:
 
         @contextmanager
         def step(label: str) -> Iterator[None]:
@@ -184,32 +241,23 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     if error_msg:
         console.print(f"[bold red]Error:[/bold red] {error_msg}\n")
 
-    table = Table(
-        title="Available Templates",
-        box=box.ROUNDED,
-        title_style="bold blue",
-        title_justify="left",
-        padding=(0, 1),
-        expand=True,
-    )
+    table = Table(box=None, show_header=False, padding=(0, 2, 0, 0), expand=True)
     table.add_column("Template", style="bold cyan", no_wrap=True)
-    table.add_column("Description", style="white", ratio=1)
+    table.add_column("Description", ratio=1)
     table.add_column("Type", no_wrap=True)
 
     for tmpl in discovered:
+        # External templates run code from elsewhere, so they stand out.
         type_str = (
-            "[green]Built-in[/green]"
+            Text("Built-in", "dim")
             if tmpl.type == TemplateType.BUILT_IN
-            else "[yellow]External[/yellow]"
+            else Text("External", "yellow")
         )
 
-        table.add_row(
-            tmpl.name,
-            tmpl.description,
-            type_str,
-        )
+        table.add_row(Text(tmpl.name), Text(tmpl.description), type_str)
 
-    console.print(table)
+    console.print(heading("Available templates"))
+    console.print(indented(table))
 
     # Exit with 1 if it was a failure, 0 if it was an intentional listing
     sys.exit(1 if error_msg else 0)
@@ -338,43 +386,19 @@ def _run_engine(
     if is_json_mode:
         result = engine.execute(manifest, hook_revisions=hook_revisions)
     else:
-        console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
+        console.print(heading("Ignition sequence initiated"))
         with progress_trail("Preparing workspace") as progress:
             result = engine.execute(
                 manifest, hook_revisions=hook_revisions, progress=progress
             )
 
         # --- Render Diagnostics ---
-        has_warnings = False
+        has_warnings = any(
+            event.severity == Severity.WARNING for event in result.diagnostics
+        )
         if result.diagnostics:
-            lines = []
-            warning = glyph("⚠", "!")
-            for event in result.diagnostics:
-                if event.severity == Severity.WARNING:
-                    has_warnings = True
-                    lines.append(
-                        f"[yellow]{warning} [{event.phase}][/yellow] {event.message}"
-                    )
-                elif event.severity == Severity.SKIP:
-                    lines.append(
-                        rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
-                    )
-                else:
-                    lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
-
-                if event.detail:
-                    lines.append(f"  [dim]{event.detail}[/dim]")
-
             console.print()
-            console.print(
-                Panel(
-                    "\n".join(lines),
-                    title="[bold]Diagnostic Summary",
-                    border_style="yellow" if has_warnings else "blue",
-                    expand=False,
-                    padding=(1, 2),
-                )
-            )
+            console.print(diagnostics_report(result.diagnostics))
 
         if has_warnings:
             console.print(
@@ -387,6 +411,34 @@ def _run_engine(
             )
 
     return result
+
+
+def diagnostics_report(events: Sequence[DiagnosticEvent]) -> Group:
+    """Renders execution diagnostics as a section, one line per event.
+
+    Args:
+        events: The diagnostics an execution reported.
+
+    Returns:
+        A ``Diagnostics`` heading over the events: warnings in yellow, skips
+        dimmed, and everything else marked in cyan.
+    """
+    warning = glyph("⚠", "!")
+    lines: list[Text] = []
+    for event in events:
+        # Messages can quote template text: data, never markup.
+        tag = f"[{event.phase}]"
+        if event.severity == Severity.WARNING:
+            lines.append(
+                Text.assemble((f"{warning} {tag}", "yellow"), f" {event.message}")
+            )
+        elif event.severity == Severity.SKIP:
+            lines.append(Text(f"[i] {tag} {event.message}", "dim"))
+        else:
+            lines.append(Text.assemble((f"• {tag}", "cyan"), f" {event.message}"))
+        if event.detail:
+            lines.append(Text(f"  {event.detail}", "dim"))
+    return Group(heading("Diagnostics"), indented(Group(*lines)))
 
 
 def planned_paths(manifest: EnvironmentManifest) -> tuple[list[str], set[str]]:
@@ -414,7 +466,10 @@ def plan_tree(manifest: EnvironmentManifest) -> Tree:
         A tree rooted at the workspace, with a trailing slash on directories.
     """
     paths, directories = planned_paths(manifest)
-    tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
+    tree = Tree(
+        Text.assemble((".", "bold blue"), (" (Workspace Root)", "dim")),
+        guide_style="bright_black",
+    )
     nodes: dict[str, Tree] = {"": tree}
     for path in paths:
         parts = path.split("/")
@@ -426,110 +481,85 @@ def plan_tree(manifest: EnvironmentManifest) -> Tree:
                 is_file = index == len(parts) - 1 and path not in directories
                 # Paths come from templates: render them as data, never markup.
                 nodes[current] = nodes[parent].add(
-                    Text(part if is_file else f"{part}/")
+                    Text(
+                        part if is_file else f"{part}/",
+                        path_style(part, directory=not is_file),
+                    )
                 )
     return tree
 
 
+def _facts(rows: list[tuple[str, str]]) -> Table:
+    """Lays out labelled facts: dim labels in a column, values beside them."""
+    table = Table(box=None, show_header=False, padding=(0, 2, 0, 0))
+    table.add_column("Label", style="dim", no_wrap=True)
+    table.add_column("Value")
+    for label, value in rows:
+        # Values name packages and commands from templates: data, never markup.
+        table.add_row(label, Text(value))
+    return table
+
+
+def _section(title: str, body: RenderableType) -> None:
+    console.print()
+    console.print(heading(title))
+    console.print(indented(body))
+
+
 def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     """Renders a human-readable summary of the planned environment manifest."""
-    table = Table(box=None, show_header=False, padding=(0, 2))
-    table.add_column("Category", justify="right", style="bold")
-    table.add_column("Details")
-
     paths, _ = planned_paths(manifest)
-    table.add_row("Filesystem:", f"{len(paths)} files/directories to create or update")
-
-    # Dependencies
+    dependencies = manifest.dependencies
     deps_total = (
-        len(manifest.dependencies.dependencies)
-        + len(manifest.dependencies.dev_dependencies)
-        + len(manifest.dependencies.docs_dependencies)
+        len(dependencies.dependencies)
+        + len(dependencies.dev_dependencies)
+        + len(dependencies.docs_dependencies)
     )
-    table.add_row("Dependencies:", f"{deps_total} packages to install")
-
-    # Tasks
-    tasks_total = len(manifest.tasks.system_tasks) + len(
-        manifest.tasks.post_install_tasks
-    )
-    table.add_row("Tasks:", f"{tasks_total} system commands to execute")
-
-    # Collision Strategy
-    table.add_row(
-        "Collision Strategy:",
+    tasks = (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
+    collisions = (
         manifest.collision_strategy.value.title()
         if manifest.collision_strategy
         else "Unresolved"
         if manifest.collisions
-        else "Not needed",
+        else "Not needed"
     )
 
-    console.print()
-    console.print(
-        Panel(
-            table,
-            title="[bold]Summary",
-            border_style="cyan",
-            padding=(0, 2),
-            expand=False,
-        )
+    _section(
+        "Summary",
+        _facts(
+            [
+                ("Filesystem", f"{len(paths)} files/directories to create or update"),
+                ("Dependencies", f"{deps_total} packages to install"),
+                ("Tasks", f"{len(tasks)} system commands to execute"),
+                ("Collision strategy", collisions),
+            ]
+        ),
     )
 
     if deps_total > 0:
-        dep_lines = []
-        if manifest.dependencies.dependencies:
-            pkgs = ", ".join(manifest.dependencies.dependencies)
-            dep_lines.append(f"[bold]Standard:[/bold] {pkgs}")
-        if manifest.dependencies.dev_dependencies:
-            pkgs = ", ".join(manifest.dependencies.dev_dependencies)
-            dep_lines.append(f"[bold]Development:[/bold] {pkgs}")
-        if manifest.dependencies.docs_dependencies:
-            pkgs = ", ".join(manifest.dependencies.docs_dependencies)
-            dep_lines.append(f"[bold]Documentation:[/bold] {pkgs}")
-
-        console.print()
-        console.print(
-            Panel(
-                "\n".join(dep_lines),
-                title="[bold]Dependencies",
-                border_style="cyan",
-                padding=(0, 2),
-                expand=False,
-            )
+        groups = (
+            ("Standard", dependencies.dependencies),
+            ("Development", dependencies.dev_dependencies),
+            ("Documentation", dependencies.docs_dependencies),
+        )
+        _section(
+            "Dependencies",
+            _facts([(label, ", ".join(names)) for label, names in groups if names]),
         )
 
-    if tasks_total > 0:
-        task_lines = []
-        for i, task in enumerate(manifest.tasks.system_tasks, 1):
-            cmd = shlex.join(task.command)
-            task_lines.append(f"  {i}. {cmd}")
-        offset = len(manifest.tasks.system_tasks)
-        for i, task in enumerate(manifest.tasks.post_install_tasks, offset + 1):
-            cmd = shlex.join(task.command)
-            task_lines.append(f"  {i}. {cmd}")
-
-        console.print()
-        console.print(
-            Panel(
-                "\n".join(task_lines),
-                title="[bold]Tasks",
-                border_style="cyan",
-                padding=(0, 2),
-                expand=False,
-            )
+    if tasks:
+        _section(
+            "Tasks",
+            _facts(
+                [
+                    (f"{number}.", shlex.join(task.command))
+                    for number, task in enumerate(tasks, 1)
+                ]
+            ),
         )
 
     if paths:
-        console.print()
-        console.print(
-            Panel(
-                plan_tree(manifest),
-                title="[bold]Filesystem",
-                border_style="cyan",
-                padding=(0, 2),
-                expand=False,
-            )
-        )
+        _section("Filesystem", plan_tree(manifest))
 
     console.print("\n[dim]No changes were made to your system.[/dim]")
 
@@ -555,8 +585,6 @@ def warn_credential_names(names: tuple[str, ...]) -> None:
 
 def print_recipe_summary(request: InitRequest) -> None:
     """Leave a literal, encoding-safe summary after the decision app exits."""
-    from rich.text import Text
-
     reference = request.template_reference
     template = (
         (reference.display_name or reference.locator) if reference else "No template"
@@ -573,9 +601,16 @@ def print_recipe_summary(request: InitRequest) -> None:
             for selection in request.recipe.selections(opinions)
             if selection.enabled
         )
+    console.print(heading("Recipe"))
     console.print(
-        Text(
-            f"Recipe: {template}\nTools: {tools or 'None'}\nDocker: {'yes' if request.docker else 'no'}"
+        indented(
+            _facts(
+                [
+                    ("Template", template),
+                    ("Tools", tools or "None"),
+                    ("Docker", "yes" if request.docker else "no"),
+                ]
+            )
         )
     )
 
@@ -586,19 +621,25 @@ def print_review_summary(decision: InitDecision) -> None:
     Args:
         decision: The review's outcome.
     """
-    lines = []
+    rows = []
     if decision.draft.collision_strategy:
-        lines.append(f"Existing files: {decision.draft.collision_strategy.value}")
+        rows.append(("Existing files", decision.draft.collision_strategy.value))
     if decision.confirmed_commands:
         count = len(decision.confirmed_commands)
-        lines.append(
-            f"Confirmed {count} command{'' if count == 1 else 's'} "
-            "from an untrusted template"
+        rows.append(
+            (
+                "Commands",
+                f"{count} confirmed from an untrusted template",
+            )
         )
     if decision.draft.allowed_secrets:
-        lines.append(
-            "Kept values flagged as credentials: "
-            + ", ".join(sorted(decision.draft.allowed_secrets))
+        rows.append(
+            (
+                "Kept values",
+                "flagged as credentials: "
+                + ", ".join(sorted(decision.draft.allowed_secrets)),
+            )
         )
-    if lines:
-        console.print(Text("\n".join(lines)))
+    if rows:
+        console.print(heading("Review"))
+        console.print(indented(_facts(rows)))

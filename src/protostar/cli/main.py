@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 from rich.console import Group
 from rich.logging import RichHandler
 from rich.markup import escape
-from rich.panel import Panel
 from rich.text import Text
 
 from protostar.cli import parser, schema, ui
@@ -521,7 +520,7 @@ def main() -> None:
             ui.console.print()
 
             # Domain error text is data, not markup: escape it before composing
-            # the panel body so literal '[templates]' survives Rich rendering.
+            # the error body so literal '[templates]' survives Rich rendering.
             body = escape(str(e))
             if isinstance(e, CommandExecutionError) and e.output_detail:
                 body += f"\n\n[dim]{escape(e.output_detail)}[/dim]"
@@ -605,20 +604,13 @@ def main() -> None:
                 else:
                     body_renderable = Text.from_markup(body)
 
-            panel_title = (
-                "[bold red]Execution Interrupted"
+            title = (
+                "Execution interrupted"
                 if isinstance(e, ExecutionInterruptedError)
-                else "[bold red]Execution Aborted"
+                else "Execution aborted"
             )
-            ui.console.print(
-                Panel(
-                    body_renderable,
-                    title=panel_title,
-                    border_style="red",
-                    expand=False,
-                    padding=(1, 2),
-                )
-            )
+            ui.console.print(ui.heading(title, "bold red"))
+            ui.console.print(ui.indented(body_renderable))
 
         # Route specific domain exceptions to standard POSIX status codes
         if isinstance(e, InvalidUsageError):

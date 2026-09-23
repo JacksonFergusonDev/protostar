@@ -18,6 +18,7 @@ from protostar.errors import ConfigurationError, ProtostarError, SecretDetectedE
 from protostar.init_draft import InitDraft
 from protostar.secret_guard import check_variable_values, credential_named
 
+from ..chrome import Heading, Headline, Masthead, Panel
 from ..keys import ActionBar, Field, Form, KeyboardScreen, Toggle, key_label, move
 from .preview import PlanPreview
 
@@ -81,7 +82,7 @@ class VariableFields(Vertical):
 
     def compose(self) -> ComposeResult:
         """Compose a field, its notes, and an error line for each variable."""
-        yield Label("Template variables", classes="section")
+        yield Heading("Template variables")
         yield Static("Saved to pyproject.toml; don't enter secrets.", classes="note")
         for name in self.names:
             yield Label(name, classes="field-label")
@@ -220,19 +221,24 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
             self.draft.template.source.reference if self.draft.template else None
         )
         name = (reference.display_name or reference.locator) if reference else ""
-        yield Label("Template needs values", id="title")
-        yield Static(
-            Text(f"{name} uses variables that have no value yet."), id="subtitle"
+        yield Masthead("init", "variables")
+        yield Headline(
+            "Template needs values",
+            Text(f"{name} uses variables that have no value yet."),
         )
         with Horizontal(id="body"):
-            with Form(id="editor"):
+            with Panel("Recipe", id="editor-panel"), Form(id="editor"):
                 yield VariableFields(
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
-            yield PlanPreview(self.config)
-        with ActionBar(id="actions"):
-            yield Button(key_label("Cancel", "esc"), id="cancel")
-            yield Button(key_label("Continue", "^s"), variant="primary", id="continue")
+            with Vertical(id="aside"):
+                with Panel("Preview", id="preview-panel"):
+                    yield PlanPreview(self.config)
+                with ActionBar(id="actions"):
+                    yield Button(key_label("Cancel", "esc"), id="cancel")
+                    yield Button(
+                        key_label("Continue", "^s"), variant="primary", id="continue"
+                    )
         yield Footer()
 
     async def on_mount(self) -> None:

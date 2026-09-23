@@ -12,7 +12,8 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
+from textual.content import Content
 from textual.widgets import (
     Button,
     Checkbox,
@@ -40,6 +41,7 @@ from protostar.recipe import (
 )
 from protostar.templates import TemplateInfo, TemplateType
 
+from ..chrome import Heading, Headline, Masthead, Panel
 from ..keys import (
     ActionBar,
     Choice,
@@ -75,6 +77,7 @@ _GROUPS = {
     ),
 }
 _NAMES = {Tool(module.config_key): module.name for module in TOOLING_MODULES}
+_NAME_WIDTH = max(len(name) for name in _NAMES.values()) + 3
 _SOURCES = {
     SelectionLayer.TEMPLATE: "from template",
     SelectionLayer.PROJECT: "from recipe",
@@ -144,16 +147,19 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             for selection in selections
         }
 
-    def _label(self, tool: Tool) -> Text:
-        label = f"{_NAMES[tool]} · {self.sources[tool]}"
+    def _label(self, tool: Tool) -> Content:
+        # Names pad to one width so every source lines up in a column.
+        parts: list[str | tuple[str, str]] = [
+            _NAMES[tool].ljust(_NAME_WIDTH),
+            (self.sources[tool], "$text-faint"),
+        ]
         missing = TOOL_REQUIREMENTS.get(tool, frozenset()) - {
             tool for tool, enabled in self.enabled.items() if enabled
         }
         if missing:
-            label += " · requires " + ", ".join(
-                _NAMES[item] for item in sorted(missing)
-            )
-        return Text(label)
+            requires = ", ".join(_NAMES[item] for item in sorted(missing))
+            parts.append((f" · requires {requires}", "$text-warning"))
+        return Content.assemble(*parts)
 
     def _docker(self) -> bool:
         if self.docker_override is not None:
@@ -164,19 +170,19 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
 
     def compose(self) -> ComposeResult:
         """Compose the editor sections beside the plan preview."""
-        yield Label("Build your recipe", id="title")
-        yield Static(
-            "Choose a starting point, tools, and project details.", id="subtitle"
+        yield Masthead("init", "recipe")
+        yield Headline(
+            "Build your recipe", "Choose a starting point, tools, and project details."
         )
         with Horizontal(id="body"):
-            with Form(id="editor"):
-                yield Label("Template", classes="section")
+            with Panel("Recipe", id="editor-panel"), Form(id="editor"):
+                yield Heading("Template")
                 yield self._template_select()
                 yield Static("", id="template-status", markup=False)
                 yield VariableFields(
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
-                yield Label("Tools", classes="section")
+                yield Heading("Tools")
                 yield Static("", id="constraints", markup=False)
                 with ChoiceGroup(id="tools"):
                     yield Toggle("Docker", value=self._docker(), id="docker")
@@ -202,12 +208,16 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                                 value=self.enabled[tool],
                                 id=f"tool-{tool}",
                             )
-                yield Label("Project details", classes="section")
+                yield Heading("Project details")
                 yield MetadataFields(self._metadata_defaults)
-            yield PlanPreview(self.config)
-        with ActionBar(id="actions"):
-            yield Button(key_label("Cancel", "esc"), id="cancel")
-            yield Button(key_label("Continue", "^s"), variant="primary", id="continue")
+            with Vertical(id="aside"):
+                with Panel("Preview", id="preview-panel"):
+                    yield PlanPreview(self.config)
+                with ActionBar(id="actions"):
+                    yield Button(key_label("Cancel", "esc"), id="cancel")
+                    yield Button(
+                        key_label("Continue", "^s"), variant="primary", id="continue"
+                    )
         yield Footer()
 
     def _template_select(self) -> Picker[TemplateInfo | _TemplateChoice]:
@@ -251,6 +261,10 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         await fields.show(self.draft.template.source if self.draft.template else None)
         if fields.missing:
             self.query_one(f"#var-{fields.missing[0]}", Input).focus()
+        else:
+            # Focus centers the picker before layout, scrolling past its heading.
+            editor = self.query_one(Form)
+            editor.call_after_refresh(editor.scroll_home, animate=False)
         self._status(Text(""))
         self._refresh_tools()
         self._changed()

@@ -6,6 +6,10 @@ from textual.app import App
 from textual.binding import Binding, BindingType
 from textual.screen import Screen
 
+from protostar.cli.palette import ANSI
+
+from .theme import PROTOSTAR
+
 
 class DecisionApp[ResultT](App[ResultT]):
     """Run one decision flow and exit with its immutable result."""
@@ -24,7 +28,9 @@ class DecisionApp[ResultT](App[ResultT]):
         self, screen: Screen[ResultT], *, exit_after_first_frame: bool = False
     ) -> None:
         super().__init__()
-        self.theme = "textual-dark"
+        self.register_theme(PROTOSTAR)
+        self.theme = PROTOSTAR.name
+        self.ansi_theme_dark = ANSI
         self.decision_screen = screen
         self.exit_after_first_frame = exit_after_first_frame
 
