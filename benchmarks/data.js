@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790188078074,
+  "lastUpdate": 1790191875844,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16121,6 +16121,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 780.7,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "62b70648da5e67e98e40e3dad289d2ca0492389f",
+          "message": "feat(cli): keyboard-first TUI navigation (#311)\n\n* feat(cli): keyboard-first TUI navigation\n\nArrow keys now walk every row of the recipe editor without changing a\nvalue, space and enter toggle or choose, and tab moves between controls\nwith the tool checkboxes counting as one stop. Ctrl+S continues; the\nreview answers to letters (a, m, o, t, q) and pages its diff from the\nfile tree. Each button and option shows its key, the footer is the\nlegend for moving, and F1 lists every key.\n\nEsc now asks before leaving instead of discarding the recipe; Ctrl+C\nstill quits at once.\n\n* fix(cli): leave the first row focused by Textual\n\nFocusing the template picker from on_mount could land after an early\nscroll and jump the view back to the top.\n\n* test(cli): settle before clicking a recorded-recipe tool\n\nThe editor recomposes its variable fields after mount, which can move a\nrow between a scroll and a click on slower CI runners.\n\n* test(cli): settle the editor before changing its template\n\nA template change posted while on_mount is still recomposing the\nvariable fields races the mount on slower Windows runners.",
+          "timestamp": "2026-09-23T12:29:06-07:00",
+          "tree_id": "3d455b4432d589d66461d1d61ac071e163f49181",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/62b70648da5e67e98e40e3dad289d2ca0492389f"
+        },
+        "date": 1790191874776,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 207.57,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 704.63,
             "unit": "ms"
           }
         ]
