@@ -136,6 +136,7 @@ async def test_tools_constraints_and_provenance():
         )
     )
     async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
         rtd = app.screen.query_one("#tool-readthedocs", Checkbox)
         assert rtd.disabled
         assert "requires Zensical" in rtd.label.plain
@@ -462,7 +463,8 @@ async def test_credential_value_blocks_continue_and_names_the_rule(tmp_path):
         await settle(pilot)
         assert "Waiting for values: ORG" in plain(app, "#preview-summary")
         field = app.screen.query_one("#var-ORG", Input)
-        field.focus()
+        # The editor opens on the value it is waiting for.
+        assert app.focused is field
         field.value = github_token()
         await pilot.press("enter")
         await settle(pilot)

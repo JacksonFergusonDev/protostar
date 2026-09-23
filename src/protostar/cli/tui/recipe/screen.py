@@ -244,14 +244,13 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
     async def on_mount(self) -> None:
         """Show the template's variables, then plan the initial draft.
 
-        Focus starts on the first variable without a value, else the template.
+        Focus starts on the first variable without a value; otherwise it
+        stays on the first row, the template.
         """
         fields = self.query_one(VariableFields)
         await fields.show(self.draft.template.source if self.draft.template else None)
         if fields.missing:
             self.query_one(f"#var-{fields.missing[0]}", Input).focus()
-        else:
-            self.query_one("#template", Select).focus()
         self._status(Text(""))
         self._refresh_tools()
         self._changed()
