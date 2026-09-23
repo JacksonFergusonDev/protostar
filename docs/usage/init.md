@@ -224,11 +224,17 @@ Running `just` in your project root provides standard developer workflows immedi
 - __`just test` / `just test-cov`__: Executes the test suite with coverage reporting.
 - __`just ci`__: Emulates the GitHub Actions CI pipeline locally.
 
-## Interactive Wizard & Metadata
+## Recipe Editor & Metadata
 
-When running `protostar init` without a `--template` flag, Protostar launches an interactive prompt wizard to configure your environment.
+When running `protostar init` without a `--template` flag in a terminal, Protostar opens the recipe editor. Pick a template, toggle tools, and fill in project details while a live preview shows the planned file tree. Press `Esc` to cancel without changing anything.
 
-The following metadata fields are prompted during initialization or automatically resolved from your global configuration and git environment:
+![Protostar recipe editor](../assets/terminals/tui_recipe_editor.svg)
+
+__Continue__ opens the change review. It lists every planned path as new, modified, conflict, existing, or after setup, shows a diff for each file Protostar writes before running commands, and then the commands and packages that follow. Nothing runs until you choose __Apply__.
+
+![Protostar change review](../assets/terminals/tui_change_review.svg)
+
+The following metadata fields appear in the editor, pre-filled from your global configuration and git environment:
 
 --8<-- "table_metadata.md"
 
@@ -247,17 +253,12 @@ keeps the checklist lines; `--json` suppresses the checklist entirely.
 
 ## Progressive Scaffolding & Collisions
 
-When Protostar detects existing configuration files (like `pyproject.toml`), it prompts you to choose how to handle the conflict:
+When Protostar detects existing configuration files (like `pyproject.toml`), the change review marks them as conflicts and asks how to handle them under __Existing files__:
 
-```text
-Workspace Collision: Protostar detected existing configuration files in the workspace.
-  - pyproject.toml
+- __Merge__ safely injects missing configs and preserves existing user data.
+- __Overwrite__ forces injection and updates existing keys to match Protostar.
 
-? How would you like to proceed?
-  » Merge      (Safely injects missing configs; preserves existing user data)
-    Overwrite  (Forces injection; updates existing keys to match Protostar)
-    Abort      (Safely exit without modifying the environment)
-```
+Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit without modifying the environment.
 
 Selecting __Merge__ reconciles declared TOML configuration against
 `.protostar.lock.toml`. A tracked project requires the same explicitly selected

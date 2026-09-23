@@ -637,9 +637,6 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             return
         user_config = UserConfig.load()
         catalog = discover_templates(user_config)
-        # Keep the existing benchmark boundary before importing or launching Textual.
-        if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
-            sys.exit(0)
         existing_recipe = read_recipe(Path("pyproject.toml"))
         template = None
         if existing_recipe and existing_recipe.source:
@@ -648,11 +645,16 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             template = DraftTemplate(
                 source, is_external=external, is_trusted=not external
             )
+        # The wizard benchmark measures time to the editor's first frame.
+        benchmark = "PROTOSTAR_BENCHMARK_WIZARD" in os.environ
         decision = edit_recipe(
             InitDraft(template=template, existing_recipe=existing_recipe),
             catalog,
             user_config,
+            exit_after_first_frame=benchmark,
         )
+        if benchmark:
+            sys.exit(0)
         if decision is None:
             raise ExecutionAbortedError("Recipe editing cancelled by user.")
         modules, request = resolve_init(decision.draft, user_config)

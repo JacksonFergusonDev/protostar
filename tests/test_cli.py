@@ -140,8 +140,7 @@ def test_handle_config_reset_confirmed(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
-    mock_confirm = mocker.patch("questionary.confirm")
-    mock_confirm.return_value.ask.return_value = True
+    mock_confirm = mocker.patch("rich.prompt.Confirm.ask", return_value=True)
     mock_run = mocker.patch("subprocess.run")
 
     args = argparse.Namespace(reset=True, force=False)
@@ -153,6 +152,7 @@ def test_handle_config_reset_confirmed(mocker, tmp_path):
     mock_confirm.assert_called_once_with(
         "Warning: this will erase your current configuration, are you sure you want to do this?",
         default=False,
+        console=mocker.ANY,
     )
 
 
@@ -162,8 +162,7 @@ def test_handle_config_reset_cancelled(mocker, tmp_path):
     initial_content = "custom_setting = true\n"
     mock_config_file.write_text(initial_content)
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
-    mock_confirm = mocker.patch("questionary.confirm")
-    mock_confirm.return_value.ask.return_value = False
+    mocker.patch("rich.prompt.Confirm.ask", return_value=False)
     mock_run = mocker.patch("subprocess.run")
 
     args = argparse.Namespace(reset=True, force=False)
@@ -179,8 +178,7 @@ def test_handle_config_reset_aborted(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
-    mock_confirm = mocker.patch("questionary.confirm")
-    mock_confirm.return_value.ask.return_value = None
+    mocker.patch("rich.prompt.Confirm.ask", side_effect=KeyboardInterrupt)
 
     args = argparse.Namespace(reset=True, force=False)
     with pytest.raises(ExecutionAbortedError, match=r"Configuration reset aborted\."):
@@ -192,7 +190,7 @@ def test_handle_config_reset_force(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
-    mock_confirm = mocker.patch("questionary.confirm")
+    mock_confirm = mocker.patch("rich.prompt.Confirm.ask")
     mock_run = mocker.patch("subprocess.run")
 
     args = argparse.Namespace(reset=True, force=True)

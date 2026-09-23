@@ -66,16 +66,7 @@ protostar init --template cli --force-replace
 
 ## Remote Template Security Alerts
 
-When you load a template from an untrusted remote URL (`--from https://...`) that contains executable `system_tasks` or `post_install_tasks`, Protostar halts execution to display the **Informed Consent Security Dialog**:
-
-```text
-⚠️  REMOTE TEMPLATE WARNING ⚠️
-
-This template was loaded from an external source and will execute the following shell commands on your system:
-  - uv run nbdime config-git --enable
-
-Do you trust this source to modify your system? [y/N]
-```
+When you load a template from an untrusted remote URL (`--from https://...`) that contains executable `system_tasks` or `post_install_tasks`, Protostar lists its exact commands under **Untrusted template** in the change review. **Apply** stays disabled until you tick the checkbox confirming those commands, and only the commands you confirmed run.
 
 ### Bypassing Prompts for Trusted Templates
 

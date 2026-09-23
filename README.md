@@ -92,7 +92,7 @@ Protostar is built to be lightweight, so Python's startup overhead never slows d
 - **Fast Hook Resolution:** Instead of making slow Git network calls to resolve hook versions (like `pre-commit autoupdate`), Protostar resolves them via a pre-compiled JSON registry fetched in milliseconds, with an offline fallback if you are disconnected.
 - **Micro-Optimization:** We measure initialization latency using two benchmarking approaches:
   1. **Fast-Path Execution:** Measures the latency of non-interactive commands (e.g., `protostar help init`).
-  1. **TUI-Path Execution:** Measures the overhead of triggering the interactive `questionary` wizards.
+  1. **TUI-Path Execution:** Measures the time until the interactive recipe editor draws its first frame.
 
 Our CI pipeline enforces a strict performance budget using `hyperfine`, gating any PR that introduces significant regressions in either path. We maintain historical tracking to ensure long-term architectural stability rather than chasing absolute CI metrics (which are subject to heavy VM variance).
 
@@ -130,7 +130,7 @@ pipx install protostar
 pip install protostar
 ```
 
-> **Note:** If you install Protostar into an existing Python environment with `pip`, it will bring in `questionary` and `prompt_toolkit` for the interactive wizard. For guaranteed isolation and to avoid dependency conflicts, prefer `uv tool` or Homebrew.
+> **Note:** If you install Protostar into an existing Python environment with `pip`, it will bring in `textual` for the interactive recipe editor. For guaranteed isolation and to avoid dependency conflicts, prefer `uv tool` or Homebrew.
 
 ### Shell Autocompletion
 

@@ -202,6 +202,8 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 
 ## PR 8: `refactor(cli)!: remove questionary`
 
+**Status: complete.** questionary is gone. `config --reset` confirms with `rich.prompt.Confirm` (`--force` skips it; Ctrl+C or EOF aborts). `PROTOSTAR_BENCHMARK_WIZARD` now measures time to the recipe editor's first frame: `DecisionApp(exit_after_first_frame=True)` exits right after its first refresh, so benchmark names are unchanged. `generate_docs_assets.py` captures the recipe editor and change review with `export_screenshot()` into `docs/assets/terminals/tui_*.svg`, and the docs show them in place of the old prompts and `[y/N]` trust dialog. `record_wizard` drives the Textual key flow, but the demos were not re-recorded in this PR; run `just demo-wizard` to refresh them.
+
 **Goal:** questionary is gone, and the benchmarks, demos, and docs match the new TUI.
 
 **Steps:**
@@ -238,4 +240,3 @@ Order: three-way merge, then conflict resolution, then prune, then adopt.
 
 - **Credentials inside URLs.** gitleaks has no general rule for `scheme://user:password@host`, and local-dev values like `postgres://postgres:postgres@localhost/app` are legitimate. Decide before adding a first-party rule.
 - **Declared template variables with descriptions.** Deferred at PR 6, which labels fields by name. A later PR could add an optional `[variables]` table; the field widget takes a description without restructuring.
-- **What the wizard benchmark measures** (PR 8; time to first frame is the likely answer).

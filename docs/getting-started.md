@@ -23,7 +23,7 @@ Protostar is designed to be installed globally as a standalone CLI tool, with na
     ```
 
 !!! warning "Dependency Isolation (ignore if using `brew` or `uv`)"
-    If you install Protostar into an existing Python environment with `pip`, it will bring in `questionary` and `prompt_toolkit` for the interactive TUI wizard. In rare cases, this can conflict with other tools that strictly pin `prompt_toolkit` versions (e.g., specific IPython or Jupyter stacks). For guaranteed isolation, prefer `uv tool` or Homebrew.
+    If you install Protostar into an existing Python environment with `pip`, it will bring in `textual` for the interactive recipe editor. In rare cases, this can conflict with other tools that pin `textual` or `rich` versions. For guaranteed isolation, prefer `uv tool` or Homebrew.
 
 `protostar init` is designed to be executed immediately after you `mkdir` a new project directory. It offers two distinct operational modes: an **interactive TUI** for discovery, and a **headless CLI** for speed.
 

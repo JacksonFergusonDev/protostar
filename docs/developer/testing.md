@@ -157,7 +157,7 @@ ignore_errors = true
 
 Because Protostar is designed for high-velocity initialization, we enforce a strict performance budget to prevent Python's startup overhead from degrading the CLI experience.
 
-To bypass the `questionary` interactive TUI blockage during benchmark or headless CI environments, we expose a hidden environment variable constraint (`PROTOSTAR_BENCHMARK_WIZARD=1`).
+The wizard benchmark sets a hidden environment variable, `PROTOSTAR_BENCHMARK_WIZARD=1`. It treats the session as interactive and makes `protostar init` exit as soon as the recipe editor draws its first frame, so the benchmark measures time to first frame without waiting on input.
 
 The `justfile` includes predefined recipes leveraging [hyperfine](https://github.com/sharkdp/hyperfine) to track regression thresholds. Ensure you test your changes against the fast-path (e.g., `protostar help`) to verify dynamic module imports haven't bloated the instantiation tree.
 
