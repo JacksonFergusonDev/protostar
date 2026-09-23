@@ -482,7 +482,7 @@ def test_main_verbose_flag_after_subcommand(mocker):
 
 
 def test_main_handles_expected_operational_errors(mocker):
-    """Test that known operational errors bubble up to main, are wrapped in a rich Panel, and exit cleanly."""
+    """Test that known operational errors bubble up to main, print under a red heading, and exit cleanly."""
     from protostar.cli import main
     from protostar.errors import ProtostarError
 
@@ -500,14 +500,21 @@ def test_main_handles_expected_operational_errors(mocker):
 
     mock_exit.assert_called_once_with(1)
 
-    # Locate the call that rendered the Rich Panel, guarding against empty print() calls
-    panel_call = next(
+    # Locate the heading and the body under it, guarding against empty print() calls
+    from rich.rule import Rule
+
+    rule_call = next(
+        call
+        for call in mock_print.call_args_list
+        if call.args and isinstance(call.args[0], Rule)
+    )
+    body_call = next(
         call
         for call in mock_print.call_args_list
         if call.args and hasattr(call.args[0], "renderable")
     )
-    assert "Known config collision" in str(panel_call.args[0].renderable)
-    assert "Execution Aborted" in str(panel_call.args[0].title)
+    assert "Known config collision" in str(body_call.args[0].renderable)
+    assert "EXECUTION ABORTED" in str(rule_call.args[0].title)
 
 
 def test_main_handles_rollback_error_with_documentation_hyperlink(mocker):
@@ -1032,7 +1039,7 @@ def test_list_templates_table_output(capsys, monkeypatch):
         main()
     assert exc.value.code == 0
     captured = capsys.readouterr()
-    assert "Available Templates" in captured.out
+    assert "AVAILABLE TEMPLATES" in captured.out
     assert "FastAPI" in captured.out
     assert "(api)" not in captured.out
     assert "Built-in" in captured.out
@@ -1073,7 +1080,7 @@ def test_init_resolves_template_by_display_name(capsys, monkeypatch, tmp_path):
         main()
     assert exc.value.code == 0
     captured = capsys.readouterr()
-    assert "Summary" in captured.out
+    assert "SUMMARY" in captured.out
     assert "fastapi" in captured.out
 
 
@@ -1119,18 +1126,18 @@ def test_main_invalid_subcommand_human_mode(mocker):
 
     mock_exit.assert_called_once_with(ExitCode.USAGE)
     assert mock_print.call_count >= 1
-    # Check that the Rich Panel was passed to console.print
-    from rich.panel import Panel
+    # Check that the error body was passed to console.print
+    from rich.padding import Padding
 
-    panels = [
+    bodies = [
         call.args[0]
         for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], Panel)
+        if call.args and isinstance(call.args[0], Padding)
     ]
-    assert len(panels) == 1
+    assert len(bodies) == 1
     from rich.console import Group
 
-    r = panels[0].renderable
+    r = bodies[0].renderable
     assert isinstance(r, Group)
     assert "invalid choice" in str(r.renderables[0])
     assert "wrong-command" in str(r.renderables[0])
@@ -1154,7 +1161,7 @@ def test_main_invalid_subcommand_json_mode(capsys, monkeypatch):
 
 
 def test_main_missing_argument_human_mode(mocker):
-    """Test that missing required option arguments exit with EX_USAGE and rich panel."""
+    """Test that missing required option arguments exit with EX_USAGE and an error body."""
     mocker.patch.object(sys, "argv", ["protostar", "init", "--python-version"])
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
     mock_print = mocker.patch("protostar.cli.ui.console.print")
@@ -1163,17 +1170,17 @@ def test_main_missing_argument_human_mode(mocker):
         main()
 
     mock_exit.assert_called_once_with(ExitCode.USAGE)
-    from rich.panel import Panel
+    from rich.padding import Padding
 
-    panels = [
+    bodies = [
         call.args[0]
         for call in mock_print.call_args_list
-        if call.args and isinstance(call.args[0], Panel)
+        if call.args and isinstance(call.args[0], Padding)
     ]
-    assert len(panels) == 1
+    assert len(bodies) == 1
     from rich.console import Group
 
-    r = panels[0].renderable
+    r = bodies[0].renderable
     assert isinstance(r, Group)
     assert "expected one argument" in str(r.renderables[0])
 

@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from protostar.orchestrator import Orchestrator
 
 import argcomplete
-from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -109,15 +108,7 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
         if display_title.lower() in ("options", "positional arguments", "subcommands"):
             display_title = display_title.title()
 
-        table = Table(
-            show_header=False,
-            title=display_title,
-            box=box.ROUNDED,
-            show_lines=False,
-            padding=(0, 1),
-            title_justify="left",
-            title_style="bold blue",
-        )
+        table = Table(show_header=False, box=None, padding=(0, 3, 0, 0))
         table.add_column("Arguments", style="cyan", no_wrap=True)
         table.add_column("Description")
 
@@ -181,7 +172,8 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
             table.add_row(invocation, help_text)
 
         if table.row_count > 0:
-            console.print(table)
+            console.print(ui.heading(display_title))
+            console.print(ui.indented(table))
             console.print()
 
     # Append the parser's epilog block if one is defined
@@ -190,7 +182,7 @@ def print_table_help(self: argparse.ArgumentParser, file: Any = None) -> None:
             renderable_method = cast(Any, self.epilog).get_renderable
             console.print(renderable_method())
         else:
-            console.print(self.epilog)
+            console.print(self.epilog, highlight=False)
 
 
 def _get_version() -> str:

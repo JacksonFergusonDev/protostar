@@ -1,38 +1,224 @@
-Screen { background: $surface; }
-#title { margin: 1 2 0 2; text-style: bold; color: $accent; }
-#subtitle { margin: 0 2 1 2; color: $text-muted; }
+/* Tokens live in theme.py. Panels are $surface on the $background, raised
+   controls are $panel, and cyan ($accent) marks only focus, keys, and the
+   primary action. */
+
+* {
+    scrollbar-size-vertical: 1;
+    scrollbar-size-horizontal: 1;
+}
+
+Screen { background: $background; }
+
+/* --- Frame ------------------------------------------------------------- */
+
+Masthead { height: 1; padding: 0 2; background: $panel; }
+#headline { height: auto; margin: 1 2 0 2; }
+#title { width: auto; text-style: bold; color: $foreground; }
+#subtitle { width: 1fr; margin-left: 1; color: $text-muted; }
 #subtitle.-error { color: $error; }
-#body { height: 1fr; }
-#editor { width: 3fr; padding: 0 2; }
-PlanPreview { width: 2fr; padding: 0 1; border-left: vkey $panel; }
-.section { margin-top: 1; text-style: bold; color: $accent; }
-.group { margin-top: 1; text-style: bold; }
-.note { color: $text-muted; }
-.field-label { margin-top: 1; }
+#body { height: 1fr; margin: 0 1; }
+
+/* A panel is ruled above and below only. It stays transparent so the rules,
+   drawn on the inner edge of their rows, sit flush on the filled contents. */
+Panel {
+    height: 1fr;
+    background: transparent;
+    border-top: wide $hairline;
+    border-bottom: wide $hairline;
+}
+Panel:focus-within { border-top: wide $accent; border-bottom: wide $accent; }
+Panel > * { background: $surface; }
+Panel > .panel-title { height: 1; padding: 0 1; color: $text-faint; text-style: bold; }
+Panel:focus-within > .panel-title { color: $accent; }
+/* The scrollbar meets the panel's edge. */
+#editor, PlanPreview, #files, #steps, #diff-pane {
+    height: 1fr;
+    padding: 0 0 0 1;
+    background: $surface;
+}
+
+#editor-panel { width: 3fr; }
+/* Rows keep clear of the scrollbar; margins are set whole in Textual. */
+#editor > * { margin: 0 2 0 0; }
+#editor > .section, #editor > .group { margin: 1 2 0 0; }
+/* The editor runs to the bottom; the buttons sit under the panel beside it. */
+/* Each column is at least as wide as its buttons, which never overhang it. */
+#aside { width: 2fr; min-width: 33; margin-left: 1; }
+#review { width: 2fr; }
+/* The files take two thirds of the column; commands scroll in the rest. */
+#files-panel { height: 2fr; }
+#diff-column { width: 3fr; min-width: 45; margin-left: 1; }
+
+.section { height: 1; margin-top: 1; }
+.group { margin-top: 1; padding-left: 1; text-style: bold; color: $text-muted; }
+.note { color: $text-faint; }
+.field-label { margin-top: 1; color: $text-muted; }
 .field-error { height: auto; color: $error; }
 .field-warning { color: $warning; }
 VariableFields, MetadataFields, MetadataFields .field { height: auto; }
-Checkbox { width: 1fr; height: auto; min-height: 1; border: none; padding: 0 1; }
-RadioSet { width: 1fr; height: auto; }
-SelectionList { height: auto; }
-#constraints { height: auto; color: $error; }
-#template-status { height: auto; color: $text-muted; }
-#template-status.-error, #preview-summary.-error { color: $error; }
+
+#preview-summary { color: $text-muted; }
+#preview-summary.-error, #template-status.-error { color: $error; }
 #preview-collisions { color: $warning; }
-#actions { height: 3; margin: 1 2; align-horizontal: right; }
+#template-status { height: auto; color: $text-muted; }
+#constraints { height: auto; color: $error; }
+
+/* --- Controls ---------------------------------------------------------- */
+
+Checkbox, RadioButton {
+    width: 1fr;
+    height: 1;
+    border: none;
+    padding: 0 1;
+    background: transparent;
+}
+Checkbox > .toggle--button, RadioButton > .toggle--button {
+    color: $strut;
+    background: $panel;
+}
+Checkbox.-on > .toggle--button, RadioSet > RadioButton.-on > .toggle--button {
+    color: $accent;
+    background: $panel;
+}
+Checkbox:focus, RadioSet:focus > RadioButton.-selected {
+    border: none;
+    background: $glow;
+    background-tint: $foreground 0%;
+}
+Checkbox:focus > .toggle--label,
+RadioSet:focus > RadioButton.-selected > .toggle--label {
+    color: $accent;
+    background: transparent;
+    text-style: bold;
+}
+Checkbox:blur:hover, RadioButton:hover { background: $panel; }
+Checkbox:blur:hover > .toggle--label, RadioButton:hover > .toggle--label {
+    background: transparent;
+}
+RadioSet:blur > RadioButton.-selected > .toggle--label { background: transparent; }
+Checkbox:disabled > .toggle--label, RadioButton:disabled > .toggle--label {
+    color: $text-disabled;
+}
+
+RadioSet, SelectionList {
+    width: 1fr;
+    height: auto;
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+RadioSet:focus, SelectionList:focus {
+    border: none;
+    background-tint: $foreground 0%;
+}
+SelectionList > .selection-list--button,
+SelectionList > .selection-list--button-highlighted {
+    color: $strut;
+    background: $panel;
+}
+SelectionList:blur > .option-list--option-highlighted { background: transparent; }
+SelectionList > .selection-list--button-selected,
+SelectionList > .selection-list--button-selected-highlighted {
+    color: $accent;
+    background: $panel;
+}
+
+Select { width: 1fr; }
+Select > SelectCurrent {
+    height: 1;
+    border: none;
+    padding: 0 1;
+    background: $panel;
+}
+Select:focus > SelectCurrent {
+    border: none;
+    background: $glow;
+    color: $accent;
+}
+Select > SelectCurrent .arrow { color: $text-faint; }
+Select:focus > SelectCurrent .arrow { color: $accent; }
+Select > SelectOverlay {
+    border: hkey $accent;
+    background: $panel;
+}
+
+Input {
+    height: 1;
+    border: none;
+    padding: 0 1;
+    background: $panel;
+}
+Input:focus {
+    border: none;
+    background: $glow;
+    background-tint: $foreground 0%;
+}
+Input.-invalid, Input.-invalid:focus { background: $error 20%; border: none; }
+
+Button {
+    height: 1;
+    min-width: 10;
+    border: none;
+    padding: 0 1;
+    background: $panel;
+    color: $foreground;
+    text-style: bold;
+}
+Button:hover { border: none; background: $hairline; }
+Button:focus {
+    background: $glow;
+    color: $accent;
+    background-tint: $foreground 0%;
+}
+Button.-primary { background: $accent; color: $background; }
+Button.-primary:hover, Button.-primary:focus {
+    background: $accent-lighten-2;
+    color: $background;
+}
+Button.-error { background: $error; color: $background; }
+Button.-error:hover, Button.-error:focus { background: $error-lighten-1; }
+Button:disabled, Button.-primary:disabled {
+    background: $panel;
+    color: $text-disabled;
+    text-opacity: 100%;
+}
+/* The buttons end where the editor's bottom rule is drawn, a row up. */
+#actions { height: 1; margin-bottom: 1; align-horizontal: right; }
 #actions Button { margin-left: 1; }
-#review { width: 2fr; padding: 0 2; }
-#files { height: 1fr; }
-#steps { height: auto; max-height: 12; }
-#diff-pane { width: 3fr; padding: 0 1; border-left: vkey $panel; }
+
+Tree { padding: 0; }
+Tree:focus { background-tint: $foreground 0%; }
+Tree > .tree--guides { color: $hairline; }
+Tree > .tree--guides-hover { color: $strut; }
+Tree > .tree--guides-selected { color: $accent; }
+Tree > .tree--highlight-line { background: $panel; }
+
+Footer { background: $panel; }
+
+/* --- Review decisions -------------------------------------------------- */
+
 #decisions, #collision-choice, #trust-gate { height: auto; }
-#decisions { margin: 0 2; }
+#decisions { margin-bottom: 1; }
 #collision-note { color: $warning; }
 ChoiceGroup { height: auto; }
-LeaveScreen, KeysScreen { align: center middle; background: $background 60%; }
-#dialog { width: auto; max-width: 90; height: auto; padding: 1 2; border: round $accent; background: $panel; }
-#dialog .section { margin-top: 0; }
+
+/* --- Dialogs ----------------------------------------------------------- */
+
+LeaveScreen, KeysScreen { align: center middle; background: $background 70%; }
+#dialog {
+    width: auto;
+    max-width: 90;
+    height: auto;
+    padding: 1 2;
+    border: hkey $accent;
+    border-title-color: $accent;
+    border-title-style: bold;
+    background: $panel;
+}
+#dialog .question { text-style: bold; }
 #dialog .note { margin-top: 1; }
+#dialog Button { background: $hairline; }
+#dialog Button.-error { background: $error; color: $background; }
 .dialog-actions { width: auto; height: auto; margin-top: 1; }
-.dialog-actions Button { margin-right: 1; }
+.dialog-actions Button { margin-right: 2; }
 KeysScreen #dialog { width: 72; max-width: 100%; }

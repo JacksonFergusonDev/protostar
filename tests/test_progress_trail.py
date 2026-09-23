@@ -137,10 +137,9 @@ def test_run_engine_renders_engine_steps_under_the_banner(screen, mocker, monkey
     request = InitRequest()
     ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
-    assert screen.getvalue().splitlines()[:2] == [
-        "Protostar Ignition Sequence Initiated",
-        "  ✔ Initializing git repository",
-    ]
+    banner, step = screen.getvalue().splitlines()[:2]
+    assert banner.startswith("IGNITION SEQUENCE INITIATED ─")
+    assert step == "  ✔ Initializing git repository"
 
 
 def test_run_engine_json_mode_executes_without_progress(screen, mocker, monkeypatch):

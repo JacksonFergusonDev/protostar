@@ -1051,10 +1051,15 @@ def test_review_summary_is_cp1252_safe(mocker):
     )
     ui.print_review_summary(InitDecision(InitDraft(), ()))
     stream.flush()
-    assert output.getvalue().decode("cp1252").splitlines() == [
-        "Existing files: merge",
-        "Confirmed 2 commands from an untrusted template",
-        "Kept values flagged as credentials: BETA, ORG",
+    heading, *rows = [
+        line.rstrip() for line in output.getvalue().decode("cp1252").splitlines()
+    ]
+    # cp1252 cannot encode box drawing, so the heading's rule falls back to dashes.
+    assert heading.startswith("REVIEW -")
+    assert rows == [
+        "  Existing files  merge",
+        "  Commands        2 confirmed from an untrusted template",
+        "  Kept values     flagged as credentials: BETA, ORG",
     ]
 
 

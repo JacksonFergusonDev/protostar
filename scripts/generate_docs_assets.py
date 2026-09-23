@@ -19,13 +19,12 @@ from unittest import mock
 import tomlkit
 from rich.cells import cell_len
 from rich.console import Console
-from rich.panel import Panel
 from rich.segment import Segment
-from rich.terminal_theme import DEFAULT_TERMINAL_THEME, TerminalTheme
 from rich.text import Text
 from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
+from protostar.cli.palette import ANSI
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
@@ -121,25 +120,6 @@ class ManifestEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def _get_protostar_terminal_theme() -> TerminalTheme:
-    """Constructs the standard Protostar dark terminal theme."""
-    ansi_colors = [
-        (color.red, color.green, color.blue)
-        for color in DEFAULT_TERMINAL_THEME.ansi_colors  # type: ignore[attr-defined]
-    ]
-    ansi_colors[4] = (97, 175, 239)
-    ansi_colors[12] = (97, 175, 239)
-    ansi_colors[6] = (34, 211, 238)
-    ansi_colors[14] = (34, 211, 238)
-
-    return TerminalTheme(
-        background=(10, 15, 31),
-        foreground=(220, 225, 235),
-        normal=ansi_colors[:8],
-        bright=ansi_colors[8:16],
-    )
-
-
 def _calculate_content_width(console: Console, min_width: int = 1) -> int:
     """Calculates the maximum visible column width across all lines in the console buffer."""
     segments = list(Segment.filter_control(console._record_buffer))
@@ -165,7 +145,9 @@ def _calculate_content_width(console: Console, min_width: int = 1) -> int:
                 line_max_col = current_col
             else:
                 rstripped = text.rstrip()
-                if rstripped:
+                # A heading's rule fills whatever width it is given; the export
+                # crops it to the widest content instead.
+                if rstripped and set(rstripped) != {"─"}:
                     line_max_col = current_col + cell_len(rstripped)
                 current_col += cell_len(text)
         if line_max_col > max_col:
@@ -187,7 +169,7 @@ def _render_and_write_svg(
 
     svg_content = console.export_svg(
         title=title,
-        theme=_get_protostar_terminal_theme(),
+        theme=ANSI,
         unique_id=unique_id or filename.replace(".svg", ""),
     )
 
@@ -934,7 +916,7 @@ def generate_cli_help_svgs() -> None:
         )
 
         prompt = Text.assemble(
-            ("❯ ", "bold magenta"),  # noqa: RUF001
+            ("❯ ", "bright_black"),  # noqa: RUF001
             ("protostar ", "bold cyan"),
             (f"{prompt_cmd}\n", "white"),
         )
@@ -993,7 +975,7 @@ def _print_prompt(console: Console, arguments: str) -> None:
     """Prints a shell prompt invoking protostar with the given arguments."""
     console.print(
         Text.assemble(
-            ("❯ ", "bold magenta"),  # noqa: RUF001
+            ("❯ ", "bright_black"),  # noqa: RUF001
             ("protostar ", "bold cyan"),
             (f"{arguments}\n", "white"),
         )
@@ -1131,32 +1113,7 @@ def generate_diagnostic_panel_svg() -> None:
         ),
     ]
 
-    lines = []
-    has_warnings = False
-
-    for event in events:
-        if event.severity == Severity.WARNING:
-            has_warnings = True
-            lines.append(f"[yellow]⚠ [{event.phase}][/yellow] {event.message}")
-        elif event.severity == Severity.SKIP:
-            lines.append(
-                rf"[dim white]\[i] [{event.phase}] {event.message}[/dim white]"
-            )
-        else:
-            lines.append(f"[blue]• [{event.phase}][/blue] {event.message}")
-
-        if event.detail:
-            lines.append(f"  [dim]{event.detail}[/dim]")
-
-    panel = Panel(
-        "\n".join(lines),
-        title="[bold]Diagnostic Summary",
-        border_style="yellow" if has_warnings else "blue",
-        expand=False,
-        padding=(1, 2),
-    )
-
-    record_console.print(panel)
+    record_console.print(protostar.cli.ui.diagnostics_report(events))
 
     _render_and_write_svg(
         record_console,

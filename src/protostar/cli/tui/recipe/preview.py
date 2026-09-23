@@ -7,7 +7,7 @@ from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
-from textual.widgets import Label, Static
+from textual.widgets import Static
 
 from protostar.cli.ui import plan_tree, planned_paths
 from protostar.config import UserConfig
@@ -38,7 +38,6 @@ class PlanPreview(VerticalScroll):
 
     def compose(self) -> ComposeResult:
         """Compose the summary, collision, and tree lines."""
-        yield Label("Preview", classes="section")
         yield Static("Planning…", id="preview-summary")
         yield Static("", id="preview-collisions")
         yield Static("", id="preview-tree")

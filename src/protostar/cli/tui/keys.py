@@ -25,6 +25,7 @@ from textual.widgets import (
     SelectionList,
     Static,
 )
+from textual.widgets._toggle_button import ToggleButton
 
 MOVE = Binding.Group("Move", compact=True)
 """Groups up and down under one footer entry."""
@@ -77,6 +78,11 @@ class ActionBar(Horizontal):
             index = buttons.index(self.screen.focused) + direction
             if 0 <= index < len(buttons):
                 buttons[index].focus()
+
+
+# A square lamp tells a checkbox from a radio button's round one. SelectionList
+# draws its boxes from ToggleButton itself, so the lamp is set there.
+ToggleButton.BUTTON_INNER = "■"
 
 
 class Toggle(Checkbox):
@@ -246,8 +252,9 @@ class LeaveScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         """Compose the question and its two answers, each showing its key."""
-        with Vertical(id="dialog"):
-            yield Label("Leave without setting up the project?", classes="section")
+        with Vertical(id="dialog") as dialog:
+            dialog.border_title = "LEAVE"
+            yield Label("Leave without setting up the project?", classes="question")
             yield Static("Nothing has been written yet.", classes="note")
             with Horizontal(classes="dialog-actions"):
                 stay = Button(key_label("Stay", "esc"), id="stay")
@@ -278,11 +285,11 @@ class KeysScreen(ModalScreen[None]):
         width = max(len(keys) for keys, _ in self.rows)
         text = Text()
         for keys, description in self.rows:
-            text.append(keys.ljust(width + 2), "bold")
+            text.append(keys.ljust(width + 3), "bold cyan")
             text.append(description + "\n")
         text.rstrip()
-        with Vertical(id="dialog"):
-            yield Label("Keys", classes="section")
+        with Vertical(id="dialog") as dialog:
+            dialog.border_title = "KEYS"
             yield Static(text)
             yield Static(Text("esc to close", style="dim"), classes="note")
 
