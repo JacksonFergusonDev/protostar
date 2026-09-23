@@ -1,12 +1,10 @@
-"""Three-way generated-file and exact-byte append-region acceptance tests."""
+"""Three-way generated-file and append-region acceptance tests."""
 
-from hashlib import sha256
 from pathlib import Path
 
 import pytest
 
-from protostar.appends import append_marker_blocks
-from protostar.checksum import checksum_gate
+from protostar.appends import RegionConflict, append_marker_blocks
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
@@ -191,7 +189,7 @@ def test_region_lifecycle_and_surrounding_bytes(suffix):
     )
     original = first.content + "suffix\r\n"
     changed = append_marker_blocks(
-        original, [AppendContribution("test:id", "v2")], path, baselines=first.digests
+        original, [AppendContribution("test:id", "v2")], path, baselines=first.baselines
     )
     assert changed.content.startswith("prefix\r\n")
     assert changed.content.endswith("suffix\r\n")
@@ -199,44 +197,102 @@ def test_region_lifecycle_and_surrounding_bytes(suffix):
     assert "v1" not in changed.content
     edited = changed.content.replace("v2", "local")
     repeat = append_marker_blocks(
-        edited, [AppendContribution("test:id", "v2")], path, baselines=changed.digests
+        edited, [AppendContribution("test:id", "v2")], path, baselines=changed.baselines
     )
     assert repeat.content == edited
     assert not repeat.conflicts
     conflict = append_marker_blocks(
-        edited, [AppendContribution("test:id", "v3")], path, baselines=changed.digests
+        edited, [AppendContribution("test:id", "v3")], path, baselines=changed.baselines
     )
     assert conflict.content == edited
-    assert conflict.conflicts == ("test:id",)
-    assert conflict.digests == changed.digests
+    # The one payload line conflicts: line 4, after the prefix, the blank
+    # separator, and the begin marker.
+    assert conflict.conflicts == (RegionConflict("test:id", LineSpan(4, 1)),)
+    assert conflict.baselines == changed.baselines
     converged = append_marker_blocks(
         changed.content.replace("v2", "v3"),
         [AppendContribution("test:id", "v3")],
         path,
-        baselines=changed.digests,
+        baselines=changed.baselines,
     )
-    assert converged.digests != changed.digests
+    assert converged.baselines != changed.baselines
     deleted = append_marker_blocks(
         "prefix\r\nsuffix\r\n",
         [AppendContribution("test:id", "v3")],
         path,
-        baselines=converged.digests,
+        baselines=converged.baselines,
     )
     assert deleted.content == "prefix\r\nsuffix\r\n"
     assert not deleted.conflicts
     unowned = append_marker_blocks(
         first.content, [AppendContribution("test:id", "v2")], path
     )
-    assert not unowned.digests
-    assert unowned.conflicts
+    assert not unowned.baselines
+    assert unowned.conflicts == (RegionConflict("test:id"),)
     restored = append_marker_blocks(
         edited,
         [AppendContribution("test:id", "v3")],
         path,
         overwrite=True,
-        baselines=changed.digests,
+        baselines=changed.baselines,
     )
     assert "v3" in restored.content
+
+
+def region(content, identity="test:id"):
+    return AppendContribution(identity, content)
+
+
+def test_region_edits_merge_with_desired_updates():
+    path = Path("AGENTS.md")
+    first = append_marker_blocks("# Notes\n", [region("a\nb\nc")], path)
+    edited = first.content.replace("\na\n", "\nA\n")
+
+    result = append_marker_blocks(
+        edited, [region("a\nb\nC")], path, baselines=first.baselines
+    )
+
+    assert not result.conflicts
+    assert "\nA\nb\nC\n" in result.content
+    desired = append_marker_blocks("# Notes\n", [region("a\nb\nC")], path)
+    assert result.baselines == desired.baselines
+
+
+def test_crlf_file_regions_still_update():
+    path = Path("AGENTS.md")
+    first = append_marker_blocks("# Notes\n", [region("a\nb")], path)
+    checkout = first.content.replace("\n", "\r\n")
+
+    result = append_marker_blocks(
+        checkout, [region("a\nB")], path, baselines=first.baselines
+    )
+
+    assert not result.conflicts
+    assert result.content == checkout.replace("\r\nb\r\n", "\r\nB\r\n")
+
+
+def test_region_conflicts_are_numbered_in_the_final_file():
+    path = Path("AGENTS.md")
+    first = append_marker_blocks(
+        "# Notes\n", [region("one", "test:upper"), region("x\ny", "test:lower")], path
+    )
+    edited = first.content.replace("\nx\n", "\nlocal\n")
+
+    # The lower region is reconciled first, then the upper one grows by two
+    # lines, so the lower conflict must be numbered after that growth.
+    result = append_marker_blocks(
+        edited,
+        [region("remote\ny", "test:lower"), region("one\ntwo\nthree", "test:upper")],
+        path,
+        baselines=first.baselines,
+    )
+
+    (conflict,) = result.conflicts
+    lines = result.content.splitlines()
+    assert conflict.identity == "test:lower"
+    assert conflict.lines is not None
+    assert lines[conflict.lines.start - 1] == "local"
+    assert conflict.lines.count == 1
 
 
 def test_seed_and_deleted_region_file(tmp_path, monkeypatch, mocker):
@@ -288,21 +344,6 @@ def test_generated_and_regions_rollback(tmp_path, monkeypatch, mocker):
     with pytest.raises(ConfigurationError):
         run(mocker, revision)
     assert {p: (p.read_bytes(), p.stat().st_mode) for p in paths} == originals
-
-
-@pytest.mark.parametrize(
-    ("local", "base", "remote", "write", "conflict"),
-    [
-        (None, None, b"a", True, False),
-        (b"a", None, b"a", False, False),
-        (b"b", None, b"a", False, True),
-        (None, b"a", b"a", False, False),
-        (None, b"a", b"b", False, True),
-    ],
-)
-def test_gate_absence(local, base, remote, write, conflict):
-    result = checksum_gate(local, remote, sha256(base).hexdigest() if base else None)
-    assert (result.write, result.conflict) == (write, conflict)
 
 
 def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
@@ -388,7 +429,7 @@ def test_generated_justfile_with_regions_merges(tmp_path, monkeypatch, mocker):
         if r.path == "justfile"
     )
     assert record.baseline == region.content
-    assert record.regions[0].digest == region.digests["template:recipes"]
+    assert record.regions[0].baseline == region.baselines["template:recipes"]
     target.unlink()
     justfile_regions(mocker, "base v1\n", "recipe v3")
     assert not target.exists()
@@ -555,3 +596,34 @@ def test_review_reports_line_conflicts_and_preserved_edits(
     ]
     render_review(review)
     assert "Conflict: justfile line 5 : diverged" in capsys.readouterr().out
+
+
+def test_region_preserved_deviations_ignore_newline_style(
+    tmp_path, monkeypatch, mocker
+):
+    from protostar.preparation import prepare_review
+
+    monkeypatch.chdir(tmp_path)
+
+    def desired():
+        manifest = EnvironmentManifest()
+        manifest.filesystem.add_region(".envrc", "export A=1", identity="test:env")
+        return manifest
+
+    run(
+        mocker,
+        lambda e: e.manifest.filesystem.add_region(
+            ".envrc", "export A=1", identity="test:env"
+        ),
+    )
+    target = Path(".envrc")
+    applied = target.read_text()
+
+    target.write_bytes(applied.replace("\n", "\r\n").encode())
+    assert not prepare_review(desired(), UserConfig()).preserved
+    target.write_text(applied.replace("A=1", "A=2"))
+    (edited,) = prepare_review(desired(), UserConfig()).preserved
+    assert (edited.location.identity, edited.deleted) == ("test:env", False)
+    target.write_text("# no region\n")
+    (deleted,) = prepare_review(desired(), UserConfig()).preserved
+    assert (deleted.location.identity, deleted.deleted) == ("test:env", True)

@@ -695,26 +695,30 @@ class Reconciliation:
                 region_payloads,
                 target,
                 overwrite=is_overwrite,
-                baselines={r.id: r.digest for r in record.regions} if record else {},
+                baselines={r.id: r.baseline for r in record.regions} if record else {},
                 missing_owned_file=record is not None
                 and not self.workspace.exists(target),
             )
-            for identity in region_result.conflicts:
+            for refused in region_result.conflicts:
                 self._merge_warning(
                     MergeConflict(
-                        MergeLocation(target.as_posix(), identity=identity),
+                        MergeLocation(
+                            target.as_posix(),
+                            identity=refused.identity,
+                            lines=refused.lines,
+                        ),
                         ConflictReason.DIVERGED if record else ConflictReason.UNOWNED,
                     )
                 )
-            if region_result.digests:
+            if region_result.baselines:
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
                         target.as_posix(),
                         record.policy if record else FilePolicy.REGIONS,
                         record.baseline if record else None,
                         regions=tuple(
-                            RegionState(region_tag(identity), identity, digest)
-                            for identity, digest in region_result.digests.items()
+                            RegionState(region_tag(identity), identity, baseline)
+                            for identity, baseline in region_result.baselines.items()
                         ),
                     )
                 )
@@ -894,17 +898,17 @@ class Reconciliation:
             if result.content is not None:
                 self.fs.write_text(target, result.content)
             if result.baseline is not None:
-                regions = {r.id: r.digest for r in record.regions} if record else {}
+                regions = {r.id: r.baseline for r in record.regions} if record else {}
                 if result.baseline == content:
-                    regions.update(framed.digests)
+                    regions.update(framed.baselines)
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
                         target.as_posix(),
                         FilePolicy.TEXT,
                         result.baseline,
                         regions=tuple(
-                            RegionState(region_tag(identity), identity, digest)
-                            for identity, digest in regions.items()
+                            RegionState(region_tag(identity), identity, baseline)
+                            for identity, baseline in regions.items()
                         ),
                     )
                 )

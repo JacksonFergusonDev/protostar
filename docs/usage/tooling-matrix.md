@@ -18,7 +18,7 @@ Protostar provides a modular matrix of tooling modules and built-in templates. T
 
 The guide states only facts Protostar knows about the project it scaffolded: the Python version and uv workflow, the `just` recipes (or the raw commands when `just` is off) for formatting, linting, type checking, and testing, and the hook runner that gates each commit. It holds no general advice, so it has nothing to go stale beyond what Protostar keeps current.
 
-Protostar owns only the block between its region markers. Put project notes above or below the block; they are never touched. When the tooling changes, `protostar sync` rewrites the block, and if you edited inside it, sync keeps your edit and reports a conflict instead. Running with `--agents` against an existing `AGENTS.md` appends the block after your content.
+Protostar owns only the block between its region markers. Put project notes above or below the block; they are never touched. When the tooling changes, `protostar sync` updates the block, merging line by line with anything you edited inside it. If your edit and the update touch the same or adjacent lines, sync keeps the block exactly as you left it and reports a conflict with those line numbers instead. Running with `--agents` against an existing `AGENTS.md` appends the block after your content.
 
 The block opens with the document's top-level heading so a fresh scaffold passes the Markdown linters. If you merge it into an `AGENTS.md` that already has its own top-level heading, rumdl and MarkdownLint report a second top-level heading (MD025); move your notes under the guide's heading or demote your own.
 

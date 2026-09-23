@@ -5,7 +5,14 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from protostar import text_merge
-from protostar.text_merge import TextConflict, TextMerge, merge_text
+from protostar.text_merge import (
+    TextConflict,
+    TextMerge,
+    TextReconciliation,
+    is_edited,
+    merge_text,
+    reconcile_text,
+)
 
 # A few distinct lines, so generated texts repeat lines the way real files do.
 LINE = st.sampled_from(["a\n", "b\n", "c\n", "\n", "}\n", "    pass\n", "x"])
@@ -152,6 +159,66 @@ def test_aligns_repeated_lines_within_a_bounded_cost(
     # Past the cost bound nothing aligns: both sides rewrote the whole text.
     monkeypatch.setattr(text_merge, "_FALLBACK_CELLS", 0)
     assert not merge_text(*case).clean
+
+
+@pytest.mark.parametrize(
+    ("local", "baseline", "desired", "expected"),
+    [
+        pytest.param(None, None, "a\n", TextReconciliation("a\n", "a\n"), id="create"),
+        pytest.param(
+            b"a\n", None, "a\n", TextReconciliation(None, None), id="equal-unowned"
+        ),
+        pytest.param(
+            b"b\n", None, "a\n", TextReconciliation(None, None, True), id="unowned"
+        ),
+        pytest.param(
+            None, "a\n", "a\n", TextReconciliation(None, "a\n"), id="kept-deletion"
+        ),
+        pytest.param(
+            None, "a\n", "b\n", TextReconciliation(None, "a\n", True), id="deleted"
+        ),
+        pytest.param(
+            b"a\n", "a\n", "b\n", TextReconciliation("b\n", "b\n"), id="update"
+        ),
+        pytest.param(
+            b"b\n", "a\n", "b\n", TextReconciliation(None, "b\n"), id="converged"
+        ),
+        pytest.param(
+            b"\xff\n", "a\n", "b\n", TextReconciliation(None, "a\n", True), id="binary"
+        ),
+        pytest.param(
+            b"\xff\n", "a\n", "a\n", TextReconciliation(None, "a\n"), id="binary-kept"
+        ),
+    ],
+)
+def test_ownership_gate(
+    local: bytes | None,
+    baseline: str | None,
+    desired: str,
+    expected: TextReconciliation,
+) -> None:
+    assert reconcile_text(local, desired, baseline) == expected
+
+
+def test_ownership_gate_reports_overlaps_and_overwrite_wins() -> None:
+    refused = reconcile_text(b"x\n", "b\n", "a\n")
+
+    assert (refused.content, refused.baseline, refused.conflict) == (None, "a\n", True)
+    assert refused.conflicts == (TextConflict(0, ("a\n",), ("x\n",), ("b\n",)),)
+    assert reconcile_text(b"x\n", "b\n", "a\n", overwrite=True) == (
+        TextReconciliation("b\n", "b\n")
+    )
+    assert reconcile_text(b"b\n", "b\n", None, overwrite=True) == (
+        TextReconciliation(None, "b\n")
+    )
+
+
+@pytest.mark.parametrize(
+    ("local", "edited"),
+    [(b"a\nb\n", False), (b"a\r\nb\r\n", False), (b"a\nB\n", True), (b"\xff", True)],
+)
+def test_is_edited_ignores_newline_style(local: bytes, edited: bool) -> None:
+    assert is_edited(local, "a\nb\n") is edited
 
 
 # --- properties -------------------------------------------------------------

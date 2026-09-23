@@ -83,17 +83,25 @@ def validate_state_path(path: str) -> None:
 
 @dataclass(frozen=True)
 class RegionState:
-    """Delimited tag, stable logical identity, and applied digest for an append region."""
+    """Delimited tag, stable logical identity, and applied text of an append region.
+
+    Attributes:
+        tag: The 8-hex tag in the region's markers.
+        id: The region's stable logical identity.
+        baseline: The framed text last applied, from the begin marker through
+            the end marker.
+    """
 
     tag: str
     id: str
-    digest: str
+    baseline: str
 
     def __post_init__(self) -> None:
         """Validates the persisted ownership contract at construction."""
         _tag(self.tag)
         validate_region_id(self.id)
-        _digest(self.digest)
+        if type(self.baseline) is not str:
+            raise _invalid("regions record their last applied text.")
 
 
 @dataclass(frozen=True)
@@ -139,7 +147,7 @@ class FileState:
             if self.baseline is not None or self.regions:
                 raise _invalid("seed-only policy records only the seeded path.")
         elif self.baseline is not None:
-            raise _invalid("region policy records only region digests.")
+            raise _invalid("region policy records only its regions.")
         if len({region.id for region in self.regions}) != len(self.regions):
             raise _invalid("duplicate region identities.")
         if len({region.tag for region in self.regions}) != len(self.regions):
@@ -367,12 +375,12 @@ def deserialize_state(content: str) -> SyncState:
             record = _record(item, {"path", "policy"}, {"baseline", "regions"})
             regions = []
             for region in _records(record.get("regions", [])):
-                fields = _record(region, {"tag", "id", "digest"})
+                fields = _record(region, {"tag", "id", "baseline"})
                 regions.append(
                     RegionState(
                         _text(fields["tag"], "region tag"),
                         _text(fields["id"], "region id"),
-                        _text(fields["digest"], "region digest"),
+                        _text(fields["baseline"], "region baseline"),
                     )
                 )
             baseline = record.get("baseline")
@@ -459,7 +467,7 @@ def serialize_state(state: SyncState) -> str:
             fields["baseline"] = _canonical_baseline(record.policy, record.baseline)
         if record.regions:
             fields["regions"] = [
-                {"tag": region.tag, "id": region.id, "digest": region.digest}
+                {"tag": region.tag, "id": region.id, "baseline": region.baseline}
                 for region in sorted(
                     record.regions, key=lambda item: (item.tag, item.id)
                 )
