@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import sys
+
+import pytest
+
+if sys.platform == "win32":
+    pytest.skip("PTY demo recording is Unix-specific", allow_module_level=True)
+
 import signal
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from scripts.record_demos import PTYSession
 
