@@ -1,6 +1,7 @@
 Screen { background: $surface; }
 #title { margin: 1 2 0 2; text-style: bold; color: $accent; }
 #subtitle { margin: 0 2 1 2; color: $text-muted; }
+#subtitle.-error { color: $error; }
 #body { height: 1fr; }
 #editor { width: 3fr; padding: 0 2; }
 PlanPreview { width: 2fr; padding: 0 1; border-left: vkey $panel; }
@@ -19,3 +20,10 @@ SelectionList { height: auto; }
 #preview-collisions { color: $warning; }
 #actions { height: 3; margin: 1 2; align-horizontal: right; }
 #actions Button { margin-left: 1; }
+#review { width: 2fr; padding: 0 2; }
+#files { height: 1fr; }
+#steps { height: auto; max-height: 12; }
+#diff-pane { width: 3fr; padding: 0 1; border-left: vkey $panel; }
+#decisions, #collision-choice, #trust-gate { height: auto; }
+#decisions { margin: 0 2; }
+#collision-note { color: $warning; }

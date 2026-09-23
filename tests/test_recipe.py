@@ -250,7 +250,7 @@ def test_cli_preserves_diversions_and_frozen_context(tmp_path, monkeypatch, mock
     mocker.patch("shutil.which", return_value="/mock/command")
     engines = []
 
-    def capture(engine, request):
+    def capture(engine, request, decision):
         engines.append(engine)
         return ExecutionResult(frozenset(), frozenset(), ())
 
@@ -614,13 +614,19 @@ def test_invalid_desired_recipe_fails_before_mutation(tmp_path, monkeypatch, moc
 
 
 def _capture_init_engines(mocker):
+    from protostar.init_draft import InitDecision
     from protostar.models import ExecutionResult
 
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
     mocker.patch("shutil.which", return_value="/mock/command")
+    # A local template is untrusted, so an interactive run reviews it first.
+    mocker.patch(
+        "protostar.cli.main.review_changes",
+        side_effect=lambda draft, config: InitDecision(draft, ()),
+    )
     engines = []
 
-    def capture(engine, request):
+    def capture(engine, request, decision):
         engines.append(engine)
         return ExecutionResult(frozenset(), frozenset(), ())
 

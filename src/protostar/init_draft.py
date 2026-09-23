@@ -17,6 +17,7 @@ from .recipe import (
     establish_recipe,
     select_tooling,
 )
+from .registry import ResolvedHookRevision
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,22 @@ class InitDraft:
     variables: tuple[tuple[str, str], ...] = ()
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
+
+
+@dataclass(frozen=True)
+class InitDecision:
+    """A reviewed draft and the review facts that execution must match.
+
+    Attributes:
+        draft: The draft to resolve, with the chosen collision strategy.
+        hook_revisions: The registry snapshot whose pins the review showed.
+        confirmed_commands: The exact commands confirmed for an untrusted
+            template, in order; empty when no confirmation was needed.
+    """
+
+    draft: InitDraft
+    hook_revisions: tuple[ResolvedHookRevision, ...]
+    confirmed_commands: tuple[tuple[str, ...], ...] = ()
 
 
 def resolve_init(

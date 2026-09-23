@@ -26,7 +26,7 @@ from .preparation import (
 )
 from .progress import ProgressStep, no_progress
 from .reconciliation import Reconciliation
-from .registry import resolve_hook_revisions
+from .registry import ResolvedHookRevision, resolve_hook_revisions
 from .review_workspace import LiveWorkspace
 from .security import enforce_binary_safelist, enforce_path_jail
 from .sync_state import SyncState, serialize_state
@@ -50,6 +50,7 @@ class SystemExecutor(Reconciliation):
         docker: bool = False,
         *,
         review: PreparedReview | None = None,
+        hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
         progress: ProgressStep = no_progress,
     ) -> None:
         """Initializes the executor with the target manifest state.
@@ -59,19 +60,21 @@ class SystemExecutor(Reconciliation):
             config: The active Protostar configuration instance.
             docker: If True, scaffolds a .dockerignore from the manifest ignores.
             review: Captured lifecycle decisions; consumes their frozen registry snapshot.
+            hook_revisions: The registry snapshot a caller already reviewed. Without
+                one or a review, the executor takes its own when hooks are wanted.
             progress: Brackets each subprocess and the initial scaffold for a presenter.
         """
         self.workspace = LiveWorkspace()
         self.manifest = manifest
         self.review = review
         self.progress = progress
-        self.hook_revisions = (
-            review.hook_revisions
-            if review is not None
-            else resolve_hook_revisions()
-            if manifest.tooling.wants_hooks
-            else ()
-        )
+        if review is not None:
+            hook_revisions = review.hook_revisions
+        elif hook_revisions is None:
+            hook_revisions = (
+                resolve_hook_revisions() if manifest.tooling.wants_hooks else ()
+            )
+        self.hook_revisions = hook_revisions
         self.config = config
         self.docker = docker or manifest.tooling.wants_docker
         if self.docker:

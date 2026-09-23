@@ -1,8 +1,10 @@
 import argparse
 import importlib.metadata
 import json
+import shutil
 import subprocess
 import sys
+from dataclasses import replace
 
 import pytest
 
@@ -32,7 +34,7 @@ from protostar.errors import (
     NetworkFetchError,
     TemplateResolutionError,
 )
-from protostar.init_draft import InitDraft
+from protostar.init_draft import InitDecision, InitDraft
 from protostar.recipe import Tool
 from protostar.system_deps import GlobalExecutable
 
@@ -382,7 +384,11 @@ def test_intercept_interactive_wizards_success(mocker):
         variables=(("REGION", "eu"),),
         metadata=(),
     )
-    mocker.patch("protostar.cli.parser.edit_recipe", return_value=selections)
+    snapshot = (mocker.sentinel.revision,)
+    mocker.patch(
+        "protostar.cli.parser.edit_recipe",
+        return_value=InitDecision(selections, snapshot),
+    )
     mocker.patch("protostar.cli.parser.UserConfig.load")
     mock_orchestrator = mocker.patch("protostar.cli.parser.Orchestrator")
     mocker.patch(
@@ -414,6 +420,9 @@ def test_intercept_interactive_wizards_success(mocker):
 
     mock_orchestrator.return_value.plan.assert_called_once()
     mock_orchestrator.return_value.execute.assert_called_once()
+    # Execution writes the pins the change review showed.
+    execute = mock_orchestrator.return_value.execute
+    assert execute.call_args.kwargs["hook_revisions"] is snapshot
     mock_exit.assert_called_once_with(0)
     # Values entered in the wizard are recorded in the recipe, like --var values.
     request = mock_orchestrator.call_args.kwargs["request"]
@@ -1452,56 +1461,62 @@ def test_config_verbose_logging(capsys, monkeypatch, tmp_path, mocker):
         logger.handlers.clear()
 
 
-def test_run_engine_collision_retry_sets_request_strategy(
-    mocker, tmp_path, monkeypatch
-):
-    """A collision decision updates the request and replans the same engine."""
-    from pathlib import Path
-
-    from protostar.cli.ui import _run_engine
-    from protostar.config import UserConfig
-    from protostar.manifest import CollisionStrategy, EnvironmentManifest
-    from protostar.models import InitRequest
-    from protostar.orchestrator import Orchestrator
-
+def _flag_init(mocker, tmp_path, monkeypatch, *, interactive=True, **flags):
+    """Runs handle_init on a workspace whose pyproject.toml collides."""
     monkeypatch.chdir(tmp_path)
-
-    collisions = frozenset({Path("pyproject.toml")})
-    pending = EnvironmentManifest(collision_strategy=None, collisions=collisions)
-    resolved = EnvironmentManifest(
-        collision_strategy=CollisionStrategy.MERGE, collisions=collisions
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "existing"\n')
+    monkeypatch.setattr("protostar.metadata.get_git_config", lambda key: None)
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.main.is_interactive", return_value=interactive)
+    args = argparse.Namespace(
+        template_name=None, from_path=None, python_version=None, **flags
     )
-    mock_result = mocker.MagicMock(diagnostics=())
+    handle_init(args)
 
-    initial_request = InitRequest(
-        docker=True,
-        python_version="3.12",
-        metadata={"author_name": "Ada Lovelace"},
-        is_external=True,
-        is_trusted=True,
-    )
 
-    mock_plan = mocker.patch.object(
-        Orchestrator,
-        "plan",
-        side_effect=[pending, resolved],
-    )
-    mocker.patch.object(Orchestrator, "execute", return_value=mock_result)
-    mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
-    mocker.patch("protostar.cli.ui.select", return_value=CollisionStrategy.MERGE)
+def test_flag_init_reviews_an_open_collision(mocker, tmp_path, monkeypatch):
+    """An interactive flag run settles the collision in the review before running."""
+    from protostar.init_draft import InitDecision
+    from protostar.manifest import CollisionStrategy
 
-    engine = Orchestrator([], UserConfig(), request=initial_request)
-    res = _run_engine(engine, initial_request)
+    def review(draft, config):
+        return InitDecision(
+            replace(draft, collision_strategy=CollisionStrategy.OVERWRITE), ()
+        )
 
-    assert res is mock_result
-    assert mock_plan.call_count == 2
-    second_request = engine.request
-    assert second_request.collision_strategy is CollisionStrategy.MERGE
-    assert second_request.docker is True
-    assert second_request.python_version == "3.12"
-    assert second_request.metadata == {"author_name": "Ada Lovelace"}
-    assert second_request.is_external is True
-    assert second_request.is_trusted is True
+    reviewed = mocker.patch("protostar.cli.main.review_changes", side_effect=review)
+    run = mocker.patch("protostar.cli.ui._run_engine")
+    _flag_init(mocker, tmp_path, monkeypatch)
+
+    reviewed.assert_called_once()
+    engine, request, decision = run.call_args.args
+    assert request.collision_strategy is CollisionStrategy.OVERWRITE
+    assert engine.request is request
+    assert decision.draft.collision_strategy is CollisionStrategy.OVERWRITE
+
+
+@pytest.mark.parametrize(
+    ("interactive", "flags"),
+    [(True, {"force_merge": True}), (False, {})],
+    ids=["resolved-by-flag", "non-interactive"],
+)
+def test_flag_init_skips_the_review(mocker, tmp_path, monkeypatch, interactive, flags):
+    """Resolved flags never open the review; off a terminal the guard raises instead."""
+    reviewed = mocker.patch("protostar.cli.main.review_changes")
+    run = mocker.patch("protostar.cli.ui._run_engine")
+    _flag_init(mocker, tmp_path, monkeypatch, interactive=interactive, **flags)
+
+    reviewed.assert_not_called()
+    assert run.call_args.args[2] is None
+
+
+def test_cancelled_review_never_executes(mocker, tmp_path, monkeypatch):
+    mocker.patch("protostar.cli.main.review_changes", return_value=None)
+    run = mocker.patch("protostar.cli.ui._run_engine")
+    with pytest.raises(ExecutionAbortedError, match="Change review cancelled"):
+        _flag_init(mocker, tmp_path, monkeypatch)
+    run.assert_not_called()
 
 
 def test_malformed_cli_arguments(run_cli):

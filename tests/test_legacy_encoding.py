@@ -9,7 +9,7 @@ from rich.console import Console
 from protostar.cli import completion, ui
 from protostar.cli.main import main
 from protostar.config import UserConfig
-from protostar.errors import ConfigurationError, ExecutionAbortedError, ProtostarError
+from protostar.errors import ConfigurationError, ProtostarError
 from protostar.manifest import (
     DiagnosticEvent,
     DiagnosticPhase,
@@ -88,11 +88,9 @@ def test_remote_template_warning_banner(legacy_console, mocker):
     manifest = EnvironmentManifest()
     manifest.tasks.add_system_task(["git", "init"])
     mocker.patch.object(Orchestrator, "plan", return_value=manifest)
-    mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
-    mocker.patch("protostar.cli.ui.confirm", return_value=False)
     request = InitRequest(is_external=True, is_trusted=False)
 
-    with pytest.raises(ExecutionAbortedError):
+    with pytest.raises(ProtostarError, match="Untrusted external template"):
         ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
     assert "!  REMOTE TEMPLATE WARNING !" in legacy_console()

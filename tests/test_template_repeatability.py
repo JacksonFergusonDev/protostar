@@ -167,8 +167,10 @@ def test_template_initial_and_repeat_merge_convergence(
     results: list[ExecutionResult] = []
     original_execute = Orchestrator.execute
 
-    def spy_execute(self: Orchestrator, manifest: Any) -> ExecutionResult:
-        result = original_execute(self, manifest)
+    def spy_execute(
+        self: Orchestrator, manifest: Any, **kwargs: Any
+    ) -> ExecutionResult:
+        result = original_execute(self, manifest, **kwargs)
         results.append(result)
         return result
 

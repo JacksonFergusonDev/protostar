@@ -128,7 +128,7 @@ def _engine(mocker, execute):
 def test_run_engine_renders_engine_steps_under_the_banner(screen, mocker, monkeypatch):
     monkeypatch.setattr(ui, "is_json_mode", False)
 
-    def execute(manifest, *, progress):
+    def execute(manifest, *, hook_revisions, progress):
         with progress("Initializing git repository"):
             pass
         return EMPTY_RESULT
@@ -145,11 +145,11 @@ def test_run_engine_renders_engine_steps_under_the_banner(screen, mocker, monkey
 
 def test_run_engine_json_mode_executes_without_progress(screen, mocker, monkeypatch):
     monkeypatch.setattr(ui, "is_json_mode", True)
-    execute = _engine(mocker, lambda manifest: EMPTY_RESULT)
+    execute = _engine(mocker, lambda manifest, *, hook_revisions: EMPTY_RESULT)
     request = InitRequest()
 
     result = ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
     assert result is EMPTY_RESULT
-    assert execute.call_args.kwargs == {}
+    assert execute.call_args.kwargs == {"hook_revisions": None}
     assert screen.getvalue() == ""

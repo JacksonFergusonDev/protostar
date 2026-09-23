@@ -1,0 +1,559 @@
+"""The first file batch, the steps after it, and the collision and trust decisions."""
+
+import asyncio
+import shlex
+from collections import Counter
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
+from enum import StrEnum
+from pathlib import Path
+from typing import ClassVar
+
+from rich.console import Group, RenderableType
+from rich.padding import Padding
+from rich.text import Text
+from textual import on, work
+from textual.app import ComposeResult
+from textual.binding import Binding, BindingType
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.screen import Screen
+from textual.widgets import (
+    Button,
+    Checkbox,
+    Footer,
+    Label,
+    RadioButton,
+    RadioSet,
+    Static,
+    Tree,
+)
+from textual.widgets.tree import TreeNode
+
+from protostar.cli.reviews import unified_diff
+from protostar.cli.ui import planned_paths, untrusted_commands
+from protostar.config import UserConfig
+from protostar.errors import ProtostarError
+from protostar.init_draft import InitDecision, InitDraft, resolve_init
+from protostar.intent import DependencyGroup
+from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.merge import MergeConflict
+from protostar.models import InitRequest
+from protostar.orchestrator import Orchestrator
+from protostar.preparation import (
+    ExecutionPolicy,
+    PreparationPhase,
+    PreparedEdit,
+    PreparedReview,
+    prepare_review,
+)
+from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
+
+
+class Change(StrEnum):
+    """What happens to a planned path before any command runs."""
+
+    NEW = "new"
+    MODIFIED = "modified"
+    CONFLICT = "conflict"
+    EXISTS = "existing"
+    LATER = "after setup"
+
+
+_STYLES = {
+    Change.NEW: "green",
+    Change.MODIFIED: "yellow",
+    Change.CONFLICT: "red",
+    Change.EXISTS: "dim",
+    Change.LATER: "dim",
+}
+
+
+@dataclass(frozen=True)
+class Entry:
+    """One planned path and what the first file batch does to it."""
+
+    path: str
+    change: Change
+    directory: bool = False
+    edit: PreparedEdit | None = None
+    conflicts: tuple[MergeConflict, ...] = ()
+    creator: tuple[str, ...] | None = None
+
+
+@dataclass(frozen=True)
+class Review:
+    """A planned draft and its first file batch."""
+
+    request: InitRequest
+    manifest: EnvironmentManifest
+    prepared: PreparedReview
+    entries: tuple[Entry, ...]
+
+
+def classify(
+    manifest: EnvironmentManifest, prepared: PreparedReview
+) -> tuple[Entry, ...]:
+    """Sorts every planned path by what the first file batch does to it.
+
+    Only the first batch's bytes are known before commands run. A path it
+    leaves alone either exists already, or is written later from command
+    output. Reads the workspace, so it runs off the main thread.
+
+    Args:
+        manifest: The planned manifest.
+        prepared: The first file batch prepared from it.
+
+    Returns:
+        One entry per planned path, sorted by path.
+    """
+    edits = {edit.path: edit for edit in prepared.edits}
+    conflicts: dict[str, list[MergeConflict]] = {}
+    for conflict in prepared.conflicts:
+        conflicts.setdefault(conflict.location.file, []).append(conflict)
+    creators = {
+        path: tuple(task.command)
+        for task in manifest.tasks.system_tasks
+        for path in task.owned_files
+    }
+    paths, directories = planned_paths(manifest)
+    entries: list[Entry] = []
+    for path in sorted({*paths, *edits, *prepared.directories, *conflicts}):
+        edit = edits.get(path)
+        if edit is not None:
+            change = Change.NEW if edit.before is None else Change.MODIFIED
+        elif path in prepared.directories:
+            change = Change.NEW
+        elif path in conflicts:
+            change = Change.CONFLICT
+        elif Path(path).exists():
+            change = Change.EXISTS
+        else:
+            change = Change.LATER
+        entries.append(
+            Entry(
+                path,
+                change,
+                path in directories or path in prepared.directories,
+                edit,
+                tuple(conflicts.get(path, ())),
+                creators.get(path),
+            )
+        )
+    return tuple(entries)
+
+
+def _plan(
+    draft: InitDraft, config: UserConfig
+) -> tuple[InitRequest, EnvironmentManifest]:
+    modules, request = resolve_init(draft, config)
+    return request, Orchestrator(modules, config, request=request).plan()
+
+
+def _prepare(
+    request: InitRequest,
+    manifest: EnvironmentManifest,
+    config: UserConfig,
+    hook_revisions: tuple[ResolvedHookRevision, ...],
+) -> Review:
+    prepared = prepare_review(
+        manifest,
+        config,
+        hook_revisions=hook_revisions,
+        policy=ExecutionPolicy.INITIALIZATION,
+        phase=PreparationPhase.BEFORE_INITIALIZERS,
+    )
+    return Review(request, manifest, prepared, classify(manifest, prepared))
+
+
+def diff_text(diff: str) -> Text:
+    """Colors a unified diff whose lines stay literal text, never markup.
+
+    Args:
+        diff: A unified diff.
+
+    Returns:
+        The diff with added, removed, and hunk lines styled.
+    """
+    text = Text()
+    for line in diff.splitlines(keepends=True):
+        if line.startswith(("+++", "---")):
+            style = "bold"
+        elif line.startswith("+"):
+            style = "green"
+        elif line.startswith("-"):
+            style = "red"
+        elif line.startswith("@@"):
+            style = "cyan"
+        else:
+            style = ""
+        text.append(line, style)
+    text.rstrip()
+    return text
+
+
+def describe(entry: Entry) -> RenderableType:
+    """Renders an entry's accepted bytes, or says why none can be shown yet.
+
+    Args:
+        entry: The planned path to describe.
+
+    Returns:
+        The path, any conflicts kept as they are, and its diff or a note.
+    """
+    parts: list[RenderableType] = [
+        Text(entry.path + ("/" if entry.directory else ""), style="bold"),
+        Text(""),
+    ]
+    for conflict in entry.conflicts:
+        keys = ".".join(conflict.location.keys) or "the file"
+        parts.append(
+            Text(f"Your version of {keys} is kept ({conflict.reason.value}).", "red")
+        )
+    if entry.edit is not None:
+        parts.append(diff_text(unified_diff(entry.edit)))
+    elif entry.directory:
+        parts.append(
+            Text("A new directory." if entry.change is Change.NEW else "Exists.")
+        )
+    elif entry.change is Change.EXISTS:
+        parts.append(
+            Text(
+                "Already exists. Nothing is written to it before setup; a later "
+                "step may merge Protostar's settings into it."
+            )
+        )
+    elif entry.change is Change.LATER:
+        origin = (
+            f"Created by {shlex.join(entry.creator)}, then Protostar merges its "
+            "settings into it."
+            if entry.creator
+            else "Written after the commands and packages run."
+        )
+        parts.append(
+            Text(
+                f"{origin} Its content depends on their output, so it can't be shown yet."
+            )
+        )
+    return Group(*parts)
+
+
+def _indented(lines: Sequence[str], style: str = "") -> list[RenderableType]:
+    # Padding keeps a wrapped command's continuation under its first line.
+    return [Padding(Text(line, style), (0, 0, 0, 2)) for line in lines]
+
+
+def steps_text(manifest: EnvironmentManifest) -> RenderableType:
+    """Lists the commands and package installs that follow the first batch.
+
+    Args:
+        manifest: The planned manifest.
+
+    Returns:
+        Commands, packages by group, and the commands that run after install.
+    """
+    dependencies = manifest.dependencies
+    packages = (
+        (DependencyGroup.MAIN, dependencies.dependencies),
+        (DependencyGroup.DEV, dependencies.dev_dependencies),
+        (DependencyGroup.DOCS, dependencies.docs_dependencies),
+    )
+    sections = (
+        (
+            "Commands",
+            [shlex.join(task.command) for task in manifest.tasks.system_tasks],
+        ),
+        (
+            "Packages",
+            [f"{group}: {', '.join(names)}" for group, names in packages if names],
+        ),
+        (
+            "After install",
+            [shlex.join(task.command) for task in manifest.tasks.post_install_tasks],
+        ),
+    )
+    parts: list[RenderableType] = []
+    for title, lines in sections:
+        if lines:
+            parts.append(Text(title, style="bold"))
+            parts.extend(_indented(lines))
+    return Group(*parts) if parts else Text("No commands or packages.", style="dim")
+
+
+def _count(number: int, noun: str) -> str:
+    return f"{number} {noun}{'' if number == 1 else 's'}"
+
+
+def summary(review: Review) -> Text:
+    """Counts the planned files by change, then the packages and commands.
+
+    Args:
+        review: The prepared review.
+
+    Returns:
+        One line for the screen's subtitle.
+    """
+    counts = Counter(
+        entry.change
+        for entry in review.entries
+        if not (entry.directory and entry.change is Change.EXISTS)
+    )
+    dependencies = review.manifest.dependencies
+    tasks = review.manifest.tasks
+    parts = [f"{counts[change]} {change.value}" for change in Change if counts[change]]
+    parts.append(
+        _count(
+            len(dependencies.dependencies)
+            + len(dependencies.dev_dependencies)
+            + len(dependencies.docs_dependencies),
+            "package",
+        )
+    )
+    parts.append(
+        _count(len(tasks.system_tasks) + len(tasks.post_install_tasks), "command")
+    )
+    return Text(" · ".join(parts))
+
+
+def _label(entry: Entry) -> Text:
+    name = entry.path.rsplit("/", 1)[-1] + ("/" if entry.directory else "")
+    marker = (
+        "" if entry.directory and entry.change is Change.EXISTS else entry.change.value
+    )
+    if entry.conflicts and entry.change is not Change.CONFLICT:
+        marker += " · conflict"
+    return Text.assemble(name, (f"  {marker}", _STYLES[entry.change]) if marker else "")
+
+
+def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
+    return Group(
+        Text(
+            "This template comes from an external source that isn't marked "
+            "trusted. Applying runs these commands on your system:"
+        ),
+        *_indented([shlex.join(command) for command in commands], "bold"),
+        Text(
+            "Configure it as an alias with trusted = true to skip this check.",
+            style="dim",
+        ),
+    )
+
+
+class ReviewScreen(Screen[InitDecision]):
+    """Show what init will change, and settle the collision and trust decisions."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [Binding("escape", "back", "Back")]
+
+    def __init__(
+        self, draft: InitDraft, config: UserConfig, *, can_go_back: bool = False
+    ) -> None:
+        super().__init__()
+        self.draft = draft
+        self.config = config
+        self.can_go_back = can_go_back
+        self.strategy = draft.collision_strategy or CollisionStrategy.MERGE
+        self.review: Review | None = None
+        self.commands: tuple[tuple[str, ...], ...] = ()
+        self._hook_revisions: tuple[ResolvedHookRevision, ...] | None = None
+        self._loading = True
+
+    def compose(self) -> ComposeResult:
+        """Compose the file tree and steps beside the diff, above the decisions."""
+        yield Label("Review changes", id="title")
+        yield Static("Preparing review…", id="subtitle")
+        with Horizontal(id="body"):
+            with Vertical(id="review"):
+                yield Label("Files", classes="section")
+                yield Tree(Text("."), id="files")
+                yield Label("Commands and packages", classes="section")
+                with VerticalScroll(id="steps"):
+                    yield Static("", id="steps-list")
+            with VerticalScroll(id="diff-pane"):
+                yield Static("", id="diff")
+        with Vertical(id="decisions"):
+            with Vertical(id="collision-choice"):
+                yield Label("Existing files", classes="section")
+                yield Static("", id="collision-note")
+                with RadioSet(id="collision"):
+                    yield RadioButton(
+                        "Merge · keep your values and add what's missing",
+                        value=self.strategy is CollisionStrategy.MERGE,
+                        id="strategy-merge",
+                    )
+                    yield RadioButton(
+                        "Overwrite · replace them with Protostar's version",
+                        value=self.strategy is CollisionStrategy.OVERWRITE,
+                        id="strategy-overwrite",
+                    )
+            with Vertical(id="trust-gate"):
+                yield Label("Untrusted template", classes="section")
+                yield Static("", id="trust-note")
+                yield Checkbox(
+                    "I trust this template to run these commands", id="trust"
+                )
+        with Horizontal(id="actions"):
+            if self.can_go_back:
+                yield Button("Back", id="back")
+            yield Button("Cancel", id="cancel")
+            yield Button("Apply", variant="primary", id="apply", disabled=True)
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Hide the decisions until the review shows they are needed, then prepare."""
+        files = self.query_one("#files", Tree)
+        files.show_root = False
+        files.focus()
+        self.query_one("#collision-choice").display = False
+        self.query_one("#trust-gate").display = False
+        self.prepare()
+
+    @work(exclusive=True, group="review")
+    async def prepare(self) -> None:
+        """Plan the draft and prepare its first file batch; a newer call cancels this one.
+
+        Planning and preparation are read-only, so both run in a thread.
+        ``execute()`` never runs while the app does.
+        """
+        self._loading = True
+        self._status(Text("Preparing review…"))
+        self._refresh_apply()
+        draft = replace(self.draft, collision_strategy=self.strategy)
+        try:
+            request, manifest = await asyncio.to_thread(_plan, draft, self.config)
+            if self._hook_revisions is None:
+                # One registry snapshot per review: execution writes the pins it shows.
+                self._hook_revisions = (
+                    await asyncio.to_thread(resolve_hook_revisions)
+                    if manifest.tooling.wants_hooks
+                    else ()
+                )
+            review = await asyncio.to_thread(
+                _prepare, request, manifest, self.config, self._hook_revisions
+            )
+        except ProtostarError as exc:
+            self.review = None
+            self._loading = False
+            self._status(Text(str(exc)), error=True)
+            self._refresh_apply()
+            return
+        self._loading = False
+        self._show(review)
+
+    def _show(self, review: Review) -> None:
+        self.review = review
+        manifest = review.manifest
+        commands = untrusted_commands(review.request, manifest)
+        if commands != self.commands:
+            # A confirmation covers exactly the commands it was given.
+            self.commands = commands
+            trust = self.query_one("#trust", Checkbox)
+            with trust.prevent(Checkbox.Changed):
+                trust.value = False
+        collisions = sorted(path.as_posix() for path in manifest.collisions)
+        self.query_one("#collision-choice").display = bool(collisions)
+        self.query_one("#collision-note", Static).update(
+            Text(f"Already in the workspace: {', '.join(collisions)}")
+        )
+        self.query_one("#trust-gate").display = bool(commands)
+        self.query_one("#trust-note", Static).update(_trust_text(commands))
+        self.query_one("#steps-list", Static).update(steps_text(manifest))
+        self._status(summary(review))
+        self._fill_tree(review.entries)
+        self._refresh_apply()
+
+    def _fill_tree(self, entries: Sequence[Entry]) -> None:
+        files: Tree[Entry] = self.query_one("#files", Tree)
+        cursor = files.cursor_node
+        current = cursor.data.path if cursor and cursor.data else None
+        files.clear()
+        nodes: dict[str, TreeNode[Entry]] = {"": files.root}
+        for entry in entries:
+            parts = entry.path.split("/")
+            parent = ""
+            for index in range(1, len(parts)):
+                folder = "/".join(parts[:index])
+                if folder not in nodes:
+                    nodes[folder] = nodes[parent].add(
+                        Text(f"{parts[index - 1]}/"), expand=True
+                    )
+                parent = folder
+            label = _label(entry)
+            nodes[entry.path] = (
+                nodes[parent].add(label, entry, expand=True)
+                if entry.directory
+                else nodes[parent].add_leaf(label, entry)
+            )
+        # Keep the file in view across a strategy change, else open the first diff.
+        target = next(
+            (entry for entry in entries if entry.path == current),
+            next((entry for entry in entries if entry.edit), None),
+        ) or (entries[0] if entries else None)
+        self._describe(target)
+        if target is not None:
+            files.call_after_refresh(files.move_cursor, nodes[target.path])
+
+    def _describe(self, entry: Entry | None) -> None:
+        self.query_one("#diff", Static).update(
+            describe(entry)
+            if entry
+            else Text("Select a file to see its changes.", style="dim")
+        )
+
+    def _status(self, message: Text, *, error: bool = False) -> None:
+        subtitle = self.query_one("#subtitle", Static)
+        subtitle.update(message)
+        subtitle.set_class(error, "-error")
+
+    def _refresh_apply(self) -> None:
+        confirmed = not self.commands or self.query_one("#trust", Checkbox).value
+        self.query_one("#apply", Button).disabled = (
+            self._loading or self.review is None or not confirmed
+        )
+
+    @on(Tree.NodeHighlighted, "#files")
+    def show_changes(self, event: Tree.NodeHighlighted[Entry]) -> None:
+        """Show the highlighted file's diff, or why it has none yet."""
+        self._describe(event.node.data)
+
+    @on(RadioSet.Changed, "#collision")
+    def choose_strategy(self, event: RadioSet.Changed) -> None:
+        """Re-prepare the batch, since merge and overwrite write different bytes."""
+        strategy = CollisionStrategy(str(event.pressed.id).removeprefix("strategy-"))
+        if strategy is self.strategy:
+            return
+        self.strategy = strategy
+        self.prepare()
+
+    @on(Checkbox.Changed, "#trust")
+    def confirm_trust(self) -> None:
+        """Allow applying only once the listed commands are confirmed."""
+        self._refresh_apply()
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        """Leave escape to the app's cancel when there is no editor to go back to."""
+        return self.can_go_back if action == "back" else True
+
+    def action_back(self) -> None:
+        """Return to the recipe editor with its choices intact."""
+        self.app.pop_screen()
+
+    @on(Button.Pressed)
+    def finish(self, event: Button.Pressed) -> None:
+        """Exit with the decision; execution starts after the app has exited."""
+        if event.button.id == "back":
+            self.action_back()
+        elif event.button.id == "cancel":
+            self.app.exit(None)
+        elif event.button.id == "apply" and self.review is not None:
+            # The choice applies only where the review asked for one.
+            strategy = (
+                self.strategy
+                if self.review.manifest.collisions
+                else self.draft.collision_strategy
+            )
+            self.app.exit(
+                InitDecision(
+                    replace(self.draft, collision_strategy=strategy),
+                    self.review.prepared.hook_revisions,
+                    self.commands,
+                )
+            )

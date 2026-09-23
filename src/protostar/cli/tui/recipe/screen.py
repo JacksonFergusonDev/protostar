@@ -25,7 +25,7 @@ from textual.widgets import (
 
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
-from protostar.init_draft import DraftTemplate, InitDraft
+from protostar.init_draft import DraftTemplate, InitDecision, InitDraft
 from protostar.metadata import MetadataKey
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
@@ -38,6 +38,7 @@ from protostar.recipe import (
 )
 from protostar.templates import TemplateInfo, TemplateType
 
+from ..review.screen import ReviewScreen
 from .metadata import MetadataFields, metadata_defaults, metadata_keys
 from .preview import PlanPreview
 from .variables import VariableFields, draft_variables
@@ -74,7 +75,7 @@ class _TemplateChoice(Enum):
     RECORDED = auto()
 
 
-class RecipeScreen(Screen[InitDraft]):
+class RecipeScreen(Screen[InitDecision]):
     """Edit the template, its variables, tools, and metadata beside a live preview."""
 
     def __init__(
@@ -423,10 +424,14 @@ class RecipeScreen(Screen[InitDraft]):
 
     @on(Button.Pressed)
     def finish(self, event: Button.Pressed) -> None:
-        """Return decisions only; execution starts after the app has exited."""
+        """Continue to the change review, which returns the decisions."""
         if event.button.id == "cancel":
             self.app.exit(None)
             return
         variables = self.query_one(VariableFields).values()
         if variables is not None:
-            self.app.exit(self._current_draft(variables))
+            self.app.push_screen(
+                ReviewScreen(
+                    self._current_draft(variables), self.config, can_go_back=True
+                )
+            )

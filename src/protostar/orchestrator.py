@@ -31,6 +31,7 @@ from .workflows import AgentsSpec, HookRunner, generate_agents_md
 if TYPE_CHECKING:
     from .config import UserConfig
     from .executor import SystemExecutor
+    from .registry import ResolvedHookRevision
 
 logger = logging.getLogger("protostar")
 
@@ -330,7 +331,11 @@ class Orchestrator:
         return manifest
 
     def execute(
-        self, manifest: EnvironmentManifest, *, progress: ProgressStep = no_progress
+        self,
+        manifest: EnvironmentManifest,
+        *,
+        hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
+        progress: ProgressStep = no_progress,
     ) -> ExecutionResult:
         """Realizes the pre-built manifest on disk.
 
@@ -339,6 +344,8 @@ class Orchestrator:
 
         Args:
             manifest: The populated EnvironmentManifest to execute.
+            hook_revisions: The registry snapshot a review showed, so execution
+                writes the same hook pins. Without one, execution takes its own.
             progress: Brackets each presentable execution step for the caller.
 
         Raises:
@@ -357,7 +364,11 @@ class Orchestrator:
 
         executor_cls: type[SystemExecutor] = sys.modules[__name__].SystemExecutor
         executor = executor_cls(
-            manifest, self.user_config, self.request.docker, progress=progress
+            manifest,
+            self.user_config,
+            self.request.docker,
+            hook_revisions=hook_revisions,
+            progress=progress,
         )
 
         try:

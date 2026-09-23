@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import io
 import json
 import shlex
@@ -17,19 +16,16 @@ from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import schema
-from protostar.cli.prompts import Choice, confirm, select
-from protostar.cli.prompts import Style as UIStyle
 from protostar.config import active_config_source
 from protostar.errors import (
-    ExecutionAbortedError,
     ProtostarError,
     SecurityViolationError,
     WorkspaceCollisionError,
 )
-from protostar.manifest import CollisionStrategy, EnvironmentManifest, Severity
+from protostar.init_draft import InitDecision
+from protostar.manifest import EnvironmentManifest, Severity
 from protostar.models import ExecutionResult, InitRequest
 from protostar.progress import ProgressStep
-from protostar.system import is_interactive
 
 if TYPE_CHECKING:
     from protostar.orchestrator import Orchestrator
@@ -219,29 +215,72 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     sys.exit(1 if error_msg else 0)
 
 
-def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
-    """Runs the full plan → trust → execute → render pipeline for the CLI.
+def untrusted_commands(
+    request: InitRequest, manifest: EnvironmentManifest
+) -> tuple[tuple[str, ...], ...]:
+    """Returns every command a run of an untrusted external template executes.
 
-    Encapsulates the collision prompt loop, remote trust boundary, execution,
-    and diagnostic rendering so both the argument-driven and wizard-driven
-    entry points share the same presentation logic.
+    Args:
+        request: The resolved init request, carrying the template's trust facts.
+        manifest: The planned manifest.
+
+    Returns:
+        Each system and post-install command in execution order, or nothing
+        when the template is built in or configured as trusted.
+    """
+    if not request.is_external or request.is_trusted:
+        return ()
+    return tuple(
+        tuple(task.command)
+        for task in (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
+    )
+
+
+def needs_review(request: InitRequest, manifest: EnvironmentManifest) -> bool:
+    """Returns whether a collision or trust decision is still open.
+
+    Args:
+        request: The resolved init request.
+        manifest: The planned manifest.
+
+    Returns:
+        True if existing files collide with no strategy chosen, or an untrusted
+        template would run commands.
+    """
+    return bool(
+        (manifest.collisions and manifest.collision_strategy is None)
+        or untrusted_commands(request, manifest)
+    )
+
+
+def _run_engine(
+    engine: Orchestrator,
+    request: InitRequest,
+    decision: InitDecision | None = None,
+) -> ExecutionResult:
+    """Runs the full plan → guards → execute → render pipeline for the CLI.
+
+    Every decision is made before this runs: by flags and configuration, or
+    in the change review, whose outcome ``decision`` carries. An open
+    collision or trust decision here aborts instead of prompting.
 
     In JSON mode:
-    - ``WorkspaceCollisionError`` re-raises immediately (no interactive prompt).
-    - Untrusted external templates raise ``SecurityViolationError`` rather than
-      prompting for confirmation.
+    - ``WorkspaceCollisionError`` re-raises immediately.
+    - Untrusted external templates raise ``SecurityViolationError``.
     - The progress trail and all human-readable output are suppressed to preserve
       ``stdout`` for the JSON payload emitted by the caller.
 
     Args:
         engine: A fully constructed Orchestrator.
-        request: The InitRequest used to build the engine. May be replaced if
-            the user resolves a collision interactively.
+        request: The InitRequest used to build the engine.
+        decision: The change review's outcome, if one ran. Execution reuses its
+            registry snapshot, and runs an untrusted template's commands only
+            if they are exactly the ones it confirmed.
 
     Returns:
         The ExecutionResult produced by the engine.
     """
-    # --- Collision Decision ---
+    # --- Collision Guard ---
     manifest = engine.plan()
     if manifest.collisions and manifest.collision_strategy is None:
         error = WorkspaceCollisionError(paths=manifest.collisions)
@@ -254,98 +293,56 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
             "existing configuration files in the workspace."
         )
         for path in sorted(manifest.collisions):
-            console.print(f"  - {path}")
+            console.print(Text(f"  - {path}"))
 
-        if not is_interactive():
-            raise ProtostarError(
-                "Workspace collision detected: The target workspace is not empty.\n"
-                "Aborting to prevent destructive mutations in a non-interactive context.\n"
-                "Use the --force-merge or --force-replace flag to bypass this check."
-            ) from error
-
-        choice = select(
-            "\nHow would you like to proceed?",
-            choices=[
-                Choice(
-                    title="Merge     (Safely injects missing configs; preserves existing user data)",
-                    value=CollisionStrategy.MERGE,
-                ),
-                Choice(
-                    title="Overwrite (Forces injection; updates existing keys to match Protostar)",
-                    value=CollisionStrategy.OVERWRITE,
-                ),
-                Choice(
-                    title="Abort     (Safely exit without modifying the environment)",
-                    value=None,
-                ),
-            ],
-            style=UIStyle(
-                [
-                    ("answer", "fg:cyan bold"),
-                    ("pointer", "fg:cyan bold"),
-                    ("selected", "fg:cyan"),
-                ]
-            ),
-        )
-
-        if choice is None:
-            raise ExecutionAbortedError(
-                "Environment initialization cancelled by user."
-            ) from None
-
-        request = dataclasses.replace(request, collision_strategy=choice)
-        engine.request = request
-        manifest = engine.plan()
+        raise ProtostarError(
+            "Workspace collision detected: The target workspace is not empty.\n"
+            "Aborting to prevent destructive mutations in a non-interactive context.\n"
+            "Use the --force-merge or --force-replace flag to bypass this check."
+        ) from error
 
     # --- Trust Boundary ---
-    if request.is_external and not request.is_trusted:
-        tasks = [*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks]
-        if tasks:
-            # JSON mode: reject immediately without prompting to avoid blocking agents.
-            if is_json_mode:
-                raise SecurityViolationError(
-                    "Execution aborted: Untrusted external template contains "
-                    "executable tasks. To trust this source, configure it with "
-                    "'trusted = true' in your global configuration.",
-                    hint=(
-                        f"Configure the template in {active_config_source().path} "
-                        "with 'trusted = true' "
-                        "and re-run."
-                    ),
-                )
-
-            warning = glyph("⚠️", "!")
-            console.print(
-                f"\n[bold red]{warning}  REMOTE TEMPLATE WARNING {warning}[/bold red]\n\n"
-                "This template was loaded from an external source and will execute "
-                "the following shell commands on your system:"
+    commands = untrusted_commands(request, manifest)
+    if commands and (decision is None or decision.confirmed_commands != commands):
+        # JSON mode: reject immediately without prompting to avoid blocking agents.
+        if is_json_mode:
+            raise SecurityViolationError(
+                "Execution aborted: Untrusted external template contains "
+                "executable tasks. To trust this source, configure it with "
+                "'trusted = true' in your global configuration.",
+                hint=(
+                    f"Configure the template in {active_config_source().path} "
+                    "with 'trusted = true' "
+                    "and re-run."
+                ),
             )
-            for task in tasks:
-                console.print(f"  - {' '.join(task.command)}")
-            console.print()
 
-            if not is_interactive():
-                raise ProtostarError(
-                    "Execution aborted: Untrusted external template contains executable tasks.\n"
-                    "To trust this template in non-interactive environments, add its URL to "
-                    "the [templates] block in your global configuration."
-                )
+        warning = glyph("⚠️", "!")
+        console.print(
+            f"\n[bold red]{warning}  REMOTE TEMPLATE WARNING {warning}[/bold red]\n\n"
+            "This template was loaded from an external source and will execute "
+            "the following shell commands on your system:"
+        )
+        for command in commands:
+            console.print(Text(f"  - {shlex.join(command)}"))
+        console.print()
 
-            confirmed = confirm(
-                "Do you trust this source to modify your system?", default=False
-            )
-            if not confirmed or confirmed is None:
-                raise ExecutionAbortedError(
-                    "Execution cancelled: Untrusted external source."
-                )
+        raise ProtostarError(
+            "Execution aborted: Untrusted external template contains executable tasks.\n"
+            "To trust this template in non-interactive environments, add its URL to "
+            "the [templates] block in your global configuration."
+        )
 
     # --- Execute ---
+    hook_revisions = decision.hook_revisions if decision else None
     if is_json_mode:
-        result = engine.execute(manifest)
+        result = engine.execute(manifest, hook_revisions=hook_revisions)
     else:
         console.print("[bold]Protostar Ignition Sequence Initiated[/bold]")
         with progress_trail("Preparing workspace") as progress:
-            result = engine.execute(manifest, progress=progress)
+            result = engine.execute(
+                manifest, hook_revisions=hook_revisions, progress=progress
+            )
 
         # --- Render Diagnostics ---
         has_warnings = False
@@ -562,3 +559,22 @@ def print_recipe_summary(request: InitRequest) -> None:
             f"Recipe: {template}\nTools: {tools or 'None'}\nDocker: {'yes' if request.docker else 'no'}"
         )
     )
+
+
+def print_review_summary(decision: InitDecision) -> None:
+    """Leave the change review's decisions in scrollback after the app exits.
+
+    Args:
+        decision: The review's outcome.
+    """
+    lines = []
+    if decision.draft.collision_strategy:
+        lines.append(f"Existing files: {decision.draft.collision_strategy.value}")
+    if decision.confirmed_commands:
+        count = len(decision.confirmed_commands)
+        lines.append(
+            f"Confirmed {count} command{'' if count == 1 else 's'} "
+            "from an untrusted template"
+        )
+    if lines:
+        console.print(Text("\n".join(lines)))

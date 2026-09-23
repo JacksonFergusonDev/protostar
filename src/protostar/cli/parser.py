@@ -648,18 +648,19 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             template = DraftTemplate(
                 source, is_external=external, is_trusted=not external
             )
-        draft = edit_recipe(
+        decision = edit_recipe(
             InitDraft(template=template, existing_recipe=existing_recipe),
             catalog,
             user_config,
         )
-        if draft is None:
+        if decision is None:
             raise ExecutionAbortedError("Recipe editing cancelled by user.")
-        modules, request = resolve_init(draft, user_config)
+        modules, request = resolve_init(decision.draft, user_config)
         ui.print_recipe_summary(request)
+        ui.print_review_summary(decision)
         orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
         engine = orchestrator_cls(modules, user_config, request=request)
-        ui._run_engine(engine, request)
+        ui._run_engine(engine, request, decision)
         sys.exit(0)
 
 

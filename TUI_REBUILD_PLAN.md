@@ -14,7 +14,7 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 | 4 | `refactor(cli): single init draft and resolver` | Merged (#304) |
 | 5 | `feat(cli): Textual foundation and recipe editor` | Complete |
 | 6 | `feat(cli): variables, metadata and live plan preview` | Complete |
-| 7 | `feat(cli): change review screen` | Planned |
+| 7 | `feat(cli): change review screen` | Complete |
 | 8 | `refactor(cli)!: remove questionary` | Planned |
 
 ## Settled Decisions
@@ -170,6 +170,14 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
 
 ## PR 7: `feat(cli): change review screen`
 
+**Status: complete.** The recipe editor continues to a change review, and a flag-driven interactive init opens it (`launch.review_changes`) when a collision or trust decision is open.
+
+- **What it shows:** the first file batch from `prepare_review(..., phase=BEFORE_INITIALIZERS)`. Each planned path is marked new, modified, conflict, existing, or after setup, with a unified diff for each first-batch edit, then the commands and packages that follow. A file written later names the command that creates it and shows no guessed content.
+- **Decisions:** merge or overwrite re-prepares the batch. An untrusted template needs a checkbox confirming its exact commands.
+- **Snapshot and result:** the review takes one registry snapshot in a worker. `InitDecision` (in `init_draft.py`) carries it, the draft, and the confirmed commands. `_run_engine` passes the snapshot through `Orchestrator.execute(hook_revisions=...)` to `SystemExecutor`, and runs an untrusted template only if its commands equal the confirmed ones.
+- **Removed:** `_run_engine` no longer prompts; the questionary `select` and `confirm` calls are gone from `cli/ui.py`. Off a terminal and under `--json`, the errors are unchanged.
+- **Unchanged:** later file batches are still not simulated, since they depend on command output. Demos were not regenerated.
+
 **Goal:** before anything runs, show what will change, and collect the collision and trust decisions on one screen. This screen is the base that conflict resolution and prune reuse later.
 
 **Steps:**
@@ -207,7 +215,8 @@ Replace questionary with a Textual TUI, redesigned rather than ported. Each PR i
     - `README.md` (performance and install notes)
     - `docs/getting-started.md`
     - `docs/developer/testing.md` (benchmark hook)
-    - `docs/usage/init.md` ("Interactive Wizard & Metadata")
+    - `docs/usage/init.md` ("Interactive Wizard & Metadata", including the old collision prompt)
+    - `docs/usage/templates.md` and `docs/usage/troubleshooting.md` (the old `[y/N]` trust dialog, replaced by the change review's trust gate in PR 7)
     - `CONTRIBUTING.md`
     - `AGENTS.md`'s headless-core package list
 

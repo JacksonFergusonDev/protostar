@@ -130,3 +130,54 @@ def test_trust_boundary_rejects_untrusted_in_json_mode(mocker: Any) -> None:
     request = InitRequest(is_external=True, is_trusted=False)
     with pytest.raises(SecurityViolationError, match="Untrusted external template"):
         _run_engine(mock_engine, request)
+
+
+def _untrusted_engine(mocker: Any) -> Any:
+    from protostar.manifest import EnvironmentManifest
+    from protostar.models import ExecutionResult
+    from protostar.orchestrator import Orchestrator
+
+    engine = mocker.MagicMock(spec=Orchestrator)
+    manifest = EnvironmentManifest()
+    manifest.tasks.add_system_task(["git", "init"])
+    manifest.tasks.add_post_install_task(["uv", "run", "setup"])
+    engine.plan.return_value = manifest
+    engine.execute.return_value = ExecutionResult(frozenset(), frozenset(), ())
+    return engine
+
+
+def test_untrusted_commands_lists_every_command_in_order(mocker: Any) -> None:
+    """Built-in and trusted templates need no confirmation; others list all tasks."""
+    from protostar.cli.ui import needs_review, untrusted_commands
+    from protostar.models import InitRequest
+
+    manifest = _untrusted_engine(mocker).plan()
+    untrusted = InitRequest(is_external=True)
+    assert untrusted_commands(untrusted, manifest) == (
+        ("git", "init"),
+        ("uv", "run", "setup"),
+    )
+    assert needs_review(untrusted, manifest)
+    for request in (InitRequest(), InitRequest(is_external=True, is_trusted=True)):
+        assert untrusted_commands(request, manifest) == ()
+        assert not needs_review(request, manifest)
+
+
+def test_trust_boundary_runs_exactly_the_confirmed_commands(mocker: Any) -> None:
+    """A review's confirmation lets the commands it listed run, and no others."""
+    from protostar.cli.ui import _run_engine
+    from protostar.errors import ProtostarError
+    from protostar.init_draft import InitDecision, InitDraft
+    from protostar.models import InitRequest
+
+    request = InitRequest(is_external=True)
+    engine = _untrusted_engine(mocker)
+    stale = InitDecision(InitDraft(), (), (("git", "init"),))
+    with pytest.raises(ProtostarError, match="Untrusted external template"):
+        _run_engine(engine, request, stale)
+    engine.execute.assert_not_called()
+
+    confirmed = InitDecision(InitDraft(), (), (("git", "init"), ("uv", "run", "setup")))
+    _run_engine(engine, request, confirmed)
+    engine.execute.assert_called_once()
+    assert engine.execute.call_args.kwargs["hook_revisions"] == ()

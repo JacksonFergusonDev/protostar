@@ -6,11 +6,9 @@ from textual.app import App
 from textual.binding import Binding, BindingType
 from textual.screen import Screen
 
-from protostar.init_draft import InitDraft
 
-
-class DecisionApp(App[InitDraft]):
-    """Run one decision screen and exit with its immutable draft."""
+class DecisionApp[ResultT](App[ResultT]):
+    """Run one decision flow and exit with its immutable result."""
 
     CSS_PATH = "protostar.tcss"
     TITLE = "Protostar"
@@ -20,13 +18,13 @@ class DecisionApp(App[InitDraft]):
         Binding("ctrl+c", "cancel", "Cancel", show=False, priority=True),
     ]
 
-    def __init__(self, screen: Screen[InitDraft]) -> None:
+    def __init__(self, screen: Screen[ResultT]) -> None:
         super().__init__()
         self.theme = "textual-dark"
         self.decision_screen = screen
 
     def on_mount(self) -> None:
-        """Open the decision screen without starting engine execution."""
+        """Open the first decision screen without starting engine execution."""
         self.push_screen(self.decision_screen)
 
     def action_cancel(self) -> None:

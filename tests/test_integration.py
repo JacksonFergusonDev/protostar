@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from protostar.cli.main import handle_init
+from protostar.init_draft import InitDecision
 from protostar.manifest import CollisionStrategy
 
 
@@ -134,7 +136,7 @@ def test_collision_overwrite_e2e(
     tmp_path: Path,
     seed_global_config: Any,
 ) -> None:
-    """Tests the OVERWRITE strategy via the interactive TUI prompt."""
+    """Tests the OVERWRITE strategy chosen in the interactive change review."""
     monkeypatch.chdir(tmp_path)
 
     # Strip the pytest environment variable so the Orchestrator doesn't default to MERGE
@@ -154,10 +156,14 @@ def test_collision_overwrite_e2e(
     mock_proc.poll.return_value = 0
     mocker.patch("subprocess.Popen", return_value=mock_proc)
 
-    # 2. Mock the interactive environment
-    mocker.patch("protostar.cli.ui.is_interactive", return_value=True)
-    mock_questionary = mocker.patch("questionary.select")
-    mock_questionary.return_value.ask.return_value = CollisionStrategy.OVERWRITE
+    # 2. Mock the interactive environment; Pilot tests drive the review itself.
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
+    review = mocker.patch(
+        "protostar.cli.main.review_changes",
+        side_effect=lambda draft, config: InitDecision(
+            replace(draft, collision_strategy=CollisionStrategy.OVERWRITE), ()
+        ),
+    )
 
     # 3. Construct arguments mimicking: `protostar init --ruff`
     args = argparse.Namespace(
@@ -169,8 +175,8 @@ def test_collision_overwrite_e2e(
 
     handle_init(args)
 
-    # 4. Verify TUI was triggered
-    mock_questionary.assert_called_once()
+    # 4. Verify the review was opened for the open collision
+    review.assert_called_once()
 
     # 5. Verify the file was overwritten correctly (purging line-length=150 and replacing with 88)
     final_content = pyproject.read_text()
