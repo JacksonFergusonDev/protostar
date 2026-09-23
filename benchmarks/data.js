@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790203038214,
+  "lastUpdate": 1790204040060,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16223,6 +16223,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 795.76,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cc67ba70f6be3b38520dda928e290bacc4a43a46",
+          "message": "fix(scripts): terminate process group and guarantee teardown in demo recorder (#317)\n\n* fix(scripts): terminate process group and guarantee teardown in demo recorder\n\n* fix(tests): skip demo recorder tests on windows",
+          "timestamp": "2026-09-23T15:52:09-07:00",
+          "tree_id": "0e68a9d1ac6b666927121fe023633f91fcb5fa4d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cc67ba70f6be3b38520dda928e290bacc4a43a46"
+        },
+        "date": 1790204038961,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 160.59,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 620,
             "unit": "ms"
           }
         ]
