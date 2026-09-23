@@ -36,7 +36,7 @@ class FilePolicy(StrEnum):
     TOML = "structured-toml"
     YAML = "structured-yaml"
     JSONC = "structured-jsonc"
-    CHECKSUM = "checksum"
+    TEXT = "text"
     SEED = "seed-only"
     REGIONS = "regions"
 
@@ -103,7 +103,6 @@ class FileState:
     path: str
     policy: FilePolicy
     baseline: str | None = None
-    digest: str | None = None
     regions: tuple[RegionState, ...] = ()
 
     def __post_init__(self) -> None:
@@ -112,11 +111,7 @@ class FileState:
         if not isinstance(self.policy, FilePolicy):
             raise _invalid("unknown file policy.")
         if self.policy in (FilePolicy.TOML, FilePolicy.YAML, FilePolicy.JSONC):
-            if (
-                type(self.baseline) is not str
-                or self.digest is not None
-                or self.regions
-            ):
+            if type(self.baseline) is not str or self.regions:
                 raise _invalid(
                     "structured configuration requires only a baseline document string."
                 )
@@ -137,14 +132,13 @@ class FileState:
                 value = decode_yaml_baseline(self.baseline)
                 if (spec := yaml_spec(self.path)) is not None:
                     validate_yaml_baseline(spec, value)
-        elif self.policy is FilePolicy.CHECKSUM:
-            if self.digest is None or self.baseline is not None:
-                raise _invalid("checksum policy requires only a digest.")
-            _digest(self.digest)
+        elif self.policy is FilePolicy.TEXT:
+            if type(self.baseline) is not str:
+                raise _invalid("text policy requires the last applied text.")
         elif self.policy is FilePolicy.SEED:
-            if self.baseline is not None or self.digest is not None or self.regions:
+            if self.baseline is not None or self.regions:
                 raise _invalid("seed-only policy records only the seeded path.")
-        elif self.baseline is not None or self.digest is not None:
+        elif self.baseline is not None:
             raise _invalid("region policy records only region digests.")
         if len({region.id for region in self.regions}) != len(self.regions):
             raise _invalid("duplicate region identities.")
@@ -370,9 +364,7 @@ def deserialize_state(content: str) -> SyncState:
             )
         files = []
         for item in _records(root.get("files", [])):
-            record = _record(
-                item, {"path", "policy"}, {"baseline", "digest", "regions"}
-            )
+            record = _record(item, {"path", "policy"}, {"baseline", "regions"})
             regions = []
             for region in _records(record.get("regions", [])):
                 fields = _record(region, {"tag", "id", "digest"})
@@ -391,9 +383,6 @@ def deserialize_state(content: str) -> SyncState:
                     _text(record["path"], "file path"),
                     FilePolicy(_text(record["policy"], "file policy")),
                     baseline,
-                    _text(record["digest"], "file digest")
-                    if "digest" in record
-                    else None,
                     tuple(regions),
                 )
             )
@@ -440,6 +429,8 @@ def deserialize_state(content: str) -> SyncState:
 
 @lru_cache(maxsize=256)
 def _canonical_baseline(policy: FilePolicy, baseline: str) -> str:
+    if policy is FilePolicy.TEXT:
+        return baseline
     if policy is FilePolicy.YAML:
         from .yaml_ast import decode_yaml_baseline, encode_yaml_baseline
 
@@ -466,8 +457,6 @@ def serialize_state(state: SyncState) -> str:
         fields: dict[str, object] = {"path": record.path, "policy": record.policy.value}
         if record.baseline is not None:
             fields["baseline"] = _canonical_baseline(record.policy, record.baseline)
-        if record.digest is not None:
-            fields["digest"] = record.digest
         if record.regions:
             fields["regions"] = [
                 {"tag": region.tag, "id": region.id, "digest": region.digest}

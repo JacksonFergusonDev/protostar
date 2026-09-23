@@ -18,7 +18,7 @@ content. After initialization, use the [project lifecycle](lifecycle.md) command
 
 - :material-shield-check: __Safe Merging__
 
-    Protostar doesn't blindly overwrite files. In merge mode it uses recorded ownership baselines for supported TOML and YAML configuration (including GitHub Actions workflows, merged by job and step), checksum gates for other generated files, and deduplicated ignore additions. Existing content without state remains unowned.
+    Protostar doesn't blindly overwrite files. In merge mode it uses recorded ownership baselines for supported TOML and YAML configuration (including GitHub Actions workflows, merged by job and step), line-by-line three-way merges for other generated files, and deduplicated ignore additions. Existing content without state remains unowned.
 
 - :material-clock-fast: __Instant & Repeatable__
 

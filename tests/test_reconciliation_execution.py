@@ -104,6 +104,7 @@ def test_partial_conflict_and_foreign_trivia(tmp_path, monkeypatch, mocker):
         "file": "pyproject.toml",
         "keys": ["tool", "ruff", "line-length"],
         "identity": None,
+        "lines": None,
         "reason": "diverged",
     }
 

@@ -69,7 +69,7 @@ transaction attempt; file baselines remain authoritative after partial conflicts
 | `structured-toml` | TOML document string containing only applied contributions |
 | `structured-yaml` | Validated YAML 1.2 document string containing only applied contributions |
 | `structured-jsonc` | Strict JSON object string containing only applied contributions, including nulls |
-| `checksum` | Last applied lowercase SHA-256 hex digest, plus optional managed-region digests |
+| `text` | Last applied generated text, plus optional managed-region digests |
 | `seed-only` | Path actually seeded; retained after deletion |
 | `regions` | Delimited 8-hex tags, stable logical IDs, and last applied SHA-256 digests |
 
@@ -342,15 +342,20 @@ The package's `__init__` assembles the registries callers look up by path: `YAML
 
 ## PR F: Generated files, seeds, and regions
 
-Dockerfile and justfile use one pure exact-byte SHA-256 gate. (CI and release
-workflows used it too until they moved to the YAML adapter; see
-[GitHub Actions workflows](#github-actions-workflows).) An absent never-owned target is created; an unchanged owned target
-can update. Convergence advances an existing baseline without rewriting the file.
+Dockerfile and justfile record the text Protostar last applied and reconcile
+through `reconcile_text` (see [Text merge engine](#text-merge-engine)). An absent
+never-owned target is created; an unchanged owned target takes the desired text
+exactly. Convergence advances an existing baseline without rewriting the file.
 Unowned existing files are never adopted, including when their bytes equal the
-desired output. Edited or deleted owned files remain untouched. A pending desired
-change emits a structured conflict; an unchanged desired contribution does not
-warn merely because the user edited or deleted it. Explicit overwrite can replace
-a declared generated target and establish its new digest.
+desired output. Deleted owned files stay deleted. An edited owned file merges
+three ways against its baseline: non-overlapping edits combine and the baseline
+advances to the desired text; overlapping edits keep the whole local file and the
+previous baseline, with one `diverged` conflict per overlap carrying its
+`LineSpan`. Local bytes that are not UTF-8 are treated as edited. An unchanged
+desired contribution does not warn merely because the user edited or deleted it.
+Explicit overwrite can replace a declared generated target and own its text. A
+digest-only `checksum` record from before text baselines is rejected as an
+unknown policy; there is no migration.
 
 Renovate configuration is no longer checksum-gated; it is reconciled as JSONC
 (see the JSONC boundary below). Dockerfile preservation does not prevent additive
@@ -377,13 +382,15 @@ writes through the transactional filesystem. No-op runs write nothing; failures
 restore exact file/state bytes and POSIX modes. Resolver completion and end-to-end
 Stage 1 acceptance remain PR G and PR H.
 
-Generated targets with declared append regions (such as a template's justfile appends) checksum
-the complete desired file and also retain individual region digests. If user edits
-prevent whole-file regeneration, clean region updates can still apply independently.
+Generated targets with declared append regions (such as a template's justfile
+appends) record the complete desired text and also retain individual region
+digests. If overlapping edits prevent the whole-file merge, clean region updates
+can still apply independently.
 A pre-existing unowned generated target can own a newly appended region without
 acquiring whole-file ownership. When a previously managed region is omitted, merge
-mode conservatively skips whole-file regeneration because its digest cannot
-reconstruct the omitted payload; independently declared region updates still apply.
+mode skips whole-file regeneration, because regenerating without the region would
+remove it and regions are never pruned; independently declared region updates
+still apply.
 
 ## PR G resolver and derived-artifact boundary
 
@@ -551,7 +558,10 @@ Hunks changed by one side take that side; identical changes on both sides merge.
 Overlapping and adjacent edits conflict, as in git. Lines both sides added
 identically at the edges of a conflict leave it (git's `zdiff3` refinement), so a
 `TextConflict` spans only disagreeing lines: its zero-based `start` in the local
-text and the base, local, and remote lines. A conflicted merge returns no text.
+text and the base, local, and remote lines. Its `lines` property converts that to
+the `LineSpan` a `MergeLocation` carries into diagnostics and review JSON: a
+one-based `start` and a `count`, numbered like a unified diff hunk header, so a
+zero `count` sits after line `start`. A conflicted merge returns no text.
 Two hunks of one generator change can depend on each other, so adapters keep the
 local file whole or accept the merged file whole; they never write a partial merge.
 

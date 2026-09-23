@@ -22,8 +22,8 @@ protostar sync --check
 
 `status` summarizes accepted updates, conflicts, preserved edits/deletions, and
 ownership advancement. `diff` and `sync --dry-run` show the same accepted byte
-changes. Conflicts appear separately with file/key/identity diagnostics; a
-conflicted file can still have independent accepted edits. Resolver actions list
+changes. Conflicts appear separately with file, key, identity, and line
+diagnostics; a conflicted file can still have independent accepted edits. Resolver actions list
 accepted requirements and their `pyproject.toml`/`uv.lock` footprint. Their output
 is unknown until application, so previews do not invent a resulting lockfile diff.
 
@@ -58,6 +58,16 @@ Resolve the desired setting deliberately in your project or same-source template
 then review again. If local content already equals new desired content, Protostar
 can advance its baseline without rewriting that content. This still counts as
 pending work until `sync` records the advancement.
+
+Generated files without a structured format, such as the `justfile` and
+`Dockerfile`, merge line by line against the text Protostar last wrote. Your
+edits and Protostar's changes combine when they touch different lines. When both
+change the same or adjacent lines, the whole file is kept exactly as you left it
+rather than half updated, and each overlap is reported as a `diverged` conflict
+with its `lines` (a one-based `start` and a `count`, numbered like a unified diff
+hunk header). The update stays pending until those lines match what you want.
+A checkout that only converts line endings, such as Git's `core.autocrlf`, is not
+an edit, and a merged file keeps your line endings.
 
 Local edits or deletions with unchanged desired intent are preserved and do not
 make checks fail. Deleted managed files stay deleted. Omitted template
