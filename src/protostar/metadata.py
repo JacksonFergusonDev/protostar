@@ -24,7 +24,7 @@ __all__ = [
 
 
 class PromptType(enum.StrEnum):
-    """Enumeration of interactive prompt widget types."""
+    """The kind of field that collects a metadata value."""
 
     TEXT = "text"
     CHECKBOX = "checkbox"
@@ -99,7 +99,7 @@ class MetadataField:
 METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     MetadataKey.DESCRIPTION: MetadataField(
         key=MetadataKey.DESCRIPTION,
-        label="Project description (optional, press Enter to skip):",
+        label="Project description",
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=None,
@@ -107,7 +107,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.LICENSE: MetadataField(
         key=MetadataKey.LICENSE,
-        label="Project license:",
+        label="License",
         prompt_type=PromptType.SELECT,
         choices=[lic.value for lic in LicenseType],
         auto_resolver=lambda cfg: cfg.license,
@@ -115,7 +115,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.AUTHOR_NAME: MetadataField(
         key=MetadataKey.AUTHOR_NAME,
-        label="Author name (optional, press Enter to skip):",
+        label="Author name",
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.author_name or get_git_config("user.name"),
@@ -123,7 +123,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.AUTHOR_EMAIL: MetadataField(
         key=MetadataKey.AUTHOR_EMAIL,
-        label="Author email (optional, press Enter to skip):",
+        label="Author email",
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.author_email or get_git_config("user.email"),
@@ -131,7 +131,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.GITHUB_USERNAME: MetadataField(
         key=MetadataKey.GITHUB_USERNAME,
-        label="GitHub username (optional, press Enter to skip):",
+        label="GitHub username",
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.github_username,
@@ -139,7 +139,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.MINIMUM_PYTHON: MetadataField(
         key=MetadataKey.MINIMUM_PYTHON,
-        label="Minimum supported Python version:",
+        label="Minimum Python version",
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.python_version,
@@ -147,7 +147,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.SUPPORTED_OS: MetadataField(
         key=MetadataKey.SUPPORTED_OS,
-        label="Supported Operating Systems:",
+        label="Supported operating systems",
         prompt_type=PromptType.CHECKBOX,
         choices=[target_os.value for target_os in TargetOS],
         auto_resolver=lambda cfg: cfg.supported_os if cfg.supported_os else None,
@@ -155,7 +155,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
     ),
     MetadataKey.DOCKER_PORT: MetadataField(
         key=MetadataKey.DOCKER_PORT,
-        label="Container exposed port:",
+        label="Container port",
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=None,

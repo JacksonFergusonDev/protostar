@@ -392,15 +392,55 @@ def _run_engine(engine: Orchestrator, request: InitRequest) -> ExecutionResult:
     return result
 
 
+def planned_paths(manifest: EnvironmentManifest) -> tuple[list[str], set[str]]:
+    """Returns every planned path, sorted, and the subset that are directories.
+
+    Args:
+        manifest: The planned environment manifest.
+
+    Returns:
+        The POSIX paths of every file and directory to create or update, and
+        the directories among them.
+    """
+    directories = {path.as_posix() for path in manifest.target_directories()}
+    paths = sorted(directories | {path.as_posix() for path in manifest.written_files()})
+    return paths, directories
+
+
+def plan_tree(manifest: EnvironmentManifest) -> Tree:
+    """Builds the workspace tree of every path the manifest creates or updates.
+
+    Args:
+        manifest: The planned environment manifest.
+
+    Returns:
+        A tree rooted at the workspace, with a trailing slash on directories.
+    """
+    paths, directories = planned_paths(manifest)
+    tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
+    nodes: dict[str, Tree] = {"": tree}
+    for path in paths:
+        parts = path.split("/")
+        current = ""
+        for index, part in enumerate(parts):
+            parent = current
+            current = f"{current}/{part}" if current else part
+            if current not in nodes:
+                is_file = index == len(parts) - 1 and path not in directories
+                # Paths come from templates: render them as data, never markup.
+                nodes[current] = nodes[parent].add(
+                    Text(part if is_file else f"{part}/")
+                )
+    return tree
+
+
 def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
     """Renders a human-readable summary of the planned environment manifest."""
     table = Table(box=None, show_header=False, padding=(0, 2))
     table.add_column("Category", justify="right", style="bold")
     table.add_column("Details")
 
-    # Filesystem: one rendered path set feeds both the count and the tree.
-    directories = {path.as_posix() for path in manifest.target_directories()}
-    paths = sorted(directories | {path.as_posix() for path in manifest.written_files()})
+    paths, _ = planned_paths(manifest)
     table.add_row("Filesystem:", f"{len(paths)} files/directories to create or update")
 
     # Dependencies
@@ -483,27 +523,10 @@ def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
         )
 
     if paths:
-        tree = Tree("[bold].[/bold] (Workspace Root)", guide_style="dim")
-        nodes: dict[str, Tree] = {"": tree}
-
-        for path in paths:
-            parts = path.split("/")
-            current = ""
-            for idx, part in enumerate(parts):
-                parent = current
-                current = f"{current}/{part}" if current else part
-
-                if current not in nodes:
-                    is_file = (idx == len(parts) - 1) and (path not in directories)
-                    if is_file:
-                        nodes[current] = nodes[parent].add(f"{part}")
-                    else:
-                        nodes[current] = nodes[parent].add(f"{part}/")
-
         console.print()
         console.print(
             Panel(
-                tree,
+                plan_tree(manifest),
                 title="[bold]Filesystem",
                 border_style="cyan",
                 padding=(0, 2),

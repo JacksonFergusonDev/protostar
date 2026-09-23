@@ -1,10 +1,21 @@
 Screen { background: $surface; }
 #title { margin: 1 2 0 2; text-style: bold; color: $accent; }
 #subtitle { margin: 0 2 1 2; color: $text-muted; }
-#editor { padding: 0 2; }
+#body { height: 1fr; }
+#editor { width: 3fr; padding: 0 2; }
+PlanPreview { width: 2fr; padding: 0 1; border-left: vkey $panel; }
 .section { margin-top: 1; text-style: bold; color: $accent; }
+.group { margin-top: 1; text-style: bold; }
+.note { color: $text-muted; }
+.field-label { margin-top: 1; }
+.field-error { height: auto; color: $error; }
+VariableFields, MetadataFields, MetadataFields .field { height: auto; }
 Checkbox { width: 1fr; height: auto; min-height: 1; border: none; padding: 0 1; }
 RadioSet { width: 1fr; height: auto; }
-#error, #constraints { height: auto; color: $error; }
+SelectionList { height: auto; }
+#constraints { height: auto; color: $error; }
+#template-status { height: auto; color: $text-muted; }
+#template-status.-error, #preview-summary.-error { color: $error; }
+#preview-collisions { color: $warning; }
 #actions { height: 3; margin: 1 2; align-horizontal: right; }
 #actions Button { margin-left: 1; }

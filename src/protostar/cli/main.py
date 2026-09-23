@@ -24,7 +24,7 @@ from rich.text import Text
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
 from protostar.cli.prompts import confirm
-from protostar.cli.wizard import prompt_template_variables
+from protostar.cli.tui.launch import edit_variables
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateSource,
@@ -174,6 +174,16 @@ def handle_init(args: argparse.Namespace) -> None:
         collision_strategy=strategy,
         existing_recipe=existing_recipe,
     )
+    if (
+        source
+        and source.variables - variables.keys()
+        and is_interactive()
+        and not ui.is_json_mode
+    ):
+        edited = edit_variables(draft, user_config)
+        if edited is None:
+            raise ExecutionAbortedError("Variable entry cancelled by user.")
+        draft = edited
     modules, request = resolve_init(draft, user_config)
 
     # 4. Undocumented Crash Test Injection
@@ -360,8 +370,9 @@ def _resolve_template_variables(
     """Collects values for a template's variables.
 
     Recorded values come first and ``--var`` flags override them. Any still
-    missing are prompted for in an interactive terminal; otherwise rendering
-    raises ``MissingTemplateVariablesError`` listing them all.
+    missing are left out: the caller asks for them in an interactive terminal,
+    and otherwise rendering raises ``MissingTemplateVariablesError`` listing
+    them all.
 
     Args:
         source: The template being applied, if any.
@@ -394,9 +405,6 @@ def _resolve_template_variables(
         name: value for name, value in recorded.items() if name in source.variables
     }
     values.update(flags)
-    missing = sorted(source.variables - values.keys())
-    if missing and is_interactive() and not ui.is_json_mode:
-        values.update(prompt_template_variables(missing))
     return values
 
 
