@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790122069560,
+  "lastUpdate": 1790126731161,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15985,6 +15985,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 197.42,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe36798b24d7f6db3c2c5a047512416da3eb5fbe",
+          "message": "feat(cli): change review screen (#307)\n\n* feat(cli): change review screen\n\nBefore anything runs, init now shows what will change and settles the\ncollision and trust decisions on one Textual screen. The recipe editor\ncontinues to it, and an interactive flag-driven init opens it when a\ncollision or trust decision is open.\n\nThe review renders the first file batch (prepare_review at\nBEFORE_INITIALIZERS) as a file tree with unified diffs, and lists later\nfiles with the command that creates them instead of guessing content.\nIt takes one registry snapshot in a worker; InitDecision carries it to\nOrchestrator.execute(hook_revisions=...), so execution writes the pins\nthe review showed. A trust confirmation covers exactly the listed\ncommands. _run_engine no longer prompts: the questionary collision\nselect and trust confirm are gone.\n\n* fix(cli): normalize CRLF line endings in unified diffs",
+          "timestamp": "2026-09-22T18:24:22-07:00",
+          "tree_id": "32b1e17cd59dd1973d4f9bc5dffbc3f9579297f9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fe36798b24d7f6db3c2c5a047512416da3eb5fbe"
+        },
+        "date": 1790126730084,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 210.99,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 201.36,
             "unit": "ms"
           }
         ]
