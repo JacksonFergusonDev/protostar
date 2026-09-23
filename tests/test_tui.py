@@ -341,6 +341,7 @@ async def test_recorded_values_and_template_switch_preserve_choices():
     )
     app = make_app(InitDraft(existing_recipe=recipe), config)
     async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
         assert "from recipe" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         assert app.screen.query_one("#docker", Checkbox).value
         assert app.screen.query_one("#meta-description", Input).value == "Recorded"
