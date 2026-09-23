@@ -30,6 +30,7 @@ from protostar.sync_state import (
 )
 
 DIGEST = "a" * 64
+REGION = "# region: protostar 12345678\nexport A=1\n# endregion: protostar 12345678"
 PROPERTY = settings(max_examples=200, deadline=None)
 REF = TemplateReference(
     TemplateOrigin.BUILT_IN, "api", DIGEST, "my-alias", "v1", "revision"
@@ -54,11 +55,11 @@ def sample_state():
                 ".envrc",
                 FilePolicy.REGIONS,
                 regions=(
-                    RegionState(region_tag("module:direnv"), "module:direnv", DIGEST),
+                    RegionState(region_tag("module:direnv"), "module:direnv", REGION),
                     RegionState(
                         region_tag("template:api/environment"),
                         "template:api/environment",
-                        "b" * 64,
+                        REGION.replace("A=1", "B=2"),
                     ),
                 ),
             ),
@@ -206,35 +207,35 @@ def test_corrupt_state_is_fatal_with_actionable_hint(content):
         lambda: FileState("file", FilePolicy.TEXT),
         lambda: FileState("file", FilePolicy.SEED, baseline="x = 1"),
         lambda: FileState(
-            "file", FilePolicy.TOML, "x = 1", (RegionState("12345678", "a", DIGEST),)
+            "file", FilePolicy.TOML, "x = 1", (RegionState("12345678", "a", REGION),)
         ),
         lambda: FileState("file", FilePolicy.REGIONS, baseline="text"),
         lambda: FileState(
             "file",
             FilePolicy.REGIONS,
             regions=(
-                RegionState("12345678", "a", DIGEST),
-                RegionState("12345678", "a", DIGEST),
+                RegionState("12345678", "a", REGION),
+                RegionState("12345678", "a", REGION),
             ),
         ),
         lambda: FileState(
             "file",
             FilePolicy.REGIONS,
             regions=(
-                RegionState("12345678", "a", DIGEST),
-                RegionState("87654321", "a", DIGEST),
+                RegionState("12345678", "a", REGION),
+                RegionState("87654321", "a", REGION),
             ),
         ),
         lambda: FileState(
             "file",
             FilePolicy.REGIONS,
             regions=(
-                RegionState("12345678", "a", DIGEST),
-                RegionState("12345678", "b", DIGEST),
+                RegionState("12345678", "a", REGION),
+                RegionState("12345678", "b", REGION),
             ),
         ),
-        lambda: RegionState("bad_tag", "a", DIGEST),
-        lambda: RegionState("12345678", "bad identity", DIGEST),
+        lambda: RegionState("bad_tag", "a", REGION),
+        lambda: RegionState("12345678", "bad identity", REGION),
         lambda: DependencyState(
             "pyproject.toml", DependencyGroup.MAIN, "Not_Canonical", "", "x", "x"
         ),
@@ -252,6 +253,17 @@ def test_text_baselines_round_trip_exactly(text):
     state = SyncState("0.9.0", files=(FileState("justfile", FilePolicy.TEXT, text),))
 
     assert deserialize_state(serialize_state(state)).files[0].baseline == text
+
+
+def test_digest_only_region_records_are_rejected():
+    content = (
+        'schema_version = 1\nproducer_version = "x"\n[[files]]\npath = ".envrc"\n'
+        'policy = "regions"\n[[files.regions]]\ntag = "12345678"\nid = "test:id"\n'
+        f'digest = "{DIGEST}"\n'
+    )
+
+    with pytest.raises(ConfigurationError):
+        deserialize_state(content)
 
 
 def test_digest_only_generated_records_are_rejected():
@@ -409,7 +421,7 @@ def test_jsonc_baseline_must_be_a_strict_json_object(baseline):
 @pytest.mark.parametrize(
     "fields",
     [
-        {"regions": (RegionState("12345678", "test:id", DIGEST),)},
+        {"regions": (RegionState("12345678", "test:id", REGION),)},
         {},
     ],
 )

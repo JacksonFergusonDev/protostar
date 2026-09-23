@@ -4,11 +4,17 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from .checksum import checksum_gate
 from .errors import ConfigurationError
 from .intent import AppendContribution, validate_region_id
+from .merge import LineSpan
+from .text_merge import TextConflict, reconcile_text
 
-__all__ = ["append_marker_blocks", "get_comment_markers"]
+__all__ = [
+    "RegionConflict",
+    "RegionResult",
+    "append_marker_blocks",
+    "get_comment_markers",
+]
 
 
 def get_comment_markers(filepath: Path) -> tuple[str, str]:
@@ -69,12 +75,32 @@ def get_comment_markers(filepath: Path) -> tuple[str, str]:
 
 
 @dataclass(frozen=True)
+class RegionConflict:
+    """A region whose desired change was refused.
+
+    Attributes:
+        identity: The region's stable logical identity.
+        lines: File lines where local and desired edits overlap, or ``None``
+            when the whole region was refused (unowned, deleted, or unreadable).
+    """
+
+    identity: str
+    lines: LineSpan | None = None
+
+
+@dataclass(frozen=True)
 class RegionResult:
-    """Exact region content, composite applied digests, and conflicting identities."""
+    """Exact file content, composite applied region texts, and refused regions.
+
+    Attributes:
+        content: The file with every accepted region update applied.
+        baselines: Each owned region's last applied framed text, by identity.
+        conflicts: Refused regions, one entry per overlapping edit.
+    """
 
     content: str
-    digests: dict[str, str]
-    conflicts: tuple[str, ...]
+    baselines: dict[str, str]
+    conflicts: tuple[RegionConflict, ...]
 
 
 def append_marker_blocks(
@@ -86,7 +112,24 @@ def append_marker_blocks(
     baselines: dict[str, str] | None = None,
     missing_owned_file: bool = False,
 ) -> RegionResult:
-    """Reconciles stable regions using exact-byte gates and preserves surrounding bytes."""
+    """Merges each stable region three ways and preserves surrounding bytes.
+
+    A region spans its begin marker through its end marker. Each merges against
+    the framed text last applied to it, so local edits inside a region survive
+    desired updates to other lines; overlapping edits keep that region whole.
+
+    Args:
+        original_content: The file's current text.
+        payloads: Desired region contents, in append order.
+        filepath: The file, which selects the comment syntax of the markers.
+        overwrite: Whether desired regions replace local edits.
+        baselines: Each owned region's last applied framed text, by identity.
+        missing_owned_file: Whether the file is owned but was deleted, which
+            protects newly introduced regions too.
+
+    Returns:
+        The reconciled content, applied region texts, and refused regions.
+    """
     c_start, c_end = get_comment_markers(filepath)
 
     def marker(tag: str, end: bool = False) -> str:
@@ -140,8 +183,8 @@ def append_marker_blocks(
     for identity in identities:
         validate_region_id(identity)
     result = original_content
-    digests = dict(baselines or {})
-    conflicts: list[str] = []
+    applied = dict(baselines or {})
+    refused: list[tuple[AppendContribution, tuple[TextConflict, ...]]] = []
     for contribution in payloads:
         tag = contribution.tag
         begin, end = marker(tag), marker(tag, True)
@@ -155,26 +198,21 @@ def append_marker_blocks(
             start = result.index(begin)
             stop = result.index(end, start) + len(end)
             local = result[start:stop].encode("utf-8")
-        baseline = digests.get(contribution.id)
+        baseline = applied.get(contribution.id)
         if missing_owned_file and not overwrite:
             # An owned deleted file protects newly introduced regions too.
-            if (
-                baseline is None
-                or checksum_gate(None, framed.encode("utf-8"), baseline).conflict
-            ):
-                conflicts.append(contribution.id)
+            if baseline != framed:
+                refused.append((contribution, ()))
             continue
-        decision = checksum_gate(
-            local, framed.encode("utf-8"), baseline, overwrite=overwrite
-        )
+        decision = reconcile_text(local, framed, baseline, overwrite=overwrite)
         if decision.conflict:
-            conflicts.append(contribution.id)
-        if decision.digest is not None:
-            digests[contribution.id] = decision.digest
-        if not decision.write:
+            refused.append((contribution, decision.conflicts))
+        if decision.baseline is not None:
+            applied[contribution.id] = decision.baseline
+        if decision.content is None:
             continue
         if local is not None:
-            result = result[:start] + framed + result[stop:]
+            result = result[:start] + decision.content + result[stop:]
         else:
             separator = (
                 "" if not result else ("\n" if result.endswith("\n") else "\n\n")
@@ -183,4 +221,18 @@ def append_marker_blocks(
             seen.add(tag)
     if payloads:
         append_marker_blocks(result, [], filepath)
-    return RegionResult(result, digests, tuple(conflicts))
+    conflicts: list[RegionConflict] = []
+    for contribution, overlaps in refused:
+        if not overlaps:
+            conflicts.append(RegionConflict(contribution.id))
+            continue
+        # Number lines in the final file, after every accepted region moved them.
+        offset = result[: result.index(marker(contribution.tag))].count("\n")
+        conflicts.extend(
+            RegionConflict(
+                contribution.id,
+                LineSpan(overlap.lines.start + offset, overlap.lines.count),
+            )
+            for overlap in overlaps
+        )
+    return RegionResult(result, applied, tuple(conflicts))

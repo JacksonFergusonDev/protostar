@@ -69,9 +69,9 @@ transaction attempt; file baselines remain authoritative after partial conflicts
 | `structured-toml` | TOML document string containing only applied contributions |
 | `structured-yaml` | Validated YAML 1.2 document string containing only applied contributions |
 | `structured-jsonc` | Strict JSON object string containing only applied contributions, including nulls |
-| `text` | Last applied generated text, plus optional managed-region digests |
+| `text` | Last applied generated text, plus optional managed-region texts |
 | `seed-only` | Path actually seeded; retained after deletion |
-| `regions` | Delimited 8-hex tags, stable logical IDs, and last applied SHA-256 digests |
+| `regions` | Delimited 8-hex tags, stable logical IDs, and last applied framed region texts |
 
 TOML and YAML snapshots are validated by their respective codecs; unknown policies
 fail rather than accepting opaque documents. YAML snapshots preserve null values.
@@ -365,26 +365,31 @@ Free-form files record paths actually seeded. Existing files remain unowned and
 untouched in merge mode, regardless of extension; deleted seeded files stay absent.
 New never-seeded paths can still be created.
 
-Named append regions use the same gate per stable identity. Delimiters use subtle,
-editor-folding-compatible comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`)
-carrying a deterministic 8-character hex tag derived from the region identity, while `.protostar.lock.toml`
-preserves the tag, full logical ID, and digest. The digest covers
-UTF-8 bytes from the begin marker through the end marker, including the payload
-and internal line endings, excluding the newline following the end marker.
-Replacement preserves all bytes outside that interval. Existing unowned regions
-remain unowned; edited/deleted regions retain their old digest. Deleting an owned
-region file protects newly introduced regions too. Omitted region identities
+Named append regions use the same `reconcile_text` gate per stable identity.
+Delimiters use subtle, editor-folding-compatible comments (`# region: protostar <tag>`
+and `# endregion: protostar <tag>`) carrying a deterministic 8-character hex tag
+derived from the region identity, while `.protostar.lock.toml` preserves the tag,
+full logical ID, and last applied framed text. That text spans the begin marker
+through the end marker, including the payload and internal line endings,
+excluding the newline following the end marker. Replacement preserves all bytes
+outside that interval. Existing unowned regions remain unowned. An edited owned
+region merges line by line with its desired update; overlapping edits keep the
+local block whole and its previous text, with one `diverged` conflict per overlap
+whose `LineSpan` is numbered in the final file, after other regions' accepted
+updates. A deleted region stays deleted. Deleting an owned region file protects
+newly introduced regions too. Digest-only region records from before region texts
+are rejected as unknown fields. Omitted region identities
 retain their baselines without pruning. Duplicate, nested, or malformed
 boundaries raise domain errors, including boundaries injected by a new payload.
 
-Accepted digests and seeded paths enter the candidate state only, with final state
+Accepted texts and seeded paths enter the candidate state only, with final state
 writes through the transactional filesystem. No-op runs write nothing; failures
 restore exact file/state bytes and POSIX modes. Resolver completion and end-to-end
 Stage 1 acceptance remain PR G and PR H.
 
 Generated targets with declared append regions (such as a template's justfile
 appends) record the complete desired text and also retain individual region
-digests. If overlapping edits prevent the whole-file merge, clean region updates
+texts. If overlapping edits prevent the whole-file merge, clean region updates
 can still apply independently.
 A pre-existing unowned generated target can own a newly appended region without
 acquiring whole-file ownership. When a previously managed region is omitted, merge
@@ -432,10 +437,10 @@ end-to-end evidence from focused synthetic-revision cases:
 - `tests/test_template_repeatability.py` executes every built-in template in an
   isolated workspace, then performs two identical merge runs. It asserts
   byte-identical workspace and lock state, no managed mutations on either
-  repeat, and exact-byte agreement between every persisted whole-file digest and
-  its generated artifact.
+  repeat, and exact-byte agreement between every persisted whole-file text
+  baseline and its generated artifact.
 - `tests/test_reconciliation_execution.py`, `tests/test_codecov_execution.py`,
-  `tests/test_pre_commit_reconciliation.py`, `tests/test_checksum_execution.py`,
+  `tests/test_pre_commit_reconciliation.py`, `tests/test_generated_execution.py`,
   and `tests/test_resolver_execution.py` provide synthetic v1-to-v2 revisions
   and conflict/failure cases. They cover non-overlapping edits, scalar/keyed/
   sequence conflicts, deletion protection, state-write rollback, resolver
@@ -457,7 +462,7 @@ user-facing `sync` command, remain deferred.
 `protostar.preparation.prepare_review()` computes immutable accepted file bytes,
 conflicts, preserved local deviations, candidate ownership, and resolver requests
 from a manifest and captured workspace inputs. It uses the existing TOML, YAML,
-keyed-hook, region, and checksum adapters through `Reconciliation`. Preparation
+keyed-hook, region, and text adapters through `Reconciliation`. Preparation
 writes only to an in-memory byte sink; it never runs initializers, package managers,
 template tasks, IDE probes, or registry acquisition. This is a headless backend
 boundary; no public lifecycle command ships with this refactor.

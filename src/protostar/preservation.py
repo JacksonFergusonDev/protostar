@@ -1,6 +1,5 @@
 """Informational inspection of retained ownership deviations, never merge decisions."""
 
-import hashlib
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -160,14 +159,10 @@ def preserved_deviations(
                 finish = f"{start} endregion: protostar {region.tag}{suffix}".strip()
                 offset = region_content.find(begin)
                 stop = region_content.find(finish, offset) if offset >= 0 else -1
-                local_digest = (
-                    hashlib.sha256(
-                        region_content[offset : stop + len(finish)].encode()
-                    ).hexdigest()
-                    if stop >= 0
-                    else None
-                )
-                if local_digest != region.digest:
+                if stop < 0 or is_edited(
+                    region_content[offset : stop + len(finish)].encode(),
+                    region.baseline,
+                ):
                     preserved.append(PreservedDeviation(region_location, stop < 0))
     target = Path(pyproject.TARGET)
     data = (
