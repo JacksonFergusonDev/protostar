@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790119155403,
+  "lastUpdate": 1790122069560,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -15951,6 +15951,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 199.73,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7bcd8600fcfe7b48eef8450b88158e0b1f4346bf",
+          "message": "feat(cli): variables, metadata and live plan preview (#306)\n\n* feat(cli): variables, metadata and live plan preview\n\nThe recipe editor now collects template variables and project metadata,\nand shows a live preview of the planned files beside the form.\n\n- Variable fields run the secret guard on submit or blur, never per\n  keystroke, and show the gitleaks rule on the field. Recorded values\n  pre-fill them; fields are labeled by name.\n- Metadata fields map PromptType to Input, Select, and SelectionList,\n  pre-filled from the recipe, then the auto-resolvers. Fields appear\n  only when an enabled tool or Docker reads them.\n- The preview re-plans in an exclusive, debounced worker thread and\n  lists collisions. It shares plan_tree() with --dry-run.\n- Template loads run in a worker with a loading line and inline errors,\n  so a remote alias no longer blocks the UI.\n- A flag-driven init missing variables in an interactive terminal opens\n  the variables step (edit_variables) instead of a questionary prompt.\n- cli/wizard.py is deleted; the app now runs a given screen.\n\n* test(cli): stabilize TUI continue event handling and subprocess encoding on Windows",
+          "timestamp": "2026-09-22T17:06:42-07:00",
+          "tree_id": "f4cce5af6e353c9dbd471cd19ea966410d2838cb",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7bcd8600fcfe7b48eef8450b88158e0b1f4346bf"
+        },
+        "date": 1790122068227,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 204.57,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 197.42,
             "unit": "ms"
           }
         ]
