@@ -444,11 +444,14 @@ def untrusted_draft(path):
 @pytest.fixture
 def collisions(workspace):
     """An unmanaged justfile, pre-commit config, and pyproject.toml already exist."""
-    (workspace / "pyproject.toml").write_text('[project]\nname = "existing"\n')
-    (workspace / "justfile").write_text("default:\n    echo hi\n")
+    (workspace / "pyproject.toml").write_text(
+        '[project]\nname = "existing"\n', newline="\n"
+    )
+    (workspace / "justfile").write_text("default:\n    echo hi\n", newline="\n")
     (workspace / ".pre-commit-config.yaml").write_text(
         "repos:\n  - repo: local\n    hooks:\n      - id: mine\n"
-        "        name: mine\n        entry: mine\n        language: system\n"
+        "        name: mine\n        entry: mine\n        language: system\n",
+        newline="\n",
     )
     return UserConfig(ci=True, just=True, prek=True)
 

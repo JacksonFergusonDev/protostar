@@ -343,6 +343,19 @@ def test_unified_diff_marks_missing_final_newlines():
     )
 
 
+def test_unified_diff_normalizes_crlf_line_endings():
+    from protostar.cli.reviews import unified_diff
+    from protostar.preparation import PreparedEdit
+
+    diff = unified_diff(
+        PreparedEdit("example", b"line1\r\nline2\r\n", b"line1\nline2\nline3\n")
+    )
+    assert "\r" not in diff
+    assert " line1\n" in diff
+    assert " line2\n" in diff
+    assert "+line3\n" in diff
+
+
 def test_source_symlink_is_rejected(project):
     from protostar.errors import UnsupportedFilesystemNodeError
 
