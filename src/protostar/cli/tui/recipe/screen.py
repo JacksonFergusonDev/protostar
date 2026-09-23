@@ -6,16 +6,18 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import replace
 from enum import Enum, auto
+from typing import ClassVar
 
 from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Horizontal, VerticalScroll
-from textual.screen import Screen
+from textual.binding import Binding, BindingType
+from textual.containers import Horizontal
 from textual.widgets import (
     Button,
     Checkbox,
     Footer,
+    Input,
     Label,
     RadioButton,
     RadioSet,
@@ -38,6 +40,16 @@ from protostar.recipe import (
 )
 from protostar.templates import TemplateInfo, TemplateType
 
+from ..keys import (
+    ActionBar,
+    Choice,
+    ChoiceGroup,
+    Form,
+    KeyboardScreen,
+    Picker,
+    Toggle,
+    key_label,
+)
 from ..review.screen import ReviewScreen
 from .metadata import MetadataFields, metadata_defaults, metadata_keys
 from .preview import PlanPreview
@@ -75,8 +87,12 @@ class _TemplateChoice(Enum):
     RECORDED = auto()
 
 
-class RecipeScreen(Screen[InitDecision]):
+class RecipeScreen(KeyboardScreen[InitDecision]):
     """Edit the template, its variables, tools, and metadata beside a live preview."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("ctrl+s", "continue", "Continue", show=False),
+    ]
 
     def __init__(
         self, draft: InitDraft, catalog: list[TemplateInfo], config: UserConfig
@@ -153,7 +169,7 @@ class RecipeScreen(Screen[InitDecision]):
             "Choose a starting point, tools, and project details.", id="subtitle"
         )
         with Horizontal(id="body"):
-            with VerticalScroll(id="editor"):
+            with Form(id="editor"):
                 yield Label("Template", classes="section")
                 yield self._template_select()
                 yield Static("", id="template-status", markup=False)
@@ -162,18 +178,19 @@ class RecipeScreen(Screen[InitDecision]):
                 )
                 yield Label("Tools", classes="section")
                 yield Static("", id="constraints", markup=False)
-                yield Checkbox("Docker", value=self._docker(), id="docker")
-                for title, tools in _GROUPS.items():
-                    yield Label(title, classes="group")
-                    for tool in tools:
-                        yield Checkbox(
-                            self._label(tool),
-                            value=self.enabled[tool],
-                            id=f"tool-{tool}",
-                        )
+                with ChoiceGroup(id="tools"):
+                    yield Toggle("Docker", value=self._docker(), id="docker")
+                    for title, tools in _GROUPS.items():
+                        yield Label(title, classes="group")
+                        for tool in tools:
+                            yield Toggle(
+                                self._label(tool),
+                                value=self.enabled[tool],
+                                id=f"tool-{tool}",
+                            )
                 yield Label("Git hook manager", classes="group")
                 for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
-                    with RadioSet(id=f"exclusive-{index}"):
+                    with Choice(id=f"exclusive-{index}"):
                         yield RadioButton(
                             "None",
                             value=not any(self.enabled[tool] for tool in pair),
@@ -188,12 +205,12 @@ class RecipeScreen(Screen[InitDecision]):
                 yield Label("Project details", classes="section")
                 yield MetadataFields(self._metadata_defaults)
             yield PlanPreview(self.config)
-        with Horizontal(id="actions"):
-            yield Button("Cancel", id="cancel")
-            yield Button("Continue", variant="primary", id="continue")
+        with ActionBar(id="actions"):
+            yield Button(key_label("Cancel", "esc"), id="cancel")
+            yield Button(key_label("Continue", "^s"), variant="primary", id="continue")
         yield Footer()
 
-    def _template_select(self) -> Select[TemplateInfo | _TemplateChoice]:
+    def _template_select(self) -> Picker[TemplateInfo | _TemplateChoice]:
         options: list[tuple[Text, TemplateInfo | _TemplateChoice]] = [
             (Text("No template"), _TemplateChoice.NONE)
         ]
@@ -222,13 +239,19 @@ class RecipeScreen(Screen[InitDecision]):
                     (Text(f"Recorded template · {reference.locator}"), initial)
                 )
         self._selected_template = initial
-        return Select(options, value=initial, allow_blank=False, id="template")
+        return Picker(options, value=initial, allow_blank=False, id="template")
 
     async def on_mount(self) -> None:
-        """Show the template's variables, then plan the initial draft."""
-        await self.query_one(VariableFields).show(
-            self.draft.template.source if self.draft.template else None
-        )
+        """Show the template's variables, then plan the initial draft.
+
+        Focus starts on the first variable without a value, else the template.
+        """
+        fields = self.query_one(VariableFields)
+        await fields.show(self.draft.template.source if self.draft.template else None)
+        if fields.missing:
+            self.query_one(f"#var-{fields.missing[0]}", Input).focus()
+        else:
+            self.query_one("#template", Select).focus()
         self._status(Text(""))
         self._refresh_tools()
         self._changed()
@@ -422,11 +445,14 @@ class RecipeScreen(Screen[InitDecision]):
         self._refresh_tools()
         self._changed()
 
-    @on(Button.Pressed)
-    def finish(self, event: Button.Pressed) -> None:
+    @on(Button.Pressed, "#cancel")
+    def _cancel_pressed(self) -> None:
+        self.action_cancel()
+
+    @on(Button.Pressed, "#continue")
+    def action_continue(self) -> None:
         """Continue to the change review, which returns the decisions."""
-        if event.button.id == "cancel":
-            self.app.exit(None)
+        if self.query_one("#continue", Button).disabled:
             return
         variables = self.query_one(VariableFields).values()
         if variables is not None:

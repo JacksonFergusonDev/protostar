@@ -16,7 +16,6 @@ from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import Screen
 from textual.widgets import (
     Button,
     Checkbox,
@@ -47,6 +46,16 @@ from protostar.preparation import (
     prepare_review,
 )
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
+
+from ..keys import (
+    MOVE,
+    ActionBar,
+    Choice,
+    KeyboardScreen,
+    KeyRows,
+    Toggle,
+    key_label,
+)
 
 
 class Change(StrEnum):
@@ -338,10 +347,34 @@ def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
     )
 
 
-class ReviewScreen(Screen[InitDecision]):
-    """Show what init will change, and settle the collision and trust decisions."""
+_SCROLL_DIFF = Binding.Group("Scroll diff")
 
-    BINDINGS: ClassVar[list[BindingType]] = [Binding("escape", "back", "Back")]
+
+class FileTree(Tree[Entry]):
+    """The planned paths; page keys scroll the diff rather than the tree."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("up", "cursor_up", "Up", group=MOVE),
+        Binding("down", "cursor_down", "Down", group=MOVE),
+        Binding("pageup", "screen.scroll_diff(-1)", "Up", group=_SCROLL_DIFF),
+        Binding("pagedown", "screen.scroll_diff(1)", "Down", group=_SCROLL_DIFF),
+    ]
+
+
+class ReviewScreen(KeyboardScreen[InitDecision]):
+    """Show what init will change, and settle the collision and trust decisions.
+
+    No field takes text, so every decision has a letter.
+    """
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("escape", "back", "Back", show=False),
+        Binding("q", "cancel", "Cancel", show=False),
+        Binding("a", "apply", "Apply", show=False),
+        Binding("m", "strategy('merge')", "Merge", show=False),
+        Binding("o", "strategy('overwrite')", "Overwrite", show=False),
+        Binding("t", "trust", "Trust", show=False),
+    ]
 
     def __init__(
         self, draft: InitDraft, config: UserConfig, *, can_go_back: bool = False
@@ -363,7 +396,7 @@ class ReviewScreen(Screen[InitDecision]):
         with Horizontal(id="body"):
             with Vertical(id="review"):
                 yield Label("Files", classes="section")
-                yield Tree(Text("."), id="files")
+                yield FileTree(Text("."), id="files")
                 yield Label("Commands and packages", classes="section")
                 with VerticalScroll(id="steps"):
                     yield Static("", id="steps-list")
@@ -373,28 +406,37 @@ class ReviewScreen(Screen[InitDecision]):
             with Vertical(id="collision-choice"):
                 yield Label("Existing files", classes="section")
                 yield Static("", id="collision-note")
-                with RadioSet(id="collision"):
+                with Choice(id="collision"):
                     yield RadioButton(
-                        "Merge · keep your values and add what's missing",
+                        key_label(
+                            "Merge · keep your values and add what's missing", "m"
+                        ),
                         value=self.strategy is CollisionStrategy.MERGE,
                         id="strategy-merge",
                     )
                     yield RadioButton(
-                        "Overwrite · replace them with Protostar's version",
+                        key_label(
+                            "Overwrite · replace them with Protostar's version", "o"
+                        ),
                         value=self.strategy is CollisionStrategy.OVERWRITE,
                         id="strategy-overwrite",
                     )
             with Vertical(id="trust-gate"):
                 yield Label("Untrusted template", classes="section")
                 yield Static("", id="trust-note")
-                yield Checkbox(
-                    "I trust this template to run these commands", id="trust"
+                yield Toggle(
+                    key_label("I trust this template to run these commands", "t"),
+                    id="trust",
                 )
-        with Horizontal(id="actions"):
+        with ActionBar(id="actions"):
             if self.can_go_back:
-                yield Button("Back", id="back")
-            yield Button("Cancel", id="cancel")
-            yield Button("Apply", variant="primary", id="apply", disabled=True)
+                yield Button(key_label("Back", "esc"), id="back")
+            yield Button(
+                key_label("Cancel", "q" if self.can_go_back else "esc"), id="cancel"
+            )
+            yield Button(
+                key_label("Apply", "a"), variant="primary", id="apply", disabled=True
+            )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -528,22 +570,72 @@ class ReviewScreen(Screen[InitDecision]):
         """Allow applying only once the listed commands are confirmed."""
         self._refresh_apply()
 
+    def key_rows(self) -> KeyRows:
+        """The review's keys; escape goes back only when there is an editor."""
+        leave = (
+            (("esc", "Back to the editor"), ("q", "Cancel, after asking"))
+            if self.can_go_back
+            else (("esc", "Cancel, after asking"),)
+        )
+        return (
+            ("↑ ↓", "Move between files"),
+            ("pgup pgdn", "Scroll the diff"),
+            ("space", "Fold or unfold a folder"),
+            ("tab", "Next control"),
+            ("shift+tab", "Previous control"),
+            ("m / o", "Merge into or overwrite existing files, when asked"),
+            ("t", "Trust the template's commands, when asked"),
+            ("a", "Apply"),
+            *leave,
+            ("^c", "Quit immediately"),
+        )
+
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        """Leave escape to the app's cancel when there is no editor to go back to."""
-        return self.can_go_back if action == "back" else True
+        """Disable the keys whose control is hidden.
+
+        Escape falls through to the app's cancel when there is no editor to go
+        back to.
+        """
+        if action == "back":
+            return self.can_go_back
+        if action == "strategy":
+            return self.query_one("#collision-choice").display
+        if action == "trust":
+            return self.query_one("#trust-gate").display
+        return True
 
     def action_back(self) -> None:
         """Return to the recipe editor with its choices intact."""
         self.app.pop_screen()
 
-    @on(Button.Pressed)
-    def finish(self, event: Button.Pressed) -> None:
+    def action_strategy(self, strategy: str) -> None:
+        """Choose how existing files are handled."""
+        self.query_one(f"#strategy-{strategy}", RadioButton).value = True
+
+    def action_trust(self) -> None:
+        """Toggle the confirmation that the listed commands may run."""
+        self.query_one("#trust", Checkbox).toggle()
+
+    def action_scroll_diff(self, direction: int) -> None:
+        """Page the diff without leaving the file tree."""
+        pane = self.query_one("#diff-pane", VerticalScroll)
+        if direction > 0:
+            pane.scroll_page_down(animate=False)
+        else:
+            pane.scroll_page_up(animate=False)
+
+    @on(Button.Pressed, "#back")
+    def _back_pressed(self) -> None:
+        self.action_back()
+
+    @on(Button.Pressed, "#cancel")
+    def _cancel_pressed(self) -> None:
+        self.action_cancel()
+
+    @on(Button.Pressed, "#apply")
+    def action_apply(self) -> None:
         """Exit with the decision; execution starts after the app has exited."""
-        if event.button.id == "back":
-            self.action_back()
-        elif event.button.id == "cancel":
-            self.app.exit(None)
-        elif event.button.id == "apply" and self.review is not None:
+        if self.review is not None and not self.query_one("#apply", Button).disabled:
             # The choice applies only where the review asked for one.
             strategy = (
                 self.strategy

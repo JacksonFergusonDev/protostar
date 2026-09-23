@@ -21,6 +21,8 @@ from protostar.metadata import (
 )
 from protostar.modules import BootstrapModule
 
+from ..keys import Checklist, Field, Picker, move
+
 MetadataValue = str | tuple[str, ...]
 
 # Asked for every project, whatever its tools.
@@ -84,7 +86,7 @@ class MetadataFields(Vertical):
         choices = field.choices or []
         if field.prompt_type is PromptType.SELECT:
             value = default if default in choices else field.default
-            return Select(
+            return Picker(
                 [(choice, choice) for choice in choices],
                 value=value,
                 allow_blank=False,
@@ -92,11 +94,11 @@ class MetadataFields(Vertical):
             )
         if field.prompt_type is PromptType.CHECKBOX:
             selected = set(default or ())
-            return SelectionList[str](
+            return Checklist[str](
                 *(Selection(choice, choice, choice in selected) for choice in choices),
                 id=f"meta-{key}",
             )
-        return Input("" if default is None else str(default), id=f"meta-{key}")
+        return Field("" if default is None else str(default), id=f"meta-{key}")
 
     def show(self, keys: Set[MetadataKey]) -> None:
         """Show only the fields for ``keys``."""
@@ -127,5 +129,5 @@ class MetadataFields(Vertical):
     def _changed(self, event: Message) -> None:
         event.stop()
         if isinstance(event, Input.Submitted):
-            self.screen.focus_next()
+            move(self.screen, 1)
         self.post_message(self.Changed())

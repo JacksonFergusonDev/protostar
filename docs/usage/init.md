@@ -226,11 +226,23 @@ Running `just` in your project root provides standard developer workflows immedi
 
 ## Recipe Editor & Metadata
 
-When running `protostar init` without a `--template` flag in a terminal, Protostar opens the recipe editor. Pick a template, toggle tools, and fill in project details while a live preview shows the planned file tree. Press `Esc` to cancel without changing anything.
+When running `protostar init` without a `--template` flag in a terminal, Protostar opens the recipe editor. Pick a template, toggle tools, and fill in project details while a live preview shows the planned file tree.
 
 ![Protostar recipe editor](../assets/terminals/tui_recipe_editor.svg)
 
-__Continue__ opens the change review. It lists every planned path as new, modified, conflict, existing, or after setup, shows a diff for each file Protostar writes before running commands, and then the commands and packages that follow. Nothing runs until you choose __Apply__.
+The editor is built for the keyboard; the mouse works too. Moving never changes a value; only `Space` and `Enter` do. The footer shows the keys for whatever has focus, each button shows its own key, and `F1` lists them all.
+
+| Key | Action |
+| --- | --- |
+| `↑` `↓` | Move between rows. Lists move within, then continue to the next row. |
+| `Space` | Toggle a checkbox, choose an option, or open a menu. |
+| `Enter` | Same as `Space`; in a text field, accept it and move on. |
+| `Tab` / `Shift+Tab` | Next or previous control; the tool checkboxes count as one stop. |
+| `Ctrl+S` | Continue to the change review. |
+| `Esc` | Cancel, after asking. |
+| `Ctrl+C` | Quit immediately. |
+
+__Continue__ opens the change review. It lists every planned path as new, modified, conflict, existing, or after setup, shows a diff for each file Protostar writes before running commands, and then the commands and packages that follow. Nothing runs until you choose __Apply__ (`A`). `↑` `↓` move between files, `PgUp` `PgDn` scroll the diff, and `Esc` goes back to the editor.
 
 ![Protostar change review](../assets/terminals/tui_change_review.svg)
 
@@ -255,8 +267,8 @@ keeps the checklist lines; `--json` suppresses the checklist entirely.
 
 When Protostar detects existing configuration files (like `pyproject.toml`), the change review marks them as conflicts and asks how to handle them under __Existing files__:
 
-- __Merge__ safely injects missing configs and preserves existing user data.
-- __Overwrite__ forces injection and updates existing keys to match Protostar.
+- __Merge__ (`M`) safely injects missing configs and preserves existing user data.
+- __Overwrite__ (`O`) forces injection and updates existing keys to match Protostar.
 
 Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit without modifying the environment.
 

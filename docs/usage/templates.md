@@ -244,7 +244,7 @@ To address this, Protostar prompts for confirmation before running external comm
 
 1. __Built-in Templates:__ Trusted implicitly (shipped within the validated Protostar package).
 1. __Explicitly Trusted Aliases:__ Trusted when configured with `trusted = true` under `[templates.<alias>]` in your global `config.toml`.
-1. __Untrusted External Templates (`--from` or untrusted aliases):__ If an untrusted template attempts to execute `system_tasks` or `post_install_tasks`, the Orchestrator halts before touching disk or shell. The change review lists the template's exact commands under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them.
+1. __Untrusted External Templates (`--from` or untrusted aliases):__ If an untrusted template attempts to execute `system_tasks` or `post_install_tasks`, the Orchestrator halts before touching disk or shell. The change review lists the template's exact commands under __Untrusted template__, and __Apply__ stays disabled until you tick the checkbox confirming them (`T`).
 
 In non-interactive environments (e.g., CI/CD or `--json` mode), untrusted templates with executable tasks abort immediately with `SecurityViolationError` to prevent hanging or unauthorized execution. To run them headlessly, configure them with `trusted = true` in your global configuration aliases.
 

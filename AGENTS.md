@@ -90,6 +90,14 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 - **`src/protostar/_secret_rules.py` is generated.** `scripts/sync_secret_rules.py` builds it from the gitleaks tag pinned in `_fallbacks.py`. Never hand-edit it; run `just sync-secret-rules` whenever that tag changes, and `--dump` to read the rules. Ruff is excluded from it because `--check` compares its text.
 - **The rules are stored compressed, never as text.** Their patterns and allowlists quote token prefixes and publicly known keys that every secret scanner (gitleaks, GitHub, scanners of installed wheels) would report. Don't store them readably, and don't add per-scanner ignore files instead.
 
+### 9. Keyboard-First TUI
+
+- **The keyboard is the primary path through every screen; the mouse is secondary.** Build screens on `KeyboardScreen` and the widgets in `src/protostar/cli/tui/keys.py` (`Form`, `ChoiceGroup`, `ActionBar`, `Toggle`, `Field`, `Picker`, `Choice`, `Checklist`), not on bare Textual widgets.
+- **Moving never changes a value.** `↑`/`↓` move between rows, and a list hands off to the next row at its edges instead of wrapping. Only `Space` and `Enter` change values. `Tab` moves between controls, and a `ChoiceGroup` counts as one.
+- **Every action has a key, shown on its own control** through `key_label`. The footer is the legend for moving. List each new key in the screen's `KEYS` or `key_rows()` so `F1` shows it.
+- **`Esc` asks before leaving (`LeaveScreen`); `Ctrl+C` quits at once and never asks.**
+- **Drive TUI tests with `pilot.press`.** Use `pilot.click` only in tests that are about the mouse.
+
 ## Pre-Commit & Pre-Push Hooks (Avoid Redundant Checks)
 
 The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated gating:

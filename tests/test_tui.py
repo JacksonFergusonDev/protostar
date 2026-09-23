@@ -18,6 +18,7 @@ from textual.widgets import (
     Checkbox,
     Input,
     RadioButton,
+    RadioSet,
     Select,
     SelectionList,
     Static,
@@ -27,6 +28,7 @@ from textual.worker import WorkerCancelled
 
 from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
+from protostar.cli.tui.keys import KeysScreen, LeaveScreen
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.variables import VariablesScreen
 from protostar.cli.tui.review.screen import ReviewScreen
@@ -84,13 +86,13 @@ async def settle(pilot):
 
 
 async def apply(pilot, *, trust=False):
-    """Continue from the editor, then apply the change review."""
-    await pilot.click("#continue")
+    """Continue from the editor, then apply the change review, by key."""
+    await pilot.press("ctrl+s")
     await settle(pilot)
     assert isinstance(pilot.app.screen, ReviewScreen)
     if trust:
-        await pilot.click("#trust")
-    await pilot.click("#apply")
+        await pilot.press("t")
+    await pilot.press("a")
 
 
 def plain(app, selector):
@@ -161,12 +163,170 @@ async def test_tools_constraints_and_provenance():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("key", ["escape", "ctrl+c"])
-async def test_cancel(key):
+async def test_escape_asks_before_leaving():
     app = make_app()
     async with app.run_test() as pilot:
-        await pilot.press(key)
+        await settle(pilot)
+        await pilot.press("escape")
+        assert isinstance(app.screen, LeaveScreen)
+        assert labels(app) == {"stay": "Stay  esc", "leave": "Leave  enter"}
+        await pilot.press("escape")
+        assert isinstance(app.screen, RecipeScreen)
+        assert app.is_running
+        # Escape from a text field asks too, rather than losing the recipe.
+        app.screen.query_one("#meta-description", Input).focus()
+        await pilot.press("escape")
+        assert isinstance(app.screen, LeaveScreen)
+        await pilot.press("enter")
+        assert not app.is_running
     assert app.return_value is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("confirming", [False, True])
+async def test_ctrl_c_quits_without_asking(confirming):
+    app = make_app()
+    async with app.run_test() as pilot:
+        await settle(pilot)
+        if confirming:
+            await pilot.press("escape")
+        await pilot.press("ctrl+c")
+        assert not app.is_running
+    assert app.return_value is None
+
+
+def labels(app):
+    """Each button's label, by id."""
+    return {button.id: str(button.label) for button in app.screen.query(Button)}
+
+
+def legend(app):
+    """The footer's entries: a group's description, or a lone binding's."""
+    return {
+        (active.binding.group or active.binding).description
+        for active in app.screen.active_bindings.values()
+        if active.binding.show
+    }
+
+
+@pytest.mark.asyncio
+async def test_arrows_walk_every_row_without_changing_a_value():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        template = screen.query_one("#template", Select)
+        assert app.focused is template
+        editor = screen.query_one("#editor")
+        rows = [w.id for w in screen.focus_chain if editor in w.ancestors]
+        before = screen._current_draft()
+        visited = [app.focused.id]
+        for _ in range(len(rows) + 5):
+            await pilot.press("down")
+            if app.focused.id != visited[-1]:
+                visited.append(app.focused.id)
+        # Past the last row, the cursor lands on the primary button and stays.
+        assert visited == [*rows, "continue"]
+        for _ in range(len(rows) + 5):
+            await pilot.press("up")
+        assert app.focused is template
+        assert not template.expanded
+        await settle(pilot)
+        assert screen._current_draft() == before
+
+
+@pytest.mark.asyncio
+async def test_menus_open_on_space_and_close_on_escape():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        template = app.screen.query_one("#template", Select)
+        assert legend(app) == {"Open", "Move", "Next", "Keys"}
+        await pilot.press("space")
+        assert template.expanded
+        await pilot.press("escape")
+        assert not template.expanded
+        assert isinstance(app.screen, RecipeScreen)
+
+
+@pytest.mark.asyncio
+async def test_tab_treats_the_tools_as_one_stop():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        await pilot.press("tab")
+        assert app.focused.id == "docker"
+        assert legend(app) == {"Toggle", "Move", "Next", "Keys"}
+        await pilot.press("down", "down")
+        assert app.focused.id == "tool-mypy"
+        await pilot.press("tab")
+        assert app.focused.id == "exclusive-0"
+        await pilot.press("shift+tab")
+        assert app.focused.id == "docker"
+        await pilot.press("shift+tab")
+        assert app.focused.id == "template"
+
+
+@pytest.mark.asyncio
+async def test_arrows_move_a_choice_highlight_and_space_chooses():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        choice = screen.query_one("#exclusive-0", RadioSet)
+
+        def highlighted():
+            return [b.id for b in choice.query(RadioButton) if b.has_class("-selected")]
+
+        screen.query_one("#tool-agents").focus()
+        await pilot.press("down")
+        assert app.focused is choice
+        assert highlighted() == ["none-0"]
+        assert legend(app) == {"Move", "Choose", "Next", "Keys"}
+        await pilot.press("down", "down")
+        assert highlighted() == ["tool-prek"]
+        assert choice.pressed_button.id == "none-0"
+        await pilot.press("space")
+        assert choice.pressed_button.id == "tool-prek"
+        assert screen.enabled[Tool.PREK]
+        # The ends hand off to the neighbouring rows instead of wrapping.
+        await pilot.press("down")
+        assert app.focused.id == "meta-description"
+        await pilot.press("up")
+        assert app.focused is choice
+        assert highlighted() == ["tool-prek"]
+
+
+@pytest.mark.asyncio
+async def test_a_whole_init_from_the_keyboard():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        await pilot.press("tab", "space")  # Docker
+        await pilot.press("tab", "down", "down", "space")  # prek
+        await pilot.press("tab")
+        assert legend(app) == {"Move", "Accept", "Next", "Keys"}
+        await pilot.press(*"Orbit", "enter")
+        assert app.focused.id == "meta-license"
+        await settle(pilot)
+        await apply(pilot)
+    draft = app.return_value.draft
+    assert draft.docker
+    assert dict(draft.tool_choices)[Tool.PREK]
+    assert dict(draft.metadata)["description"] == "Orbit"
+
+
+@pytest.mark.asyncio
+async def test_buttons_show_their_keys_and_f1_lists_them_all():
+    app = make_app()
+    async with app.run_test() as pilot:
+        await settle(pilot)
+        assert labels(app) == {"cancel": "Cancel  esc", "continue": "Continue  ^s"}
+        await pilot.press("f1")
+        assert isinstance(app.screen, KeysScreen)
+        assert ("^s", "Continue") in app.screen.rows
+        await pilot.press("escape")
+        assert isinstance(app.screen, RecipeScreen)
 
 
 @pytest.mark.asyncio
@@ -215,6 +375,8 @@ async def test_alias_and_load_error(tmp_path):
         await settle(pilot)
         assert app.screen.query_one("#continue", Button).disabled
         assert "not found" in plain(app, "#template-status")
+        await pilot.press("ctrl+s")
+        assert isinstance(app.screen, RecipeScreen)
         app.screen.query_one("#template", Select).value = next(
             item for item in app.decision_screen.catalog if item.alias == "team"
         )
@@ -468,6 +630,22 @@ async def test_variables_step_focuses_the_missing_value(tmp_path):
     assert dict(result.variables) == {"REGION": "eu", "TIER": "gold"}
 
 
+@pytest.mark.asyncio
+async def test_enter_through_the_last_field_reaches_continue(tmp_path):
+    draft = template_draft(
+        tmp_path / "t.toml", '[files]\n"custom.txt" = "<% REGION %> <% TIER %>"\n'
+    )
+    app = DecisionApp(VariablesScreen(draft, UserConfig()))
+    async with app.run_test(size=(110, 30)) as pilot:
+        await settle(pilot)
+        await pilot.press(*"eu", "enter", *"gold", "enter")
+        assert app.focused is app.screen.query_one("#continue", Button)
+        await pilot.press("enter")
+    result = app.return_value
+    assert result is not None
+    assert dict(result.variables) == {"REGION": "eu", "TIER": "gold"}
+
+
 def test_editor_snapshot(snap_compare, monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
     app = make_app(config=UserConfig(author_name="Ada Lovelace"))
@@ -602,9 +780,9 @@ async def test_the_chosen_strategy_reaches_execution(collisions, mocker, strateg
     app = make_review(config=collisions)
     async with app.run_test(size=(120, 45)) as pilot:
         await settle(pilot)
-        await pilot.click(f"#strategy-{strategy.value}")
+        await pilot.press(strategy.value[0])
         await settle(pilot)
-        await pilot.click("#apply")
+        await pilot.press("a")
     decision = app.return_value
     assert decision.draft.collision_strategy is strategy
     executor = execute_decision(decision, collisions, mocker)
@@ -690,8 +868,62 @@ async def test_escape_cancels_a_review_with_no_editor_behind_it(collisions):
     app = make_review(config=collisions)
     async with app.run_test() as pilot:
         await settle(pilot)
+        assert labels(app) == {"cancel": "Cancel  esc", "apply": "Apply  a"}
         await pilot.press("escape")
+        assert isinstance(app.screen, LeaveScreen)
+        await pilot.press("enter")
+        assert not app.is_running
     assert app.return_value is None
+
+
+@pytest.mark.asyncio
+async def test_review_keys_scroll_the_diff_from_the_file_tree(collisions):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 30)) as pilot:
+        await settle(pilot)
+        tree = app.screen.query_one("#files", Tree)
+        assert app.focused is tree
+        assert legend(app) == {"Move", "Scroll diff", "Next", "Keys"}
+        await highlight(pilot, ".pre-commit-config.yaml")
+        pane = app.screen.query_one("#diff-pane")
+        assert pane.max_scroll_y > 0
+        await pilot.press("pagedown")
+        assert pane.scroll_y > 0
+        await pilot.press("pageup")
+        assert pane.scroll_y == 0
+        assert app.focused is tree
+        # A key whose control is hidden does nothing.
+        await pilot.press("t")
+        assert not app.screen.query_one("#trust", Checkbox).value
+
+
+@pytest.mark.asyncio
+async def test_review_keys_confirm_trust_and_apply(tmp_path):
+    app = make_review(untrusted_draft(tmp_path / "t.toml"))
+    async with app.run_test(size=(120, 50)) as pilot:
+        await settle(pilot)
+        await pilot.press("a")
+        assert app.is_running
+        await pilot.press("t", "a")
+    assert app.return_value.confirmed_commands[-1] == REMOTE_TASK
+
+
+@pytest.mark.asyncio
+async def test_q_asks_before_leaving_a_review_with_an_editor_behind_it():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert labels(app) == {
+            "back": "Back  esc",
+            "cancel": "Cancel  q",
+            "apply": "Apply  a",
+        }
+        await pilot.press("q")
+        assert isinstance(app.screen, LeaveScreen)
+        await pilot.press("escape")
+        assert isinstance(app.screen, ReviewScreen)
 
 
 def test_review_snapshot(snap_compare, monkeypatch, mocker, collisions):
