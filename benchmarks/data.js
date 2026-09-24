@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790273319910,
+  "lastUpdate": 1790273411099,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16529,6 +16529,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 657.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c55a658abe2814cedc533a5b13e2e378ee11332",
+          "message": "feat(init): analyze existing projects to pre-fill the recipe (#326)\n\nWhen init runs where no recipe exists, read what the project already has\nbefore planning. Facts (Python version and minimum, authors, license,\nGitHub account, operating systems, copyright year) fill recipe values the\ndraft leaves unset, ahead of configuration defaults and placeholders. Tools\nthe project uses start switched on in the recipe editor, marked with what\nshowed them; they are only ever added, and never selected headlessly.\n\nEach tooling module declares the signals that show its tool is in use, so\nanalysis knows no tool by name. The dry-run JSON reports the analysis for\nagents.",
+          "timestamp": "2026-09-24T11:07:41-07:00",
+          "tree_id": "3f4559915943b4ebdd144ff67e961965e3c9a363",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5c55a658abe2814cedc533a5b13e2e378ee11332"
+        },
+        "date": 1790273410292,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 224.42,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 874.33,
             "unit": "ms"
           }
         ]
