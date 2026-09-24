@@ -217,13 +217,19 @@ The check exits `1` when the template has errors, and also on warnings with `--s
 
 The check covers a default `init`. Tool-bound content that only applies when a user turns on a tool the template leaves off is not planned, so still try the combinations you expect your users to choose.
 
+Each finding names the file and line it concerns, such as `protostar.toml:12`, including a key inside a `[dev.pyproject]` payload. A finding about something the template doesn't contain, such as a missing `name`, names only the file.
+
+### Checking in GitHub Actions
+
 To check a template in its own repository's CI, add a step such as:
 
 ```yaml
 - uses: actions/checkout@v7
 - uses: astral-sh/setup-uv@v10
-- run: uvx protostar check-template --strict
+- run: uvx protostar check-template --strict --output-format github
 ```
+
+With `--output-format github`, each finding becomes a workflow annotation: it shows on the pull request's changed files at its line, and in the run's summary. Paths are relative to the repository root (`GITHUB_WORKSPACE`), so the step works from any `working-directory`. A template that couldn't be retrieved gets one annotation saying so, and findings in a remote template annotate the run instead of a file. The step still fails the same way: exit `1` for a failed check, or the retrieval error's own exit code. `--output-format github` can't be combined with `--json`.
 
 ### Local Testing
 

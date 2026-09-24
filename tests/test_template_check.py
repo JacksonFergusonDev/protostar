@@ -1,6 +1,7 @@
 """Checks a template author runs before publishing a template."""
 
 import subprocess
+import sys
 from email.message import Message
 from pathlib import Path
 from typing import Any
@@ -178,6 +179,69 @@ def test_payload_and_package_rules_are_warnings(tmp_path):
     assert "--no-pytest" in (check.warnings[2].hint or "")
 
 
+def test_findings_point_at_their_lines(tmp_path):
+    target = write_template(
+        tmp_path / "t",
+        "dependancies = []\n"  # 3
+        "\n"
+        "[dev]\n"
+        "dev_dependencies = [\n"  # 6
+        '  "rich",\n'
+        '  "pytest-cov",\n'  # 8
+        "]\n"
+        "\n"
+        "[dev.pyproject.lint]\n"  # 11
+        'requires = "mypy"\n'
+        "content = '''\n"
+        "[tool.ruff.lint]\n"  # 14
+        'select = ["E"]\n'  # 15
+        "'''\n"
+        "\n"
+        "[files]\n"
+        '"a.txt" = "<% OWNER %>"\n',  # 19
+    )
+    lines = {(f.rule, f.key): f.line for f in check_template(target).findings}
+    assert lines == {
+        (CheckRule.UNKNOWN_KEY, "dependancies"): 3,
+        (CheckRule.UNBOUND_TOOL_PACKAGE, "dev.dev_dependencies"): 8,
+        (CheckRule.UNBOUND_TOOL_CONFIG, "dev.pyproject.lint"): 14,
+        (CheckRule.UNDESCRIBED_VARIABLE, "variables.OWNER"): 19,
+    }
+
+
+def test_a_toml_syntax_error_points_at_its_line(tmp_path):
+    (finding,) = check_template(
+        write_template(tmp_path / "t", "a = [\n\nb =\n")
+    ).findings
+    assert finding.rule is CheckRule.INVALID_TEMPLATE
+    assert finding.line == 5
+
+
+def test_a_variable_first_used_under_template_points_there(tmp_path):
+    target = write_template(
+        tmp_path / "t",
+        '[variables.TOKEN]\ndescription = "t"\n',
+        files={"src/app.py": b"import os\n\nKEY = '<% TOKEN %>'\n"},
+    )
+    (finding,) = check_template(target).findings
+    assert finding.rule is CheckRule.CREDENTIAL_VARIABLE
+    assert (finding.file, finding.line) == ("protostar.toml", 3)
+    target = write_template(
+        tmp_path / "u", "", files={"src/app.py": b"\nKEY = '<% OWNER %>'\n"}
+    )
+    (finding,) = check_template(target).findings
+    assert (finding.file, finding.line) == ("template/src/app.py", 2)
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Windows does not support < or > in filenames"
+)
+def test_a_variable_used_only_in_a_path_names_the_file(tmp_path):
+    target = write_template(tmp_path / "t", "", files={"<% OWNER %>.txt": b"x"})
+    (finding,) = check_template(target).findings
+    assert (finding.file, finding.line) == ("template/<% OWNER %>.txt", None)
+
+
 def test_the_json_form_is_stable(tmp_path):
     root = tmp_path / "t"
     root.mkdir()
@@ -192,6 +256,7 @@ def test_the_json_form_is_stable(tmp_path):
                 "severity": "warning",
                 "message": "The template declares no name.",
                 "file": "protostar.toml",
+                "line": None,
                 "key": "name",
                 "hint": 'Set name = "..." at the top of the template; '
                 "protostar init --list-templates and the wizard show it.",
@@ -219,14 +284,20 @@ class TestBaselineViolationDetector:
         violations = find_baseline_violations(
             "[tool.mypy]\npretty = true\n", SYNTHETIC_BASELINES
         )
-        assert violations == ["tool.mypy.pretty repeats the mypy baseline verbatim."]
+        assert violations == [
+            (
+                ("tool", "mypy", "pretty"),
+                "tool.mypy.pretty repeats the mypy baseline verbatim.",
+            )
+        ]
 
     def test_flags_a_redefined_baseline_list(self) -> None:
         violations = find_baseline_violations(
             '[tool.ruff.lint]\nselect = ["A", "B", "D"]\n', SYNTHETIC_BASELINES
         )
-        assert len(violations) == 1
-        assert "instead of adding to it" in violations[0]
+        ((path, message),) = violations
+        assert path == ("tool", "ruff", "lint", "select")
+        assert "instead of adding to it" in message
 
     def test_allows_an_additive_key(self) -> None:
         assert not find_baseline_violations(
@@ -247,8 +318,8 @@ class TestBaselineViolationDetector:
         violations = find_baseline_violations(
             '[tool.ruff.lint]\nignore = ["D100"]\n', SYNTHETIC_BASELINES
         )
-        assert len(violations) == 1
-        assert "drops entries" in violations[0]
+        ((_, message),) = violations
+        assert "drops entries" in message
 
     def test_a_tool_bound_payload_is_compared_only_with_its_own_baseline(self) -> None:
         # `pretty = true` repeats the mypy baseline, but a ruff-bound payload is
@@ -269,14 +340,15 @@ class TestUnboundToolConfigDetector:
     """Proves the requires ratchet bites, so it cannot pass vacuously."""
 
     def test_flags_tool_config_with_no_requires(self) -> None:
-        ((identity, message),) = find_unbound_tool_config(
+        ((identity, path, message),) = find_unbound_tool_config(
             {"typing": ("[tool.mypy]\nstrict = true\n", None)}, SYNTHETIC_OWNERS
         )
         assert identity == "typing"
+        assert path == ("tool", "mypy")
         assert 'expected "mypy"' in message
 
     def test_flags_tool_config_bound_to_the_wrong_tool(self) -> None:
-        ((_, message),) = find_unbound_tool_config(
+        ((_, _, message),) = find_unbound_tool_config(
             {"cov": ("[tool.coverage.run]\nbranch = true\n", "ruff")}, SYNTHETIC_OWNERS
         )
         assert 'expected "pytest"' in message
@@ -302,7 +374,10 @@ class TestUnboundToolPackageDetector:
     """Proves the tool-package ratchet bites, so it cannot pass vacuously."""
 
     def test_flags_a_pytest_plugin_installed_unconditionally(self) -> None:
-        ((owner, message),) = find_unbound_tool_packages(["pytest-cov", "rich"])
+        ((package, owner, message),) = find_unbound_tool_packages(
+            ["pytest-cov", "rich"]
+        )
+        assert package == "pytest-cov"
         assert owner == "pytest"
         assert "pytest-cov" in message
 

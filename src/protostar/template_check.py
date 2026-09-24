@@ -21,12 +21,13 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import cache
-from pathlib import PurePosixPath
+from pathlib import PurePath, PurePosixPath
 from typing import Any
 
 from .config import TEMPLATE_STRUCTURAL_KEYS, TemplateBlueprint, TemplateSource
 from .errors import ProtostarError, TemplateEncodingError, TemplateResolutionError
 from .interpolation import VARIABLE_PATTERN
+from .toml_lines import TomlLineIndex
 
 __all__ = [
     "CheckRule",
@@ -78,6 +79,7 @@ class Finding:
         file: The template file it is in, as a POSIX path within the template.
         key: The dotted TOML key it concerns, when there is one.
         hint: How to fix it.
+        line: The 1-based line in ``file`` it points at, when it has one.
     """
 
     rule: CheckRule
@@ -85,6 +87,7 @@ class Finding:
     file: str
     key: str | None = None
     hint: str | None = None
+    line: int | None = None
 
     @property
     def severity(self) -> Severity:
@@ -98,6 +101,7 @@ class Finding:
             "severity": self.severity.value,
             "message": self.message,
             "file": self.file,
+            "line": self.line,
             "key": self.key,
             "hint": self.hint,
         }
@@ -193,13 +197,21 @@ def check_template(target: str) -> TemplateCheck:
             (Finding(CheckRule.INVALID_TEMPLATE, e.detail, e.path, hint=e.hint),),
         )
 
+    text = source.template_bytes.decode("utf-8")
+    # Indexed as parsed: a placeholder may stand where TOML needs a key, and
+    # substituting one never changes a line.
+    where = _Where(
+        manifest_file,
+        text,
+        TomlLineIndex(VARIABLE_PATTERN.sub(_PLACEHOLDER_VALUE, text)),
+    )
     errors: list[Finding] = []
     warnings: list[Finding] = []
-    raw = _raw_data(source)
+    raw = _raw_data(text)
     if raw is not None:
-        warnings.extend(_unknown_keys(raw, manifest_file))
-        warnings.extend(_missing_metadata(raw, manifest_file))
-    warnings.extend(_variable_findings(source, manifest_file))
+        warnings.extend(_unknown_keys(raw, where))
+        warnings.extend(_missing_metadata(raw, where))
+    warnings.extend(_variable_findings(source, where))
 
     variables = dict.fromkeys(source.variables, _PLACEHOLDER_VALUE)
     try:
@@ -211,8 +223,25 @@ def check_template(target: str) -> TemplateCheck:
             _plan_default_init(source, variables)
         except ProtostarError as e:
             errors.append(_error_finding(e, manifest_file))
-        warnings.extend(_payload_findings(blueprint, manifest_file))
+        warnings.extend(_payload_findings(blueprint, where))
     return TemplateCheck(target, (*errors, *warnings))
+
+
+@dataclass(frozen=True)
+class _Where:
+    """The template's TOML file, for locating findings in it."""
+
+    file: str
+    text: str
+    index: TomlLineIndex
+
+    def payload_line(self, identity: str, inner: tuple[str, ...]) -> int | None:
+        """Locates a key inside a [dev.pyproject] payload, in either form."""
+        payload = ("dev", "pyproject", identity)
+        for path in ((*payload, "content"), payload):
+            if (line := self.index.line_in_string(path, inner)) is not None:
+                return line
+        return None
 
 
 def _manifest_file(target: str) -> str:
@@ -222,9 +251,19 @@ def _manifest_file(target: str) -> str:
 
 
 def _error_finding(error: ProtostarError, file: str) -> Finding:
-    """Reports an error the engine raised as a finding."""
+    """Reports an error the engine raised as a finding.
+
+    A TOML syntax error names its line; other errors concern the template as
+    a whole, or a target no line of it spells out.
+    """
     message = error.detail if isinstance(error, TemplateResolutionError) else str(error)
-    return Finding(CheckRule.INVALID_TEMPLATE, message, file, hint=error.hint)
+    line = None
+    if isinstance(error.__cause__, tomllib.TOMLDecodeError):
+        found = re.search(r"\bline (\d+)", str(error.__cause__))
+        line = int(found.group(1)) if found else None
+    return Finding(
+        CheckRule.INVALID_TEMPLATE, message, file, hint=error.hint, line=line
+    )
 
 
 def _plan_default_init(source: TemplateSource, variables: dict[str, str]) -> None:
@@ -255,22 +294,19 @@ def _plan_default_init(source: TemplateSource, variables: dict[str, str]) -> Non
         )
 
 
-def _raw_data(source: TemplateSource) -> dict[str, Any] | None:
+def _raw_data(text: str) -> dict[str, Any] | None:
     """Parses the unrendered template, or None when it is not valid TOML.
 
     Placeholders are replaced first, since one may stand where TOML needs a
     key. Rendering reports a syntax error itself.
     """
-    text = VARIABLE_PATTERN.sub(
-        _PLACEHOLDER_VALUE, source.template_bytes.decode("utf-8")
-    )
     try:
-        return tomllib.loads(text)
+        return tomllib.loads(VARIABLE_PATTERN.sub(_PLACEHOLDER_VALUE, text))
     except tomllib.TOMLDecodeError:
         return None
 
 
-def _unknown_keys(raw: dict[str, Any], file: str) -> Iterator[Finding]:
+def _unknown_keys(raw: dict[str, Any], where: _Where) -> Iterator[Finding]:
     """Reports root keys Protostar silently ignores, such as a misspelled field.
 
     An unknown boolean is a tooling flag, which planning rejects outright.
@@ -286,37 +322,43 @@ def _unknown_keys(raw: dict[str, Any], file: str) -> Iterator[Finding]:
                 CheckRule.UNKNOWN_KEY,
                 f"'{key}' is a tooling flag, but its value is not true or "
                 "false, so Protostar ignores it.",
-                file,
+                where.file,
                 key,
                 hint=f"Set {key} = true or {key} = false.",
+                line=where.index.line_of((key,)),
             )
         else:
             yield Finding(
                 CheckRule.UNKNOWN_KEY,
                 f"Protostar ignores the root key '{key}'.",
-                file,
+                where.file,
                 key,
                 hint="Check its spelling against the template schema "
                 "(protostar export-schema).",
+                line=where.index.line_of((key,)),
             )
 
 
-def _missing_metadata(raw: dict[str, Any], file: str) -> Iterator[Finding]:
+def _missing_metadata(raw: dict[str, Any], where: _Where) -> Iterator[Finding]:
     """Reports a missing display name or description."""
     for key in ("name", "description"):
         if not raw.get(key):
             yield Finding(
                 CheckRule.MISSING_METADATA,
                 f"The template declares no {key}.",
-                file,
+                where.file,
                 key,
                 hint=f'Set {key} = "..." at the top of the template; '
                 "protostar init --list-templates and the wizard show it.",
             )
 
 
-def _variable_findings(source: TemplateSource, file: str) -> Iterator[Finding]:
-    """Reports custom variables with no description or a credential-like name."""
+def _variable_findings(source: TemplateSource, where: _Where) -> Iterator[Finding]:
+    """Reports custom variables with no description or a credential-like name.
+
+    An undescribed variable points at its first use, and a credential-like
+    one at its declaration when it has one.
+    """
     from .secret_guard import credential_named
 
     try:
@@ -325,6 +367,7 @@ def _variable_findings(source: TemplateSource, file: str) -> Iterator[Finding]:
         # A malformed [variables] table fails rendering, which reports it.
         described = source.variables
     for name in sorted(source.variables - described):
+        file, line = _first_use(source, name, where)
         yield Finding(
             CheckRule.UNDESCRIBED_VARIABLE,
             f"The variable {name} has no description.",
@@ -332,8 +375,13 @@ def _variable_findings(source: TemplateSource, file: str) -> Iterator[Finding]:
             f"variables.{name}",
             hint=f'Add [variables.{name}] with description = "..." so the '
             "prompt can explain what the value is for.",
+            line=line,
         )
     for name in credential_named(source.variables):
+        declared = where.index.line_of(("variables", name))
+        file, line = (
+            (where.file, declared) if declared else _first_use(source, name, where)
+        )
         yield Finding(
             CheckRule.CREDENTIAL_VARIABLE,
             f"The variable {name} is named like a credential.",
@@ -342,10 +390,27 @@ def _variable_findings(source: TemplateSource, file: str) -> Iterator[Finding]:
             hint="Variable values are saved in pyproject.toml and committed. "
             "Have the generated code read secrets from the environment instead, "
             "and rename the variable.",
+            line=line,
         )
 
 
-def _payload_findings(blueprint: TemplateBlueprint, file: str) -> Iterator[Finding]:
+def _first_use(
+    source: TemplateSource, name: str, where: _Where
+) -> tuple[str, int | None]:
+    """Finds a variable's first placeholder: the TOML file, then template/."""
+    placeholder = re.compile(rf"<%\s*{re.escape(name)}\s*%>")
+    if found := placeholder.search(where.text):
+        return where.file, where.text.count("\n", 0, found.start()) + 1
+    for relative, content in sorted(source.files.items()):
+        path = f"template/{PurePath(relative).as_posix()}"
+        if found := placeholder.search(content):
+            return path, content.count("\n", 0, found.start()) + 1
+        if placeholder.search(relative):
+            return path, None
+    return where.file, None
+
+
+def _payload_findings(blueprint: TemplateBlueprint, where: _Where) -> Iterator[Finding]:
     """Reports payloads and packages that ignore the tool they belong to."""
     baselines = module_baselines()
     owners = {
@@ -358,32 +423,37 @@ def _payload_findings(blueprint: TemplateBlueprint, file: str) -> Iterator[Findi
         for identity, payload in blueprint.pyproject_injections.items()
     }
     for identity, (content, requires) in payloads.items():
-        for message in find_baseline_violations(content, baselines, requires):
+        for path, message in find_baseline_violations(content, baselines, requires):
             yield Finding(
                 CheckRule.RESTATED_BASELINE,
                 message,
-                file,
+                where.file,
                 f"dev.pyproject.{identity}",
                 hint="State only what differs from Protostar's baseline, and use "
                 "additive keys such as extend-select for lists.",
+                line=where.payload_line(identity, path),
             )
-    for identity, message in find_unbound_tool_config(payloads, owners):
+    for identity, path, message in find_unbound_tool_config(payloads, owners):
         yield Finding(
             CheckRule.UNBOUND_TOOL_CONFIG,
             message,
-            file,
+            where.file,
             f"dev.pyproject.{identity}",
             hint="Write the payload as a table with content and requires, so "
             "--no-<tool> leaves no configuration behind.",
+            line=where.payload_line(identity, path),
         )
-    for owner, message in find_unbound_tool_packages(blueprint.dev_dependencies):
+    for package, owner, message in find_unbound_tool_packages(
+        blueprint.dev_dependencies
+    ):
         yield Finding(
             CheckRule.UNBOUND_TOOL_PACKAGE,
             message,
-            file,
+            where.file,
             "dev.dev_dependencies",
             hint=f"Move it to [dev.tool_dependencies] {owner} = [...], so "
             f"--no-{owner} does not install it.",
+            line=where.index.line_in_value(("dev", "dev_dependencies"), package),
         )
 
 
@@ -431,7 +501,7 @@ def _lookup(node: Any, path: tuple[str, ...]) -> Any:
 
 def find_baseline_violations(
     payload: str, baselines: Mapping[str, dict[str, Any]], requires: str | None = None
-) -> list[str]:
+) -> list[tuple[tuple[str, ...], str]]:
     """Lists ways a template's TOML payload restates a module baseline.
 
     Overriding a baseline scalar with a different value is a legitimate delta.
@@ -446,11 +516,11 @@ def find_baseline_violations(
         requires: The tool the payload is bound to, if any.
 
     Returns:
-        One message per violation.
+        (key path within the payload, message) for each violation.
     """
     if requires is not None:
         baselines = {requires: baselines.get(requires, {})}
-    violations: list[str] = []
+    violations: list[tuple[tuple[str, ...], str]] = []
     for path, value in _leaves(_parse_payload(payload)):
         dotted = ".".join(path)
         for tool, baseline in baselines.items():
@@ -458,23 +528,28 @@ def find_baseline_violations(
             if base_value is _MISSING:
                 continue
             if value == base_value:
-                violations.append(f"{dotted} repeats the {tool} baseline verbatim.")
+                violations.append(
+                    (path, f"{dotted} repeats the {tool} baseline verbatim.")
+                )
             elif isinstance(value, list) and isinstance(base_value, list):
                 if path not in ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY:
                     violations.append(
-                        f"{dotted} redefines the {tool} baseline list instead of "
-                        "adding to it."
+                        (
+                            path,
+                            f"{dotted} redefines the {tool} baseline list "
+                            "instead of adding to it.",
+                        )
                     )
                 elif not all(item in value for item in base_value):
                     violations.append(
-                        f"{dotted} drops entries from the {tool} baseline list."
+                        (path, f"{dotted} drops entries from the {tool} baseline list.")
                     )
     return violations
 
 
 def find_unbound_tool_config(
     payloads: Mapping[str, tuple[str, str | None]], owners: Mapping[str, str]
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, tuple[str, ...], str]]:
     """Lists payloads that configure a tool without declaring ``requires`` for it.
 
     Args:
@@ -482,9 +557,9 @@ def find_unbound_tool_config(
         owners: The tool owning each ``tool.<table>`` name.
 
     Returns:
-        (identity, message) for each problem.
+        (identity, key path within the payload, message) for each problem.
     """
-    problems: list[tuple[str, str]] = []
+    problems: list[tuple[str, tuple[str, ...], str]] = []
     for identity, (content, requires) in payloads.items():
         for table in _parse_payload(content).get("tool", {}):
             owner = owners.get(table)
@@ -492,6 +567,7 @@ def find_unbound_tool_config(
                 problems.append(
                     (
                         identity,
+                        ("tool", table),
                         f"The payload configures tool.{table} but declares "
                         f'requires = {requires!r}; expected "{owner}".',
                     )
@@ -499,22 +575,25 @@ def find_unbound_tool_config(
     return problems
 
 
-def find_unbound_tool_packages(dev_dependencies: list[str]) -> list[tuple[str, str]]:
+def find_unbound_tool_packages(
+    dev_dependencies: list[str],
+) -> list[tuple[str, str, str]]:
     """Lists always-installed dev packages that belong to a tool's toolchain.
 
     Args:
         dev_dependencies: The template's unconditional dev packages.
 
     Returns:
-        (owning tool, message) for each problem.
+        (package, owning tool, message) for each problem.
     """
-    problems: list[tuple[str, str]] = []
+    problems: list[tuple[str, str, str]] = []
     for dependency in dev_dependencies:
         name = re.split(r"[\[<>=!~; ]", dependency, maxsplit=1)[0].lower()
         for prefix, owner in TOOL_PACKAGE_OWNERS.items():
             if name == prefix or name.startswith(f"{prefix}-"):
                 problems.append(
                     (
+                        dependency,
                         owner,
                         f"'{dependency}' is installed unconditionally but "
                         f"belongs to {owner}.",

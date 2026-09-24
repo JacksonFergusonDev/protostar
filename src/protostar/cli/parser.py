@@ -525,7 +525,7 @@ def build_parser() -> argparse.ArgumentParser:
     export_schema_parser.set_defaults(func=schema.handle_export_schema)
 
     # --- Check Template Subparser ---
-    from protostar.cli.check_template import handle_check_template
+    from protostar.cli.check_template import OutputFormat, handle_check_template
 
     check_template_parser = subparsers.add_parser(
         "check-template",
@@ -546,6 +546,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict",
         action="store_true",
         help="Fail on warnings as well as errors.",
+    )
+    check_template_parser.add_argument(
+        "--output-format",
+        type=OutputFormat,
+        choices=list(OutputFormat),
+        default=OutputFormat.TEXT,
+        metavar="<format>",
+        help="text (default) for people, or github for GitHub Actions annotations on the template's files.",
     )
     check_template_parser.set_defaults(func=handle_check_template)
 
