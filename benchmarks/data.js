@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790278142312,
+  "lastUpdate": 1790280165974,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16665,6 +16665,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 655.82,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "b991961177b64495e7024bc4b3c2224e4ec44103",
+          "message": "feat(init): add one-shot scaffolding mode",
+          "timestamp": "2026-09-24T12:59:35-07:00",
+          "tree_id": "0ab21e1aa6c0e9fa5e62efb87974d35cc3cd6ab6",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b991961177b64495e7024bc4b3c2224e4ec44103"
+        },
+        "date": 1790280165216,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 219.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 827.39,
             "unit": "ms"
           }
         ]
