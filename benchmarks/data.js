@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790220933282,
+  "lastUpdate": 1790269900154,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16393,6 +16393,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 559.88,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2110e93f0ae19dea2ef1bfaf633603c4c2e722ef",
+          "message": "feat(cli): enhance review and status reporting with semantic rich formatting (#324)\n\nStyle status and review decisions in reviews.py using Rich Text.assemble\nwith semantic colors according to the palette rule (red/green outcomes,\nplain/dim counts).\n\n- Add format_diff to protostar.cli.diff for syntax-highlighted unified diffs\n  that preserve content lines starting with --/++.\n- Normalize paths passed to ui.path_style so hidden files and directories\n  are styled by their final component.\n- Fix rule 7 data-as-markup violations in main.py, ui.py, and reviews.py.\n- Fix empty command indexing bug in rollback task listing in main.py.",
+          "timestamp": "2026-09-24T10:09:17-07:00",
+          "tree_id": "aa15d4cb862084deedf6843d7053214f9878ec03",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2110e93f0ae19dea2ef1bfaf633603c4c2e722ef"
+        },
+        "date": 1790269898606,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 210.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 798.79,
             "unit": "ms"
           }
         ]
