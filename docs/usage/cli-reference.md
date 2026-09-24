@@ -147,6 +147,16 @@ protostar export-schema [OPTIONS]
 
 --8<-- "table_cli_export_schema.md"
 
+### `protostar check-template`
+
+Checks a template before you publish it: that `protostar init` would accept it, and that it follows the practices built-in templates follow. It writes nothing and runs no commands. See [Checking a Template](authoring-templates.md#checking-a-template).
+
+```bash
+protostar check-template [SOURCE] [OPTIONS]
+```
+
+--8<-- "table_cli_check_template.md"
+
 ### `protostar completion`
 
 Generates dynamic autocompletion scripts for supported shells (Bash, Zsh, Fish, PowerShell).

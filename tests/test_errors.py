@@ -1,7 +1,9 @@
 """Unit tests for protostar domain exceptions and exit codes."""
 
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 import pytest
 
@@ -94,6 +96,17 @@ def test_network_fetch_error_defaults_and_custom():
     )
     assert str(custom_err) == "Custom network fail"
     assert custom_err.hint == "Custom hint"
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [(404, "exists and is public"), (403, "exists and is public"), (503, "Try again")],
+)
+def test_network_fetch_error_hint_names_the_http_status(code, expected):
+    orig = HTTPError("https://example.com/t.toml", code, "status", Message(), None)
+    err = NetworkFetchError("https://example.com/t.toml", original=orig)
+    assert f"HTTP {code}" in (err.hint or "")
+    assert expected in (err.hint or "")
 
 
 def test_template_resolution_error():

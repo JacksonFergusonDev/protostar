@@ -114,6 +114,11 @@ def test_decoding_accepts_recorded_variable_values_the_guard_would_flag():
     assert dict(decode_recipe(data).variables) == {"REGION": _token()}
 
 
+def test_unknown_template_flags_are_named():
+    with pytest.raises(ConfigurationError, match="unknown tooling flags: mypi, rufff"):
+        recipe().selections({"rufff": True, "ruff": True, "mypi": False})
+
+
 def test_template_opinions_evolve_only_under_omitted_overrides():
     captured = replace(recipe(), tools=((Tool.MYPY, True), (Tool.RENOVATE, False)))
     decisions = {

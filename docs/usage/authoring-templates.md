@@ -186,6 +186,45 @@ Values already recorded in the recipe are not checked again, so a confirmed valu
 
 ## Level 4: Testing & Distribution
 
+### Checking a Template
+
+`protostar check-template` checks a template without scaffolding anything. Run it from the template's directory, or name a template directory, a template TOML file, or an HTTPS URL:
+
+```bash
+protostar check-template
+protostar check-template ./templates/backend.toml
+protostar check-template https://github.com/YourOrg/fastapi-template
+```
+
+It renders the template with a placeholder for each custom variable and plans a default `protostar init` of it into an empty scratch directory, using Protostar's built-in configuration rather than yours, so every machine gets the same result. It writes nothing, runs no commands, and ignores whatever the directory you run it from contains.
+
+It reports two kinds of finding:
+
+- **Errors** (`invalid-template`) are anything that stops `protostar init` from using the template: invalid TOML, a field of the wrong type, a forbidden or reserved target, an unknown tooling flag, or a file under `template/` that isn't UTF-8 text.
+- **Warnings** break a practice the built-in templates follow. The template works, but its users get a worse result.
+
+| Rule | What it reports |
+| :--- | :--- |
+| `unknown-key` | A root key Protostar ignores, such as a misspelled field, or a tooling flag whose value isn't `true` or `false` |
+| `missing-metadata` | No `name` or `description`, which `--list-templates` and the wizard show |
+| `undescribed-variable` | A custom variable with no `[variables]` description |
+| `credential-variable` | A custom variable named like a credential |
+| `restated-baseline` | A `[dev.pyproject]` payload that repeats a module's baseline value, or redefines a baseline list instead of using an additive key |
+| `unbound-tool-config` | A payload that configures a tool without `requires` for that tool |
+| `unbound-tool-package` | A tool's package, such as `pytest-cov`, installed unconditionally instead of under `[dev.tool_dependencies]` |
+
+The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be retrieved at all (a wrong path, a network failure, an HTTP error such as 404), nothing is checked: it prints the retrieval error and exits with that error's [exit code](cli-reference.md#posix-exit-codes), such as `65` or `75`, so a failure to download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
+
+The check covers a default `init`. Tool-bound content that only applies when a user turns on a tool the template leaves off is not planned, so still try the combinations you expect your users to choose.
+
+To check a template in its own repository's CI, add a step such as:
+
+```yaml
+- uses: actions/checkout@v7
+- uses: astral-sh/setup-uv@v10
+- run: uvx protostar check-template --strict
+```
+
 ### Local Testing
 
 When authoring a template, you do not need to commit and push to a remote repository to test its execution. You can point the `--from` flag directly at your local template directory:
@@ -226,7 +265,7 @@ When building templates for your team or the open-source community, keep the fol
 - **Choose the Right Complexity:** Start with a single-file blueprint (`protostar.toml`) if you only need to enforce tooling configurations (like Ruff or Pyright rules). Graduate to a multi-file repository only when you need to scaffold physical code, directories, or CI/CD pipelines.
 - **Descriptive Variable Names:** Use clear, self-explanatory names for custom placeholders (e.g., `<% AWS_REGION %>` instead of `<% REG %>`). Since Protostar automatically generates interactive terminal prompts for unresolved variables, descriptive names provide a better user experience.
 - **Minimize Shell Scripts:** Be cautious with `system_tasks` and `post_install_tasks`. Heavy reliance on shell commands can compromise cross-platform compatibility (e.g., failing on Windows). It also triggers the Informed Consent Security Model for remote URLs, which might alarm users.
-- **Test Locally:** Always test your template locally against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
+- **Check, Then Test Locally:** Run `protostar check-template --strict` on every change, and try the template against an empty target directory (`protostar init --from ./path/to/template`) before publishing it to a remote version control platform.
 
 ## Next Steps
 

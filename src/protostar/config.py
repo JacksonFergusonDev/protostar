@@ -17,6 +17,7 @@ from typing import Any
 from .errors import (
     ConfigurationError,
     MissingTemplateVariablesError,
+    TemplateEncodingError,
     TemplateResolutionError,
 )
 from .ide import IDEType
@@ -586,6 +587,28 @@ def _parse_tool_dependencies(raw: object, source: str) -> dict[str, list[str]]:
     return parsed
 
 
+# Root keys of a template that hold structure; every other root boolean is a
+# tooling flag. `variables` is read from the raw template, not the blueprint.
+TEMPLATE_STRUCTURAL_KEYS: frozenset[str] = frozenset(
+    {
+        "name",
+        "version",
+        "dependency_includes",
+        "description",
+        "dependencies",
+        "directories",
+        "vcs_ignores",
+        "system_tasks",
+        "post_install_tasks",
+        "docs_dependencies",
+        "dev",
+        "files",
+        "appends",
+        "variables",
+    }
+)
+
+
 @dataclass
 class TemplateBlueprint:
     """Represents the parsed template state for target environments."""
@@ -928,23 +951,8 @@ class TemplateBlueprint:
                 instance.dependency_includes.append(DependencyInclude(group, include))
 
         # Extract tooling overrides dynamically (root-level boolean flags)
-        structural_keys = {
-            "name",
-            "version",
-            "dependency_includes",
-            "description",
-            "dependencies",
-            "directories",
-            "vcs_ignores",
-            "system_tasks",
-            "post_install_tasks",
-            "docs_dependencies",
-            "dev",
-            "files",
-            "appends",
-        }
         for key, value in data.items():
-            if key not in structural_keys and isinstance(value, bool):
+            if key not in TEMPLATE_STRUCTURAL_KEYS and isinstance(value, bool):
                 instance.tooling_overrides[key] = value
 
         instance._validate_declarations()
@@ -1069,6 +1077,10 @@ class TemplateSource:
                 base_dir = target_path
 
             template_bytes = toml_path.read_bytes()
+            try:
+                template_bytes.decode("utf-8")
+            except UnicodeDecodeError as e:
+                raise TemplateEncodingError(target, toml_path.name) from e
 
             raw_files: dict[str, str] = {}
             template_dir = base_dir / "template"
@@ -1085,12 +1097,8 @@ class TemplateSource:
                     try:
                         raw_files[rel_path] = file_path.read_text(encoding="utf-8")
                     except UnicodeDecodeError as e:
-                        raise TemplateResolutionError(
-                            target,
-                            f"template/{Path(rel_path).as_posix()} is not UTF-8 text.",
-                            hint="Template files are interpolated as text, so binary "
-                            "files such as images are not supported. Remove the file "
-                            "or save it as UTF-8.",
+                        raise TemplateEncodingError(
+                            target, f"template/{Path(rel_path).as_posix()}"
                         ) from e
 
             origin = (

@@ -6,6 +6,7 @@ import os
 from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.error import HTTPError
 
 from protostar.docs_registry import DocsPage
 from protostar.system_deps import GlobalExecutable
@@ -173,6 +174,13 @@ class NetworkFetchError(ProtostarError):
             f"Network failure: Could not fetch remote configuration from '{url}'."
         )
         default_hint = "Ensure you have an active internet connection and that the URL requires HTTPS, not HTTP."
+        if isinstance(original, HTTPError):
+            default_hint = (
+                f"The server answered HTTP {original.code}. Check that the URL, "
+                "including its branch, tag, or commit, exists and is public."
+                if 400 <= original.code < 500
+                else f"The server answered HTTP {original.code}. Try again later."
+            )
         super().__init__(
             message or default_message, hint=hint or default_hint, docs_path=docs_path
         )
@@ -195,6 +203,30 @@ class TemplateResolutionError(ProtostarError):
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.target = target
         self.detail = detail
+
+
+class TemplateEncodingError(TemplateResolutionError):
+    """Raised when a file in an acquired template is not UTF-8 text.
+
+    Everything Protostar reads from a template is interpolated as text, so an
+    undecodable file is a defect of the template itself, not a failure to
+    retrieve it.
+    """
+
+    def __init__(self, target: str, path: str) -> None:
+        """Initializes the error for one undecodable file.
+
+        Args:
+            target: The template being loaded.
+            path: The file's POSIX path within the template.
+        """
+        super().__init__(
+            target,
+            f"{path} is not UTF-8 text.",
+            hint="Template files are interpolated as text, so binary files such as "
+            "images are not supported. Remove the file or save it as UTF-8.",
+        )
+        self.path = path
 
 
 class MissingTemplateVariablesError(TemplateResolutionError):
