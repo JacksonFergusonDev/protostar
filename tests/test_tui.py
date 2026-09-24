@@ -789,10 +789,15 @@ def test_existing_project_snapshot(snap_compare, monkeypatch, workspace):
     app = make_app(InitDraft(analysis=existing_project(workspace)), config)
 
     async def tools(pilot):
+        # A slow runner can plan the preview, or re-plan it after the scroll,
+        # later than one settle; capture only once both have finished.
+        for _ in range(2):
+            await settle(pilot)
+            while "Planning" in plain(pilot.app, "#preview-summary"):
+                await pilot.pause(0.05)
+            notes = pilot.app.screen.query_one("#analysis-notes")
+            notes.scroll_visible(top=True, animate=False, immediate=True)
         await settle(pilot)
-        notes = pilot.app.screen.query_one("#analysis-notes")
-        notes.scroll_visible(top=True, animate=False, immediate=True)
-        await pilot.pause()
 
     assert snap_compare(app, terminal_size=(110, 50), run_before=tools)
 
