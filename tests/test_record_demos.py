@@ -17,8 +17,12 @@ from unittest.mock import MagicMock, patch
 from scripts.record_demos import PTYSession
 
 
-def test_pty_session_start_sets_isolated_process_group(tmp_path: Path) -> None:
+def test_pty_session_start_sets_isolated_process_group(
+    tmp_path: Path, monkeypatch
+) -> None:
     """Verifies that PTYSession launches the shell with start_new_session=True."""
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("PAGER", "cat")
     session = PTYSession(workspace=str(tmp_path))
 
     with (
@@ -38,6 +42,9 @@ def test_pty_session_start_sets_isolated_process_group(tmp_path: Path) -> None:
         mock_popen.assert_called_once()
         _, kwargs = mock_popen.call_args
         assert kwargs.get("start_new_session") is True
+        assert "NO_COLOR" not in kwargs["env"]
+        assert kwargs["env"]["PAGER"] == "less"
+        assert kwargs["env"]["BAT_PAGER"] == "less"
         assert session.proc is mock_proc
         assert session.slave_fd == -1
 

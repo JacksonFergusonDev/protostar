@@ -57,7 +57,7 @@ def test_explicit_language_overrides_filename_and_unknowns_are_plain():
 
 def test_lexer_programming_errors_are_not_hidden(mocker):
     mocker.patch(
-        "protostar.cli.tui.code.get_lexer_for_filename",
+        "protostar.cli.tui.syntax.get_lexer_for_filename",
         side_effect=AssertionError("bug"),
     )
     with pytest.raises(AssertionError, match="bug"):

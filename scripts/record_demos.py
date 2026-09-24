@@ -105,6 +105,11 @@ class PTYSession:
         set_winsize(self.slave_fd, self.rows, self.cols)
 
         env = os.environ.copy()
+        # Record the product palette and an interactive pager regardless of the
+        # invoking agent or shell's output preferences.
+        env.pop("NO_COLOR", None)
+        env["PAGER"] = "less"
+        env["BAT_PAGER"] = "less"
         env["TERM"] = "xterm-256color"
         env["COLORTERM"] = "truecolor"
         env["BAT_PAGING"] = "always"
@@ -450,7 +455,7 @@ def record_wizard(session: PTYSession) -> None:
     # 2. Focus wraps backwards from the picker to "Continue".
     session.key(shift_tab, wait=0.5)
     session.key(enter, wait=0.0)
-    session.wait_for("Commands and packages", timeout=15.0, post_wait=0.6)
+    session.wait_for("COMMANDS & PACKAGES", timeout=15.0, post_wait=0.6)
 
     # 3. The change review focuses the file tree: step down it to show diffs.
     session.down(count=3, wait=0.5)

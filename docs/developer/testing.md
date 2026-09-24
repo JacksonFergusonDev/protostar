@@ -189,6 +189,8 @@ and `edit_text` for a prepared edit. These renderers share Protostar's palette;
 screens must not select independent syntax themes. Pass a Pygments language alias
 when the displayed serialization differs from the filename (for example, a TOML
 conflict value displayed as JSON). Unknown languages remain plain text.
+The Pygments adapter and token theme in `syntax.py` load on the first source
+render; keep that import lazy so opening the recipe editor loads no Pygments.
 
 Highlighting is presentation-only: it never reads project files, changes merge
 policy, or modifies prepared bytes. Source display normalizes CRLF and CR to LF,
