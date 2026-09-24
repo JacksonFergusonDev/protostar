@@ -10,6 +10,12 @@ ownership. The ownership ledger remains schema v1.
 It writes neither the recipe nor `protostar.lock`, so lifecycle commands cannot
 update that scaffold. It still generates the separate `uv.lock` dependency lockfile.
 
+`protostar eject` takes an already tracked project out of the lifecycle. It removes
+the recipe and `protostar.lock` in one transaction while retaining `uv.lock` and all
+other project files. The CLI shows the pending changes and asks for confirmation;
+`--dry-run` previews the pyproject diff, and `--yes` confirms a noninteractive run.
+After ejection, `status`, `diff`, and `sync` are unavailable for that project.
+
 In a `pyproject.toml` that Protostar creates, the recipe is the last section, under its own `# ---- Protostar ---- #` header, like every other tool's configuration. Everything that is not tool configuration (`[project]`, `[build-system]`, `[dependency-groups]`, and build-backend tables such as `[tool.hatch...]`) sits above the `# Tool Configuration` banner. A `pyproject.toml` you already had keeps your own order.
 
 For new uv projects, the captured project name uses uv normalization (`Demo_Project`

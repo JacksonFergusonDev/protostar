@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 import tomlkit
 
 from .documents.pyproject_layout import (
+    BANNER,
     Section,
     compose_children,
     insert_section,
@@ -477,6 +478,46 @@ def edit_recipe(content: str, recipe: ProjectRecipe) -> str:
     tool = document.setdefault("tool", tomlkit.table())
     _update_recipe(tool.setdefault("protostar", tomlkit.table()), desired)
     return tomlkit.dumps(document)
+
+
+def remove_recipe(content: str) -> str:
+    """Removes the recorded recipe while preserving unrelated TOML content."""
+    try:
+        raw = tomllib.loads(content)
+        tool_data = raw.get("tool", {})
+        if not isinstance(tool_data, dict):
+            raise _invalid()
+        if "protostar" not in tool_data:
+            return content
+        document = tomlkit.parse(content)
+    except (tomllib.TOMLDecodeError, tomlkit.exceptions.TOMLKitError) as error:
+        raise _invalid() from error
+
+    del document["tool"]["protostar"]
+    sections = split_sections(document)
+    has_other_tool = any(
+        (section.path == ("tool",) and bool(section.body.strip()))
+        or (
+            len(section.path) > 1
+            and section.path[0] == "tool"
+            and section.path[1] not in {"", "hatch"}
+        )
+        for section in sections
+    )
+    decoration = {"# ---- Protostar ---- #"}
+    if not has_other_tool:
+        decoration.update(BANNER)
+    for section in sections:
+        if not section.tail:
+            continue
+        lines = section.tail.splitlines(keepends=True)
+        if any(line.strip() in decoration for line in lines):
+            section.tail = "".join(
+                line for line in lines if line.strip() not in decoration
+            )
+            if not section.tail.strip():
+                section.tail = ""
+    return join_sections(sections)
 
 
 def _update_recipe(current: Any, values: dict[str, Any]) -> None:

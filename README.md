@@ -186,6 +186,8 @@ protostar init --template cli --one-shot
 
 This leaves `[tool.protostar]` out of `pyproject.toml` and does not create `protostar.lock`. The Python dependency lockfile, `uv.lock`, is still generated. `protostar status`, `diff`, and `sync` require a recorded recipe and ownership state, so they are unavailable for a one shot scaffold. Use this flag only in a project that is not already tracked by Protostar.
 
+To stop tracking a project after initialization, run `protostar eject`. It shows the two changes and asks for confirmation before deleting `protostar.lock` and removing `[tool.protostar]` from `pyproject.toml`. Use `protostar eject --dry-run` to preview the TOML diff, or `protostar eject --yes` to confirm in a noninteractive run. The scaffolded files and `uv.lock` remain.
+
 ### Dry-Run Simulations & Agent Integration
 
 You can preview the entire scaffolding plan without touching disk or running subprocesses by passing `--dry-run`:
