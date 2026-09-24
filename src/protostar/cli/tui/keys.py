@@ -20,6 +20,7 @@ from textual.widgets import (
     Checkbox,
     Input,
     Label,
+    RadioButton,
     RadioSet,
     Select,
     SelectionList,
@@ -160,6 +161,20 @@ class Choice(RadioSet, inherit_bindings=False):
         if enabled:
             self._selected = enabled[0] if direction > 0 else enabled[-1]
 
+    def show(self, pressed: RadioButton | None) -> None:
+        """Press one button, or none, without announcing a change.
+
+        RadioSet presses a button again when code switches it off, so the
+        buttons are set with their messages held and the set told directly.
+
+        Args:
+            pressed: The button to press, or ``None`` to press none.
+        """
+        with self.prevent(RadioButton.Changed, RadioSet.Changed):
+            for button in self.query(RadioButton):
+                button.value = button is pressed
+        self._pressed_button = pressed
+
 
 class Checklist[ValueT](SelectionList[ValueT], inherit_bindings=False):
     """A selection list that hands off to the neighbouring row at its ends."""
@@ -250,11 +265,20 @@ class LeaveScreen(ModalScreen[bool]):
         Binding("enter", "dismiss(True)", "Leave"),
     ]
 
+    def __init__(self, question: str) -> None:
+        """Create the dialog.
+
+        Args:
+            question: What leaving abandons, asked as a question.
+        """
+        super().__init__()
+        self.question = question
+
     def compose(self) -> ComposeResult:
         """Compose the question and its two answers, each showing its key."""
         with Vertical(id="dialog") as dialog:
             dialog.border_title = "LEAVE"
-            yield Label("Leave without setting up the project?", classes="question")
+            yield Label(self.question, classes="question")
             yield Static("Nothing has been written yet.", classes="note")
             with Horizontal(classes="dialog-actions"):
                 stay = Button(key_label("Stay", "esc"), id="stay")
@@ -316,6 +340,9 @@ class KeyboardScreen[ResultT](Screen[ResultT]):
     KEYS: ClassVar[KeyRows] = FORM_KEYS
     """The rows the keys list shows, besides f1 itself."""
 
+    LEAVE: ClassVar[str] = "Leave without setting up the project?"
+    """What escape asks before leaving."""
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("tab", "step(1)", "Next"),
         Binding("shift+tab", "step(-1)", "Previous", show=False),
@@ -362,4 +389,4 @@ class KeyboardScreen[ResultT](Screen[ResultT]):
             if leave:
                 self.app.exit(None)
 
-        self.app.push_screen(LeaveScreen(), answer)
+        self.app.push_screen(LeaveScreen(self.LEAVE), answer)

@@ -1169,9 +1169,9 @@ async def _settle(pilot: Any) -> None:
     await pilot.pause()
 
 
-def _write_tui_svg(app: Any, filename: str) -> None:
+def _write_tui_svg(app: Any, filename: str, title: str = "protostar init") -> None:
     """Writes the app's current screen to DOCS_TERMINALS_DIR."""
-    svg_content = app.export_screenshot(title="protostar init")
+    svg_content = app.export_screenshot(title=title)
     clean_svg = "\n".join(line.rstrip() for line in svg_content.splitlines()) + "\n"
     atomic_write_text(DOCS_TERMINALS_DIR / filename, clean_svg)
 
@@ -1198,14 +1198,70 @@ async def _capture_tui_screens() -> None:
         app.exit(None)
 
 
+def _conflict_manifest(renovate: str, line_length: int, command: str) -> Any:
+    """A lifecycle manifest with a JSON value, a TOML key, and a text region."""
+    manifest = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
+    manifest.filesystem.add_file_injection(
+        ".github/renovate.json", json.dumps({"extends": [renovate]}) + "\n"
+    )
+    manifest.filesystem.add_structured(
+        "pyproject.toml",
+        f"[tool.ruff]\nline-length = {line_length}\n",
+        producer="module:ruff",
+    )
+    manifest.filesystem.add_region(
+        "AGENTS.md", f"Run `{command}` before pushing.", identity="demo:commands"
+    )
+    return manifest
+
+
+async def _capture_conflict_screen() -> None:
+    """Captures the sync conflict screen over three kinds of conflict."""
+    from protostar.cli.tui.app import DecisionApp
+    from protostar.cli.tui.conflicts.screen import ConflictScreen
+    from protostar.executor import SystemExecutor
+    from protostar.lifecycle import PreparedProject
+    from protostar.preparation import prepare_review
+
+    config = UserConfig()
+    baseline = _conflict_manifest("config:recommended", 88, "just test")
+    SystemExecutor(
+        baseline, config, review=prepare_review(baseline, config, hook_revisions=())
+    ).execute()
+    renovate = Path(".github/renovate.json")
+    renovate.write_text(renovate.read_text().replace("recommended", "base"))
+    pyproject = Path("pyproject.toml")
+    pyproject.write_text(pyproject.read_text().replace("88", "100"))
+    agents = Path("AGENTS.md")
+    agents.write_text(agents.read_text().replace("just test", "just check"))
+    manifest = _conflict_manifest("config:best-practices", 120, "just ci")
+    project = PreparedProject(
+        manifest, config, prepare_review(manifest, config, hook_revisions=())
+    )
+    app = DecisionApp(ConflictScreen(project))
+    async with app.run_test(size=(120, 36)) as pilot:
+        await _settle(pilot)
+        await pilot.press("down", "down", "b")
+        await _settle(pilot)
+        _write_tui_svg(app, "tui_sync_conflicts.svg", "protostar sync")
+        app.exit(None)
+
+
 def generate_tui_svgs() -> None:
-    """Captures the recipe editor and change review with Textual's own screenshots."""
+    """Captures the recipe editor, change review, and conflict screen."""
     with (
         _demo_project(),
         mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
         mock.patch("protostar.metadata.get_git_config", return_value=None),
     ):
         asyncio.run(_capture_tui_screens())
+    orig_cwd = Path.cwd()
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        try:
+            os.chdir(tmp_dir)
+            asyncio.run(_capture_conflict_screen())
+        finally:
+            os.chdir(orig_cwd)
 
 
 def generate_docs_assets() -> None:

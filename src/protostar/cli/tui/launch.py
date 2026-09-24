@@ -2,6 +2,8 @@
 
 from protostar.config import UserConfig
 from protostar.init_draft import InitDecision, InitDraft
+from protostar.lifecycle import PreparedProject
+from protostar.merge import ResolutionChoice
 from protostar.templates import TemplateInfo
 
 
@@ -44,3 +46,18 @@ def review_changes(draft: InitDraft, config: UserConfig) -> InitDecision | None:
     from .review.screen import ReviewScreen
 
     return DecisionApp(ReviewScreen(draft, config)).run()
+
+
+def resolve_conflicts(project: PreparedProject) -> dict[str, ResolutionChoice] | None:
+    """Choose how a sync's conflicts are settled, or return None on cancellation.
+
+    Args:
+        project: The prepared sync whose conflicts to settle.
+
+    Returns:
+        Choices keyed by conflict identity; conflicts left out stay open.
+    """
+    from .app import DecisionApp
+    from .conflicts.screen import ConflictScreen
+
+    return DecisionApp(ConflictScreen(project)).run()

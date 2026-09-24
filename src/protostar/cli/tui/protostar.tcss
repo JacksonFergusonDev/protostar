@@ -222,3 +222,17 @@ LeaveScreen, KeysScreen { align: center middle; background: $background 70%; }
 .dialog-actions { width: auto; height: auto; margin-top: 1; }
 .dialog-actions Button { margin-right: 2; }
 KeysScreen #dialog { width: 72; max-width: 100%; }
+
+/* --- Conflicts --------------------------------------------------------- */
+
+#conflicts-panel { width: 2fr; }
+#conflicts, .side, #result-pane {
+    height: 1fr;
+    padding: 0 0 0 1;
+    background: $surface;
+}
+#sides-column { width: 3fr; min-width: 45; margin-left: 1; }
+#sides { height: 1fr; }
+#sides > Panel { width: 1fr; }
+#desired-panel { margin-left: 1; }
+#meaning { height: auto; }

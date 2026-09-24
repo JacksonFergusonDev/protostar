@@ -6,9 +6,12 @@ import sys
 from typing import Any, cast
 
 from protostar.cli import schema, ui
+from protostar.cli.tui.launch import resolve_conflicts
+from protostar.errors import ExecutionAbortedError
 from protostar.lifecycle import inspect_project, prepare_project
 from protostar.merge import MergeConflict, ResolutionChoice, describe_location
 from protostar.preparation import PreparedEdit, PreparedReview, select_resolutions
+from protostar.system import is_interactive
 
 SETTLED = {
     ResolutionChoice.LOCAL: "kept local content",
@@ -148,13 +151,32 @@ def _where(conflict: MergeConflict) -> str:
     return " ".join(part for part in parts if part)
 
 
+def _asks(args: argparse.Namespace, review: PreparedReview) -> bool:
+    """Returns whether to ask how conflicts are settled before applying."""
+    return (
+        not (args.dry_run or args.check or args.resolve or ui.is_json_mode)
+        and is_interactive()
+        and any(conflict.choices for conflict in review.conflicts)
+    )
+
+
 def handle_sync(args: argparse.Namespace) -> None:
-    """Reviews or applies the current recipe without prompts or task replay."""
+    """Reviews or applies the current recipe without task replay.
+
+    In an interactive terminal, conflicts that can be settled open the
+    conflict screen first; its choices are applied like ``--resolve``.
+    """
     project = prepare_project()
     if args.resolve:
         project = project.resolve(
             select_resolutions(project.review.conflicts, args.resolve)
         )
+    elif _asks(args, project.review):
+        choices = resolve_conflicts(project)
+        if choices is None:
+            raise ExecutionAbortedError("Sync cancelled by user.")
+        if choices:
+            project = project.resolve(choices)
     review = project.review
     if args.dry_run or args.check:
         payload = review_payload(review)
