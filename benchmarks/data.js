@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790209268232,
+  "lastUpdate": 1790218213407,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16291,6 +16291,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 773.69,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dc9db7017f0f6f394f86ac6e824a2b530e6c0096",
+          "message": "feat(init): settle first-batch conflicts in the change review (#321)\n\nThe init change review now offers the same resolutions as sync for the\nconflicts it shows, so an existing file Protostar never managed can be\nadopted (keep mine) or replaced (take update) before anything runs. The\ndecision carries the resolutions to the first initialization batch.\n\nInitialization now carries candidate ownership across batches whenever a\nbatch has been applied, since adoption changes ownership without writing.",
+          "timestamp": "2026-09-23T19:48:34-07:00",
+          "tree_id": "b34d6177cabe6a1a3c3af0f73d7738fde3ebb04c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/dc9db7017f0f6f394f86ac6e824a2b530e6c0096"
+        },
+        "date": 1790218212263,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 134.62,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 525.64,
             "unit": "ms"
           }
         ]
