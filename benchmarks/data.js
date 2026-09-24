@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790276380338,
+  "lastUpdate": 1790276856077,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16597,6 +16597,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 741.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "459cbbb76fb8e714d3bb9e8454a0017be946dcf1",
+          "message": "feat(init): point to sync for conflicts an init kept open (#328)\n\n--force-merge skips the change review, so a conflict init meets keeps the\nuser's version. The partial-success ending now counts the open conflicts\nthat offer a choice and names protostar sync, which settles them.",
+          "timestamp": "2026-09-24T12:05:05-07:00",
+          "tree_id": "b9ac601ab740e9a1ef11bcf471222bf7aa3c3b00",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/459cbbb76fb8e714d3bb9e8454a0017be946dcf1"
+        },
+        "date": 1790276854871,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 211.95,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 814.88,
             "unit": "ms"
           }
         ]
