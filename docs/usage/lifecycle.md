@@ -109,6 +109,18 @@ show both sides of:
 Conflicts caused by document policy (`duplicate-identity`, `shared-structure`,
 `unsafe-pin`) and dependency conflicts offer no choices. Fix those by hand.
 
+In an interactive terminal, `sync` opens a conflict screen before it applies
+anything whenever a conflict can be settled. It lists the conflicts by file with
+your side, the update's side, and a preview of the file each choice produces.
+Press `k` to keep yours, `u` to take the update, `b` to keep both, `x` to leave a
+conflict open, and `n` for the next open one; on a file's row, a choice applies
+to every conflict in that file. `a` applies the sync with those choices, and
+open conflicts keep your content as before. `esc` asks before leaving without
+applying anything. The screen never opens for `--dry-run`, `--check`, `--json`,
+`--resolve`, or a non-interactive terminal.
+
+![Protostar sync conflict screen](../assets/terminals/tui_sync_conflicts.svg)
+
 Each conflict has an `id` covering its location and content. `status` prints it
 with the choices it offers, and JSON reviews list both with every side under
 `review.conflicts`. Pass `--resolve SELECTOR=CHOICE` to `sync`, where the selector

@@ -48,6 +48,7 @@ from protostar.preparation import (
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
 
 from ..chrome import Heading, Headline, Masthead, Panel
+from ..conflicts.sides import diff_text
 from ..keys import (
     MOVE,
     ActionBar,
@@ -175,32 +176,6 @@ def _prepare(
         phase=PreparationPhase.BEFORE_INITIALIZERS,
     )
     return Review(request, manifest, prepared, classify(manifest, prepared))
-
-
-def diff_text(diff: str) -> Text:
-    """Colors a unified diff whose lines stay literal text, never markup.
-
-    Args:
-        diff: A unified diff.
-
-    Returns:
-        The diff with added, removed, and hunk lines styled.
-    """
-    text = Text()
-    for line in diff.splitlines(keepends=True):
-        if line.startswith(("+++", "---")):
-            style = "bold"
-        elif line.startswith("+"):
-            style = "green"
-        elif line.startswith("-"):
-            style = "red"
-        elif line.startswith("@@"):
-            style = "cyan"
-        else:
-            style = ""
-        text.append(line, style)
-    text.rstrip()
-    return text
 
 
 def describe(entry: Entry) -> RenderableType:
