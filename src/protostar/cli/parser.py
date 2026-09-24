@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from protostar.orchestrator import Orchestrator
+    from protostar.preparation import ResolutionRequest
 
 import argcomplete
 from rich.console import Console
@@ -223,6 +224,20 @@ class _VersionAction(argparse.Action):
         parser.exit()
 
 
+def _resolution_request(value: str) -> "ResolutionRequest":
+    """Parses one ``SELECTOR=CHOICE`` resolution for ``sync --resolve``."""
+    from protostar.merge import ResolutionChoice
+    from protostar.preparation import ResolutionRequest
+
+    selector, _, choice = value.rpartition("=")
+    choices = ", ".join(c.value for c in ResolutionChoice)
+    if not selector or choice not in {c.value for c in ResolutionChoice}:
+        raise argparse.ArgumentTypeError(
+            f"expected SELECTOR=CHOICE with CHOICE one of {choices}, got {value!r}"
+        )
+    return ResolutionRequest(selector, ResolutionChoice(choice))
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Constructs and returns the primary argument parser with dynamically injected modules."""
     base_parser = JsonAwareParser(add_help=False)
@@ -337,7 +352,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Apply safe project updates and retain conflicting local content.",
         description="Apply accepted lifecycle updates transactionally in the current directory.",
         parents=[base_parser],
-        epilog="Requires the project recipe in pyproject.toml and .protostar.lock.toml. Never replays initialization tasks or IDE probes. Conflicts commit safe changes with exit 1.",
+        epilog="Requires the project recipe in pyproject.toml and .protostar.lock.toml. Never replays initialization tasks or IDE probes. Unresolved conflicts commit safe changes with exit 1.",
+    )
+    sync_parser.add_argument(
+        "--resolve",
+        action="append",
+        default=[],
+        type=_resolution_request,
+        metavar="SELECTOR=CHOICE",
+        help="Settle conflicts by id, or every conflict in a file by path. CHOICE is local (keep yours), desired (take the update), or both (text lines only). Repeatable.",
     )
     sync_modes = sync_parser.add_mutually_exclusive_group()
     sync_modes.add_argument(

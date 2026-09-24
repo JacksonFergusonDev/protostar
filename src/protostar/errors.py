@@ -88,6 +88,62 @@ class StaleReviewError(ConfigurationError):
         )
 
 
+class UnmatchedResolutionError(ConfigurationError):
+    """Raised when a resolution names no conflict in the current review.
+
+    A conflict's identity covers its content, so a conflict that changed since
+    it was reviewed no longer matches.
+    """
+
+    def __init__(self, selectors: tuple[str, ...]) -> None:
+        """Initializes the error with every selector that matched nothing.
+
+        Args:
+            selectors: Conflict identities or file paths, in the order given.
+        """
+        super().__init__(
+            f"No conflict matches: {', '.join(selectors)}.",
+            hint="Review the project again and resolve the conflicts it lists.",
+            docs_path=DocsPage.RESOLVE_CONFLICTS,
+        )
+        self.selectors = selectors
+
+    def details(self) -> dict[str, Any]:
+        """Returns the selectors that matched no conflict."""
+        return {"unmatched_resolutions": list(self.selectors)}
+
+
+class UnsupportedResolutionError(ConfigurationError):
+    """Raised when a conflict cannot be settled by the choice made for it."""
+
+    def __init__(self, selector: str, choice: str, choices: tuple[str, ...]) -> None:
+        """Initializes the error with the choices the conflict does offer.
+
+        Args:
+            selector: The conflict identity or file path the choice was made for.
+            choice: The unsupported choice.
+            choices: The choices the conflict offers, empty when it must be
+                resolved by hand.
+        """
+        super().__init__(
+            f"Cannot resolve {selector} with '{choice}'.",
+            hint=f"Choose one of: {', '.join(choices)}."
+            if choices
+            else "Edit the file by hand, then review the project again.",
+            docs_path=DocsPage.RESOLVE_CONFLICTS,
+        )
+        self.selector = selector
+        self.choice = choice
+        self.choices = choices
+
+    def details(self) -> dict[str, Any]:
+        """Returns the rejected choice and the choices offered instead."""
+        return {
+            "resolution": {"selector": self.selector, "choice": self.choice},
+            "choices": list(self.choices),
+        }
+
+
 class InvalidUsageError(ProtostarError):
     """Raised when the user provides unrecognized or invalid CLI arguments."""
 

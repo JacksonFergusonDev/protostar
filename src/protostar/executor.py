@@ -17,6 +17,7 @@ from .manifest import (
     Severity,
     SystemTask,
 )
+from .merge import NO_RESOLUTIONS
 from .preparation import (
     ExecutionPolicy,
     PreparationPhase,
@@ -91,6 +92,8 @@ class SystemExecutor(Reconciliation):
         self._state_bytes: bytes | None = None
         self._resolution_dirty = False
         self._preserve_deleted_pyproject = False
+        # Conflicts are settled in the review execution applies, never here.
+        self.resolutions = NO_RESOLUTIONS
 
     def execute(
         self,

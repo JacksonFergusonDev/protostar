@@ -12,10 +12,20 @@ from __future__ import annotations
 import difflib
 import re
 from bisect import bisect_left
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
 
-from .merge import LineSpan
+from .merge import (
+    MISSING,
+    NO_RESOLUTIONS,
+    ConflictReason,
+    ConflictSides,
+    LineSpan,
+    MergeConflict,
+    MergeLocation,
+    ResolutionChoice,
+    Resolutions,
+)
 
 __all__ = [
     "TextConflict",
@@ -47,12 +57,14 @@ class TextConflict:
         base: The region's lines in the common ancestor.
         local: The region's lines in the local text.
         remote: The region's lines in the remote text.
+        resolution: The choice that settled it, or ``None`` while open.
     """
 
     start: int
     base: tuple[str, ...]
     local: tuple[str, ...]
     remote: tuple[str, ...]
+    resolution: ResolutionChoice | None = None
 
     @property
     def stop(self) -> int:
@@ -66,6 +78,10 @@ class TextConflict:
         return LineSpan(self.start + 1 if count else self.start, count)
 
 
+# Picks the resolution of one conflicting hunk, or ``None`` to leave it open.
+type HunkChooser = Callable[[TextConflict], ResolutionChoice | None]
+
+
 @dataclass(frozen=True)
 class TextMerge:
     """The merged text, or every conflict that prevented one.
@@ -74,12 +90,17 @@ class TextMerge:
         content: The merged text in the local newline style, or ``None`` when
             any region conflicts. No partially merged text is offered: two
             hunks of one change can depend on each other, so the caller keeps
-            the local text whole or accepts the merge whole.
-        conflicts: Conflicting regions in local line order.
+            the local text whole or accepts the merge whole. A hunk counts as
+            open until every hunk is resolved, since its resolution is applied
+            only with the others.
+        conflicts: Open conflicting regions in local line order.
+        resolved: Conflicting regions settled by a resolution, in local line
+            order, when every region was.
     """
 
     content: str | None
     conflicts: tuple[TextConflict, ...] = ()
+    resolved: tuple[TextConflict, ...] = ()
 
     @property
     def clean(self) -> bool:
@@ -95,22 +116,25 @@ class TextReconciliation:
         content: Text to write, or ``None`` to leave the local text untouched.
         baseline: Ownership to record: the accepted desired text, the previous
             baseline when an update is refused, or ``None`` while unowned.
-        conflict: Whether a pending desired change was refused.
-        conflicts: The overlapping edits that refused it, when a merge ran.
+        conflicts: Why a pending desired change was refused: one conflict per
+            overlapping hunk, or one for the whole text.
+        resolved: Conflicts settled by a resolution.
     """
 
     content: str | None
     baseline: str | None
-    conflict: bool = False
-    conflicts: tuple[TextConflict, ...] = ()
+    conflicts: tuple[MergeConflict, ...] = ()
+    resolved: tuple[MergeConflict, ...] = ()
 
 
 def reconcile_text(
     local: bytes | None,
     desired: str,
     baseline: str | None,
+    location: MergeLocation,
     *,
     overwrite: bool = False,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> TextReconciliation:
     """Decides an owned text update, merging local edits with desired changes.
 
@@ -122,35 +146,87 @@ def reconcile_text(
     UTF-8 cannot be merged and are treated as edited. Explicit overwrite writes
     and owns the desired text.
 
+    A resolution owns the desired text whichever side it keeps: unowned text
+    kept is adopted as an edit of the update, and a deleted text kept stays
+    deleted until the update changes again.
+
     Args:
         local: The workspace bytes, or ``None`` when the file is absent.
         desired: The newly generated text.
         baseline: The last accepted generated text, or ``None`` if unowned.
+        location: The file, and region identity, carried into conflicts.
         overwrite: Whether the collision strategy replaces local content.
+        resolutions: Choices settling conflicts, keyed by conflict identity.
 
     Returns:
-        What to write, what to own, and any refused change.
+        What to write, what to own, and any refused or settled change.
     """
     target = desired.encode("utf-8")
     if overwrite or (baseline is None and local is None):
         return TextReconciliation(None if local == target else desired, desired)
-    if baseline is None:
-        return TextReconciliation(None, None, conflict=local != target)
-    if local is None:
-        return TextReconciliation(None, baseline, conflict=desired != baseline)
     try:
-        text = local.decode("utf-8")
+        text = local.decode("utf-8") if local is not None else None
     except UnicodeDecodeError:
-        return TextReconciliation(None, baseline, conflict=desired != baseline)
-    merged = merge_text(baseline, text, desired)
+        if desired == baseline:
+            return TextReconciliation(None, baseline)
+        reason = ConflictReason.UNOWNED if baseline is None else ConflictReason.DIVERGED
+        return TextReconciliation(None, baseline, (MergeConflict(location, reason),))
+    if baseline is None or text is None:
+        if (baseline is None and local == target) or desired == baseline:
+            return TextReconciliation(None, baseline)
+        found = MergeConflict(
+            location,
+            ConflictReason.UNOWNED
+            if baseline is None
+            else ConflictReason.DELETED_ANCESTOR,
+            ConflictSides(
+                MISSING if baseline is None else baseline,
+                MISSING if text is None else text,
+                desired,
+                line=0,
+            ),
+        )
+        settled = found.settle(resolutions)
+        if settled is None:
+            return TextReconciliation(None, baseline, (found,))
+        keep = settled.resolution is ResolutionChoice.LOCAL
+        return TextReconciliation(None if keep else desired, desired, (), (settled,))
+
+    def hunk(overlap: TextConflict) -> MergeConflict:
+        return MergeConflict(
+            replace(location, lines=overlap.lines),
+            ConflictReason.DIVERGED,
+            ConflictSides(
+                "".join(overlap.base),
+                "".join(overlap.local),
+                "".join(overlap.remote),
+                line=overlap.start,
+            ),
+        )
+
+    def choose(overlap: TextConflict) -> ResolutionChoice | None:
+        settled = hunk(overlap).settle(resolutions)
+        return settled.resolution if settled else None
+
+    merged = merge_text(baseline, text, desired, choose)
     if merged.content is None:
-        return TextReconciliation(None, baseline, True, merged.conflicts)
+        return TextReconciliation(
+            None, baseline, tuple(hunk(overlap) for overlap in merged.conflicts)
+        )
     return TextReconciliation(
-        None if merged.content == text else merged.content, desired
+        None if merged.content == text else merged.content,
+        desired,
+        (),
+        tuple(
+            replace(hunk(overlap), resolution=overlap.resolution)
+            for overlap in merged.resolved
+        ),
     )
 
 
-def merge_text(base: str, local: str, remote: str) -> TextMerge:
+def merge_text(
+    base: str, local: str, remote: str, choose: HunkChooser | None = None
+) -> TextMerge:
     """Merges the local and remote edits of a common ancestor, line by line.
 
     Lines keep their terminators, so a missing final newline is a change like
@@ -164,6 +240,7 @@ def merge_text(base: str, local: str, remote: str) -> TextMerge:
         base: The common ancestor, such as the last accepted generated text.
         local: The workspace text.
         remote: The newly desired text.
+        choose: Picks each conflicting region's resolution, or leaves it open.
 
     Returns:
         The merged text, or the conflicting regions.
@@ -182,14 +259,29 @@ def merge_text(base: str, local: str, remote: str) -> TextMerge:
     )
     merged: list[str] = []
     conflicts: list[TextConflict] = []
+    resolved: list[TextConflict] = []
     for chunk in _diff3(base_lines, local_lines, remote_lines):
-        if isinstance(chunk, TextConflict):
-            conflicts.append(chunk)
-        else:
+        if not isinstance(chunk, TextConflict):
             merged.extend(chunk)
+            continue
+        choice = choose(chunk) if choose is not None else None
+        if choice is None:
+            conflicts.append(chunk)
+            continue
+        resolved.append(replace(chunk, resolution=choice))
+        if choice is not ResolutionChoice.DESIRED:
+            merged.extend(chunk.local)
+        if choice is not ResolutionChoice.LOCAL:
+            merged.extend(chunk.remote)
     if conflicts:
-        return TextMerge(None, tuple(conflicts))
-    return TextMerge("".join(merged))
+        # Resolutions apply only together, so every hunk stays open.
+        opened = [replace(chunk, resolution=None) for chunk in resolved]
+        return TextMerge(None, tuple(sorted([*conflicts, *opened], key=_start)))
+    return TextMerge("".join(merged), (), tuple(resolved))
+
+
+def _start(conflict: TextConflict) -> int:
+    return conflict.start
 
 
 def is_edited(local: bytes, baseline: str) -> bool:

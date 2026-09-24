@@ -66,6 +66,8 @@ class DiagnosticEvent:
         message: A concise description of the event.
         severity: The severity level of the event.
         detail: Optional extended diagnostic information.
+        conflict: An open conflict, whose local content was kept.
+        resolved: A conflict settled by a resolution.
     """
 
     phase: DiagnosticPhase | str
@@ -73,6 +75,7 @@ class DiagnosticEvent:
     severity: Severity
     detail: str | None = None
     conflict: MergeConflict | None = None
+    resolved: MergeConflict | None = None
 
 
 class SystemTask:

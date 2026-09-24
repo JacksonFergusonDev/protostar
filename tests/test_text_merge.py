@@ -5,6 +5,13 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from protostar import text_merge
+from protostar.merge import (
+    ConflictReason,
+    ConflictSides,
+    LineSpan,
+    MergeLocation,
+    ResolutionChoice,
+)
 from protostar.text_merge import (
     TextConflict,
     TextMerge,
@@ -161,33 +168,28 @@ def test_aligns_repeated_lines_within_a_bounded_cost(
     assert not merge_text(*case).clean
 
 
+FILE = MergeLocation("justfile")
+DIVERGED, UNOWNED, DELETED = (
+    ConflictReason.DIVERGED,
+    ConflictReason.UNOWNED,
+    ConflictReason.DELETED_ANCESTOR,
+)
+
+
 @pytest.mark.parametrize(
     ("local", "baseline", "desired", "expected"),
     [
-        pytest.param(None, None, "a\n", TextReconciliation("a\n", "a\n"), id="create"),
+        pytest.param(None, None, "a\n", ("a\n", "a\n", None), id="create"),
+        pytest.param(b"a\n", None, "a\n", (None, None, None), id="equal-unowned"),
+        pytest.param(b"b\n", None, "a\n", (None, None, UNOWNED), id="unowned"),
+        pytest.param(None, "a\n", "a\n", (None, "a\n", None), id="kept-deletion"),
+        pytest.param(None, "a\n", "b\n", (None, "a\n", DELETED), id="deleted"),
+        pytest.param(b"a\n", "a\n", "b\n", ("b\n", "b\n", None), id="update"),
+        pytest.param(b"b\n", "a\n", "b\n", (None, "b\n", None), id="converged"),
+        pytest.param(b"\xff\n", "a\n", "b\n", (None, "a\n", DIVERGED), id="binary"),
+        pytest.param(b"\xff\n", "a\n", "a\n", (None, "a\n", None), id="binary-kept"),
         pytest.param(
-            b"a\n", None, "a\n", TextReconciliation(None, None), id="equal-unowned"
-        ),
-        pytest.param(
-            b"b\n", None, "a\n", TextReconciliation(None, None, True), id="unowned"
-        ),
-        pytest.param(
-            None, "a\n", "a\n", TextReconciliation(None, "a\n"), id="kept-deletion"
-        ),
-        pytest.param(
-            None, "a\n", "b\n", TextReconciliation(None, "a\n", True), id="deleted"
-        ),
-        pytest.param(
-            b"a\n", "a\n", "b\n", TextReconciliation("b\n", "b\n"), id="update"
-        ),
-        pytest.param(
-            b"b\n", "a\n", "b\n", TextReconciliation(None, "b\n"), id="converged"
-        ),
-        pytest.param(
-            b"\xff\n", "a\n", "b\n", TextReconciliation(None, "a\n", True), id="binary"
-        ),
-        pytest.param(
-            b"\xff\n", "a\n", "a\n", TextReconciliation(None, "a\n"), id="binary-kept"
+            b"\xff\n", None, "a\n", (None, None, UNOWNED), id="binary-unowned"
         ),
     ],
 )
@@ -195,20 +197,29 @@ def test_ownership_gate(
     local: bytes | None,
     baseline: str | None,
     desired: str,
-    expected: TextReconciliation,
+    expected: tuple[str | None, str | None, ConflictReason | None],
 ) -> None:
-    assert reconcile_text(local, desired, baseline) == expected
+    result = reconcile_text(local, desired, baseline, FILE)
+
+    content, owned, reason = expected
+    assert (result.content, result.baseline) == (content, owned)
+    assert [c.reason for c in result.conflicts] == ([reason] if reason else [])
+    assert all(c.location == FILE for c in result.conflicts)
+    assert not result.resolved
 
 
 def test_ownership_gate_reports_overlaps_and_overwrite_wins() -> None:
-    refused = reconcile_text(b"x\n", "b\n", "a\n")
+    refused = reconcile_text(b"x\n", "b\n", "a\n", FILE)
 
-    assert (refused.content, refused.baseline, refused.conflict) == (None, "a\n", True)
-    assert refused.conflicts == (TextConflict(0, ("a\n",), ("x\n",), ("b\n",)),)
-    assert reconcile_text(b"x\n", "b\n", "a\n", overwrite=True) == (
+    assert (refused.content, refused.baseline) == (None, "a\n")
+    (conflict,) = refused.conflicts
+    assert conflict.location == MergeLocation("justfile", lines=LineSpan(1, 1))
+    assert conflict.sides == ConflictSides("a\n", "x\n", "b\n", line=0)
+    assert conflict.choices == tuple(ResolutionChoice)
+    assert reconcile_text(b"x\n", "b\n", "a\n", FILE, overwrite=True) == (
         TextReconciliation("b\n", "b\n")
     )
-    assert reconcile_text(b"b\n", "b\n", None, overwrite=True) == (
+    assert reconcile_text(b"b\n", "b\n", None, FILE, overwrite=True) == (
         TextReconciliation(None, "b\n")
     )
 
@@ -312,3 +323,138 @@ def test_alignment_pairs_equal_lines_in_order(a: list[str], b: list[str]) -> Non
 
     assert all(a[i] == b[j] for i, j in matches)
     assert all(i1 < i2 and j1 < j2 for (i1, j1), (i2, j2) in pairwise(matches))
+
+
+# --- resolutions --------------------------------------------------------------
+
+LOCAL, DESIRED, BOTH = ResolutionChoice
+
+
+def always(choice: ResolutionChoice) -> text_merge.HunkChooser:
+    return lambda _: choice
+
+
+@pytest.mark.parametrize(
+    ("choice", "merged"),
+    [
+        (LOCAL, "A\nb\nc\nd\nE\n"),
+        (DESIRED, "a2\nb\nc\nd\ne2\n"),
+        (BOTH, "A\na2\nb\nc\nd\nE\ne2\n"),
+    ],
+)
+def test_every_hunk_takes_its_chosen_side(
+    choice: ResolutionChoice, merged: str
+) -> None:
+    base = lf_text(["a", "b", "c", "d", "e"])
+    local = lf_text(["A", "b", "c", "d", "E"])
+    remote = lf_text(["a2", "b", "c", "d", "e2"])
+
+    result = merge_text(base, local, remote, always(choice))
+
+    assert result.content == merged
+    assert not result.conflicts
+    assert [(c.start, c.resolution) for c in result.resolved] == [
+        (0, choice),
+        (4, choice),
+    ]
+
+
+def test_one_open_hunk_keeps_every_hunk_open() -> None:
+    base = lf_text(["a", "b", "c", "d", "e"])
+    local = lf_text(["A", "b", "c", "d", "E"])
+    remote = lf_text(["a2", "b", "c", "d", "e2"])
+
+    result = merge_text(
+        base, local, remote, lambda hunk: LOCAL if hunk.start == 0 else None
+    )
+
+    assert result == TextMerge(None, merge_text(base, local, remote).conflicts)
+    assert all(c.resolution is None for c in result.conflicts)
+
+
+def test_hunk_resolutions_apply_only_all_together() -> None:
+    base, local, desired = "a\nb\nc\nd\ne\n", "A\nb\nc\nd\nE\n", "a2\nb\nc\nd\ne2\n"
+    (first, last) = reconcile_text(local.encode(), desired, base, FILE).conflicts
+
+    partial = reconcile_text(
+        local.encode(), desired, base, FILE, resolutions={first.id: LOCAL}
+    )
+    assert (partial.content, partial.baseline) == (None, base)
+    assert partial.conflicts == (first, last)
+
+    settled = reconcile_text(
+        local.encode(),
+        desired,
+        base,
+        FILE,
+        resolutions={first.id: LOCAL, last.id: BOTH},
+    )
+    assert (settled.content, settled.baseline) == ("A\nb\nc\nd\nE\ne2\n", desired)
+    assert [(c.id, c.resolution) for c in settled.resolved] == [
+        (first.id, LOCAL),
+        (last.id, BOTH),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("local", "baseline", "choice", "content"),
+    [
+        pytest.param(b"mine\n", None, LOCAL, None, id="adopt-unowned"),
+        pytest.param(b"mine\n", None, DESIRED, "new\n", id="overwrite-unowned"),
+        pytest.param(None, "old\n", LOCAL, None, id="keep-deleted"),
+        pytest.param(None, "old\n", DESIRED, "new\n", id="recreate-deleted"),
+    ],
+)
+def test_whole_text_resolutions_own_the_update(
+    local: bytes | None,
+    baseline: str | None,
+    choice: ResolutionChoice,
+    content: str | None,
+) -> None:
+    (conflict,) = reconcile_text(local, "new\n", baseline, FILE).conflicts
+    assert conflict.location == FILE
+    assert conflict.choices == (LOCAL, DESIRED)
+
+    result = reconcile_text(
+        local, "new\n", baseline, FILE, resolutions={conflict.id: choice}
+    )
+
+    assert (result.content, result.baseline) == (content, "new\n")
+    assert not result.conflicts
+    # The next update of an adopted text merges like any owned text.
+    if local is not None and choice is LOCAL:
+        again = reconcile_text(local, "newer\n", result.baseline, FILE)
+        assert [c.reason for c in again.conflicts] == [ConflictReason.DIVERGED]
+
+
+def test_whole_text_conflicts_cannot_keep_both() -> None:
+    (conflict,) = reconcile_text(b"mine\n", "new\n", None, FILE).conflicts
+
+    result = reconcile_text(
+        b"mine\n", "new\n", None, FILE, resolutions={conflict.id: BOTH}
+    )
+
+    assert result.conflicts == (conflict,)
+
+
+@PROPERTY
+@given(TEXT, TEXT, TEXT, st.sampled_from(list(ResolutionChoice)))
+def test_resolving_every_hunk_always_merges(
+    base: str, local: str, remote: str, choice: ResolutionChoice
+) -> None:
+    conflicts = merge_text(base, local, remote).conflicts
+    result = merge_text(base, local, remote, always(choice))
+
+    assert result.clean
+    assert [c.start for c in result.resolved] == [c.start for c in conflicts]
+
+
+@PROPERTY
+@given(TEXT, TEXT, TEXT)
+def test_keeping_local_mirrors_taking_the_update(
+    base: str, local: str, remote: str
+) -> None:
+    forward = merge_text(base, local, remote, always(LOCAL))
+    backward = merge_text(base, remote, local, always(DESIRED))
+
+    assert forward.content == backward.content

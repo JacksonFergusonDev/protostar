@@ -52,6 +52,7 @@ Execution is strictly split into two decoupled phases:
 - Never overwrite user files blindly.
 - Use `tomlkit` to manipulate and merge `pyproject.toml` files to preserve comments, indentation, and formatting. Do not use string templating or regex for structured TOML files.
 - Deduplicate and append to `.gitignore` files rather than replacing them.
+- **A resolution always owns the update.** Settling a conflict records the desired content as the new baseline; the `ResolutionChoice` only picks which bytes stay (`LOCAL`, `DESIRED`, or `BOTH` for text hunks). Resolutions are keyed by the content-addressed `MergeConflict.id`, never by position, and a text file's hunks apply together or not at all. A conflict with no `sides` is settled by hand.
 - **Format engines know no file by name.** `toml_ast`, `yaml_ast`, and `jsonc_ast` reconcile whatever spec they are handed. A file's target path, merge spec, and policy (guards, layout, pin handling) live in its module under `src/protostar/documents/` and are looked up through that package's registries; never branch on a file name inside an engine or hardcode a managed target path elsewhere.
 
 ### 5. Domain-Specific Error Handling

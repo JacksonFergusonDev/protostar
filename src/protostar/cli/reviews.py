@@ -3,12 +3,18 @@
 import argparse
 import difflib
 import sys
-from typing import Any
+from typing import Any, cast
 
 from protostar.cli import schema, ui
 from protostar.lifecycle import inspect_project, prepare_project
-from protostar.merge import describe_location
-from protostar.preparation import PreparedEdit, PreparedReview
+from protostar.merge import MergeConflict, ResolutionChoice, describe_location
+from protostar.preparation import PreparedEdit, PreparedReview, select_resolutions
+
+SETTLED = {
+    ResolutionChoice.LOCAL: "kept local content",
+    ResolutionChoice.DESIRED: "took the update",
+    ResolutionChoice.BOTH: "kept both",
+}
 
 
 def _diff_lines(content: bytes | None) -> list[str]:
@@ -64,6 +70,7 @@ def render_review(
     """Renders shared decisions for inspection, checks, and application."""
     ui.console.print(
         f"{len(review.edits)} accepted file edits; {len(review.conflicts)} conflicts; "
+        f"{len(review.resolved)} resolved; "
         f"{len(review.preserved)} preserved local deviations.",
         markup=False,
     )
@@ -74,11 +81,19 @@ def render_review(
     for path in review.directories:
         ui.console.print(f"Accepted directory: {path}", markup=False)
     for conflict in review.conflicts:
-        location = describe_location(conflict.location)
-        identity = conflict.location.identity or ""
+        choices = ", ".join(choice.value for choice in conflict.choices)
         ui.console.print(
-            f"Conflict: {conflict.location.file} {location} {identity}: {conflict.reason.value}",
+            f"Conflict {conflict.id}: {_where(conflict)}: {conflict.reason.value}; "
+            + (f"resolve with {choices}." if choices else "resolve by hand."),
             markup=False,
+            soft_wrap=True,
+        )
+    for conflict in review.resolved:
+        settled = SETTLED[cast(ResolutionChoice, conflict.resolution)]
+        ui.console.print(
+            f"Resolved {conflict.id}: {_where(conflict)}: {settled}.",
+            markup=False,
+            soft_wrap=True,
         )
     for item in review.preserved:
         ui.console.print(
@@ -123,9 +138,23 @@ def render_review(
         ui.console.print("No pending work.", markup=False)
 
 
+def _where(conflict: MergeConflict) -> str:
+    """Returns the file, position, and identity of a conflict on one line."""
+    parts = (
+        conflict.location.file,
+        describe_location(conflict.location),
+        conflict.location.identity or "",
+    )
+    return " ".join(part for part in parts if part)
+
+
 def handle_sync(args: argparse.Namespace) -> None:
     """Reviews or applies the current recipe without prompts or task replay."""
     project = prepare_project()
+    if args.resolve:
+        project = project.resolve(
+            select_resolutions(project.review.conflicts, args.resolve)
+        )
     review = project.review
     if args.dry_run or args.check:
         payload = review_payload(review)
@@ -163,6 +192,7 @@ def handle_sync(args: argparse.Namespace) -> None:
         render_review(review, applied=True)
         ui.console.print(
             f"Applied changes to {len(result.touched_paths)} paths; "
+            f"{len(review.resolved)} conflicts resolved; "
             f"{len(review.conflicts)} conflicts retained.",
             markup=False,
         )

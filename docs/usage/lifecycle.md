@@ -54,10 +54,10 @@ protostar sync --json > sync-result.json
 protostar diff
 ```
 
-Resolve the desired setting deliberately in your project or same-source template,
-then review again. If local content already equals new desired content, Protostar
-can advance its baseline without rewriting that content. This still counts as
-pending work until `sync` records the advancement.
+Settle the conflict with a [resolution](#resolve-conflicts), or edit your
+project or same-source template and review again. If local content already equals
+new desired content, Protostar can advance its baseline without rewriting that
+content. This still counts as pending work until `sync` records the advancement.
 
 Generated files without a structured format, such as the `justfile` and
 `Dockerfile`, merge line by line against the text Protostar last wrote. Your
@@ -81,6 +81,50 @@ removed and an edited copy is kept with a `retracted` conflict. Workflow files a
 merged by job and by step name, so your own jobs, steps, triggers, and inputs stay.
 An action version you or Renovate changed (including a SHA pin) is yours: a newer
 Protostar version of the same action does not conflict and `sync --check` passes.
+
+## Resolve conflicts
+
+A conflict stays open, and `sync --check` keeps failing, until you settle it.
+Every resolution makes the update Protostar's new baseline there; your choice
+decides only which content stays in the file:
+
+| Choice | Meaning | Afterwards |
+| --- | --- | --- |
+| `local` | Keep mine | Your content reads as a local edit of the update and is preserved until the update changes there again. |
+| `desired` | Take the update | The update is written. |
+| `both` | Keep both | Your lines, then the update's. Only for overlapping lines of a text file. |
+
+Choosing `local` is also how you finish a hand edit: change the file however you
+like, then keep it. The same choices settle every kind of conflict Protostar can
+show both sides of:
+
+- A `diverged` or `type-mismatch` value or line range takes the side you choose.
+- An `unowned` file or value kept with `local` is adopted: it stays as it is and
+  merges three ways from then on. With `desired` it is replaced.
+- A `deleted-ancestor` file or table kept with `local` stays deleted; `desired`
+  recreates it.
+- A `retracted` value kept with `local` stays and is no longer Protostar's;
+  `desired` removes it.
+
+Conflicts caused by document policy (`duplicate-identity`, `shared-structure`,
+`unsafe-pin`) and dependency conflicts offer no choices. Fix those by hand.
+
+Each conflict has an `id` covering its location and content. `status` prints it
+with the choices it offers, and JSON reviews list both with every side under
+`review.conflicts`. Pass `--resolve SELECTOR=CHOICE` to `sync`, where the selector
+is a conflict `id` or a file path that selects every conflict in that file:
+
+```bash
+protostar sync --dry-run --resolve 3f2a9c1b7d4e=local
+protostar sync --resolve justfile=both --resolve 8b0e5d2c61fa=desired
+```
+
+Later selectors override earlier ones, so an `id` can refine a file-wide choice.
+Settled conflicts move from `review.conflicts` to `review.resolved`. A selector
+that matches nothing fails before anything is written. An `id` stops matching as
+soon as either side of its conflict changes, so a choice is never applied to
+content you did not review. The overlapping line ranges of one text file are
+applied together: resolve every one, or the file stays as it is.
 
 ## Edit the recipe deliberately
 
@@ -126,8 +170,8 @@ protostar sync --check --json > review.json
 | Invocation/outcome | Exit code |
 | --- | --- |
 | Valid status, diff, or dry-run review, including conflicts | `0` |
-| Sync completes with no conflicts, including a no-op | `0` |
-| Sync commits safe work and retains conflicts | `1` |
+| Sync completes with no unresolved conflicts, including a no-op | `0` |
+| Sync commits safe work and retains unresolved conflicts | `1` |
 | Check finds accepted edits, resolver work, state advancement, or conflicts | `1` |
 | Check finds only preserved local deviations or no work | `0` |
 | Fatal error | Domain-specific code; interruption uses `130` |

@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
+from collections.abc import Mapping
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time
 from enum import StrEnum
+from functools import cached_property
 from typing import cast
 
 from .errors import ConfigurationError
@@ -94,12 +98,136 @@ def describe_location(location: MergeLocation) -> str:
     return f"lines {span.start}-{span.start + span.count - 1}"
 
 
+class ResolutionChoice(StrEnum):
+    """How a conflict is settled. Every choice advances ownership to the update.
+
+    ``LOCAL`` keeps the local content, ``DESIRED`` takes the update, and ``BOTH``
+    keeps the local lines of a text hunk followed by the update's.
+    """
+
+    LOCAL = "local"
+    DESIRED = "desired"
+    BOTH = "both"
+
+
+# Resolution choices keyed by ``MergeConflict.id``.
+type Resolutions = Mapping[str, ResolutionChoice]
+NO_RESOLUTIONS: Resolutions = {}
+
+
+@dataclass(frozen=True)
+class ConflictSides:
+    """What each side holds where a conflict is, so it can be shown and settled.
+
+    Attributes:
+        base: The owned baseline there, or ``MISSING`` when never owned.
+        local: The workspace content there, or ``MISSING`` when deleted.
+        desired: The update there, or ``MISSING`` when it is retracted.
+        line: For text, the zero-based line where the hunk starts in the local
+            text it was merged in, which tells identical hunks apart; ``None``
+            for structured values.
+    """
+
+    base: Value
+    local: Value
+    desired: Value
+    line: int | None = None
+
+    @property
+    def text(self) -> bool:
+        """Returns whether the sides are text rather than structured values."""
+        return self.line is not None
+
+
 @dataclass(frozen=True)
 class MergeConflict:
-    """Structured conflict without terminal or diagnostic formatting."""
+    """Structured conflict without terminal or diagnostic formatting.
+
+    Attributes:
+        location: Where the conflict is.
+        reason: Why the local content was kept.
+        sides: Each side's content, or ``None`` when the conflict can only be
+            settled by hand, such as a document-policy hold.
+        resolution: The choice that settled it, or ``None`` while open.
+    """
 
     location: MergeLocation
     reason: ConflictReason
+    sides: ConflictSides | None = None
+    resolution: ResolutionChoice | None = None
+
+    @cached_property
+    def id(self) -> str:
+        """Returns a content-addressed identity that is stable across reviews.
+
+        It covers the location and every side, but not text line numbers, which
+        move when other conflicts are settled. A conflict whose content changed
+        since it was reviewed therefore has a different identity.
+        """
+        sides = self.sides
+        payload = [
+            self.location.file,
+            list(self.location.keys),
+            self.location.identity,
+            self.reason.value,
+            None
+            if sides is None
+            else [
+                _canonical(sides.base),
+                _canonical(sides.local),
+                _canonical(sides.desired),
+                sides.line,
+            ],
+        ]
+        encoded = json.dumps(payload, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()[:12]
+
+    def __hash__(self) -> int:
+        """Hashes by identity, since the sides can hold lists and mappings."""
+        return hash((self.id, self.resolution))
+
+    @property
+    def choices(self) -> tuple[ResolutionChoice, ...]:
+        """Returns the choices that can settle this conflict, if any."""
+        if self.sides is None:
+            return ()
+        if self.sides.text and self.location.lines is not None:
+            return (
+                ResolutionChoice.LOCAL,
+                ResolutionChoice.DESIRED,
+                ResolutionChoice.BOTH,
+            )
+        return (ResolutionChoice.LOCAL, ResolutionChoice.DESIRED)
+
+    def settle(self, resolutions: Resolutions) -> MergeConflict | None:
+        """Returns this conflict settled by its chosen resolution, if one applies.
+
+        Args:
+            resolutions: Choices keyed by conflict identity.
+
+        Returns:
+            The conflict with its resolution, or ``None`` when no choice this
+            conflict offers was made.
+        """
+        choice = resolutions.get(self.id)
+        if choice is None or choice not in self.choices:
+            return None
+        return replace(self, resolution=choice)
+
+
+def _canonical(value: Value) -> object:
+    """Encodes a value for hashing without conflating types JSON would merge."""
+    if value is MISSING:
+        return ["missing"]
+    if isinstance(value, dict):
+        return ["map", [[key, _canonical(value[key])] for key in sorted(value)]]
+    if isinstance(value, list):
+        return ["list", [_canonical(child) for child in value]]
+    if isinstance(value, (date, time)):
+        return [type(value).__name__, value.isoformat()]
+    if isinstance(value, float):
+        return ["float", repr(value)]
+    return [type(value).__name__, value]
 
 
 @dataclass(frozen=True)
@@ -124,12 +252,21 @@ DEFAULT_POLICY = MergePolicy()
 
 @dataclass(frozen=True)
 class MergeResult:
-    """Semantic output and composite owned baseline, detached from all inputs."""
+    """Semantic output and composite owned baseline, detached from all inputs.
+
+    Attributes:
+        value: The merged value.
+        baseline: The composite owned baseline to record.
+        decision: What happened at the root.
+        conflicts: Open conflicts, where the local content was kept.
+        resolved: Conflicts settled by a resolution.
+    """
 
     value: Value
     baseline: Value
     decision: MergeDecision
     conflicts: tuple[MergeConflict, ...] = ()
+    resolved: tuple[MergeConflict, ...] = ()
 
 
 def validate_value(value: Value) -> None:
@@ -213,8 +350,12 @@ def reconcile(
     remote: Value,
     location: MergeLocation,
     policy: MergePolicy = DEFAULT_POLICY,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> MergeResult:
     """Reconciles owned contributions without adoption, pruning, or side effects.
+
+    A resolved conflict owns the desired value either way: keeping the local
+    value leaves it as an edit of the update, and taking the update applies it.
 
     Args:
         base: Only previously applied owned contributions, or explicit absence.
@@ -222,6 +363,7 @@ def reconcile(
         remote: Desired contribution, or explicit absence.
         location: File/key/identity information carried into conflicts.
         policy: Adapter-selected set-like paths and ancestor deletion protection.
+        resolutions: Choices settling conflicts, keyed by conflict identity.
 
     Returns:
         Detached semantic values and the baseline for a candidate transaction.
@@ -242,12 +384,29 @@ def reconcile(
             )
 
         def conflict(reason: ConflictReason) -> MergeResult:
-            return MergeResult(
-                deepcopy(current),
-                deepcopy(previous),
-                MergeDecision.CONFLICT,
-                (MergeConflict(loc, reason),),
+            found = MergeConflict(
+                loc,
+                reason,
+                ConflictSides(
+                    deepcopy(previous), deepcopy(current), deepcopy(incoming)
+                ),
             )
+            settled = found.settle(resolutions)
+            if settled is None:
+                return MergeResult(
+                    deepcopy(current),
+                    deepcopy(previous),
+                    MergeDecision.CONFLICT,
+                    (found,),
+                )
+            if settled.resolution is ResolutionChoice.LOCAL:
+                return MergeResult(
+                    deepcopy(current),
+                    deepcopy(incoming),
+                    MergeDecision.KEEP_LOCAL,
+                    resolved=(settled,),
+                )
+            return replace(apply(), resolved=(settled,))
 
         def apply() -> MergeResult:
             return MergeResult(
@@ -286,6 +445,7 @@ def reconcile(
                 deepcopy(previous) if isinstance(previous, dict) else {}
             )
             conflicts: list[MergeConflict] = []
+            resolved: list[MergeConflict] = []
             for key, desired in incoming.items():
                 child = merge(
                     baseline.get(key, MISSING),
@@ -299,6 +459,7 @@ def reconcile(
                 if child.baseline is not MISSING:
                     baseline[key] = child.baseline
                 conflicts.extend(child.conflicts)
+                resolved.extend(child.resolved)
             if policy.complete and isinstance(previous, dict):
                 for key in [k for k in previous if k not in incoming]:
                     local = values.get(key, MISSING)
@@ -308,12 +469,22 @@ def reconcile(
                         values.pop(key)
                         baseline.pop(key, None)
                     else:
-                        conflicts.append(
-                            MergeConflict(
-                                MergeLocation(loc.file, (*loc.keys, key), loc.identity),
-                                ConflictReason.RETRACTED,
-                            )
+                        found = MergeConflict(
+                            MergeLocation(loc.file, (*loc.keys, key), loc.identity),
+                            ConflictReason.RETRACTED,
+                            ConflictSides(
+                                deepcopy(previous[key]), deepcopy(local), MISSING
+                            ),
                         )
+                        settled = found.settle(resolutions)
+                        if settled is None:
+                            conflicts.append(found)
+                            continue
+                        # Either way Protostar stops owning the retracted value.
+                        baseline.pop(key)
+                        if settled.resolution is ResolutionChoice.DESIRED:
+                            values.pop(key)
+                        resolved.append(settled)
             owned: Value = (
                 baseline
                 if baseline or previous is not MISSING or current is MISSING
@@ -328,7 +499,9 @@ def reconcile(
                     else MergeDecision.APPLY_REMOTE
                 )
             )
-            return MergeResult(values, owned, decision, tuple(conflicts))
+            return MergeResult(
+                values, owned, decision, tuple(conflicts), tuple(resolved)
+            )
         if isinstance(incoming, list) and loc.keys in policy.set_like_paths:
             if (current is not MISSING and not isinstance(current, list)) or (
                 previous is not MISSING and not isinstance(previous, list)

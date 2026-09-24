@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from protostar.appends import RegionConflict, append_marker_blocks
+from protostar.appends import append_marker_blocks
 from protostar.config import UserConfig
 from protostar.errors import ConfigurationError
 from protostar.executor import SystemExecutor
 from protostar.intent import AppendContribution
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.merge import ConflictReason, LineSpan
+from protostar.merge import ConflictReason, LineSpan, MergeLocation, ResolutionChoice
 from protostar.models import ExecutionResult
 from protostar.sync_state import FilePolicy, deserialize_state
 
@@ -207,7 +207,11 @@ def test_region_lifecycle_and_surrounding_bytes(suffix):
     assert conflict.content == edited
     # The one payload line conflicts: line 4, after the prefix, the blank
     # separator, and the begin marker.
-    assert conflict.conflicts == (RegionConflict("test:id", LineSpan(4, 1)),)
+    ((location, reason),) = [(c.location, c.reason) for c in conflict.conflicts]
+    assert location == MergeLocation(
+        path.as_posix(), identity="test:id", lines=LineSpan(4, 1)
+    )
+    assert reason is ConflictReason.DIVERGED
     assert conflict.baselines == changed.baselines
     converged = append_marker_blocks(
         changed.content.replace("v2", "v3"),
@@ -228,7 +232,9 @@ def test_region_lifecycle_and_surrounding_bytes(suffix):
         first.content, [AppendContribution("test:id", "v2")], path
     )
     assert not unowned.baselines
-    assert unowned.conflicts == (RegionConflict("test:id"),)
+    ((location, reason),) = [(c.location, c.reason) for c in unowned.conflicts]
+    assert location == MergeLocation(path.as_posix(), identity="test:id")
+    assert reason is ConflictReason.UNOWNED
     restored = append_marker_blocks(
         edited,
         [AppendContribution("test:id", "v3")],
@@ -289,10 +295,11 @@ def test_region_conflicts_are_numbered_in_the_final_file():
 
     (conflict,) = result.conflicts
     lines = result.content.splitlines()
-    assert conflict.identity == "test:lower"
-    assert conflict.lines is not None
-    assert lines[conflict.lines.start - 1] == "local"
-    assert conflict.lines.count == 1
+    assert conflict.location.identity == "test:lower"
+    span = conflict.location.lines
+    assert span is not None
+    assert lines[span.start - 1] == "local"
+    assert span.count == 1
 
 
 def test_seed_and_deleted_region_file(tmp_path, monkeypatch, mocker):
@@ -572,7 +579,10 @@ def test_review_reports_line_conflicts_and_preserved_edits(
     # A CRLF checkout is not a local edit.
     target.write_bytes(GENERATED.replace("\n", "\r\n").encode())
     assert not prepare_review(desired(), UserConfig()).preserved
-    target.write_text(GENERATED.replace("uv run pytest", "uv run pytest -x"))
+    # LF on every platform: the sides are reported in the local newline style.
+    target.write_text(
+        GENERATED.replace("uv run pytest", "uv run pytest -x"), newline="\n"
+    )
     (preserved,) = prepare_review(desired(), UserConfig()).preserved
     assert preserved.location.file == "justfile"
     assert not preserved.deleted
@@ -585,17 +595,99 @@ def test_review_reports_line_conflicts_and_preserved_edits(
 
     assert not review.edits
     assert not review.preserved
+    (conflict,) = review.conflicts
     assert review.to_dict()["conflicts"] == [
         {
+            "id": conflict.id,
             "file": "justfile",
             "keys": [],
             "identity": None,
             "lines": {"start": 5, "count": 1},
             "reason": "diverged",
+            "choices": ["local", "desired", "both"],
+            "sides": {
+                "text": True,
+                "base": {"value": "    uv run pytest\n"},
+                "local": {"value": "    uv run pytest -x\n"},
+                "desired": {"value": "    uv run pytest -q\n"},
+            },
         }
     ]
     render_review(review)
-    assert "Conflict: justfile line 5 : diverged" in capsys.readouterr().out
+    assert (
+        f"Conflict {conflict.id}: justfile line 5: diverged; "
+        "resolve with local, desired, both."
+    ) in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("choice", "line"),
+    [
+        (ResolutionChoice.LOCAL, "    uv run pytest -x\n"),
+        (ResolutionChoice.DESIRED, "    uv run pytest -q\n"),
+        (ResolutionChoice.BOTH, "    uv run pytest -x\n    uv run pytest -q\n"),
+    ],
+)
+def test_resolved_line_conflict_is_applied_and_owns_the_update(
+    tmp_path, monkeypatch, mocker, choice, line
+):
+    from protostar.preparation import prepare_review
+
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value=GENERATED)
+
+    def desired():
+        manifest = EnvironmentManifest()
+        manifest.tooling.wants_just = True
+        return manifest
+
+    run(mocker, lambda e: setattr(e.manifest.tooling, "wants_just", True))
+    target.write_text(GENERATED.replace("uv run pytest\n", "uv run pytest -x\n"))
+    update = GENERATED.replace("uv run pytest\n", "uv run pytest -q\n")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value=update)
+    (conflict,) = prepare_review(desired(), UserConfig()).conflicts
+
+    review = prepare_review(desired(), UserConfig(), resolutions={conflict.id: choice})
+    executor = SystemExecutor(desired(), UserConfig(), review=review)
+    mocker.patch.object(executor, "_check_ide_extensions")
+    executor.execute()
+
+    assert not review.conflicts
+    assert [c.id for c in review.resolved] == [conflict.id]
+    assert target.read_text() == GENERATED.replace("    uv run pytest\n", line)
+    assert baseline_of("justfile") == update
+    assert not prepare_review(desired(), UserConfig()).conflicts
+
+
+def test_resolved_region_conflict_is_numbered_in_the_final_file():
+    path = Path("AGENTS.md")
+    first = append_marker_blocks(
+        "# Notes\n", [region("one", "test:upper"), region("x\ny", "test:lower")], path
+    )
+    edited = first.content.replace("\nx\n", "\nlocal\n")
+    payloads = [region("remote\ny", "test:lower"), region("one\ntwo", "test:upper")]
+    (conflict,) = append_marker_blocks(
+        edited, payloads, path, baselines=first.baselines
+    ).conflicts
+
+    result = append_marker_blocks(
+        edited,
+        payloads,
+        path,
+        baselines=first.baselines,
+        resolutions={conflict.id: ResolutionChoice.DESIRED},
+    )
+
+    assert not result.conflicts
+    (resolved,) = result.resolved
+    assert resolved.id == conflict.id
+    assert "remote\ny" in result.content
+    assert result.baselines["test:lower"].count("remote") == 1
+    span = resolved.location.lines
+    assert span is not None
+    # Numbered after the upper region grew, it points at the settled line.
+    assert result.content.splitlines()[span.start - 1] == "remote"
 
 
 def test_region_preserved_deviations_ignore_newline_style(
