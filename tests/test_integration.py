@@ -17,6 +17,7 @@ from pytest_mock import MockerFixture
 from protostar.cli.main import handle_init
 from protostar.init_draft import InitDecision
 from protostar.manifest import CollisionStrategy
+from protostar.system import GIT_REPOSITORY_VARIABLES
 
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
@@ -208,6 +209,40 @@ def test_pre_commit_lifecycle_integration(
     assert (workspace / ".git" / "hooks" / "pre-commit").exists(), (
         "Pre-commit binary failed to map git hooks"
     )
+
+
+@pytest.mark.skipif(
+    shutil.which("uv") is None or shutil.which("git") is None,
+    reason="uv and git executables required",
+)
+def test_inherited_git_dir_cannot_redirect_git_init(
+    run_cli: Any, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: Any
+) -> None:
+    """A caller's GIT_DIR, as a git hook exports it, must not steer `git init`."""
+    decoy = tmp_path_factory.mktemp("caller") / "repo.git"
+    monkeypatch.setenv("GIT_DIR", str(decoy))
+    monkeypatch.setenv("GIT_WORK_TREE", str(decoy.parent))
+
+    current_py = f"{sys.version_info.major}.{sys.version_info.minor}"
+    code, stdout, stderr, workspace = run_cli("init", "--python-version", current_py)
+
+    assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
+    assert (workspace / ".git" / "HEAD").is_file()
+    assert not decoy.exists()
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git executable required")
+def test_scrubbed_variables_cover_gits_repository_variables() -> None:
+    """Every variable git clears when entering another repository is scrubbed."""
+    listed = subprocess.run(
+        ["git", "rev-parse", "--local-env-vars"],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1"},
+    ).stdout.split()
+
+    assert set(listed) <= GIT_REPOSITORY_VARIABLES
 
 
 @pytest.mark.skipif(shutil.which("direnv") is None, reason="direnv executable required")

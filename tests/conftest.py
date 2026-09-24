@@ -33,6 +33,20 @@ def mock_global_config_file(mocker, tmp_path):
     clear_hook_registry_cache()
 
 
+@pytest.fixture(autouse=True)
+def isolate_git_repository(monkeypatch):
+    """Keeps a caller's git repository from leaking into any test.
+
+    ``git push`` from a linked worktree exports ``GIT_DIR`` to the pre-push
+    hook that runs this suite; a test running real git would then operate on
+    the developer's repository instead of its temporary one.
+    """
+    from protostar.system import GIT_REPOSITORY_VARIABLES
+
+    for name in GIT_REPOSITORY_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture
 def manifest():
     """Provides a fresh EnvironmentManifest for each test."""
