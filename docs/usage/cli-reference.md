@@ -30,6 +30,11 @@ protostar init [OPTIONS] [DYNAMIC_VARS...]
 
 --8<-- "table_cli_init_core.md"
 
+`--one-shot` scaffolds without writing `[tool.protostar]` or `protostar.lock`.
+It still generates `uv.lock` when dependencies are resolved. It requires a
+project that is not already tracked by Protostar. See
+[one time scaffolding](init.md#one-time-scaffolding).
+
 #### Tooling Tri-State Flags
 
 Every tooling module can be explicitly enabled (`--<flag>`) or disabled (`--no-<flag>`), overriding template defaults:

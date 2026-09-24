@@ -2,6 +2,7 @@
   "api_version": 1,
   "status": "planned",
   "manifest": {
+    "one_shot": false,
     "template_reference": null,
     "collision_strategy": "merge",
     "collisions": [],

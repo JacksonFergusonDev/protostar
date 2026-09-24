@@ -138,6 +138,7 @@ class AgentsSpec:
     lint_commands: list[str]
     typecheck_commands: list[str]
     ci_flags: set[CIFlag | str]
+    one_shot: bool = False
 
 
 DOCKERFILE = "Dockerfile"
@@ -668,11 +669,16 @@ def generate_agents_md(spec: AgentsSpec) -> str:
         The Markdown section, opening with the document's top-level heading so a
         freshly scaffolded file satisfies first-line-heading lint rules.
     """
+    introduction = (
+        "Protostar scaffolded this section once. Update it when the project's tooling changes."
+        if spec.one_shot
+        else "Protostar generates and updates this section from the project's tooling. "
+        "Keep project notes outside the surrounding Protostar markers."
+    )
     lines = [
         "# Agent Guide",
         "",
-        "Protostar generates and updates this section from the project's tooling. "
-        "Keep project notes outside the surrounding Protostar markers.",
+        introduction,
         "",
         "## Environment",
         "",
@@ -681,9 +687,12 @@ def generate_agents_md(spec: AgentsSpec) -> str:
         "- Add dependencies with `uv add <package>`, or `uv add --dev <package>` "
         "for development tools. Do not edit dependency tables in `pyproject.toml` "
         "by hand.",
-        "- Tooling is recorded in `[tool.protostar]` in `pyproject.toml`. "
-        "To change it, edit `[tool.protostar.tools]` and run `protostar sync`.",
     ]
+    if not spec.one_shot:
+        lines.append(
+            "- Tooling is recorded in `[tool.protostar]` in `pyproject.toml`. "
+            "To change it, edit `[tool.protostar.tools]` and run `protostar sync`."
+        )
 
     has_pytest = CIFlag.PYTEST in spec.ci_flags
     if spec.wants_just:

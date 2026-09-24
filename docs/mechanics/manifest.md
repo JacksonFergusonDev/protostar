@@ -72,6 +72,7 @@ During the `build()` phase, modules route their state declarations through these
     * `metadata`: Structured `ProjectMetadata` dictionary defining author, licensing, and package specs.
     * `ide_settings`: Key-value dictionaries mapped directly to local IDE workspace configs via `manifest.add_ide_setting()`.
     * `collision_strategy`: Chosen `CollisionStrategy` (`MERGE` or `OVERWRITE`), or `null` while a collision decision is pending.
+    * `one_shot`: Whether execution omits the recorded recipe and Protostar ownership state after scaffolding.
     * `collisions`: Existing workspace paths that intersect planned file writes.
     * `target_files()`: Pure method returning the complete set of concrete `Path` objects Protostar intends to create or mutate (file injections, TOML targets, Dockerfiles, lockfiles, `.gitignore`, and templated blueprint files). Used by the Orchestrator for dynamic collision detection.
 

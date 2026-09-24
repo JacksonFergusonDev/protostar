@@ -30,7 +30,7 @@ from .reconciliation import Reconciliation
 from .registry import ResolvedHookRevision, resolve_hook_revisions
 from .review_workspace import LiveWorkspace
 from .security import enforce_binary_safelist, enforce_path_jail
-from .sync_state import SyncState, serialize_state
+from .sync_state import SyncState, check_one_shot_workspace, serialize_state
 from .system import ProcessRunner, shield_sigint
 from .workspace import validate_resolver_workspace
 
@@ -112,6 +112,8 @@ class SystemExecutor(Reconciliation):
     ) -> None:
         """Applies captured decisions with initialization-specific materialization."""
         try:
+            if self.manifest.one_shot:
+                check_one_shot_workspace(Path.cwd())
             review = self.review
             if review is not None:
                 policy = review.policy
@@ -145,9 +147,11 @@ class SystemExecutor(Reconciliation):
                 self._apply_review(artifacts)
                 self._run_tasks(self.manifest.tasks.post_install_tasks)
                 self._check_ide_extensions()
-                recipe = self._prepare(PreparationPhase.RECIPE)
-                self._apply_review(recipe)
-            self._write_state()
+                if not self.manifest.one_shot:
+                    recipe = self._prepare(PreparationPhase.RECIPE)
+                    self._apply_review(recipe)
+            if not self.manifest.one_shot:
+                self._write_state()
             self.journal.commit()
         except BaseException as original_error:
             self.process_runner.terminate_active_process_tree()

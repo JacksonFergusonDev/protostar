@@ -222,24 +222,27 @@ def _prepare(
     return Review(request, manifest, prepared, classify(manifest, prepared))
 
 
-def describe(entry: Entry) -> RenderableType:
+def describe(entry: Entry, *, one_shot: bool = False) -> RenderableType:
     """Renders an entry's accepted bytes, or says why none can be shown yet.
 
     Args:
         entry: The planned path to describe.
+        one_shot: Whether the run leaves no ownership state behind.
 
     Returns:
         Any conflicts kept as they are, then the diff or a note.
     """
     parts: list[RenderableType] = []
     if entry.proposals:
-        parts.append(
-            Text(
-                "Changes to content you already have. Each applies unless kept "
-                "out; keeping yours out records Protostar's version, so sync "
-                "can take it later."
-            )
+        note = (
+            "Changes to content you already have. Each applies unless kept "
+            "out; keeping yours out leaves your version in place."
+            if one_shot
+            else "Changes to content you already have. Each applies unless kept "
+            "out; keeping yours out records Protostar's version, so sync "
+            "can take it later."
         )
+        parts.append(Text(note))
     for conflict in entry.conflicts:
         where = describe_location(conflict.location)
         reason = conflict.reason.value
@@ -664,7 +667,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             title = Content.assemble(title, ("  ", ""), (name, "$foreground"))
         self.query_one("#diff-panel", Panel).retitle(title)
         self.query_one("#diff", Static).update(
-            describe(entry)
+            describe(entry, one_shot=self.draft.one_shot)
             if entry
             else Text("Select a file to see its changes.", style="dim")
         )
@@ -686,12 +689,19 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         heading.refresh()
         noun = "changes" if only_proposals else "decisions"
         count = f"{len(conflicts)} {noun} here. " if len(conflicts) > 1 else ""
-        note = (
-            "Keeping yours records Protostar's version without writing it; "
-            "sync can take it later."
-            if only_proposals
-            else "Whichever you choose, Protostar manages it from now on."
-        )
+        if self.draft.one_shot:
+            note = (
+                "Keeping yours leaves your version in place."
+                if only_proposals
+                else "This choice applies to this run only."
+            )
+        else:
+            note = (
+                "Keeping yours records Protostar's version without writing it; "
+                "sync can take it later."
+                if only_proposals
+                else "Whichever you choose, Protostar manages it from now on."
+            )
         self.query_one("#conflict-note", Static).update(Text(f"{count}{note}"))
         for choice in ResolutionChoice:
             button = self.query_one(f"#resolve-{choice.value}", RadioButton)

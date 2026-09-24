@@ -41,6 +41,10 @@ Every JSON response emitted to `stdout` follows one of three structured envelope
 === "1. Planned (`status: "planned"`)"
     Emitted when running `protostar init --dry-run --json`. Returns the complete planned `manifest` and, in a directory with no recipe yet, the `analysis` of what the project already has: the tools found with their `sources`, the `facts` read with where each came from, and `notes` about anything left out. `analysis` is `null` once a recipe exists. Analysis never selects a tool for a headless run; pass the flags for the tools you want.
 
+    With `--one-shot`, `manifest.one_shot` is `true`. Execution still resolves
+    dependencies and may write `uv.lock`, but omits `[tool.protostar]` and
+    `protostar.lock`.
+
     ```json
     --8<-- "agent_payload_planned.json"
     ```

@@ -14,7 +14,7 @@ It skips the change review, so a conflict it meets keeps your version; `init`
 ends by counting those you can still settle, and `protostar sync` lets you choose
 a side.
 It does not adopt existing configuration, switch templates, prune removed template
-content. After initialization, use the [project lifecycle](lifecycle.md) commands
+content. After tracked initialization, use the [project lifecycle](lifecycle.md) commands
 `status`, `diff`, and `sync` to review and apply the recorded recipe.
 
 <div class="grid cards" markdown>
@@ -353,7 +353,28 @@ To view all supported subcommands and flags in your terminal, run `protostar hel
 
 ## Persisted project intent
 
-Successful initialization records `[tool.protostar]` in `pyproject.toml` alongside
+By default, successful initialization records `[tool.protostar]` in `pyproject.toml` alongside
 the separate ownership ledger. Unspecified flags preserve recorded diversions on
 reinitialization. See [project recipes](../development/project-recipe.md) for
 enrollment, selection precedence, and template variables.
+
+## One time scaffolding
+
+Use `--one-shot` when you want the generated environment without Protostar
+managing future updates:
+
+```bash
+protostar init --template cli --one-shot
+```
+
+Protostar scaffolds the same project files and resolves dependencies, including
+`uv.lock`, but does not add `[tool.protostar]` to `pyproject.toml` or write
+`protostar.lock`. Generated agent guidance describes the resulting project
+without referring to a recorded recipe or `protostar sync`. The run retains
+normal conflict handling and rollback.
+
+The flag requires a project with neither a recorded recipe nor a
+`protostar.lock`. Without those files, `protostar status`, `diff`, and `sync`
+cannot manage the scaffold afterward. A later tracked `init --force-merge`
+can establish a recipe and ownership state, but existing files remain subject
+to the normal rules for foreign content.

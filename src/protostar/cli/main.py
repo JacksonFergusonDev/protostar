@@ -56,7 +56,7 @@ from protostar.modules import (
     BootstrapModule,
 )
 from protostar.secret_guard import credential_named
-from protostar.sync_state import check_workspace_identity
+from protostar.sync_state import check_one_shot_workspace, check_workspace_identity
 from protostar.system import is_interactive
 
 logger = logging.getLogger("protostar")
@@ -79,6 +79,8 @@ def handle_init(args: argparse.Namespace) -> None:
 
     user_config = UserConfig.load()
     existing_recipe = read_recipe(Path("pyproject.toml"))
+    if getattr(args, "one_shot", False):
+        check_one_shot_workspace(Path.cwd())
     analysis = None if existing_recipe else analyze_project(Path.cwd())
     if existing_recipe:
         user_config = replace(
@@ -184,6 +186,7 @@ def handle_init(args: argparse.Namespace) -> None:
         collision_strategy=strategy,
         existing_recipe=existing_recipe,
         analysis=analysis,
+        one_shot=getattr(args, "one_shot", False),
     )
     if (
         source

@@ -53,6 +53,7 @@ class InitDraft:
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
     analysis: ProjectAnalysis | None = None
+    one_shot: bool = False
 
 
 @dataclass(frozen=True)
@@ -197,6 +198,7 @@ def resolve_init(
     template = draft.template
     request = InitRequest(
         recipe=recipe,
+        one_shot=draft.one_shot,
         python_version=recipe.python,
         template_blueprint=blueprint,
         template_reference=blueprint.reference if blueprint else None,

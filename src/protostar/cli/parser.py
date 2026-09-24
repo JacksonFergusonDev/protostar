@@ -414,6 +414,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List all available built-in and global alias templates.",
     )
+    base_group.add_argument(
+        "--one-shot",
+        action="store_true",
+        help="Scaffold once without recording a Protostar recipe or ownership state; uv.lock remains separate.",
+    )
     from_action = base_group.add_argument(
         "--from",
         type=str,

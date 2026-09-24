@@ -422,7 +422,7 @@ def _run_engine(
                 "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
                 "but some non-critical tasks encountered issues."
             )
-            if pointer := _sync_pointer(result.diagnostics):
+            if not request.one_shot and (pointer := _sync_pointer(result.diagnostics)):
                 console.print(pointer)
         else:
             console.print(

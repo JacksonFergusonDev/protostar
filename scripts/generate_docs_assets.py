@@ -538,6 +538,11 @@ def generate_capability_tables() -> None:
             "Lists all available built-in templates and configured global aliases.",
         ],
         [
+            "`--one-shot`",
+            "*None*",
+            "Scaffold once without recording a Protostar recipe or ownership state; uv.lock remains separate.",
+        ],
+        [
             "`--python-version <VER>`",
             "*None*",
             "Override the target Python version for this initialization (e.g. `3.13`).",

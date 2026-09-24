@@ -39,6 +39,7 @@ class InitRequest:
     """Declarative intent from the caller for a scaffolding run.
 
     Attributes:
+        one_shot: Scaffold without persisting the recipe or ownership state.
         template_blueprint: An optional pre-loaded template blueprint to apply.
         python_version: An optional Python version string (e.g. '3.13'). Informational;
             the modules list is already constructed with the resolved version.
@@ -51,6 +52,7 @@ class InitRequest:
     """
 
     recipe: ProjectRecipe | None = None
+    one_shot: bool = False
     template_blueprint: TemplateBlueprint | None = None
     template_reference: TemplateReference | None = None
     python_version: str | None = None
@@ -67,6 +69,7 @@ class InitRequest:
             self.template_blueprint.reference if self.template_blueprint else None
         )
         return {
+            "one_shot": self.one_shot,
             "template_reference": reference.to_dict() if reference else None,
             "python_version": self.python_version,
             "docker": self.docker,

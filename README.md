@@ -178,6 +178,14 @@ protostar init --template cli --no-direnv --docker
 
 To bypass any interactive collision prompts when running in headless CI environments, use `--force-merge` or `--force-replace`. You can also explicitly override the target Python version by passing `--python-version 3.13`.
 
+For a one time scaffold without Protostar managing future updates, add `--one-shot`:
+
+```bash
+protostar init --template cli --one-shot
+```
+
+This leaves `[tool.protostar]` out of `pyproject.toml` and does not create `protostar.lock`. The Python dependency lockfile, `uv.lock`, is still generated. `protostar status`, `diff`, and `sync` require a recorded recipe and ownership state, so they are unavailable for a one shot scaffold. Use this flag only in a project that is not already tracked by Protostar.
+
 ### Dry-Run Simulations & Agent Integration
 
 You can preview the entire scaffolding plan without touching disk or running subprocesses by passing `--dry-run`:

@@ -27,7 +27,7 @@ from .modules import (
 )
 from .preparation import ExecutionPolicy
 from .progress import ProgressStep, no_progress
-from .sync_state import check_workspace_identity
+from .sync_state import check_one_shot_workspace, check_workspace_identity
 from .system_deps import GlobalExecutable
 from .workflows import AgentsSpec, HookRunner, generate_agents_md
 
@@ -111,7 +111,10 @@ class Orchestrator:
             template_reference=req.template_reference
             or (req.template_blueprint.reference if req.template_blueprint else None),
             collision_strategy=req.collision_strategy,
+            one_shot=req.one_shot,
         )
+        if req.one_shot:
+            check_one_shot_workspace(Path.cwd())
         # A project never switches template, so no caller gets as far as
         # asking the user anything about one it can't apply.
         check_workspace_identity(Path.cwd(), manifest.template_reference)
@@ -239,6 +242,7 @@ class Orchestrator:
                         lint_commands=tooling.just_lint_commands,
                         typecheck_commands=tooling.just_typecheck_commands,
                         ci_flags=tooling.ci_flags,
+                        one_shot=manifest.one_shot,
                     )
                 ),
                 identity=AGENTS_REGION_ID,

@@ -604,6 +604,7 @@ class EnvironmentManifest:
     producer_contributions: tuple[ProducerContribution, ...] = ()
     selections: tuple[ToolSelection, ...] = ()
     recipe: ProjectRecipe | None = None
+    one_shot: bool = False
     template_reference: TemplateReference | None = None
     dependencies: DependencyManifest = field(default_factory=DependencyManifest)
     filesystem: FilesystemManifest = field(default_factory=FilesystemManifest)
@@ -763,6 +764,7 @@ class EnvironmentManifest:
             A JSON-serializable dictionary representation of the full manifest.
         """
         return {
+            "one_shot": self.one_shot,
             "template_reference": self.template_reference.to_dict()
             if self.template_reference
             else None,

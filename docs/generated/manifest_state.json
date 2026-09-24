@@ -1,4 +1,5 @@
 {
+    "one_shot": false,
     "template_reference": {
         "origin": "built-in",
         "locator": "astro",

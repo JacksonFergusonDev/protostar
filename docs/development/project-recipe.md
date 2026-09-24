@@ -1,10 +1,14 @@
 # Project recipes
 
-A successful `protostar init` records project intent in `[tool.protostar]` inside
+By default, a successful `protostar init` records project intent in `[tool.protostar]` inside
 `pyproject.toml`. Commit it alongside `protostar.lock`. The recipe describes
 what you request; the lock records contributions actually accepted by semantic
 reconciliation. Conflicts can therefore leave desired intent ahead of applied
 ownership. The ownership ledger remains schema v1.
+
+`init --one-shot` uses the recipe and ownership decisions only during the run.
+It writes neither the recipe nor `protostar.lock`, so lifecycle commands cannot
+update that scaffold. It still generates the separate `uv.lock` dependency lockfile.
 
 In a `pyproject.toml` that Protostar creates, the recipe is the last section, under its own `# ---- Protostar ---- #` header, like every other tool's configuration. Everything that is not tool configuration (`[project]`, `[build-system]`, `[dependency-groups]`, and build-backend tables such as `[tool.hatch...]`) sits above the `# Tool Configuration` banner. A `pyproject.toml` you already had keeps your own order.
 

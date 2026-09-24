@@ -218,6 +218,7 @@ class PreparedReview:
     selections: tuple[ToolSelection, ...]
     producers: tuple[ProducerContribution, ...]
     policy: ExecutionPolicy
+    one_shot: bool
     inputs: tuple[CapturedInput, ...]
     edits: tuple[PreparedEdit, ...]
     directories: tuple[str, ...]
@@ -245,7 +246,9 @@ class PreparedReview:
     @property
     def state_changed(self) -> bool:
         """Returns whether ownership/provenance must advance."""
-        return serialize_state(self.candidate_state).encode() != self.state_before
+        return not self.one_shot and (
+            serialize_state(self.candidate_state).encode() != self.state_before
+        )
 
     @property
     def pending(self) -> bool:
@@ -423,9 +426,14 @@ def prepare_review(
         decisions._write_ignores()
         decisions._write_docker_artifacts()
         decisions._write_ide_settings()
-    if policy is ExecutionPolicy.INITIALIZATION and phase in (
-        PreparationPhase.COMPLETE,
-        PreparationPhase.RECIPE,
+    if (
+        not manifest.one_shot
+        and policy is ExecutionPolicy.INITIALIZATION
+        and phase
+        in (
+            PreparationPhase.COMPLETE,
+            PreparationPhase.RECIPE,
+        )
     ):
         decisions._write_recipe()
     edits = tuple(
@@ -484,6 +492,7 @@ def prepare_review(
         manifest.selections,
         manifest.producer_contributions,
         policy,
+        manifest.one_shot,
         tuple(workspace.inputs[path] for path in sorted(workspace.inputs)),
         edits,
         tuple(sorted(workspace.directories)),

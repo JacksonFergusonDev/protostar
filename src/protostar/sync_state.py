@@ -325,6 +325,21 @@ def read_workspace_state(root: Path) -> SyncState | None:
         ) from error
 
 
+def check_one_shot_workspace(root: Path) -> None:
+    """Require a workspace without a recorded recipe or ownership state.
+
+    Args:
+        root: The project root to inspect without mutating it.
+    """
+    from .recipe import read_recipe
+
+    if read_recipe(root / "pyproject.toml") or read_workspace_state(root):
+        raise ConfigurationError(
+            "One-shot initialization requires an untracked project.",
+            hint="Run init without --one-shot to update a tracked project.",
+        )
+
+
 def check_workspace_identity(root: Path, desired: TemplateReference | None) -> None:
     """Rejects a template that differs from the one a project's state records.
 

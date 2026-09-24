@@ -4,7 +4,7 @@ description: "Review and apply recipe-driven project updates while preserving lo
 
 # Review and synchronize a project
 
-After `init`, commit `pyproject.toml` and `protostar.lock`. The
+After a tracked `init`, commit `pyproject.toml` and `protostar.lock`. The
 [project recipe](../development/project-recipe.md) records desired selection; the
 lock records accepted ownership. Run lifecycle commands from that project's root.
 Protostar uses the current directory and never searches ancestors for a project.
