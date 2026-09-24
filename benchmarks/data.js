@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790288139095,
+  "lastUpdate": 1790289426351,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16801,6 +16801,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 779.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c48d6176ce4f7fb700c7d78d6012041da04fa5ee",
+          "message": "feat(cli): annotate check-template findings in GitHub Actions (#332)\n\nFindings now carry the line they concern, located by a small TOML lexer\n(tomllib and tomlkit report no source positions), including keys inside\n[dev.pyproject] payload strings, a variable's first placeholder, and the\nline a TOML syntax error names. The text output shows file:line.\n\ncheck-template --output-format github writes each finding as an ::error\nor ::warning workflow command on its repository-relative file and line,\nwith every part escaped because template text flows into it. A template\nthat cannot be retrieved gets one annotation saying so. The format\ncannot be combined with --json.",
+          "timestamp": "2026-09-24T15:34:44-07:00",
+          "tree_id": "8d22219161c190fae794513cad0aa86e41995090",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c48d6176ce4f7fb700c7d78d6012041da04fa5ee"
+        },
+        "date": 1790289425533,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 219.87,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 821.79,
             "unit": "ms"
           }
         ]
