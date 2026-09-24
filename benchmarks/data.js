@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790285260987,
+  "lastUpdate": 1790288139095,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16767,6 +16767,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 678.25,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9889033a2aed3b102edbbe89281a899992a743d7",
+          "message": "feat(cli): add check-template for template authors (#331)\n\nprotostar check-template [SOURCE] checks that protostar init would accept\na template and that it follows the practices built-ins follow, without\nwriting files or running commands. It renders the template with\nplaceholder variables and plans a default init into an empty scratch\ndirectory under built-in configuration. Errors exit 1; warnings exit 1\nunder --strict. A template that cannot be retrieved raises its usual\nerror instead, so a failed download is never reported as a broken\ntemplate.\n\nThe rules the built-in contract test enforced for template authors move\ninto protostar.template_check, and every built-in now passes the check\nstrictly. A non-UTF-8 protostar.toml no longer crashes, an unknown\ntooling flag is named in its error, and HTTP failures hint at the status.",
+          "timestamp": "2026-09-24T15:13:18-07:00",
+          "tree_id": "45f6a4e568ae2388fb8b451f78014fdf0c4af5ae",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9889033a2aed3b102edbbe89281a899992a743d7"
+        },
+        "date": 1790288137120,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 205.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 779.57,
             "unit": "ms"
           }
         ]
