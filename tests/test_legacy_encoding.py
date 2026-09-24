@@ -171,7 +171,9 @@ def test_review_lists_proposals_and_kept_edits(legacy_console, tmp_path, monkeyp
     from protostar.preparation import ExecutionPolicy, prepare_review
 
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "pyproject.toml").write_text('[project]\nname = "ünïcode"\n')
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "ünïcode"\n', encoding="utf-8"
+    )
     manifest = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
     manifest.filesystem.add_structured(
         "pyproject.toml", "[tool.ruff]\nline-length = 88\n", producer="module:test"
