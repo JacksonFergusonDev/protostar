@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,12 @@ from protostar.errors import (
     ExecutionInterruptedError,
     WorkspaceCollisionError,
 )
-from protostar.intent import AppendContribution, PyprojectPayload
+from protostar.intent import (
+    AppendContribution,
+    PyprojectPayload,
+    TemplateOrigin,
+    TemplateReference,
+)
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
@@ -30,6 +36,7 @@ from protostar.modules import (
     ZensicalModule,
 )
 from protostar.orchestrator import AGENTS_REGION_ID, AGENTS_TARGET, Orchestrator
+from protostar.sync_state import SyncState, serialize_state
 
 
 @pytest.fixture
@@ -125,6 +132,27 @@ def test_plan_returns_fresh_manifest_on_each_call(tmp_path, monkeypatch, mock_co
     m2 = engine.plan()
 
     assert m1 is not m2
+
+
+def test_plan_rejects_a_template_the_project_does_not_record(
+    tmp_path, monkeypatch, mock_config
+):
+    """plan() fails before any caller can ask about a template switch."""
+    monkeypatch.chdir(tmp_path)
+    recorded = TemplateReference(TemplateOrigin.BUILT_IN, "api", "a" * 64)
+    (tmp_path / ".protostar.lock.toml").write_text(
+        serialize_state(SyncState("0.9.0", recorded))
+    )
+    engine = Orchestrator(
+        [],
+        mock_config,
+        request=InitRequest(template_reference=replace(recorded, locator="cli")),
+    )
+
+    with pytest.raises(ConfigurationError, match="differs"):
+        engine.plan()
+    engine.request = InitRequest(template_reference=recorded)
+    engine.plan()
 
 
 def test_plan_injects_blueprint_fields(mocker, mock_config):

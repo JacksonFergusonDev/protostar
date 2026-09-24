@@ -25,6 +25,7 @@ from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import read_recipe
+from protostar.sync_state import read_workspace_state
 from protostar.system import is_interactive
 from protostar.templates import discover_templates
 
@@ -662,6 +663,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
         user_config = UserConfig.load()
         catalog = discover_templates(user_config)
         existing_recipe = read_recipe(Path("pyproject.toml"))
+        # Every preview would fail on unreadable state, so fail before the editor.
+        read_workspace_state(Path.cwd())
         template = None
         if existing_recipe and existing_recipe.source:
             source = existing_recipe.source.acquire(Path.cwd())

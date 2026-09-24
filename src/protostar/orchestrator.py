@@ -26,6 +26,7 @@ from .modules import (
 )
 from .preparation import ExecutionPolicy
 from .progress import ProgressStep, no_progress
+from .sync_state import check_workspace_identity
 from .system_deps import GlobalExecutable
 from .workflows import AgentsSpec, HookRunner, generate_agents_md
 
@@ -96,7 +97,8 @@ class Orchestrator:
             policy: Lifecycle reviews skip execution prerequisite checks.
 
         Raises:
-            ConfigurationError: If conflicting modules or missing prerequisites are detected.
+            ConfigurationError: If conflicting modules or missing prerequisites are
+                detected, or the project's state records another template.
             AggregatedDependencyError: If a module pre-flight check fails.
 
         Returns:
@@ -110,6 +112,9 @@ class Orchestrator:
             or (req.template_blueprint.reference if req.template_blueprint else None),
             collision_strategy=req.collision_strategy,
         )
+        # A project never switches template, so no caller gets as far as
+        # asking the user anything about one it can't apply.
+        check_workspace_identity(Path.cwd(), manifest.template_reference)
         if req.metadata:
             manifest.metadata.update(cast(ProjectMetadata, req.metadata))
 

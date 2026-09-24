@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import lru_cache
-from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import cast
 from urllib.parse import urlsplit
 
@@ -26,6 +26,7 @@ from .intent import (
 from .jsonc_ast import decode_jsonc_baseline, encode_jsonc_baseline
 from .merge import Value, validate_value
 from .registry import PinProvenance as PinProvenance
+from .review_workspace import capture_node
 
 SCHEMA_VERSION = 1
 
@@ -287,6 +288,52 @@ def check_template_identity(
             "Selected template differs from the tracked project identity.",
             hint="Select the same template source explicitly; template switching and adoption are unsupported.",
         )
+
+
+STATE_FILE = ".protostar.lock.toml"
+"""The committed ownership state, relative to the project root."""
+
+
+def read_workspace_state(root: Path) -> SyncState | None:
+    """Reads a project's committed ownership state without following links.
+
+    Args:
+        root: The project root.
+
+    Returns:
+        The validated state, or None when the project has no state file.
+
+    Raises:
+        ConfigurationError: If the state file is not UTF-8 or not valid state.
+        UnsupportedFilesystemNodeError: If the state file is a link or special node.
+    """
+    captured = capture_node(root / STATE_FILE)
+    if captured.file_content is None:
+        return None
+    try:
+        return deserialize_state(captured.file_content.decode())
+    except UnicodeError as error:
+        raise ConfigurationError(
+            "Invalid project ownership state.",
+            hint=f"Correct {STATE_FILE} encoding.",
+        ) from error
+
+
+def check_workspace_identity(root: Path, desired: TemplateReference | None) -> None:
+    """Rejects a template that differs from the one a project's state records.
+
+    Reads only, so planning runs it before anything asks the user for input.
+
+    Args:
+        root: The project root.
+        desired: The template the caller would apply, or None for none.
+
+    Raises:
+        ConfigurationError: If the state is invalid or records another template.
+    """
+    state = read_workspace_state(root)
+    if state is not None:
+        check_template_identity(state, desired)
 
 
 def decode_toml_baseline(content: str) -> dict[str, Value]:

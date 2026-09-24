@@ -95,6 +95,8 @@ failures. Paths must be relative POSIX workspace paths, reject Windows drives an
 backslashes, and exclude engine state and resolver-owned `uv.lock` targets.
 `check_template_identity()` allows a changed digest at the same source while
 rejecting template switching, alias retargeting, and tooling/template transitions.
+`Orchestrator.plan()` runs it through `check_workspace_identity()`, so every
+caller rejects a switch before it asks the user anything.
 Missing state is a caller-level absence, not an empty or corrupt state document.
 
 ## PR C execution boundary

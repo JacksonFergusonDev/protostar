@@ -35,7 +35,9 @@ from protostar.errors import (
     TemplateResolutionError,
 )
 from protostar.init_draft import InitDecision, InitDraft
+from protostar.intent import TemplateOrigin, TemplateReference
 from protostar.recipe import Tool
+from protostar.sync_state import SyncState, serialize_state
 from protostar.system_deps import GlobalExecutable
 
 
@@ -89,6 +91,21 @@ def test_intercept_interactive_wizards_cancellations(mocker):
     with pytest.raises(ExecutionAbortedError):
         intercept_interactive_wizards(parser)
     parser.parse_args.assert_not_called()
+
+
+def test_wizard_rejects_unreadable_state_before_the_editor(
+    mocker, tmp_path, monkeypatch
+):
+    """Every preview would fail on unreadable state, so the editor never opens."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".protostar.lock.toml").write_bytes(b"\xff")
+    mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
+    mocker.patch.object(sys, "argv", ["protostar", "init"])
+    editor = mocker.patch("protostar.cli.parser.edit_recipe")
+
+    with pytest.raises(ConfigurationError, match="ownership state"):
+        intercept_interactive_wizards(mocker.Mock())
+    editor.assert_not_called()
 
 
 def test_intercept_interactive_wizards_non_interactive_fallback(mocker):
@@ -1521,6 +1538,30 @@ def test_cancelled_review_never_executes(mocker, tmp_path, monkeypatch):
     run = mocker.patch("protostar.cli.ui._run_engine")
     with pytest.raises(ExecutionAbortedError, match="Change review cancelled"):
         _flag_init(mocker, tmp_path, monkeypatch)
+    run.assert_not_called()
+
+
+def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
+    """A project's recorded template is checked before variables or a review."""
+    monkeypatch.chdir(tmp_path)
+    recorded = TemplateReference(TemplateOrigin.BUILT_IN, "api", "a" * 64)
+    (tmp_path / ".protostar.lock.toml").write_text(
+        serialize_state(SyncState("0.9.0", recorded))
+    )
+    blueprint = tmp_path / "blueprint.toml"
+    blueprint.write_text('[files]\n"custom.txt" = "<% REGION %>"\n')
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
+    screens = [
+        mocker.patch(f"protostar.cli.main.{name}")
+        for name in ("edit_variables", "review_changes")
+    ]
+    run = mocker.patch("protostar.cli.ui._run_engine")
+
+    with pytest.raises(ConfigurationError, match="differs"):
+        handle_init(argparse.Namespace(from_path=str(blueprint), docker=None))
+    for screen in screens:
+        screen.assert_not_called()
     run.assert_not_called()
 
 
