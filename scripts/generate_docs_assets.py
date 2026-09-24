@@ -636,6 +636,10 @@ def generate_capability_tables() -> None:
             "Fails on warnings as well as errors.",
         ],
         [
+            "`--output-format <format>`",
+            "`text` (default) for people, or `github` for GitHub Actions annotations on each finding's file and line. Cannot be combined with `--json`.",
+        ],
+        [
             "`--json`",
             "Emits the findings as a JSON payload with `status` `passed` or `failed`.",
         ],
