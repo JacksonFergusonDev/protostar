@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790273411099,
+  "lastUpdate": 1790276380338,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16563,6 +16563,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 874.33,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e5c922df115bec998a75bbb0ee80dfb05e26fe57",
+          "message": "feat(reconcile): make every change to an existing file reviewable (#327)\n\n* feat(reconcile): make every change to an existing file reviewable\n\nA change Protostar would make inside a file it never owned is now a\n\nproposal: applied unless kept out, and keeping it out owns the update\nwithout writing it. Local edits kept under an unchanged update are reported\nby the engine that keeps them, each with an id, and a resolution can take\ntheir update later through sync. Proposals and preserved edits share the\nconflict record, its ids, and --resolve.\n\nThe init change review previews the configuration merges and dependency\nchoices whenever no setup command creates their files, lists every\nproposal per file, and adds Keep all mine (K). The unowned workflow job and\ndiffering dependency requirements, previously settled only by hand, now\noffer both sides. The sync screen also opens for proposals and lists\npreserved edits, which only their own row can update.\n\n* test: write the non-ASCII pyproject as UTF-8 on every platform\n\nWindows writes text files as cp1252 by default, so the fixture was not\nUTF-8 there and the review correctly refused to read it.\n\n* test: capture the existing-project editor only after its preview settles\n\nOn a slow runner the preview could still be planning, or re-plan after the\nscroll, when the snapshot was taken. Wait for both, then scroll again.",
+          "timestamp": "2026-09-24T11:57:26-07:00",
+          "tree_id": "a02752c2a904d41d6543c4f6c7c2dd57c39bd997",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e5c922df115bec998a75bbb0ee80dfb05e26fe57"
+        },
+        "date": 1790276378999,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 201.35,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 741.57,
             "unit": "ms"
           }
         ]
