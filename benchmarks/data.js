@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790280165974,
+  "lastUpdate": 1790282908341,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16699,6 +16699,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 827.39,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b491e7b17828b62bd732e5faf645a247d34c32af",
+          "message": "feat(cli): add confirmed project ejection (#329)\n\n* feat(cli): add confirmed project ejection\n\nLet tracked projects leave the Protostar lifecycle without removing scaffolded files.\n\nApply recipe and lockfile removal in one transaction. Preview or confirm through the CLI.\n\n* test(eject): skip posix file mode assertions on windows",
+          "timestamp": "2026-09-24T13:46:01-07:00",
+          "tree_id": "acfaf759925bc74f4f0567fc82378c4ce2b60b39",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b491e7b17828b62bd732e5faf645a247d34c32af"
+        },
+        "date": 1790282906445,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 222.51,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 809.56,
             "unit": "ms"
           }
         ]
