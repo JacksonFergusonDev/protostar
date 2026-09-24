@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790204040060,
+  "lastUpdate": 1790209268232,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16257,6 +16257,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 620,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "559ef067dee4dd40a97925787cba87c38cfc034c",
+          "message": "fix(system): keep a caller's git repository out of subprocesses (#318)\n\nGit exports GIT_DIR and related variables to hooks and aliases, and a\nlinked worktree's hooks point GIT_DIR into the parent repository. Inherited\nby Protostar's `git init`, they reinitialized the caller's repository (as\nbare) instead of the project. ProcessRunner and the git config probe now\nstart from subprocess_environment(), which drops git's repository-local\nvariables (`git rev-parse --local-env-vars`) as well as the active Python\nenvironment. The test suite scrubs the same variables for every test.",
+          "timestamp": "2026-09-23T17:18:52-07:00",
+          "tree_id": "100035abdd5abb09339d6c4e0ac2e2f4180e2f4d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/559ef067dee4dd40a97925787cba87c38cfc034c"
+        },
+        "date": 1790209266995,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 200.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 773.69,
             "unit": "ms"
           }
         ]
