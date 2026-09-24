@@ -240,7 +240,7 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         sys.exit(0)
 
     if error_msg:
-        console.print(f"[bold red]Error:[/bold red] {error_msg}\n")
+        console.print(Text.assemble(("Error: ", "bold red"), error_msg, "\n"))
 
     table = Table(box=None, show_header=False, padding=(0, 2, 0, 0), expand=True)
     table.add_column("Template", style="bold cyan", no_wrap=True)
@@ -342,7 +342,12 @@ def _run_engine(
             "existing configuration files in the workspace."
         )
         for path in sorted(manifest.collisions):
-            console.print(Text(f"  - {path}"))
+            console.print(
+                Text.assemble(
+                    ("  - ", "dim"),
+                    (path.as_posix(), path_style(path.name, directory=False)),
+                )
+            )
 
         raise ProtostarError(
             "Workspace collision detected: The target workspace is not empty.\n"
@@ -373,7 +378,12 @@ def _run_engine(
             "the following shell commands on your system:"
         )
         for command in commands:
-            console.print(Text(f"  - {shlex.join(command)}"))
+            console.print(
+                Text.assemble(
+                    ("  - ", "dim"),
+                    (shlex.join(command), "cyan"),
+                )
+            )
         console.print()
 
         raise ProtostarError(

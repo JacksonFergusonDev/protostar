@@ -300,7 +300,12 @@ def handle_config(args: argparse.Namespace) -> None:
         )
         atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
         ui.console.print(
-            f"[bold green]Reset configuration at {config_path} to default state.[/bold green]"
+            Text.assemble(
+                (f"{ui.glyph('✔', '+')} ", "green"),
+                ("Reset configuration at ", "bold green"),
+                (str(config_path), "cyan"),
+                (" to default state.", "bold green"),
+            )
         )
         return
 
@@ -308,7 +313,11 @@ def handle_config(args: argparse.Namespace) -> None:
         logger.debug("Writing initial default configuration to %s", config_path)
         atomic_write_text(config_path, DEFAULT_CONFIG_CONTENT)
         ui.console.print(
-            f"[bold green]Initialized default configuration at {config_path}[/bold green]"
+            Text.assemble(
+                (f"{ui.glyph('✔', '+')} ", "green"),
+                ("Initialized default configuration at ", "bold green"),
+                (str(config_path), "cyan"),
+            )
         )
 
     editor_env = os.environ.get("EDITOR", "nano")
@@ -564,24 +573,29 @@ def main() -> None:
                             )
                         )
                         for t in ctx.completed_tasks:
-                            desc = (
-                                t.command[0] if not t.command else " ".join(t.command)
-                            )
+                            desc = " ".join(t.command) if t.command else ""
                             rb_group.append(
-                                Text.from_markup(f"[dim]• [Completed]   {desc}[/dim]")
+                                Text.assemble(
+                                    ("• ", "dim"),
+                                    ("[Completed]   ", "green"),
+                                    (desc, "dim"),
+                                )
                             )
                         if ctx.interrupted_task:
                             t = ctx.interrupted_task
-                            desc = (
-                                t.command[0] if not t.command else " ".join(t.command)
-                            )
+                            desc = " ".join(t.command) if t.command else ""
                             rb_group.append(
-                                Text.from_markup(f"[dim]• [Interrupted] {desc}[/dim]")
+                                Text.assemble(
+                                    ("• ", "dim"),
+                                    ("[Interrupted] ", "yellow"),
+                                    (desc, "dim"),
+                                )
                             )
                 else:
                     rb_group.append(
-                        Text.from_markup(
-                            "Note: Some standard artifacts (like the .venv/ directory) remain but are safe to ignore."
+                        Text(
+                            "Note: Some standard artifacts (like the .venv/ directory) remain but are safe to ignore.",
+                            "dim",
                         )
                     )
                     docs_page = e.docs_path or DocsPage.ROLLBACK
