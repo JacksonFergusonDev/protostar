@@ -202,8 +202,12 @@ async def test_ctrl_c_quits_without_asking(confirming):
 
 
 def labels(app):
-    """Each button's label, by id."""
-    return {button.id: str(button.label) for button in app.screen.query(Button)}
+    """Each shown button's label, by id."""
+    return {
+        button.id: str(button.label)
+        for button in app.screen.query(Button)
+        if button.display
+    }
 
 
 def legend(app):
@@ -888,7 +892,8 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
             ".gitignore": ".gitignore  after setup",
             ".pre-commit-config.yaml": ".pre-commit-config.yaml  modified",
             "justfile": "justfile  conflict",
-            "pyproject.toml": "pyproject.toml  existing",
+            # No command creates it, so its merge shows before any runs.
+            "pyproject.toml": "pyproject.toml  modified",
         }
         assert "Already in the workspace: .pre-commit-config.yaml, justfile, " in (
             plain(app, "#collision-note")
@@ -904,7 +909,11 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         assert "--- yours\n+++ update\n" in diff
         assert "-    echo hi" in diff
         await highlight(pilot, "pyproject.toml")
-        assert "Nothing is written to it before setup" in plain(app, "#diff")
+        diff = plain(app, "#diff")
+        assert "Changes to content you already have." in diff
+        assert "adds      dependencies.dev ruff" in diff
+        assert "adds      tool\n" in diff
+        assert "+++ b/pyproject.toml" in diff
         await highlight(pilot, ".gitignore")
         assert "so it can't be shown yet" in plain(app, "#diff")
 
@@ -953,6 +962,59 @@ async def test_review_settles_a_conflict_and_execution_applies_the_choice(
     assert chosen is choice
     executor = execute_decision(decision, collisions, mocker)
     assert executor.reviewed_resolutions == {conflict_id: choice}
+
+
+@pytest.mark.asyncio
+async def test_changes_to_an_existing_file_can_be_kept_out(collisions, mocker):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        await highlight(pilot, "pyproject.toml")
+        heading = app.screen.query_one("#conflict-choice .choice-heading")
+        assert heading.label == "Changes to your file"
+        lit = [b.id for b in app.screen.query("#resolution RadioButton") if b.value]
+        # A proposal applies unless kept out, so it is never left open.
+        assert lit == ["resolve-desired"]
+        assert app.screen.query_one("#resolve-open", RadioButton).disabled
+        await pilot.press("x")
+        assert not app.screen.choices
+        await pilot.press("k")
+        await settle(pilot)
+        label = file_nodes(app)["pyproject.toml"].label.plain
+        # Every change kept out, the file is left as it is.
+        assert label.startswith("pyproject.toml  existing · ")
+        assert label.endswith(" kept out")
+        assert "kept out  dependencies.dev ruff" in plain(app, "#diff")
+        await pilot.press("a")
+    decision = app.return_value
+    proposals = [
+        c for c in decision.resolutions.values() if c is ResolutionChoice.LOCAL
+    ]
+    assert proposals
+    executor = execute_decision(decision, collisions, mocker)
+    assert executor.reviewed_resolutions == decision.resolutions
+
+
+@pytest.mark.asyncio
+async def test_keep_all_mine_keeps_every_existing_file_as_it_is(collisions):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        assert "changes to your files" in plain(app, "#subtitle")
+        await pilot.press("K")
+        await settle(pilot)
+        labels_by_path = {
+            path: node.label.plain for path, node in file_nodes(app).items()
+        }
+        assert labels_by_path["justfile"] == "justfile  existing · resolved"
+        assert labels_by_path["pyproject.toml"].endswith("kept out")
+        edits = {edit.path for edit in app.screen.review.prepared.edits}
+        # Nothing Protostar writes before a command touches an existing file.
+        assert not edits & {"justfile", ".pre-commit-config.yaml", "pyproject.toml"}
+        await pilot.press("a")
+    decision = app.return_value
+    assert decision.resolutions
+    assert set(decision.resolutions.values()) == {ResolutionChoice.LOCAL}
 
 
 @pytest.mark.asyncio
@@ -1064,7 +1126,11 @@ async def test_escape_cancels_a_review_with_no_editor_behind_it(collisions):
     app = make_review(config=collisions)
     async with app.run_test() as pilot:
         await settle(pilot)
-        assert labels(app) == {"cancel": "Cancel  esc", "apply": "Apply  a"}
+        assert labels(app) == {
+            "cancel": "Cancel  esc",
+            "keep-all": "Keep all mine  K",
+            "apply": "Apply  a",
+        }
         await pilot.press("escape")
         assert isinstance(app.screen, LeaveScreen)
         await pilot.press("enter")

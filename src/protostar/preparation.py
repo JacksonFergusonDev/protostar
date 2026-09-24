@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import UserConfig
-from .documents import vscode
+from .documents import pyproject, vscode
 from .errors import (
     ConfigurationError,
     UnmatchedResolutionError,
@@ -27,12 +27,12 @@ from .manifest import (
 from .merge import (
     MISSING,
     NO_RESOLUTIONS,
+    ConflictReason,
     MergeConflict,
     ResolutionChoice,
     Resolutions,
     Value,
 )
-from .preservation import PreservedDeviation, preserved_deviations
 from .recipe import ProducerContribution, ToolSelection, decode_recipe
 from .reconciliation import Reconciliation
 from .registry import ResolvedHookRevision
@@ -52,6 +52,9 @@ class PreparationPhase(StrEnum):
 
     BEFORE_INITIALIZERS = "before-initializers"
     BEFORE_RESOLVER = "before-resolver"
+    BEFORE_COMMANDS = "before-commands"
+    """Both batches before the resolver, for a change review, when no
+    initializer creates a file the second one reads (see ``review_phase``)."""
     AFTER_RESOLVER = "after-resolver"
     COMPLETE = "complete"
     RECIPE = "recipe"
@@ -106,15 +109,18 @@ class ResolutionRequest:
 
 
 def select_resolutions(
-    conflicts: Sequence[MergeConflict], requests: Sequence[ResolutionRequest]
+    decisions: Sequence[MergeConflict], requests: Sequence[ResolutionRequest]
 ) -> dict[str, ResolutionChoice]:
-    """Turns selectors into choices keyed by conflict identity.
+    """Turns selectors into choices keyed by decision identity.
 
-    Later requests override earlier ones, so a conflict identity can refine a
-    file-wide choice.
+    Later requests override earlier ones, so an identity can refine a
+    file-wide choice. A file selector names the file's conflicts and
+    proposals; a preserved deviation is restored only by its own identity,
+    since it is a deliberate local edit.
 
     Args:
-        conflicts: The open conflicts of a review.
+        decisions: The review's open conflicts, proposals, and preserved
+            deviations.
         requests: Choices in the order given.
 
     Returns:
@@ -129,9 +135,13 @@ def select_resolutions(
     unmatched: list[str] = []
     for request in requests:
         named = [
-            conflict
-            for conflict in conflicts
-            if request.selector in (conflict.id, conflict.location.file)
+            decision
+            for decision in decisions
+            if request.selector == decision.id
+            or (
+                request.selector == decision.location.file
+                and decision.reason is not ConflictReason.PRESERVED
+            )
         ]
         if not named:
             unmatched.append(request.selector)
@@ -213,7 +223,8 @@ class PreparedReview:
     directories: tuple[str, ...]
     conflicts: tuple[MergeConflict, ...]
     resolved: tuple[MergeConflict, ...]
-    preserved: tuple[PreservedDeviation, ...]
+    proposals: tuple[MergeConflict, ...]
+    preserved: tuple[MergeConflict, ...]
     diagnostics: tuple[DiagnosticEvent, ...]
     candidate_state: SyncState
     state_before: bytes | None
@@ -221,6 +232,15 @@ class PreparedReview:
     initialization_only: tuple[tuple[str, ...], ...]
     initialization_only_ide_probe: bool
     preserve_deleted_pyproject: bool
+
+    @property
+    def decisions(self) -> tuple[MergeConflict, ...]:
+        """Returns every decision a resolution can name.
+
+        These are the open conflicts, the proposals, and the preserved
+        deviations.
+        """
+        return (*self.conflicts, *self.proposals, *self.preserved)
 
     @property
     def state_changed(self) -> bool:
@@ -262,13 +282,12 @@ class PreparedReview:
             "directories": list(self.directories),
             "conflicts": [conflict_record(conflict) for conflict in self.conflicts],
             "resolved": [conflict_record(conflict) for conflict in self.resolved],
+            "proposals": [
+                {"resolution": None, **conflict_record(proposal)}
+                for proposal in self.proposals
+            ],
             "preserved": [
-                {
-                    "file": item.location.file,
-                    "keys": list(item.location.keys),
-                    "identity": item.location.identity,
-                    "deleted": item.deleted,
-                }
+                {**conflict_record(item), "deleted": deleted(item)}
                 for item in self.preserved
             ],
             "state_changed": self.state_changed,
@@ -315,6 +334,7 @@ def prepare_review(
     presence: PresenceReader | None = None,
     preserve_deleted_pyproject: bool = False,
     resolutions: Resolutions = NO_RESOLUTIONS,
+    partial_resolutions: bool = False,
 ) -> PreparedReview:
     """Computes accepted bytes using the shared kernel, without executing side effects.
 
@@ -322,8 +342,11 @@ def prepare_review(
     boundary. Initializers and resolvers cannot be simulated here; initialization
     prepares fresh batches around their actual execution.
 
-    Resolutions settle conflicts by identity. One that names no conflict raises,
-    so a choice made for content that changed since is never applied elsewhere.
+    Resolutions settle conflicts, proposals, and preserved deviations by
+    identity. One that names no decision raises, so a choice made for content
+    that changed since is never applied elsewhere, unless
+    ``partial_resolutions`` says the choices span several batches; the caller
+    then checks that every one was used.
     A text hunk's resolution applies only with every other hunk in its text, so
     until those are chosen too it stays open without raising.
 
@@ -348,7 +371,6 @@ def prepare_review(
     decisions._load_state()
     if candidate_state is not None:
         decisions.candidate_state = candidate_state
-    original_state = decisions.candidate_state
     decisions._preserve_deleted_pyproject |= preserve_deleted_pyproject
     workspace.capture(Path("pyproject.toml"))
     workspace.capture(Path("uv.lock"))
@@ -374,7 +396,11 @@ def prepare_review(
         workspace.capture(Path(vscode.SETTINGS_TARGET))
     for resolver_path in manifest.dependencies.resolver_footprint.paths:
         workspace.capture(Path(resolver_path))
-    if phase in (PreparationPhase.COMPLETE, PreparationPhase.BEFORE_INITIALIZERS):
+    if phase in (
+        PreparationPhase.COMPLETE,
+        PreparationPhase.BEFORE_INITIALIZERS,
+        PreparationPhase.BEFORE_COMMANDS,
+    ):
         decisions._create_directories()
         decisions._write_injected_files()
         decisions._write_pre_commit_config()
@@ -383,7 +409,11 @@ def prepare_review(
         decisions._write_justfile()
     accepted = DependencyManifest()
     blocked: set[DependencyGroup] = set()
-    if phase in (PreparationPhase.COMPLETE, PreparationPhase.BEFORE_RESOLVER):
+    if phase in (
+        PreparationPhase.COMPLETE,
+        PreparationPhase.BEFORE_RESOLVER,
+        PreparationPhase.BEFORE_COMMANDS,
+    ):
         decisions._append_files()
         decisions._apply_dependency_includes()
         accepted, blocked = decisions._select_dependencies()
@@ -443,10 +473,10 @@ def prepare_review(
             key=_conflict_order,
         )
     )
-    _check_resolutions(resolutions, conflicts, resolved)
-    preserved = preserved_deviations(
-        workspace, original_state, decisions.candidate_state, conflicts
-    )
+    proposals = tuple(sorted(decisions.proposals, key=_conflict_order))
+    preserved = tuple(sorted(decisions.preserved, key=_conflict_order))
+    if not partial_resolutions:
+        check_resolutions(resolutions, (*conflicts, *resolved, *proposals))
     return PreparedReview(
         workspace.workspace_root,
         hook_revisions,
@@ -459,6 +489,7 @@ def prepare_review(
         tuple(sorted(workspace.directories)),
         conflicts,
         resolved,
+        proposals,
         preserved,
         tuple(decisions.diagnostics),
         decisions.candidate_state,
@@ -495,13 +526,20 @@ def _conflict_order(
     )
 
 
-def _check_resolutions(
-    resolutions: Resolutions,
-    conflicts: tuple[MergeConflict, ...],
-    resolved: tuple[MergeConflict, ...],
+def check_resolutions(
+    resolutions: Resolutions, decisions: Sequence[MergeConflict]
 ) -> None:
-    """Rejects resolutions that name no conflict or a choice it does not offer."""
-    found = {conflict.id: conflict for conflict in (*conflicts, *resolved)}
+    """Rejects resolutions that name no decision or a choice it does not offer.
+
+    Args:
+        resolutions: Choices keyed by identity.
+        decisions: Every decision the choices could name, open or settled.
+
+    Raises:
+        UnmatchedResolutionError: If a resolution names no decision.
+        UnsupportedResolutionError: If a decision does not offer its choice.
+    """
+    found = {decision.id: decision for decision in decisions}
     unmatched = tuple(identity for identity in resolutions if identity not in found)
     if unmatched:
         raise UnmatchedResolutionError(unmatched)
@@ -511,6 +549,40 @@ def _check_resolutions(
             raise UnsupportedResolutionError(
                 identity, choice.value, tuple(c.value for c in choices)
             )
+
+
+def deleted(decision: MergeConflict) -> bool:
+    """Returns whether a preserved deviation is a deletion rather than an edit."""
+    return decision.sides is not None and decision.sides.local is MISSING
+
+
+def review_phase(manifest: EnvironmentManifest) -> PreparationPhase:
+    """Returns how much of an initialization a change review can show.
+
+    The batch after the initializers merges configuration and selects
+    dependencies. When no initializer creates a file it reads, as in a project
+    that already has its ``pyproject.toml``, its bytes are known before any
+    command runs, so the review shows it too and its decisions can be made
+    there.
+
+    Args:
+        manifest: The planned initialization.
+
+    Returns:
+        ``BEFORE_COMMANDS`` when both batches are known, else
+        ``BEFORE_INITIALIZERS``.
+    """
+    created = {
+        path for task in manifest.tasks.system_tasks for path in task.owned_files
+    }
+    read = {
+        *manifest.filesystem.structured,
+        *manifest.filesystem.regions,
+        pyproject.TARGET,
+    }
+    if created & read:
+        return PreparationPhase.BEFORE_INITIALIZERS
+    return PreparationPhase.BEFORE_COMMANDS
 
 
 def manifest_digest(manifest: EnvironmentManifest) -> str:

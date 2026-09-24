@@ -47,6 +47,10 @@ class ConflictReason(StrEnum):
     TYPE_MISMATCH = "type-mismatch"
     DELETED_ANCESTOR = "deleted-ancestor"
     RETRACTED = "retracted"
+    PROPOSED = "proposed"
+    """A change to content Protostar never owned. Applied unless declined."""
+    PRESERVED = "preserved"
+    """A local edit or deletion kept under an unchanged update."""
 
 
 @dataclass(frozen=True)
@@ -140,6 +144,26 @@ class ConflictSides:
         return self.line is not None
 
 
+def default_choice(conflict: MergeConflict) -> ResolutionChoice | None:
+    """Returns what happens to a decision nobody chose, or ``None`` if it stays open.
+
+    A proposal applies and a preserved deviation keeps the local content; a
+    conflict stays open, which also keeps the local content but leaves the
+    update pending.
+
+    Args:
+        conflict: The decision.
+
+    Returns:
+        The choice in effect without one, or ``None`` for an open conflict.
+    """
+    if conflict.reason is ConflictReason.PROPOSED:
+        return ResolutionChoice.DESIRED
+    if conflict.reason is ConflictReason.PRESERVED:
+        return ResolutionChoice.LOCAL
+    return None
+
+
 @dataclass(frozen=True)
 class MergeConflict:
     """Structured conflict without terminal or diagnostic formatting.
@@ -189,7 +213,14 @@ class MergeConflict:
 
     @property
     def choices(self) -> tuple[ResolutionChoice, ...]:
-        """Returns the choices that can settle this conflict, if any."""
+        """Returns the choices that can settle this conflict, if any.
+
+        A preserved deviation can always be settled: keeping it changes
+        nothing, and taking the update restores Protostar's version even where
+        its sides cannot be shown.
+        """
+        if self.reason is ConflictReason.PRESERVED:
+            return (ResolutionChoice.LOCAL, ResolutionChoice.DESIRED)
         if self.sides is None:
             return ()
         if self.sides.text and self.location.lines is not None:
@@ -241,11 +272,15 @@ class MergePolicy:
         complete: Whether the remote value is one generator's complete document, so
             owned mapping keys it no longer declares are retracted: removed when
             unedited, kept with a ``retracted`` conflict when edited.
+        proposing: Whether the document existed before Protostar owned any of
+            it, so every change into never-owned content is a proposal that can
+            be declined.
     """
 
     set_like_paths: frozenset[tuple[str, ...]] = frozenset()
     protected_ancestor: bool = False
     complete: bool = False
+    proposing: bool = False
 
 
 DEFAULT_POLICY = MergePolicy()
@@ -260,7 +295,12 @@ class MergeResult:
         baseline: The composite owned baseline to record.
         decision: What happened at the root.
         conflicts: Open conflicts, where the local content was kept.
-        resolved: Conflicts settled by a resolution.
+        resolved: Conflicts settled by a resolution, and preserved deviations
+            a resolution restored.
+        proposals: Changes into never-owned content, applied unless a
+            resolution declined them.
+        preserved: Local edits and deletions kept where the update did not
+            change, which a resolution can restore.
     """
 
     value: Value
@@ -268,6 +308,8 @@ class MergeResult:
     decision: MergeDecision
     conflicts: tuple[MergeConflict, ...] = ()
     resolved: tuple[MergeConflict, ...] = ()
+    proposals: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
 
 
 def validate_value(value: Value) -> None:
@@ -414,6 +456,108 @@ def reconcile(
                 deepcopy(incoming), deepcopy(incoming), MergeDecision.APPLY_REMOTE
             )
 
+        def propose(desired: Value, owned: Value) -> MergeResult:
+            # A change into never-owned content: applied unless declined. Either
+            # way Protostar owns ``owned``, so a declined proposal reads as a
+            # local deletion that sync can restore later.
+            found = MergeConflict(
+                loc,
+                ConflictReason.PROPOSED,
+                ConflictSides(MISSING, deepcopy(current), deepcopy(desired)),
+            )
+            settled = found.settle(resolutions)
+            if settled is not None and settled.resolution is ResolutionChoice.LOCAL:
+                return MergeResult(
+                    deepcopy(current),
+                    deepcopy(owned),
+                    MergeDecision.KEEP_LOCAL,
+                    proposals=(settled,),
+                )
+            return MergeResult(
+                deepcopy(desired),
+                deepcopy(owned),
+                MergeDecision.APPLY_REMOTE,
+                proposals=(settled or found,),
+            )
+
+        def preserve(restored: Value) -> MergeResult:
+            # A local edit or deletion kept where the update did not change;
+            # a resolution taking the update writes ``restored``.
+            found = MergeConflict(
+                loc,
+                ConflictReason.PRESERVED,
+                ConflictSides(
+                    deepcopy(previous), deepcopy(current), deepcopy(incoming)
+                ),
+            )
+            settled = found.settle(resolutions)
+            if settled is None:
+                return replace(keep(), preserved=(found,))
+            if settled.resolution is ResolutionChoice.LOCAL:
+                return replace(keep(), resolved=(settled,))
+            return MergeResult(
+                deepcopy(restored),
+                deepcopy(incoming),
+                MergeDecision.APPLY_REMOTE,
+                resolved=(settled,),
+            )
+
+        def unchanged() -> MergeResult:
+            # The update did not change here, so a local edit or deletion is
+            # kept and reported where it is: leaf by leaf inside a mapping the
+            # user still has, once for a whole value they removed or replaced.
+            if semantic_equal(current, previous):
+                return keep()
+            if (
+                isinstance(previous, dict)
+                and isinstance(incoming, dict)
+                and isinstance(current, dict)
+            ):
+                local = current
+                values = deepcopy(local)
+                preserved: list[MergeConflict] = []
+                resolved: list[MergeConflict] = []
+                restored = False
+                for key, owned in previous.items():
+                    child = merge(
+                        owned,
+                        local.get(key, MISSING),
+                        incoming.get(key, MISSING),
+                        MergeLocation(loc.file, (*loc.keys, key), loc.identity),
+                        False,
+                    )
+                    if child.decision is MergeDecision.APPLY_REMOTE:
+                        restored = True
+                        values[key] = child.value
+                    preserved.extend(child.preserved)
+                    resolved.extend(child.resolved)
+                return MergeResult(
+                    values if restored else deepcopy(current),
+                    deepcopy(previous),
+                    MergeDecision.APPLY_REMOTE
+                    if restored
+                    else MergeDecision.KEEP_LOCAL,
+                    resolved=tuple(resolved),
+                    preserved=tuple(preserved),
+                )
+            if loc.keys in policy.set_like_paths and isinstance(current, list):
+                # Foreign members are no edit; only a missing owned member is.
+                gone = removed_members(current)
+                return preserve([*current, *gone]) if gone else keep()
+            return preserve(incoming)
+
+        def removed_members(members: list[Value]) -> list[Value]:
+            # Owned members of a set-like list the user removed while the
+            # update still wants them.
+            if not isinstance(previous, list) or not isinstance(incoming, list):
+                return []
+            return [
+                member
+                for member in previous
+                if any(semantic_equal(member, want) for want in incoming)
+                and not any(semantic_equal(member, have) for have in members)
+            ]
+
         if incoming is MISSING:
             return keep()
         if protected:
@@ -431,10 +575,12 @@ def reconcile(
                 deepcopy(current), deepcopy(incoming), MergeDecision.KEEP_LOCAL
             )
         if previous is not MISSING and semantic_equal(incoming, previous):
-            return keep()
+            return unchanged()
         if previous is not MISSING and current is MISSING:
             return conflict(ConflictReason.DELETED_ANCESTOR)
         if isinstance(incoming, dict):
+            if policy.proposing and previous is MISSING and current is MISSING:
+                return propose(incoming, incoming)
             if current is not MISSING and not isinstance(current, dict):
                 return conflict(ConflictReason.TYPE_MISMATCH)
             if previous is not MISSING and not isinstance(previous, dict):
@@ -447,6 +593,8 @@ def reconcile(
             )
             conflicts: list[MergeConflict] = []
             resolved: list[MergeConflict] = []
+            proposals: list[MergeConflict] = []
+            preserved: list[MergeConflict] = []
             for key, desired in incoming.items():
                 child = merge(
                     baseline.get(key, MISSING),
@@ -461,6 +609,8 @@ def reconcile(
                     baseline[key] = child.baseline
                 conflicts.extend(child.conflicts)
                 resolved.extend(child.resolved)
+                proposals.extend(child.proposals)
+                preserved.extend(child.preserved)
             if policy.complete and isinstance(previous, dict):
                 for key in [k for k in previous if k not in incoming]:
                     local = values.get(key, MISSING)
@@ -501,7 +651,13 @@ def reconcile(
                 )
             )
             return MergeResult(
-                values, owned, decision, tuple(conflicts), tuple(resolved)
+                values,
+                owned,
+                decision,
+                tuple(conflicts),
+                tuple(resolved),
+                tuple(proposals),
+                tuple(preserved),
             )
         if isinstance(incoming, list) and loc.keys in policy.set_like_paths:
             if (current is not MISSING and not isinstance(current, list)) or (
@@ -521,16 +677,31 @@ def reconcile(
                 if owned_members or previous is not MISSING or current is MISSING
                 else MISSING
             )
+            if (
+                policy.proposing
+                and previous is MISSING
+                and not semantic_equal(members, current)
+            ):
+                return propose(members, owned)
+            gone = removed_members(members)
+            deviation = preserve([*members, *gone]) if gone else None
+            if (
+                deviation is not None
+                and deviation.decision is MergeDecision.APPLY_REMOTE
+            ):
+                members = cast(list[Value], deviation.value)
             return MergeResult(
                 members,
                 owned,
                 MergeDecision.KEEP_LOCAL
                 if semantic_equal(members, current)
                 else MergeDecision.APPLY_REMOTE,
+                resolved=deviation.resolved if deviation else (),
+                preserved=deviation.preserved if deviation else (),
             )
         if previous is MISSING:
             if current is MISSING:
-                return apply()
+                return propose(incoming, incoming) if policy.proposing else apply()
             if semantic_equal(current, incoming):
                 return keep()
             return conflict(ConflictReason.UNOWNED)

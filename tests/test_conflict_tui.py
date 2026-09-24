@@ -1,10 +1,13 @@
 """The sync conflict screen: choosing sides by key, previews, and the CLI hand-off."""
 
+import argparse
 import contextlib
 import io
 import json
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from rich.console import Console
@@ -21,6 +24,7 @@ from protostar.executor import SystemExecutor
 from protostar.lifecycle import prepare_project
 from protostar.manifest import EnvironmentManifest
 from protostar.merge import (
+    MISSING,
     ConflictReason,
     ConflictSides,
     MergeConflict,
@@ -184,6 +188,60 @@ async def test_a_file_row_settles_every_conflict_in_it_and_x_reopens(conflicted)
         assert cursor.data.conflict.location.file == RENOVATE
         await pilot.press("a")
     assert app.return_value == {}
+
+
+@pytest.mark.asyncio
+async def test_a_kept_edit_takes_the_update_only_from_its_own_row(conflicted):
+    # Back at the recorded revision, both local edits are kept, not conflicts.
+    (conflicted.parent / "source.toml").write_text(revision("original"))
+    app = make_app()
+    async with app.run_test(size=(120, 40)) as pilot:
+        await settle(pilot)
+        assert rows(app) == [
+            f"{RENOVATE}  1",
+            "value  preserved  keep mine",
+            f"{NOTES}  1",
+            "whole file  preserved  keep mine",
+        ]
+        assert "2 kept edits" in plain(app, "#subtitle")
+        # A file row never takes the update for a deliberate local edit.
+        await select(pilot, RENOVATE, conflict=False)
+        await pilot.press("u")
+        assert rows(app)[1] == "value  preserved  keep mine"
+        await select(pilot, RENOVATE)
+        assert pressed(app) == ["choice-local"]
+        assert app.screen.query_one("#choice-open", RadioButton).disabled
+        assert "update is still Protostar's version" in plain(app, "#meaning")
+        await pilot.press("u")
+        await settle(pilot)
+        assert rows(app)[1] == "value  preserved  take update"
+        assert "2 kept edits (1 updated)" in plain(app, "#subtitle")
+        assert '+{"value": "original"}' in plain(app, "#result")
+        await pilot.press("a")
+    kept = {c.location.file: c.id for c in prepare_project().review.preserved}
+    assert app.return_value == {kept[RENOVATE]: DESIRED}
+
+
+def test_the_screen_opens_for_proposals_but_not_for_kept_edits_alone(monkeypatch):
+    from protostar.cli import reviews, ui
+    from protostar.preparation import PreparedReview
+
+    monkeypatch.setattr(reviews, "is_interactive", lambda: True)
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    args = argparse.Namespace(dry_run=False, check=False, resolve=[])
+    proposal = MergeConflict(
+        MergeLocation("pyproject.toml", ("tool",)),
+        ConflictReason.PROPOSED,
+        ConflictSides(MISSING, MISSING, {"a": 1}),
+    )
+    kept = MergeConflict(MergeLocation("pyproject.toml"), ConflictReason.PRESERVED)
+
+    def review(**decisions: object) -> PreparedReview:
+        fields = {"conflicts": (), "proposals": (), "preserved": (), **decisions}
+        return cast(PreparedReview, SimpleNamespace(**fields))
+
+    assert reviews._asks(args, review(proposals=(proposal,)))
+    assert not reviews._asks(args, review(preserved=(kept,)))
 
 
 @pytest.mark.asyncio

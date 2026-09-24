@@ -1,4 +1,9 @@
-"""Choose, conflict by conflict, which content a sync keeps."""
+"""Choose, decision by decision, which content a sync keeps.
+
+The list holds the sync's conflicts, its proposed changes to content the user
+already had, and the local edits it preserves. A proposal applies and a
+preserved edit stays unless chosen otherwise; only a conflict can be left open.
+"""
 
 import asyncio
 from collections import Counter
@@ -18,7 +23,13 @@ from textual.widgets.tree import TreeNode
 
 from protostar.errors import ProtostarError
 from protostar.lifecycle import PreparedProject
-from protostar.merge import MergeConflict, ResolutionChoice, describe_location
+from protostar.merge import (
+    ConflictReason,
+    MergeConflict,
+    ResolutionChoice,
+    default_choice,
+    describe_location,
+)
 from protostar.preparation import PreparedReview
 
 from ..chrome import Heading, Headline, Masthead, Panel
@@ -29,6 +40,7 @@ from .sides import (
     OPEN,
     SAID,
     describe_conflict,
+    is_conflict,
     side_text,
     tag,
 )
@@ -63,27 +75,40 @@ def _count(number: int, noun: str) -> str:
 
 
 def summary(
-    conflicts: tuple[MergeConflict, ...], choices: Mapping[str, ResolutionChoice]
+    decisions: tuple[MergeConflict, ...], choices: Mapping[str, ResolutionChoice]
 ) -> Text:
-    """Counts the conflicts by what happens to them.
+    """Counts the decisions by what happens to them.
 
     Args:
-        conflicts: Every open conflict of the review.
+        decisions: The review's conflicts, proposals, and preserved edits.
         choices: The choices made so far.
 
     Returns:
         One line for the screen's subtitle.
     """
+    conflicts = [d for d in decisions if is_conflict(d)]
     counts = Counter(
         "by hand"
         if not conflict.choices
         else ("resolved" if conflict.id in choices else OPEN)
         for conflict in conflicts
     )
-    parts = [_count(len(conflicts), "conflict")]
-    parts.extend(f"{counts[kind]} {kind}" for kind in ("resolved", OPEN))
-    if counts["by hand"]:
-        parts.append(f"{counts['by hand']} by hand")
+    parts = []
+    if conflicts:
+        parts.append(_count(len(conflicts), "conflict"))
+        parts.extend(f"{counts[kind]} {kind}" for kind in ("resolved", OPEN))
+        if counts["by hand"]:
+            parts.append(f"{counts['by hand']} by hand")
+    proposals = [d for d in decisions if d.reason is ConflictReason.PROPOSED]
+    if proposals:
+        kept = sum(choices.get(p.id) is ResolutionChoice.LOCAL for p in proposals)
+        changes = _count(len(proposals), "change") + " to your files"
+        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
+    preserved = [d for d in decisions if d.reason is ConflictReason.PRESERVED]
+    if preserved:
+        restored = sum(choices.get(p.id) is ResolutionChoice.DESIRED for p in preserved)
+        edits = _count(len(preserved), "kept edit")
+        parts.append(f"{edits} ({restored} updated)" if restored else edits)
     note = "Open conflicts keep your content; safe changes apply either way."
     return Text(f"{' · '.join(parts)}. {note}")
 
@@ -158,7 +183,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         """
         super().__init__()
         self.project = project
-        self.conflicts = project.review.conflicts
+        self.conflicts = project.review.decisions
         self.choices: dict[str, ResolutionChoice] = {}
         self.preview: PreparedReview | None = None
         self._failed = False
@@ -167,9 +192,9 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
     def compose(self) -> ComposeResult:
         """Compose the conflict list beside both sides, the choices below them."""
         yield Masthead("sync", "conflicts")
-        yield Headline("Resolve conflicts", summary(self.conflicts, self.choices))
+        yield Headline("Review sync", summary(self.conflicts, self.choices))
         with Horizontal(id="body"):
-            with Panel("Conflicts", id="conflicts-panel"):
+            with Panel("Decisions", id="conflicts-panel"):
                 yield ConflictTree(Text("."), id="conflicts")
             with Vertical(id="sides-column"):
                 with Horizontal(id="sides"):
@@ -260,7 +285,12 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
             return []
         if node.conflict is not None:
             return [node.conflict]
-        return [c for c in self.conflicts if c.location.file == node.path]
+        # A preserved edit is deliberate, so only its own row takes the update.
+        return [
+            c
+            for c in self.conflicts
+            if c.location.file == node.path and c.reason is not ConflictReason.PRESERVED
+        ]
 
     def _show(self, node: Node | None) -> None:
         targets = self._targets(node)
@@ -294,12 +324,14 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
 
     def _show_choice(self, targets: list[MergeConflict]) -> None:
         offered = {choice for conflict in targets for choice in conflict.choices}
-        picked = {self.choices.get(c.id) for c in targets if c.choices}
+        picked = {
+            self.choices.get(c.id) or default_choice(c) for c in targets if c.choices
+        }
         for choice in ResolutionChoice:
             button = self.query_one(f"#choice-{choice.value}", RadioButton)
             button.disabled = choice not in offered
         leave = self.query_one(f"#choice-{OPEN}", RadioButton)
-        leave.disabled = not offered
+        leave.disabled = not any(c.choices and is_conflict(c) for c in targets)
         pressed = None
         # Mixed choices across a file's conflicts press no button.
         if offered and len(picked) == 1:
@@ -313,6 +345,8 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         changed = False
         for conflict in self._targets(node):
             if choice is not None and choice not in conflict.choices:
+                continue
+            if choice is None and not is_conflict(conflict):
                 continue
             if not conflict.choices or self.choices.get(conflict.id) == choice:
                 continue
@@ -370,7 +404,9 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
             targets = self._targets(self._highlighted())
             offered = {choice for conflict in targets for choice in conflict.choices}
             value = str(parameters[0]) if parameters else OPEN
-            return bool(offered) and (value == OPEN or value in offered)
+            if value == OPEN:
+                return any(c.choices and is_conflict(c) for c in targets)
+            return value in offered
         return True
 
     def action_choose(self, value: str) -> None:
@@ -381,7 +417,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         """Highlight the next conflict that is still open, wrapping around."""
         tree = self.query_one("#conflicts", ConflictTree)
         node = self._highlighted()
-        order = [c for c in self.conflicts if c.choices]
+        order = [c for c in self.conflicts if c.choices and is_conflict(c)]
         start = (
             order.index(node.conflict) + 1
             if node is not None and node.conflict in order

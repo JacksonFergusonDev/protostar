@@ -18,7 +18,7 @@ from protostar.errors import (
 from protostar.executor import SystemExecutor
 from protostar.intent import DependencyGroup, StructuredFormat
 from protostar.manifest import EnvironmentManifest, HookRunner
-from protostar.preparation import prepare_review
+from protostar.preparation import deleted, prepare_review
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
 from protostar.sync_state import deserialize_state
@@ -174,12 +174,12 @@ def test_state_only_convergence_and_preserved_local_deviation(
     review = prepare_review(desired, UserConfig())
     assert not review.pending
     assert review.preserved[0].location.keys == ("tool", "ruff", "line-length")
-    assert not review.preserved[0].deleted
+    assert not deleted(review.preserved[0])
     assert not apply(desired, review, mocker).journal.touched_paths
     target.unlink()
     review = prepare_review(desired, UserConfig())
     assert not review.pending
-    assert review.preserved[0].deleted
+    assert deleted(review.preserved[0])
     assert not apply(desired, review, mocker).journal.touched_paths
     assert not target.exists()
 

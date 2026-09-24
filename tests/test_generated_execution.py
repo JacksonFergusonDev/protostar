@@ -12,6 +12,7 @@ from protostar.intent import AppendContribution
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.merge import ConflictReason, LineSpan, MergeLocation, ResolutionChoice
 from protostar.models import ExecutionResult
+from protostar.preparation import deleted as is_deleted
 from protostar.sync_state import FilePolicy, deserialize_state
 
 ARTIFACTS = ["Dockerfile", "justfile"]
@@ -585,7 +586,7 @@ def test_review_reports_line_conflicts_and_preserved_edits(
     )
     (preserved,) = prepare_review(desired(), UserConfig()).preserved
     assert preserved.location.file == "justfile"
-    assert not preserved.deleted
+    assert not is_deleted(preserved)
 
     mocker.patch(
         "protostar.reconciliation.generate_justfile",
@@ -715,10 +716,10 @@ def test_region_preserved_deviations_ignore_newline_style(
     assert not prepare_review(desired(), UserConfig()).preserved
     target.write_text(applied.replace("A=1", "A=2"))
     (edited,) = prepare_review(desired(), UserConfig()).preserved
-    assert (edited.location.identity, edited.deleted) == ("test:env", False)
+    assert (edited.location.identity, is_deleted(edited)) == ("test:env", False)
     target.write_text("# no region\n")
     (deleted,) = prepare_review(desired(), UserConfig()).preserved
-    assert (deleted.location.identity, deleted.deleted) == ("test:env", True)
+    assert (deleted.location.identity, is_deleted(deleted)) == ("test:env", True)
 
 
 @pytest.mark.parametrize(

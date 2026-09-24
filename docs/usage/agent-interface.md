@@ -196,6 +196,14 @@ applying elsewhere; a choice the conflict does not offer fails with
 `UnsupportedResolutionError` and lists the ones it does. See
 [resolve conflicts](lifecycle.md#resolve-conflicts).
 
+Two more kinds of decision share that shape and the same `--resolve`. Entries in
+`review.proposals` are changes into files Protostar never owned; each applies
+unless resolved with `local`, and its `resolution` is `null` until one is chosen.
+Entries in `review.preserved` are your kept edits and deletions, each with an
+`id`, its sides, and `deleted`; resolving one with `desired` takes Protostar's
+version there. A file selector names conflicts and proposals, never a preserved
+edit.
+
 ```json
 --8<-- "agent_payload_reviewed.json"
 ```

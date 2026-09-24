@@ -11,9 +11,11 @@ from rich.text import Text
 from protostar.errors import ProtostarError
 from protostar.merge import (
     MISSING,
+    ConflictReason,
     MergeConflict,
     ResolutionChoice,
     Value,
+    default_choice,
     describe_location,
 )
 from protostar.yaml_ast import encode_yaml_baseline
@@ -79,9 +81,10 @@ def side_text(conflict: MergeConflict, side: str) -> Text:
         return Text("Protostar can't show this side.", style="dim")
     text = _side(conflict, side)
     if text is None:
-        return Text(
-            "Deleted." if side == "local" else "No longer generated.", style="dim"
-        )
+        if side == "local":
+            proposed = conflict.reason is ConflictReason.PROPOSED
+            return Text("Not in your file." if proposed else "Deleted.", style="dim")
+        return Text("No longer generated.", style="dim")
     return (
         source_text(CodeSource(text.text.rstrip("\n"), text.path, text.language))
         if text.text
@@ -131,22 +134,32 @@ def describe_conflict(conflict: MergeConflict) -> Text:
         "unowned": "It was already there before Protostar managed it.",
         "deleted-ancestor": "You deleted it, and the update changed it.",
         "retracted": "You edited it, and the update no longer generates it.",
+        "proposed": "Protostar adds it; your file doesn't have it yet.",
+        "preserved": "You changed it, and the update is still Protostar's version.",
     }.get(reason, "")
     return Text.assemble((where, "bold"), f"  {meaning}")
 
 
 def tag(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
-    """Returns what happens to a conflict, as its list row says it.
+    """Returns what happens to a decision, as its list row says it.
 
     Args:
-        conflict: The conflict.
-        choice: The choice made for it, or ``None`` while open.
+        conflict: The conflict, proposal, or preserved deviation.
+        choice: The choice made for it, or ``None`` when none was.
 
     Returns:
-        A short colored tag.
+        A short colored tag; a decision nobody chose shows its default, dimmed.
     """
     if not conflict.choices:
         return Text("by hand", "dim")
-    if choice is None:
+    if choice is not None:
+        return Text(SAID[choice], _TAG_STYLES[choice])
+    default = default_choice(conflict)
+    if default is None:
         return Text(OPEN, "red")
-    return Text(SAID[choice], _TAG_STYLES[choice])
+    return Text(SAID[default], "dim")
+
+
+def is_conflict(decision: MergeConflict) -> bool:
+    """Returns whether a decision is a conflict, which can be left open."""
+    return decision.reason not in (ConflictReason.PROPOSED, ConflictReason.PRESERVED)

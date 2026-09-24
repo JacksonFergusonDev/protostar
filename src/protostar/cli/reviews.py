@@ -12,8 +12,18 @@ from protostar.cli.diff import format_diff, normalize_newlines
 from protostar.cli.tui.launch import resolve_conflicts
 from protostar.errors import ExecutionAbortedError
 from protostar.lifecycle import inspect_project, prepare_project
-from protostar.merge import MergeConflict, ResolutionChoice, describe_location
-from protostar.preparation import PreparedEdit, PreparedReview, select_resolutions
+from protostar.merge import (
+    ConflictReason,
+    MergeConflict,
+    ResolutionChoice,
+    describe_location,
+)
+from protostar.preparation import (
+    PreparedEdit,
+    PreparedReview,
+    deleted,
+    select_resolutions,
+)
 from protostar.system import is_interactive
 
 SETTLED = {
@@ -87,6 +97,11 @@ def render_review(
             ),
             ("; ", "dim"),
             (
+                f"{len(review.proposals)} changes to your files",
+                "" if review.proposals else "dim",
+            ),
+            ("; ", "dim"),
+            (
                 f"{len(review.preserved)} preserved local deviations.",
                 "" if review.preserved else "dim",
             ),
@@ -135,19 +150,29 @@ def render_review(
             ),
             soft_wrap=True,
         )
-    for item in review.preserved:
-        action = "deletion" if item.deleted else "local edit"
-        keys_str = f"{'.'.join(item.location.keys)}" if item.location.keys else ""
-        identity_str = f" {item.location.identity or ''}"
-        name = item.location.file.rsplit("/", 1)[-1]
+    for proposal in review.proposals:
+        declined = proposal.resolution is ResolutionChoice.LOCAL
         ui.console.print(
             Text.assemble(
-                f"Preserved {action}: ",
-                (item.location.file, ui.path_style(name, directory=False)),
-                " ",
-                keys_str,
-                (identity_str, "dim" if identity_str.strip() else ""),
-            )
+                (f"Proposed {proposal.id}: ", "bold"),
+                (_where(proposal), "bold"),
+                (
+                    ": declined; kept your content."
+                    if declined
+                    else f": {'applied' if applied else 'applies'}; decline with local."
+                ),
+            ),
+            soft_wrap=True,
+        )
+    for item in review.preserved:
+        action = "deletion" if deleted(item) else "local edit"
+        ui.console.print(
+            Text.assemble(
+                f"Preserved {action} {item.id}: ",
+                (_where(item), "bold"),
+                (": take the update with desired.", "dim"),
+            ),
+            soft_wrap=True,
         )
     if review.state_changed:
         msg = (
@@ -197,11 +222,18 @@ def _where(conflict: MergeConflict) -> str:
 
 
 def _asks(args: argparse.Namespace, review: PreparedReview) -> bool:
-    """Returns whether to ask how conflicts are settled before applying."""
+    """Returns whether to ask how conflicts and proposals are settled first.
+
+    Preserved deviations alone never open the screen: they are no pending
+    work, and ``status`` lists how to take each one's update.
+    """
     return (
         not (args.dry_run or args.check or args.resolve or ui.is_json_mode)
         and is_interactive()
-        and any(conflict.choices for conflict in review.conflicts)
+        and (
+            any(conflict.choices for conflict in review.conflicts)
+            or bool(review.proposals)
+        )
     )
 
 
@@ -214,7 +246,7 @@ def handle_sync(args: argparse.Namespace) -> None:
     project = prepare_project()
     if args.resolve:
         project = project.resolve(
-            select_resolutions(project.review.conflicts, args.resolve)
+            select_resolutions(project.review.decisions, args.resolve)
         )
     elif _asks(args, project.review):
         choices = resolve_conflicts(project)
@@ -266,6 +298,10 @@ def handle_sync(args: argparse.Namespace) -> None:
         )
     else:
         render_review(review, applied=True)
+        settled = [
+            c for c in review.resolved if c.reason is not ConflictReason.PRESERVED
+        ]
+        updated = len(review.resolved) - len(settled)
         ui.console.print(
             Text.assemble(
                 (
@@ -273,9 +309,10 @@ def handle_sync(args: argparse.Namespace) -> None:
                     "bold green" if result.touched_paths else "dim",
                 ),
                 (
-                    f"{len(review.resolved)} conflicts resolved",
-                    "" if review.resolved else "dim",
+                    f"{len(settled)} conflicts resolved",
+                    "" if settled else "dim",
                 ),
+                (f"; {updated} kept edits updated" if updated else "", ""),
                 ("; ", "dim"),
                 (
                     f"{len(review.conflicts)} conflicts retained.",

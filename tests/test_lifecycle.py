@@ -23,6 +23,7 @@ from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project
 from protostar.manifest import EnvironmentManifest
 from protostar.merge import ConflictReason, ResolutionChoice
+from protostar.preparation import deleted as is_deleted
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
 
 
@@ -95,7 +96,7 @@ def test_inspection_accepted_edits_and_preservation_are_read_only(project):
     assert any(p.location.file == ".github/renovate.json" for p in review.preserved)
     assert not any(c.location.file == ".github/renovate.json" for c in review.conflicts)
     Path(".github/renovate.json").unlink()
-    assert any(p.deleted for p in inspect_project().preserved)
+    assert any(is_deleted(p) for p in inspect_project().preserved)
 
 
 @pytest.mark.parametrize("command", ["status", "diff"])

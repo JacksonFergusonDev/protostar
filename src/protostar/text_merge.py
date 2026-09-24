@@ -118,13 +118,42 @@ class TextReconciliation:
             baseline when an update is refused, or ``None`` while unowned.
         conflicts: Why a pending desired change was refused: one conflict per
             overlapping hunk, or one for the whole text.
-        resolved: Conflicts settled by a resolution.
+        resolved: Conflicts settled by a resolution, and a restored local edit.
+        preserved: The local edit or deletion kept under an unchanged update.
     """
 
     content: str | None
     baseline: str | None
     conflicts: tuple[MergeConflict, ...] = ()
     resolved: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
+
+
+def preserved_text(
+    location: MergeLocation, local: bytes | None, baseline: str
+) -> MergeConflict | None:
+    """Returns the local edit or deletion of an owned text, or ``None`` if unedited.
+
+    Args:
+        location: The file, and region identity.
+        local: The workspace bytes, or ``None`` when deleted.
+        baseline: The last accepted text, which the update still matches.
+
+    Returns:
+        A ``preserved`` decision whose sides show both texts; local bytes that
+        are not UTF-8 cannot be shown, so their decision has no sides.
+    """
+    if local is not None and not is_edited(local, baseline):
+        return None
+    try:
+        text = local.decode("utf-8") if local is not None else None
+    except UnicodeDecodeError:
+        return MergeConflict(location, ConflictReason.PRESERVED)
+    return MergeConflict(
+        location,
+        ConflictReason.PRESERVED,
+        ConflictSides(baseline, MISSING if text is None else text, baseline, line=0),
+    )
 
 
 def reconcile_text(
@@ -148,7 +177,9 @@ def reconcile_text(
 
     A resolution owns the desired text whichever side it keeps: unowned text
     kept is adopted as an edit of the update, and a deleted text kept stays
-    deleted until the update changes again.
+    deleted until the update changes again. While the update matches the
+    baseline, a local edit or deletion is reported as preserved, and a
+    resolution that takes the update restores the desired text.
 
     Args:
         local: The workspace bytes, or ``None`` when the file is absent.
@@ -164,11 +195,20 @@ def reconcile_text(
     target = desired.encode("utf-8")
     if overwrite or (baseline is None and local is None):
         return TextReconciliation(None if local == target else desired, desired)
+    if baseline is not None and desired == baseline:
+        found = preserved_text(location, local, baseline)
+        settled = found.settle(resolutions) if found is not None else None
+        if found is None:
+            return TextReconciliation(None, baseline)
+        if settled is None:
+            return TextReconciliation(None, baseline, preserved=(found,))
+        restore = settled.resolution is ResolutionChoice.DESIRED
+        return TextReconciliation(
+            desired if restore else None, baseline, resolved=(settled,)
+        )
     try:
         text = local.decode("utf-8") if local is not None else None
     except UnicodeDecodeError:
-        if desired == baseline:
-            return TextReconciliation(None, baseline)
         reason = ConflictReason.UNOWNED if baseline is None else ConflictReason.DIVERGED
         return TextReconciliation(None, baseline, (MergeConflict(location, reason),))
     if baseline is None or text is None:
