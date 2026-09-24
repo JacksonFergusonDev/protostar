@@ -18,7 +18,7 @@ To restore your configuration to the factory defaults:
 protostar config --reset
 ```
 
-To bypass the confirmation prompt (e.g., in automated scripts), append `--force` (or `-f`):
+Outside an interactive terminal, or with `--json`, there is no prompt: `--reset` fails unless you append `--force` (or `-f`), which also skips the prompt in a terminal:
 
 ```bash
 protostar config --reset --force

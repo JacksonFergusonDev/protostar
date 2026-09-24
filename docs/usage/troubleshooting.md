@@ -94,7 +94,7 @@ Template variable values look like credentials:
   - org_name (gitleaks rule github-pat)
 ```
 
-The error names the variable and the [gitleaks](https://github.com/gitleaks/gitleaks) rule it matched, never the value. In `--json` mode the same pairs appear under `error.findings`.
+The error names the variable and the [gitleaks](https://github.com/gitleaks/gitleaks) rule it matched, never the value. In `--json` mode the same pairs appear under `error.findings`. In an interactive terminal, a flagged `--var` value opens the variables screen instead of failing, so you can change it or keep it there.
 
 - **You entered a secret:** enter a non-secret value instead, and supply the secret through the environment when the project runs.
 - **The template asks for a secret:** the template needs fixing; see [Variables Are Not Secrets](authoring-templates.md#variables-are-not-secrets).

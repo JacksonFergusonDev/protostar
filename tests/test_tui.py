@@ -762,6 +762,35 @@ async def test_variables_step_focuses_the_missing_value(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_variables_step_opens_on_a_flagged_value(tmp_path):
+    token = github_token()
+    draft = template_draft(
+        tmp_path / "t.toml",
+        '[files]\n"custom.txt" = "<% ORG %>"\n',
+        variables=(("ORG", token),),
+    )
+    app = DecisionApp(VariablesScreen(draft, UserConfig(), flagged=("ORG",)))
+    async with app.run_test(size=(110, 30)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        assert "Values look like credentials" in plain(app, "#title")
+        assert app.focused is screen.query_one("#var-ORG", Input)
+        assert "gitleaks rule github-pat" in plain(app, "#var-ORG-error")
+        # A flagged value stays out of the preview until it is settled.
+        assert "Waiting for values: ORG" in plain(app, "#preview-summary")
+        allow = screen.query_one("#var-ORG-allow", Checkbox)
+        assert allow.display
+        await pilot.press("tab", "space")
+        await settle(pilot)
+        assert allow.value
+        await pilot.press("ctrl+s")
+    result = app.return_value
+    assert result is not None
+    assert dict(result.variables) == {"ORG": token}
+    assert result.allowed_secrets == frozenset({"ORG"})
+
+
+@pytest.mark.asyncio
 async def test_enter_through_the_last_field_reaches_continue(tmp_path):
     draft = template_draft(
         tmp_path / "t.toml", '[files]\n"custom.txt" = "<% REGION %> <% TIER %>"\n'

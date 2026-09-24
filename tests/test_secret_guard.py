@@ -3,6 +3,7 @@ import random
 import string
 import subprocess
 import sys
+from dataclasses import replace
 
 import pytest
 
@@ -11,6 +12,7 @@ from protostar.cli.parser import build_parser
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import (
     ConfigurationError,
+    ExecutionAbortedError,
     ExitCode,
     InvalidUsageError,
     SecretDetectedError,
@@ -551,6 +553,54 @@ def test_human_error_names_variable_without_value(capsys, monkeypatch, tmp_path)
     assert "npm-access-token" in captured.out
     assert token not in captured.out
     assert token not in captured.err
+
+
+def _flagged_var_args(tmp_path, token):
+    template = _template(tmp_path, "org_name")
+    return build_parser().parse_args(
+        ["init", "--from", str(template), "--var", f"org_name={token}", "--dry-run"]
+    )
+
+
+def test_terminal_settles_a_flagged_var_on_the_variables_screen(
+    mocker, monkeypatch, tmp_path
+):
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
+    screen = mocker.patch(
+        "protostar.cli.main.edit_variables",
+        side_effect=lambda draft, config, flagged: replace(
+            draft, allowed_secrets=frozenset(flagged)
+        ),
+    )
+    summary = mocker.patch("protostar.cli.ui.print_dry_run_summary")
+
+    with pytest.raises(SystemExit) as exc:
+        handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))
+
+    assert exc.value.code == 0
+    assert screen.call_args.args[2] == ("org_name",)
+    summary.assert_called_once()
+
+
+def test_cancelling_the_flagged_var_screen_aborts(mocker, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
+    mocker.patch("protostar.cli.main.edit_variables", return_value=None)
+
+    with pytest.raises(ExecutionAbortedError, match="Variable entry cancelled"):
+        handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))
+
+
+def test_flagged_var_off_a_terminal_never_opens_a_screen(mocker, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=False)
+    screen = mocker.patch("protostar.cli.main.edit_variables")
+
+    with pytest.raises(SecretDetectedError, match="org_name"):
+        handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))
+
+    screen.assert_not_called()
 
 
 def test_cli_startup_does_not_load_the_rule_set(tmp_path):
