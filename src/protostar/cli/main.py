@@ -56,6 +56,7 @@ from protostar.modules import (
     BootstrapModule,
 )
 from protostar.secret_guard import credential_named
+from protostar.sync_state import check_workspace_identity
 from protostar.system import is_interactive
 
 logger = logging.getLogger("protostar")
@@ -143,6 +144,8 @@ def handle_init(args: argparse.Namespace) -> None:
         source = TemplateSource.load(
             override_target, built_in=built_in, display_name=template_name
         )
+    # plan() checks this too, but only after the variables are entered.
+    check_workspace_identity(Path.cwd(), source.reference if source else None)
     variables = _resolve_template_variables(
         source,
         dict(existing_recipe.variables) if existing_recipe else {},

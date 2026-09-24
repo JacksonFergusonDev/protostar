@@ -5,7 +5,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from protostar.errors import ConfigurationError
+from protostar.errors import ConfigurationError, UnsupportedFilesystemNodeError
 from protostar.intent import (
     DependencyGroup,
     TemplateOrigin,
@@ -23,9 +23,11 @@ from protostar.sync_state import (
     RegionState,
     SyncState,
     check_template_identity,
+    check_workspace_identity,
     decode_toml_baseline,
     deserialize_state,
     encode_toml_baseline,
+    read_workspace_state,
     serialize_state,
 )
 
@@ -311,6 +313,31 @@ def test_same_source_revision_is_allowed_but_alias_retargeting_is_rejected():
     with pytest.raises(ConfigurationError):
         check_template_identity(SyncState("0.9.0"), REF)
     check_template_identity(SyncState("0.9.0"), None)
+
+
+def test_workspace_state_is_read_without_following_links(tmp_path):
+    assert read_workspace_state(tmp_path) is None
+    content = serialize_state(sample_state())
+    state_file = tmp_path / ".protostar.lock.toml"
+    state_file.write_text(content)
+    assert read_workspace_state(tmp_path) == deserialize_state(content)
+    state_file.write_bytes(b"\xff")
+    with pytest.raises(ConfigurationError, match="ownership state"):
+        read_workspace_state(tmp_path)
+    state_file.unlink()
+    (tmp_path / "elsewhere.toml").write_text(content)
+    state_file.symlink_to(tmp_path / "elsewhere.toml")
+    with pytest.raises(UnsupportedFilesystemNodeError):
+        read_workspace_state(tmp_path)
+
+
+def test_workspace_identity_rejects_only_a_recorded_other_template(tmp_path):
+    check_workspace_identity(tmp_path, replace(REF, locator="cli"))
+    (tmp_path / ".protostar.lock.toml").write_text(serialize_state(sample_state()))
+    check_workspace_identity(tmp_path, replace(REF, digest="b" * 64))
+    with pytest.raises(ConfigurationError, match="differs") as caught:
+        check_workspace_identity(tmp_path, replace(REF, locator="cli"))
+    assert caught.value.hint
 
 
 def test_state_rejects_template_credentials_and_installation_identity():

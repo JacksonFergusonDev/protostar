@@ -33,14 +33,16 @@ from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.variables import VariablesScreen
 from protostar.cli.tui.review.screen import ReviewScreen
 from protostar.config import TemplateAliasConfig, TemplateSource, UserConfig
-from protostar.errors import ExecutionAbortedError
+from protostar.errors import ConfigurationError, ExecutionAbortedError
 from protostar.executor import SystemExecutor
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
+from protostar.intent import TemplateOrigin, TemplateReference
 from protostar.manifest import CollisionStrategy
 from protostar.merge import ResolutionChoice
 from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
+from protostar.sync_state import SyncState, serialize_state
 from protostar.templates import discover_templates
 
 
@@ -969,6 +971,57 @@ async def test_review_keys_confirm_trust_and_apply(tmp_path):
         assert app.is_running
         await pilot.press("t", "a")
     assert app.return_value.confirmed_commands[-1] == REMOTE_TASK
+
+
+def record_template(workspace):
+    """Record a built-in template the drafts under test are not."""
+    recorded = TemplateReference(TemplateOrigin.BUILT_IN, "api", "a" * 64)
+    (workspace / ".protostar.lock.toml").write_text(
+        serialize_state(SyncState("0.9.0", recorded))
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_review_that_never_prepares_hands_its_error_to_the_cli(
+    tmp_path, workspace
+):
+    """No choice on the review can fix it, so the app leaves with the error."""
+    record_template(workspace)
+    app = make_review(template_draft(tmp_path / "t.toml", "[files]\n"))
+    async with app.run_test() as pilot:
+        await settle(pilot)
+        assert not app.is_running
+    assert app.return_value is None
+    assert app.failure is not None
+    assert "differs" in str(app.failure)
+
+
+def test_decide_raises_the_error_a_screen_left_with(mocker):
+    from textual.screen import Screen
+
+    app: DecisionApp[None] = DecisionApp(Screen())
+    mocker.patch.object(app, "run", return_value=None)
+    assert app.decide() is None
+    app.failure = ConfigurationError("Unfixable.")
+    with pytest.raises(ConfigurationError, match="Unfixable"):
+        app.decide()
+
+
+@pytest.mark.asyncio
+async def test_a_review_with_an_editor_behind_it_shows_the_error_and_hint(
+    tmp_path, workspace
+):
+    """Going back to the editor can fix it, so the review stays with the hint."""
+    record_template(workspace)
+    draft = template_draft(tmp_path / "t.toml", "[files]\n")
+    app = DecisionApp(ReviewScreen(draft, UserConfig(), can_go_back=True))
+    async with app.run_test(size=(160, 40)) as pilot:
+        await settle(pilot)
+        assert app.is_running
+        subtitle = plain(app, "#subtitle")
+        assert "differs" in subtitle
+        assert "Select the same template source" in subtitle
+        assert app.screen.query_one("#apply", Button).disabled
 
 
 @pytest.mark.asyncio

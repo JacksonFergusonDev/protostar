@@ -21,8 +21,7 @@ from .preparation import ExecutionPolicy, PreparedReview, prepare_review
 from .progress import ProgressStep, no_progress
 from .recipe import read_recipe, select_tooling
 from .registry import resolve_hook_revisions
-from .review_workspace import capture_node
-from .sync_state import check_template_identity, deserialize_state
+from .sync_state import STATE_FILE, read_workspace_state
 
 
 @dataclass(frozen=True)
@@ -103,19 +102,12 @@ def prepare_project() -> PreparedProject:
             "Project recipe is missing.",
             hint="Rerun your original explicit selection with init --force-merge to establish [tool.protostar].",
         )
-    state_input = capture_node(root / ".protostar.lock.toml")
-    if state_input.file_content is None:
+    state = read_workspace_state(root)
+    if state is None:
         raise ConfigurationError(
             "Project ownership state is missing.",
-            hint="Rerun your original explicit selection with init --force-merge to establish .protostar.lock.toml.",
+            hint=f"Rerun your original explicit selection with init --force-merge to establish {STATE_FILE}.",
         )
-    try:
-        state = deserialize_state(state_input.file_content.decode())
-    except UnicodeError as error:
-        raise ConfigurationError(
-            "Invalid project ownership state.",
-            hint="Correct .protostar.lock.toml encoding.",
-        ) from error
     context = recipe.rendering_context()
 
     # sync never prompts: a variable the template gained since the recipe was
@@ -129,7 +121,7 @@ def prepare_project() -> PreparedProject:
             "Cannot read the recorded template source.",
             hint="Verify its locator and UTF-8 source files.",
         ) from error
-    check_template_identity(state, blueprint.reference if blueprint else None)
+    # plan() rejects a template other than the recorded one.
     if blueprint and blueprint.reference and state.template:
         blueprint.reference = replace(
             blueprint.reference, display_name=state.template.display_name

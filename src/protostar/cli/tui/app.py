@@ -7,12 +7,17 @@ from textual.binding import Binding, BindingType
 from textual.screen import Screen
 
 from protostar.cli.palette import ANSI
+from protostar.errors import ProtostarError
 
 from .theme import PROTOSTAR
 
 
 class DecisionApp[ResultT](App[ResultT]):
-    """Run one decision flow and exit with its immutable result."""
+    """Run one decision flow and exit with its immutable result.
+
+    A screen that meets an error no choice on it can fix leaves through
+    ``fail``, and ``decide`` raises it once the terminal is restored.
+    """
 
     CSS_PATH = "protostar.tcss"
     TITLE = "Protostar"
@@ -33,6 +38,27 @@ class DecisionApp[ResultT](App[ResultT]):
         self.ansi_theme_dark = ANSI
         self.decision_screen = screen
         self.exit_after_first_frame = exit_after_first_frame
+        self.failure: ProtostarError | None = None
+
+    def decide(self) -> ResultT | None:
+        """Run the flow and return its result, or None on cancellation.
+
+        Raises:
+            ProtostarError: The error a screen left with through ``fail``.
+        """
+        result = self.run()
+        if self.failure is not None:
+            raise self.failure
+        return result
+
+    def fail(self, error: ProtostarError) -> None:
+        """Leave without a result, handing the error to the CLI to report.
+
+        Args:
+            error: The error, with its hint, that the CLI prints.
+        """
+        self.failure = error
+        self.exit(None)
 
     def on_mount(self) -> None:
         """Open the first decision screen without starting engine execution."""

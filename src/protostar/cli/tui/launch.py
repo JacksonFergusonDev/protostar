@@ -29,7 +29,7 @@ def edit_recipe(
     return DecisionApp(
         RecipeScreen(draft, catalog, config),
         exit_after_first_frame=exit_after_first_frame,
-    ).run()
+    ).decide()
 
 
 def edit_variables(draft: InitDraft, config: UserConfig) -> InitDraft | None:
@@ -37,15 +37,20 @@ def edit_variables(draft: InitDraft, config: UserConfig) -> InitDraft | None:
     from .app import DecisionApp
     from .recipe.variables import VariablesScreen
 
-    return DecisionApp(VariablesScreen(draft, config)).run()
+    return DecisionApp(VariablesScreen(draft, config)).decide()
 
 
 def review_changes(draft: InitDraft, config: UserConfig) -> InitDecision | None:
-    """Review a draft's changes and settle its open decisions, or return None."""
+    """Review a draft's changes and settle its open decisions, or return None.
+
+    Raises:
+        ProtostarError: If the first review fails, since nothing on the screen
+            could change its outcome.
+    """
     from .app import DecisionApp
     from .review.screen import ReviewScreen
 
-    return DecisionApp(ReviewScreen(draft, config)).run()
+    return DecisionApp(ReviewScreen(draft, config)).decide()
 
 
 def resolve_conflicts(project: PreparedProject) -> dict[str, ResolutionChoice] | None:
@@ -60,4 +65,4 @@ def resolve_conflicts(project: PreparedProject) -> dict[str, ResolutionChoice] |
     from .app import DecisionApp
     from .conflicts.screen import ConflictScreen
 
-    return DecisionApp(ConflictScreen(project)).run()
+    return DecisionApp(ConflictScreen(project)).decide()

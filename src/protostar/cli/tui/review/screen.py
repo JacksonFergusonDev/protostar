@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, cast
 
 from rich.console import Group, RenderableType
 from rich.padding import Padding
@@ -46,6 +46,7 @@ from protostar.preparation import (
 )
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
 
+from ..app import DecisionApp
 from ..chrome import Heading, Headline, Masthead, Panel
 from ..code import edit_text
 from ..conflicts.sides import (
@@ -413,6 +414,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.choices: dict[str, ResolutionChoice] = {}
         self._hook_revisions: tuple[ResolvedHookRevision, ...] | None = None
         self._loading = True
+        self._shown = False
 
     def compose(self) -> ComposeResult:
         """Compose the file tree and steps beside the diff, the decisions below it."""
@@ -526,12 +528,20 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                 dict(self.choices),
             )
         except ProtostarError as exc:
+            if not self._shown and not self.can_go_back:
+                # No choice here can fix a review that never prepared.
+                cast("DecisionApp[InitDecision]", self.app).fail(exc)
+                return
             self.review = None
             self._loading = False
-            self._status(Text(str(exc)), error=True)
+            self._status(
+                Text.assemble(str(exc), (f"  {exc.hint}", "dim") if exc.hint else ""),
+                error=True,
+            )
             self._refresh_apply()
             return
         self._loading = False
+        self._shown = True
         self._show(review)
 
     def _show(self, review: Review) -> None:
