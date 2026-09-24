@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790218213407,
+  "lastUpdate": 1790220412980,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16325,6 +16325,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 525.64,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "be2d9cdd3d29af027a920b08591f6bb533c004cb",
+          "message": "feat(tui): unify source and diff syntax highlighting (#323)\n\n* feat(tui): unify source and diff syntax highlighting\n\n* perf(tui): load the Pygments adapter on first code render\n\nMove the lexer lookup and token palette into cli/tui/syntax.py and import\nit lazily from code.py, so opening the recipe editor loads no Pygments.\nRe-record both demos and regenerate the review and conflict terminal SVGs\nfor the new highlighting; the demo recorder now clears NO_COLOR and pins\nan interactive pager so recordings don't inherit the caller's shell.",
+          "timestamp": "2026-09-23T20:23:53-07:00",
+          "tree_id": "30ec52f46abae42fc5e33a4e3c4a3f7c1a921902",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/be2d9cdd3d29af027a920b08591f6bb533c004cb"
+        },
+        "date": 1790220412148,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 211.36,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 844.52,
             "unit": "ms"
           }
         ]
