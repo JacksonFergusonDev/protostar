@@ -43,6 +43,7 @@ from protostar.errors import (
     MissingDependencyError,
     NetworkFetchError,
     ProtostarError,
+    SecretDetectedError,
     SecurityViolationError,
     TemplateResolutionError,
 )
@@ -188,17 +189,19 @@ def handle_init(args: argparse.Namespace) -> None:
         analysis=analysis,
         one_shot=getattr(args, "one_shot", False),
     )
-    if (
-        source
-        and source.variables - variables.keys()
-        and is_interactive()
-        and not ui.is_json_mode
-    ):
-        edited = edit_variables(draft, user_config)
-        if edited is None:
-            raise ExecutionAbortedError("Variable entry cancelled by user.")
-        draft = edited
-    modules, request = resolve_init(draft, user_config)
+    interactive = is_interactive() and not ui.is_json_mode
+    if source and source.variables - variables.keys() and interactive:
+        draft = _edit_variables(draft, user_config)
+    try:
+        modules, request = resolve_init(draft, user_config)
+    except SecretDetectedError as error:
+        if not interactive:
+            raise
+        # Values entered on the screen are checked there, so only --var values
+        # reach this: settle each flagged one where it can be changed or kept.
+        flagged = tuple(finding.variable for finding in error.findings)
+        draft = _edit_variables(draft, user_config, flagged)
+        modules, request = resolve_init(draft, user_config)
 
     # 4. Undocumented Crash Test Injection
     if getattr(args, "crash_test", False):
@@ -235,11 +238,7 @@ def handle_init(args: argparse.Namespace) -> None:
         sys.exit(0)
 
     decision = None
-    if (
-        is_interactive()
-        and not ui.is_json_mode
-        and ui.needs_review(request, engine.plan())
-    ):
+    if interactive and ui.needs_review(request, engine.plan()):
         decision = review_changes(draft, user_config)
         if decision is None:
             raise ExecutionAbortedError("Change review cancelled by user.")
@@ -256,6 +255,25 @@ def handle_init(args: argparse.Namespace) -> None:
                 "result": result.to_dict(),
             }
         )
+
+
+def _edit_variables(
+    draft: InitDraft, config: UserConfig, flagged: tuple[str, ...] = ()
+) -> InitDraft:
+    """Opens the variables screen, raising if the user cancels it.
+
+    Args:
+        draft: The draft whose variables to collect.
+        config: The user's configuration.
+        flagged: Variables whose values the secret guard flagged.
+
+    Raises:
+        ExecutionAbortedError: If the user cancels the screen.
+    """
+    edited = edit_variables(draft, config, flagged)
+    if edited is None:
+        raise ExecutionAbortedError("Variable entry cancelled by user.")
+    return edited
 
 
 def handle_config(args: argparse.Namespace) -> None:
@@ -291,6 +309,12 @@ def handle_config(args: argparse.Namespace) -> None:
 
     if getattr(args, "reset", False):
         if not getattr(args, "force", False):
+            if ui.is_json_mode or not is_interactive():
+                raise InvalidUsageError(
+                    "Resetting the configuration requires confirmation.",
+                    hint="Pass --force to reset without prompting.",
+                    docs_path=DocsPage.CONFIGURATION,
+                )
             from rich.prompt import Confirm
 
             try:

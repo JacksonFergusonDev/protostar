@@ -381,7 +381,7 @@ def test_terminal_opens_the_variables_step_for_missing_variables(
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     step = mocker.patch(
         "protostar.cli.main.edit_variables",
-        side_effect=lambda draft, config: replace(
+        side_effect=lambda draft, config, flagged: replace(
             draft, variables=(*draft.variables, ("TIER", "gold"))
         ),
     )

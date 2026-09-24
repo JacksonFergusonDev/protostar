@@ -1,5 +1,7 @@
 """Lazy entry point: importing this module never imports Textual."""
 
+from collections.abc import Collection
+
 from protostar.config import UserConfig
 from protostar.init_draft import InitDecision, InitDraft
 from protostar.lifecycle import PreparedProject
@@ -32,12 +34,21 @@ def edit_recipe(
     ).decide()
 
 
-def edit_variables(draft: InitDraft, config: UserConfig) -> InitDraft | None:
-    """Collect a template's missing variables, or return None on cancellation."""
+def edit_variables(
+    draft: InitDraft, config: UserConfig, flagged: Collection[str] = ()
+) -> InitDraft | None:
+    """Collect a template's variables, or return None on cancellation.
+
+    Args:
+        draft: The draft whose variables to collect.
+        config: The user's configuration.
+        flagged: Variables whose values the secret guard flagged; each must be
+            changed or confirmed as not a secret.
+    """
     from .app import DecisionApp
     from .recipe.variables import VariablesScreen
 
-    return DecisionApp(VariablesScreen(draft, config)).decide()
+    return DecisionApp(VariablesScreen(draft, config, flagged)).decide()
 
 
 def review_changes(draft: InitDraft, config: UserConfig) -> InitDecision | None:

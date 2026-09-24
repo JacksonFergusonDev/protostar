@@ -204,16 +204,23 @@ class VariableFields(Vertical):
 
 
 class VariablesScreen(KeyboardScreen[InitDraft]):
-    """The editor's variables step alone, for a flag-driven init missing values."""
+    """The editor's variables step alone, for a flag-driven init.
+
+    It opens for values that are missing, or for values the secret guard
+    flagged, which the user changes or confirms are not secrets.
+    """
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+s", "continue", "Continue", show=False),
     ]
 
-    def __init__(self, draft: InitDraft, config: UserConfig) -> None:
+    def __init__(
+        self, draft: InitDraft, config: UserConfig, flagged: Collection[str] = ()
+    ) -> None:
         super().__init__()
         self.draft = draft
         self.config = config
+        self.flagged = tuple(sorted(flagged))
 
     def compose(self) -> ComposeResult:
         """Compose the variable fields beside the plan preview."""
@@ -222,10 +229,19 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
         )
         name = (reference.display_name or reference.locator) if reference else ""
         yield Masthead("init", "variables")
-        yield Headline(
-            "Template needs values",
-            Text(f"{name} uses variables that have no value yet."),
-        )
+        if self.flagged:
+            yield Headline(
+                "Values look like credentials",
+                Text(
+                    "Change each flagged value, or confirm it is not a secret: "
+                    "it is saved to pyproject.toml."
+                ),
+            )
+        else:
+            yield Headline(
+                "Template needs values",
+                Text(f"{name} uses variables that have no value yet."),
+            )
         with Horizontal(id="body"):
             with Panel("Recipe", id="editor-panel"), Form(id="editor"):
                 yield VariableFields(
@@ -242,11 +258,21 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
         yield Footer()
 
     async def on_mount(self) -> None:
-        """Show the template's variables and focus the first without a value."""
+        """Show the template's variables and focus the first to settle.
+
+        A flagged value shows its rule and confirmation, and stays out of the
+        preview until it is changed or confirmed.
+        """
         fields = self.query_one(VariableFields)
         await fields.show(self.draft.template.source if self.draft.template else None)
-        if fields.missing:
-            self.query_one(f"#var-{fields.missing[0]}", Input).focus()
+        flagged = [name for name in self.flagged if name in fields.names]
+        for name in flagged:
+            field = self.query_one(f"#var-{name}", Input)
+            fields._report(name, field.validate(field.value))
+            fields.committed.pop(name, None)
+        pending = flagged or fields.missing
+        if pending:
+            self.query_one(f"#var-{pending[0]}", Input).focus()
         self.refresh_preview()
 
     @on(VariableFields.Committed)

@@ -157,6 +157,7 @@ def test_handle_config_reset_confirmed(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     mock_confirm = mocker.patch("rich.prompt.Confirm.ask", return_value=True)
     mock_run = mocker.patch("subprocess.run")
 
@@ -179,6 +180,7 @@ def test_handle_config_reset_cancelled(mocker, tmp_path):
     initial_content = "custom_setting = true\n"
     mock_config_file.write_text(initial_content)
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     mocker.patch("rich.prompt.Confirm.ask", return_value=False)
     mock_run = mocker.patch("subprocess.run")
 
@@ -195,11 +197,36 @@ def test_handle_config_reset_aborted(mocker, tmp_path):
     mock_config_file = tmp_path / "config.toml"
     mock_config_file.write_text("custom_setting = true\n")
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     mocker.patch("rich.prompt.Confirm.ask", side_effect=KeyboardInterrupt)
 
     args = argparse.Namespace(reset=True, force=False)
     with pytest.raises(ExecutionAbortedError, match=r"Configuration reset aborted\."):
         handle_config(args)
+
+
+@pytest.mark.parametrize(
+    ("interactive", "json_mode"),
+    [(False, False), (True, True)],
+    ids=["non-interactive", "json"],
+)
+def test_handle_config_reset_requires_force_without_a_prompt(
+    mocker, monkeypatch, tmp_path, interactive, json_mode
+):
+    """--reset never prompts, or writes, where nobody can answer."""
+    mock_config_file = tmp_path / "config.toml"
+    mock_config_file.write_text("custom_setting = true\n")
+    mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=interactive)
+    monkeypatch.setattr("protostar.cli.ui.is_json_mode", json_mode)
+    mock_confirm = mocker.patch("rich.prompt.Confirm.ask")
+
+    with pytest.raises(InvalidUsageError, match="requires confirmation") as caught:
+        handle_config(argparse.Namespace(reset=True, force=False))
+
+    assert caught.value.hint == "Pass --force to reset without prompting."
+    mock_confirm.assert_not_called()
+    assert mock_config_file.read_text() == "custom_setting = true\n"
 
 
 def test_handle_config_reset_force(mocker, tmp_path):
