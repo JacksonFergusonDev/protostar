@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790282908341,
+  "lastUpdate": 1790285260987,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16733,6 +16733,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 809.56,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9761d3e53667c2fce9f80712d3aa60ac5b410223",
+          "message": "fix(templates): reject binary files in template/ with a domain error (#330)\n\nA non-UTF-8 file under a multi-file template's template/ directory raised\nan unhandled UnicodeDecodeError, which the CLI reported as an internal bug\n(exit 70). Loading now raises TemplateResolutionError naming the file,\nwith a hint, so it exits 65 like any other invalid template.",
+          "timestamp": "2026-09-24T14:25:34-07:00",
+          "tree_id": "a15b2ea21dd7fe14f2964e3d916efb652f862b53",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9761d3e53667c2fce9f80712d3aa60ac5b410223"
+        },
+        "date": 1790285259048,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 176.34,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 678.25,
             "unit": "ms"
           }
         ]
