@@ -1,6 +1,5 @@
 """How a conflict's sides and choices read, shared by every screen that settles one."""
 
-import difflib
 import json
 from pathlib import Path
 from typing import Any
@@ -19,6 +18,8 @@ from protostar.merge import (
 )
 from protostar.yaml_ast import encode_yaml_baseline
 
+from ..code import CodeSource, DiffLabels, diff_text, source_text
+
 LOCAL, DESIRED, BOTH = ResolutionChoice
 
 # What each choice does, as the list and the choice buttons say it.
@@ -29,49 +30,29 @@ OPEN = "open"
 """The choice button that leaves a conflict open."""
 
 
-def diff_text(diff: str) -> Text:
-    """Colors a unified diff whose lines stay literal text, never markup.
-
-    Args:
-        diff: A unified diff.
-
-    Returns:
-        The diff with added, removed, and hunk lines styled.
-    """
-    text = Text()
-    for line in diff.splitlines(keepends=True):
-        if line.startswith(("+++", "---")):
-            style = "bold"
-        elif line.startswith("+"):
-            style = "green"
-        elif line.startswith("-"):
-            style = "red"
-        elif line.startswith("@@"):
-            style = "cyan"
-        else:
-            style = ""
-        text.append(line, style)
-    text.rstrip()
-    return text
-
-
-def _structured(conflict: MergeConflict, value: Value) -> str:
+def _structured(conflict: MergeConflict, value: Value) -> CodeSource:
     """Renders a value in its file's own format, keyed by its last key."""
     keys = conflict.location.keys
     data: Any = {keys[-1]: value} if keys else value
     suffix = Path(conflict.location.file).suffix
     try:
         if suffix == ".toml" and isinstance(data, dict):
-            return tomlkit.dumps(data).rstrip("\n")
+            return CodeSource(tomlkit.dumps(data), conflict.location.file, "toml")
         if suffix in (".yaml", ".yml") and isinstance(data, dict):
-            return encode_yaml_baseline(data).rstrip("\n")
+            return CodeSource(
+                encode_yaml_baseline(data), conflict.location.file, "yaml"
+            )
     except (ProtostarError, ValueError, TypeError):
         pass  # Shown as JSON below; a presenter never raises.
     # Dates read as their ISO form, as machine output shows them.
-    return json.dumps(data, indent=2, ensure_ascii=False, default=str)
+    return CodeSource(
+        json.dumps(data, indent=2, ensure_ascii=False, default=str) + "\n",
+        conflict.location.file,
+        "json",
+    )
 
 
-def _side(conflict: MergeConflict, side: str) -> str | None:
+def _side(conflict: MergeConflict, side: str) -> CodeSource | None:
     """Returns one side as text, or ``None`` when it holds nothing."""
     sides = conflict.sides
     if sides is None:
@@ -80,8 +61,8 @@ def _side(conflict: MergeConflict, side: str) -> str | None:
     if value is MISSING:
         return None
     if sides.text:
-        return str(value)
-    return _structured(conflict, value) + "\n"
+        return CodeSource(str(value), conflict.location.file)
+    return _structured(conflict, value)
 
 
 def side_text(conflict: MergeConflict, side: str) -> Text:
@@ -101,7 +82,11 @@ def side_text(conflict: MergeConflict, side: str) -> Text:
         return Text(
             "Deleted." if side == "local" else "No longer generated.", style="dim"
         )
-    return Text(text.rstrip("\n")) if text else Text("No lines.", style="dim")
+    return (
+        source_text(CodeSource(text.text.rstrip("\n"), text.path, text.language))
+        if text.text
+        else Text("No lines.", style="dim")
+    )
 
 
 def sides_diff(conflict: MergeConflict) -> RenderableType:
@@ -119,15 +104,7 @@ def sides_diff(conflict: MergeConflict) -> RenderableType:
             Text.assemble(("Yours: ", "bold"), side_text(conflict, "local")),
             Text.assemble(("Update: ", "bold"), side_text(conflict, "desired")),
         )
-    lines = difflib.unified_diff(
-        local.splitlines(keepends=True),
-        desired.splitlines(keepends=True),
-        "yours",
-        "update",
-    )
-    return diff_text(
-        "".join(line if line.endswith("\n") else line + "\n" for line in lines)
-    )
+    return diff_text(local, desired, labels=DiffLabels("yours", "update"))
 
 
 def describe_conflict(conflict: MergeConflict) -> Text:

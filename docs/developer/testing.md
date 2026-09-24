@@ -180,3 +180,23 @@ The `justfile` includes predefined recipes leveraging [hyperfine](https://github
 - **[Developer Overview & Contributing](./overview.md):** Setup instructions, coding standards, and PR workflows.
 - **[Extending Protostar](./extending-protostar.md):** Build new tooling modules to accompany your tests.
 - **[The Orchestrator](../mechanics/orchestrator.md):** Understand the headless core and execution lifecycle under test.
+
+## TUI source presentation
+
+All TUI code and structured configuration use `src/protostar/cli/tui/code.py`.
+Use `source_text(CodeSource(...))` for a source pane, `diff_text` for two sources,
+and `edit_text` for a prepared edit. These renderers share Protostar's palette;
+screens must not select independent syntax themes. Pass a Pygments language alias
+when the displayed serialization differs from the filename (for example, a TOML
+conflict value displayed as JSON). Unknown languages remain plain text.
+
+Highlighting is presentation-only: it never reads project files, changes merge
+policy, or modifies prepared bytes. Source display normalizes CRLF and CR to LF,
+preserves indentation and literal markup-like text, and highlights complete
+sources before selecting diff hunks. Added and removed lines retain syntax colors;
+their markers and subtle backgrounds communicate the change.
+
+Run `uv run pytest tests/test_tui_code.py tests/test_conflict_tui.py tests/test_tui.py`
+when changing these renderers. Review the Textual snapshots as well as the text
+assertions, including the narrow conflict screen. Use `--snapshot-update` only
+when accepting an intentional visual change.

@@ -16,20 +16,19 @@ from textual.content import Content
 from textual.widgets import Button, Footer, RadioButton, RadioSet, Static, Tree
 from textual.widgets.tree import TreeNode
 
-from protostar.cli.reviews import unified_diff
 from protostar.errors import ProtostarError
 from protostar.lifecycle import PreparedProject
 from protostar.merge import MergeConflict, ResolutionChoice, describe_location
 from protostar.preparation import PreparedReview
 
 from ..chrome import Heading, Headline, Masthead, Panel
+from ..code import edit_text
 from ..keys import MOVE, ActionBar, Choice, KeyboardScreen, KeyRows, key_label
 from .sides import (
     KEYS,
     OPEN,
     SAID,
     describe_conflict,
-    diff_text,
     side_text,
     tag,
 )
@@ -113,7 +112,7 @@ def _result(
             )
         )
     if edit is not None:
-        parts.append(diff_text(unified_diff(edit)))
+        parts.append(edit_text(edit))
     else:
         parts.append(Text("The file stays as it is.", style="dim"))
     return Group(*parts)

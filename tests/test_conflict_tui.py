@@ -315,3 +315,8 @@ def test_the_conflict_screen_never_opens_for_previews_scripts_or_flags(
 def test_conflict_screen_snapshot(snap_compare, monkeypatch, conflicted):
     monkeypatch.delenv("NO_COLOR", raising=False)
     assert snap_compare(make_app(), terminal_size=(120, 36), run_before=settle)
+
+
+def test_conflict_screen_narrow_snapshot(snap_compare, monkeypatch, conflicted):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    assert snap_compare(make_app(), terminal_size=(80, 36), run_before=settle)
