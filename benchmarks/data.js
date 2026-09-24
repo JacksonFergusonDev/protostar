@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790270367425,
+  "lastUpdate": 1790272181839,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16461,6 +16461,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 803.81,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "277d0c875ea97e4b44a30e69b404c9f8afcfb618",
+          "message": "fix(init): reject a template switch before opening any screen (#325)\n\nplan() now checks the project's recorded template identity, and init runs\nthe same check before asking for template variables. A change review that\nnever prepares leaves through DecisionApp.fail, so the CLI prints the\nerror with its hint instead of showing an empty review.",
+          "timestamp": "2026-09-24T10:47:10-07:00",
+          "tree_id": "81e981cd523c53dfced82b7510c76887b889f6aa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/277d0c875ea97e4b44a30e69b404c9f8afcfb618"
+        },
+        "date": 1790272179915,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 220.9,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 848.07,
             "unit": "ms"
           }
         ]
