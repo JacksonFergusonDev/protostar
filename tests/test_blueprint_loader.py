@@ -3,7 +3,7 @@ import sys
 import pytest
 
 from protostar.config import TemplateSource, UserConfig
-from protostar.errors import MissingTemplateVariablesError
+from protostar.errors import MissingTemplateVariablesError, TemplateResolutionError
 from protostar.templates import TemplateType, discover_templates
 
 BUILTIN_TEMPLATES = sorted(
@@ -75,6 +75,21 @@ def test_template_blueprint_missing_variables_error(tmp_path):
     with pytest.raises(MissingTemplateVariablesError, match="DATABASE_URL") as caught:
         TemplateSource.load(str(tmp_path)).render({})
     assert caught.value.variables == ("DATABASE_URL",)
+
+
+def test_template_blueprint_rejects_a_binary_template_file(tmp_path):
+    """A non-UTF-8 file under template/ is a template error, not a crash."""
+    (tmp_path / "protostar.toml").write_text('name = "x"\n', encoding="utf-8")
+    assets = tmp_path / "template" / "assets"
+    assets.mkdir(parents=True)
+    (assets / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\xff\xfe")
+
+    with pytest.raises(
+        TemplateResolutionError, match=r"template/assets/logo\.png"
+    ) as caught:
+        TemplateSource.load(str(tmp_path))
+    assert isinstance(caught.value.__cause__, UnicodeDecodeError)
+    assert caught.value.hint is not None
 
 
 @pytest.mark.parametrize("template_name", BUILTIN_TEMPLATES)

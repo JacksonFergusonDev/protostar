@@ -1082,7 +1082,16 @@ class TemplateSource:
                     ):
                         continue
                     rel_path = str(file_path.relative_to(template_dir))
-                    raw_files[rel_path] = file_path.read_text(encoding="utf-8")
+                    try:
+                        raw_files[rel_path] = file_path.read_text(encoding="utf-8")
+                    except UnicodeDecodeError as e:
+                        raise TemplateResolutionError(
+                            target,
+                            f"template/{Path(rel_path).as_posix()} is not UTF-8 text.",
+                            hint="Template files are interpolated as text, so binary "
+                            "files such as images are not supported. Remove the file "
+                            "or save it as UTF-8.",
+                        ) from e
 
             origin = (
                 TemplateOrigin.BUILT_IN

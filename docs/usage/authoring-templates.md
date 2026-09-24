@@ -129,6 +129,8 @@ my-org-fastapi-template/
 
 *Note: Protostar automatically ignores compilation artifacts (`__pycache__`) and `.DS_Store` files inside the `template/` directory during extraction.*
 
+Every file in `template/` must be UTF-8 text, because Protostar interpolates placeholders in each one. A binary file such as an image stops the template from loading with an error naming the file.
+
 ## Level 3: Variable Interpolation
 
 Protostar features a lightweight, regex-based templating engine that evaluates placeholders wrapped in `<% VARIABLE_NAME %>` delimiters. This interpolation runs across the `protostar.toml` manifest, inline `[files]` strings, and physical files housed within the `template/` directory.
