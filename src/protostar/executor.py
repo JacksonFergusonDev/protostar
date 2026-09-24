@@ -17,7 +17,7 @@ from .manifest import (
     Severity,
     SystemTask,
 )
-from .merge import NO_RESOLUTIONS
+from .merge import NO_RESOLUTIONS, Resolutions
 from .preparation import (
     ExecutionPolicy,
     PreparationPhase,
@@ -53,6 +53,7 @@ class SystemExecutor(Reconciliation):
         review: PreparedReview | None = None,
         hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
         progress: ProgressStep = no_progress,
+        resolutions: Resolutions = NO_RESOLUTIONS,
     ) -> None:
         """Initializes the executor with the target manifest state.
 
@@ -64,6 +65,8 @@ class SystemExecutor(Reconciliation):
             hook_revisions: The registry snapshot a caller already reviewed. Without
                 one or a review, the executor takes its own when hooks are wanted.
             progress: Brackets each subprocess and the initial scaffold for a presenter.
+            resolutions: Choices a change review made for the conflicts of the
+                first initialization batch, the only one it could show.
         """
         self.workspace = LiveWorkspace()
         self.manifest = manifest
@@ -90,10 +93,12 @@ class SystemExecutor(Reconciliation):
 
         self.candidate_state = SyncState(__version__, manifest.template_reference)
         self._state_bytes: bytes | None = None
+        self._batch_applied = False
         self._resolution_dirty = False
         self._preserve_deleted_pyproject = False
-        # Conflicts are settled in the review execution applies, never here.
+        # Conflicts are settled in the reviews execution applies, never here.
         self.resolutions = NO_RESOLUTIONS
+        self.reviewed_resolutions = resolutions
 
     def execute(
         self,
@@ -249,11 +254,14 @@ class SystemExecutor(Reconciliation):
             hook_revisions=self.hook_revisions,
             policy=ExecutionPolicy.INITIALIZATION,
             phase=phase,
-            candidate_state=self.candidate_state
-            if self._state_bytes is not None or self.journal.touched_paths
-            else None,
+            # Later batches continue the ownership earlier ones decided, which
+            # can change without a write (an adopted file keeps its bytes).
+            candidate_state=self.candidate_state if self._batch_applied else None,
             presence=self.journal,
             preserve_deleted_pyproject=self._preserve_deleted_pyproject,
+            resolutions=self.reviewed_resolutions
+            if phase is PreparationPhase.BEFORE_INITIALIZERS
+            else NO_RESOLUTIONS,
         )
 
     def _apply_review(self, review: PreparedReview) -> None:
@@ -263,6 +271,7 @@ class SystemExecutor(Reconciliation):
         if manifest_digest(self.manifest) != review.manifest_digest:
             raise StaleReviewError("desired manifest")
         review.validate_inputs()
+        self._batch_applied = True
         self.candidate_state = review.candidate_state
         self._state_bytes = review.state_before
         self._preserve_deleted_pyproject = review.preserve_deleted_pyproject

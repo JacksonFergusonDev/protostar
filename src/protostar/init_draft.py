@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from .config import TemplateSource, UserConfig
 from .manifest import CollisionStrategy, ProjectMetadata
+from .merge import NO_RESOLUTIONS, Resolutions
 from .models import InitRequest
 from .modules import BootstrapModule, PythonCore, SystemWorkspaceModule
 from .recipe import (
@@ -56,11 +57,14 @@ class InitDecision:
         hook_revisions: The registry snapshot whose pins the review showed.
         confirmed_commands: The exact commands confirmed for an untrusted
             template, in order; empty when no confirmation was needed.
+        resolutions: Choices settling the conflicts the review showed, keyed by
+            conflict identity; they apply to the first file batch only.
     """
 
     draft: InitDraft
     hook_revisions: tuple[ResolvedHookRevision, ...]
     confirmed_commands: tuple[tuple[str, ...], ...] = ()
+    resolutions: Resolutions = NO_RESOLUTIONS
 
 
 def resolve_init(

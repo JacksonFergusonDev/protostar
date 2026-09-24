@@ -10,6 +10,7 @@ from protostar.cli import ui
 from protostar.config import UserConfig
 from protostar.errors import CommandExecutionError
 from protostar.manifest import EnvironmentManifest
+from protostar.merge import NO_RESOLUTIONS
 from protostar.models import ExecutionResult, InitRequest
 from protostar.orchestrator import Orchestrator
 from protostar.progress import no_progress
@@ -128,7 +129,7 @@ def _engine(mocker, execute):
 def test_run_engine_renders_engine_steps_under_the_banner(screen, mocker, monkeypatch):
     monkeypatch.setattr(ui, "is_json_mode", False)
 
-    def execute(manifest, *, hook_revisions, progress):
+    def execute(manifest, *, hook_revisions, progress, resolutions):
         with progress("Initializing git repository"):
             pass
         return EMPTY_RESULT
@@ -144,11 +145,16 @@ def test_run_engine_renders_engine_steps_under_the_banner(screen, mocker, monkey
 
 def test_run_engine_json_mode_executes_without_progress(screen, mocker, monkeypatch):
     monkeypatch.setattr(ui, "is_json_mode", True)
-    execute = _engine(mocker, lambda manifest, *, hook_revisions: EMPTY_RESULT)
+    execute = _engine(
+        mocker, lambda manifest, *, hook_revisions, resolutions: EMPTY_RESULT
+    )
     request = InitRequest()
 
     result = ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
     assert result is EMPTY_RESULT
-    assert execute.call_args.kwargs == {"hook_revisions": None}
+    assert execute.call_args.kwargs == {
+        "hook_revisions": None,
+        "resolutions": NO_RESOLUTIONS,
+    }
     assert screen.getvalue() == ""

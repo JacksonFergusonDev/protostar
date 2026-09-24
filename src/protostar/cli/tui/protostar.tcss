@@ -197,7 +197,7 @@ Footer { background: $panel; }
 
 /* --- Review decisions -------------------------------------------------- */
 
-#decisions, #collision-choice, #trust-gate { height: auto; }
+#decisions, #collision-choice, #conflict-choice, #trust-gate { height: auto; }
 #decisions { margin-bottom: 1; }
 #collision-note { color: $warning; }
 ChoiceGroup { height: auto; }

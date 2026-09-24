@@ -11,6 +11,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, time
 from enum import StrEnum
 from functools import cached_property
+from types import MappingProxyType
 from typing import cast
 
 from .errors import ConfigurationError
@@ -112,7 +113,7 @@ class ResolutionChoice(StrEnum):
 
 # Resolution choices keyed by ``MergeConflict.id``.
 type Resolutions = Mapping[str, ResolutionChoice]
-NO_RESOLUTIONS: Resolutions = {}
+NO_RESOLUTIONS: Resolutions = MappingProxyType({})
 
 
 @dataclass(frozen=True)
