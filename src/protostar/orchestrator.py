@@ -15,6 +15,7 @@ from .errors import (
     WorkspaceCollisionError,
 )
 from .manifest import EnvironmentManifest, ProjectMetadata
+from .merge import NO_RESOLUTIONS, Resolutions
 from .models import ExecutionResult, InitRequest
 from .modules import (
     AgentsModule,
@@ -336,6 +337,7 @@ class Orchestrator:
         *,
         hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
         progress: ProgressStep = no_progress,
+        resolutions: Resolutions = NO_RESOLUTIONS,
     ) -> ExecutionResult:
         """Realizes the pre-built manifest on disk.
 
@@ -347,6 +349,8 @@ class Orchestrator:
             hook_revisions: The registry snapshot a review showed, so execution
                 writes the same hook pins. Without one, execution takes its own.
             progress: Brackets each presentable execution step for the caller.
+            resolutions: Choices the change review made for the conflicts it
+                showed, keyed by conflict identity.
 
         Raises:
             ExecutionInterruptedError: If the user interrupts execution after
@@ -369,6 +373,7 @@ class Orchestrator:
             self.request.docker,
             hook_revisions=hook_revisions,
             progress=progress,
+            resolutions=resolutions,
         )
 
         try:

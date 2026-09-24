@@ -37,6 +37,7 @@ from protostar.errors import ExecutionAbortedError
 from protostar.executor import SystemExecutor
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.manifest import CollisionStrategy
+from protostar.merge import ResolutionChoice
 from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
@@ -765,7 +766,10 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         assert "\n   - repo: local\n" in diff
         assert "+    repo: https://github.com/gitleaks/gitleaks" in diff
         await highlight(pilot, "justfile")
-        assert "Your version of the file is kept (unowned)." in plain(app, "#diff")
+        diff = plain(app, "#diff")
+        assert "Whole file  It was already there before Protostar managed it." in diff
+        assert "--- yours\n+++ update\n" in diff
+        assert "-    echo hi" in diff
         await highlight(pilot, "pyproject.toml")
         assert "Nothing is written to it before setup" in plain(app, "#diff")
         await highlight(pilot, ".gitignore")
@@ -779,6 +783,58 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         diff = plain(app, "#diff")
         assert "-    echo hi" in diff
         assert "+    @just --list" in diff
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("key", "label", "choice"),
+    [
+        ("k", "justfile  existing · resolved", ResolutionChoice.LOCAL),
+        ("u", "justfile  modified · resolved", ResolutionChoice.DESIRED),
+    ],
+)
+async def test_review_settles_a_conflict_and_execution_applies_the_choice(
+    collisions, mocker, key, label, choice
+):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        await highlight(pilot, ".gitignore")
+        assert not app.screen.query_one("#conflict-choice").display
+        # A key whose control is hidden does nothing.
+        await pilot.press("k")
+        assert not app.screen.choices
+        await highlight(pilot, "justfile")
+        assert app.screen.query_one("#conflict-choice").display
+        assert app.screen.query_one("#resolve-both", RadioButton).disabled
+        await pilot.press(key)
+        await settle(pilot)
+        assert file_nodes(app)["justfile"].label.plain == label
+        assert "Resolved the file: " in plain(app, "#diff")
+        lit = [b.id for b in app.screen.query("#resolution RadioButton") if b.value]
+        assert lit == [f"resolve-{choice.value}"]
+        await pilot.press("a")
+    decision = app.return_value
+    (conflict_id, chosen), *_ = decision.resolutions.items()
+    assert len(decision.resolutions) == 1
+    assert chosen is choice
+    executor = execute_decision(decision, collisions, mocker)
+    assert executor.reviewed_resolutions == {conflict_id: choice}
+
+
+@pytest.mark.asyncio
+async def test_leaving_a_conflict_open_drops_its_choice(collisions):
+    app = make_review(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        await highlight(pilot, "justfile")
+        await pilot.press("k")
+        await settle(pilot)
+        await pilot.press("x")
+        await settle(pilot)
+        assert file_nodes(app)["justfile"].label.plain == "justfile  conflict"
+        await pilot.press("a")
+    assert app.return_value.resolutions == {}
 
 
 @pytest.mark.asyncio

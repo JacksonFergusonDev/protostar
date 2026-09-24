@@ -3,7 +3,7 @@
 import asyncio
 import shlex
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
@@ -35,7 +35,7 @@ from protostar.errors import ProtostarError
 from protostar.init_draft import InitDecision, InitDraft, resolve_init
 from protostar.intent import DependencyGroup
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.merge import MergeConflict, describe_location
+from protostar.merge import MergeConflict, ResolutionChoice, describe_location
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
 from protostar.preparation import (
@@ -48,7 +48,14 @@ from protostar.preparation import (
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
 
 from ..chrome import Heading, Headline, Masthead, Panel
-from ..conflicts.sides import diff_text
+from ..conflicts.sides import (
+    KEYS,
+    OPEN,
+    SAID,
+    describe_conflict,
+    diff_text,
+    sides_diff,
+)
 from ..keys import (
     MOVE,
     ActionBar,
@@ -83,7 +90,10 @@ _FOLDER = path_style("", directory=True)
 
 @dataclass(frozen=True)
 class Entry:
-    """One planned path and what the first file batch does to it."""
+    """One planned path and what the first file batch does to it.
+
+    Its conflicts are open or, once a choice settled them, resolved.
+    """
 
     path: str
     change: Change
@@ -91,6 +101,11 @@ class Entry:
     edit: PreparedEdit | None = None
     conflicts: tuple[MergeConflict, ...] = ()
     creator: tuple[str, ...] | None = None
+
+    @property
+    def open(self) -> tuple[MergeConflict, ...]:
+        """Returns the conflicts no choice has settled."""
+        return tuple(c for c in self.conflicts if c.resolution is None)
 
 
 @dataclass(frozen=True)
@@ -121,7 +136,7 @@ def classify(
     """
     edits = {edit.path: edit for edit in prepared.edits}
     conflicts: dict[str, list[MergeConflict]] = {}
-    for conflict in prepared.conflicts:
+    for conflict in (*prepared.conflicts, *prepared.resolved):
         conflicts.setdefault(conflict.location.file, []).append(conflict)
     creators = {
         path: tuple(task.command)
@@ -136,7 +151,7 @@ def classify(
             change = Change.NEW if edit.before is None else Change.MODIFIED
         elif path in prepared.directories:
             change = Change.NEW
-        elif path in conflicts:
+        elif any(c.resolution is None for c in conflicts.get(path, ())):
             change = Change.CONFLICT
         elif Path(path).exists():
             change = Change.EXISTS
@@ -167,14 +182,23 @@ def _prepare(
     manifest: EnvironmentManifest,
     config: UserConfig,
     hook_revisions: tuple[ResolvedHookRevision, ...],
+    choices: Mapping[str, ResolutionChoice],
 ) -> Review:
-    prepared = prepare_review(
-        manifest,
-        config,
-        hook_revisions=hook_revisions,
-        policy=ExecutionPolicy.INITIALIZATION,
-        phase=PreparationPhase.BEFORE_INITIALIZERS,
-    )
+    def prepared_with(resolutions: Mapping[str, ResolutionChoice]) -> PreparedReview:
+        return prepare_review(
+            manifest,
+            config,
+            hook_revisions=hook_revisions,
+            policy=ExecutionPolicy.INITIALIZATION,
+            phase=PreparationPhase.BEFORE_INITIALIZERS,
+            resolutions=resolutions,
+        )
+
+    prepared = prepared_with({})
+    # Choices made for conflicts a changed plan no longer has lapse.
+    kept = {c.id: choices[c.id] for c in prepared.conflicts if c.id in choices}
+    if kept:
+        prepared = prepared_with(kept)
     return Review(request, manifest, prepared, classify(manifest, prepared))
 
 
@@ -191,6 +215,18 @@ def describe(entry: Entry) -> RenderableType:
     for conflict in entry.conflicts:
         where = describe_location(conflict.location)
         reason = conflict.reason.value
+        if conflict.resolution is not None:
+            parts.append(
+                Text(
+                    f"Resolved {where or 'the file'}: {SAID[conflict.resolution]}.",
+                    "cyan",
+                )
+            )
+            continue
+        if conflict.choices:
+            parts.append(describe_conflict(conflict))
+            parts.append(sides_diff(conflict))
+            continue
         if conflict.location.lines is not None:
             # Both sides edited these lines, so the whole file is kept.
             message = f"{where[:1].upper()}{where[1:]}: your edit is kept ({reason})."
@@ -307,8 +343,10 @@ def _label(entry: Entry) -> Text:
     marker = (
         "" if entry.directory and entry.change is Change.EXISTS else entry.change.value
     )
-    if entry.conflicts and entry.change is not Change.CONFLICT:
+    if entry.open and entry.change is not Change.CONFLICT:
         marker += " · conflict"
+    elif entry.conflicts and not entry.open:
+        marker += " · resolved"
     # Color here means change, so only directories keep their kind's color.
     return Text.assemble(
         (name, _FOLDER if entry.directory else ""),
@@ -357,6 +395,10 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         Binding("m", "strategy('merge')", "Merge", show=False),
         Binding("o", "strategy('overwrite')", "Overwrite", show=False),
         Binding("t", "trust", "Trust", show=False),
+        Binding("k", "resolve('local')", "Keep mine", show=False),
+        Binding("u", "resolve('desired')", "Take update", show=False),
+        Binding("b", "resolve('both')", "Keep both", show=False),
+        Binding("x", "resolve('open')", "Leave open", show=False),
     ]
 
     def __init__(
@@ -369,6 +411,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.strategy = draft.collision_strategy or CollisionStrategy.MERGE
         self.review: Review | None = None
         self.commands: tuple[tuple[str, ...], ...] = ()
+        self.choices: dict[str, ResolutionChoice] = {}
         self._hook_revisions: tuple[ResolvedHookRevision, ...] | None = None
         self._loading = True
 
@@ -409,6 +452,18 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                                 value=self.strategy is CollisionStrategy.OVERWRITE,
                                 id="strategy-overwrite",
                             )
+                    with Vertical(id="conflict-choice"):
+                        yield Heading("Conflicts")
+                        yield Static("", id="conflict-note")
+                        with Choice(id="resolution"):
+                            for choice in ResolutionChoice:
+                                yield RadioButton(
+                                    key_label(SAID[choice].capitalize(), KEYS[choice]),
+                                    id=f"resolve-{choice.value}",
+                                )
+                            yield RadioButton(
+                                key_label("Leave open", "x"), id=f"resolve-{OPEN}"
+                            )
                     with Vertical(id="trust-gate"):
                         yield Heading("Untrusted template")
                         yield Static("", id="trust-note")
@@ -439,6 +494,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         files.show_root = False
         files.focus()
         self.query_one("#collision-choice").display = False
+        self.query_one("#conflict-choice").display = False
         self.query_one("#trust-gate").display = False
         self.prepare()
 
@@ -463,7 +519,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                     else ()
                 )
             review = await asyncio.to_thread(
-                _prepare, request, manifest, self.config, self._hook_revisions
+                _prepare,
+                request,
+                manifest,
+                self.config,
+                self._hook_revisions,
+                dict(self.choices),
             )
         except ProtostarError as exc:
             self.review = None
@@ -528,6 +589,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             files.call_after_refresh(files.move_cursor, nodes[target.path])
 
     def _describe(self, entry: Entry | None) -> None:
+        self._show_resolution(entry)
         title = Content("DIFF")
         if entry:
             # A path is data: Content never reads it as markup.
@@ -539,6 +601,51 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             if entry
             else Text("Select a file to see its changes.", style="dim")
         )
+
+    def _show_resolution(self, entry: Entry | None) -> None:
+        """Offer the choices the entry's conflicts can be settled with."""
+        conflicts = [c for c in entry.conflicts if c.choices] if entry else []
+        group = self.query_one("#conflict-choice")
+        group.display = bool(conflicts)
+        if not conflicts:
+            return
+        offered = {choice for conflict in conflicts for choice in conflict.choices}
+        picked = {conflict.resolution for conflict in conflicts}
+        count = f"{len(conflicts)} conflicts here. " if len(conflicts) > 1 else ""
+        self.query_one("#conflict-note", Static).update(
+            Text(f"{count}Whichever you choose, Protostar manages it from now on.")
+        )
+        for choice in ResolutionChoice:
+            button = self.query_one(f"#resolve-{choice.value}", RadioButton)
+            button.disabled = choice not in offered
+        pressed = None
+        # Mixed choices across a file's conflicts press no button.
+        if len(picked) == 1:
+            (only,) = picked
+            value = only.value if only else OPEN
+            pressed = self.query_one(f"#resolve-{value}", RadioButton)
+        self.query_one("#resolution", Choice).show(pressed)
+
+    def _resolve(self, value: str) -> None:
+        """Settle the highlighted file's conflicts, then prepare the review again."""
+        cursor = self.query_one("#files", Tree).cursor_node
+        entry = cursor.data if cursor is not None else None
+        if entry is None or self._loading:
+            return
+        choice = None if value == OPEN else ResolutionChoice(value)
+        changed = False
+        for conflict in entry.conflicts:
+            if not conflict.choices or (choice and choice not in conflict.choices):
+                continue
+            if self.choices.get(conflict.id) == choice:
+                continue
+            if choice is None:
+                self.choices.pop(conflict.id, None)
+            else:
+                self.choices[conflict.id] = choice
+            changed = True
+        if changed:
+            self.prepare()
 
     def _status(self, message: Text, *, error: bool = False) -> None:
         subtitle = self.query_one("#subtitle", Static)
@@ -565,6 +672,11 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.strategy = strategy
         self.prepare()
 
+    @on(RadioSet.Changed, "#resolution")
+    def choose_resolution(self, event: RadioSet.Changed) -> None:
+        """Settle the highlighted file's conflicts with the pressed choice."""
+        self._resolve(str(event.pressed.id).removeprefix("resolve-"))
+
     @on(Checkbox.Changed, "#trust")
     def confirm_trust(self) -> None:
         """Allow applying only once the listed commands are confirmed."""
@@ -585,6 +697,8 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             ("shift+tab", "Previous control"),
             ("m / o", "Merge into or overwrite existing files, when asked"),
             ("t", "Trust the template's commands, when asked"),
+            ("k / u / b", "Keep mine, take the update, or keep both, for a conflict"),
+            ("x", "Leave a conflict open"),
             ("a", "Apply"),
             *leave,
             ("^c", "Quit immediately"),
@@ -602,6 +716,14 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             return self.query_one("#collision-choice").display
         if action == "trust":
             return self.query_one("#trust-gate").display
+        if action == "resolve":
+            if not self.query_one("#conflict-choice").display:
+                return False
+            value = str(parameters[0]) if parameters else OPEN
+            return (
+                value == OPEN
+                or not self.query_one(f"#resolve-{value}", RadioButton).disabled
+            )
         return True
 
     def action_back(self) -> None:
@@ -611,6 +733,10 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
     def action_strategy(self, strategy: str) -> None:
         """Choose how existing files are handled."""
         self.query_one(f"#strategy-{strategy}", RadioButton).value = True
+
+    def action_resolve(self, value: str) -> None:
+        """Settle the highlighted file's conflicts by key."""
+        self._resolve(value)
 
     def action_trust(self) -> None:
         """Toggle the confirmation that the listed commands may run."""
@@ -647,5 +773,11 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                     replace(self.draft, collision_strategy=strategy),
                     self.review.prepared.hook_revisions,
                     self.commands,
+                    # Exactly the choices this review applied.
+                    {
+                        c.id: c.resolution
+                        for c in self.review.prepared.resolved
+                        if c.resolution is not None
+                    },
                 )
             )

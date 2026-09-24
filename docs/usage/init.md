@@ -272,6 +272,17 @@ When Protostar detects existing configuration files (like `pyproject.toml`), the
 
 Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit without modifying the environment.
 
+Under __Merge__, a file Protostar can't merge into is kept as it is and marked
+`conflict`, such as an existing `justfile` it has never managed. Highlight it to
+see your version beside Protostar's and settle it under __Conflicts__: __Keep
+mine__ (`K`) leaves the file untouched and adopts it, so later updates merge into
+it three ways; __Take update__ (`U`) replaces it. __Keep both__ (`B`) is offered
+for overlapping lines, and __Leave open__ (`X`) keeps today's behavior. The
+review shows the result before anything runs. Only conflicts in files written
+before setup commands run can be settled here; the rest are listed after setup,
+and `protostar sync` settles them the same way (see
+[resolve conflicts](lifecycle.md#resolve-conflicts)).
+
 Selecting __Merge__ reconciles declared TOML configuration against
 `.protostar.lock.toml`. A tracked project requires the same explicitly selected
 template source; switching templates or adding a template to tracked tooling-only

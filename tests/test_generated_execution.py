@@ -716,3 +716,49 @@ def test_region_preserved_deviations_ignore_newline_style(
     target.write_text("# no region\n")
     (deleted,) = prepare_review(desired(), UserConfig()).preserved
     assert (deleted.location.identity, deleted.deleted) == ("test:env", True)
+
+
+@pytest.mark.parametrize(
+    ("choice", "content"),
+    [(ResolutionChoice.LOCAL, "mine\n"), (ResolutionChoice.DESIRED, GENERATED)],
+)
+def test_init_resolution_adopts_or_replaces_an_unowned_file(
+    tmp_path, monkeypatch, mocker, choice, content
+):
+    from protostar.preparation import (
+        ExecutionPolicy,
+        PreparationPhase,
+        prepare_review,
+    )
+
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    target.write_text("mine\n")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value=GENERATED)
+
+    def manifest():
+        intent = EnvironmentManifest()
+        intent.collision_strategy = CollisionStrategy.MERGE
+        intent.tooling.wants_just = True
+        return intent
+
+    (conflict,) = prepare_review(
+        manifest(),
+        UserConfig(),
+        policy=ExecutionPolicy.INITIALIZATION,
+        phase=PreparationPhase.BEFORE_INITIALIZERS,
+    ).conflicts
+    assert conflict.reason is ConflictReason.UNOWNED
+
+    executor = SystemExecutor(
+        manifest(), UserConfig(), resolutions={conflict.id: choice}
+    )
+    mocker.patch.object(executor, "_check_ide_extensions")
+    executor.execute()
+
+    assert target.read_text() == content
+    assert baseline_of("justfile") == GENERATED
+    assert not [d for d in executor.diagnostics if d.conflict]
+    # Settled for good: the same update no longer conflicts.
+    assert not apply_generated(mocker, target, GENERATED).diagnostics
+    assert target.read_text() == content

@@ -24,6 +24,7 @@ from protostar.errors import (
 )
 from protostar.init_draft import InitDecision
 from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
+from protostar.merge import NO_RESOLUTIONS
 from protostar.models import ExecutionResult, InitRequest
 from protostar.progress import ProgressStep
 
@@ -383,13 +384,19 @@ def _run_engine(
 
     # --- Execute ---
     hook_revisions = decision.hook_revisions if decision else None
+    resolutions = decision.resolutions if decision else NO_RESOLUTIONS
     if is_json_mode:
-        result = engine.execute(manifest, hook_revisions=hook_revisions)
+        result = engine.execute(
+            manifest, hook_revisions=hook_revisions, resolutions=resolutions
+        )
     else:
         console.print(heading("Ignition sequence initiated"))
         with progress_trail("Preparing workspace") as progress:
             result = engine.execute(
-                manifest, hook_revisions=hook_revisions, progress=progress
+                manifest,
+                hook_revisions=hook_revisions,
+                progress=progress,
+                resolutions=resolutions,
             )
 
         # --- Render Diagnostics ---
