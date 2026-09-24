@@ -579,7 +579,10 @@ def test_review_reports_line_conflicts_and_preserved_edits(
     # A CRLF checkout is not a local edit.
     target.write_bytes(GENERATED.replace("\n", "\r\n").encode())
     assert not prepare_review(desired(), UserConfig()).preserved
-    target.write_text(GENERATED.replace("uv run pytest", "uv run pytest -x"))
+    # LF on every platform: the sides are reported in the local newline style.
+    target.write_text(
+        GENERATED.replace("uv run pytest", "uv run pytest -x"), newline="\n"
+    )
     (preserved,) = prepare_review(desired(), UserConfig()).preserved
     assert preserved.location.file == "justfile"
     assert not preserved.deleted
