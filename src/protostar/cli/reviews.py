@@ -5,8 +5,10 @@ import difflib
 import sys
 from typing import Any, cast
 
+from rich.text import Text
+
 from protostar.cli import schema, ui
-from protostar.cli.diff import normalize_newlines
+from protostar.cli.diff import format_diff, normalize_newlines
 from protostar.cli.tui.launch import resolve_conflicts
 from protostar.errors import ExecutionAbortedError
 from protostar.lifecycle import inspect_project, prepare_project
@@ -68,73 +70,120 @@ def render_review(
 ) -> None:
     """Renders shared decisions for inspection, checks, and application."""
     ui.console.print(
-        f"{len(review.edits)} accepted file edits; {len(review.conflicts)} conflicts; "
-        f"{len(review.resolved)} resolved; "
-        f"{len(review.preserved)} preserved local deviations.",
-        markup=False,
+        Text.assemble(
+            (
+                f"{len(review.edits)} accepted file edits",
+                ("green" if applied else "") if review.edits else "dim",
+            ),
+            ("; ", "dim"),
+            (
+                f"{len(review.conflicts)} conflicts",
+                "bold red" if review.conflicts else "dim",
+            ),
+            ("; ", "dim"),
+            (
+                f"{len(review.resolved)} resolved",
+                "" if review.resolved else "dim",
+            ),
+            ("; ", "dim"),
+            (
+                f"{len(review.preserved)} preserved local deviations.",
+                "" if review.preserved else "dim",
+            ),
+        )
     )
     for edit in review.edits:
-        ui.console.print(f"Accepted: {edit.path}", markup=False)
+        ui.console.print(
+            Text.assemble(
+                ("Accepted: ", "green" if applied else ""),
+                (
+                    edit.path,
+                    ui.path_style(edit.path.rsplit("/", 1)[-1], directory=False),
+                ),
+            )
+        )
         if show_diffs:
-            ui.console.print(unified_diff(edit), markup=False, highlight=False, end="")
+            ui.console.print(format_diff(unified_diff(edit)), end="")
     for path in review.directories:
-        ui.console.print(f"Accepted directory: {path}", markup=False)
+        ui.console.print(
+            Text.assemble(
+                ("Accepted directory: ", "green" if applied else ""),
+                (
+                    path,
+                    ui.path_style(path.rsplit("/", 1)[-1], directory=True),
+                ),
+            )
+        )
     for conflict in review.conflicts:
         choices = ", ".join(choice.value for choice in conflict.choices)
+        choice_text = f"resolve with {choices}." if choices else "resolve by hand."
         ui.console.print(
-            f"Conflict {conflict.id}: {_where(conflict)}: {conflict.reason.value}; "
-            + (f"resolve with {choices}." if choices else "resolve by hand."),
-            markup=False,
+            Text.assemble(
+                (f"Conflict {conflict.id}: ", "bold red"),
+                (_where(conflict), "bold"),
+                (f": {conflict.reason.value}; {choice_text}"),
+            ),
             soft_wrap=True,
         )
     for conflict in review.resolved:
         settled = SETTLED[cast(ResolutionChoice, conflict.resolution)]
         ui.console.print(
-            f"Resolved {conflict.id}: {_where(conflict)}: {settled}.",
-            markup=False,
+            Text.assemble(
+                (f"Resolved {conflict.id}: ", "bold green" if applied else "bold"),
+                (_where(conflict), "bold"),
+                (f": {settled}."),
+            ),
             soft_wrap=True,
         )
     for item in review.preserved:
+        action = "deletion" if item.deleted else "local edit"
+        keys_str = f"{'.'.join(item.location.keys)}" if item.location.keys else ""
+        identity_str = f" {item.location.identity or ''}"
+        name = item.location.file.rsplit("/", 1)[-1]
         ui.console.print(
-            f"Preserved {'deletion' if item.deleted else 'local edit'}: {item.location.file} "
-            f"{'.'.join(item.location.keys)} {item.location.identity or ''}",
-            markup=False,
+            Text.assemble(
+                f"Preserved {action}: ",
+                (item.location.file, ui.path_style(name, directory=False)),
+                " ",
+                keys_str,
+                (identity_str, "dim" if identity_str.strip() else ""),
+            )
         )
     if review.state_changed:
-        ui.console.print(
-            (
-                "Ownership/provenance state advanced."
-                if applied
-                else "Ownership/provenance state will advance (may require no content write)."
-            ),
-            markup=False,
+        msg = (
+            "Ownership/provenance state advanced."
+            if applied
+            else "Ownership/provenance state will advance (may require no content write)."
         )
+        ui.console.print(Text(msg, "green" if applied else ""))
     if review.resolver.pending:
         for group, requirements in review.resolver.requirements:
             if requirements:
                 ui.console.print(
-                    f"Resolver {group.value}: {', '.join(requirements)}", markup=False
+                    Text(f"Resolver {group.value}: {', '.join(requirements)}")
                 )
         ui.console.print(
-            f"Resolver footprint: {', '.join(review.resolver.footprint.paths)}; "
-            + ("executed." if applied else "output unknown."),
-            markup=False,
+            Text.assemble(
+                f"Resolver footprint: {', '.join(review.resolver.footprint.paths)}; ",
+                (
+                    "executed." if applied else "output unknown.",
+                    "green" if applied else "dim",
+                ),
+            )
         )
         if review.resolver.lock_required:
-            ui.console.print(
-                (
-                    "Lock refreshed after accepted metadata changes."
-                    if applied
-                    else "Lock refresh required after accepted metadata changes."
-                ),
-                markup=False,
+            msg = (
+                "Lock refreshed after accepted metadata changes."
+                if applied
+                else "Lock refresh required after accepted metadata changes."
             )
+            ui.console.print(Text(msg, "green" if applied else ""))
     if review.initialization_only or review.initialization_only_ide_probe:
         ui.console.print(
-            "Initialization-only tasks and IDE probes are excluded.", markup=False
+            Text("Initialization-only tasks and IDE probes are excluded.", "dim")
         )
     if not review.pending:
-        ui.console.print("No pending work.", markup=False)
+        ui.console.print(Text("No pending work.", "dim"))
 
 
 def _where(conflict: MergeConflict) -> str:
@@ -183,11 +232,20 @@ def handle_sync(args: argparse.Namespace) -> None:
         else:
             render_review(review, show_diffs=args.dry_run)
             if args.check:
-                ui.console.print(
-                    "Check passed."
-                    if not review.pending
-                    else "Check failed: pending work."
-                )
+                if not review.pending:
+                    ui.console.print(
+                        Text.assemble(
+                            (f"{ui.glyph('✔', '+')} ", "green"),
+                            ("Check passed.", "bold green"),
+                        )
+                    )
+                else:
+                    ui.console.print(
+                        Text.assemble(
+                            (f"{ui.glyph('✖', 'x')} ", "bold red"),
+                            ("Check failed: pending work.", "bold red"),
+                        )
+                    )
         if args.check and review.pending:
             sys.exit(1)
         return
@@ -209,10 +267,21 @@ def handle_sync(args: argparse.Namespace) -> None:
     else:
         render_review(review, applied=True)
         ui.console.print(
-            f"Applied changes to {len(result.touched_paths)} paths; "
-            f"{len(review.resolved)} conflicts resolved; "
-            f"{len(review.conflicts)} conflicts retained.",
-            markup=False,
+            Text.assemble(
+                (
+                    f"Applied changes to {len(result.touched_paths)} paths; ",
+                    "bold green" if result.touched_paths else "dim",
+                ),
+                (
+                    f"{len(review.resolved)} conflicts resolved",
+                    "" if review.resolved else "dim",
+                ),
+                ("; ", "dim"),
+                (
+                    f"{len(review.conflicts)} conflicts retained.",
+                    "bold red" if review.conflicts else "dim",
+                ),
+            )
         )
     if partial:
         sys.exit(1)
