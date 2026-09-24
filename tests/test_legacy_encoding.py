@@ -16,6 +16,13 @@ from protostar.manifest import (
     EnvironmentManifest,
     Severity,
 )
+from protostar.merge import (
+    MISSING,
+    ConflictReason,
+    ConflictSides,
+    MergeConflict,
+    MergeLocation,
+)
 from protostar.models import ExecutionResult, InitRequest, RollbackContext
 from protostar.orchestrator import Orchestrator
 
@@ -82,6 +89,40 @@ def test_diagnostic_summary_warning_mark(legacy_console, mocker):
     ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
     assert "! [IDE] Missing extensions" in legacy_console()
+
+
+def test_open_conflicts_with_a_choice_point_to_sync(legacy_console, mocker):
+    """Each settleable conflict counts once; one settled by hand points nowhere."""
+    settleable = MergeConflict(
+        MergeLocation(".github/renovate.json", ("value",)),
+        ConflictReason.UNOWNED,
+        ConflictSides(MISSING, "mine", "template"),
+    )
+    by_hand = MergeConflict(MergeLocation("justfile"), ConflictReason.UNOWNED)
+    events = tuple(
+        DiagnosticEvent(
+            DiagnosticPhase.EXECUTOR,
+            f"Preserving local contribution in {conflict.location.file}.",
+            Severity.WARNING,
+            conflict=conflict,
+        )
+        # Initialization can report a conflict once per batch.
+        for conflict in (settleable, settleable, by_hand)
+    )
+    mocker.patch.object(Orchestrator, "plan", return_value=EnvironmentManifest())
+    execute = mocker.patch.object(
+        Orchestrator,
+        "execute",
+        return_value=ExecutionResult(frozenset(), frozenset(), events),
+    )
+    request = InitRequest()
+
+    ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
+    assert "1 conflict kept your version. Run protostar sync" in legacy_console()
+
+    execute.return_value = ExecutionResult(frozenset(), frozenset(), events[2:])
+    ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
+    assert "protostar sync" not in legacy_console().split("PARTIAL SUCCESS")[-1]
 
 
 def test_remote_template_warning_banner(legacy_console, mocker):
