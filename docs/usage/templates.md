@@ -122,7 +122,7 @@ The equivalent forms are `/-/archive/v1.2.0/repo-v1.2.0.zip` on GitLab, `/archiv
 
 #### Recorded Provenance
 
-Protostar records a SHA-256 digest of whichever template it resolved in `.protostar.lock.toml`, pinned or not, so `protostar status` can report when an unpinned source has drifted. A __full 40-character commit SHA__ in the URL is additionally recorded as the source revision; a tag is not, because a tag can be moved.
+Protostar records a SHA-256 digest of whichever template it resolved in `protostar.lock`, pinned or not, so `protostar status` can report when an unpinned source has drifted. A __full 40-character commit SHA__ in the URL is additionally recorded as the source revision; a tag is not, because a tag can be moved.
 
 ```toml
 # Strongest pin: immutable, and recorded as the source revision
@@ -132,7 +132,7 @@ source = "https://raw.githubusercontent.com/YourOrg/standards/4f0b8c2d1e9a7b3c5d
 
 #### Choosing Whether to Pin
 
-The resolved locator is part of the project identity tracked in `.protostar.lock.toml`, so the choice is durable:
+The resolved locator is part of the project identity tracked in `protostar.lock`, so the choice is durable:
 
 - __Pin__ when reproducible scaffolds matter more than updates. Every `protostar init` from that alias produces the same result indefinitely.
 - __Leave floating__ (a branch ref, or a bare repository URL) when you want `protostar sync` to deliver template updates to existing projects.

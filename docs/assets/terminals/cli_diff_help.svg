@@ -1,4 +1,4 @@
-<svg class="rich-terminal" viewBox="0 0 1214 318.4" xmlns="http://www.w3.org/2000/svg">
+<svg class="rich-terminal" viewBox="0 0 1226 294.0" xmlns="http://www.w3.org/2000/svg">
     <!-- Generated with Rich https://www.textualize.io -->
     <style>
 
@@ -40,41 +40,38 @@
 
     <defs>
     <clipPath id="cli_diff_help-clip-terminal">
-      <rect x="0" y="0" width="1194.6" height="267.4" />
+      <rect x="0" y="0" width="1206.8" height="243.0" />
     </clipPath>
     <clipPath id="cli_diff_help-line-0">
-    <rect x="0" y="1.5" width="1195.6" height="24.65"/>
+    <rect x="0" y="1.5" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-1">
-    <rect x="0" y="25.9" width="1195.6" height="24.65"/>
+    <rect x="0" y="25.9" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-2">
-    <rect x="0" y="50.3" width="1195.6" height="24.65"/>
+    <rect x="0" y="50.3" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-3">
-    <rect x="0" y="74.7" width="1195.6" height="24.65"/>
+    <rect x="0" y="74.7" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-4">
-    <rect x="0" y="99.1" width="1195.6" height="24.65"/>
+    <rect x="0" y="99.1" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-5">
-    <rect x="0" y="123.5" width="1195.6" height="24.65"/>
+    <rect x="0" y="123.5" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-6">
-    <rect x="0" y="147.9" width="1195.6" height="24.65"/>
+    <rect x="0" y="147.9" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-7">
-    <rect x="0" y="172.3" width="1195.6" height="24.65"/>
+    <rect x="0" y="172.3" width="1207.8" height="24.65"/>
             </clipPath>
 <clipPath id="cli_diff_help-line-8">
-    <rect x="0" y="196.7" width="1195.6" height="24.65"/>
-            </clipPath>
-<clipPath id="cli_diff_help-line-9">
-    <rect x="0" y="221.1" width="1195.6" height="24.65"/>
+    <rect x="0" y="196.7" width="1207.8" height="24.65"/>
             </clipPath>
     </defs>
 
-    <rect fill="#0a0a0a" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1212" height="316.4" rx="8"/><text class="cli_diff_help-title" fill="#e2e8f0" text-anchor="middle" x="606" y="27">zsh</text>
+    <rect fill="#0a0a0a" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1224" height="292" rx="8"/><text class="cli_diff_help-title" fill="#e2e8f0" text-anchor="middle" x="612" y="27">zsh</text>
             <g transform="translate(26,22)">
             <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
             <circle cx="22" cy="0" r="7" fill="#febc2e"/>
@@ -84,17 +81,16 @@
     <g transform="translate(9, 41)" clip-path="url(#cli_diff_help-clip-terminal)">
 
     <g class="cli_diff_help-matrix">
-    <text class="cli_diff_help-r1" x="0" y="20" textLength="24.4" clip-path="url(#cli_diff_help-line-0)">❯&#160;</text><text class="cli_diff_help-r2" x="24.4" y="20" textLength="122" clip-path="url(#cli_diff_help-line-0)">protostar&#160;</text><text class="cli_diff_help-r3" x="146.4" y="20" textLength="109.8" clip-path="url(#cli_diff_help-line-0)">help&#160;diff</text><text class="cli_diff_help-r3" x="1195.6" y="20" textLength="12.2" clip-path="url(#cli_diff_help-line-0)">
-</text><text class="cli_diff_help-r3" x="1195.6" y="44.4" textLength="12.2" clip-path="url(#cli_diff_help-line-1)">
-</text><text class="cli_diff_help-r3" x="0" y="68.8" textLength="841.8" clip-path="url(#cli_diff_help-line-2)">Review&#160;accepted&#160;file&#160;diffs,&#160;conflicts,&#160;and&#160;proposed&#160;resolver&#160;actions.</text><text class="cli_diff_help-r3" x="1195.6" y="68.8" textLength="12.2" clip-path="url(#cli_diff_help-line-2)">
-</text><text class="cli_diff_help-r3" x="1195.6" y="93.2" textLength="12.2" clip-path="url(#cli_diff_help-line-3)">
-</text><text class="cli_diff_help-r2" x="0" y="117.6" textLength="85.4" clip-path="url(#cli_diff_help-line-4)">OPTIONS</text><text class="cli_diff_help-r1" x="97.6" y="117.6" textLength="1098" clip-path="url(#cli_diff_help-line-4)">──────────────────────────────────────────────────────────────────────────────────────────</text><text class="cli_diff_help-r3" x="1195.6" y="117.6" textLength="12.2" clip-path="url(#cli_diff_help-line-4)">
-</text><text class="cli_diff_help-r4" x="24.4" y="142" textLength="183" clip-path="url(#cli_diff_help-line-5)">-v,&#160;--verbose&#160;&#160;</text><text class="cli_diff_help-r3" x="244" y="142" textLength="890.6" clip-path="url(#cli_diff_help-line-5)">Enable&#160;verbose&#160;debug&#160;output&#160;and&#160;rich&#160;tracebacks.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_diff_help-r3" x="1195.6" y="142" textLength="12.2" clip-path="url(#cli_diff_help-line-5)">
-</text><text class="cli_diff_help-r4" x="24.4" y="166.4" textLength="183" clip-path="url(#cli_diff_help-line-6)">--config&#160;&lt;path&gt;</text><text class="cli_diff_help-r3" x="244" y="166.4" textLength="890.6" clip-path="url(#cli_diff_help-line-6)">Read&#160;global&#160;configuration&#160;from&#160;this&#160;file&#160;instead&#160;of&#160;the&#160;default&#160;location.</text><text class="cli_diff_help-r3" x="1195.6" y="166.4" textLength="12.2" clip-path="url(#cli_diff_help-line-6)">
-</text><text class="cli_diff_help-r4" x="24.4" y="190.8" textLength="183" clip-path="url(#cli_diff_help-line-7)">--no-config&#160;&#160;&#160;&#160;</text><text class="cli_diff_help-r3" x="244" y="190.8" textLength="890.6" clip-path="url(#cli_diff_help-line-7)">Ignore&#160;global&#160;configuration&#160;entirely&#160;and&#160;use&#160;built-in&#160;defaults.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_diff_help-r3" x="1195.6" y="190.8" textLength="12.2" clip-path="url(#cli_diff_help-line-7)">
-</text><text class="cli_diff_help-r3" x="1195.6" y="215.2" textLength="12.2" clip-path="url(#cli_diff_help-line-8)">
-</text><text class="cli_diff_help-r3" x="0" y="239.6" textLength="500.2" clip-path="url(#cli_diff_help-line-9)">Inspects&#160;the&#160;current&#160;directory.&#160;Requires&#160;</text><text class="cli_diff_help-r3" x="500.2" y="239.6" textLength="695.4" clip-path="url(#cli_diff_help-line-9)">&#160;and&#160;.protostar.lock.toml;&#160;never&#160;executes&#160;tasks&#160;or&#160;writes</text><text class="cli_diff_help-r3" x="1195.6" y="239.6" textLength="12.2" clip-path="url(#cli_diff_help-line-9)">
-</text><text class="cli_diff_help-r3" x="0" y="264" textLength="73.2" clip-path="url(#cli_diff_help-line-10)">files.</text><text class="cli_diff_help-r3" x="1195.6" y="264" textLength="12.2" clip-path="url(#cli_diff_help-line-10)">
+    <text class="cli_diff_help-r1" x="0" y="20" textLength="24.4" clip-path="url(#cli_diff_help-line-0)">❯&#160;</text><text class="cli_diff_help-r2" x="24.4" y="20" textLength="122" clip-path="url(#cli_diff_help-line-0)">protostar&#160;</text><text class="cli_diff_help-r3" x="146.4" y="20" textLength="109.8" clip-path="url(#cli_diff_help-line-0)">help&#160;diff</text><text class="cli_diff_help-r3" x="1207.8" y="20" textLength="12.2" clip-path="url(#cli_diff_help-line-0)">
+</text><text class="cli_diff_help-r3" x="1207.8" y="44.4" textLength="12.2" clip-path="url(#cli_diff_help-line-1)">
+</text><text class="cli_diff_help-r3" x="0" y="68.8" textLength="841.8" clip-path="url(#cli_diff_help-line-2)">Review&#160;accepted&#160;file&#160;diffs,&#160;conflicts,&#160;and&#160;proposed&#160;resolver&#160;actions.</text><text class="cli_diff_help-r3" x="1207.8" y="68.8" textLength="12.2" clip-path="url(#cli_diff_help-line-2)">
+</text><text class="cli_diff_help-r3" x="1207.8" y="93.2" textLength="12.2" clip-path="url(#cli_diff_help-line-3)">
+</text><text class="cli_diff_help-r2" x="0" y="117.6" textLength="85.4" clip-path="url(#cli_diff_help-line-4)">OPTIONS</text><text class="cli_diff_help-r1" x="97.6" y="117.6" textLength="1110.2" clip-path="url(#cli_diff_help-line-4)">───────────────────────────────────────────────────────────────────────────────────────────</text><text class="cli_diff_help-r3" x="1207.8" y="117.6" textLength="12.2" clip-path="url(#cli_diff_help-line-4)">
+</text><text class="cli_diff_help-r4" x="24.4" y="142" textLength="183" clip-path="url(#cli_diff_help-line-5)">-v,&#160;--verbose&#160;&#160;</text><text class="cli_diff_help-r3" x="244" y="142" textLength="890.6" clip-path="url(#cli_diff_help-line-5)">Enable&#160;verbose&#160;debug&#160;output&#160;and&#160;rich&#160;tracebacks.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_diff_help-r3" x="1207.8" y="142" textLength="12.2" clip-path="url(#cli_diff_help-line-5)">
+</text><text class="cli_diff_help-r4" x="24.4" y="166.4" textLength="183" clip-path="url(#cli_diff_help-line-6)">--config&#160;&lt;path&gt;</text><text class="cli_diff_help-r3" x="244" y="166.4" textLength="890.6" clip-path="url(#cli_diff_help-line-6)">Read&#160;global&#160;configuration&#160;from&#160;this&#160;file&#160;instead&#160;of&#160;the&#160;default&#160;location.</text><text class="cli_diff_help-r3" x="1207.8" y="166.4" textLength="12.2" clip-path="url(#cli_diff_help-line-6)">
+</text><text class="cli_diff_help-r4" x="24.4" y="190.8" textLength="183" clip-path="url(#cli_diff_help-line-7)">--no-config&#160;&#160;&#160;&#160;</text><text class="cli_diff_help-r3" x="244" y="190.8" textLength="890.6" clip-path="url(#cli_diff_help-line-7)">Ignore&#160;global&#160;configuration&#160;entirely&#160;and&#160;use&#160;built-in&#160;defaults.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_diff_help-r3" x="1207.8" y="190.8" textLength="12.2" clip-path="url(#cli_diff_help-line-7)">
+</text><text class="cli_diff_help-r3" x="1207.8" y="215.2" textLength="12.2" clip-path="url(#cli_diff_help-line-8)">
+</text><text class="cli_diff_help-r3" x="0" y="239.6" textLength="500.2" clip-path="url(#cli_diff_help-line-9)">Inspects&#160;the&#160;current&#160;directory.&#160;Requires&#160;</text><text class="cli_diff_help-r3" x="500.2" y="239.6" textLength="707.6" clip-path="url(#cli_diff_help-line-9)">&#160;and&#160;protostar.lock;&#160;never&#160;executes&#160;tasks&#160;or&#160;writes&#160;files.</text><text class="cli_diff_help-r3" x="1207.8" y="239.6" textLength="12.2" clip-path="url(#cli_diff_help-line-9)">
 </text>
     </g>
     </g>

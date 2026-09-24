@@ -127,11 +127,11 @@ def validate_target(path: str) -> None:
         or bool(win.root)
         or ".." in target.parts
         or not target.parts
-        or any(part in (".protostar.lock.toml", "uv.lock") for part in target.parts)
+        or any(part in ("protostar.lock", "uv.lock") for part in target.parts)
     ):
         raise ConfigurationError(
             f"Unsupported contribution target '{path}'.",
-            hint="Use a relative workspace path outside reserved .protostar.lock.toml and resolver-owned uv.lock paths.",
+            hint="Use a relative workspace path outside reserved protostar.lock and resolver-owned uv.lock paths.",
         )
 
 

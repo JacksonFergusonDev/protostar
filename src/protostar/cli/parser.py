@@ -343,7 +343,7 @@ def build_parser() -> argparse.ArgumentParser:
             help=description,
             description=description,
             parents=[base_parser],
-            epilog="Inspects the current directory. Requires [tool.protostar] and .protostar.lock.toml; never executes tasks or writes files.",
+            epilog="Inspects the current directory. Requires [tool.protostar] and protostar.lock; never executes tasks or writes files.",
         )
         review_parser.set_defaults(func=handle_review)
 
@@ -354,7 +354,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Apply safe project updates and retain conflicting local content.",
         description="Apply accepted lifecycle updates transactionally in the current directory.",
         parents=[base_parser],
-        epilog="Requires the project recipe in pyproject.toml and .protostar.lock.toml. Never replays initialization tasks or IDE probes. In an interactive terminal, conflicts you can settle open a screen before anything is applied. Unresolved conflicts commit safe changes with exit 1.",
+        epilog="Requires the project recipe in pyproject.toml and protostar.lock. Never replays initialization tasks or IDE probes. In an interactive terminal, conflicts you can settle open a screen before anything is applied. Unresolved conflicts commit safe changes with exit 1.",
     )
     sync_parser.add_argument(
         "--resolve",

@@ -94,8 +94,7 @@ def test_preview_is_read_only_and_applies_exact_safe_sibling_bytes(
     apply(desired, review, mocker)
     assert target.read_bytes() == review.edits[0].after
     assert (
-        deserialize_state(Path(".protostar.lock.toml").read_text())
-        == review.candidate_state
+        deserialize_state(Path("protostar.lock").read_text()) == review.candidate_state
     )
 
 
@@ -113,8 +112,8 @@ def test_stale_review_aborts_before_mutation(tmp_path, monkeypatch, mocker, chan
             "# concurrent\n" + Path("pyproject.toml").read_text()
         )
     elif change == "state":
-        Path(".protostar.lock.toml").write_text(
-            "# concurrent\n" + Path(".protostar.lock.toml").read_text()
+        Path("protostar.lock").write_text(
+            "# concurrent\n" + Path("protostar.lock").read_text()
         )
     elif change == "uv-lock":
         Path("uv.lock").write_text("new resolver state")
@@ -144,7 +143,7 @@ def test_unsupported_nodes_fail_during_preparation(tmp_path, monkeypatch, node):
     outside.write_text("outside")
     path = {
         "input": "pyproject.toml",
-        "state": ".protostar.lock.toml",
+        "state": "protostar.lock",
         "lock": "uv.lock",
         "ancestor": "generated",
     }[node]
@@ -169,7 +168,7 @@ def test_state_only_convergence_and_preserved_local_deviation(
     assert review.state_changed
     assert review.pending
     executor = apply(desired, review, mocker)
-    assert executor.journal.mutated_paths == {".protostar.lock.toml"}
+    assert executor.journal.mutated_paths == {"protostar.lock"}
     target.write_text(target.read_text().replace("100", "120"))
     review = prepare_review(desired, UserConfig())
     assert not review.pending
@@ -304,7 +303,7 @@ def test_dependency_convergence_advances_state_without_resolver(
             ),
         ),
     )
-    Path(".protostar.lock.toml").write_text(serialize_state(state))
+    Path("protostar.lock").write_text(serialize_state(state))
     desired = EnvironmentManifest()
     desired.dependencies.add("example>=2")
     review = prepare_review(desired, UserConfig())
@@ -313,9 +312,7 @@ def test_dependency_convergence_advances_state_without_resolver(
     assert review.state_changed
     apply(desired, review, mocker)
     assert (
-        deserialize_state(Path(".protostar.lock.toml").read_text())
-        .dependencies[0]
-        .declared
+        deserialize_state(Path("protostar.lock").read_text()).dependencies[0].declared
         == "example>=2"
     )
 
@@ -390,7 +387,7 @@ def test_prepared_resolver_uses_only_accepted_requests_and_materialized_bounds(
     executor.execute()
     process.assert_called_once()
     assert b"line-length = 100" in Path("pyproject.toml").read_bytes()
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     assert state.dependencies[0].declared == "example"
     assert state.dependencies[0].materialized == "example>=3"
     assert not prepare_review(desired, UserConfig()).pending

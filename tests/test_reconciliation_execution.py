@@ -48,7 +48,7 @@ def run(intent, mocker):
 
 
 def owned():
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     baseline = state.files[0].baseline
     assert baseline is not None
     return decode_toml_baseline(baseline)
@@ -57,14 +57,14 @@ def owned():
 def test_initial_repeat_and_clean_update(tmp_path, monkeypatch, mocker):
     monkeypatch.chdir(tmp_path)
     first = run(manifest(), mocker)
-    assert first.journal.created_paths == {"pyproject.toml", ".protostar.lock.toml"}
+    assert first.journal.created_paths == {"pyproject.toml", "protostar.lock"}
     initial = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
     for _ in range(2):
         repeated = run(manifest(), mocker)
         assert repeated.journal.touched_paths == frozenset()
         assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == initial
     changed = run(manifest(100), mocker)
-    assert changed.journal.mutated_paths == {"pyproject.toml", ".protostar.lock.toml"}
+    assert changed.journal.mutated_paths == {"pyproject.toml", "protostar.lock"}
     assert owned()["tool"]["ruff"]["line-length"] == 100
 
 
@@ -149,7 +149,7 @@ def test_failures_restore_exact_bytes_modes_and_state(
 ):
     monkeypatch.chdir(tmp_path)
     run(manifest(), mocker)
-    paths = [Path("pyproject.toml"), Path(".protostar.lock.toml"), Path("uv.lock")]
+    paths = [Path("pyproject.toml"), Path("protostar.lock"), Path("uv.lock")]
     paths[-1].write_bytes(b"original lock\r\n")
     for path in paths:
         path.chmod(0o640)
@@ -178,7 +178,7 @@ def test_failures_restore_exact_bytes_modes_and_state(
 
         def fail_state(path, content, **kwargs):
             original_write(path, content, **kwargs)
-            if path.name == ".protostar.lock.toml":
+            if path.name == "protostar.lock":
                 raise OSError("state write failure")
 
         mocker.patch.object(executor.fs, "write_text", side_effect=fail_state)
@@ -196,7 +196,7 @@ def test_invalid_state_and_nodes_abort_before_mutation(
     monkeypatch.chdir(tmp_path)
     ref = TemplateReference(TemplateOrigin.BUILT_IN, "cli", "a" * 64)
     run(manifest(template=ref), mocker)
-    state = Path(".protostar.lock.toml")
+    state = Path("protostar.lock")
     if bad == "malformed":
         state.write_text("[broken")
     elif bad == "version":
@@ -306,7 +306,7 @@ def test_dependency_materialized_bounds_repeat_edit_and_update(
 
     _first, runner = execute_requirement("Requests", "requests>=2.0")
     runner.assert_called_once()
-    record = deserialize_state(Path(".protostar.lock.toml").read_text()).dependencies[0]
+    record = deserialize_state(Path("protostar.lock").read_text()).dependencies[0]
     assert record.declared == "Requests"
     assert record.materialized == "requests>=2.0"
     repeated, runner = execute_requirement("requests")
@@ -325,7 +325,7 @@ def test_dependency_materialized_bounds_repeat_edit_and_update(
     _accepted, runner = execute_requirement("requests>=3.0")
     runner.assert_called_once()
     assert (
-        deserialize_state(Path(".protostar.lock.toml").read_text())
+        deserialize_state(Path("protostar.lock").read_text())
         .dependencies[0]
         .materialized
         == "requests>=3.0"
@@ -442,7 +442,7 @@ def test_dependency_only_malformed_toml_is_fatal_before_writes(
     intent.dependencies.add("requests")
     with pytest.raises(ConfigurationError):
         run(intent, mocker)
-    assert not Path(".protostar.lock.toml").exists()
+    assert not Path("protostar.lock").exists()
     assert Path("pyproject.toml").read_bytes() == b"[broken"
 
 
@@ -460,7 +460,7 @@ def test_owned_convergence_advances_only_accepted_dependency(
         "requests>=2",
         "requests>=2",
     )
-    Path(".protostar.lock.toml").write_text(
+    Path("protostar.lock").write_text(
         serialize_state(SyncState("old", dependencies=(record,)))
     )
     Path("pyproject.toml").write_text('[project]\ndependencies = ["requests>=3"]\n')
@@ -469,9 +469,7 @@ def test_owned_convergence_advances_only_accepted_dependency(
     executor = run(intent, mocker)
     executor.process_runner.run.assert_not_called()
     assert (
-        deserialize_state(Path(".protostar.lock.toml").read_text())
-        .dependencies[0]
-        .declared
+        deserialize_state(Path("protostar.lock").read_text()).dependencies[0].declared
         == "requests>=3"
     )
 
@@ -505,7 +503,7 @@ def test_unchanged_dependency_under_deleted_file_is_silent(
         "requests",
         "requests>=2",
     )
-    Path(".protostar.lock.toml").write_text(
+    Path("protostar.lock").write_text(
         serialize_state(SyncState("old", dependencies=(record,)))
     )
     intent = EnvironmentManifest()
@@ -644,7 +642,7 @@ def test_python_initializer_respects_deleted_tracked_project(
     execute(88)
     target = Path("pyproject.toml")
     target.unlink()
-    state_bytes = Path(".protostar.lock.toml").read_bytes()
+    state_bytes = Path("protostar.lock").read_bytes()
     Path(".python-version").write_text("3.14\n")
     for iteration in range(2):
         executor, runner = execute(value, overwrite=overwrite)
@@ -660,7 +658,7 @@ def test_python_initializer_respects_deleted_tracked_project(
             runner.assert_not_called()
             assert not target.exists()
             assert Path(".python-version").read_text() == "3.14\n"
-            assert Path(".protostar.lock.toml").read_bytes() == state_bytes
+            assert Path("protostar.lock").read_bytes() == state_bytes
             assert not executor.journal.touched_paths
             conflicts = [d.conflict for d in executor.diagnostics if d.conflict]
             assert all(c.reason.value == "deleted-ancestor" for c in conflicts)
@@ -689,14 +687,14 @@ def test_dependency_ownership_protects_deleted_project_from_new_tooling(
         ),
     )
     state_bytes = serialize_state(state).encode()
-    Path(".protostar.lock.toml").write_bytes(state_bytes)
+    Path("protostar.lock").write_bytes(state_bytes)
     intent = manifest()
     PythonCore(python_version="3.13").build(intent)
     intent.dependencies.add("httpx")
     executor = run(intent, mocker)
     executor.process_runner.run.assert_not_called()
     assert not Path("pyproject.toml").exists()
-    assert Path(".protostar.lock.toml").read_bytes() == state_bytes
+    assert Path("protostar.lock").read_bytes() == state_bytes
     assert "pyproject.toml" not in executor.journal.touched_paths
-    assert ".protostar.lock.toml" not in executor.journal.touched_paths
+    assert "protostar.lock" not in executor.journal.touched_paths
     assert any(d.conflict for d in executor.diagnostics)

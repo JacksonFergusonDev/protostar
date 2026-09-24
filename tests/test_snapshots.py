@@ -170,7 +170,7 @@ def test_scenario_fixtures_capture_consistent_reconciliation_state():
     snapshots_dir = Path("tests/snapshots")
     for name in SCENARIO_FIXTURES:
         root = snapshots_dir / name
-        state_path = root / ".protostar.lock.toml"
+        state_path = root / "protostar.lock"
         assert state_path.exists(), f"Missing reconciliation state for {name}"
         state = tomllib.loads(state_path.read_text())
         pyproject = tomllib.loads((root / "pyproject.toml").read_text())
@@ -211,7 +211,7 @@ def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
     ignores = (root / ".gitignore").read_text()
     assert all(pattern in ignores for pattern in ("*.csv", "*.fits", "*.parquet"))
 
-    state = tomllib.loads((root / ".protostar.lock.toml").read_text())
+    state = tomllib.loads((root / "protostar.lock").read_text())
     owned_names = {record["name"] for record in state["dependencies"]}
     assert "mypy" in owned_names
     assert "astropy" not in owned_names

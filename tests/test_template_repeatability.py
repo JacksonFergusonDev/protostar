@@ -194,10 +194,10 @@ def test_template_initial_and_repeat_merge_convergence(
     phase1_result = results[0]
     assert len(phase1_result.created_paths) > 0
     assert "pyproject.toml" in phase1_result.created_paths
-    assert ".protostar.lock.toml" in phase1_result.created_paths
+    assert "protostar.lock" in phase1_result.created_paths
 
     disk_phase1 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    state_phase1 = (tmp_path / ".protostar.lock.toml").read_bytes()
+    state_phase1 = (tmp_path / "protostar.lock").read_bytes()
     state = deserialize_state(state_phase1.decode("utf-8"))
 
     from protostar.lifecycle import inspect_project
@@ -253,7 +253,7 @@ def test_template_initial_and_repeat_merge_convergence(
 
     disk_phase2 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert disk_phase1 == disk_phase2
-    assert (tmp_path / ".protostar.lock.toml").read_bytes() == state_phase1
+    assert (tmp_path / "protostar.lock").read_bytes() == state_phase1
 
     # Phase 3: Second identical re-run in MERGE mode (continuous convergence)
     handle_init(merge_args)
@@ -269,7 +269,7 @@ def test_template_initial_and_repeat_merge_convergence(
 
     disk_phase3 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert disk_phase1 == disk_phase3
-    assert (tmp_path / ".protostar.lock.toml").read_bytes() == state_phase1
+    assert (tmp_path / "protostar.lock").read_bytes() == state_phase1
 
 
 def test_template_merge_preserves_foreign_content_and_local_modifications(
@@ -335,9 +335,7 @@ def test_template_merge_preserves_foreign_content_and_local_modifications(
     assert foreign_file.read_text(encoding="utf-8") == "id,val\n1,100\n"
 
     # Verify foreign dependency was not adopted into Protostar state tracking
-    lock_doc = tomlkit.parse(
-        (tmp_path / ".protostar.lock.toml").read_text(encoding="utf-8")
-    )
+    lock_doc = tomlkit.parse((tmp_path / "protostar.lock").read_text(encoding="utf-8"))
     owned_deps = lock_doc.get("dependencies", [])
     assert isinstance(owned_deps, list)
     owned_dep_names = {r["name"] for r in owned_deps if isinstance(r, dict)}
@@ -364,13 +362,13 @@ def test_stage_one_enrollment_preserves_applied_ownership(
     del doc["tool"]["protostar"]
     doc["tool"]["foreign"] = {"local-key": "retain"}
     project.write_text(tomlkit.dumps(doc))
-    before = (tmp_path / ".protostar.lock.toml").read_bytes()
+    before = (tmp_path / "protostar.lock").read_bytes()
     handle_init(args)
     assert read_recipe(project) is not None
     assert (
         tomlkit.parse(project.read_text())["tool"]["foreign"]["local-key"] == "retain"
     )
-    assert (tmp_path / ".protostar.lock.toml").read_bytes() == before
+    assert (tmp_path / "protostar.lock").read_bytes() == before
     assert "protostar" not in str(deserialize_state(before.decode()).files)
 
 

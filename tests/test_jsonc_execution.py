@@ -16,7 +16,7 @@ from protostar.sync_state import FilePolicy, deserialize_state
 
 RENOVATE = Path(".github/renovate.json")
 SETTINGS = Path(".vscode/settings.json")
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 
 CONFIG_V1 = """\
 {

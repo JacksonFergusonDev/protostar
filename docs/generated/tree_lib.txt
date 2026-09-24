@@ -8,7 +8,6 @@
 │       └── release.yml
 ├── .gitignore
 ├── .pre-commit-config.yaml
-├── .protostar.lock.toml
 ├── .python-version
 ├── .readthedocs.yaml
 ├── CHANGELOG.md
@@ -16,6 +15,7 @@
 ├── docs
 │   └── index.md
 ├── justfile
+├── protostar.lock
 ├── pyproject.toml
 ├── src
 │   └── demo_project

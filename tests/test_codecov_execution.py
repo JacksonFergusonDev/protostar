@@ -14,7 +14,7 @@ from protostar.sync_state import FilePolicy, deserialize_state
 from protostar.yaml_ast import decode_yaml_baseline
 
 TARGET = Path(".github/codecov.yml")
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 
 
 def manifest(target="80%", ignores="tests/**, docs/**"):

@@ -83,7 +83,7 @@ def validate_state_path(path: str) -> None:
         or ".." in target.parts
         or path != target.as_posix()
         or path == "."
-        or any(part in (".protostar.lock.toml", "uv.lock") for part in target.parts)
+        or any(part in ("protostar.lock", "uv.lock") for part in target.parts)
     ):
         raise _invalid(f"unsafe or reserved workspace path '{path}'.")
 
@@ -296,7 +296,7 @@ def check_template_identity(
         )
 
 
-STATE_FILE = ".protostar.lock.toml"
+STATE_FILE = "protostar.lock"
 """The committed ownership state, relative to the project root."""
 
 

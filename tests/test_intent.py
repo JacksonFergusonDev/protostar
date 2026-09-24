@@ -101,13 +101,13 @@ def test_planning_preserves_reference_and_region_identity_without_side_effects(
 @pytest.mark.parametrize(
     "path",
     [
-        ".protostar.lock.toml",
-        "./.protostar.lock.toml",
+        "protostar.lock",
+        "./protostar.lock",
         "../outside",
         "/absolute",
         "uv.lock",
         "uv.lock/child",
-        ".protostar.lock.toml/child",
+        "protostar.lock/child",
         "nested/uv.lock",
     ],
 )

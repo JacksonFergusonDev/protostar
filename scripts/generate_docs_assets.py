@@ -846,9 +846,7 @@ def generate_agent_payloads() -> None:
                 ".github/renovate.json", '{"value": "original"}\n'
             )
             initial = prepare_review(baseline, UserConfig(), hook_revisions=())
-            Path(".protostar.lock.toml").write_text(
-                serialize_state(initial.candidate_state)
-            )
+            Path("protostar.lock").write_text(serialize_state(initial.candidate_state))
             manifest = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
             manifest.filesystem.add_file_injection("safe.txt", "accepted\n")
             manifest.filesystem.add_file_injection(

@@ -13,7 +13,7 @@ from protostar.sync_state import PinProvenance, deserialize_state
 from protostar.yaml_ast import decode_yaml_baseline
 
 TARGET = Path(".pre-commit-config.yaml")
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 
 
 def intent(runner=HookRunner.PRE_COMMIT, extra=False, hook_types=()):

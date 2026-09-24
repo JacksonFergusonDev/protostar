@@ -101,7 +101,7 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
 === "Snapshot Regression & Verification"
     Generates scenario regression snapshots in `tests/snapshots/` and documentation presentation assets in `docs/generated/` and `docs/assets/terminals/`, verifying there is no snapshot drift.
 
-    Scenario snapshot directories include `.protostar.lock.toml` alongside the
+    Scenario snapshot directories include `protostar.lock` alongside the
     generated workspace files. Dependency versions are frozen consistently across
     the state record and `pyproject.toml`, so snapshot review covers ownership changes
     as well as user-visible output.

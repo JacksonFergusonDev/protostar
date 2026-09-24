@@ -82,9 +82,7 @@ def test_final_metadata_resolves_once_after_initializer(
     process.assert_not_called()
     assert not repeated.journal.touched_paths
     if addition:
-        record = deserialize_state(
-            Path(".protostar.lock.toml").read_text()
-        ).dependencies[0]
+        record = deserialize_state(Path("protostar.lock").read_text()).dependencies[0]
         assert (record.declared, record.materialized) == ("requests", "requests>=2")
 
 
@@ -96,7 +94,7 @@ def test_metadata_change_locks_when_dependency_unchanged(
     Path("pyproject.toml").write_text('[project]\nname = "demo"\ndependencies = []\n')
     execute(intent(requirement=requirement, python=">=3.13"), mocker)
     # Establish an older Python baseline without invoking a live resolver.
-    state = Path(".protostar.lock.toml")
+    state = Path("protostar.lock")
     state.write_text(state.read_text().replace(">=3.13", ">=3.12"))
     project = Path("pyproject.toml")
     project.write_text(project.read_text().replace(">=3.13", ">=3.12"))
@@ -134,7 +132,7 @@ def test_resolver_failure_restores_bytes_modes_and_state(
     monkeypatch.chdir(tmp_path)
     Path("pyproject.toml").write_text('[project]\nname = "demo"\ndependencies = []\n')
     execute(intent(python=">=3.13"), mocker)
-    state = Path(".protostar.lock.toml")
+    state = Path("protostar.lock")
     state.write_text(state.read_text().replace(">=3.13", ">=3.12"))
     project = Path("pyproject.toml")
     project.write_text(project.read_text().replace(">=3.13", ">=3.12"))
@@ -192,7 +190,7 @@ def test_foreign_include_is_not_adopted(tmp_path, monkeypatch, mocker):
     _, process = execute(intent(python=">=3.13"), mocker)
     process.assert_not_called()
     assert project.read_bytes() == original
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     assert not state.files
 
 
@@ -234,7 +232,7 @@ def test_requirement_identity_tracks_only_accepted_group(
     process = mocker.patch.object(executor.process_runner, "run", side_effect=resolve)
     executor.execute()
     process.assert_called_once()
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     assert len(state.dependencies) == 1
     record = state.dependencies[0]
     assert (record.group, record.name, record.marker) == (

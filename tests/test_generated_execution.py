@@ -42,7 +42,7 @@ def apply_generated(mocker, target, value, strategy=CollisionStrategy.MERGE):
 
 
 def baseline_of(path):
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     return next(r for r in state.files if r.path == path).baseline
 
 
@@ -55,7 +55,7 @@ def test_generated_lifecycle(tmp_path, monkeypatch, mocker, path):
         return apply_generated(mocker, target, value)
 
     apply("v1\r\n")
-    state = Path(".protostar.lock.toml")
+    state = Path("protostar.lock")
     assert baseline_of(path) == "v1\r\n"
     initial = state.read_bytes()
     assert not apply("v1\r\n").journal.touched_paths
@@ -116,7 +116,7 @@ def test_overlapping_edits_keep_the_whole_file_and_report_lines(
         "uv build", "uv build --sdist"
     )
     target.write_text(edited)
-    state = Path(".protostar.lock.toml").read_bytes()
+    state = Path("protostar.lock").read_bytes()
     update = GENERATED.replace("uv run pytest", "uv run pytest -q").replace(
         "ruff check .", "ruff check --fix ."
     )
@@ -125,7 +125,7 @@ def test_overlapping_edits_keep_the_whole_file_and_report_lines(
 
     # The clean lint hunk is not applied alone: the file is kept whole.
     assert target.read_text() == edited
-    assert Path(".protostar.lock.toml").read_bytes() == state
+    assert Path("protostar.lock").read_bytes() == state
     (event,) = [d for d in result.diagnostics if d.conflict]
     assert event.conflict.reason is ConflictReason.DIVERGED
     assert event.conflict.location.lines == LineSpan(5, 1)
@@ -333,7 +333,7 @@ def test_generated_and_regions_rollback(tmp_path, monkeypatch, mocker):
         e.manifest.filesystem.add_region(".envrc", "v1", identity="test:region")
 
     run(mocker, setup)
-    paths = [Path("justfile"), Path(".envrc"), Path(".protostar.lock.toml")]
+    paths = [Path("justfile"), Path(".envrc"), Path("protostar.lock")]
     for path in paths:
         path.chmod(0o640)
     originals = {p: (p.read_bytes(), p.stat().st_mode) for p in paths}
@@ -367,7 +367,7 @@ def test_real_producer_wiring_and_noop(tmp_path, monkeypatch, mocker):
         e.manifest.filesystem.add_region(".envrc", "v1", identity="test:region")
 
     run(mocker, setup)
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     text = [r for r in state.files if r.policy is FilePolicy.TEXT]
     assert {r.path for r in text} == set(ARTIFACTS)
     for record in text:
@@ -433,7 +433,7 @@ def test_generated_justfile_with_regions_merges(tmp_path, monkeypatch, mocker):
     )
     record = next(
         r
-        for r in deserialize_state(Path(".protostar.lock.toml").read_text()).files
+        for r in deserialize_state(Path("protostar.lock").read_text()).files
         if r.path == "justfile"
     )
     assert record.baseline == region.content
@@ -462,7 +462,7 @@ def test_regions_update_while_the_generated_file_conflicts(
     assert "recipe v2" in target.read_text()
     record = next(
         r
-        for r in deserialize_state(Path(".protostar.lock.toml").read_text()).files
+        for r in deserialize_state(Path("protostar.lock").read_text()).files
         if r.path == "justfile"
     )
     assert record.baseline is not None
@@ -484,7 +484,7 @@ def test_unowned_generated_file_can_manage_new_region(tmp_path, monkeypatch, moc
     original = Path("justfile").read_bytes()
     run(mocker, setup)
     assert Path("justfile").read_bytes() == original
-    record = deserialize_state(Path(".protostar.lock.toml").read_text()).files[0]
+    record = deserialize_state(Path("protostar.lock").read_text()).files[0]
     assert record.policy is FilePolicy.REGIONS
     assert record.baseline is None
     assert record.regions
@@ -503,13 +503,13 @@ def test_generated_region_omission_never_prunes(tmp_path, monkeypatch, mocker):
 
     run(mocker, setup)
     original = Path("justfile").read_bytes()
-    baseline = Path(".protostar.lock.toml").read_bytes()
+    baseline = Path("protostar.lock").read_bytes()
     mocker.patch(
         "protostar.reconciliation.generate_justfile", return_value="changed base\n"
     )
     run(mocker, lambda e: setattr(e.manifest.tooling, "wants_just", True))
     assert Path("justfile").read_bytes() == original
-    assert Path(".protostar.lock.toml").read_bytes() == baseline
+    assert Path("protostar.lock").read_bytes() == baseline
 
 
 def test_agents_md_region_merges_updates_and_protects_edits(

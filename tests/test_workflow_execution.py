@@ -16,7 +16,7 @@ from protostar.yaml_ast import decode_yaml_baseline
 
 CI = Path(CI_TARGET)
 RELEASE = Path(RELEASE_TARGET)
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 
 
 def manifest(*, codecov: bool = False) -> EnvironmentManifest:

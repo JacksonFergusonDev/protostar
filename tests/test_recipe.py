@@ -181,9 +181,7 @@ def test_recipe_and_state_rollback_together(tmp_path, monkeypatch, mocker, failu
 
     def fail_after_write(path, content):
         original_write(path, content)
-        if path == Path(
-            "pyproject.toml" if failure == "recipe" else ".protostar.lock.toml"
-        ):
+        if path == Path("pyproject.toml" if failure == "recipe" else "protostar.lock"):
             raise OSError("late write failure")
 
     mocker.patch.object(executor.fs, "write_text", side_effect=fail_after_write)
@@ -192,7 +190,7 @@ def test_recipe_and_state_rollback_together(tmp_path, monkeypatch, mocker, failu
     assert target.read_bytes() == original
     if sys.platform != "win32":
         assert target.stat().st_mode & 0o777 == 0o640
-    assert not (tmp_path / ".protostar.lock.toml").exists()
+    assert not (tmp_path / "protostar.lock").exists()
 
 
 def test_repeat_recipe_has_no_writes(tmp_path, monkeypatch, mocker):
@@ -208,7 +206,7 @@ def test_repeat_recipe_has_no_writes(tmp_path, monkeypatch, mocker):
         )
         executor.execute()
     assert not executor.journal.touched_paths
-    state = tomllib.loads((tmp_path / ".protostar.lock.toml").read_text())
+    state = tomllib.loads((tmp_path / "protostar.lock").read_text())
     assert "protostar" not in str(state.get("files"))
 
 
@@ -568,7 +566,7 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
     executor = SystemExecutor(first, UserConfig())
     mocker.patch.object(executor, "_check_ide_extensions")
     executor.execute()
-    lock = tmp_path / ".protostar.lock.toml"
+    lock = tmp_path / "protostar.lock"
     target.chmod(0o640)
     lock.chmod(0o600)
     before = (target.read_bytes(), lock.read_bytes())
@@ -582,7 +580,7 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
 
     def fail_after_write(path, content):
         original_write(path, content)
-        if path == Path(".protostar.lock.toml") or (
+        if path == Path("protostar.lock") or (
             failure == "recipe"
             and "[tool.protostar]" in content
             and "docker = true" in content

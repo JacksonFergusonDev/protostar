@@ -1,7 +1,7 @@
 # Project recipes
 
 A successful `protostar init` records project intent in `[tool.protostar]` inside
-`pyproject.toml`. Commit it alongside `.protostar.lock.toml`. The recipe describes
+`pyproject.toml`. Commit it alongside `protostar.lock`. The recipe describes
 what you request; the lock records contributions actually accepted by semantic
 reconciliation. Conflicts can therefore leave desired intent ahead of applied
 ownership. The ownership ledger remains schema v1.

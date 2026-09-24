@@ -3,7 +3,6 @@
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
-├── .protostar.lock.toml
 ├── .python-version
 ├── Dockerfile
 ├── data
@@ -19,6 +18,7 @@
 │       └── .gitkeep
 ├── notebooks
 │   └── exploratory
+├── protostar.lock
 ├── pyproject.toml
 ├── src
 │   └── demo_project

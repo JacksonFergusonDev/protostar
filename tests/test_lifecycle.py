@@ -122,7 +122,7 @@ def test_json_and_human_review_exit_zero_even_with_conflicts(
     )
 
 
-@pytest.mark.parametrize("target", ["pyproject.toml", ".protostar.lock.toml"])
+@pytest.mark.parametrize("target", ["pyproject.toml", "protostar.lock"])
 def test_missing_enrollment_is_actionable(project, target):
     Path(target).unlink()
     with pytest.raises(ConfigurationError) as caught:
@@ -313,7 +313,7 @@ def test_structured_conflict_has_safe_sibling_and_state_only_advancement(
     )
 
 
-@pytest.mark.parametrize("target", ["pyproject.toml", ".protostar.lock.toml"])
+@pytest.mark.parametrize("target", ["pyproject.toml", "protostar.lock"])
 def test_json_failure_envelope_and_no_ancestor_search(
     project, target, monkeypatch, capsys
 ):
@@ -560,7 +560,7 @@ def test_sync_fatal_failure_restores_bytes_modes_and_reports_rollback(
     error = (
         KeyboardInterrupt()
         if failure == "interrupt"
-        else FileSystemError("write state", ".protostar.lock.toml", OSError("injected"))
+        else FileSystemError("write state", "protostar.lock", OSError("injected"))
     )
     mocker.patch("protostar.executor.SystemExecutor._write_state", side_effect=error)
     payload = invoke_sync(
@@ -688,7 +688,7 @@ def test_sync_check_counts_baseline_only_advancement(project, monkeypatch, capsy
     before = Path(".github/renovate.json").read_bytes()
     invoke_sync(monkeypatch, capsys, "--check", code=1)
     result = invoke_sync(monkeypatch, capsys)
-    assert result["result"]["touched_paths"] == [".protostar.lock.toml"]
+    assert result["result"]["touched_paths"] == ["protostar.lock"]
     assert Path(".github/renovate.json").read_bytes() == before
     assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"]
 
@@ -848,7 +848,7 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
         "value": 3,
         "safe": True,
     }
-    state = deserialize_state(Path(".protostar.lock.toml").read_text())
+    state = deserialize_state(Path("protostar.lock").read_text())
     assert any(record.path == "omitted.txt" for record in state.files)
     process.reset_mock()
     after = snapshot(Path.cwd())
@@ -908,7 +908,7 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     recipe_doc = tomlkit.parse(Path("pyproject.toml").read_text())
     recipe_doc["tool"]["protostar"]["tools"] = {"renovate": False}
     Path("pyproject.toml").write_text(tomlkit.dumps(recipe_doc))
-    retained = Path(".protostar.lock.toml").read_bytes()
+    retained = Path("protostar.lock").read_bytes()
     project.write_text("ruff = true\nprek = true\nrenovate = true\nmypy = true\n")
     prepared = prepare_project()
     selections = {selection.tool: selection for selection in prepared.review.selections}
@@ -932,7 +932,7 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     from protostar.sync_state import deserialize_state
 
     before = deserialize_state(retained.decode())
-    after = deserialize_state(Path(".protostar.lock.toml").read_text())
+    after = deserialize_state(Path("protostar.lock").read_text())
     record = next(
         record for record in before.files if record.path == ".github/renovate.json"
     )

@@ -74,7 +74,7 @@ acquisition may use the network and reads archive data entirely in memory.
 Initialization-only tasks and IDE probes are reported as excluded.
 
 The explicit current directory must contain `[tool.protostar]` in `pyproject.toml`
-and `.protostar.lock.toml`. For a Stage 1 project, rerun the original explicit
+and `protostar.lock`. For a Stage 1 project, rerun the original explicit
 selection with `init --force-merge` to enroll it. Edit the recipe deliberately to
 change tool selections; global defaults are never consulted during review.
 Template variable values come from `[tool.protostar.variables]`; these commands never prompt.

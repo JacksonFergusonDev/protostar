@@ -115,7 +115,7 @@ class ReviewWorkspace:
     def normalize_path(self, path: Path) -> Path:
         """Normalizes a validated relative target inside the explicit root."""
         relative = path.relative_to(self.workspace_root) if path.is_absolute() else path
-        if relative.as_posix() not in {".protostar.lock.toml", "uv.lock"}:
+        if relative.as_posix() not in {"protostar.lock", "uv.lock"}:
             validate_target(relative.as_posix())
         return self.workspace_root / relative
 

@@ -1178,7 +1178,7 @@ async def test_review_keys_confirm_trust_and_apply(tmp_path):
 def record_template(workspace):
     """Record a built-in template the drafts under test are not."""
     recorded = TemplateReference(TemplateOrigin.BUILT_IN, "api", "a" * 64)
-    (workspace / ".protostar.lock.toml").write_text(
+    (workspace / "protostar.lock").write_text(
         serialize_state(SyncState("0.9.0", recorded))
     )
 

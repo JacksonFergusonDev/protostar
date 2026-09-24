@@ -17,7 +17,7 @@ from protostar.registry import RemoteHook, ResolvedHookRevision
 from protostar.sync_state import FilePolicy, FileState, PinProvenance, deserialize_state
 from protostar.yaml_ast import decode_yaml_baseline
 
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 RTD = Path(readthedocs.TARGET)
 RTD_YML = Path(".readthedocs.yml")
 CI = Path(".github/workflows/ci.yml")

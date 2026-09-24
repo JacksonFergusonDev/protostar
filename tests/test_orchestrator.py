@@ -140,7 +140,7 @@ def test_plan_rejects_a_template_the_project_does_not_record(
     """plan() fails before any caller can ask about a template switch."""
     monkeypatch.chdir(tmp_path)
     recorded = TemplateReference(TemplateOrigin.BUILT_IN, "api", "a" * 64)
-    (tmp_path / ".protostar.lock.toml").write_text(
+    (tmp_path / "protostar.lock").write_text(
         serialize_state(SyncState("0.9.0", recorded))
     )
     engine = Orchestrator(

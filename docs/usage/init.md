@@ -305,7 +305,7 @@ their files; anything later is listed after setup, and `protostar sync` settles
 it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
 Selecting __Merge__ reconciles declared TOML configuration against
-`.protostar.lock.toml`. A tracked project requires the same explicitly selected
+`protostar.lock`. A tracked project requires the same explicitly selected
 template source; switching templates or adding a template to tracked tooling-only
 state is unsupported.
 

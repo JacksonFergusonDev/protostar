@@ -168,8 +168,8 @@ def test_toml_codec_rejects_lossy_or_unsupported_shapes(values):
         "C:\\escape",
         "\\server\\share",
         "a\\b",
-        ".protostar.lock.toml",
-        "a/.protostar.lock.toml",
+        "protostar.lock",
+        "a/protostar.lock",
         "uv.lock",
         "a/uv.lock",
         "bad\x00path",
@@ -318,7 +318,7 @@ def test_same_source_revision_is_allowed_but_alias_retargeting_is_rejected():
 def test_workspace_state_is_read_without_following_links(tmp_path):
     assert read_workspace_state(tmp_path) is None
     content = serialize_state(sample_state())
-    state_file = tmp_path / ".protostar.lock.toml"
+    state_file = tmp_path / "protostar.lock"
     state_file.write_text(content)
     assert read_workspace_state(tmp_path) == deserialize_state(content)
     state_file.write_bytes(b"\xff")
@@ -333,7 +333,7 @@ def test_workspace_state_is_read_without_following_links(tmp_path):
 
 def test_workspace_identity_rejects_only_a_recorded_other_template(tmp_path):
     check_workspace_identity(tmp_path, replace(REF, locator="cli"))
-    (tmp_path / ".protostar.lock.toml").write_text(serialize_state(sample_state()))
+    (tmp_path / "protostar.lock").write_text(serialize_state(sample_state()))
     check_workspace_identity(tmp_path, replace(REF, digest="b" * 64))
     with pytest.raises(ConfigurationError, match="differs") as caught:
         check_workspace_identity(tmp_path, replace(REF, locator="cli"))

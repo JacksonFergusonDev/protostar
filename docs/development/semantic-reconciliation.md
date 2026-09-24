@@ -370,7 +370,7 @@ New never-seeded paths can still be created.
 Named append regions use the same `reconcile_text` gate per stable identity.
 Delimiters use subtle, editor-folding-compatible comments (`# region: protostar <tag>`
 and `# endregion: protostar <tag>`) carrying a deterministic 8-character hex tag
-derived from the region identity, while `.protostar.lock.toml` preserves the tag,
+derived from the region identity, while `protostar.lock` preserves the tag,
 full logical ID, and last applied framed text. That text spans the begin marker
 through the end marker, including the payload and internal line endings,
 excluding the newline following the end marker. Replacement preserves all bytes
@@ -489,7 +489,7 @@ distinguishes eligible initializer-created values from pre-existing user values.
 Recipe refresh remains after post-install tasks and inside the state transaction.
 
 Captured inputs include exact bytes, existence, POSIX modes, relevant ancestors,
-`pyproject.toml`, `.protostar.lock.toml`, and declared resolver paths. Unsupported
+`pyproject.toml`, `protostar.lock`, and declared resolver paths. Unsupported
 nodes fail during preparation. Immediately before applying a batch, execution
 checks the desired manifest and all captured inputs; a stale review fails before
 that batch mutates anything. Fatal failures terminate managed processes and roll

@@ -22,7 +22,7 @@ from protostar.sync_state import FilePolicy, deserialize_state
 from protostar.yaml_ast import decode_yaml_baseline
 
 TARGET = Path(readthedocs.TARGET)
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 JOBS_HELD = MergeConflict(
     MergeLocation(readthedocs.TARGET, ("build", "jobs")), ConflictReason.UNOWNED
 )

@@ -249,10 +249,10 @@ class SystemExecutor(Reconciliation):
         content = serialize_state(self.candidate_state)
         if content.encode("utf-8") != self._state_bytes:
             try:
-                self.fs.write_text(Path(".protostar.lock.toml"), content)
+                self.fs.write_text(Path("protostar.lock"), content)
             except OSError as e:
                 raise FileSystemError(
-                    "write reconciliation state", ".protostar.lock.toml", e
+                    "write reconciliation state", "protostar.lock", e
                 ) from e
 
     def _prepare(self, phase: PreparationPhase) -> PreparedReview:

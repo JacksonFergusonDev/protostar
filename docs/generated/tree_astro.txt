@@ -2,13 +2,13 @@
 ├── .envrc
 ├── .gitattributes
 ├── .gitignore
-├── .protostar.lock.toml
 ├── .python-version
 ├── data
 │   ├── catalogs
 │   └── fits
 ├── justfile
 ├── notebooks
+├── protostar.lock
 ├── pyproject.toml
 ├── src
 └── uv.lock

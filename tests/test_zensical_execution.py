@@ -14,7 +14,7 @@ from protostar.modules import ZensicalModule
 from protostar.sync_state import FilePolicy, deserialize_state
 
 TARGET = Path(zensical.TARGET)
-STATE = Path(".protostar.lock.toml")
+STATE = Path("protostar.lock")
 UNOWNED = MergeConflict(MergeLocation(zensical.TARGET), ConflictReason.UNOWNED)
 
 # The shape `zensical new` writes: dotted pymdownx keys, its own nav and palette.

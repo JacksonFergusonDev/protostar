@@ -8,12 +8,12 @@
 │       └── ci.yml
 ├── .gitignore
 ├── .pre-commit-config.yaml
-├── .protostar.lock.toml
 ├── .python-version
 ├── CHANGELOG.md
 ├── Dockerfile
 ├── README.md
 ├── justfile
+├── protostar.lock
 ├── pyproject.toml
 ├── src
 │   └── demo_project

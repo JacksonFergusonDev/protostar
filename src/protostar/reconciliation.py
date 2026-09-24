@@ -1350,7 +1350,7 @@ class Reconciliation:
 
     def _load_state(self) -> None:
         """Validates committed ownership before any mutation."""
-        target = Path(".protostar.lock.toml")
+        target = Path("protostar.lock")
         self._validate_node(target)
         try:
             self._state_bytes = (

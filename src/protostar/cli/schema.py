@@ -120,7 +120,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         else:
             prop = {"type": "string"}
 
-        target_pattern = r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))(?!.*(?:^|/)(?:\.protostar\.lock\.toml|uv\.lock)(?:/|$)).+$"
+        target_pattern = r"^(?!/)(?!.*(?:^|/)\.\.(?:/|$))(?!.*(?:^|/)(?:protostar\.lock|uv\.lock)(?:/|$)).+$"
         if f.name in ("files", "appends"):
             prop["propertyNames"] = {"pattern": target_pattern}
         if f.name == "files":

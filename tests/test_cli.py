@@ -98,7 +98,7 @@ def test_wizard_rejects_unreadable_state_before_the_editor(
 ):
     """Every preview would fail on unreadable state, so the editor never opens."""
     monkeypatch.chdir(tmp_path)
-    (tmp_path / ".protostar.lock.toml").write_bytes(b"\xff")
+    (tmp_path / "protostar.lock").write_bytes(b"\xff")
     mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     editor = mocker.patch("protostar.cli.parser.edit_recipe")
@@ -1545,7 +1545,7 @@ def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
     """A project's recorded template is checked before variables or a review."""
     monkeypatch.chdir(tmp_path)
     recorded = TemplateReference(TemplateOrigin.BUILT_IN, "api", "a" * 64)
-    (tmp_path / ".protostar.lock.toml").write_text(
+    (tmp_path / "protostar.lock").write_text(
         serialize_state(SyncState("0.9.0", recorded))
     )
     blueprint = tmp_path / "blueprint.toml"
