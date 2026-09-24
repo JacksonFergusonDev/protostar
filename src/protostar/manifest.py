@@ -23,7 +23,7 @@ from .interpolation import render_template
 from .merge import MergeConflict
 from .metadata import LicenseType
 from .sync_state import FilePolicy
-from .workflows import CIFlag, TargetOS
+from .workflows import DOCKERFILE, CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
 from .workspace import resolve_package_name, resolve_project_name
 
@@ -672,7 +672,7 @@ class EnvironmentManifest:
             targets.add(Path("justfile"))
 
         if self.tooling.wants_docker:
-            targets.add(Path("Dockerfile"))
+            targets.add(Path(DOCKERFILE))
             targets.add(Path(".dockerignore"))
 
         return targets

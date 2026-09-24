@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any, cast
 
+from .analysis import ProjectAnalysis, ProjectFacts
 from .config import TemplateSource, UserConfig
 from .manifest import CollisionStrategy, ProjectMetadata
 from .merge import NO_RESOLUTIONS, Resolutions
@@ -34,7 +35,12 @@ class DraftTemplate:
 
 @dataclass(frozen=True)
 class InitDraft:
-    """Unresolved init choices shared by flags and the interactive editor."""
+    """Unresolved init choices shared by flags and the interactive editor.
+
+    ``analysis`` describes a project that has no recipe yet. Its facts fill what
+    the draft leaves unset, ahead of configuration defaults; its tools are only
+    ever offered by the editor, never selected here.
+    """
 
     template: DraftTemplate | None = None
     tool_overrides: tuple[tuple[Tool, bool], ...] = ()
@@ -46,6 +52,7 @@ class InitDraft:
     allowed_secrets: frozenset[str] = frozenset()
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
+    analysis: ProjectAnalysis | None = None
 
 
 @dataclass(frozen=True)
@@ -72,6 +79,15 @@ def resolve_init(
 ) -> tuple[list[BootstrapModule], InitRequest]:
     """Resolve a draft into one reproducible recipe, module stack, and request."""
     existing = draft.existing_recipe
+    # A recorded recipe already holds the project's facts.
+    facts = (
+        draft.analysis.facts
+        if draft.analysis is not None and existing is None
+        else ProjectFacts()
+    )
+    python = draft.python_version or (
+        facts.python_version.value if facts.python_version else None
+    )
     config = (
         replace(user_config, python_version=existing.python, ide=existing.ide)
         if existing
@@ -122,6 +138,11 @@ def resolve_init(
 
         required = {key for module in tooling for key in module.required_metadata}
         metadata: dict[str, Any] = resolve_auto_metadata(required, config=config)
+        metadata.update(
+            (key, list(value) if isinstance(value, tuple) else value)
+            for key, value in facts.metadata().items()
+            if key in required
+        )
         if existing:
             metadata = {
                 key: list(value) if isinstance(value, tuple) else value
@@ -147,7 +168,7 @@ def resolve_init(
             blueprint.reference if blueprint else None,
             cast(ProjectMetadata, metadata),
             docker,
-            draft.python_version,
+            python,
             tuple(sorted(variables.items())),
         ),
     )
@@ -157,10 +178,15 @@ def resolve_init(
         fallback=tuple(sorted(fallback.items())),
         context=existing.context if existing else recipe.context,
     )
-    if draft.python_version:
-        resolved_context = dict(recipe.context)
-        resolved_context["PYTHON_VERSION"] = draft.python_version
-        recipe = replace(recipe, context=tuple(sorted(resolved_context.items())))
+    resolved_context = dict(recipe.context)
+    if python:
+        resolved_context["PYTHON_VERSION"] = python
+    if facts.author_name and not metadata.get("author_name"):
+        resolved_context["AUTHOR_NAME"] = facts.author_name.value
+    if facts.current_year:
+        # The year the license already states keeps it rendering unchanged.
+        resolved_context["CURRENT_YEAR"] = facts.current_year.value
+    recipe = replace(recipe, context=tuple(sorted(resolved_context.items())))
     recipe = decode_recipe(recipe.to_dict())
 
     core = PythonCore(

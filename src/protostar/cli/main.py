@@ -74,10 +74,12 @@ def handle_init(args: argparse.Namespace) -> None:
     from dataclasses import replace
     from pathlib import Path
 
+    from protostar.analysis import analyze_project
     from protostar.recipe import Tool, read_recipe
 
     user_config = UserConfig.load()
     existing_recipe = read_recipe(Path("pyproject.toml"))
+    analysis = None if existing_recipe else analyze_project(Path.cwd())
     if existing_recipe:
         user_config = replace(
             user_config, python_version=existing_recipe.python, ide=existing_recipe.ide
@@ -181,6 +183,7 @@ def handle_init(args: argparse.Namespace) -> None:
         allowed_secrets=allowed_secrets,
         collision_strategy=strategy,
         existing_recipe=existing_recipe,
+        analysis=analysis,
     )
     if (
         source
@@ -221,6 +224,7 @@ def handle_init(args: argparse.Namespace) -> None:
                     "api_version": schema.CLI_API_VERSION,
                     "status": "planned",
                     "manifest": manifest.to_dict(),
+                    "analysis": analysis.to_dict() if analysis else None,
                 }
             )
         else:

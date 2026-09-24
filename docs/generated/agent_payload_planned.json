@@ -142,5 +142,46 @@
       ],
       "post_install_tasks": []
     }
+  },
+  "analysis": {
+    "existing": true,
+    "tools": [
+      {
+        "tool": "pytest",
+        "sources": [
+          "pytest in pyproject.toml dependencies"
+        ]
+      },
+      {
+        "tool": "ruff",
+        "sources": [
+          "pyproject.toml [tool.ruff]"
+        ]
+      }
+    ],
+    "docker": [],
+    "facts": {
+      "author_name": {
+        "value": "Demo Author",
+        "source": "pyproject.toml [project].authors"
+      },
+      "current_year": {
+        "value": "2024",
+        "source": "LICENSE"
+      },
+      "license": {
+        "value": "MIT",
+        "source": "LICENSE"
+      },
+      "minimum_python": {
+        "value": "3.12",
+        "source": "pyproject.toml [project].requires-python"
+      },
+      "python_version": {
+        "value": "3.12",
+        "source": "pyproject.toml [project].requires-python"
+      }
+    },
+    "notes": []
   }
 }

@@ -26,6 +26,7 @@ from textual.widgets import (
     Static,
 )
 
+from protostar.analysis import NoteKind, ProjectAnalysis
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDecision, InitDraft
@@ -117,8 +118,57 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.sources: dict[Tool, str] = {}
         self.docker_override = draft.docker
         self._selected_template: TemplateInfo | _TemplateChoice | None = None
+        # A recorded recipe already says what the project uses.
+        self.analysis = None if draft.existing_recipe else draft.analysis
+        # Where each found tool was seen, and which hook runner a found one
+        # switched off, until the user changes that tool.
+        self.found: dict[Tool, str] = {}
+        self.displaced: dict[Tool, Tool] = {}
+        self.docker_found = ""
         self._resolve_selections()
+        if self.analysis:
+            self._select_found(self.analysis)
         self._metadata_defaults = metadata_defaults(draft, config)
+
+    def _select_found(self, analysis: ProjectAnalysis) -> None:
+        """Switch on the tools the project already uses.
+
+        Found tools are only ever added: a template's opinions and the
+        configured defaults still apply to everything else, except a hook
+        runner the found one replaces. A found tool whose prerequisite is off
+        stays off, still marked found, rather than leaving the tools invalid.
+        """
+        self.found = {item.tool: item.sources[0] for item in analysis.tools}
+        added = {tool for tool in self.found if not self.enabled[tool]}
+        for tool in added:
+            self.overrides[tool] = True
+            for pair in EXCLUSIVE_TOOL_PAIRS:
+                if tool in pair:
+                    for other in pair - {tool}:
+                        if self.enabled[other]:
+                            self.overrides[other] = False
+                            self.displaced[other] = tool
+        self._resolve_selections()
+        enabled = {tool for tool, value in self.enabled.items() if value}
+        blocked = {
+            tool
+            for tool in added
+            if not TOOL_REQUIREMENTS.get(tool, frozenset()) <= enabled
+        }
+        for tool in blocked:
+            del self.overrides[tool]
+        if blocked:
+            self._resolve_selections()
+        if analysis.docker:
+            self.docker_found = analysis.docker[0]
+            if not self._docker():
+                self.docker_override = True
+
+    def _forget(self, *tools: Tool) -> None:
+        """The user decided these tools, so what analysis said no longer shows."""
+        for tool in tools:
+            self.found.pop(tool, None)
+            self.displaced.pop(tool, None)
 
     def _resolve_selections(self) -> None:
         source = self.draft.template.source if self.draft.template else None
@@ -141,11 +191,16 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         selections = recipe.selections(self.opinions)
         self.enabled = {selection.tool: selection.enabled for selection in selections}
         self.sources = {
-            selection.tool: "your choice"
-            if selection.tool in self.overrides
-            else _SOURCES[selection.layer]
+            selection.tool: self._source(selection.tool, selection.layer)
             for selection in selections
         }
+
+    def _source(self, tool: Tool, layer: SelectionLayer) -> str:
+        if tool in self.found:
+            return f"found · {self.found[tool]}"
+        if tool in self.displaced:
+            return f"off · {_NAMES[self.displaced[tool]]} found"
+        return "your choice" if tool in self.overrides else _SOURCES[layer]
 
     def _label(self, tool: Tool) -> Content:
         # Names pad to one width so every source lines up in a column.
@@ -161,6 +216,13 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             parts.append((f" · requires {requires}", "$text-warning"))
         return Content.assemble(*parts)
 
+    def _docker_label(self) -> str | Content:
+        if not self.docker_found:
+            return "Docker"
+        return Content.assemble(
+            "Docker".ljust(_NAME_WIDTH), (f"found · {self.docker_found}", "$text-faint")
+        )
+
     def _docker(self) -> bool:
         if self.docker_override is not None:
             return self.docker_override
@@ -172,7 +234,10 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         """Compose the editor sections beside the plan preview."""
         yield Masthead("init", "recipe")
         yield Headline(
-            "Build your recipe", "Choose a starting point, tools, and project details."
+            "Build your recipe",
+            "Existing project: the tools and details it already has are filled in."
+            if self.analysis and self.analysis.existing
+            else "Choose a starting point, tools, and project details.",
         )
         with Horizontal(id="body"):
             with Panel("Recipe", id="editor-panel"), Form(id="editor"):
@@ -183,9 +248,13 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
                 yield Heading("Tools")
+                if notes := self._notes():
+                    yield Static(notes, id="analysis-notes", classes="note")
                 yield Static("", id="constraints", markup=False)
                 with ChoiceGroup(id="tools"):
-                    yield Toggle("Docker", value=self._docker(), id="docker")
+                    yield Toggle(
+                        self._docker_label(), value=self._docker(), id="docker"
+                    )
                     for title, tools in _GROUPS.items():
                         yield Label(title, classes="group")
                         for tool in tools:
@@ -219,6 +288,28 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                         key_label("Continue", "^s"), variant="primary", id="continue"
                     )
         yield Footer()
+
+    def _notes(self) -> Text | None:
+        """Describe what analysis saw but left out, or ``None`` if nothing."""
+        if not self.analysis:
+            return None
+        lines: list[str] = []
+        workflows = [
+            note.path
+            for note in self.analysis.notes
+            if note.kind is NoteKind.OTHER_WORKFLOW
+        ]
+        if workflows:
+            lines.append(
+                f"Other workflows: {', '.join(workflows)}. "
+                f"{_NAMES[Tool.CI]} would add its own beside them."
+            )
+        lines.extend(
+            f"Could not read {note.path}; nothing was taken from it."
+            for note in self.analysis.notes
+            if note.kind is NoteKind.UNREADABLE
+        )
+        return Text("\n".join(lines)) if lines else None
 
     def _template_select(self) -> Picker[TemplateInfo | _TemplateChoice]:
         options: list[tuple[Text, TemplateInfo | _TemplateChoice]] = [
@@ -429,11 +520,14 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             if event.value == self._docker():
                 return
             self.docker_override = event.value
+            self.docker_found = ""
+            event.checkbox.label = self._docker_label()
             self._changed()
             return
         tool = Tool(str(event.checkbox.id).removeprefix("tool-"))
         if self.enabled[tool] == event.value:
             return
+        self._forget(tool)
         self.overrides[tool] = event.value
         # Disabling a prerequisite also clears its dependent tool.
         for dependent, required in TOOL_REQUIREMENTS.items():
@@ -453,6 +547,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         values = {tool: tool.value == selected for tool in pair}
         if all(self.enabled[tool] == value for tool, value in values.items()):
             return
+        self._forget(*pair)
         self.overrides.update(values)
         self._resolve_selections()
         self._refresh_tools()

@@ -806,10 +806,26 @@ def generate_agent_payloads() -> None:
                 "python.terminal.activateEnvironment": True,
             }
 
+            # Analysis reads a separate example project, so the manifest above
+            # stays that of a new one.
+            from protostar.analysis import analyze_project
+
+            existing = Path(tmp_dir, "existing")
+            existing.mkdir()
+            (existing / "pyproject.toml").write_text(
+                '[project]\nname = "demo"\nrequires-python = ">=3.12"\n'
+                'authors = [{ name = "Demo Author" }]\n'
+                'dependencies = []\n\n[dependency-groups]\ndev = ["pytest"]\n\n'
+                "[tool.ruff]\nline-length = 100\n"
+            )
+            (existing / "LICENSE").write_text(
+                "MIT License\n\nCopyright (c) 2024 Demo Author\n"
+            )
             planned_payload = {
                 "api_version": protostar.cli.schema.CLI_API_VERSION,
                 "status": "planned",
                 "manifest": manifest.to_dict(),
+                "analysis": analyze_project(existing).to_dict(),
             }
             _write_generated_doc(
                 "agent_payload_planned.json", json.dumps(planned_payload, indent=2)

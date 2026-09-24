@@ -26,6 +26,7 @@ from textual.widgets import (
 )
 from textual.worker import WorkerCancelled
 
+from protostar.analysis import analyze_project
 from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
 from protostar.cli.tui.keys import KeysScreen, LeaveScreen
@@ -597,6 +598,122 @@ async def test_metadata_defaults_follow_config_tools_and_docker():
     assert draft.python_version == "3.13"
 
 
+def existing_project(root):
+    """A project Protostar has not seen: hooks, a justfile, Docker, facts."""
+    (root / "pyproject.toml").write_text(
+        '[project]\nname = "orbit"\nrequires-python = ">=3.12"\n'
+        'authors = [{ name = "Ada Lovelace", email = "ada@example.com" }]\n'
+        'classifiers = ["License :: OSI Approved :: Apache Software License"]\n\n'
+        '[dependency-groups]\ndev = ["prek"]\n'
+    )
+    (root / "justfile").write_text("test:\n    pytest\n")
+    (root / ".pre-commit-config.yaml").write_text("repos: []\n")
+    (root / ".readthedocs.yaml").write_text("version: 2\n")
+    (root / "Dockerfile").write_text("FROM python:3.12\n")
+    (root / ".github" / "workflows").mkdir(parents=True)
+    (root / ".github" / "workflows" / "deploy.yml").write_text("name: Deploy\n")
+    return analyze_project(root)
+
+
+@pytest.mark.asyncio
+async def test_an_existing_project_prefills_its_tools_and_details(workspace):
+    config = UserConfig(
+        ruff=True,
+        just=False,
+        prek=False,
+        pre_commit=False,
+        zensical=False,
+        readthedocs=False,
+    )
+    app = make_app(InitDraft(analysis=existing_project(workspace)), config)
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        assert "Existing project" in plain(app, "#subtitle")
+        just = screen.query_one("#tool-just", Checkbox)
+        assert just.value
+        assert "found · justfile" in just.label.plain
+        prek = screen.query_one("#tool-prek", RadioButton)
+        assert prek.value
+        assert "found · .pre-commit-config.yaml" in prek.label.plain
+        # Found tools are only added: a configured default stays on.
+        ruff = screen.query_one("#tool-ruff", Checkbox)
+        assert ruff.value
+        assert "from config" in ruff.label.plain
+        # Read the Docs needs Zensical, which the project does not use.
+        rtd = screen.query_one("#tool-readthedocs", Checkbox)
+        assert not rtd.value
+        assert "found · .readthedocs.yaml" in rtd.label.plain
+        assert "requires Zensical" in rtd.label.plain
+        docker = screen.query_one("#docker", Checkbox)
+        assert docker.value
+        assert "found · Dockerfile" in docker.label.plain
+        assert "deploy.yml" in plain(app, "#analysis-notes")
+        assert screen.query_one("#meta-author_name", Input).value == "Ada Lovelace"
+        assert screen.query_one("#meta-author_email", Input).value == "ada@example.com"
+        assert screen.query_one("#meta-license", Select).value == "Apache-2.0"
+        assert screen.query_one("#meta-minimum_python", Input).value == "3.12"
+        just.focus()
+        await pilot.press("space")
+        await settle(pilot)
+        assert not just.value
+        assert "your choice" in just.label.plain
+        await apply(pilot)
+    draft = app.return_value.draft
+    choices = dict(draft.tool_choices)
+    assert choices[Tool.PREK]
+    assert not choices[Tool.PRE_COMMIT]
+    assert not choices[Tool.JUST]
+    assert draft.docker
+    assert draft.python_version == "3.12"
+
+
+@pytest.mark.asyncio
+async def test_a_found_hook_runner_replaces_the_configured_one(workspace):
+    config = UserConfig(pre_commit=True, prek=False)
+    app = make_app(InitDraft(analysis=existing_project(workspace)), config)
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        pre_commit = app.screen.query_one("#tool-pre_commit", RadioButton)
+        assert not pre_commit.value
+        assert "off · Prek found" in pre_commit.label.plain
+        assert app.screen.query_one("#tool-prek", RadioButton).value
+
+
+@pytest.mark.asyncio
+async def test_a_template_keeps_its_opinions_beside_found_tools(workspace):
+    (workspace / "justfile").write_text("test:\n")
+    draft = template_draft(
+        workspace / "template.toml",
+        'name = "Orbit"\ndescription = "Orbit"\njust = false\nmypy = true\n',
+        analysis=analyze_project(workspace),
+    )
+    app = make_app(draft, UserConfig(mypy=False))
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        just = app.screen.query_one("#tool-just", Checkbox)
+        mypy = app.screen.query_one("#tool-mypy", Checkbox)
+        assert just.value
+        assert "found · justfile" in just.label.plain
+        assert mypy.value
+        assert "from template" in mypy.label.plain
+
+
+@pytest.mark.asyncio
+async def test_a_recorded_recipe_ignores_analysis(workspace):
+    config = UserConfig(just=False)
+    draft = InitDraft(
+        existing_recipe=establish_recipe(config),
+        analysis=existing_project(workspace),
+    )
+    app = make_app(draft, config)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert "Existing project" not in plain(app, "#subtitle")
+        assert not app.screen.query_one("#tool-just", Checkbox).value
+        assert not app.screen.query("#analysis-notes")
+
+
 @pytest.mark.asyncio
 async def test_toggling_a_tool_updates_the_preview():
     app = make_app()
@@ -660,6 +777,20 @@ def test_editor_snapshot(snap_compare, monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
     app = make_app(config=UserConfig(author_name="Ada Lovelace"))
     assert snap_compare(app, terminal_size=(110, 50), run_before=settle)
+
+
+def test_existing_project_snapshot(snap_compare, monkeypatch, workspace):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    config = UserConfig(just=False, prek=False, pre_commit=False)
+    app = make_app(InitDraft(analysis=existing_project(workspace)), config)
+
+    async def tools(pilot):
+        await settle(pilot)
+        notes = pilot.app.screen.query_one("#analysis-notes")
+        notes.scroll_visible(top=True, animate=False, immediate=True)
+        await pilot.pause()
+
+    assert snap_compare(app, terminal_size=(110, 50), run_before=tools)
 
 
 def test_editor_details_snapshot(snap_compare, monkeypatch):
@@ -1123,6 +1254,20 @@ def test_cancelled_editor_never_executes(mocker, monkeypatch, tmp_path):
     with pytest.raises(ExecutionAbortedError):
         parser.intercept_interactive_wizards(mocker.Mock())
     execute.assert_not_called()
+
+
+def test_the_wizard_hands_the_editor_its_analysis(mocker, monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "justfile").write_text("test:\n")
+    monkeypatch.setattr(sys, "argv", ["protostar"])
+    mocker.patch.object(parser, "is_interactive", return_value=True)
+    mocker.patch.object(UserConfig, "load", return_value=UserConfig())
+    edit = mocker.patch.object(parser, "edit_recipe", return_value=None)
+    with pytest.raises(ExecutionAbortedError):
+        parser.intercept_interactive_wizards(mocker.Mock())
+    draft = edit.call_args.args[0]
+    assert draft.analysis == analyze_project(tmp_path)
+    assert draft.analysis.existing
 
 
 def test_summary_is_literal_and_cp1252_safe(mocker):

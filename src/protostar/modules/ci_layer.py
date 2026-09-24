@@ -3,9 +3,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from protostar.documents import github_workflows
 from protostar.metadata import MetadataKey
 
-from .base import BootstrapModule
+from .base import BootstrapModule, PathSignal
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -40,6 +41,7 @@ class CIModule(BootstrapModule):
     cli_flags = ("--ci",)
     cli_help = "Scaffold standard GitHub Actions CI workflows"
     config_key = "ci"
+    signals = tuple(PathSignal(path) for path in github_workflows.CI_LOCATIONS.paths)
     required_metadata = (MetadataKey.SUPPORTED_OS, MetadataKey.MINIMUM_PYTHON)
 
     @property
@@ -61,6 +63,9 @@ class ReleaseModule(BootstrapModule):
     cli_flags = ("--release",)
     cli_help = "Scaffold GitHub Actions PyPI release workflows"
     config_key = "release"
+    signals = tuple(
+        PathSignal(path) for path in github_workflows.RELEASE_LOCATIONS.paths
+    )
 
     @property
     def name(self) -> str:
