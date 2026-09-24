@@ -524,6 +524,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export_schema_parser.set_defaults(func=schema.handle_export_schema)
 
+    # --- Check Template Subparser ---
+    from protostar.cli.check_template import handle_check_template
+
+    check_template_parser = subparsers.add_parser(
+        "check-template",
+        help="Check a template for errors and authoring problems before publishing it.",
+        description="Checks that protostar init would accept a template, and that it follows the practices built-in templates follow. Runs no commands and writes nothing.",
+        usage=argparse.SUPPRESS,
+        epilog="Exits 1 when the template has errors, or warnings under --strict. A template that cannot be retrieved exits with its usual error code instead.\n\n[bold]Examples:[/bold]\n  protostar check-template\n  protostar check-template ./templates/backend.toml --strict\n  protostar check-template https://github.com/YourOrg/fastapi-template",
+        parents=[suppressed_base_parser],
+    )
+    check_template_parser.add_argument(
+        "source",
+        nargs="?",
+        default=".",
+        metavar="<source>",
+        help="A template directory, a template TOML file, or a URL. Defaults to the current directory.",
+    )
+    check_template_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail on warnings as well as errors.",
+    )
+    check_template_parser.set_defaults(func=handle_check_template)
+
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
         "config",

@@ -229,3 +229,14 @@ def test_review_lists_proposals_and_kept_edits(legacy_console, tmp_path, monkeyp
     assert "1 changes to your files" in written
     assert "Proposed " in written
     assert "pyproject.toml tool: applies; decline with local." in written
+
+
+def test_template_check_marks(legacy_console, monkeypatch, tmp_path):
+    (tmp_path / "protostar.toml").write_text("ruff = true\n", encoding="utf-8")
+    monkeypatch.setattr("sys.argv", ["protostar", "check-template", str(tmp_path)])
+
+    main()
+
+    written = legacy_console()
+    assert "+ Template check passed with 2 warnings." in written
+    assert "protostar.toml -> name" in written

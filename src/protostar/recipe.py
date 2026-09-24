@@ -189,14 +189,16 @@ class ProjectRecipe:
 
     def selections(self, opinions: dict[str, bool]) -> tuple[ToolSelection, ...]:
         """Resolves overrides, current template opinions, then captured defaults."""
-        if any(
-            key not in ({tool.value for tool in Tool} | {"docker"})
-            or type(value) is not bool
+        known = {tool.value for tool in Tool} | {"docker"}
+        invalid = sorted(
+            key
             for key, value in opinions.items()
-        ):
+            if key not in known or type(value) is not bool
+        )
+        if invalid:
             raise ConfigurationError(
-                "Invalid template tooling opinion.",
-                hint="Use recognized tool names with boolean selections.",
+                f"The template sets unknown tooling flags: {', '.join(invalid)}.",
+                hint=f"Use recognized tool names with boolean selections: {', '.join(sorted(known))}.",
             )
         overrides, fallback = dict(self.tools), dict(self.fallback)
         return tuple(

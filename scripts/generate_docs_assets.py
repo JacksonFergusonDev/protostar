@@ -624,6 +624,27 @@ def generate_capability_tables() -> None:
         _format_markdown_table(export_schema_headers, export_schema_rows),
     )
 
+    # CLI check-template options table
+    check_template_headers = ["Option", "Description"]
+    check_template_rows = [
+        [
+            "`<source>`",
+            "A template directory, a template TOML file, or an HTTPS URL. Defaults to the current directory.",
+        ],
+        [
+            "`--strict`",
+            "Fails on warnings as well as errors.",
+        ],
+        [
+            "`--json`",
+            "Emits the findings as a JSON payload with `status` `passed` or `failed`.",
+        ],
+    ]
+    _write_generated_doc(
+        "table_cli_check_template.md",
+        _format_markdown_table(check_template_headers, check_template_rows),
+    )
+
     # CLI completion options table
     completion_headers = ["Option", "Description"]
     completion_rows = [
