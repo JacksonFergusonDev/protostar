@@ -9,6 +9,12 @@ After a tracked `init`, commit `pyproject.toml` and `protostar.lock`. The
 lock records accepted ownership. Run lifecycle commands from that project's root.
 Protostar uses the current directory and never searches ancestors for a project.
 
+To stop tracking the project, run `protostar eject`. It shows the pending removal of
+`protostar.lock` and `[tool.protostar]` and asks for confirmation. Preview the
+`pyproject.toml` diff with `protostar eject --dry-run`, or pass `--yes` when no
+interactive terminal is available. Other files, including `uv.lock`, remain.
+After ejection, the lifecycle commands on this page no longer apply.
+
 ## Review, apply, repeat
 
 ```bash

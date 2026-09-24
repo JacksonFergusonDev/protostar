@@ -377,6 +377,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sync_parser.set_defaults(func=handle_sync)
 
+    from protostar.cli.eject import handle_eject
+
+    eject_parser = subparsers.add_parser(
+        "eject",
+        help="Remove Protostar tracking while keeping the scaffolded project.",
+        description="Remove protostar.lock and the project recipe from pyproject.toml.",
+        parents=[base_parser],
+        epilog="Keeps uv.lock and every other project file. Interactive runs ask before applying; automation must pass --yes.",
+    )
+    eject_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show the planned changes and pyproject.toml diff without writing files.",
+    )
+    eject_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm ejection without an interactive prompt.",
+    )
+    eject_parser.set_defaults(func=handle_eject)
+
     # --- Init Subparser ---
     init_parser = subparsers.add_parser(
         "init",
