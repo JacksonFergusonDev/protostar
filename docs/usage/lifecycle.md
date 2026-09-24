@@ -161,6 +161,8 @@ write a recipe opt-out. Captured metadata and year keep rendering repeatable.
 
 ## Enroll an existing project
 
+A project Protostar has never touched starts with `protostar init`, which reads the project first and fills the recipe from it; see [existing projects](init.md#existing-projects).
+
 A Stage 1 project needs an explicit recipe. Rerun its original selection:
 
 ```bash

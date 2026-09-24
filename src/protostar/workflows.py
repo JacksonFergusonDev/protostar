@@ -14,6 +14,7 @@ from .workspace import (
 )
 
 __all__ = [
+    "DOCKERFILE",
     "AgentsSpec",
     "CIFlag",
     "CIWorkflowSpec",
@@ -137,6 +138,10 @@ class AgentsSpec:
     lint_commands: list[str]
     typecheck_commands: list[str]
     ci_flags: set[CIFlag | str]
+
+
+DOCKERFILE = "Dockerfile"
+"""Workspace path of the generated container image definition."""
 
 
 @dataclass(frozen=True)

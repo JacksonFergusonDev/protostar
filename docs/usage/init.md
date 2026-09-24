@@ -263,6 +263,15 @@ If a step fails or you interrupt it, that step is marked `✖`, every tracked ch
 is rolled back, and the error report follows. Piped output omits the spinner but
 keeps the checklist lines; `--json` suppresses the checklist entirely.
 
+## Existing Projects
+
+When `init` runs in a directory that already holds a project but has no recipe yet, Protostar first reads what the project has. It only reads: nothing is written and no command runs.
+
+- __Facts__ fill the recipe in place of defaults and placeholders. The Python version and minimum come from `requires-python` (or `.python-version`), the author, description, and GitHub account from `[project]`, the license from `[project].license`, its classifiers, or the license file's heading, the supported operating systems from the classifiers, and the copyright year from the license file, so a regenerated license keeps its year. A value you pass or type always wins over a fact. Headless runs use the facts too, for the metadata the selected tools read.
+- __Tools__ the project already uses start switched on in the recipe editor, each marked `found` with what showed it, such as `found · justfile` or `found · pyproject.toml [tool.ruff]`. Found tools are only ever added: a template's opinions and your configured defaults still apply to everything else, except that a found hook runner replaces the configured one. A found tool whose prerequisite is off stays off, still marked, so you can decide. Headless runs never switch a tool on because it was found; flags stay the only selection there.
+
+The editor's headline says when it has filled in an existing project, and a note under __Tools__ names anything it left out, such as other GitHub Actions workflows the CI tool would run beside, or a file it could not read. `protostar init --dry-run --json` reports the same analysis for agents (see the [machine interface](agent-interface.md)).
+
 ## Progressive Scaffolding & Collisions
 
 When Protostar detects existing configuration files (like `pyproject.toml`), the change review marks them as conflicts and asks how to handle them under __Existing files__:

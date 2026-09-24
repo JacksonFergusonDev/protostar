@@ -14,6 +14,7 @@ import argcomplete
 from rich.console import Console
 from rich.table import Table
 
+from protostar.analysis import analyze_project
 from protostar.cli import completion, schema, ui
 from protostar.cli import main as cli_main
 from protostar.cli.completion import Shell
@@ -674,8 +675,11 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             )
         # The wizard benchmark measures time to the editor's first frame.
         benchmark = "PROTOSTAR_BENCHMARK_WIZARD" in os.environ
+        analysis = None if existing_recipe else analyze_project(Path.cwd())
         decision = edit_recipe(
-            InitDraft(template=template, existing_recipe=existing_recipe),
+            InitDraft(
+                template=template, existing_recipe=existing_recipe, analysis=analysis
+            ),
             catalog,
             user_config,
             exit_after_first_frame=benchmark,

@@ -56,6 +56,8 @@ Execution is strictly split into two decoupled phases:
 - Deduplicate and append to `.gitignore` files rather than replacing them.
 - **A resolution always owns the update.** Settling a conflict records the desired content as the new baseline; the `ResolutionChoice` only picks which bytes stay (`LOCAL`, `DESIRED`, or `BOTH` for text hunks). Resolutions are keyed by the content-addressed `MergeConflict.id`, never by position, and a text file's hunks apply together or not at all. A conflict with no `sides` is settled by hand.
 - **Format engines know no file by name.** `toml_ast`, `yaml_ast`, and `jsonc_ast` reconcile whatever spec they are handed. A file's target path, merge spec, and policy (guards, layout, pin handling) live in its module under `src/protostar/documents/` and are looked up through that package's registries; never branch on a file name inside an engine or hardcode a managed target path elsewhere.
+- **Tool signals live on their modules.** Each tooling module declares `signals` (`PathSignal`, `TableSignal`, `SectionSignal`, `RequirementSignal` in `modules/base.py`) showing that an existing project already uses its tool; document modules build theirs from their `documents/` locations. `analysis.py` reads only what modules declare and knows no tool by name.
+- **Analysis reads, never selects.** `analyze_project()` runs only when no recipe exists, writes nothing, runs no subprocess, and reports an unreadable file as a note instead of raising. Its facts fill recipe values the draft leaves unset, everywhere. Its tools are only offered by the recipe editor, which adds them and never removes a template opinion or configured default (a found hook runner replacing the configured one is the exception); headless runs never select a tool because it was found.
 
 ### 5. Domain-Specific Error Handling
 
@@ -197,6 +199,7 @@ Scale or omit these sections based on the scope of the PR.
 - `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).
 - `src/protostar/init_draft.py`: Shared init draft and resolver for flags and interactive choices.
+- `src/protostar/analysis.py`: Read-only analysis of a project with no recipe yet: the tools it uses (from module signals) and the facts that pre-fill its first recipe.
 - `src/protostar/manifest.py`: `EnvironmentManifest` definition and aggregation state.
 - `src/protostar/executor.py`: `SystemExecutor` coordinating transactional side-effects and rollback.
 - `src/protostar/progress.py`: `ProgressStep` hook through which the engine names execution steps for the CLI to render.

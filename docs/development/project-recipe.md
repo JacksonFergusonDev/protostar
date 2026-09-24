@@ -12,6 +12,8 @@ For new uv projects, the captured project name uses uv normalization (`Demo_Proj
 becomes `demo-project`); the package identifier remains `demo_project`. This keeps
 early file rendering and later TOML rendering consistent.
 
+In a project that had no recipe, the Python version, author, and year come from the project itself where it states them (see [existing projects](../usage/init.md#existing-projects)), and from your configuration otherwise.
+
 `[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.variables]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
 
 The schema-v1 recipe captures the resolved template origin and locator (or explicit

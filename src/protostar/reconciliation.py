@@ -93,6 +93,7 @@ from .toml_ast import (
     reconcile_toml,
 )
 from .workflows import (
+    DOCKERFILE,
     CIWorkflowSpec,
     DockerfileSpec,
     JustfileSpec,
@@ -1095,7 +1096,7 @@ class Reconciliation:
         if not self.docker:
             return
 
-        dockerfile = Path("Dockerfile")
+        dockerfile = Path(DOCKERFILE)
         dockerignore = Path(".dockerignore")
         enforce_path_jail(dockerfile, Path.cwd())
         enforce_path_jail(dockerignore, Path.cwd())

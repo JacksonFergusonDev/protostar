@@ -13,12 +13,20 @@ from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag, HookRunner
 from protostar.workspace import PythonVersion
 
-from .base import BootstrapModule
+from .base import (
+    BootstrapModule,
+    PathSignal,
+    RequirementSignal,
+    SectionSignal,
+    TableSignal,
+)
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
 
 logger = logging.getLogger("protostar")
+
+AGENTS_TARGET = "AGENTS.md"
 
 
 class DirenvModule(BootstrapModule):
@@ -27,6 +35,7 @@ class DirenvModule(BootstrapModule):
     cli_flags = ("--direnv",)
     cli_help = "Scaffold a .envrc and evaluate the virtual environment"
     config_key = "direnv"
+    signals = (PathSignal(".envrc"),)
 
     @property
     def name(self) -> str:
@@ -71,6 +80,19 @@ class MarkdownLintModule(BootstrapModule):
     cli_flags = ("--markdownlint",)
     cli_help = "Scaffold a relaxed .markdownlint-cli2.yaml configuration"
     config_key = "markdownlint"
+    signals = tuple(
+        PathSignal(name)
+        for name in (
+            ".markdownlint-cli2.yaml",
+            ".markdownlint-cli2.jsonc",
+            ".markdownlint-cli2.cjs",
+            ".markdownlint-cli2.mjs",
+            ".markdownlint.yaml",
+            ".markdownlint.yml",
+            ".markdownlint.json",
+            ".markdownlint.jsonc",
+        )
+    )
 
     @property
     def name(self) -> str:
@@ -173,6 +195,12 @@ class RumdlModule(BootstrapModule):
     cli_flags = ("--rumdl",)
     cli_help = "Scaffold rumdl fast markdown linter and formatter"
     config_key = "rumdl"
+    signals = (
+        PathSignal(".rumdl.toml"),
+        PathSignal("rumdl.toml"),
+        TableSignal(("tool", "rumdl")),
+        RequirementSignal("rumdl"),
+    )
 
     @property
     def name(self) -> str:
@@ -274,6 +302,12 @@ class RuffModule(BootstrapModule):
     cli_flags = ("--ruff",)
     cli_help = "Scaffold Ruff linter and formatter"
     config_key = "ruff"
+    signals = (
+        PathSignal("ruff.toml"),
+        PathSignal(".ruff.toml"),
+        TableSignal(("tool", "ruff")),
+        RequirementSignal("ruff"),
+    )
 
     @property
     def name(self) -> str:
@@ -351,6 +385,13 @@ class MypyModule(BootstrapModule):
     cli_flags = ("--mypy",)
     cli_help = "Scaffold Mypy static type checker"
     config_key = "mypy"
+    signals = (
+        PathSignal("mypy.ini"),
+        PathSignal(".mypy.ini"),
+        TableSignal(("tool", "mypy")),
+        SectionSignal("setup.cfg", "mypy"),
+        RequirementSignal("mypy"),
+    )
 
     @property
     def name(self) -> str:
@@ -405,6 +446,11 @@ class TyModule(BootstrapModule):
     cli_flags = ("--ty",)
     cli_help = "Scaffold Ty static type checker"
     config_key = "ty"
+    signals = (
+        PathSignal("ty.toml"),
+        TableSignal(("tool", "ty")),
+        RequirementSignal("ty"),
+    )
 
     @property
     def name(self) -> str:
@@ -443,6 +489,13 @@ class PytestModule(BootstrapModule):
     cli_flags = ("--pytest",)
     cli_help = "Scaffold Pytest testing framework"
     config_key = "pytest"
+    signals = (
+        PathSignal("pytest.ini"),
+        TableSignal(("tool", "pytest")),
+        SectionSignal("setup.cfg", "tool:pytest"),
+        SectionSignal("tox.ini", "pytest"),
+        RequirementSignal("pytest"),
+    )
 
     @property
     def name(self) -> str:
@@ -497,6 +550,13 @@ class PreCommitModule(BootstrapModule):
     cli_flags = ("--pre-commit",)
     cli_help = "Scaffold pre-commit hooks and configuration"
     config_key = "pre_commit"
+    signals = (
+        *(
+            PathSignal(path)
+            for path in pre_commit.LOCATIONS[HookRunner.PRE_COMMIT].paths
+        ),
+        RequirementSignal("pre-commit"),
+    )
 
     @property
     def name(self) -> str:
@@ -532,6 +592,10 @@ class PrekModule(BootstrapModule):
         "Scaffold prek hooks and configuration (faster Rust alternative to pre-commit)"
     )
     config_key = "prek"
+    signals = (
+        *(PathSignal(path) for path in pre_commit.LOCATIONS[HookRunner.PREK].paths),
+        RequirementSignal("prek"),
+    )
 
     @property
     def name(self) -> str:
@@ -565,6 +629,14 @@ class CommitizenModule(BootstrapModule):
     cli_flags = ("--commitizen",)
     cli_help = "Scaffold commitizen version bumping and changelog tooling"
     config_key = "commitizen"
+    signals = (
+        *(
+            PathSignal(name)
+            for name in (".cz.toml", "cz.toml", ".cz.json", "cz.json", ".cz.yaml")
+        ),
+        TableSignal(("tool", "commitizen")),
+        RequirementSignal("commitizen"),
+    )
 
     @property
     def name(self) -> str:
@@ -618,6 +690,11 @@ class PyreflyModule(BootstrapModule):
     cli_flags = ("--pyrefly",)
     cli_help = "Scaffold pyrefly static type checker"
     config_key = "pyrefly"
+    signals = (
+        PathSignal("pyrefly.toml"),
+        TableSignal(("tool", "pyrefly")),
+        RequirementSignal("pyrefly"),
+    )
 
     @property
     def name(self) -> str:
@@ -657,6 +734,7 @@ class RenovateModule(BootstrapModule):
     cli_flags = ("--renovate",)
     cli_help = "Scaffold Renovate dependency update configuration"
     config_key = "renovate"
+    signals = tuple(PathSignal(path) for path in renovate.LOCATIONS.paths)
 
     @property
     def name(self) -> str:
@@ -742,6 +820,7 @@ class CodecovModule(BootstrapModule):
     cli_flags = ("--codecov",)
     cli_help = "Scaffold Codecov configuration"
     config_key = "codecov"
+    signals = tuple(PathSignal(path) for path in codecov.LOCATIONS.paths)
 
     @property
     def name(self) -> str:
@@ -802,6 +881,11 @@ class ZensicalModule(BootstrapModule):
     cli_flags = ("--zensical",)
     cli_help = "Scaffold Zensical documentation"
     config_key = "zensical"
+    # A MkDocs site is a competitor, not Zensical: only its own file counts.
+    signals = (
+        *(PathSignal(path) for path in zensical.LOCATIONS.editable),
+        RequirementSignal("zensical"),
+    )
 
     @property
     def name(self) -> str:
@@ -920,6 +1004,7 @@ class ReadTheDocsModule(BootstrapModule):
     cli_flags = ("--readthedocs",)
     cli_help = "Scaffold Read the Docs configuration"
     config_key = "readthedocs"
+    signals = tuple(PathSignal(path) for path in readthedocs.LOCATIONS.paths)
     required_metadata = (MetadataKey.MINIMUM_PYTHON,)
 
     @property
@@ -987,6 +1072,7 @@ class JustModule(BootstrapModule):
     cli_flags = ("--just",)
     cli_help = "Scaffold a justfile for command execution"
     config_key = "just"
+    signals = (PathSignal("justfile"), PathSignal("Justfile"), PathSignal(".justfile"))
 
     @property
     def name(self) -> str:
@@ -1005,6 +1091,7 @@ class AgentsModule(BootstrapModule):
     cli_flags = ("--agents",)
     cli_help = "Scaffold a managed AGENTS.md guide for coding agents"
     config_key = "agents"
+    signals = (PathSignal(AGENTS_TARGET),)
 
     @property
     def name(self) -> str:

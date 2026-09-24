@@ -19,7 +19,7 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 
 === "Example Implementation"
     ```python
-    from protostar.modules import BootstrapModule
+    from protostar.modules import BootstrapModule, PathSignal
     from protostar.manifest import EnvironmentManifest
 
     class JustModule(BootstrapModule):
@@ -28,6 +28,8 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
         cli_flags = ("--just",)
         cli_help = "Scaffold a standard justfile for project tasks"
         config_key = "just"
+        # What shows an existing project already uses this tool.
+        signals = (PathSignal("justfile"), PathSignal("Justfile"))
 
         @property
         def name(self) -> str:
@@ -66,6 +68,17 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
 ??? abstract "Deep Dive: Pre-flight vs Build"
     - **`pre_flight()`**: Executes before *any* state changes occur. If `shutil.which("just")` fails here, the orchestrator immediately halts, guaranteeing the environment remains untouched.
     - **`build()`**: Only queues state changes. Notice how we use `manifest.filesystem.add_file_injection()` instead of `Path("justfile").write_text()`.
+
+## Signals: Recognizing an Existing Project
+
+`signals` tells `init` that a project it has never touched already uses the module's tool, so the recipe editor can start with it switched on. A module lists every signal that holds for its tool:
+
+- `PathSignal(path)`: a file or directory, matched with its exact spelling.
+- `TableSignal(keys)`: a table in `pyproject.toml`, such as `("tool", "ruff")`.
+- `SectionSignal(path, section)`: a section of an INI file, such as `("setup.cfg", "mypy")`.
+- `RequirementSignal(name)`: a package in any of the project's dependency lists.
+
+A module that manages a document builds its path signals from that document's locations in `protostar.documents`, so every name the tool reads counts. Analysis knows no tool by name: it reads only what modules declare, and every tooling module must declare at least one signal.
 
 ## The Manifest API
 

@@ -54,10 +54,17 @@ def metadata_keys(
 
 
 def metadata_defaults(draft: InitDraft, config: UserConfig) -> dict[str, Any]:
-    """Recorded metadata first, then the auto-resolvers and field defaults."""
+    """Draft values, then recorded or found metadata, then the auto-resolvers."""
     defaults = resolve_auto_metadata(config=config)
     if draft.existing_recipe:
         defaults.update(draft.existing_recipe.metadata)
+    elif draft.analysis:
+        facts = draft.analysis.facts
+        defaults.update(facts.metadata())
+        # The editor records its minimum Python as the recipe's Python, so a
+        # pinned interpreter stands in when the project states no minimum.
+        if facts.minimum_python is None and facts.python_version is not None:
+            defaults[MetadataKey.MINIMUM_PYTHON.value] = facts.python_version.value
     if draft.metadata is not None:
         defaults.update(draft.metadata)
     return defaults

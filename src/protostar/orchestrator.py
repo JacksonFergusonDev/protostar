@@ -18,6 +18,7 @@ from .manifest import EnvironmentManifest, ProjectMetadata
 from .merge import NO_RESOLUTIONS, Resolutions
 from .models import ExecutionResult, InitRequest
 from .modules import (
+    AGENTS_TARGET,
     AgentsModule,
     BootstrapModule,
     PreCommitModule,
@@ -39,7 +40,6 @@ logger = logging.getLogger("protostar")
 
 __all__ = ["AGENTS_REGION_ID", "AGENTS_TARGET", "Orchestrator"]
 
-AGENTS_TARGET = "AGENTS.md"
 AGENTS_REGION_ID = "agents"
 
 

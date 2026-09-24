@@ -1,10 +1,18 @@
 """Module exports for the Protostar manifest execution engine."""
 
-from .base import BootstrapModule
+from .base import (
+    BootstrapModule,
+    PathSignal,
+    RequirementSignal,
+    SectionSignal,
+    Signal,
+    TableSignal,
+)
 from .ci_layer import CIModule, ReleaseModule
 from .lang_layer import LICENSE_MAP, PythonCore
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
+    AGENTS_TARGET,
     AgentsModule,
     CodecovModule,
     CommitizenModule,
@@ -47,6 +55,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
 )
 
 __all__ = [
+    "AGENTS_TARGET",
     "LICENSE_MAP",
     "TOOLING_MODULES",
     "AgentsModule",
@@ -58,6 +67,7 @@ __all__ = [
     "JustModule",
     "MarkdownLintModule",
     "MypyModule",
+    "PathSignal",
     "PreCommitModule",
     "PrekModule",
     "PyreflyModule",
@@ -66,9 +76,13 @@ __all__ = [
     "ReadTheDocsModule",
     "ReleaseModule",
     "RenovateModule",
+    "RequirementSignal",
     "RuffModule",
     "RumdlModule",
+    "SectionSignal",
+    "Signal",
     "SystemWorkspaceModule",
+    "TableSignal",
     "TyModule",
     "ZensicalModule",
 ]
