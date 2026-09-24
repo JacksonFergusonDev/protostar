@@ -65,7 +65,10 @@ def conflicted(tmp_path, monkeypatch, mocker):
     mocker.patch("subprocess.run", side_effect=AssertionError("subprocess.run"))
     prepare_project().apply()
     Path(RENOVATE).write_text(json.dumps({"value": "mine"}))
-    Path(NOTES).write_text(Path(NOTES).read_text().replace("original", "mine"))
+    # LF on every platform: the sides are reported in the local newline style.
+    Path(NOTES).write_text(
+        Path(NOTES).read_text().replace("original", "mine"), newline="\n"
+    )
     source.write_text(revision("remote"))
     return project
 
