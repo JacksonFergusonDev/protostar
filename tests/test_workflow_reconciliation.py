@@ -10,7 +10,15 @@ from protostar.documents.github_workflows import (
     SPEC,
     guard_workflow,
 )
-from protostar.merge import MISSING, ConflictReason, MergeConflict, MergeLocation
+from protostar.merge import (
+    MISSING,
+    NO_RESOLUTIONS,
+    ConflictReason,
+    MergeConflict,
+    MergeLocation,
+    ResolutionChoice,
+    Resolutions,
+)
 from protostar.workflows import (
     CIWorkflowSpec,
     generate_ci_workflow,
@@ -41,6 +49,7 @@ def run(
     *,
     target: str = CI_TARGET,
     overwrite: bool = False,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> YamlReconciliation:
     # Round-trip the baseline as the lockfile does between runs.
     base = (
@@ -64,6 +73,7 @@ def run(
         ),
         missing_file=local is None,
         overwrite=overwrite,
+        resolutions=resolutions,
     )
 
 
@@ -194,6 +204,41 @@ def test_retracting_an_edited_step_keeps_it_with_a_conflict():
     overwritten = run(local, ci("pytest"), first, overwrite=True)
     assert overwritten.content == ci("pytest")
     assert not overwritten.conflicts
+
+
+@pytest.mark.parametrize(
+    ("choice", "kept"),
+    [(ResolutionChoice.LOCAL, True), (ResolutionChoice.DESIRED, False)],
+)
+def test_resolving_a_retracted_step_releases_or_removes_it(choice, kept):
+    first = run(None, ci("pytest", "codecov"))
+    local = first.content.replace(
+        "          fail_ci_if_error: true", "          fail_ci_if_error: false"
+    )
+    (conflict,) = run(local, ci("pytest"), first).conflicts
+
+    result = run(local, ci("pytest"), first, resolutions={conflict.id: choice})
+
+    assert not result.conflicts
+    assert [c.resolution for c in result.resolved] == [choice]
+    assert ("Upload coverage to Codecov" in names(result.content)) is kept
+    assert "Upload coverage to Codecov" not in owned(result)
+    assert not run(result.content, ci("pytest"), result).conflicts
+
+
+def test_resolving_a_diverged_step_setting_patches_only_that_value():
+    first = run(None, ci("pytest"))
+    local = first.content.replace("run: uv run pytest", "run: uv run pytest -x")
+    desired = ci("pytest").replace("run: uv run pytest", "run: uv run pytest -q")
+    (conflict,) = run(local, desired, first).conflicts
+    assert keys(conflict)[-1] == "run"
+
+    result = run(
+        local, desired, first, resolutions={conflict.id: ResolutionChoice.DESIRED}
+    )
+
+    assert result.content == desired
+    assert not run(result.content, desired, result).conflicts
 
 
 def test_turning_codecov_on_inserts_steps_after_run_tests():

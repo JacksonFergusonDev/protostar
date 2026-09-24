@@ -62,9 +62,12 @@ from .manifest import (
 )
 from .merge import (
     MISSING,
+    NO_RESOLUTIONS,
     ConflictReason,
     MergeConflict,
     MergeLocation,
+    ResolutionChoice,
+    Resolutions,
     Value,
     describe_location,
 )
@@ -152,8 +155,10 @@ class Reconciliation:
         fs: ByteSink,
         journal: PresenceReader,
         hook_revisions: tuple[ResolvedHookRevision, ...] = (),
+        resolutions: Resolutions = NO_RESOLUTIONS,
     ) -> None:
         """Binds workspace inputs, an accepted-byte sink, and frozen hook pins."""
+        self.resolutions = resolutions
         self.manifest = manifest
         self.config = config
         self.workspace = workspace
@@ -513,6 +518,7 @@ class Reconciliation:
                     else NO_GUARD,
                     missing_file=not exists,
                     overwrite=overwrite,
+                    resolutions=self.resolutions,
                 )
             else:
                 result = reconcile_jsonc(
@@ -523,9 +529,9 @@ class Reconciliation:
                     missing_file=not exists,
                     overwrite=overwrite,
                     default_indent=indent,
+                    resolutions=self.resolutions,
                 )
-            for conflict in result.conflicts:
-                self._merge_warning(conflict)
+            self._report(result.conflicts, result.resolved)
             if result.baseline is not MISSING:
                 self._own(
                     located,
@@ -618,9 +624,9 @@ class Reconciliation:
                 initializing=initializing,
                 missing_file=not self.workspace.exists(target),
                 desired_ast=aggregated.document,
+                resolutions=self.resolutions,
             )
-            for conflict in result.conflicts:
-                self._merge_warning(conflict)
+            self._report(result.conflicts, result.resolved)
             for note in result.layout_notes:
                 self._layout_warning(target, note)
             if result.baseline is not MISSING:
@@ -698,18 +704,9 @@ class Reconciliation:
                 baselines={r.id: r.baseline for r in record.regions} if record else {},
                 missing_owned_file=record is not None
                 and not self.workspace.exists(target),
+                resolutions=self.resolutions,
             )
-            for refused in region_result.conflicts:
-                self._merge_warning(
-                    MergeConflict(
-                        MergeLocation(
-                            target.as_posix(),
-                            identity=refused.identity,
-                            lines=refused.lines,
-                        ),
-                        ConflictReason.DIVERGED if record else ConflictReason.UNOWNED,
-                    )
-                )
+            self._report(region_result.conflicts, region_result.resolved)
             if region_result.baselines:
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
@@ -878,23 +875,12 @@ class Reconciliation:
                 local,
                 content,
                 record.baseline if record else None,
+                MergeLocation(target.as_posix()),
                 overwrite=self.manifest.collision_strategy
                 is CollisionStrategy.OVERWRITE,
+                resolutions=self.resolutions,
             )
-            for conflict in result.conflicts:
-                self._merge_warning(
-                    MergeConflict(
-                        MergeLocation(target.as_posix(), lines=conflict.lines),
-                        ConflictReason.DIVERGED,
-                    )
-                )
-            if result.conflict and not result.conflicts:
-                self._merge_warning(
-                    MergeConflict(
-                        MergeLocation(target.as_posix()),
-                        ConflictReason.DIVERGED if record else ConflictReason.UNOWNED,
-                    )
-                )
+            self._report(result.conflicts, result.resolved)
             if result.content is not None:
                 self.fs.write_text(target, result.content)
             if result.baseline is not None:
@@ -1237,6 +1223,31 @@ class Reconciliation:
                 conflict=conflict,
             )
         )
+
+    def _report(
+        self,
+        conflicts: tuple[MergeConflict, ...],
+        resolved: tuple[MergeConflict, ...],
+    ) -> None:
+        """Exposes open and settled conflicts to headless callers."""
+        for conflict in conflicts:
+            self._merge_warning(conflict)
+        for conflict in resolved:
+            where = describe_location(conflict.location)
+            kept = {
+                ResolutionChoice.LOCAL: "keeping local content",
+                ResolutionChoice.DESIRED: "taking the update",
+                ResolutionChoice.BOTH: "keeping both",
+            }[cast(ResolutionChoice, conflict.resolution)]
+            self.diagnostics.append(
+                DiagnosticEvent(
+                    DiagnosticPhase.EXECUTOR,
+                    f"Resolved conflict in {conflict.location.file}"
+                    f"{f' at {where}' if where else ''} by {kept}.",
+                    Severity.INFO,
+                    resolved=conflict,
+                )
+            )
 
     def _layout_warning(self, target: Path, reason: str) -> None:
         """Reports a file that was left unformatted because formatting was unsafe."""

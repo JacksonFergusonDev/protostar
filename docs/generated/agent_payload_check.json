@@ -13,15 +13,33 @@
     "directories": [],
     "conflicts": [
       {
+        "id": "7931c07f49c0",
         "file": ".github/renovate.json",
         "keys": [
           "value"
         ],
         "identity": null,
         "lines": null,
-        "reason": "diverged"
+        "reason": "diverged",
+        "choices": [
+          "local",
+          "desired"
+        ],
+        "sides": {
+          "text": false,
+          "base": {
+            "value": "original"
+          },
+          "local": {
+            "value": "local"
+          },
+          "desired": {
+            "value": "desired"
+          }
+        }
       }
     ],
+    "resolved": [],
     "preserved": [],
     "state_changed": true,
     "resolver": {

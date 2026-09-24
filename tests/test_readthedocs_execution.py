@@ -1,5 +1,6 @@
 """.readthedocs.yaml merges without subprocesses: one build, never grafted onto another."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,13 @@ from protostar.documents import readthedocs
 from protostar.executor import SystemExecutor
 from protostar.intent import StructuredFormat
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.merge import ConflictReason, MergeConflict, MergeLocation
+from protostar.merge import (
+    MISSING,
+    ConflictReason,
+    ConflictSides,
+    MergeConflict,
+    MergeLocation,
+)
 from protostar.modules import ReadTheDocsModule
 from protostar.sync_state import FilePolicy, deserialize_state
 from protostar.yaml_ast import decode_yaml_baseline
@@ -65,7 +72,12 @@ def run(mocker, content=None, strategy=CollisionStrategy.MERGE):
 
 
 def conflicts(executor):
-    return [d.conflict for d in executor.diagnostics if d.conflict is not None]
+    # Locations and reasons only; the sides are covered where they matter.
+    return [
+        replace(d.conflict, sides=None)
+        for d in executor.diagnostics
+        if d.conflict is not None
+    ]
 
 
 def local():
@@ -180,6 +192,10 @@ def test_edited_retracted_setting_is_kept_with_a_conflict(
             ConflictReason.RETRACTED,
         )
     ]
+    (conflict,) = [d.conflict for d in executor.diagnostics if d.conflict]
+    assert conflict.sides == ConflictSides(
+        ["pip install uv"], ["pip install uv==0.9.0"], MISSING
+    )
     assert jobs(local())["pre_create_environment"] == ["pip install uv==0.9.0"]
 
 

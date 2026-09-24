@@ -1,4 +1,5 @@
 from copy import deepcopy
+from dataclasses import replace
 from datetime import date, datetime, time
 from typing import cast
 
@@ -6,12 +7,16 @@ import pytest
 
 from protostar.errors import ConfigurationError
 from protostar.merge import (
+    DEFAULT_POLICY,
     MISSING,
     ConflictReason,
+    ConflictSides,
     LineSpan,
+    MergeConflict,
     MergeDecision,
     MergeLocation,
     MergePolicy,
+    ResolutionChoice,
     Value,
     describe_location,
     overlay_declared,
@@ -427,3 +432,133 @@ def test_without_paths_prunes_only_tables_it_empties():
 )
 def test_describe_location(location, label):
     assert describe_location(location) == label
+
+
+# --- resolutions --------------------------------------------------------------
+
+COMPLETE = MergePolicy(complete=True)
+
+
+def resolve_all(base, local, remote, choice, policy=DEFAULT_POLICY):
+    """Merges once to find the conflicts, then again with each one resolved."""
+    first = reconcile(base, local, remote, LOC, policy)
+    choices = {conflict.id: choice for conflict in first.conflicts}
+    return first, reconcile(base, local, remote, LOC, policy, choices)
+
+
+@pytest.mark.parametrize(
+    ("base", "local", "remote", "reason", "kept", "taken"),
+    [
+        pytest.param(
+            {"a": 1},
+            {"a": 2},
+            {"a": 3},
+            ConflictReason.DIVERGED,
+            ({"a": 2}, {"a": 3}),
+            ({"a": 3}, {"a": 3}),
+            id="diverged",
+        ),
+        pytest.param(
+            MISSING,
+            {"a": 2},
+            {"a": 3},
+            ConflictReason.UNOWNED,
+            ({"a": 2}, {"a": 3}),
+            ({"a": 3}, {"a": 3}),
+            id="adopted",
+        ),
+        pytest.param(
+            {"a": 1},
+            {"a": "one"},
+            {"a": 3},
+            ConflictReason.TYPE_MISMATCH,
+            ({"a": "one"}, {"a": 3}),
+            ({"a": 3}, {"a": 3}),
+            id="type-mismatch",
+        ),
+        pytest.param(
+            {"a": {"b": 1}},
+            {},
+            {"a": {"b": 2}},
+            ConflictReason.DELETED_ANCESTOR,
+            ({}, {"a": {"b": 2}}),
+            ({"a": {"b": 2}}, {"a": {"b": 2}}),
+            id="deleted",
+        ),
+    ],
+)
+def test_resolution_owns_the_update_whichever_side_it_keeps(
+    base, local, remote, reason, kept, taken
+):
+    for choice, (value, baseline) in (
+        (ResolutionChoice.LOCAL, kept),
+        (ResolutionChoice.DESIRED, taken),
+    ):
+        first, resolved = resolve_all(base, local, remote, choice)
+        (conflict,) = first.conflicts
+        assert conflict.reason is reason
+        assert conflict.choices == (ResolutionChoice.LOCAL, ResolutionChoice.DESIRED)
+        assert (resolved.value, resolved.baseline) == (value, baseline)
+        assert not resolved.conflicts
+        assert [c.resolution for c in resolved.resolved] == [choice]
+        # Settled for good: the next merge of the same update is quiet.
+        again = reconcile(resolved.baseline, resolved.value, remote, LOC)
+        assert not again.conflicts
+        assert semantic_equal(again.value, resolved.value)
+
+
+@pytest.mark.parametrize(
+    ("choice", "value"),
+    [(ResolutionChoice.LOCAL, {"a": 2}), (ResolutionChoice.DESIRED, {})],
+)
+def test_resolving_a_retraction_drops_ownership(choice, value):
+    first, resolved = resolve_all({"a": 1}, {"a": 2}, {}, choice, COMPLETE)
+
+    (conflict,) = first.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.sides == ConflictSides(1, 2, MISSING)
+    assert (resolved.value, resolved.baseline) == (value, {})
+    assert not resolved.conflicts
+
+
+def test_structured_conflicts_cannot_keep_both():
+    first, resolved = resolve_all({"a": 1}, {"a": 2}, {"a": 3}, ResolutionChoice.BOTH)
+
+    assert resolved.conflicts == first.conflicts
+    assert not resolved.resolved
+
+
+def test_conflict_identity_follows_content_not_line_numbers():
+    (conflict,) = reconcile({"a": 1}, {"a": 2}, {"a": 3}, LOC).conflicts
+    (edited,) = reconcile({"a": 1}, {"a": 4}, {"a": 3}, LOC).conflicts
+
+    assert conflict.id != edited.id
+    assert len(conflict.id) == 12
+    moved = replace(conflict, location=replace(conflict.location, lines=LineSpan(3, 1)))
+    assert moved.id == conflict.id
+    assert replace(conflict, resolution=ResolutionChoice.LOCAL).id == conflict.id
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [(1, True), (1, 1.0), (1, "1"), (None, MISSING), (date(2024, 1, 1), "2024-01-01")],
+)
+def test_conflict_identity_distinguishes_types(left, right):
+    def conflict(value: Value) -> MergeConflict:
+        return MergeConflict(LOC, ConflictReason.DIVERGED, ConflictSides(0, value, 2))
+
+    assert conflict(left).id != conflict(right).id
+
+
+def test_conflicts_without_sides_are_settled_by_hand():
+    conflict = MergeConflict(LOC, ConflictReason.SHARED_STRUCTURE)
+
+    assert conflict.choices == ()
+    assert conflict.settle({conflict.id: ResolutionChoice.LOCAL}) is None
+
+
+def test_conflicts_with_container_sides_are_hashable():
+    (conflict,) = reconcile({"a": [1]}, {"a": [2]}, {"a": [3]}, LOC).conflicts
+
+    assert {conflict, replace(conflict)} == {conflict}
+    assert hash(conflict) != hash(replace(conflict, resolution=ResolutionChoice.LOCAL))

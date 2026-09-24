@@ -270,7 +270,7 @@ def emit_capabilities(
 
 def review_schema() -> dict[str, Any]:
     """Returns the schema for shipped status/diff JSON review envelopes."""
-    from protostar.merge import ConflictReason
+    from protostar.merge import ConflictReason, ResolutionChoice
     from protostar.recipe import SelectionLayer, Tool
 
     string = {"type": "string"}
@@ -291,24 +291,35 @@ def review_schema() -> dict[str, Any]:
         return {"type": "array", "items": record(properties)}
 
     location = {"file": string, "keys": strings, "identity": nullable_string}
+    choice = {"enum": [choice.value for choice in ResolutionChoice]}
+    # A side is absent (null) or holds text or a decoded value.
+    side = {"oneOf": [record({"value": {}}), {"type": "null"}]}
+    conflict = {
+        "id": string,
+        **location,
+        "lines": {
+            "oneOf": [
+                record({"start": count, "count": count}),
+                {"type": "null"},
+            ]
+        },
+        "reason": {"enum": [reason.value for reason in ConflictReason]},
+        "choices": {"type": "array", "items": choice},
+        "sides": {
+            "oneOf": [
+                record({"text": boolean, "base": side, "local": side, "desired": side}),
+                {"type": "null"},
+            ]
+        },
+    }
     review = record(
         {
             "edits": records(
                 {"path": string, "before": nullable_string, "after": string}
             ),
             "directories": strings,
-            "conflicts": records(
-                {
-                    **location,
-                    "lines": {
-                        "oneOf": [
-                            record({"start": count, "count": count}),
-                            {"type": "null"},
-                        ]
-                    },
-                    "reason": {"enum": [reason.value for reason in ConflictReason]},
-                }
-            ),
+            "conflicts": records(conflict),
+            "resolved": records({**conflict, "resolution": choice}),
             "preserved": records({**location, "deleted": boolean}),
             "state_changed": boolean,
             "resolver": record(

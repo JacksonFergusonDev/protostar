@@ -17,8 +17,10 @@ from typing import cast
 from .errors import ConfigurationError
 from .merge import (
     MISSING,
+    NO_RESOLUTIONS,
     MergeConflict,
     MergeLocation,
+    Resolutions,
     Value,
     overlay_declared,
     prune_unapplied,
@@ -765,6 +767,7 @@ class JsoncReconciliation:
     content: str
     baseline: Value
     conflicts: tuple[MergeConflict, ...]
+    resolved: tuple[MergeConflict, ...] = ()
 
 
 def reconcile_jsonc(
@@ -776,6 +779,7 @@ def reconcile_jsonc(
     missing_file: bool = False,
     overwrite: bool = False,
     default_indent: str = "  ",
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> JsoncReconciliation:
     """Confines accepted semantic edits to byte spans of the local document.
 
@@ -793,6 +797,7 @@ def reconcile_jsonc(
         missing_file: Whether the local file does not exist.
         overwrite: Own declared values while retaining undeclared siblings.
         default_indent: Indentation unit when the document offers none to infer.
+        resolutions: Choices settling conflicts, keyed by conflict identity.
 
     Returns:
         Resulting text, the owned baseline, and preserved-local conflicts.
@@ -808,17 +813,25 @@ def reconcile_jsonc(
     )
     local = doc.value()
     conflicts: list[MergeConflict] = []
+    resolved: tuple[MergeConflict, ...] = ()
     if overwrite:
         value: Value = deepcopy(local)
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
         overlay_declared(cast(dict[str, Value], value), remote)
         overlay_declared(cast(dict[str, Value], baseline), remote)
     else:
-        result = reconcile(base, MISSING if missing_file else local, remote, location)
+        result = reconcile(
+            base,
+            MISSING if missing_file else local,
+            remote,
+            location,
+            resolutions=resolutions,
+        )
         value, baseline = result.value, result.baseline
         conflicts = list(result.conflicts)
+        resolved = result.resolved
     if value is MISSING:
-        return JsoncReconciliation(original, baseline, tuple(conflicts))
+        return JsoncReconciliation(original, baseline, tuple(conflicts), resolved)
     accepted = cast(dict[str, Value], value)
 
     if isinstance(baseline, dict):
@@ -826,9 +839,9 @@ def reconcile_jsonc(
         if not baseline and base is MISSING and not missing_file:
             baseline = MISSING
     if missing_file and semantic_equal(accepted, remote):
-        return JsoncReconciliation(desired, baseline, tuple(conflicts))
+        return JsoncReconciliation(desired, baseline, tuple(conflicts), resolved)
     if semantic_equal(local, accepted) and (not missing_file or not accepted):
-        return JsoncReconciliation(original, baseline, tuple(conflicts))
+        return JsoncReconciliation(original, baseline, tuple(conflicts), resolved)
 
     def patch(
         target: JsoncDocument,
@@ -852,4 +865,4 @@ def reconcile_jsonc(
             "JSONC reconciliation could not preserve the accepted values.",
             hint="Simplify the target document or restore it from version control.",
         )
-    return JsoncReconciliation(edited.text, baseline, tuple(conflicts))
+    return JsoncReconciliation(edited.text, baseline, tuple(conflicts), resolved)

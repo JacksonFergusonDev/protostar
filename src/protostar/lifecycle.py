@@ -13,6 +13,7 @@ from .executor import SystemExecutor
 from .intent import TemplateOrigin
 from .journal import TransactionState
 from .manifest import CollisionStrategy, EnvironmentManifest
+from .merge import Resolutions
 from .models import ExecutionResult, InitRequest, RollbackContext
 from .modules import PythonCore, SystemWorkspaceModule
 from .orchestrator import Orchestrator
@@ -31,6 +32,28 @@ class PreparedProject:
     manifest: EnvironmentManifest
     config: UserConfig
     review: PreparedReview
+
+    def resolve(self, resolutions: Resolutions) -> "PreparedProject":
+        """Reviews the same revision again with conflicts settled.
+
+        The registry snapshot is reused, so the new review differs from this
+        one only by the resolutions.
+
+        Args:
+            resolutions: Choices keyed by conflict identity.
+
+        Returns:
+            The project with a review of the resolved decisions.
+        """
+        return replace(
+            self,
+            review=prepare_review(
+                self.manifest,
+                self.config,
+                hook_revisions=self.review.hook_revisions,
+                resolutions=resolutions,
+            ),
+        )
 
     def apply(self, *, progress: ProgressStep = no_progress) -> ExecutionResult:
         """Applies lifecycle decisions atomically, with structured rollback reporting.

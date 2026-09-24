@@ -14,9 +14,11 @@ from .intent import StructuredContribution, validate_configuration
 from .merge import (
     DEFAULT_POLICY,
     MISSING,
+    NO_RESOLUTIONS,
     MergeConflict,
     MergeLocation,
     MergePolicy,
+    Resolutions,
     Value,
     hold,
     lookup,
@@ -87,6 +89,7 @@ class TomlReconciliation:
     baseline: Value
     conflicts: tuple[MergeConflict, ...]
     layout_notes: tuple[str, ...] = ()
+    resolved: tuple[MergeConflict, ...] = ()
 
 
 def aggregate_toml_document(
@@ -208,6 +211,7 @@ def reconcile_toml(
     initializing: bool = False,
     missing_file: bool = False,
     desired_ast: Any | None = None,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> TomlReconciliation:
     """Applies semantic decisions to the local AST, laid out by the document spec.
 
@@ -222,6 +226,7 @@ def reconcile_toml(
         initializing: Whether Protostar is creating this document.
         missing_file: Whether the workspace file is absent.
         desired_ast: Desired AST whose styling is kept for accepted values.
+        resolutions: Choices settling conflicts, keyed by conflict identity.
 
     Returns:
         Emitted text, the composite owned baseline, conflicts, and layout notes.
@@ -242,6 +247,7 @@ def reconcile_toml(
         overlay_declared(value, desired)
         overlay_declared(cast(dict[str, Value], baseline), desired)
         conflicts: tuple[MergeConflict, ...] = ()
+        resolved: tuple[MergeConflict, ...] = ()
     else:
         result = reconcile(
             base,
@@ -249,12 +255,16 @@ def reconcile_toml(
             _hold_seeds(desired, base, spec.seed_paths),
             location,
             spec.policy,
+            resolutions,
         )
         if result.value is MISSING:
-            return TomlReconciliation(original, result.baseline, result.conflicts)
+            return TomlReconciliation(
+                original, result.baseline, result.conflicts, resolved=result.resolved
+            )
         value = cast(dict[str, Value], result.value)
         baseline = result.baseline
         conflicts = result.conflicts
+        resolved = result.resolved
 
     def desired_node(keys: tuple[str, ...]) -> Any | None:
         node = desired_ast
@@ -318,4 +328,6 @@ def reconcile_toml(
         # next sibling; the document keeps its own ending instead.
         ending = original[len(original.rstrip("\r\n")) :] if original else "\n"
         content = tomlkit.dumps(doc).rstrip("\r\n") + ending
-    return TomlReconciliation(content, baseline, conflicts, tuple(layout_notes))
+    return TomlReconciliation(
+        content, baseline, conflicts, tuple(layout_notes), resolved
+    )

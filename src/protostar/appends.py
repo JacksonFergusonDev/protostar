@@ -1,16 +1,22 @@
 """Generic marker-block file append engine."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .errors import ConfigurationError
 from .intent import AppendContribution, validate_region_id
-from .merge import LineSpan
-from .text_merge import TextConflict, reconcile_text
+from .merge import (
+    NO_RESOLUTIONS,
+    ConflictReason,
+    LineSpan,
+    MergeConflict,
+    MergeLocation,
+    Resolutions,
+)
+from .text_merge import reconcile_text
 
 __all__ = [
-    "RegionConflict",
     "RegionResult",
     "append_marker_blocks",
     "get_comment_markers",
@@ -75,32 +81,21 @@ def get_comment_markers(filepath: Path) -> tuple[str, str]:
 
 
 @dataclass(frozen=True)
-class RegionConflict:
-    """A region whose desired change was refused.
-
-    Attributes:
-        identity: The region's stable logical identity.
-        lines: File lines where local and desired edits overlap, or ``None``
-            when the whole region was refused (unowned, deleted, or unreadable).
-    """
-
-    identity: str
-    lines: LineSpan | None = None
-
-
-@dataclass(frozen=True)
 class RegionResult:
     """Exact file content, composite applied region texts, and refused regions.
 
     Attributes:
         content: The file with every accepted region update applied.
         baselines: Each owned region's last applied framed text, by identity.
-        conflicts: Refused regions, one entry per overlapping edit.
+        conflicts: Refused regions, one per overlapping edit or whole region,
+            identified by region and numbered by line in ``content``.
+        resolved: Region conflicts settled by a resolution, numbered likewise.
     """
 
     content: str
     baselines: dict[str, str]
-    conflicts: tuple[RegionConflict, ...]
+    conflicts: tuple[MergeConflict, ...]
+    resolved: tuple[MergeConflict, ...] = ()
 
 
 def append_marker_blocks(
@@ -111,6 +106,7 @@ def append_marker_blocks(
     *,
     baselines: dict[str, str] | None = None,
     missing_owned_file: bool = False,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> RegionResult:
     """Merges each stable region three ways and preserves surrounding bytes.
 
@@ -126,6 +122,7 @@ def append_marker_blocks(
         baselines: Each owned region's last applied framed text, by identity.
         missing_owned_file: Whether the file is owned but was deleted, which
             protects newly introduced regions too.
+        resolutions: Choices settling region conflicts, by conflict identity.
 
     Returns:
         The reconciled content, applied region texts, and refused regions.
@@ -184,7 +181,8 @@ def append_marker_blocks(
         validate_region_id(identity)
     result = original_content
     applied = dict(baselines or {})
-    refused: list[tuple[AppendContribution, tuple[TextConflict, ...]]] = []
+    refused: list[tuple[AppendContribution, MergeConflict]] = []
+    settled: list[tuple[AppendContribution, MergeConflict]] = []
     for contribution in payloads:
         tag = contribution.tag
         begin, end = marker(tag), marker(tag, True)
@@ -199,14 +197,27 @@ def append_marker_blocks(
             stop = result.index(end, start) + len(end)
             local = result[start:stop].encode("utf-8")
         baseline = applied.get(contribution.id)
+        location = MergeLocation(filepath.as_posix(), identity=contribution.id)
         if missing_owned_file and not overwrite:
             # An owned deleted file protects newly introduced regions too.
             if baseline != framed:
-                refused.append((contribution, ()))
+                refused.append(
+                    (
+                        contribution,
+                        MergeConflict(location, ConflictReason.DELETED_ANCESTOR),
+                    )
+                )
             continue
-        decision = reconcile_text(local, framed, baseline, overwrite=overwrite)
-        if decision.conflict:
-            refused.append((contribution, decision.conflicts))
+        decision = reconcile_text(
+            local,
+            framed,
+            baseline,
+            location,
+            overwrite=overwrite,
+            resolutions=resolutions,
+        )
+        refused.extend((contribution, conflict) for conflict in decision.conflicts)
+        settled.extend((contribution, conflict) for conflict in decision.resolved)
         if decision.baseline is not None:
             applied[contribution.id] = decision.baseline
         if decision.content is None:
@@ -221,18 +232,21 @@ def append_marker_blocks(
             seen.add(tag)
     if payloads:
         append_marker_blocks(result, [], filepath)
-    conflicts: list[RegionConflict] = []
-    for contribution, overlaps in refused:
-        if not overlaps:
-            conflicts.append(RegionConflict(contribution.id))
-            continue
+
+    def numbered(
+        found: list[tuple[AppendContribution, MergeConflict]],
+    ) -> tuple[MergeConflict, ...]:
         # Number lines in the final file, after every accepted region moved them.
-        offset = result[: result.index(marker(contribution.tag))].count("\n")
-        conflicts.extend(
-            RegionConflict(
-                contribution.id,
-                LineSpan(overlap.lines.start + offset, overlap.lines.count),
+        conflicts: list[MergeConflict] = []
+        for contribution, conflict in found:
+            lines = conflict.location.lines
+            begin = marker(contribution.tag)
+            if lines is not None and begin in result:
+                offset = result[: result.index(begin)].count("\n")
+                lines = LineSpan(lines.start + offset, lines.count)
+            conflicts.append(
+                replace(conflict, location=replace(conflict.location, lines=lines))
             )
-            for overlap in overlaps
-        )
-    return RegionResult(result, applied, tuple(conflicts))
+        return tuple(conflicts)
+
+    return RegionResult(result, applied, numbered(refused), numbered(settled))

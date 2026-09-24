@@ -3,14 +3,20 @@
 import hashlib
 import json
 import tomllib
+from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date, time
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from .config import UserConfig
 from .documents import vscode
-from .errors import ConfigurationError
+from .errors import (
+    ConfigurationError,
+    UnmatchedResolutionError,
+    UnsupportedResolutionError,
+)
 from .intent import DependencyGroup, ResolverFootprint
 from .manifest import (
     CollisionStrategy,
@@ -18,7 +24,14 @@ from .manifest import (
     DiagnosticEvent,
     EnvironmentManifest,
 )
-from .merge import MergeConflict
+from .merge import (
+    MISSING,
+    NO_RESOLUTIONS,
+    MergeConflict,
+    ResolutionChoice,
+    Resolutions,
+    Value,
+)
 from .preservation import PreservedDeviation, preserved_deviations
 from .recipe import ProducerContribution, ToolSelection, decode_recipe
 from .reconciliation import Reconciliation
@@ -79,6 +92,113 @@ class ResolverAction:
 
 
 @dataclass(frozen=True)
+class ResolutionRequest:
+    """A choice for the conflicts one selector names.
+
+    Attributes:
+        selector: A conflict identity, or a file path that names every conflict
+            in that file which offers the choice.
+        choice: How to settle them.
+    """
+
+    selector: str
+    choice: ResolutionChoice
+
+
+def select_resolutions(
+    conflicts: Sequence[MergeConflict], requests: Sequence[ResolutionRequest]
+) -> dict[str, ResolutionChoice]:
+    """Turns selectors into choices keyed by conflict identity.
+
+    Later requests override earlier ones, so a conflict identity can refine a
+    file-wide choice.
+
+    Args:
+        conflicts: The open conflicts of a review.
+        requests: Choices in the order given.
+
+    Returns:
+        Choices keyed by conflict identity.
+
+    Raises:
+        UnmatchedResolutionError: If a selector names no open conflict.
+        UnsupportedResolutionError: If no conflict a selector names offers its
+            choice.
+    """
+    resolutions: dict[str, ResolutionChoice] = {}
+    unmatched: list[str] = []
+    for request in requests:
+        named = [
+            conflict
+            for conflict in conflicts
+            if request.selector in (conflict.id, conflict.location.file)
+        ]
+        if not named:
+            unmatched.append(request.selector)
+            continue
+        chosen = [c for c in named if request.choice in c.choices]
+        if not chosen:
+            offered = {choice for c in named for choice in c.choices}
+            raise UnsupportedResolutionError(
+                request.selector,
+                request.choice.value,
+                tuple(c.value for c in ResolutionChoice if c in offered),
+            )
+        resolutions.update((conflict.id, request.choice) for conflict in chosen)
+    if unmatched:
+        raise UnmatchedResolutionError(tuple(unmatched))
+    return resolutions
+
+
+def _plain(value: Value) -> Any:
+    """Returns a decoded value as JSON-ready data, with dates in ISO form."""
+    if isinstance(value, dict):
+        return {key: _plain(child) for key, child in value.items()}
+    if isinstance(value, list):
+        return [_plain(child) for child in value]
+    if isinstance(value, (date, time)):
+        return value.isoformat()
+    return value
+
+
+def conflict_record(conflict: MergeConflict) -> dict[str, Any]:
+    """Serializes a conflict, with its sides and choices, for machine output.
+
+    Args:
+        conflict: An open or settled conflict.
+
+    Returns:
+        A JSON-ready mapping; ``resolution`` appears only once it is settled.
+    """
+    location = conflict.location
+    sides = conflict.sides
+
+    def side(value: Value) -> dict[str, Any] | None:
+        return None if value is MISSING else {"value": _plain(value)}
+
+    record: dict[str, Any] = {
+        "id": conflict.id,
+        "file": location.file,
+        "keys": list(location.keys),
+        "identity": location.identity,
+        "lines": location.lines.to_dict() if location.lines else None,
+        "reason": conflict.reason.value,
+        "choices": [choice.value for choice in conflict.choices],
+        "sides": None
+        if sides is None
+        else {
+            "text": sides.text,
+            "base": side(sides.base),
+            "local": side(sides.local),
+            "desired": side(sides.desired),
+        },
+    }
+    if conflict.resolution is not None:
+        record["resolution"] = conflict.resolution.value
+    return record
+
+
+@dataclass(frozen=True)
 class PreparedReview:
     """Immutable accepted bytes, ownership decisions, and captured workspace inputs."""
 
@@ -92,6 +212,7 @@ class PreparedReview:
     edits: tuple[PreparedEdit, ...]
     directories: tuple[str, ...]
     conflicts: tuple[MergeConflict, ...]
+    resolved: tuple[MergeConflict, ...]
     preserved: tuple[PreservedDeviation, ...]
     diagnostics: tuple[DiagnosticEvent, ...]
     candidate_state: SyncState
@@ -139,18 +260,8 @@ class PreparedReview:
                 for edit in self.edits
             ],
             "directories": list(self.directories),
-            "conflicts": [
-                {
-                    "file": conflict.location.file,
-                    "keys": list(conflict.location.keys),
-                    "identity": conflict.location.identity,
-                    "lines": conflict.location.lines.to_dict()
-                    if conflict.location.lines
-                    else None,
-                    "reason": conflict.reason.value,
-                }
-                for conflict in self.conflicts
-            ],
+            "conflicts": [conflict_record(conflict) for conflict in self.conflicts],
+            "resolved": [conflict_record(conflict) for conflict in self.resolved],
             "preserved": [
                 {
                     "file": item.location.file,
@@ -203,12 +314,22 @@ def prepare_review(
     candidate_state: SyncState | None = None,
     presence: PresenceReader | None = None,
     preserve_deleted_pyproject: bool = False,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> PreparedReview:
     """Computes accepted bytes using the shared kernel, without executing side effects.
 
     Source acquisition, tool selection, and registry acquisition precede this
     boundary. Initializers and resolvers cannot be simulated here; initialization
     prepares fresh batches around their actual execution.
+
+    Resolutions settle conflicts by identity. One that names no conflict raises,
+    so a choice made for content that changed since is never applied elsewhere.
+    A text hunk's resolution applies only with every other hunk in its text, so
+    until those are chosen too it stays open without raising.
+
+    Raises:
+        UnmatchedResolutionError: If a resolution names no conflict.
+        UnsupportedResolutionError: If a conflict does not offer its choice.
     """
     if (
         policy is ExecutionPolicy.LIFECYCLE
@@ -220,7 +341,7 @@ def prepare_review(
         )
     workspace = ReviewWorkspace(Path.cwd().resolve(), presence)
     decisions = Reconciliation(
-        manifest, config, workspace, workspace, workspace, hook_revisions
+        manifest, config, workspace, workspace, workspace, hook_revisions, resolutions
     )
     if manifest.recipe:
         decode_recipe(manifest.recipe.to_dict())
@@ -309,15 +430,20 @@ def prepare_review(
                 for event in decisions.diagnostics
                 if event.conflict is not None
             ),
-            key=lambda conflict: (
-                conflict.location.file,
-                conflict.location.keys,
-                conflict.location.identity or "",
-                conflict.location.lines.start if conflict.location.lines else 0,
-                conflict.reason.value,
-            ),
+            key=_conflict_order,
         )
     )
+    resolved = tuple(
+        sorted(
+            (
+                event.resolved
+                for event in decisions.diagnostics
+                if event.resolved is not None
+            ),
+            key=_conflict_order,
+        )
+    )
+    _check_resolutions(resolutions, conflicts, resolved)
     preserved = preserved_deviations(
         workspace, original_state, decisions.candidate_state, conflicts
     )
@@ -332,6 +458,7 @@ def prepare_review(
         edits,
         tuple(sorted(workspace.directories)),
         conflicts,
+        resolved,
         preserved,
         tuple(decisions.diagnostics),
         decisions.candidate_state,
@@ -352,6 +479,38 @@ def prepare_review(
         bool(manifest.tooling.ide_extensions),
         decisions._preserve_deleted_pyproject,
     )
+
+
+def _conflict_order(
+    conflict: MergeConflict,
+) -> tuple[str, tuple[str, ...], str, int, str]:
+    """Orders conflicts by file, then position within it."""
+    location = conflict.location
+    return (
+        location.file,
+        location.keys,
+        location.identity or "",
+        location.lines.start if location.lines else 0,
+        conflict.reason.value,
+    )
+
+
+def _check_resolutions(
+    resolutions: Resolutions,
+    conflicts: tuple[MergeConflict, ...],
+    resolved: tuple[MergeConflict, ...],
+) -> None:
+    """Rejects resolutions that name no conflict or a choice it does not offer."""
+    found = {conflict.id: conflict for conflict in (*conflicts, *resolved)}
+    unmatched = tuple(identity for identity in resolutions if identity not in found)
+    if unmatched:
+        raise UnmatchedResolutionError(unmatched)
+    for identity, choice in resolutions.items():
+        choices = found[identity].choices
+        if choice not in choices:
+            raise UnsupportedResolutionError(
+                identity, choice.value, tuple(c.value for c in choices)
+            )
 
 
 def manifest_digest(manifest: EnvironmentManifest) -> str:

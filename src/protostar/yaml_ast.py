@@ -22,10 +22,12 @@ from .errors import ConfigurationError
 from .merge import (
     DEFAULT_POLICY,
     MISSING,
+    NO_RESOLUTIONS,
     ConflictReason,
     MergeConflict,
     MergeLocation,
     MergePolicy,
+    Resolutions,
     Value,
     hold,
     lookup,
@@ -233,6 +235,7 @@ class YamlReconciliation:
     content: str
     baseline: Value
     conflicts: tuple[MergeConflict, ...]
+    resolved: tuple[MergeConflict, ...] = ()
 
 
 class Wildcard(Enum):
@@ -494,6 +497,7 @@ def reconcile_yaml(
     guard: YamlGuard = NO_GUARD,
     missing_file: bool = False,
     overwrite: bool = False,
+    resolutions: Resolutions = NO_RESOLUTIONS,
 ) -> YamlReconciliation:
     """Reconciles a YAML document under its spec without owning foreign content.
 
@@ -508,6 +512,7 @@ def reconcile_yaml(
         guard: Document-policy holds and conflicts, applied ahead of the merge.
         missing_file: Whether the workspace file is absent.
         overwrite: Whether explicit overwrite owns declared values.
+        resolutions: Choices settling conflicts, keyed by conflict identity.
 
     Returns:
         Emitted text, the composite owned baseline, and structured conflicts.
@@ -536,11 +541,17 @@ def reconcile_yaml(
         _omit(declared, held)
     # Validate explicit membership policy even under overwrite authorization.
     result = reconcile(
-        base, MISSING if missing_file else local, remote, location, spec.policy
+        base,
+        MISSING if missing_file else local,
+        remote,
+        location,
+        spec.policy,
+        resolutions,
     )
     value = result.value
     baseline = result.baseline
     conflicts = [*guard.conflicts, *ambiguities, *result.conflicts]
+    resolved = result.resolved
     if overwrite:
         value = deepcopy(local)
         baseline = deepcopy(base) if isinstance(base, dict) else {}
@@ -550,8 +561,11 @@ def reconcile_yaml(
         overlay_declared(value, declared)
         overlay_declared(baseline, declared)
         conflicts = [*guard.conflicts, *ambiguities]
+        resolved = ()
     if value is MISSING:
-        return YamlReconciliation(original, _unkeyed(spec, baseline), tuple(conflicts))
+        return YamlReconciliation(
+            original, _unkeyed(spec, baseline), tuple(conflicts), resolved
+        )
 
     counts: dict[int, int] = {}
 
@@ -732,7 +746,9 @@ def reconcile_yaml(
         if not baseline and base is MISSING and not missing_file:
             baseline = MISSING
     if semantic_equal(local, value) and not missing_file:
-        return YamlReconciliation(original, _unkeyed(spec, baseline), tuple(conflicts))
+        return YamlReconciliation(
+            original, _unkeyed(spec, baseline), tuple(conflicts), resolved
+        )
     if missing_file and semantic_equal(value, wanted):
         # A fully accepted new file keeps the desired text, including its comments.
         content = desired
@@ -749,4 +765,6 @@ def reconcile_yaml(
     decoded = decode_yaml_baseline(content)
     if not semantic_equal(keyed_view(spec, decoded), value):
         raise _invalid()
-    return YamlReconciliation(content, _unkeyed(spec, baseline), tuple(conflicts))
+    return YamlReconciliation(
+        content, _unkeyed(spec, baseline), tuple(conflicts), resolved
+    )

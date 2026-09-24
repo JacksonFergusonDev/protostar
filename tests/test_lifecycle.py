@@ -17,11 +17,12 @@ from protostar.errors import (
     InvalidUsageError,
     MissingTemplateVariablesError,
     ProtostarError,
+    UnmatchedResolutionError,
 )
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project
 from protostar.manifest import EnvironmentManifest
-from protostar.merge import ConflictReason
+from protostar.merge import ConflictReason, ResolutionChoice
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
 
 
@@ -114,7 +115,10 @@ def test_json_and_human_review_exit_zero_even_with_conflicts(
     monkeypatch.setattr(ui, "is_json_mode", False)
     monkeypatch.setattr("sys.argv", ["protostar", command])
     main()
-    assert "Conflict: .github/renovate.json" in capsys.readouterr().out
+    (conflict,) = payload["review"]["conflicts"]
+    assert (
+        f"Conflict {conflict['id']}: .github/renovate.json" in capsys.readouterr().out
+    )
 
 
 @pytest.mark.parametrize("target", ["pyproject.toml", ".protostar.lock.toml"])
@@ -412,6 +416,121 @@ def test_sync_partial_commits_safe_siblings_and_retains_conflict(
     assert not review.state_changed
 
 
+RENOVATE = ".github/renovate.json"
+
+
+def local_conflict(project):
+    Path(RENOVATE).write_text(json.dumps({"value": "local"}))
+    project.write_text(source_text("remote"))
+    (conflict,) = inspect_project().conflicts
+    return conflict
+
+
+def test_sync_resolve_keeps_local_content_and_owns_the_update(
+    project, monkeypatch, capsys
+):
+    conflict = local_conflict(project)
+    assert conflict.choices == (ResolutionChoice.LOCAL, ResolutionChoice.DESIRED)
+
+    payload = invoke_sync(monkeypatch, capsys, "--resolve", f"{conflict.id}=local")
+
+    assert payload["status"] == "success"
+    assert not payload["review"]["conflicts"]
+    (resolved,) = payload["review"]["resolved"]
+    assert (resolved["id"], resolved["resolution"]) == (conflict.id, "local")
+    assert json.loads(Path(RENOVATE).read_text()) == {"value": "local"}
+    # The kept content now reads as a local edit of the update.
+    review = inspect_project()
+    assert not review.pending
+    assert [item.location.file for item in review.preserved] == [RENOVATE]
+    assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
+    # A later change to the same value conflicts again.
+    project.write_text(source_text("newer"))
+    assert inspect_project().conflicts
+
+
+def test_sync_resolve_by_path_takes_the_update(project, monkeypatch, capsys):
+    local_conflict(project)
+
+    payload = invoke_sync(monkeypatch, capsys, "--resolve", f"{RENOVATE}=desired")
+
+    assert payload["status"] == "success"
+    assert [item["resolution"] for item in payload["review"]["resolved"]] == ["desired"]
+    assert json.loads(Path(RENOVATE).read_text()) == {"value": "remote"}
+    assert not inspect_project().pending
+
+
+def test_sync_resolve_previews_without_writing(project, monkeypatch, capsys):
+    local_conflict(project)
+    before = snapshot(Path.cwd())
+
+    preview = invoke_sync(
+        monkeypatch, capsys, "--dry-run", "--resolve", f"{RENOVATE}=desired"
+    )
+
+    assert snapshot(Path.cwd()) == before
+    assert not preview["review"]["conflicts"]
+    assert RENOVATE in [item["path"] for item in preview["diffs"]]
+
+
+@pytest.mark.parametrize(
+    ("resolution", "error", "details"),
+    [
+        pytest.param(
+            "abcdef012345=local",
+            "UnmatchedResolutionError",
+            {"unmatched_resolutions": ["abcdef012345"]},
+            id="unmatched",
+        ),
+        pytest.param(
+            f"{RENOVATE}=both",
+            "UnsupportedResolutionError",
+            {
+                "resolution": {"selector": RENOVATE, "choice": "both"},
+                "choices": ["local", "desired"],
+            },
+            id="unsupported",
+        ),
+    ],
+)
+def test_sync_rejects_resolutions_it_cannot_apply(
+    project, monkeypatch, capsys, resolution, error, details
+):
+    local_conflict(project)
+    before = snapshot(Path.cwd())
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr(
+        "sys.argv", ["protostar", "sync", "--json", "--resolve", resolution]
+    )
+
+    with pytest.raises(SystemExit) as caught:
+        main()
+
+    assert caught.value.code != 0
+    payload = json.loads(capsys.readouterr().out)["error"]
+    assert payload["type"] == error
+    assert details.items() <= payload.items()
+    assert snapshot(Path.cwd()) == before
+
+
+def test_resolution_for_changed_content_no_longer_applies(project):
+    from protostar.lifecycle import prepare_project
+
+    conflict = local_conflict(project)
+    Path(RENOVATE).write_text(json.dumps({"value": "edited again"}))
+
+    with pytest.raises(UnmatchedResolutionError):
+        prepare_project().resolve({conflict.id: ResolutionChoice.LOCAL})
+
+
+def test_sync_resolve_argument_is_validated(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["protostar", "sync", "--resolve", "file=mine"])
+    with pytest.raises(SystemExit) as caught:
+        main()
+    assert caught.value.code != 0
+    assert "local, desired, both" in " ".join(capsys.readouterr().out.split())
+
+
 def test_sync_check_and_dry_run_are_read_only(project, monkeypatch, capsys):
     project.write_text(source_text("updated"))
     before = snapshot(Path.cwd())
@@ -653,7 +772,7 @@ def test_sync_application_schema_and_flags_are_published():
     capabilities = schema._build_capabilities_schema(build_parser())
     application = capabilities["application_schema"]
     assert application["properties"]["status"]["enum"] == ["success", "partial"]
-    assert {"--dry-run", "--check"} <= {
+    assert {"--dry-run", "--check", "--resolve"} <= {
         name
         for flag in capabilities["commands"]["sync"]["flags"]
         for name in flag["names"]

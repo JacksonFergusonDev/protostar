@@ -40,6 +40,7 @@ class DocsPage(Enum):
         "Remote Template Security",
     )
     ROLLBACK = ("usage/rollback/", "Rollback")
+    RESOLVE_CONFLICTS = ("usage/lifecycle/#resolve-conflicts", "Resolve Conflicts")
 
     INIT = ("usage/init/", "Init")
 
