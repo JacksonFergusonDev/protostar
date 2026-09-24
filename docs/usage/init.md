@@ -10,6 +10,9 @@ Protostar is designed to be run on Day 1 to build your repository foundation. On
 an already initialized workspace, `--force-merge` safely reconciles contributions
 that Protostar previously recorded. It can apply unchanged-local template updates
 and additive tooling, while preserving user edits, deletions, and unowned content.
+It skips the change review, so a conflict it meets keeps your version; `init`
+ends by counting those you can still settle, and `protostar sync` lets you choose
+a side.
 It does not adopt existing configuration, switch templates, prune removed template
 content. After initialization, use the [project lifecycle](lifecycle.md) commands
 `status`, `diff`, and `sync` to review and apply the recorded recipe.

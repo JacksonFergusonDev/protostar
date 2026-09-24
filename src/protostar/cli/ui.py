@@ -422,12 +422,34 @@ def _run_engine(
                 "\n[bold yellow]PARTIAL SUCCESS:[/bold yellow] Environment scaffolded, "
                 "but some non-critical tasks encountered issues."
             )
+            if pointer := _sync_pointer(result.diagnostics):
+                console.print(pointer)
         else:
             console.print(
                 "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
             )
 
     return result
+
+
+def _sync_pointer(events: Sequence[DiagnosticEvent]) -> Text | None:
+    """Points to ``sync`` for the open conflicts that offer a choice, if any."""
+    # Initialization prepares batches around its commands, so one conflict
+    # can be reported more than once.
+    count = len(
+        {
+            event.conflict.id
+            for event in events
+            if event.conflict and event.conflict.choices
+        }
+    )
+    if not count:
+        return None
+    return Text.assemble(
+        f"{count} conflict{'' if count == 1 else 's'} kept your version. Run ",
+        ("protostar sync", "bold cyan"),
+        " to choose a side.",
+    )
 
 
 def diagnostics_report(events: Sequence[DiagnosticEvent]) -> Group:
