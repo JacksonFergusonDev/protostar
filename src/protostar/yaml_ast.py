@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from functools import lru_cache
 from io import StringIO
@@ -27,6 +27,7 @@ from .merge import (
     MergeConflict,
     MergeLocation,
     MergePolicy,
+    ResolutionChoice,
     Resolutions,
     Value,
     hold,
@@ -236,6 +237,8 @@ class YamlReconciliation:
     baseline: Value
     conflicts: tuple[MergeConflict, ...]
     resolved: tuple[MergeConflict, ...] = ()
+    proposals: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
 
 
 class Wildcard(Enum):
@@ -299,6 +302,9 @@ class YamlGuard:
             baseline (or dropped when unowned), so local content and previous
             ownership are kept there without a conflict of their own.
         conflicts: Conflicts the policy found, reported ahead of the merge's own.
+            One at a held path with sides can be settled: the hold is lifted
+            and the merge then keeps the local value as an edit of the update,
+            or takes the update.
     """
 
     holds: tuple[tuple[str, ...], ...] = ()
@@ -487,6 +493,20 @@ def _insertion_index(
     return len(node)
 
 
+def _place(base: Value, path: tuple[str, ...], value: Value) -> Value:
+    """Returns ``base`` with ``value`` at a key path, creating mappings on the way."""
+    root: dict[str, Value] = deepcopy(base) if isinstance(base, dict) else {}
+    node = root
+    for key in path[:-1]:
+        child = node.get(key)
+        if not isinstance(child, dict):
+            child = {}
+            node[key] = child
+        node = child
+    node[path[-1]] = deepcopy(value)
+    return root
+
+
 def reconcile_yaml(
     spec: YamlDocumentSpec,
     original: str,
@@ -498,6 +518,7 @@ def reconcile_yaml(
     missing_file: bool = False,
     overwrite: bool = False,
     resolutions: Resolutions = NO_RESOLUTIONS,
+    proposing: bool = False,
 ) -> YamlReconciliation:
     """Reconciles a YAML document under its spec without owning foreign content.
 
@@ -513,6 +534,8 @@ def reconcile_yaml(
         missing_file: Whether the workspace file is absent.
         overwrite: Whether explicit overwrite owns declared values.
         resolutions: Choices settling conflicts, keyed by conflict identity.
+        proposing: Whether the document existed before Protostar owned any of
+            it, so each change into it is a proposal.
 
     Returns:
         Emitted text, the composite owned baseline, and structured conflicts.
@@ -536,7 +559,27 @@ def reconcile_yaml(
     ]
     remote = deepcopy(wanted)
     declared = deepcopy(wanted)
+    guard_open: list[MergeConflict] = []
+    guard_settled: list[MergeConflict] = []
+    lifted: set[tuple[str, ...]] = set()
+    for found in guard.conflicts:
+        settled = found.settle(resolutions) if not overwrite else None
+        if settled is None or found.sides is None:
+            guard_open.append(found)
+            continue
+        # The side the merge must see as owned for it to reach the choice:
+        # the update's to keep local content as an edit of it, local's to take it.
+        owned = (
+            found.sides.desired
+            if settled.resolution is ResolutionChoice.LOCAL
+            else found.sides.local
+        )
+        base = _place(base, found.location.keys, owned)
+        lifted.add(found.location.keys)
+        guard_settled.append(settled)
     for held in (*guard.holds, *ambiguous):
+        if held in lifted:
+            continue
         hold(remote, base, held)
         _omit(declared, held)
     # Validate explicit membership policy even under overwrite authorization.
@@ -545,13 +588,15 @@ def reconcile_yaml(
         MISSING if missing_file else local,
         remote,
         location,
-        spec.policy,
+        replace(spec.policy, proposing=proposing),
         resolutions,
     )
     value = result.value
     baseline = result.baseline
-    conflicts = [*guard.conflicts, *ambiguities, *result.conflicts]
-    resolved = result.resolved
+    conflicts = [*guard_open, *ambiguities, *result.conflicts]
+    resolved = (*guard_settled, *result.resolved)
+    proposals = result.proposals
+    preserved = result.preserved
     if overwrite:
         value = deepcopy(local)
         baseline = deepcopy(base) if isinstance(base, dict) else {}
@@ -562,9 +607,15 @@ def reconcile_yaml(
         overlay_declared(baseline, declared)
         conflicts = [*guard.conflicts, *ambiguities]
         resolved = ()
+        proposals = preserved = ()
     if value is MISSING:
         return YamlReconciliation(
-            original, _unkeyed(spec, baseline), tuple(conflicts), resolved
+            original,
+            _unkeyed(spec, baseline),
+            tuple(conflicts),
+            tuple(resolved),
+            proposals,
+            preserved,
         )
 
     counts: dict[int, int] = {}
@@ -747,7 +798,12 @@ def reconcile_yaml(
             baseline = MISSING
     if semantic_equal(local, value) and not missing_file:
         return YamlReconciliation(
-            original, _unkeyed(spec, baseline), tuple(conflicts), resolved
+            original,
+            _unkeyed(spec, baseline),
+            tuple(conflicts),
+            tuple(resolved),
+            proposals,
+            preserved,
         )
     if missing_file and semantic_equal(value, wanted):
         # A fully accepted new file keeps the desired text, including its comments.
@@ -766,5 +822,10 @@ def reconcile_yaml(
     if not semantic_equal(keyed_view(spec, decoded), value):
         raise _invalid()
     return YamlReconciliation(
-        content, _unkeyed(spec, baseline), tuple(conflicts), resolved
+        content,
+        _unkeyed(spec, baseline),
+        tuple(conflicts),
+        tuple(resolved),
+        proposals,
+        preserved,
     )

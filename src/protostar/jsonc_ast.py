@@ -20,6 +20,7 @@ from .merge import (
     NO_RESOLUTIONS,
     MergeConflict,
     MergeLocation,
+    MergePolicy,
     Resolutions,
     Value,
     overlay_declared,
@@ -768,6 +769,8 @@ class JsoncReconciliation:
     baseline: Value
     conflicts: tuple[MergeConflict, ...]
     resolved: tuple[MergeConflict, ...] = ()
+    proposals: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
 
 
 def reconcile_jsonc(
@@ -780,6 +783,7 @@ def reconcile_jsonc(
     overwrite: bool = False,
     default_indent: str = "  ",
     resolutions: Resolutions = NO_RESOLUTIONS,
+    proposing: bool = False,
 ) -> JsoncReconciliation:
     """Confines accepted semantic edits to byte spans of the local document.
 
@@ -798,6 +802,8 @@ def reconcile_jsonc(
         overwrite: Own declared values while retaining undeclared siblings.
         default_indent: Indentation unit when the document offers none to infer.
         resolutions: Choices settling conflicts, keyed by conflict identity.
+        proposing: Whether the document existed before Protostar owned any of
+            it, so each change into it is a proposal.
 
     Returns:
         Resulting text, the owned baseline, and preserved-local conflicts.
@@ -814,6 +820,8 @@ def reconcile_jsonc(
     local = doc.value()
     conflicts: list[MergeConflict] = []
     resolved: tuple[MergeConflict, ...] = ()
+    proposals: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
     if overwrite:
         value: Value = deepcopy(local)
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
@@ -825,13 +833,17 @@ def reconcile_jsonc(
             MISSING if missing_file else local,
             remote,
             location,
-            resolutions=resolutions,
+            MergePolicy(proposing=proposing),
+            resolutions,
         )
         value, baseline = result.value, result.baseline
         conflicts = list(result.conflicts)
         resolved = result.resolved
+        proposals = result.proposals
+        preserved = result.preserved
+    decisions = (tuple(conflicts), resolved, proposals, preserved)
     if value is MISSING:
-        return JsoncReconciliation(original, baseline, tuple(conflicts), resolved)
+        return JsoncReconciliation(original, baseline, *decisions)
     accepted = cast(dict[str, Value], value)
 
     if isinstance(baseline, dict):
@@ -839,9 +851,9 @@ def reconcile_jsonc(
         if not baseline and base is MISSING and not missing_file:
             baseline = MISSING
     if missing_file and semantic_equal(accepted, remote):
-        return JsoncReconciliation(desired, baseline, tuple(conflicts), resolved)
+        return JsoncReconciliation(desired, baseline, *decisions)
     if semantic_equal(local, accepted) and (not missing_file or not accepted):
-        return JsoncReconciliation(original, baseline, tuple(conflicts), resolved)
+        return JsoncReconciliation(original, baseline, *decisions)
 
     def patch(
         target: JsoncDocument,
@@ -865,4 +877,4 @@ def reconcile_jsonc(
             "JSONC reconciliation could not preserve the accepted values.",
             hint="Simplify the target document or restore it from version control.",
         )
-    return JsoncReconciliation(edited.text, baseline, tuple(conflicts), resolved)
+    return JsoncReconciliation(edited.text, baseline, *decisions)

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .config import UserConfig
 from .dependencies import install_dependencies
-from .errors import ConfigurationError, FileSystemError
+from .errors import ConfigurationError, FileSystemError, StaleReviewError
 from .fs_transaction import TransactionAwareFS
 from .ide import check_ide_extensions
 from .intent import ResolverFootprint
@@ -17,7 +17,7 @@ from .manifest import (
     Severity,
     SystemTask,
 )
-from .merge import NO_RESOLUTIONS, Resolutions
+from .merge import NO_RESOLUTIONS, MergeConflict, Resolutions
 from .preparation import (
     ExecutionPolicy,
     PreparationPhase,
@@ -65,8 +65,9 @@ class SystemExecutor(Reconciliation):
             hook_revisions: The registry snapshot a caller already reviewed. Without
                 one or a review, the executor takes its own when hooks are wanted.
             progress: Brackets each subprocess and the initial scaffold for a presenter.
-            resolutions: Choices a change review made for the conflicts of the
-                first initialization batch, the only one it could show.
+            resolutions: Choices a change review made for the decisions of the
+                batches it could show: the first, and the one before the
+                resolver when no initializer creates its inputs.
         """
         self.workspace = LiveWorkspace()
         self.manifest = manifest
@@ -87,6 +88,9 @@ class SystemExecutor(Reconciliation):
         self.fs = TransactionAwareFS(self.journal)
         self.process_runner = ProcessRunner()
         self.diagnostics: list[DiagnosticEvent] = []
+        self.proposals: list[MergeConflict] = []
+        self.preserved: list[MergeConflict] = []
+        self._owned_on_disk: frozenset[str] = frozenset()
         self.completed_tasks: list[SystemTask] = []
         self.interrupted_task: SystemTask | None = None
         from . import __version__
@@ -99,6 +103,7 @@ class SystemExecutor(Reconciliation):
         # Conflicts are settled in the reviews execution applies, never here.
         self.resolutions = NO_RESOLUTIONS
         self.reviewed_resolutions = resolutions
+        self._used_resolutions: set[str] = set()
 
     def execute(
         self,
@@ -130,6 +135,10 @@ class SystemExecutor(Reconciliation):
                     self._apply_review(early)
                 self._run_tasks(self.manifest.tasks.system_tasks)
                 resolver = self._prepare(PreparationPhase.BEFORE_RESOLVER)
+                if self._used_resolutions != set(self.reviewed_resolutions):
+                    # A reviewed choice that names nothing left to decide was made
+                    # for content that changed since.
+                    raise StaleReviewError("change review choices")
                 self._apply_review(resolver)
                 self._resolve_review(resolver)
                 artifacts = self._prepare(PreparationPhase.AFTER_RESOLVER)
@@ -247,8 +256,18 @@ class SystemExecutor(Reconciliation):
                 ) from e
 
     def _prepare(self, phase: PreparationPhase) -> PreparedReview:
-        """Prepares the next initializer/resolver-dependent batch without mutation."""
-        return prepare_review(
+        """Prepares the next initializer/resolver-dependent batch without mutation.
+
+        The reviewed choices span the first two batches, so each batch takes
+        the ones naming its own decisions, and the executor checks that every
+        choice was used: one that settled nothing, including a choice its
+        decision no longer offers, was made for content that changed since.
+        """
+        reviewed = phase in (
+            PreparationPhase.BEFORE_INITIALIZERS,
+            PreparationPhase.BEFORE_RESOLVER,
+        )
+        prepared = prepare_review(
             self.manifest,
             self.config,
             hook_revisions=self.hook_revisions,
@@ -259,15 +278,19 @@ class SystemExecutor(Reconciliation):
             candidate_state=self.candidate_state if self._batch_applied else None,
             presence=self.journal,
             preserve_deleted_pyproject=self._preserve_deleted_pyproject,
-            resolutions=self.reviewed_resolutions
-            if phase is PreparationPhase.BEFORE_INITIALIZERS
-            else NO_RESOLUTIONS,
+            resolutions=self.reviewed_resolutions if reviewed else NO_RESOLUTIONS,
+            partial_resolutions=reviewed,
         )
+        if reviewed:
+            self._used_resolutions.update(
+                decision.id
+                for decision in (*prepared.resolved, *prepared.proposals)
+                if decision.resolution is not None
+            )
+        return prepared
 
     def _apply_review(self, review: PreparedReview) -> None:
         """Revalidates captured inputs before applying exact accepted bytes."""
-        from .errors import StaleReviewError
-
         if manifest_digest(self.manifest) != review.manifest_digest:
             raise StaleReviewError("desired manifest")
         review.validate_inputs()

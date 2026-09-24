@@ -272,6 +272,8 @@ When `init` runs in a directory that already holds a project but has no recipe y
 
 The editor's headline says when it has filled in an existing project, and a note under __Tools__ names anything it left out, such as other GitHub Actions workflows the CI tool would run beside, or a file it could not read. `protostar init --dry-run --json` reports the same analysis for agents (see the [machine interface](agent-interface.md)).
 
+The change review that follows lists every change Protostar would make to a file you already have, and each can be kept out; __Keep all mine__ (`K`) adopts the project exactly as it is, and `protostar sync` can take any kept-out change later (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
+
 ## Progressive Scaffolding & Collisions
 
 When Protostar detects existing configuration files (like `pyproject.toml`), the change review marks them as conflicts and asks how to handle them under __Existing files__:
@@ -284,13 +286,20 @@ Choosing either re-prepares the review with its diffs. Press __Cancel__ to exit 
 Under __Merge__, a file Protostar can't merge into is kept as it is and marked
 `conflict`, such as an existing `justfile` it has never managed. Highlight it to
 see your version beside Protostar's and settle it under __Conflicts__: __Keep
-mine__ (`K`) leaves the file untouched and adopts it, so later updates merge into
-it three ways; __Take update__ (`U`) replaces it. __Keep both__ (`B`) is offered
-for overlapping lines, and __Leave open__ (`X`) keeps today's behavior. The
-review shows the result before anything runs. Only conflicts in files written
-before setup commands run can be settled here; the rest are listed after setup,
-and `protostar sync` settles them the same way (see
-[resolve conflicts](lifecycle.md#resolve-conflicts)).
+mine__ (`k`) leaves the file untouched and adopts it, so later updates merge into
+it three ways; __Take update__ (`u`) replaces it. __Keep both__ (`b`) is offered
+for overlapping lines, and __Leave open__ (`x`) keeps today's behavior.
+
+Everything else Merge would change in a file you already have is listed too, as
+__Changes to your file__: each key, table, list member, or dependency it adds.
+Each applies unless you keep it out with `k`; keeping it out records Protostar's
+version without writing it, so `protostar sync` can take it later.
+__Keep all mine__ (`K`) keeps your side of every conflict and change at once,
+which adopts the project exactly as it is. The review shows the result before
+anything runs. It covers the files written before setup commands, and the
+configuration merges and dependencies after them whenever no command creates
+their files; anything later is listed after setup, and `protostar sync` settles
+it the same way (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 
 Selecting __Merge__ reconciles declared TOML configuration against
 `.protostar.lock.toml`. A tracked project requires the same explicitly selected

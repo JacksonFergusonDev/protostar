@@ -1,10 +1,12 @@
 """GitHub Actions workflow merge spec and guards for foreign jobs and action refs."""
 
+from copy import deepcopy
 from typing import cast
 
 from ..merge import (
     MISSING,
     ConflictReason,
+    ConflictSides,
     MergeConflict,
     MergeLocation,
     MergePolicy,
@@ -50,7 +52,9 @@ def guard_workflow(target: str, desired: Value, local: Value, base: Value) -> Ya
     """Holds foreign jobs and user-owned action refs before a workflow merge.
 
     - A job that exists locally but that Protostar does not own is left whole and
-      reported as ``unowned``; Protostar never grafts its steps into it.
+      reported as ``unowned``; Protostar never grafts its steps into it. Keeping
+      it adopts the job as an edit of Protostar's, whose steps then merge by
+      name; taking the update replaces it.
     - When an owned step's local ``uses`` names the same action Protostar last
       wrote but a different ref (a Renovate SHA pin or a manual bump), the ref
       belongs to the user: it is kept without a conflict.
@@ -79,7 +83,11 @@ def guard_workflow(target: str, desired: Value, local: Value, base: Value) -> Ya
             holds.append(("jobs", job))
             conflicts.append(
                 MergeConflict(
-                    MergeLocation(target, ("jobs", job)), ConflictReason.UNOWNED
+                    MergeLocation(target, ("jobs", job)),
+                    ConflictReason.UNOWNED,
+                    ConflictSides(
+                        MISSING, deepcopy(local_jobs[job]), deepcopy(desired_job)
+                    ),
                 )
             )
             continue

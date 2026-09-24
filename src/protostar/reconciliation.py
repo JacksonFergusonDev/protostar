@@ -64,6 +64,7 @@ from .merge import (
     MISSING,
     NO_RESOLUTIONS,
     ConflictReason,
+    ConflictSides,
     MergeConflict,
     MergeLocation,
     ResolutionChoice,
@@ -168,6 +169,9 @@ class Reconciliation:
         self.hook_revisions = hook_revisions
         self.docker = manifest.tooling.wants_docker
         self.diagnostics: list[DiagnosticEvent] = []
+        self.proposals: list[MergeConflict] = []
+        self.preserved: list[MergeConflict] = []
+        self._owned_on_disk: frozenset[str] = frozenset()
         from . import __version__
 
         self.candidate_state = SyncState(__version__, manifest.template_reference)
@@ -377,7 +381,26 @@ class Reconciliation:
                     self._reconcile_document(located, content, FilePolicy.JSONC)
                 continue
             record = self._file_record(target, FilePolicy.SEED)
-            if self.manifest.collision_strategy is not CollisionStrategy.OVERWRITE and (
+            overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
+            if (
+                not overwrite
+                and record is not None
+                and not self.workspace.exists(target)
+            ):
+                # A deleted seed stays deleted unless its restoration is chosen.
+                deleted = MergeConflict(
+                    MergeLocation(target.as_posix()),
+                    ConflictReason.PRESERVED,
+                    ConflictSides(MISSING, MISSING, content, line=0),
+                )
+                settled = deleted.settle(self.resolutions)
+                if settled is None:
+                    self._report((), (), preserved=(deleted,))
+                    continue
+                self._report((), (settled,))
+                if settled.resolution is ResolutionChoice.LOCAL:
+                    continue
+            elif not overwrite and (
                 self.workspace.exists(target) or record is not None
             ):
                 self.add_diagnostic(
@@ -502,6 +525,7 @@ class Reconciliation:
             )
             location = MergeLocation(target.as_posix())
             overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
+            proposing = not overwrite and self._proposing(target, record)
             if policy is FilePolicy.YAML:
                 result: YamlReconciliation | JsoncReconciliation = reconcile_yaml(
                     YAML_DOCUMENTS[located.target],
@@ -520,6 +544,7 @@ class Reconciliation:
                     missing_file=not exists,
                     overwrite=overwrite,
                     resolutions=self.resolutions,
+                    proposing=proposing,
                 )
             else:
                 result = reconcile_jsonc(
@@ -531,8 +556,11 @@ class Reconciliation:
                     overwrite=overwrite,
                     default_indent=indent,
                     resolutions=self.resolutions,
+                    proposing=proposing,
                 )
-            self._report(result.conflicts, result.resolved)
+            self._report(
+                result.conflicts, result.resolved, result.proposals, result.preserved
+            )
             if result.baseline is not MISSING:
                 self._own(
                     located,
@@ -626,8 +654,11 @@ class Reconciliation:
                 missing_file=not self.workspace.exists(target),
                 desired_ast=aggregated.document,
                 resolutions=self.resolutions,
+                proposing=not is_overwrite and self._proposing(target, record),
             )
-            self._report(result.conflicts, result.resolved)
+            self._report(
+                result.conflicts, result.resolved, result.proposals, result.preserved
+            )
             for note in result.layout_notes:
                 self._layout_warning(target, note)
             if result.baseline is not MISSING:
@@ -707,7 +738,11 @@ class Reconciliation:
                 and not self.workspace.exists(target),
                 resolutions=self.resolutions,
             )
-            self._report(region_result.conflicts, region_result.resolved)
+            self._report(
+                region_result.conflicts,
+                region_result.resolved,
+                preserved=region_result.preserved,
+            )
             if region_result.baselines:
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
@@ -881,7 +916,7 @@ class Reconciliation:
                 is CollisionStrategy.OVERWRITE,
                 resolutions=self.resolutions,
             )
-            self._report(result.conflicts, result.resolved)
+            self._report(result.conflicts, result.resolved, preserved=result.preserved)
             if result.content is not None:
                 self.fs.write_text(target, result.content)
             if result.baseline is not None:
@@ -1212,6 +1247,24 @@ class Reconciliation:
                 indent=vscode.SETTINGS_INDENT,
             )
 
+    def _proposing(self, target: Path, record: FileState | None) -> bool:
+        """Returns whether changes into an existing file are proposals.
+
+        They are while the file existed before this run and Protostar owns
+        nothing in it, neither now nor in the committed state: the content is
+        the user's, so each change into it can be declined.
+
+        Args:
+            target: The file being reconciled.
+            record: Its current ownership record, if any.
+        """
+        return (
+            record is None
+            and target.as_posix() not in self._owned_on_disk
+            and self.workspace.exists(target)
+            and self.journal.was_present(target)
+        )
+
     def _merge_warning(self, conflict: MergeConflict) -> None:
         """Exposes a concrete preserved conflict to headless callers."""
         where = describe_location(conflict.location)
@@ -1229,8 +1282,16 @@ class Reconciliation:
         self,
         conflicts: tuple[MergeConflict, ...],
         resolved: tuple[MergeConflict, ...],
+        proposals: tuple[MergeConflict, ...] = (),
+        preserved: tuple[MergeConflict, ...] = (),
     ) -> None:
-        """Exposes open and settled conflicts to headless callers."""
+        """Exposes open and settled conflicts to headless callers.
+
+        Proposals and preserved deviations are no anomaly, so the review lists
+        them without a diagnostic.
+        """
+        self.proposals.extend(proposals)
+        self.preserved.extend(preserved)
         for conflict in conflicts:
             self._merge_warning(conflict)
         for conflict in resolved:
@@ -1240,10 +1301,15 @@ class Reconciliation:
                 ResolutionChoice.DESIRED: "taking the update",
                 ResolutionChoice.BOTH: "keeping both",
             }[cast(ResolutionChoice, conflict.resolution)]
+            noun = (
+                "local change"
+                if conflict.reason is ConflictReason.PRESERVED
+                else "conflict"
+            )
             self.diagnostics.append(
                 DiagnosticEvent(
                     DiagnosticPhase.EXECUTOR,
-                    f"Resolved conflict in {conflict.location.file}"
+                    f"Resolved {noun} in {conflict.location.file}"
                     f"{f' at {where}' if where else ''} by {kept}.",
                     Severity.INFO,
                     resolved=conflict,
@@ -1305,6 +1371,7 @@ class Reconciliation:
                     | {r.path for r in state.dependencies}
                     | {r.path for r in state.hook_pins}
                 )
+                self._owned_on_disk = frozenset(paths)
                 for path in paths:
                     self._validate_node(Path(path))
                 # Capture deletion before initializer tasks can recreate the file.
@@ -1367,6 +1434,10 @@ class Reconciliation:
         )
         selected: dict[DependencyGroup, list[str]] = {}
         blocked: set[DependencyGroup] = set()
+        # A project whose requirements Protostar never owned proposes each one.
+        proposing = not self.candidate_state.dependencies and self._proposing(
+            target, None
+        )
         for group, desired in groups:
             tracked_file = any(
                 r.path == pyproject.TARGET for r in self.candidate_state.files
@@ -1450,17 +1521,33 @@ class Reconciliation:
                         )
                     )
                 continue
+            overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
             result = select_dependencies(
                 desired,
                 requirement_entries(data, group),
                 self.candidate_state.dependencies,
                 group,
-                overwrite=self.manifest.collision_strategy
-                is CollisionStrategy.OVERWRITE,
+                overwrite=overwrite,
+                proposing=not overwrite and proposing,
+                resolutions=self.resolutions,
             )
             selected[group] = list(result.packages)
-            for conflict in result.conflicts:
-                self._merge_warning(conflict)
+            self._report(
+                result.conflicts, result.resolved, result.proposals, result.preserved
+            )
+            if result.records:
+                kept = {record.identity for record in result.records}
+                self.candidate_state = replace(
+                    self.candidate_state,
+                    dependencies=(
+                        *(
+                            r
+                            for r in self.candidate_state.dependencies
+                            if r.identity not in kept
+                        ),
+                        *result.records,
+                    ),
+                )
         accepted = DependencyManifest(
             dependencies=selected[DependencyGroup.MAIN],
             dev_dependencies=selected[DependencyGroup.DEV],

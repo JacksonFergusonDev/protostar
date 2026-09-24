@@ -320,7 +320,11 @@ def review_schema() -> dict[str, Any]:
             "directories": strings,
             "conflicts": records(conflict),
             "resolved": records({**conflict, "resolution": choice}),
-            "preserved": records({**location, "deleted": boolean}),
+            # A proposal without a choice applies.
+            "proposals": records(
+                {**conflict, "resolution": {"oneOf": [choice, {"type": "null"}]}}
+            ),
+            "preserved": records({**conflict, "deleted": boolean}),
             "state_changed": boolean,
             "resolver": record(
                 {

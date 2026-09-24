@@ -70,9 +70,10 @@ A checkout that only converts line endings, such as Git's `core.autocrlf`, is no
 an edit, and a merged file keeps your line endings.
 
 Local edits or deletions with unchanged desired intent are preserved and do not
-make checks fail. Deleted managed files stay deleted. Omitted template
-contributions retain their existing files and ownership; sync never prunes them.
-Equal foreign content remains unowned.
+make checks fail. Deleted managed files stay deleted. Each preserved edit has an
+`id`, and you can [take its update later](#take-a-kept-change-later). Omitted
+template contributions retain their existing files and ownership; sync never
+prunes them. Equal foreign content remains unowned.
 
 GitHub Actions workflows are the exception to pruning, because each is one
 generator's complete output. When Protostar stops generating a step or key (for
@@ -99,32 +100,40 @@ like, then keep it. The same choices settle every kind of conflict Protostar can
 show both sides of:
 
 - A `diverged` or `type-mismatch` value or line range takes the side you choose.
-- An `unowned` file or value kept with `local` is adopted: it stays as it is and
-  merges three ways from then on. With `desired` it is replaced.
+- An `unowned` file, value, or workflow job kept with `local` is adopted: it
+  stays as it is and merges three ways from then on (a job's steps by name).
+  With `desired` it is replaced.
+- A dependency whose requirement differs from the request (`unowned`,
+  `diverged`, or `deleted-ancestor`) kept with `local` stands for the request
+  from then on, so `ruff>=0.5` satisfies a request for `ruff`; with `desired`
+  the resolver adds the request.
 - A `deleted-ancestor` file or table kept with `local` stays deleted; `desired`
   recreates it.
 - A `retracted` value kept with `local` stays and is no longer Protostar's;
   `desired` removes it.
 
 Conflicts caused by document policy (`duplicate-identity`, `shared-structure`,
-`unsafe-pin`) and dependency conflicts offer no choices. Fix those by hand.
+`unsafe-pin`), a table outside the file's root, and a dependency listed more
+than once offer no choices. Fix those by hand.
 
-In an interactive terminal, `sync` opens a conflict screen before it applies
-anything whenever a conflict can be settled. It lists the conflicts by file with
+In an interactive terminal, `sync` opens its review screen before it applies
+anything whenever a conflict can be settled or it proposes a change to a file
+you already have. It lists them by file, with your preserved edits, showing
 your side, the update's side, and a preview of the file each choice produces.
 Press `k` to keep yours, `u` to take the update, `b` to keep both, `x` to leave a
 conflict open, and `n` for the next open one; on a file's row, a choice applies
-to every conflict in that file. `a` applies the sync with those choices, and
-open conflicts keep your content as before. `esc` asks before leaving without
-applying anything. The screen never opens for `--dry-run`, `--check`, `--json`,
-`--resolve`, or a non-interactive terminal.
+to every conflict and proposal in that file, but never to a preserved edit. `a`
+applies the sync with those choices, and open conflicts keep your content as
+before. `esc` asks before leaving without applying anything. The screen never
+opens for `--dry-run`, `--check`, `--json`, `--resolve`, or a non-interactive
+terminal, and never for preserved edits alone.
 
 ![Protostar sync conflict screen](../assets/terminals/tui_sync_conflicts.svg)
 
 Each conflict has an `id` covering its location and content. `status` prints it
 with the choices it offers, and JSON reviews list both with every side under
 `review.conflicts`. Pass `--resolve SELECTOR=CHOICE` to `sync`, where the selector
-is a conflict `id` or a file path that selects every conflict in that file:
+is an `id` or a file path that selects every conflict and proposal in that file:
 
 ```bash
 protostar sync --dry-run --resolve 3f2a9c1b7d4e=local
@@ -137,6 +146,46 @@ that matches nothing fails before anything is written. An `id` stops matching as
 soon as either side of its conflict changes, so a choice is never applied to
 content you did not review. The overlapping line ranges of one text file are
 applied together: resolve every one, or the file stays as it is.
+
+## Changes to files you already have
+
+A change Protostar would make inside a file it has never owned is a proposal:
+`init` in an existing project, or a tool you enable whose configuration file you
+already wrote. That covers a new key or table, members added to a list such as
+Ruff's `select`, and a new dependency in a project whose requirements it never
+managed. A proposal applies unless you keep it out. Keeping it out records
+Protostar's version as the baseline without writing it, exactly like keeping
+your side of a conflict, so it reads as your deletion from then on: it is
+preserved, `sync --check` passes, and you can take it later.
+
+The `init` change review lists every proposal per file beside the file's diff,
+with the conflicts. Press `k` or `u` on a file to keep yours or take the update
+for all of its changes, and `K` to keep yours for every conflict and change in
+the review, which adopts the project exactly as it is. When no setup command
+creates them, as in a project that already has a `pyproject.toml`, the review
+shows the configuration merges and dependency choices too, so every change to an
+existing file is decided before anything runs. `status` and JSON reviews list
+proposals under `review.proposals`; a proposal without a `resolution` applies.
+`--force-merge` without a review applies every proposal, as before.
+
+`.gitignore` additions stay automatic: they only add missing lines.
+
+## Take a kept change later
+
+Every preserved edit or deletion is a decision you can revisit. `status` prints
+each with its `id`, and JSON reviews list them under `review.preserved` with
+their sides. Taking the update writes Protostar's version there, through the
+resolver for a dependency:
+
+```bash
+protostar status
+protostar sync --resolve 53c675afdfb0=desired
+```
+
+A file path never selects preserved edits, since each is deliberate: name them
+by `id`. The sync review screen lists them too, where `u` on a preserved edit's
+own row takes its update. This is how a project adopted as it was takes up
+Protostar's standards one at a time.
 
 ## Edit the recipe deliberately
 

@@ -1,4 +1,4 @@
-"""The first file batch, the steps after it, and the collision and trust decisions."""
+"""The files init writes before any command, the steps after them, and every decision."""
 
 import asyncio
 import shlex
@@ -34,15 +34,21 @@ from protostar.errors import ProtostarError
 from protostar.init_draft import InitDecision, InitDraft, resolve_init
 from protostar.intent import DependencyGroup
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.merge import MergeConflict, ResolutionChoice, describe_location
+from protostar.merge import (
+    ConflictReason,
+    MergeConflict,
+    ResolutionChoice,
+    default_choice,
+    describe_location,
+)
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
 from protostar.preparation import (
     ExecutionPolicy,
-    PreparationPhase,
     PreparedEdit,
     PreparedReview,
     prepare_review,
+    review_phase,
 )
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
 
@@ -90,9 +96,11 @@ _FOLDER = path_style("", directory=True)
 
 @dataclass(frozen=True)
 class Entry:
-    """One planned path and what the first file batch does to it.
+    """One planned path and what the files written before any command do to it.
 
-    Its conflicts are open or, once a choice settled them, resolved.
+    Its conflicts are open or, once a choice settled them, resolved. Its
+    proposals are changes into content the user already had, applied unless
+    kept out.
     """
 
     path: str
@@ -105,7 +113,16 @@ class Entry:
     @property
     def open(self) -> tuple[MergeConflict, ...]:
         """Returns the conflicts no choice has settled."""
-        return tuple(c for c in self.conflicts if c.resolution is None)
+        return tuple(
+            c
+            for c in self.conflicts
+            if c.resolution is None and c.reason is not ConflictReason.PROPOSED
+        )
+
+    @property
+    def proposals(self) -> tuple[MergeConflict, ...]:
+        """Returns the changes into this file's existing content."""
+        return tuple(c for c in self.conflicts if c.reason is ConflictReason.PROPOSED)
 
 
 @dataclass(frozen=True)
@@ -136,7 +153,7 @@ def classify(
     """
     edits = {edit.path: edit for edit in prepared.edits}
     conflicts: dict[str, list[MergeConflict]] = {}
-    for conflict in (*prepared.conflicts, *prepared.resolved):
+    for conflict in (*prepared.conflicts, *prepared.resolved, *prepared.proposals):
         conflicts.setdefault(conflict.location.file, []).append(conflict)
     creators = {
         path: tuple(task.command)
@@ -184,19 +201,22 @@ def _prepare(
     hook_revisions: tuple[ResolvedHookRevision, ...],
     choices: Mapping[str, ResolutionChoice],
 ) -> Review:
+    # A project whose files no command creates shows its merges here too.
+    phase = review_phase(manifest)
+
     def prepared_with(resolutions: Mapping[str, ResolutionChoice]) -> PreparedReview:
         return prepare_review(
             manifest,
             config,
             hook_revisions=hook_revisions,
             policy=ExecutionPolicy.INITIALIZATION,
-            phase=PreparationPhase.BEFORE_INITIALIZERS,
+            phase=phase,
             resolutions=resolutions,
         )
 
     prepared = prepared_with({})
-    # Choices made for conflicts a changed plan no longer has lapse.
-    kept = {c.id: choices[c.id] for c in prepared.conflicts if c.id in choices}
+    # Choices made for decisions a changed plan no longer has lapse.
+    kept = {c.id: choices[c.id] for c in prepared.decisions if c.id in choices}
     if kept:
         prepared = prepared_with(kept)
     return Review(request, manifest, prepared, classify(manifest, prepared))
@@ -212,9 +232,33 @@ def describe(entry: Entry) -> RenderableType:
         Any conflicts kept as they are, then the diff or a note.
     """
     parts: list[RenderableType] = []
+    if entry.proposals:
+        parts.append(
+            Text(
+                "Changes to content you already have. Each applies unless kept "
+                "out; keeping yours out records Protostar's version, so sync "
+                "can take it later."
+            )
+        )
     for conflict in entry.conflicts:
         where = describe_location(conflict.location)
         reason = conflict.reason.value
+        if conflict.reason is ConflictReason.PROPOSED:
+            # One line each; the file's diff below shows the exact bytes.
+            kept = conflict.resolution is ResolutionChoice.LOCAL
+            # A requirement's identity is its package and marker.
+            identity = (conflict.location.identity or "").rstrip(":")
+            parts.append(
+                Text.assemble(
+                    (
+                        "  kept out  " if kept else "  adds      ",
+                        "cyan" if kept else "green",
+                    ),
+                    (where or "the file", "bold"),
+                    (f" {identity}" if identity else "", "bold"),
+                )
+            )
+            continue
         if conflict.resolution is not None:
             parts.append(
                 Text(
@@ -335,6 +379,11 @@ def summary(review: Review) -> Text:
     parts.append(
         _count(len(tasks.system_tasks) + len(tasks.post_install_tasks), "command")
     )
+    proposals = review.prepared.proposals
+    if proposals:
+        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
+        changes = _count(len(proposals), "change") + " to your files"
+        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
     return Text(" · ".join(parts))
 
 
@@ -345,8 +394,13 @@ def _label(entry: Entry) -> Text:
     )
     if entry.open and entry.change is not Change.CONFLICT:
         marker += " · conflict"
-    elif entry.conflicts and not entry.open:
+    elif any(c.reason is not ConflictReason.PROPOSED for c in entry.conflicts) and (
+        not entry.open
+    ):
         marker += " · resolved"
+    if entry.proposals:
+        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in entry.proposals)
+        marker += f" · {kept}/{len(entry.proposals)} kept out" if kept else ""
     # Color here means change, so only directories keep their kind's color.
     return Text.assemble(
         (name, _FOLDER if entry.directory else ""),
@@ -399,6 +453,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         Binding("u", "resolve('desired')", "Take update", show=False),
         Binding("b", "resolve('both')", "Keep both", show=False),
         Binding("x", "resolve('open')", "Leave open", show=False),
+        Binding("K", "keep_all", "Keep all mine", show=False),
     ]
 
     def __init__(
@@ -454,7 +509,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                                 id="strategy-overwrite",
                             )
                     with Vertical(id="conflict-choice"):
-                        yield Heading("Conflicts")
+                        yield Heading("Conflicts").set_class(True, "choice-heading")
                         yield Static("", id="conflict-note")
                         with Choice(id="resolution"):
                             for choice in ResolutionChoice:
@@ -481,6 +536,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                         key_label("Cancel", "q" if self.can_go_back else "esc"),
                         id="cancel",
                     )
+                    yield Button(key_label("Keep all mine", "K"), id="keep-all")
                     yield Button(
                         key_label("Apply", "a"),
                         variant="primary",
@@ -496,6 +552,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         files.focus()
         self.query_one("#collision-choice").display = False
         self.query_one("#conflict-choice").display = False
+        self.query_one("#keep-all").display = False
         self.query_one("#trust-gate").display = False
         self.prepare()
 
@@ -563,6 +620,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.query_one("#trust-note", Static).update(_trust_text(commands))
         self.query_one("#steps-list", Static).update(steps_text(manifest))
         self._status(summary(review))
+        self.query_one("#keep-all").display = bool(self._keepable())
         self._fill_tree(review.entries)
         self._refresh_apply()
 
@@ -612,21 +670,33 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         )
 
     def _show_resolution(self, entry: Entry | None) -> None:
-        """Offer the choices the entry's conflicts can be settled with."""
+        """Offer the choices the entry's conflicts and proposals can be settled with."""
         conflicts = [c for c in entry.conflicts if c.choices] if entry else []
         group = self.query_one("#conflict-choice")
         group.display = bool(conflicts)
         if not conflicts:
             return
         offered = {choice for conflict in conflicts for choice in conflict.choices}
-        picked = {conflict.resolution for conflict in conflicts}
-        count = f"{len(conflicts)} conflicts here. " if len(conflicts) > 1 else ""
-        self.query_one("#conflict-note", Static).update(
-            Text(f"{count}Whichever you choose, Protostar manages it from now on.")
+        # A proposal applies unless kept out, so its choice is never "open".
+        picked = {c.resolution or default_choice(c) for c in conflicts}
+        proposals = sum(c.reason is ConflictReason.PROPOSED for c in conflicts)
+        only_proposals = proposals == len(conflicts)
+        heading = self.query_one(".choice-heading", Heading)
+        heading.label = "Changes to your file" if only_proposals else "Conflicts"
+        heading.refresh()
+        noun = "changes" if only_proposals else "decisions"
+        count = f"{len(conflicts)} {noun} here. " if len(conflicts) > 1 else ""
+        note = (
+            "Keeping yours records Protostar's version without writing it; "
+            "sync can take it later."
+            if only_proposals
+            else "Whichever you choose, Protostar manages it from now on."
         )
+        self.query_one("#conflict-note", Static).update(Text(f"{count}{note}"))
         for choice in ResolutionChoice:
             button = self.query_one(f"#resolve-{choice.value}", RadioButton)
             button.disabled = choice not in offered
+        self.query_one(f"#resolve-{OPEN}", RadioButton).disabled = only_proposals
         pressed = None
         # Mixed choices across a file's conflicts press no button.
         if len(picked) == 1:
@@ -644,6 +714,8 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         choice = None if value == OPEN else ResolutionChoice(value)
         changed = False
         for conflict in entry.conflicts:
+            if choice is None and conflict.reason is ConflictReason.PROPOSED:
+                continue
             if not conflict.choices or (choice and choice not in conflict.choices):
                 continue
             if self.choices.get(conflict.id) == choice:
@@ -655,6 +727,30 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             changed = True
         if changed:
             self.prepare()
+
+    def _keepable(self) -> list[MergeConflict]:
+        """Returns every decision in the review that can keep the local content."""
+        if self.review is None:
+            return []
+        return [
+            c
+            for entry in self.review.entries
+            for c in entry.conflicts
+            if ResolutionChoice.LOCAL in c.choices
+        ]
+
+    def action_keep_all(self) -> None:
+        """Keep the local content everywhere a choice allows it."""
+        if self._loading:
+            return
+        keepable = self._keepable()
+        if any(self.choices.get(c.id) is not ResolutionChoice.LOCAL for c in keepable):
+            self.choices.update((c.id, ResolutionChoice.LOCAL) for c in keepable)
+            self.prepare()
+
+    @on(Button.Pressed, "#keep-all")
+    def _keep_all_pressed(self) -> None:
+        self.action_keep_all()
 
     def _status(self, message: Text, *, error: bool = False) -> None:
         subtitle = self.query_one("#subtitle", Static)
@@ -706,8 +802,9 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             ("shift+tab", "Previous control"),
             ("m / o", "Merge into or overwrite existing files, when asked"),
             ("t", "Trust the template's commands, when asked"),
-            ("k / u / b", "Keep mine, take the update, or keep both, for a conflict"),
+            ("k / u / b", "Keep mine, take the update, or keep both, for a file"),
             ("x", "Leave a conflict open"),
+            ("K", "Keep mine for every conflict and change to your files"),
             ("a", "Apply"),
             *leave,
             ("^c", "Quit immediately"),
@@ -725,14 +822,13 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             return self.query_one("#collision-choice").display
         if action == "trust":
             return self.query_one("#trust-gate").display
+        if action == "keep_all":
+            return self.query_one("#keep-all").display
         if action == "resolve":
             if not self.query_one("#conflict-choice").display:
                 return False
             value = str(parameters[0]) if parameters else OPEN
-            return (
-                value == OPEN
-                or not self.query_one(f"#resolve-{value}", RadioButton).disabled
-            )
+            return not self.query_one(f"#resolve-{value}", RadioButton).disabled
         return True
 
     def action_back(self) -> None:
@@ -785,7 +881,10 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                     # Exactly the choices this review applied.
                     {
                         c.id: c.resolution
-                        for c in self.review.prepared.resolved
+                        for c in (
+                            *self.review.prepared.resolved,
+                            *self.review.prepared.proposals,
+                        )
                         if c.resolution is not None
                     },
                 )

@@ -111,7 +111,9 @@
                   "diverged",
                   "type-mismatch",
                   "deleted-ancestor",
-                  "retracted"
+                  "retracted",
+                  "proposed",
+                  "preserved"
                 ]
               },
               "choices": {
@@ -268,7 +270,9 @@
                   "diverged",
                   "type-mismatch",
                   "deleted-ancestor",
-                  "retracted"
+                  "retracted",
+                  "proposed",
+                  "preserved"
                 ]
               },
               "choices": {
@@ -376,11 +380,14 @@
             "additionalProperties": false
           }
         },
-        "preserved": {
+        "proposals": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
+              "id": {
+                "type": "string"
+              },
               "file": {
                 "type": "string"
               },
@@ -396,14 +403,315 @@
                   "null"
                 ]
               },
+              "lines": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "count"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "duplicate-identity",
+                  "unsafe-pin",
+                  "shared-structure",
+                  "unowned",
+                  "diverged",
+                  "type-mismatch",
+                  "deleted-ancestor",
+                  "retracted",
+                  "proposed",
+                  "preserved"
+                ]
+              },
+              "choices": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "local",
+                    "desired",
+                    "both"
+                  ]
+                }
+              },
+              "sides": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "boolean"
+                      },
+                      "base": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "local": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "desired": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "text",
+                      "base",
+                      "local",
+                      "desired"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resolution": {
+                "oneOf": [
+                  {
+                    "enum": [
+                      "local",
+                      "desired",
+                      "both"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "file",
+              "keys",
+              "identity",
+              "lines",
+              "reason",
+              "choices",
+              "sides",
+              "resolution"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "preserved": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "identity": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "lines": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "count"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "enum": [
+                  "duplicate-identity",
+                  "unsafe-pin",
+                  "shared-structure",
+                  "unowned",
+                  "diverged",
+                  "type-mismatch",
+                  "deleted-ancestor",
+                  "retracted",
+                  "proposed",
+                  "preserved"
+                ]
+              },
+              "choices": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "local",
+                    "desired",
+                    "both"
+                  ]
+                }
+              },
+              "sides": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "text": {
+                        "type": "boolean"
+                      },
+                      "base": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "local": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "desired": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "text",
+                      "base",
+                      "local",
+                      "desired"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "deleted": {
                 "type": "boolean"
               }
             },
             "required": [
+              "id",
               "file",
               "keys",
               "identity",
+              "lines",
+              "reason",
+              "choices",
+              "sides",
               "deleted"
             ],
             "additionalProperties": false
@@ -589,6 +897,7 @@
         "directories",
         "conflicts",
         "resolved",
+        "proposals",
         "preserved",
         "state_changed",
         "resolver",

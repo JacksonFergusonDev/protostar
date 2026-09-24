@@ -162,3 +162,29 @@ def test_replace_unencodable_output_keeps_an_explicit_handler(monkeypatch):
     ui.replace_unencodable_output()
 
     assert (strict.errors, chosen.errors) == ("replace", "backslashreplace")
+
+
+def test_review_lists_proposals_and_kept_edits(legacy_console, tmp_path, monkeypatch):
+    from protostar.cli.reviews import render_review
+    from protostar.config import UserConfig
+    from protostar.manifest import CollisionStrategy, EnvironmentManifest
+    from protostar.preparation import ExecutionPolicy, prepare_review
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "ünïcode"\n', encoding="utf-8"
+    )
+    manifest = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
+    manifest.filesystem.add_structured(
+        "pyproject.toml", "[tool.ruff]\nline-length = 88\n", producer="module:test"
+    )
+    review = prepare_review(
+        manifest, UserConfig(), policy=ExecutionPolicy.INITIALIZATION
+    )
+
+    render_review(review)
+
+    written = legacy_console()
+    assert "1 changes to your files" in written
+    assert "Proposed " in written
+    assert "pyproject.toml tool: applies; decline with local." in written

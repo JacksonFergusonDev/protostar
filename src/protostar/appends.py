@@ -12,9 +12,10 @@ from .merge import (
     LineSpan,
     MergeConflict,
     MergeLocation,
+    ResolutionChoice,
     Resolutions,
 )
-from .text_merge import reconcile_text
+from .text_merge import preserved_text, reconcile_text
 
 __all__ = [
     "RegionResult",
@@ -89,13 +90,17 @@ class RegionResult:
         baselines: Each owned region's last applied framed text, by identity.
         conflicts: Refused regions, one per overlapping edit or whole region,
             identified by region and numbered by line in ``content``.
-        resolved: Region conflicts settled by a resolution, numbered likewise.
+        resolved: Region conflicts settled by a resolution, numbered likewise,
+            and restored regions.
+        preserved: Local edits and deletions of regions the update left as they
+            were, by region.
     """
 
     content: str
     baselines: dict[str, str]
     conflicts: tuple[MergeConflict, ...]
     resolved: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
 
 
 def append_marker_blocks(
@@ -183,6 +188,7 @@ def append_marker_blocks(
     applied = dict(baselines or {})
     refused: list[tuple[AppendContribution, MergeConflict]] = []
     settled: list[tuple[AppendContribution, MergeConflict]] = []
+    preserved: list[MergeConflict] = []
     for contribution in payloads:
         tag = contribution.tag
         begin, end = marker(tag), marker(tag, True)
@@ -207,7 +213,16 @@ def append_marker_blocks(
                         MergeConflict(location, ConflictReason.DELETED_ANCESTOR),
                     )
                 )
-            continue
+                continue
+            deleted = preserved_text(location, None, framed)
+            choice = deleted.settle(resolutions) if deleted is not None else None
+            if choice is None or choice.resolution is not ResolutionChoice.DESIRED:
+                # Restoring one region recreates the file; the merge below reports it.
+                if choice is not None:
+                    settled.append((contribution, choice))
+                elif deleted is not None:
+                    preserved.append(deleted)
+                continue
         decision = reconcile_text(
             local,
             framed,
@@ -218,6 +233,7 @@ def append_marker_blocks(
         )
         refused.extend((contribution, conflict) for conflict in decision.conflicts)
         settled.extend((contribution, conflict) for conflict in decision.resolved)
+        preserved.extend(decision.preserved)
         if decision.baseline is not None:
             applied[contribution.id] = decision.baseline
         if decision.content is None:
@@ -249,4 +265,6 @@ def append_marker_blocks(
             )
         return tuple(conflicts)
 
-    return RegionResult(result, applied, numbered(refused), numbered(settled))
+    return RegionResult(
+        result, applied, numbered(refused), numbered(settled), tuple(preserved)
+    )
