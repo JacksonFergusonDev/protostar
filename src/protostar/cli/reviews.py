@@ -6,6 +6,7 @@ import sys
 from typing import Any, cast
 
 from protostar.cli import schema, ui
+from protostar.cli.diff import normalize_newlines
 from protostar.cli.tui.launch import resolve_conflicts
 from protostar.errors import ExecutionAbortedError
 from protostar.lifecycle import inspect_project, prepare_project
@@ -23,12 +24,7 @@ SETTLED = {
 def _diff_lines(content: bytes | None) -> list[str]:
     if not content:
         return []
-    return (
-        content.decode()
-        .replace("\r\n", "\n")
-        .replace("\r", "\n")
-        .splitlines(keepends=True)
-    )
+    return normalize_newlines(content.decode()).splitlines(keepends=True)
 
 
 def unified_diff(edit: PreparedEdit) -> str:

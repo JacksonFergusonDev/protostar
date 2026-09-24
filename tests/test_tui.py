@@ -1157,3 +1157,23 @@ def test_line_conflicts_name_the_kept_lines():
         "Lines 5-7: your edit is kept (diverged).",
         "After line 9: your edit is kept (diverged).",
     ]
+
+
+def test_recipe_import_defers_pygments_until_code_is_rendered(tmp_path):
+    probe = """
+import sys
+from protostar.cli.tui.recipe.screen import RecipeScreen
+from protostar.cli.tui.code import CodeSource, source_text
+assert not any(name == "pygments" or name.startswith("pygments.") for name in sys.modules)
+rendered = source_text(CodeSource('name = "orbit"', 'pyproject.toml'))
+assert rendered.plain == 'name = "orbit"'
+assert rendered.spans
+assert "pygments.lexers" in sys.modules
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr

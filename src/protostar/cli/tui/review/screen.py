@@ -28,7 +28,6 @@ from textual.widgets import (
 )
 from textual.widgets.tree import TreeNode
 
-from protostar.cli.reviews import unified_diff
 from protostar.cli.ui import path_style, planned_paths, untrusted_commands
 from protostar.config import UserConfig
 from protostar.errors import ProtostarError
@@ -48,12 +47,12 @@ from protostar.preparation import (
 from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
 
 from ..chrome import Heading, Headline, Masthead, Panel
+from ..code import edit_text
 from ..conflicts.sides import (
     KEYS,
     OPEN,
     SAID,
     describe_conflict,
-    diff_text,
     sides_diff,
 )
 from ..keys import (
@@ -234,7 +233,7 @@ def describe(entry: Entry) -> RenderableType:
             message = f"Your version of {where or 'the file'} is kept ({reason})."
         parts.append(Text(message, "red"))
     if entry.edit is not None:
-        parts.append(diff_text(unified_diff(entry.edit)))
+        parts.append(edit_text(entry.edit))
     elif entry.directory:
         parts.append(
             Text("A new directory." if entry.change is Change.NEW else "Exists.")
