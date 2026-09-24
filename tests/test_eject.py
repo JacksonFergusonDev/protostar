@@ -2,6 +2,7 @@
 
 import argparse
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -88,7 +89,8 @@ def test_ejection_changes_only_named_files_and_keeps_file_mode(tmp_path: Path):
     prepared.apply()
 
     assert pyproject.read_text() == EXPECTED
-    assert stat.S_IMODE(pyproject.stat().st_mode) == 0o640
+    if sys.platform != "win32":
+        assert stat.S_IMODE(pyproject.stat().st_mode) == 0o640
     assert not (tmp_path / "protostar.lock").exists()
     assert (tmp_path / "uv.lock").read_bytes() == b"resolver state\n"
     assert prepare_ejection(tmp_path).changed_paths == ()
@@ -138,7 +140,8 @@ def test_ejection_rolls_back_deleted_lock_when_pyproject_write_fails(
         prepared.apply()
 
     assert lock.read_bytes() == b"ownership state\n"
-    assert stat.S_IMODE(lock.stat().st_mode) == 0o600
+    if sys.platform != "win32":
+        assert stat.S_IMODE(lock.stat().st_mode) == 0o600
     assert (tmp_path / "pyproject.toml").read_text() == PYPROJECT
 
 
