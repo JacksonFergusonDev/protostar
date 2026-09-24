@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790289426351,
+  "lastUpdate": 1790293097357,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16835,6 +16835,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 821.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e8ce47e771485525d284769174f631a403d94b4c",
+          "message": "fix(cli): settle flagged --var values on the variables screen; guard config --reset (#333)\n\nAn interactive init whose --var value trips the secret guard now opens the\nvariables screen with that field flagged, where the value can be changed or\nkept, instead of failing. Headless runs still raise SecretDetectedError.\n\nconfig --reset without --force no longer prompts outside an interactive\nterminal or in --json mode: it raises InvalidUsageError pointing to --force,\nso stdout stays pure and machine runs never block.",
+          "timestamp": "2026-09-24T16:35:54-07:00",
+          "tree_id": "72a5b285c953452375d622c6a80a17bbcb646921",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e8ce47e771485525d284769174f631a403d94b4c"
+        },
+        "date": 1790293096620,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 223.67,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 834.52,
             "unit": "ms"
           }
         ]
