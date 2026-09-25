@@ -265,6 +265,35 @@ class UnversionedTemplateError(ConfigurationError):
         )
 
 
+class OutdatedProtostarError(ConfigurationError):
+    """Raised when the installed Protostar is older than the one that wrote the lock.
+
+    Built-in modules render whatever the installed release produces, so an
+    older release would plan older output and accept it as an update.
+    """
+
+    def __init__(self, recorded: str, installed: str) -> None:
+        """Initializes the error for one version pair.
+
+        Args:
+            recorded: The version that last wrote ``protostar.lock``.
+            installed: The version running now.
+        """
+        super().__init__(
+            f"protostar.lock was written by Protostar {recorded}, "
+            f"but Protostar {installed} is installed.",
+            hint=f"Upgrade Protostar to {recorded} or newer (for example, "
+            "`uv tool upgrade protostar`), then run the command again.",
+            docs_path=DocsPage.VERSION_SKEW,
+        )
+        self.recorded = recorded
+        self.installed = installed
+
+    def details(self) -> dict[str, Any]:
+        """Returns both versions."""
+        return {"recorded_version": self.recorded, "installed_version": self.installed}
+
+
 class MissingTemplateVariablesError(TemplateResolutionError):
     """Raised when a template needs variable values nobody supplied.
 

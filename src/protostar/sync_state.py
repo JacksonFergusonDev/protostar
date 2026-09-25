@@ -14,9 +14,10 @@ from urllib.parse import urlsplit
 import tomlkit
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
+from packaging.version import InvalidVersion, Version
 from tomlkit.exceptions import TOMLKitError
 
-from .errors import ConfigurationError
+from .errors import ConfigurationError, OutdatedProtostarError
 from .intent import (
     DependencyGroup,
     TemplateOrigin,
@@ -332,6 +333,28 @@ STATE_FILE = "protostar.lock"
 """The committed ownership state, relative to the project root."""
 
 
+def check_producer_version(state: SyncState, installed: str) -> None:
+    """Rejects a lock written by a newer Protostar than the one running.
+
+    Built-in output comes from the installed release, so an older one would
+    plan older output and accept it as an update. A version that isn't PEP 440,
+    such as ``unknown`` from a source checkout, is not compared.
+
+    Args:
+        state: The committed ownership state.
+        installed: The running Protostar's version.
+
+    Raises:
+        OutdatedProtostarError: If ``installed`` is older than the lock's producer.
+    """
+    try:
+        older = Version(installed) < Version(state.producer_version)
+    except InvalidVersion:
+        return
+    if older:
+        raise OutdatedProtostarError(state.producer_version, installed)
+
+
 def read_workspace_state(root: Path) -> SyncState | None:
     """Reads a project's committed ownership state without following links.
 
@@ -343,18 +366,23 @@ def read_workspace_state(root: Path) -> SyncState | None:
 
     Raises:
         ConfigurationError: If the state file is not UTF-8 or not valid state.
+        OutdatedProtostarError: If a newer Protostar wrote the state file.
         UnsupportedFilesystemNodeError: If the state file is a link or special node.
     """
+    from . import __version__
+
     captured = capture_node(root / STATE_FILE)
     if captured.file_content is None:
         return None
     try:
-        return deserialize_state(captured.file_content.decode())
+        state = deserialize_state(captured.file_content.decode())
     except UnicodeError as error:
         raise ConfigurationError(
             "Invalid project ownership state.",
             hint=f"Correct {STATE_FILE} encoding.",
         ) from error
+    check_producer_version(state, __version__)
+    return state
 
 
 def check_one_shot_workspace(root: Path) -> None:

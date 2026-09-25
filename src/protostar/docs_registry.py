@@ -41,6 +41,10 @@ class DocsPage(Enum):
     )
     ROLLBACK = ("usage/rollback/", "Rollback")
     RESOLVE_CONFLICTS = ("usage/lifecycle/#resolve-conflicts", "Resolve Conflicts")
+    VERSION_SKEW = (
+        "usage/lifecycle/#keep-protostar-versions-in-step",
+        "Keep Protostar Versions in Step",
+    )
 
     INIT = ("usage/init/", "Init")
 
