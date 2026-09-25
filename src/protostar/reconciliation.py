@@ -10,7 +10,12 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
 
-from .appends import append_marker_blocks
+from .appends import (
+    append_marker_blocks,
+    attach_regions,
+    cut_regions,
+    detach_regions,
+)
 from .config import UserConfig
 from .dependencies import (
     normalized_requirement,
@@ -91,7 +96,7 @@ from .sync_state import (
     deserialize_state,
     encode_toml_baseline,
 )
-from .text_merge import reconcile_text
+from .text_merge import is_edited, reconcile_text
 from .toml_ast import (
     TomlDocumentSpec,
     TomlReconciliation,
@@ -696,6 +701,61 @@ class Reconciliation:
                     "retract configuration", record.path, error
                 ) from error
 
+    def _release_undeclared_generated(self) -> None:
+        """Lets go of each owned generated file that nothing declares any more.
+
+        A tool switched off stops generating its file. It goes the way a seed
+        does: deleted when unedited, and otherwise a ``retracted`` conflict for
+        the whole file, since generated text has no units to keep apart. The
+        conflict's ``local`` choice keeps the file as the user's; ``desired``
+        deletes it. A file already deleted is forgotten. A file that still
+        receives a declared region is declared, and keeps its generated text.
+        """
+        declared = self.manifest.generated_files() | {
+            Path(render_template(path, self.interpolation_context)).as_posix()
+            for path in self.manifest.filesystem.regions
+        }
+        for record in [
+            r
+            for r in self.candidate_state.files
+            if r.policy is FilePolicy.TEXT and r.path not in declared
+        ]:
+            target = Path(record.path)
+            enforce_path_jail(target, Path.cwd())
+            self._validate_node(target)
+            if not self.workspace.exists(target):
+                self.candidate_state = self.candidate_state.without_file(record.path)
+                continue
+            local = self.workspace.read_bytes(target)
+            if is_edited(local, record.baseline or ""):
+                conflict = MergeConflict(
+                    MergeLocation(record.path),
+                    ConflictReason.RETRACTED,
+                    ConflictSides(
+                        record.baseline or MISSING,
+                        local.decode("utf-8", "replace"),
+                        MISSING,
+                        line=0,
+                    ),
+                )
+                settled = conflict.settle(self.resolutions)
+                if settled is None:
+                    self._report((conflict,), ())
+                    continue
+                self._report((), (settled,))
+                if settled.resolution is ResolutionChoice.LOCAL:
+                    self.candidate_state = self.candidate_state.without_file(
+                        record.path
+                    )
+                    continue
+            try:
+                self.fs.remove_file(target)
+            except OSError as error:
+                raise FileSystemError(
+                    "remove generated file", record.path, error
+                ) from error
+            self.candidate_state = self.candidate_state.without_file(record.path)
+
     def _release_document(self, path: str) -> None:
         """Forgets a structured document's ownership and the hook pins it held."""
         self.candidate_state = replace(
@@ -1049,16 +1109,13 @@ class Reconciliation:
             if record is not None and text_baseline is not None:
                 # A generated file's text holds its regions; one that was cut
                 # leaves that text too.
-                cut = {
-                    r.id: r.baseline
+                cut = [
+                    r.id
                     for r in record.regions
                     if r.id not in region_result.baselines
                     and r.baseline not in region_result.content
-                }
-                if cut:
-                    text_baseline = append_marker_blocks(
-                        text_baseline, [], target, baselines=cut
-                    ).content
+                ]
+                text_baseline = cut_regions(text_baseline, cut, target)
             if region_result.baselines or (
                 record is not None and record.policy is FilePolicy.TEXT
             ):
@@ -1218,11 +1275,14 @@ class Reconciliation:
                 hint="Keep the tracked file policy unchanged.",
             )
         contributions = self.manifest.filesystem.regions.get(target.as_posix(), [])
-        if record is not None and any(
-            r.id not in {c.id for c in contributions} for r in record.regions
-        ):
-            # Regenerating without an omitted region would drop it unasked. The
-            # region step retracts it first, so the next run regenerates.
+        declared = {c.id for c in contributions}
+        omitted = (
+            {r.id: r.baseline for r in record.regions if r.id not in declared}
+            if record is not None
+            else {}
+        )
+        if omitted and record is not None and record.policy is FilePolicy.REGIONS:
+            # Protostar owns only the regions here; the region step retracts them.
             return
         framed = append_marker_blocks(
             content,
@@ -1255,30 +1315,79 @@ class Reconciliation:
                     )
                 )
                 return
+            base = record.baseline if record else None
+            released: str | None = None
+            detached = ""
+            kept: tuple[str, ...] = ()
+            if omitted:
+                # Regenerating without an omitted region would drop it unasked,
+                # so it is retracted first, and the file regenerates in this run.
+                try:
+                    retraction = append_marker_blocks(
+                        local.decode("utf-8") if local is not None else "",
+                        [],
+                        target,
+                        baselines=omitted,
+                        resolutions=self.resolutions,
+                    )
+                except UnicodeError as error:
+                    raise FileSystemError(
+                        "read generated file", str(target), error
+                    ) from error
+                if retraction.conflicts:
+                    # An edited region waits for its decision in the region
+                    # step, which reports it; the file regenerates once settled.
+                    return
+                self._report((), retraction.resolved)
+                if local is not None:
+                    released = retraction.content
+                    # A region kept with its local edit is the user's now. It
+                    # sits out the merge, so a generated line changed next to
+                    # it does not conflict, and is put back after it.
+                    detached, kept = detach_regions(released, omitted, target)
+                    local = detached.encode("utf-8")
+                base = cut_regions(base, omitted, target) if base is not None else None
             result = reconcile_text(
                 local,
                 content,
-                record.baseline if record else None,
+                base,
                 MergeLocation(target.as_posix()),
                 overwrite=self.manifest.collision_strategy
                 is CollisionStrategy.OVERWRITE,
                 resolutions=self.resolutions,
             )
             self._report(result.conflicts, result.resolved, preserved=result.preserved)
-            if result.content is not None:
-                self.fs.write_text(target, result.content)
-            if result.baseline is not None:
-                regions = {r.id: r.baseline for r in record.regions} if record else {}
+            if released is None:
+                if result.content is not None:
+                    self.fs.write_text(target, result.content)
+            else:
+                merged = (
+                    released
+                    if result.conflicts
+                    else attach_regions(
+                        result.content if result.content is not None else detached,
+                        kept,
+                    )
+                )
+                if merged.encode("utf-8") != self.workspace.read_bytes(target):
+                    self.fs.write_text(target, merged)
+            baseline = result.baseline if result.baseline is not None else base
+            if baseline is not None and (result.baseline is not None or omitted):
+                regions = (
+                    {r.id: r.baseline for r in record.regions if r.id in declared}
+                    if record
+                    else {}
+                )
                 if result.baseline == content:
                     regions.update(framed.baselines)
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
                         target.as_posix(),
                         FilePolicy.TEXT,
-                        result.baseline,
+                        baseline,
                         regions=tuple(
-                            RegionState(region_tag(identity), identity, baseline)
-                            for identity, baseline in regions.items()
+                            RegionState(region_tag(identity), identity, text)
+                            for identity, text in regions.items()
                         ),
                     )
                 )

@@ -37,6 +37,10 @@ def apply_generated(mocker, target, value, strategy=CollisionStrategy.MERGE):
             "protostar.reconciliation.Reconciliation._write_ci_workflow",
             lambda decisions: decisions._write_generated(target, value),
         )
+        # Declared as generated, so the file is not released as undeclared.
+        mocker.patch.object(
+            EnvironmentManifest, "generated_files", return_value={target.as_posix()}
+        )
 
     return run(mocker, setup)
 
@@ -510,6 +514,115 @@ def test_generated_region_omission_retracts_the_region(tmp_path, monkeypatch, mo
     (record,) = [r for r in state.files if r.path == "justfile"]
     assert record.baseline == "base\n"
     assert not record.regions
+
+
+def test_generated_region_omission_regenerates_in_the_same_run(
+    tmp_path, monkeypatch, mocker
+):
+    """A dropped region and a changed generated text converge in one run."""
+    monkeypatch.chdir(tmp_path)
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v2\n")
+
+    def generated(e):
+        e.manifest.tooling.wants_just = True
+
+    run(mocker, generated)
+
+    assert Path("justfile").read_text() == "base v2\n"
+    (record,) = deserialize_state(Path("protostar.lock").read_text()).files
+    assert record.baseline == "base v2\n"
+    assert not record.regions
+    assert not run(mocker, generated).journal.touched_paths
+
+
+def _omitted_region_review(mocker, resolutions=None):
+    from protostar.preparation import prepare_review
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_just = True
+    return manifest, prepare_review(
+        manifest, UserConfig(), resolutions=resolutions or {}
+    )
+
+
+def test_an_edited_omitted_region_holds_the_generated_file(
+    tmp_path, monkeypatch, mocker
+):
+    """An edited region waits for its decision; the file regenerates once settled."""
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    target.write_text(target.read_text().replace("recipe v1", "my recipe"))
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v2\n")
+
+    _, review = _omitted_region_review(mocker)
+    (conflict,) = review.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.identity == "template:recipes"
+    assert not review.edits
+
+
+@pytest.mark.parametrize(
+    ("choice", "kept"),
+    [(ResolutionChoice.LOCAL, True), (ResolutionChoice.DESIRED, False)],
+)
+def test_a_settled_omitted_region_regenerates_in_the_same_run(
+    tmp_path, monkeypatch, mocker, choice, kept
+):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    target.write_text(target.read_text().replace("recipe v1", "my recipe"))
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v2\n")
+    _, review = _omitted_region_review(mocker)
+    (conflict,) = review.conflicts
+
+    manifest, review = _omitted_region_review(mocker, {conflict.id: choice})
+    assert not review.conflicts
+    assert [c.id for c in review.resolved] == [conflict.id]
+    executor = SystemExecutor(manifest, UserConfig(), review=review)
+    mocker.patch.object(executor, "_check_ide_extensions")
+    executor.execute()
+
+    text = target.read_text()
+    assert text.startswith("base v2\n")
+    assert ("my recipe" in text) is kept
+    (record,) = deserialize_state(Path("protostar.lock").read_text()).files
+    assert record.baseline == "base v2\n"
+    assert not record.regions
+    # The kept region is the user's: later runs leave it and ask nothing.
+    _, again = _omitted_region_review(mocker)
+    assert not again.conflicts
+    assert not again.edits
+
+
+def test_a_dockerfile_leaves_when_docker_is_switched_off(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    run(mocker, lambda e: setattr(e.manifest.tooling, "wants_docker", True))
+    assert Path("Dockerfile").exists()
+
+    run(mocker, lambda e: None)
+
+    assert not Path("Dockerfile").exists()
+    state = deserialize_state(Path("protostar.lock").read_text())
+    assert "Dockerfile" not in {r.path for r in state.files}
+
+
+def test_a_generated_file_that_still_receives_a_region_stays(
+    tmp_path, monkeypatch, mocker
+):
+    """A declared region keeps its file declared, generated text and all."""
+    monkeypatch.chdir(tmp_path)
+    justfile_regions(mocker, "base\n", "recipe")
+
+    def region_only(e):
+        e.manifest.filesystem.add_region(
+            "justfile", "recipe", identity="template:recipes"
+        )
+
+    assert not run(mocker, region_only).journal.touched_paths
+    assert Path("justfile").read_text().startswith("base\n")
 
 
 def test_agents_md_region_merges_updates_and_protects_edits(

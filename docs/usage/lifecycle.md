@@ -131,7 +131,9 @@ A whole configuration file whose tool you turn off, such as `zensical.toml`,
 `.github/codecov.yml`, `.readthedocs.yaml`, a workflow, the hook configuration,
 Renovate's, or the VS Code settings, is retracted key by key the same way. When
 nothing of Protostar's is left, the file is deleted if it holds nothing else and
-kept with only your own keys if it does.
+kept with only your own keys if it does. A generated `justfile` or `Dockerfile`
+whose tool you turn off is deleted when unedited; an edited one is kept with a
+`retracted` conflict for the whole file.
 Seeded project metadata such as `[project].name` and dependency-group includes
 are never retracted. Workflow files are
 merged by job and by step name, so your own jobs, steps, triggers, and inputs stay.

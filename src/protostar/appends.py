@@ -1,6 +1,7 @@
 """Generic marker-block file append engine."""
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -22,6 +23,9 @@ from .text_merge import is_edited, preserved_text, reconcile_text
 __all__ = [
     "RegionResult",
     "append_marker_blocks",
+    "attach_regions",
+    "cut_regions",
+    "detach_regions",
     "get_comment_markers",
 ]
 
@@ -105,6 +109,79 @@ class RegionResult:
     preserved: tuple[MergeConflict, ...] = ()
 
 
+def _marker(filepath: Path, tag: str, end: bool = False) -> str:
+    """Returns a region's begin or end marker in the file's comment syntax."""
+    c_start, c_end = get_comment_markers(filepath)
+    prefix = "endregion" if end else "region"
+    suffix = f" {c_end}" if c_end else ""
+    return f"{c_start} {prefix}: protostar {tag}{suffix}".strip()
+
+
+def cut_regions(text: str, identities: Iterable[str], filepath: Path) -> str:
+    """Removes regions from a text whatever they hold, such as a recorded baseline.
+
+    Args:
+        text: Text whose regions are well formed.
+        identities: The regions to remove; absent ones are skipped.
+        filepath: The file, which selects the comment syntax of the markers.
+
+    Returns:
+        The text without those regions, spaced as appending left it.
+    """
+    for identity in identities:
+        tag = region_tag(identity)
+        begin, end = _marker(filepath, tag), _marker(filepath, tag, True)
+        if begin in text:
+            start = text.index(begin)
+            text = _cut(text, start, text.index(end, start) + len(end))
+    return text
+
+
+def detach_regions(
+    text: str, identities: Iterable[str], filepath: Path
+) -> tuple[str, tuple[str, ...]]:
+    """Takes regions out of a text, to put back with ``attach_regions``.
+
+    Args:
+        text: Text whose regions are well formed.
+        identities: The regions to take out; absent ones are skipped.
+        filepath: The file, which selects the comment syntax of the markers.
+
+    Returns:
+        The text without those regions, and each region's framed text in order.
+    """
+    blocks: list[tuple[int, str]] = []
+    for identity in identities:
+        tag = region_tag(identity)
+        begin, end = _marker(filepath, tag), _marker(filepath, tag, True)
+        if begin in text:
+            start = text.index(begin)
+            blocks.append((start, text[start : text.index(end, start) + len(end)]))
+    detached = cut_regions(text, identities, filepath)
+    return detached, tuple(block for _, block in sorted(blocks))
+
+
+def attach_regions(text: str, blocks: Iterable[str]) -> str:
+    """Appends framed regions to a text the way a new region is appended.
+
+    Args:
+        text: The text to extend.
+        blocks: Framed region texts, in order.
+
+    Returns:
+        The text with each region appended after a blank line.
+    """
+    for block in blocks:
+        newline = "\r\n" if "\r\n" in text or "\r\n" in block else "\n"
+        separator = (
+            ""
+            if not text
+            else (newline if text.endswith(("\r\n", "\n")) else newline + newline)
+        )
+        text += separator + block + newline
+    return text
+
+
 def _cut(text: str, start: int, stop: int) -> str:
     """Removes a region and the line break after it, and the blank line it needed."""
     if text[stop : stop + 2] == "\r\n":
@@ -113,8 +190,16 @@ def _cut(text: str, start: int, stop: int) -> str:
         stop += 1
     head, tail = text[:start], text[stop:]
     # Appending put one blank line before the region; one is enough.
-    if head.endswith("\n\n") and (not tail or tail.startswith("\n")):
+    if head.endswith(("\r\n\r\n", "\n\r\n")) and (
+        not tail or tail.startswith(("\r\n", "\n"))
+    ):
+        head = head[:-2]
+    elif head.endswith(("\r\n\n", "\n\n")) and (
+        not tail or tail.startswith(("\r\n", "\n"))
+    ):
         head = head[:-1]
+    elif not head and tail.startswith("\r\n"):
+        tail = tail[2:]
     elif not head and tail.startswith("\n"):
         tail = tail[1:]
     return head + tail
@@ -149,12 +234,9 @@ def append_marker_blocks(
     Returns:
         The reconciled content, applied region texts, and refused regions.
     """
-    c_start, c_end = get_comment_markers(filepath)
 
     def marker(tag: str, end: bool = False) -> str:
-        prefix = "endregion" if end else "region"
-        suffix = f" {c_end}" if c_end else ""
-        return f"{c_start} {prefix}: protostar {tag}{suffix}".strip()
+        return _marker(filepath, tag, end)
 
     active: str | None = None
     seen: set[str] = set()

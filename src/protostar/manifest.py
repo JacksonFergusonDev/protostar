@@ -685,6 +685,19 @@ class EnvironmentManifest:
             path for target in targets for path in self.document_locations(target).paths
         }
 
+    def generated_files(self) -> set[str]:
+        """Returns the text files a tool generates whole in this run.
+
+        Returns:
+            Workspace-relative POSIX paths.
+        """
+        files: set[str] = set()
+        if self.tooling.wants_just:
+            files.add("justfile")
+        if self.tooling.wants_docker:
+            files.add(DOCKERFILE)
+        return files
+
     def target_files(self) -> set[Path]:
         """Returns all concrete workspace file paths that this manifest intends to create or mutate.
 
@@ -721,11 +734,8 @@ class EnvironmentManifest:
         if self.tooling.wants_release:
             targets.add(Path(github_workflows.RELEASE_TARGET))
 
-        if self.tooling.wants_just:
-            targets.add(Path("justfile"))
-
+        targets.update(Path(path) for path in self.generated_files())
         if self.tooling.wants_docker:
-            targets.add(Path(DOCKERFILE))
             targets.add(Path(".dockerignore"))
 
         return targets

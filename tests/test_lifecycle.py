@@ -1262,6 +1262,58 @@ def test_sync_reports_a_retracted_document_removal(project, monkeypatch, capsys)
     assert not Path(".github/renovate.json").exists()
 
 
+def test_a_generated_file_whose_tool_is_switched_off_is_released(project, mocker):
+    """An unedited justfile leaves with just; one already deleted is forgotten."""
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(project, "just = true\n", "just = false\n")
+    assert Path("justfile").exists()
+    reprepare().apply()
+
+    assert not Path("justfile").exists()
+    assert "justfile" not in {r.path for r in _state().files}
+
+    reprepare = _released(project, "just = true\n", "just = false\n")
+    Path("justfile").unlink()
+    prepared = reprepare()
+    assert not prepared.review.conflicts
+    prepared.apply()
+    assert "justfile" not in {r.path for r in _state().files}
+
+
+@pytest.mark.parametrize(
+    ("choice", "kept"),
+    [(ResolutionChoice.LOCAL, True), (ResolutionChoice.DESIRED, False)],
+)
+def test_an_edited_generated_file_whose_tool_is_switched_off_is_retracted(
+    project, mocker, choice, kept
+):
+    from protostar.lifecycle import prepare_project
+
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(project, "just = true\n", "just = false\n")
+    edited = Path("justfile").read_text() + "\nmine:\n    echo mine\n"
+    Path("justfile").write_text(edited)
+    prepared = reprepare()
+
+    (conflict,) = prepared.review.conflicts
+    assert conflict.location.file == "justfile"
+    assert conflict.reason is ConflictReason.RETRACTED
+    prepared.apply()
+    assert Path("justfile").read_text() == edited
+    assert "justfile" in {r.path for r in _state().files}
+
+    retracted = prepare_project()
+    (conflict,) = retracted.review.conflicts
+    retracted.resolve({conflict.id: choice}).apply()
+    assert Path("justfile").exists() is kept
+    assert "justfile" not in {r.path for r in _state().files}
+    assert not prepare_project().review.conflicts
+
+
 def _add_resolved(_runner, command, *, timeout):
     """Stands in for `uv add` and `uv lock` on the main group."""
     import tomlkit

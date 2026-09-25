@@ -1,7 +1,12 @@
 from pathlib import Path
 
-from protostar.appends import append_marker_blocks, get_comment_markers
-from protostar.intent import AppendContribution
+from protostar.appends import (
+    append_marker_blocks,
+    attach_regions,
+    detach_regions,
+    get_comment_markers,
+)
+from protostar.intent import AppendContribution, region_tag
 from protostar.merge import ConflictReason, ResolutionChoice
 
 
@@ -184,4 +189,41 @@ def test_a_deleted_region_nothing_declares_is_forgotten():
     )
 
     assert result.content == "export A=1\n"
+    assert result.baselines == {}
+
+
+def test_detach_and_attach_regions_preserves_crlf():
+    tag = region_tag("template:recipes")
+    text = (
+        f"base v1\r\n\r\n"
+        f"# region: protostar {tag}\r\n"
+        f"recipe v1\r\n"
+        f"# endregion: protostar {tag}\r\n"
+    )
+    filepath = Path("justfile")
+    omitted = {"template:recipes": "recipe v1"}
+    detached, kept = detach_regions(text, omitted, filepath)
+    assert detached == "base v1\r\n"
+    re_attached = attach_regions("base v2\r\n", kept)
+    assert re_attached == (
+        f"base v2\r\n\r\n"
+        f"# region: protostar {tag}\r\n"
+        f"recipe v1\r\n"
+        f"# endregion: protostar {tag}\r\n"
+    )
+
+
+def test_an_omitted_region_retracts_cleanly_under_crlf():
+    tag = region_tag("gone")
+    content = (
+        f"export A=1\r\n\r\n"
+        f"# region: protostar {tag}\r\n"
+        f"export B=2\r\n"
+        f"# endregion: protostar {tag}\r\n"
+    )
+    baselines = {
+        "gone": f"# region: protostar {tag}\nexport B=2\n# endregion: protostar {tag}"
+    }
+    result = append_marker_blocks(content, [], Path(".envrc"), baselines=baselines)
+    assert result.content == "export A=1\r\n"
     assert result.baselines == {}
