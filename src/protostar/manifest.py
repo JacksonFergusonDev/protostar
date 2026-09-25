@@ -22,6 +22,7 @@ from .intent import (
 from .interpolation import render_template
 from .merge import MergeConflict
 from .metadata import LicenseType
+from .migrations import Migration
 from .sync_state import FilePolicy
 from .workflows import DOCKERFILE, CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
@@ -606,6 +607,7 @@ class EnvironmentManifest:
     recipe: ProjectRecipe | None = None
     one_shot: bool = False
     template_reference: TemplateReference | None = None
+    migrations: tuple[Migration, ...] = ()
     dependencies: DependencyManifest = field(default_factory=DependencyManifest)
     filesystem: FilesystemManifest = field(default_factory=FilesystemManifest)
     tooling: ToolingManifest = field(default_factory=ToolingManifest)
@@ -768,6 +770,7 @@ class EnvironmentManifest:
             "template_reference": self.template_reference.to_dict()
             if self.template_reference
             else None,
+            "migrations": [migration.to_dict() for migration in self.migrations],
             "collision_strategy": self.collision_strategy.value
             if self.collision_strategy
             else None,

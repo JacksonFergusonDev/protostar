@@ -33,6 +33,14 @@ class ByteSink(Protocol):
         """Accepts exact text bytes."""
         ...
 
+    def write_bytes(self, path: Path, content: bytes) -> None:
+        """Accepts exact bytes."""
+        ...
+
+    def remove_file(self, path: Path) -> None:
+        """Accepts a file's removal."""
+        ...
+
     def ensure_directory(self, path: Path) -> None:
         """Declares a directory."""
         ...
@@ -110,6 +118,7 @@ class ReviewWorkspace:
         self.presence = presence
         self.inputs: dict[str, CapturedInput] = {}
         self.contents: dict[str, bytes] = {}
+        self.removed: set[str] = set()
         self.directories: set[str] = set()
 
     def normalize_path(self, path: Path) -> Path:
@@ -147,6 +156,8 @@ class ReviewWorkspace:
     def exists(self, path: Path) -> bool:
         """Returns captured or accepted file presence."""
         item = self.capture(path)
+        if item.path in self.removed:
+            return False
         return item.path in self.contents or item.original.kind is not NodeKind.ABSENT
 
     def read_bytes(self, path: Path) -> bytes:
@@ -166,8 +177,20 @@ class ReviewWorkspace:
 
     def write_text(self, path: Path, content: str, encoding: str = "utf-8") -> None:
         """Records accepted bytes without touching disk."""
+        self.write_bytes(path, content.encode(encoding))
+
+    def write_bytes(self, path: Path, content: bytes) -> None:
+        """Records accepted bytes without touching disk."""
         item = self.capture(path)
-        self.contents[item.path] = content.encode(encoding)
+        self.removed.discard(item.path)
+        self.contents[item.path] = content
+
+    def remove_file(self, path: Path) -> None:
+        """Records a file's removal without touching disk."""
+        item = self.capture(path)
+        self.contents.pop(item.path, None)
+        if item.original.kind is not NodeKind.ABSENT:
+            self.removed.add(item.path)
 
     def ensure_directory(self, path: Path) -> None:
         """Records a directory declaration without touching disk."""

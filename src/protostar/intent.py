@@ -35,6 +35,8 @@ class TemplateReference:
         path: A forge template's path inside its repository.
         ref: The tag, branch, or commit a forge template was applied at.
         revision: The commit ``ref`` named when it was applied.
+        migrated: The newest template migration the project has applied, which
+            the project can never move back before.
     """
 
     origin: TemplateOrigin
@@ -45,6 +47,7 @@ class TemplateReference:
     path: str = ""
     ref: str | None = None
     revision: str | None = None
+    migrated: str | None = None
 
     @property
     def identity(self) -> str:
@@ -69,6 +72,7 @@ class TemplateReference:
             "path": self.path,
             "ref": self.ref,
             "revision": self.revision,
+            "migrated": self.migrated,
         }
 
 

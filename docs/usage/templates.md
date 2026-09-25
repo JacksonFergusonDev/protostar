@@ -139,6 +139,8 @@ protostar sync --to main               # follow a branch, to its current commit
 
 `sync --to` is an ordinary three-way sync against the new revision: your local edits are kept, and conflicts are reported exactly as for any other update. Editing `ref` in the recipe by hand and running `sync` does the same thing. `sync --check` does not fail just because a newer release exists; it checks that the recorded revision is applied. Pre-releases are offered only while the project is already on one.
 
+A template can declare [migrations](authoring-templates.md#migrations) for changes a merge can't express, such as a moved or retired file or a renamed variable. They run as the project moves past the release that declared them.
+
 A new version that adds a template variable needs a value: `sync --to` asks for it in an interactive terminal, and otherwise takes `--var NAME=VALUE`.
 
 Aliases work the same way. An alias to a bare repository URL starts every new project on the newest release, and an alias that names a tag starts every project there:

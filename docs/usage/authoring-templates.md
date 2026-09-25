@@ -212,6 +212,7 @@ It reports two kinds of finding:
 | `restated-baseline` | A `[dev.pyproject]` payload that repeats a module's baseline value, or redefines a baseline list instead of using an additive key |
 | `unbound-tool-config` | A payload that configures a tool without `requires` for that tool |
 | `unbound-tool-package` | A tool's package, such as `pytest-cov`, installed unconditionally instead of under `[dev.tool_dependencies]` |
+| `inconsistent-migration` | A migration that removes or renames away a file the template still ships, renames a file to one it doesn't ship, or renames a variable the template doesn't use under its new name |
 
 The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be retrieved at all (a wrong path, a network failure, an HTTP error such as 404), nothing is checked: it prints the retrieval error and exits with that error's [exit code](cli-reference.md#posix-exit-codes), such as `65` or `75`, so a failure to download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
 
@@ -258,6 +259,30 @@ Or, you can register it as a global alias in your `~/.config/protostar/config.to
 [templates]
 org-ds-base = "https://github.com/YourOrg/data-science-template"
 ```
+
+### Migrations
+
+Most changes between your releases need nothing extra: `sync --to` merges each file three ways, so your changes arrive and your users' edits stay. A few changes can't be expressed that way, because they're about files and names rather than their contents. Declare those as migrations:
+
+```toml
+version = "2.0.0"
+
+[[migrations]]
+version = "2.0.0"
+rename = [{ from = "src/<% PACKAGE_NAME %>/settings.py", to = "src/<% PACKAGE_NAME %>/config.py" }]
+remove = ["setup.cfg"]
+rename_variables = [{ from = "ORG", to = "ORGANIZATION" }]
+```
+
+A migration's `version` is the release that introduced the change. A project runs it when it moves from a release before that version to that version or later, and never again; a project that skips releases runs every migration in between, oldest first. A template with migrations must declare a [PEP 440](https://peps.python.org/pep-0440/) root `version`, and no migration may be newer than it. Keep every migration in later releases: the new release is the only one a project reads them from.
+
+- **`rename`** moves a seeded file, including the user's edits to it, and Protostar's ownership with it. Ship the file under its new name. If something already exists at the new path, the file stays where it is and `status` says so. A file the user deleted stays deleted at its new path.
+- **`remove`** retires a seeded file you no longer ship. An unedited copy is deleted. A copy with edits stays and becomes a `retracted` conflict until the user settles it: `local` keeps it as their own file, and `desired` deletes it.
+- **`rename_variables`** moves a recorded variable value to its new name before anything renders, so users aren't asked for a value they already gave.
+
+Migrations only touch what Protostar owns: a path it never seeded is left alone. They are declarative on purpose. `status` and `sync --dry-run` list each one before anything changes, and a failed `sync` rolls them back with everything else. Scripts would make both impossible, so migrations never run commands. A project can't move back to a release before a migration it has run, because the older release can't know how to reverse it.
+
+Renaming or removing a dependency, or a module-generated file, isn't a migration yet.
 
 ### Security Considerations
 

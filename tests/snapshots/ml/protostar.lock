@@ -16,10 +16,12 @@ display_name = "ml"
 [[files]]
 path = ".envrc"
 policy = "seed-only"
+digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 
 [[files]]
 path = ".gitattributes"
 policy = "seed-only"
+digest = "1e77f3d50d9272b7cf6d64f6c7c023ee5bb2cc75b8b4b48d0837740ff47f44fe"
 
 [[files]]
 path = "Dockerfile"
@@ -29,14 +31,17 @@ baseline = "# syntax=docker/dockerfile:1\n\n# --- Builder Stage ---\nFROM ghcr.i
 [[files]]
 path = "data/01_raw/.gitkeep"
 policy = "seed-only"
+digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 [[files]]
 path = "data/02_processed/.gitkeep"
 policy = "seed-only"
+digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 [[files]]
 path = "data/03_features/.gitkeep"
 policy = "seed-only"
+digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 [[files]]
 path = "justfile"
@@ -46,6 +51,7 @@ baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstabl
 [[files]]
 path = "models/weights/.gitkeep"
 policy = "seed-only"
+digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 [[files]]
 path = "pyproject.toml"

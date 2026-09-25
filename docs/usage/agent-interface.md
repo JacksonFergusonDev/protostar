@@ -208,6 +208,12 @@ applying elsewhere; a choice the conflict does not offer fails with
 `UnsupportedResolutionError` and lists the ones it does. See
 [resolve conflicts](lifecycle.md#resolve-conflicts).
 
+An edit whose `after` is `null` removes the file. `review.migrations` lists what
+each template [migration](authoring-templates.md#migrations) does to one file:
+its `version`, `path`, the rename `target` (`null` for a removal), and the
+`outcome`: `moved`, `target-exists`, `removed`, `retired` (kept with local edits
+as a `retracted` conflict), `forgotten` (already deleted), or `not-owned`.
+
 Two more kinds of decision share that shape and the same `--resolve`. Entries in
 `review.proposals` are changes into files Protostar never owned; each applies
 unless resolved with `local`, and its `resolution` is `null` until one is chosen.

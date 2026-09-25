@@ -8,8 +8,10 @@
         "version": null,
         "path": "",
         "ref": null,
-        "revision": null
+        "revision": null,
+        "migrated": null
     },
+    "migrations": [],
     "dependencies": {
         "dependencies": [
             "numpy",

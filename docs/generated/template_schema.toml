@@ -133,6 +133,14 @@ extend-select = ["I", "UP", "B"]
 [appends.".envrc".project_environment]
 content = "export REGION=<% REGION %>"
 
+# Changes a project makes as it moves past a template version: moved and removed seed files, and renamed variables. Requires a PEP 440 version.
+
+[[migrations]]
+version = "1.0.0"
+rename = [{from = "src/<% PACKAGE_NAME %>/settings.py",to = "src/<% PACKAGE_NAME %>/config.py"}]
+remove = ["setup.cfg"]
+rename_variables = [{from = "ORG",to = "ORGANIZATION"}]
+
 # --- Custom Variables ---
 # Optional descriptions shown when asking for a custom variable's value.
 

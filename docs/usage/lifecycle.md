@@ -60,7 +60,13 @@ protostar sync --to v1.3.0
 ```
 
 `sync --to` records the new ref in the recipe, downloads that revision, and
-reviews it like any other update, in the same transaction. It accepts a tag, a
+reviews it like any other update, in the same transaction. When the template
+declares [migrations](authoring-templates.md#migrations) between the two
+releases, they run first: seeded files it moved keep your edits at their new
+path, files it retired are deleted when unedited and kept as a `retracted`
+conflict otherwise, and renamed variables keep their values. `status` lists each
+step as `Migration <version>: ...`. A project can't move back before a migration
+it has run. It accepts a tag, a
 branch, a full commit SHA, or `latest`. Variables the new version adds come from
 `--var NAME=VALUE`, or from the variables screen in an interactive terminal. When
 the repository can't be reached, `status` says so and still reviews the recorded
@@ -99,7 +105,8 @@ Local edits or deletions with unchanged desired intent are preserved and do not
 make checks fail. Deleted managed files stay deleted. Each preserved edit has an
 `id`, and you can [take its update later](#take-a-kept-change-later). Omitted
 template contributions retain their existing files and ownership; sync never
-prunes them. Equal foreign content remains unowned.
+prunes them unless a template [migration](authoring-templates.md#migrations)
+retires them. Equal foreign content remains unowned.
 
 GitHub Actions workflows are the exception to pruning, because each is one
 generator's complete output. When Protostar stops generating a step or key (for

@@ -24,6 +24,12 @@ from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
 from protostar.sync_state import deserialize_state
 
 
+def after(edit):
+    """Returns an edit's new bytes, which only a removal lacks."""
+    assert edit.after is not None
+    return edit.after
+
+
 def intent(value=88):
     result = EnvironmentManifest()
     result.filesystem.add_structured(
@@ -89,10 +95,10 @@ def test_preview_is_read_only_and_applies_exact_safe_sibling_bytes(
     assert len(review.conflicts) == 1
     assert review.conflicts[0].location.keys == ("tool", "ruff", "line-length")
     assert len(review.edits) == 1
-    assert b"120 # local" in review.edits[0].after
-    assert b"preview = true" in review.edits[0].after
+    assert b"120 # local" in after(review.edits[0])
+    assert b"preview = true" in after(review.edits[0])
     apply(desired, review, mocker)
-    assert target.read_bytes() == review.edits[0].after
+    assert target.read_bytes() == after(review.edits[0])
     assert (
         deserialize_state(Path("protostar.lock").read_text()) == review.candidate_state
     )
@@ -266,7 +272,7 @@ def test_resolver_requests_unknown_output_and_declared_rollback(
     assert review.resolver.pending
     assert review.to_dict()["resolver"]["output"] == "unknown"
     assert "uv.lock" not in {edit.path for edit in review.edits}
-    assert b"example" not in review.edits[0].after
+    assert b"example" not in after(review.edits[0])
     before = snapshot(tmp_path)
     executor = SystemExecutor(desired, UserConfig(), review=review)
 
@@ -361,8 +367,8 @@ def test_recipe_opt_out_filters_producer_before_shared_target_build(
     assert manifest.dependencies.dev_dependencies == ["shared"]
     assert {item.tool for item in manifest.producer_contributions} == {Tool.MYPY}
     review = prepare_review(manifest, UserConfig())
-    assert b"strict = true" in review.edits[0].after
-    assert "ruff" not in tomllib.loads(review.edits[0].after.decode())["tool"]
+    assert b"strict = true" in after(review.edits[0])
+    assert "ruff" not in tomllib.loads(after(review.edits[0]).decode())["tool"]
 
 
 def test_prepared_resolver_uses_only_accepted_requests_and_materialized_bounds(
@@ -422,10 +428,10 @@ def test_keyed_hook_conflict_retains_local_entry_and_adds_safe_sibling(
     review = prepare_review(desired, UserConfig(), hook_revisions=pins)
     assert len(review.conflicts) == 1
     assert review.to_dict()["conflicts"][0]["reason"] == "diverged"
-    assert b"entry: local # intent" in review.edits[0].after
-    assert b"id: sibling" in review.edits[0].after
+    assert b"entry: local # intent" in after(review.edits[0])
+    assert b"id: sibling" in after(review.edits[0])
     apply(desired, review, mocker)
-    assert target.read_bytes() == review.edits[0].after
+    assert target.read_bytes() == after(review.edits[0])
 
 
 def test_independent_region_update_beside_conflict(tmp_path, monkeypatch, mocker):
@@ -441,10 +447,10 @@ def test_independent_region_update_beside_conflict(tmp_path, monkeypatch, mocker
     desired.filesystem.add_region(".envrc", "safe-v2", identity="safe")
     review = prepare_review(desired, UserConfig())
     assert review.conflicts[0].location.identity == "conflicting"
-    assert b"\nlocal\n" in review.edits[0].after
-    assert b"\nsafe-v2\n" in review.edits[0].after
+    assert b"\nlocal\n" in after(review.edits[0])
+    assert b"\nsafe-v2\n" in after(review.edits[0])
     apply(desired, review, mocker)
-    assert target.read_bytes() == review.edits[0].after
+    assert target.read_bytes() == after(review.edits[0])
 
 
 def test_deleted_ancestor_preserves_new_intent_and_accepts_other_target(

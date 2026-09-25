@@ -4,6 +4,7 @@
   "manifest": {
     "one_shot": false,
     "template_reference": null,
+    "migrations": [],
     "collision_strategy": "merge",
     "collisions": [],
     "metadata": {

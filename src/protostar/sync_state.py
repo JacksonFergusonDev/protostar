@@ -113,12 +113,25 @@ class RegionState:
 
 @dataclass(frozen=True)
 class FileState:
-    """Only owned contributions, never a snapshot of foreign workspace content."""
+    """Only owned contributions, never a snapshot of foreign workspace content.
+
+    Attributes:
+        path: The owned file.
+        policy: How the file is owned.
+        baseline: The last applied document or text, for policies that merge.
+        regions: The owned append regions.
+        digest: For a seed, the SHA-256 of the bytes Protostar wrote, which
+            tells an untouched seed from an edited one without storing it.
+        retired: For a seed, whether a template migration removed it while it
+            held local edits; it stays a decision until settled.
+    """
 
     path: str
     policy: FilePolicy
     baseline: str | None = None
     regions: tuple[RegionState, ...] = ()
+    digest: str | None = None
+    retired: bool = False
 
     def __post_init__(self) -> None:
         """Validates the persisted ownership contract at construction."""
@@ -153,8 +166,16 @@ class FileState:
         elif self.policy is FilePolicy.SEED:
             if self.baseline is not None or self.regions:
                 raise _invalid("seed-only policy records only the seeded path.")
+            if self.digest is not None:
+                _digest(self.digest)
         elif self.baseline is not None:
             raise _invalid("region policy records only its regions.")
+        if self.policy is not FilePolicy.SEED and (
+            self.digest is not None or self.retired
+        ):
+            raise _invalid("only a seed records a digest or retirement.")
+        if type(self.retired) is not bool:
+            raise _invalid("retired must be a boolean.")
         if len({region.id for region in self.regions}) != len(self.regions):
             raise _invalid("duplicate region identities.")
         if len({region.tag for region in self.regions}) != len(self.regions):
@@ -246,7 +267,7 @@ class SyncState:
                 raise _invalid("unsupported template origin.")
             _text(ref.locator, "template locator")
             _digest(ref.digest)
-            for value in (ref.display_name, ref.version, ref.ref):
+            for value in (ref.display_name, ref.version, ref.ref, ref.migrated):
                 if value is not None:
                     _text(value, "template provenance")
             if type(ref.path) is not str:
@@ -438,11 +459,11 @@ def deserialize_state(content: str) -> SyncState:
             ref = _record(
                 root["template"],
                 {"origin", "locator", "digest"},
-                {"display_name", "version", "path", "ref", "revision"},
+                {"display_name", "version", "path", "ref", "revision", "migrated"},
             )
-            display_name, declared, ref_name, revision = (
+            display_name, declared, ref_name, revision, migrated = (
                 _text(ref[key], key) if key in ref else None
-                for key in ("display_name", "version", "ref", "revision")
+                for key in ("display_name", "version", "ref", "revision", "migrated")
             )
             template = TemplateReference(
                 TemplateOrigin(_text(ref["origin"], "template origin")),
@@ -453,10 +474,13 @@ def deserialize_state(content: str) -> SyncState:
                 _text(ref["path"], "template path") if "path" in ref else "",
                 ref_name,
                 revision,
+                migrated,
             )
         files = []
         for item in _records(root.get("files", [])):
-            record = _record(item, {"path", "policy"}, {"baseline", "regions"})
+            record = _record(
+                item, {"path", "policy"}, {"baseline", "regions", "digest", "retired"}
+            )
             regions = []
             for region in _records(record.get("regions", [])):
                 fields = _record(region, {"tag", "id", "baseline"})
@@ -476,6 +500,10 @@ def deserialize_state(content: str) -> SyncState:
                     FilePolicy(_text(record["policy"], "file policy")),
                     baseline,
                     tuple(regions),
+                    _text(record["digest"], "file digest")
+                    if "digest" in record
+                    else None,
+                    cast(bool, record.get("retired", False)),
                 )
             )
         dependencies = []
@@ -556,6 +584,10 @@ def serialize_state(state: SyncState) -> str:
                     record.regions, key=lambda item: (item.tag, item.id)
                 )
             ]
+        if record.digest is not None:
+            fields["digest"] = record.digest
+        if record.retired:
+            fields["retired"] = True
         files.append(fields)
     data["files"] = files
     data["dependencies"] = [

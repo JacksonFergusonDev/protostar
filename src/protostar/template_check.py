@@ -60,6 +60,7 @@ class CheckRule(StrEnum):
     RESTATED_BASELINE = "restated-baseline"
     UNBOUND_TOOL_CONFIG = "unbound-tool-config"
     UNBOUND_TOOL_PACKAGE = "unbound-tool-package"
+    INCONSISTENT_MIGRATION = "inconsistent-migration"
 
     @property
     def severity(self) -> Severity:
@@ -224,6 +225,7 @@ def check_template(target: str) -> TemplateCheck:
         except ProtostarError as e:
             errors.append(_error_finding(e, manifest_file))
         warnings.extend(_payload_findings(blueprint, where))
+        warnings.extend(_migration_findings(source, blueprint, where))
     return TemplateCheck(target, (*errors, *warnings))
 
 
@@ -408,6 +410,73 @@ def _first_use(
         if placeholder.search(relative):
             return path, None
     return where.file, None
+
+
+def _migration_findings(
+    source: TemplateSource, blueprint: TemplateBlueprint, where: _Where
+) -> Iterator[Finding]:
+    """Reports migrations that contradict what the template ships.
+
+    A migration describes the step from an older version to this one, so
+    what it removes or renames away must be gone, and what it renames to
+    must be here.
+    """
+    shipped = set(blueprint.files)
+    start = where.text.find("[[migrations]]")
+
+    def finding(message: str, value: str, hint: str) -> Finding:
+        found = where.text.find(f'"{value}"', max(start, 0))
+        line = where.text.count("\n", 0, found) + 1 if found >= 0 else None
+        return Finding(
+            CheckRule.INCONSISTENT_MIGRATION,
+            message,
+            where.file,
+            "migrations",
+            hint=hint,
+            line=line,
+        )
+
+    for migration in blueprint.migrations:
+        for path in migration.remove:
+            if path in shipped:
+                yield finding(
+                    f"Migration {migration.version} removes {path}, which the "
+                    "template still ships.",
+                    path,
+                    "Stop shipping the file, or drop it from remove.",
+                )
+        for rename in migration.rename:
+            if rename.source in shipped:
+                yield finding(
+                    f"Migration {migration.version} renames {rename.source}, "
+                    "which the template still ships.",
+                    rename.source,
+                    "Ship the file only under its new name.",
+                )
+            if rename.target not in shipped:
+                yield finding(
+                    f"Migration {migration.version} renames a file to "
+                    f"{rename.target}, which the template doesn't ship.",
+                    rename.target,
+                    "Ship the file under its new name in [files] or template/.",
+                )
+    for migration in source.migrations:
+        for rename in migration.rename_variables:
+            if rename.target not in source.variables:
+                yield finding(
+                    f"Migration {migration.version} renames variable "
+                    f"{rename.source} to {rename.target}, which the template "
+                    "doesn't use.",
+                    rename.target,
+                    "Use the variable under its new name, as <% NAME %>.",
+                )
+            if rename.source in source.variables:
+                yield finding(
+                    f"Migration {migration.version} renames variable "
+                    f"{rename.source}, which the template still uses.",
+                    rename.source,
+                    "Use the variable only under its new name.",
+                )
 
 
 def _payload_findings(blueprint: TemplateBlueprint, where: _Where) -> Iterator[Finding]:

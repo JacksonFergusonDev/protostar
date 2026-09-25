@@ -19,6 +19,7 @@ from .intent import TemplateOrigin, TemplateReference
 from .journal import TransactionState
 from .manifest import CollisionStrategy, EnvironmentManifest
 from .merge import Resolutions
+from .migrations import rename_variables, select_migrations
 from .models import ExecutionResult, InitRequest, RollbackContext
 from .modules import PythonCore, SystemWorkspaceModule
 from .network import RefKind, RefListing, list_refs
@@ -234,8 +235,42 @@ def locate_project(to: str | None = None) -> LocatedProject:
             "Cannot read the recorded template source.",
             hint="Verify its locator and UTF-8 source files.",
         ) from error
+    if template is not None:
+        recipe = replace(
+            recipe,
+            variables=tuple(
+                sorted(
+                    migrate_variables(template, state, dict(recipe.variables)).items()
+                )
+            ),
+        )
     upstream = _upstream(template.reference, listing) if template else None
     return LocatedProject(recipe, state, template, upstream)
+
+
+def migrate_variables(
+    template: TemplateSource, state: SyncState | None, values: Mapping[str, str]
+) -> dict[str, str]:
+    """Moves recorded variable values to the names the template's migrations gave.
+
+    Args:
+        template: The template being applied.
+        state: The project's committed ledger, whose template version the
+            migrations run from; None for a project without one.
+        values: The recorded variable values.
+
+    Raises:
+        ConfigurationError: If the template moves back across a migration.
+    """
+    if state is None or state.template is None:
+        return dict(values)
+    selected = select_migrations(
+        template.migrations,
+        state.template.version,
+        template.version,
+        state.template.migrated,
+    )
+    return rename_variables(values, selected)
 
 
 def inspect_project() -> PreparedReview:

@@ -92,7 +92,10 @@
                 ]
               },
               "after": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -107,6 +110,43 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        },
+        "migrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "target": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "outcome": {
+                "enum": [
+                  "moved",
+                  "target-exists",
+                  "removed",
+                  "retired",
+                  "forgotten",
+                  "not-owned"
+                ]
+              }
+            },
+            "required": [
+              "version",
+              "path",
+              "target",
+              "outcome"
+            ],
+            "additionalProperties": false
           }
         },
         "conflicts": {
@@ -950,6 +990,7 @@
       "required": [
         "edits",
         "directories",
+        "migrations",
         "conflicts",
         "resolved",
         "proposals",

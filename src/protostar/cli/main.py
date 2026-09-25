@@ -51,6 +51,7 @@ from protostar.fs import atomic_write_text
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin
 from protostar.interpolation import VARIABLE_NAME
+from protostar.lifecycle import migrate_variables
 from protostar.manifest import CollisionStrategy
 from protostar.modules import (
     TOOLING_MODULES,
@@ -159,6 +160,14 @@ def handle_init(args: argparse.Namespace) -> None:
         )
     # plan() checks this too, but only after the variables are entered.
     check_workspace_identity(Path.cwd(), source.reference if source else None)
+    if source is not None and existing_recipe is not None:
+        # Renamed values stay recorded values, which the secret guard skips.
+        migrated = migrate_variables(
+            source, read_workspace_state(Path.cwd()), dict(existing_recipe.variables)
+        )
+        existing_recipe = replace(
+            existing_recipe, variables=tuple(sorted(migrated.items()))
+        )
     variables = _resolve_template_variables(
         source,
         dict(existing_recipe.variables) if existing_recipe else {},

@@ -307,7 +307,10 @@ class SystemExecutor(Reconciliation):
             self.fs.ensure_directory(Path(path))
         for edit in review.edits:
             try:
-                self.fs.write_text(Path(edit.path), edit.after.decode("utf-8"))
+                if edit.after is None:
+                    self.fs.remove_file(Path(edit.path))
+                else:
+                    self.fs.write_bytes(Path(edit.path), edit.after)
             except OSError as error:
                 raise FileSystemError(
                     "apply prepared edit", edit.path, error

@@ -32,6 +32,7 @@ from .intent import (
     validate_target,
 )
 from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
+from .migrations import Migration, parse_migrations
 from .network import RemoteTemplate, fetch_remote_template
 
 logger = logging.getLogger("protostar")
@@ -604,6 +605,7 @@ TEMPLATE_STRUCTURAL_KEYS: frozenset[str] = frozenset(
         "files",
         "appends",
         "variables",
+        "migrations",
     }
 )
 
@@ -727,6 +729,25 @@ class TemplateBlueprint:
                     "project_environment": {"content": "export REGION=<% REGION %>"}
                 }
             },
+        },
+    )
+    migrations: list[Migration] = field(
+        default_factory=list,
+        metadata={
+            "description": "Changes a project makes as it moves past a template version: moved and removed seed files, and renamed variables. Requires a PEP 440 version.",
+            "example": [
+                {
+                    "version": "1.0.0",
+                    "rename": [
+                        {
+                            "from": "src/<% PACKAGE_NAME %>/settings.py",
+                            "to": "src/<% PACKAGE_NAME %>/config.py",
+                        }
+                    ],
+                    "remove": ["setup.cfg"],
+                    "rename_variables": [{"from": "ORG", "to": "ORGANIZATION"}],
+                }
+            ],
         },
     )
     tooling_overrides: dict[str, bool] = field(
@@ -949,6 +970,8 @@ class TemplateBlueprint:
                     ) from e
                 instance.dependency_includes.append(DependencyInclude(group, include))
 
+        instance.migrations = list(parse_migrations(data, source))
+
         # Extract tooling overrides dynamically (root-level boolean flags)
         for key, value in data.items():
             if key not in TEMPLATE_STRUCTURAL_KEYS and isinstance(value, bool):
@@ -1126,6 +1149,41 @@ class TemplateSource:
         return frozenset(extract_variables(text)) - BUILT_IN_VARIABLES
 
     @functools.cached_property
+    def _data(self) -> dict[str, Any]:
+        """The raw template's root table, before any variable renders.
+
+        Raises:
+            ConfigurationError: If the template is not valid TOML.
+        """
+        try:
+            return tomllib.loads(self.template_bytes.decode("utf-8"))
+        except tomllib.TOMLDecodeError as e:
+            raise ConfigurationError(
+                f"Syntax error in configuration source '{self.reference.locator}'.\n"
+                f"Details: {e}\n"
+                "Please fix the syntax error to proceed."
+            ) from e
+
+    @property
+    def version(self) -> str | None:
+        """The version the raw template declares, if any."""
+        version = self._data.get("version")
+        return version if isinstance(version, str) else None
+
+    @functools.cached_property
+    def migrations(self) -> tuple[Migration, ...]:
+        """The template's migrations, read before any variable renders.
+
+        A variable rename has to be known before rendering, which needs the
+        variable under its new name.
+
+        Raises:
+            ConfigurationError: If the template is not valid TOML.
+            TemplateResolutionError: If a migration is malformed.
+        """
+        return parse_migrations(self._data, self.reference.locator)
+
+    @functools.cached_property
     def descriptions(self) -> dict[str, str]:
         """Descriptions the template's ``[variables]`` table declares, by name.
 
@@ -1138,15 +1196,7 @@ class TemplateSource:
                 variable the template never uses.
         """
         target = self.reference.locator
-        try:
-            data = tomllib.loads(self.template_bytes.decode("utf-8"))
-        except tomllib.TOMLDecodeError as e:
-            raise ConfigurationError(
-                f"Syntax error in configuration source '{target}'.\n"
-                f"Details: {e}\n"
-                "Please fix the syntax error to proceed."
-            ) from e
-        declared = data.get("variables", {})
+        declared = self._data.get("variables", {})
         hint = 'Declare each variable as [variables.NAME] with description = "...".'
         if not isinstance(declared, dict) or any(
             not isinstance(entry, dict)
