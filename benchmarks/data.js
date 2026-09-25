@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790360237715,
+  "lastUpdate": 1790364078262,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17073,6 +17073,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 850.65,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "165806630712ad76a972fec3ab9d8b55351b5a70",
+          "message": "feat(templates): typed template options that gate content through requires (#338)\n\n* feat(sync): release seeds and requirements nothing declares any more\n\nA seed file or an owned requirement whose producer stops declaring it (a\ntool switched off, a template that drops it) is now let go: removed when\nunedited, kept as a retracted conflict when edited, and forgotten when\nalready gone. A rename migration that cannot move a file now leaves it as\nthe user's own, so a later sync never deletes it.\n\n* feat(sync): retract pyproject config and regions nothing declares any more\n\npyproject.toml's contributions are now its producers' complete declaration:\nan owned [tool.*] table that stops being declared is removed when unedited\nand becomes a retracted conflict when edited, one table at a time, with the\nfile's section headers kept right. Seeds and dependency-group includes are\nretained. An owned append region nothing declares is retracted the same way.\n\n* feat(templates): typed template options gating content through requires\n\nTemplates declare [options]: bool options with a default, and choice\noptions with a list of values and a default. Content opts in with a\nrequires condition that names tools and options (\"pytest\", \"compose\",\n\"database=postgres\", or an array that must all hold). Payloads, append\nregions, and the new [[optional]] blocks (dependencies of any group and\ntemplate files) take requires; [dev.tool_dependencies] is replaced by\n[[optional]]. Options never render into text.\n\ninit and sync take --option NAME=VALUE, the recipe editor shows a switch\nor a choice per option, and the recipe records chosen values in\n[tool.protostar.options], following tools: flags pin their value, and the\neditor records only values away from the template's defaults.",
+          "timestamp": "2026-09-25T12:18:56-07:00",
+          "tree_id": "b530a4ae2cc9b198807ffa200633d22f0e74bc7c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/165806630712ad76a972fec3ab9d8b55351b5a70"
+        },
+        "date": 1790364076729,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 219.91,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 790.09,
             "unit": "ms"
           }
         ]
