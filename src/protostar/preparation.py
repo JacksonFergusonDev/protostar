@@ -417,6 +417,7 @@ def prepare_review(
         decisions._migrate()
         decisions._release_undeclared_seeds()
         decisions._settle_retired()
+        decisions._release_undeclared_documents()
         decisions._create_directories()
         decisions._write_injected_files()
         decisions._write_pre_commit_config()

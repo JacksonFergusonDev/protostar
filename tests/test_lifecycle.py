@@ -915,10 +915,10 @@ def _resolve_dev_dependencies(_runner, command, *, timeout):
     Path("uv.lock").write_text("resolved")
 
 
-def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
+def test_recipe_tool_evolution_retains_keyed_hook_edits_and_forgets_deleted_artifacts(
     project, mocker
 ):
-    """Omitted opinions evolve, explicit opt-outs retain ownership on re-enable."""
+    """Omitted opinions evolve; a tool switched off forgets a document already deleted."""
     import tomlkit
     from ruamel.yaml import YAML
 
@@ -973,27 +973,25 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     assert not {"check-jsonschema>=1", "json5>=1"} & set(dev)
     from protostar.sync_state import deserialize_state
 
-    before = deserialize_state(retained.decode())
-    after = deserialize_state(Path("protostar.lock").read_text())
-    record = next(
-        record for record in before.files if record.path == ".github/renovate.json"
+    # The deleted document's ownership leaves with its tool.
+    assert any(
+        record.path == ".github/renovate.json"
+        for record in deserialize_state(retained.decode()).files
     )
-    assert record in after.files
+    after = deserialize_state(Path("protostar.lock").read_text())
+    assert all(record.path != ".github/renovate.json" for record in after.files)
     recipe_doc = tomlkit.parse(Path("pyproject.toml").read_text())
     recipe_doc["tool"]["protostar"]["tools"]["renovate"] = True
     Path("pyproject.toml").write_text(tomlkit.dumps(recipe_doc))
     process.reset_mock()
     prepared = prepare_project()
-    # The fixture's earlier template content left an owned key that the Renovate
-    # module omits, so the desired document counts as changed intent under a
-    # deleted ancestor: the deletion is preserved and reported as a conflict.
-    assert any(
+    assert not any(
         conflict.location.file == ".github/renovate.json"
-        and conflict.reason is ConflictReason.DELETED_ANCESTOR
         for conflict in prepared.review.conflicts
     )
     prepared.apply()
-    assert not Path(".github/renovate.json").exists()
+    # Switched back on, the tool writes its document afresh.
+    assert Path(".github/renovate.json").exists()
     # Its packages come back with it.
     process.assert_called_once_with(
         mocker.ANY, ["uv", "add", "--dev", "check-jsonschema", "json5"], timeout=600
@@ -1097,6 +1095,171 @@ def test_an_edited_retracted_seed_kept_becomes_the_users(project):
     assert Path("edited.txt").read_text() == "mine\n"
     assert "edited.txt" not in {record.path for record in _state().files}
     assert not prepare_project().review.conflicts
+
+
+def test_a_document_nothing_declares_is_deleted_or_keeps_foreign_keys(project):
+    """An unedited owned document leaves; foreign keys keep the file as the user's."""
+    reprepare = _released(project, source_text("original"), "[files]\n")
+    reprepare().apply()
+
+    assert not Path(".github/renovate.json").exists()
+    assert ".github/renovate.json" not in {r.path for r in _state().files}
+
+    reprepare = _released(project, source_text("original"), "[files]\n")
+    Path(".github/renovate.json").write_text('{"value": "original", "custom": 1}')
+    prepared = reprepare()
+    assert not prepared.review.conflicts
+    prepared.apply()
+
+    assert json.loads(Path(".github/renovate.json").read_text()) == {"custom": 1}
+    assert ".github/renovate.json" not in {r.path for r in _state().files}
+
+
+def test_an_edited_document_nothing_declares_is_retracted(project):
+    """An edited owned key waits for a decision; taking it empties and deletes the file."""
+    from protostar.lifecycle import prepare_project
+
+    reprepare = _released(project, source_text("original"), "[files]\n")
+    Path(".github/renovate.json").write_text('{"value": "mine"}')
+    prepared = reprepare()
+
+    (conflict,) = prepared.review.conflicts
+    assert conflict.location.file == ".github/renovate.json"
+    assert conflict.location.keys == ("value",)
+    assert conflict.reason is ConflictReason.RETRACTED
+    prepared.apply()
+    assert json.loads(Path(".github/renovate.json").read_text()) == {"value": "mine"}
+    assert ".github/renovate.json" in {r.path for r in _state().files}
+
+    retracted = prepare_project()
+    (conflict,) = retracted.review.conflicts
+    retracted.resolve({conflict.id: ResolutionChoice.DESIRED}).apply()
+    assert not Path(".github/renovate.json").exists()
+    assert ".github/renovate.json" not in {r.path for r in _state().files}
+
+
+def test_an_edited_document_kept_becomes_the_users(project):
+    from protostar.lifecycle import prepare_project
+
+    reprepare = _released(project, source_text("original"), "[files]\n")
+    Path(".github/renovate.json").write_text('{"value": "mine"}')
+    prepared = reprepare()
+    (conflict,) = prepared.review.conflicts
+    prepared.resolve({conflict.id: ResolutionChoice.LOCAL}).apply()
+
+    assert json.loads(Path(".github/renovate.json").read_text()) == {"value": "mine"}
+    assert ".github/renovate.json" not in {r.path for r in _state().files}
+    assert not prepare_project().review.conflicts
+
+
+def _any_resolved(_runner, command, *, timeout):
+    """Stands in for every package manager call a tool's dependencies make."""
+    Path("uv.lock").write_text("resolved")
+
+
+@pytest.mark.parametrize(
+    ("tool", "document"),
+    [
+        ("zensical", "zensical.toml"),
+        ("prek", ".pre-commit-config.yaml"),
+        ("ci", ".github/workflows/ci.yml"),
+    ],
+)
+def test_a_document_whose_tool_is_switched_off_is_retracted(
+    project, mocker, tool, document
+):
+    """A tool switched off takes its generated document with it."""
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(project, f"{tool} = true\n", f"{tool} = false\n")
+    assert document in {r.path for r in _state().files}
+    reprepare().apply()
+
+    assert not Path(document).exists()
+    assert document not in {r.path for r in _state().files}
+    assert all(pin.path != document for pin in _state().hook_pins)
+
+
+def test_a_switched_off_document_keeps_the_users_own_settings(project, mocker):
+    import tomlkit
+
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(project, "zensical = true\n", "zensical = false\n")
+    Path("zensical.toml").write_text(
+        Path("zensical.toml").read_text() + "\n[mine]\nkept = true\n"
+    )
+    reprepare().apply()
+
+    assert tomlkit.parse(Path("zensical.toml").read_text()) == {"mine": {"kept": True}}
+    assert "zensical.toml" not in {r.path for r in _state().files}
+
+
+def test_a_switched_off_workflow_with_an_edited_job_is_retracted(project, mocker):
+    from ruamel.yaml import YAML
+
+    from protostar.lifecycle import prepare_project
+
+    yaml = YAML(typ="rt")
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(project, "ci = true\n", "ci = false\n")
+    workflow = Path(".github/workflows/ci.yml")
+    data = yaml.load(workflow.read_text())
+    job = next(iter(data["jobs"]))
+    data["jobs"][job]["timeout-minutes"] = 5
+    with workflow.open("w") as stream:
+        yaml.dump(data, stream)
+    prepared = reprepare()
+
+    (conflict,) = prepared.review.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.keys == ("jobs",)
+    prepared.apply()
+    kept = yaml.load(workflow.read_text())
+    assert set(kept) == {"jobs"}
+    assert kept["jobs"][job]["timeout-minutes"] == 5
+
+    retracted = prepare_project()
+    (conflict,) = retracted.review.conflicts
+    retracted.resolve({conflict.id: ResolutionChoice.DESIRED}).apply()
+    assert not workflow.exists()
+    assert workflow.as_posix() not in {r.path for r in _state().files}
+
+
+def test_a_held_document_is_declared_and_never_retracted(project, mocker):
+    """A document its tool still declares is left alone even when it is held."""
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(project, "zensical = true\n", "zensical = true\n")
+    # Settings outside [project] hold the document: adding the table would hide them.
+    Path("zensical.toml").write_text('site_name = "mine"\n')
+    prepared = reprepare()
+    assert any(
+        "zensical.toml" in d.message and d.severity.name == "WARNING"
+        for d in prepared.review.diagnostics
+    )
+    prepared.apply()
+
+    assert Path("zensical.toml").read_text() == 'site_name = "mine"\n'
+    assert "zensical.toml" in {r.path for r in _state().files}
+
+
+def test_sync_reports_a_retracted_document_removal(project, monkeypatch, capsys):
+    project.write_text(source_text("original"))
+    from protostar.lifecycle import prepare_project
+
+    prepare_project().apply()
+    project.write_text("[files]\n")
+
+    invoke_sync(monkeypatch, capsys, "--check", code=1)
+    result = invoke_sync(monkeypatch, capsys)["result"]
+    assert ".github/renovate.json" in result["touched_paths"]
+    assert not Path(".github/renovate.json").exists()
 
 
 def _add_resolved(_runner, command, *, timeout):

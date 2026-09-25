@@ -29,6 +29,7 @@ from .documents import (
     renovate,
     toml_spec,
     vscode,
+    yaml_spec,
 )
 from .documents.locations import Resolution, resolve_location
 from .errors import (
@@ -93,6 +94,7 @@ from .sync_state import (
 from .text_merge import reconcile_text
 from .toml_ast import (
     TomlDocumentSpec,
+    TomlReconciliation,
     aggregate_toml,
     aggregate_toml_document,
     reconcile_toml,
@@ -118,6 +120,7 @@ from .workspace import (
 )
 from .yaml_ast import (
     NO_GUARD,
+    YamlDocumentSpec,
     YamlGuardPolicy,
     YamlReconciliation,
     decode_yaml_baseline,
@@ -590,6 +593,117 @@ class Reconciliation:
             if settled.resolution is ResolutionChoice.DESIRED:
                 self.fs.remove_file(target)
             self.candidate_state = self.candidate_state.without_file(record.path)
+
+    def _release_undeclared_documents(self) -> None:
+        """Retracts each owned structured document that nothing declares any more.
+
+        A tool or template option that is switched off stops declaring its
+        documents, and a template can stop contributing to one. Each is
+        reconciled against an empty complete declaration under its own spec:
+        an unedited owned unit is removed, an edited one is kept with a
+        ``retracted`` conflict, and foreign content stays. Seeds and retained
+        paths are retracted too, and guards are off, because nothing is wanted.
+        A file left with nothing once its owned content is removed is deleted;
+        one the user already deleted is forgotten. Explicit overwrite covers
+        declared targets only, so it removes no edited content here.
+        """
+        declared = self.manifest.declared_documents()
+        for record in [
+            r
+            for r in self.candidate_state.files
+            if r.policy in (FilePolicy.TOML, FilePolicy.YAML, FilePolicy.JSONC)
+            and r.path not in declared
+        ]:
+            target = Path(record.path)
+            enforce_path_jail(target, Path.cwd())
+            self._validate_node(target)
+            if not self.workspace.exists(target):
+                self._release_document(record.path)
+                continue
+            try:
+                original = self.workspace.read_bytes(target).decode("utf-8")
+            except (OSError, UnicodeError) as error:
+                raise FileSystemError(
+                    "read retracted configuration", record.path, error
+                ) from error
+            location = MergeLocation(record.path)
+            baseline = record.baseline or ""
+            decode: Callable[[str], dict[str, Value]]
+            encode: Callable[[dict[str, Value]], str]
+            result: TomlReconciliation | YamlReconciliation | JsoncReconciliation
+            if record.policy is FilePolicy.TOML:
+                spec = toml_spec(record.path)
+                decode, encode = tomllib.loads, encode_toml_baseline
+                result = reconcile_toml(
+                    replace(
+                        spec,
+                        seed_paths=frozenset(),
+                        policy=replace(
+                            spec.policy, complete=True, retained_paths=frozenset()
+                        ),
+                    ),
+                    original,
+                    {},
+                    decode_toml_baseline(baseline),
+                    location,
+                    resolutions=self.resolutions,
+                )
+            elif record.policy is FilePolicy.YAML:
+                yaml = yaml_spec(record.path) or YamlDocumentSpec(record.path)
+                decode, encode = decode_yaml_baseline, encode_yaml_baseline
+                result = reconcile_yaml(
+                    replace(
+                        yaml,
+                        policy=replace(
+                            yaml.policy, complete=True, retained_paths=frozenset()
+                        ),
+                    ),
+                    original,
+                    "{}\n",
+                    decode_yaml_baseline(baseline),
+                    location,
+                    resolutions=self.resolutions,
+                )
+            else:
+                decode, encode = decode_jsonc, encode_jsonc_baseline
+                result = reconcile_jsonc(
+                    original,
+                    "{}",
+                    decode_jsonc_baseline(baseline),
+                    location,
+                    resolutions=self.resolutions,
+                    complete=True,
+                )
+            self._report(
+                result.conflicts, result.resolved, result.proposals, result.preserved
+            )
+            owned = result.baseline if isinstance(result.baseline, dict) else {}
+            if result.conflicts or owned:
+                self.candidate_state = self.candidate_state.with_file(
+                    FileState(record.path, record.policy, encode(owned))
+                )
+            else:
+                self._release_document(record.path)
+            if result.content == original:
+                continue
+            try:
+                if not result.conflicts and not decode(result.content):
+                    self.fs.remove_file(target)
+                else:
+                    self.fs.write_text(target, result.content)
+            except OSError as error:
+                raise FileSystemError(
+                    "retract configuration", record.path, error
+                ) from error
+
+    def _release_document(self, path: str) -> None:
+        """Forgets a structured document's ownership and the hook pins it held."""
+        self.candidate_state = replace(
+            self.candidate_state.without_file(path),
+            hook_pins=tuple(
+                pin for pin in self.candidate_state.hook_pins if pin.path != path
+            ),
+        )
 
     def _create_directories(self) -> None:
         """Scaffolds all queued directories in the local workspace."""
