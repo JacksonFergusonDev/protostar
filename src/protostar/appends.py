@@ -172,8 +172,13 @@ def attach_regions(text: str, blocks: Iterable[str]) -> str:
         The text with each region appended after a blank line.
     """
     for block in blocks:
-        separator = "" if not text else ("\n" if text.endswith("\n") else "\n\n")
-        text += separator + block + "\n"
+        newline = "\r\n" if "\r\n" in text or "\r\n" in block else "\n"
+        separator = (
+            ""
+            if not text
+            else (newline if text.endswith(("\r\n", "\n")) else newline + newline)
+        )
+        text += separator + block + newline
     return text
 
 
@@ -185,8 +190,16 @@ def _cut(text: str, start: int, stop: int) -> str:
         stop += 1
     head, tail = text[:start], text[stop:]
     # Appending put one blank line before the region; one is enough.
-    if head.endswith("\n\n") and (not tail or tail.startswith("\n")):
+    if head.endswith(("\r\n\r\n", "\n\r\n")) and (
+        not tail or tail.startswith(("\r\n", "\n"))
+    ):
+        head = head[:-2]
+    elif head.endswith(("\r\n\n", "\n\n")) and (
+        not tail or tail.startswith(("\r\n", "\n"))
+    ):
         head = head[:-1]
+    elif not head and tail.startswith("\r\n"):
+        tail = tail[2:]
     elif not head and tail.startswith("\n"):
         tail = tail[1:]
     return head + tail
