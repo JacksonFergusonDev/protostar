@@ -265,3 +265,23 @@ def test_null_values_are_owned_and_distinct_from_absence():
 def test_invalid_documents_are_domain_errors(original, desired):
     with pytest.raises(ConfigurationError):
         merge(original, desired)
+
+
+def test_complete_declaration_deletes_owned_keys_and_keeps_foreign_ones():
+    local = '{\n  // mine\n  "custom": 1,\n  "extends": ["config:best-practices"]\n}\n'
+
+    result = merge(local, "{}", {"extends": ["config:best-practices"]}, complete=True)
+
+    assert result.content == '{\n  // mine\n  "custom": 1\n}\n'
+    assert result.baseline == {}
+    assert result.conflicts == ()
+
+
+def test_complete_declaration_keeps_an_edited_owned_key_as_retracted():
+    local = '{\n  "extends": ["local"]\n}\n'
+
+    result = merge(local, "{}", {"extends": ["config:best-practices"]}, complete=True)
+
+    assert result.content == local
+    assert result.baseline == {"extends": ["config:best-practices"]}
+    assert [c.reason for c in result.conflicts] == [ConflictReason.RETRACTED]
