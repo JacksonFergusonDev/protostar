@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790358134956,
+  "lastUpdate": 1790359619491,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17005,6 +17005,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 543.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "483fb81c33ba0bcaf28e252be881c29631640f44",
+          "message": "feat(sync): apply template-declared migrations (#336)\n\nTemplates can declare [[migrations]] for what a three-way merge cannot\n\nexpress: a seeded file that moved (local edits move with it), a seeded file\nthe template retired (deleted when unedited, a retracted conflict when\nedited), and a renamed variable (its recorded value moves). Migrations run\nonce as a project passes the version that declared them, are shown in status\nand diffs before anything changes, and roll back with the rest of a failed\nsync. Seeds now record the digest of what Protostar wrote, reviews can remove\nfiles, and the lock records the newest migration applied so a project never\nmoves back across one.",
+          "timestamp": "2026-09-25T11:04:19-07:00",
+          "tree_id": "b8075739b32a41652a974f8d12f8326cff2abb34",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/483fb81c33ba0bcaf28e252be881c29631640f44"
+        },
+        "date": 1790359618164,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 240.25,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 895.74,
             "unit": "ms"
           }
         ]
