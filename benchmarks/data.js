@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790359619491,
+  "lastUpdate": 1790360237715,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17039,6 +17039,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 895.74,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1a9ae6934da36716e69be8fa0c5b4e8960d1beee",
+          "message": "fix(sync): refuse a lock written by a newer Protostar (#337)\n\nprotostar.lock records producer_version, but nothing compared it. Built-in\noutput comes from the installed release, so an older Protostar planned older\noutput and accepted it as an update. Reading the lock now raises\nOutdatedProtostarError when the installed version is older than the one that\nwrote it, before any prompt or screen opens.",
+          "timestamp": "2026-09-25T11:14:49-07:00",
+          "tree_id": "50ceb9d59b5b3d163b04d9e49725c35b58b63d73",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1a9ae6934da36716e69be8fa0c5b4e8960d1beee"
+        },
+        "date": 1790360236907,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 231.62,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 850.65,
             "unit": "ms"
           }
         ]
