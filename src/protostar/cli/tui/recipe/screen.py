@@ -124,6 +124,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         # switched off, until the user changes that tool.
         self.found: dict[Tool, str] = {}
         self.displaced: dict[Tool, Tool] = {}
+        self._analyzed: set[Tool] = set()
         self.docker_found = ""
         self._resolve_selections()
         if self.analysis:
@@ -148,6 +149,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                         if self.enabled[other]:
                             self.overrides[other] = False
                             self.displaced[other] = tool
+        self._analyzed = set(self.found) | set(self.displaced)
         self._resolve_selections()
         enabled = {tool for tool, value in self.enabled.items() if value}
         blocked = {
@@ -165,7 +167,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 self.docker_override = True
 
     def _forget(self, *tools: Tool) -> None:
-        """The user decided these tools, so what analysis said no longer shows."""
+        """The user decided these tools, so what analysis saw no longer shows."""
         for tool in tools:
             self.found.pop(tool, None)
             self.displaced.pop(tool, None)
@@ -181,6 +183,15 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         # Tool opinions are literal root booleans, independent of variable rendering.
         self.opinions = {
             key: value for key, value in data.items() if isinstance(value, bool)
+        }
+        base_selections = {
+            selection.tool: selection
+            for selection in self.base_recipe.selections(self.opinions)
+        }
+        self.overrides = {
+            tool: enabled
+            for tool, enabled in self.overrides.items()
+            if tool in self._analyzed or enabled != base_selections[tool].enabled
         }
         recipe = replace(
             self.base_recipe,

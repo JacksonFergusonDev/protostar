@@ -169,6 +169,75 @@ async def test_tools_constraints_and_provenance():
 
 
 @pytest.mark.asyncio
+async def test_tool_provenance_reverts_when_aligned_with_config_or_template():
+    app = make_app(config=UserConfig(ruff=True, pytest=False))
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        ruff = app.screen.query_one("#tool-ruff", Checkbox)
+        assert ruff.value
+        assert "from config" in ruff.label.plain
+
+        # Toggling ruff away from config makes it "your choice".
+        ruff.focus()
+        await pilot.press("space")
+        await settle(pilot)
+        assert not ruff.value
+        assert "your choice" in ruff.label.plain
+
+        # Toggling ruff back to its config value reverts provenance to "from config".
+        await pilot.press("space")
+        await settle(pilot)
+        assert ruff.value
+        assert "from config" in ruff.label.plain
+
+        # Selecting a template sets declared tools to "from template".
+        app.screen.query_one("#template", Select).value = next(
+            item for item in app.decision_screen.catalog if item.alias == "api"
+        )
+        await settle(pilot)
+        pytest_box = app.screen.query_one("#tool-pytest", Checkbox)
+        assert pytest_box.value
+        assert "from template" in pytest_box.label.plain
+
+        # Toggling a template tool away from the template makes it "your choice".
+        pytest_box.focus()
+        await pilot.press("space")
+        await settle(pilot)
+        assert not pytest_box.value
+        assert "your choice" in pytest_box.label.plain
+
+        # Toggling it back so it aligns with the template reverts it to "from template".
+        await pilot.press("space")
+        await settle(pilot)
+        assert pytest_box.value
+        assert "from template" in pytest_box.label.plain
+
+        # Exclusive git hook manager: api template declares prek = true.
+        prek = app.screen.query_one("#tool-prek", RadioButton)
+        pre_commit = app.screen.query_one("#tool-pre_commit", RadioButton)
+        assert prek.value
+        assert "from template" in prek.label.plain
+        assert not pre_commit.value
+        assert "from config" in pre_commit.label.plain
+
+        # Selecting pre_commit marks both as "your choice".
+        await pilot.click("#tool-pre_commit")
+        await settle(pilot)
+        assert not prek.value
+        assert "your choice" in prek.label.plain
+        assert pre_commit.value
+        assert "your choice" in pre_commit.label.plain
+
+        # Selecting prek again aligns back with the template opinions.
+        await pilot.click("#tool-prek")
+        await settle(pilot)
+        assert prek.value
+        assert "from template" in prek.label.plain
+        assert not pre_commit.value
+        assert "from config" in pre_commit.label.plain
+
+
+@pytest.mark.asyncio
 async def test_escape_asks_before_leaving():
     app = make_app()
     async with app.run_test() as pilot:
