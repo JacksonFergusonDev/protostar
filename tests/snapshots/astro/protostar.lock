@@ -16,10 +16,12 @@ display_name = "astro"
 [[files]]
 path = ".envrc"
 policy = "seed-only"
+digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 
 [[files]]
 path = ".gitattributes"
 policy = "seed-only"
+digest = "fba8c29612852cc79d5ad6be11f1534d1be2801a9bd2c74ef46a73e56b597db5"
 
 [[files]]
 path = "justfile"

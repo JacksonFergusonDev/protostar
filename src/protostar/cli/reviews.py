@@ -25,6 +25,7 @@ from protostar.merge import (
     ResolutionChoice,
     describe_location,
 )
+from protostar.migrations import MigrationOutcome, MigrationStep
 from protostar.preparation import (
     PreparedEdit,
     PreparedReview,
@@ -52,7 +53,7 @@ def unified_diff(edit: PreparedEdit) -> str:
         _diff_lines(edit.before),
         _diff_lines(edit.after),
         fromfile=f"a/{edit.path}" if edit.before is not None else "/dev/null",
-        tofile=f"b/{edit.path}",
+        tofile=f"b/{edit.path}" if edit.after is not None else "/dev/null",
     )
     return "".join(
         line if line.endswith("\n") else line + "\n\\ No newline at end of file\n"
@@ -152,10 +153,15 @@ def render_review(
             ),
         )
     )
+    for step in review.migrations:
+        ui.console.print(_migration_line(step, applied=applied), soft_wrap=True)
     for edit in review.edits:
         ui.console.print(
             Text.assemble(
-                ("Accepted: ", "green" if applied else ""),
+                (
+                    "Accepted: " if edit.after is not None else "Removed: ",
+                    "green" if applied else "",
+                ),
                 (
                     edit.path,
                     ui.path_style(edit.path.rsplit("/", 1)[-1], directory=False),
@@ -254,6 +260,36 @@ def render_review(
         )
     if not review.pending:
         ui.console.print(Text("No pending work.", "dim"))
+
+
+_MIGRATED = {
+    MigrationOutcome.MOVED: ("moved to {target}", "moves to {target}"),
+    MigrationOutcome.TARGET_EXISTS: (
+        "kept; {target} already exists",
+        "stays; {target} already exists",
+    ),
+    MigrationOutcome.REMOVED: ("removed", "is removed"),
+    MigrationOutcome.RETIRED: (
+        "has your edits; keep it with local or delete it with desired",
+        "has your edits; keep it with local or delete it with desired",
+    ),
+    MigrationOutcome.FORGOTTEN: ("already deleted", "already deleted"),
+    MigrationOutcome.NOT_OWNED: (
+        "not a Protostar seed; left alone",
+        "not a Protostar seed; left alone",
+    ),
+}
+
+
+def _migration_line(step: MigrationStep, *, applied: bool) -> Text:
+    """Describes what one template migration did, or does, to one file."""
+    done, pending = _MIGRATED[step.outcome]
+    action = (done if applied else pending).format(target=step.target)
+    return Text.assemble(
+        (f"Migration {step.version}: ", "bold"),
+        (step.path, "bold"),
+        f" {action}.",
+    )
 
 
 def _where(conflict: MergeConflict) -> str:

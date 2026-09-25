@@ -12,6 +12,7 @@
       }
     ],
     "directories": [],
+    "migrations": [],
     "conflicts": [
       {
         "id": "7931c07f49c0",

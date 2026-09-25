@@ -15,6 +15,7 @@ display_name = "cli"
 [[files]]
 path = ".envrc"
 policy = "seed-only"
+digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 
 [[files]]
 path = ".github/codecov.yml"
@@ -49,14 +50,17 @@ baseline = "build:\n  jobs:\n    build:\n      html:\n        - mkdir -p \"$READ
 [[files]]
 path = "CHANGELOG.md"
 policy = "seed-only"
+digest = "0a9c19eaad38cda8e9040bfacafc0d82d4734993e514c492dd65bc3e79b07f04"
 
 [[files]]
 path = "README.md"
 policy = "seed-only"
+digest = "37c77381868c59a8a87717f8c70016477dc028054b636446323b9bfcf2c9bdf3"
 
 [[files]]
 path = "docs/index.md"
 policy = "seed-only"
+digest = "ceb0460ebc192cf5249ce3a1f507173b92411441f3cc4738fbc22714c336a3b8"
 
 [[files]]
 path = "justfile"
@@ -71,14 +75,17 @@ baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"h
 [[files]]
 path = "src/demo_project/__init__.py"
 policy = "seed-only"
+digest = "8676db1404c13b556f9472e058e7bcedcacbeec6152d8b392fbc4468e9f000e5"
 
 [[files]]
 path = "src/demo_project/cli.py"
 policy = "seed-only"
+digest = "f04159e36b3200fd89d525cad62ce33c0d08161a162990cd87f9a9d4d78c295a"
 
 [[files]]
 path = "tests/test_cli.py"
 policy = "seed-only"
+digest = "d1feef97c5a7b02202cc6d4f72fc79d75af4b1ddb873271d5c548f6cb8eb7da5"
 
 [[files]]
 path = "zensical.toml"

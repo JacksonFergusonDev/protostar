@@ -15,10 +15,12 @@ display_name = "api"
 [[files]]
 path = ".env.example"
 policy = "seed-only"
+digest = "457b2295526ecb3850a3b4a239a5709448cfb23c5c4302e25df83a0775701097"
 
 [[files]]
 path = ".envrc"
 policy = "seed-only"
+digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 
 [[files]]
 path = ".github/renovate.json"
@@ -38,6 +40,7 @@ baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\n  - pre
 [[files]]
 path = "CHANGELOG.md"
 policy = "seed-only"
+digest = "0a9c19eaad38cda8e9040bfacafc0d82d4734993e514c492dd65bc3e79b07f04"
 
 [[files]]
 path = "Dockerfile"
@@ -47,6 +50,7 @@ baseline = "# syntax=docker/dockerfile:1\n\n# --- Builder Stage ---\nFROM ghcr.i
 [[files]]
 path = "README.md"
 policy = "seed-only"
+digest = "586754ffd7d90f437e71a38df2f5a1cff9625886a8420596518ced2d9e9016aa"
 
 [[files]]
 path = "justfile"
@@ -61,14 +65,17 @@ baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"h
 [[files]]
 path = "src/demo_project/core/config.py"
 policy = "seed-only"
+digest = "828fc44972bbcbbc1ef6d8d08f55ececf8a82ac1a0acf2865b3d0910594e47af"
 
 [[files]]
 path = "src/demo_project/main.py"
 policy = "seed-only"
+digest = "98277962dbdea60bf90f0e254e958679985c7cd1ab5faaba37d5747af6284989"
 
 [[files]]
 path = "tests/test_health.py"
 policy = "seed-only"
+digest = "cd94b52d2df329e7c006522cdca4437d5e4c8bbeac9d51148c9d8485c1683e8c"
 
 [[dependencies]]
 path = "pyproject.toml"

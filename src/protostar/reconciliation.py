@@ -1,6 +1,7 @@
 """Shared ownership decisions over workspace reads and accepted byte sinks."""
 
 import datetime
+import hashlib
 import logging
 import stat
 import tomllib
@@ -72,6 +73,7 @@ from .merge import (
     Value,
     describe_location,
 )
+from .migrations import MigrationOutcome, MigrationStep, select_migrations
 from .registry import ResolvedHookRevision
 from .review_workspace import ByteSink, PresenceReader, ReviewWorkspace, WorkspaceReader
 from .security import enforce_path_jail
@@ -172,6 +174,8 @@ class Reconciliation:
         self.proposals: list[MergeConflict] = []
         self.preserved: list[MergeConflict] = []
         self._owned_on_disk: frozenset[str] = frozenset()
+        self._committed: SyncState | None = None
+        self.migration_steps: list[MigrationStep] = []
         from . import __version__
 
         self.candidate_state = SyncState(__version__, manifest.template_reference)
@@ -412,11 +416,144 @@ class Reconciliation:
             try:
                 self.fs.write_text(target, content)
                 self.candidate_state = self.candidate_state.with_file(
-                    FileState(target.as_posix(), FilePolicy.SEED)
+                    FileState(
+                        target.as_posix(),
+                        FilePolicy.SEED,
+                        digest=hashlib.sha256(content.encode()).hexdigest(),
+                    )
                 )
             except OSError as e:
                 raise FileSystemError("inject boilerplate file", str(target), e) from e
             logger.debug(f"Injected configuration file: {interpolated_filepath}")
+
+    def _migrate(self) -> None:
+        """Applies the template's migrations between the applied and new version.
+
+        Only a project with committed state has an applied version to migrate
+        from. Every step is guarded by ownership, so repeating one is a no-op.
+
+        Raises:
+            ConfigurationError: If the template moves back across a migration.
+        """
+        committed = self._committed.template if self._committed else None
+        reference = self.candidate_state.template
+        if committed is None or reference is None:
+            return
+        selected = select_migrations(
+            self.manifest.migrations,
+            committed.version,
+            reference.version,
+            committed.migrated,
+        )
+        if selected:
+            self.candidate_state = replace(
+                self.candidate_state,
+                template=replace(reference, migrated=selected[-1].version),
+            )
+        for migration in selected:
+            for rename in migration.rename:
+                self._rename_seed(
+                    migration.version,
+                    render_template(rename.source, self.interpolation_context),
+                    render_template(rename.target, self.interpolation_context),
+                )
+            for path in migration.remove:
+                self._remove_seed(
+                    migration.version,
+                    render_template(path, self.interpolation_context),
+                )
+
+    def _seed(self, path: str) -> FileState | None:
+        """Returns the live ownership of a seed, or None for anything else."""
+        record = next((r for r in self.candidate_state.files if r.path == path), None)
+        if record is None or record.policy is not FilePolicy.SEED or record.retired:
+            return None
+        return record
+
+    def _migrated(
+        self, version: str, path: str, target: str | None, outcome: MigrationOutcome
+    ) -> None:
+        self.migration_steps.append(MigrationStep(version, path, target, outcome))
+
+    def _rename_seed(self, version: str, source: str, target: str) -> None:
+        """Moves an owned seed, local edits included, and its ownership."""
+        for path in (source, target):
+            validate_target(path)
+            enforce_path_jail(Path(path), Path.cwd())
+            self._validate_node(Path(path))
+        record = self._seed(source)
+        if record is None:
+            self._migrated(version, source, target, MigrationOutcome.NOT_OWNED)
+            return
+        if self.workspace.exists(Path(target)) or any(
+            r.path == target for r in self.candidate_state.files
+        ):
+            self._migrated(version, source, target, MigrationOutcome.TARGET_EXISTS)
+            return
+        if self.workspace.exists(Path(source)):
+            self.fs.write_bytes(Path(target), self.workspace.read_bytes(Path(source)))
+            self.fs.remove_file(Path(source))
+        # A seed deleted before the move stays deleted at its new path.
+        self.candidate_state = self.candidate_state.without_file(source).with_file(
+            replace(record, path=target)
+        )
+        self._migrated(version, source, target, MigrationOutcome.MOVED)
+
+    def _remove_seed(self, version: str, path: str) -> None:
+        """Removes an owned seed the template no longer ships.
+
+        An unedited seed is deleted. One with local edits, or one written
+        before seeds recorded their digest, is retired: it stays, and a
+        ``retracted`` conflict asks whether to keep or delete it.
+        """
+        validate_target(path)
+        enforce_path_jail(Path(path), Path.cwd())
+        self._validate_node(Path(path))
+        record = self._seed(path)
+        if record is None:
+            self._migrated(version, path, None, MigrationOutcome.NOT_OWNED)
+            return
+        target = Path(path)
+        if not self.workspace.exists(target):
+            self.candidate_state = self.candidate_state.without_file(path)
+            self._migrated(version, path, None, MigrationOutcome.FORGOTTEN)
+            return
+        local = self.workspace.read_bytes(target)
+        if record.digest == hashlib.sha256(local).hexdigest():
+            self.fs.remove_file(target)
+            self.candidate_state = self.candidate_state.without_file(path)
+            self._migrated(version, path, None, MigrationOutcome.REMOVED)
+            return
+        self.candidate_state = self.candidate_state.with_file(
+            replace(record, retired=True)
+        )
+        self._migrated(version, path, None, MigrationOutcome.RETIRED)
+
+    def _settle_retired(self) -> None:
+        """Reports each retired seed as a ``retracted`` conflict until settled.
+
+        Keeping the local file lets go of it, so it becomes the user's own;
+        taking the update deletes it. Either way Protostar stops owning it.
+        """
+        for record in [r for r in self.candidate_state.files if r.retired]:
+            target = Path(record.path)
+            if not self.workspace.exists(target):
+                self.candidate_state = self.candidate_state.without_file(record.path)
+                continue
+            local = self.workspace.read_bytes(target).decode("utf-8", "replace")
+            conflict = MergeConflict(
+                MergeLocation(record.path),
+                ConflictReason.RETRACTED,
+                ConflictSides(MISSING, local, MISSING),
+            )
+            settled = conflict.settle(self.resolutions)
+            if settled is None:
+                self._report((conflict,), ())
+                continue
+            self._report((), (settled,))
+            if settled.resolution is ResolutionChoice.DESIRED:
+                self.fs.remove_file(target)
+            self.candidate_state = self.candidate_state.without_file(record.path)
 
     def _create_directories(self) -> None:
         """Scaffolds all queued directories in the local workspace."""
@@ -1361,10 +1498,14 @@ class Reconciliation:
             if self._state_bytes is not None:
                 state = deserialize_state(self._state_bytes.decode("utf-8"))
                 check_template_identity(state, self.manifest.template_reference)
+                self._committed = state
+                reference = self.manifest.template_reference
+                if reference is not None and state.template is not None:
+                    reference = replace(reference, migrated=state.template.migrated)
                 self.candidate_state = replace(
                     state,
                     producer_version=self.candidate_state.producer_version,
-                    template=self.manifest.template_reference,
+                    template=reference,
                 )
                 paths = (
                     {r.path for r in state.files}

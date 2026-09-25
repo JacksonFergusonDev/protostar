@@ -460,7 +460,7 @@ def test_settings_write_failure_through_the_executor_rolls_back(
     executor = SystemExecutor(settings_manifest(), UserConfig())
     mocker.patch.object(executor, "_check_ide_extensions")
     mocker.patch.object(
-        executor.fs, "write_text", side_effect=OSError(13, "Permission denied")
+        executor.fs, "write_bytes", side_effect=OSError(13, "Permission denied")
     )
 
     with pytest.raises(FileSystemError) as caught:

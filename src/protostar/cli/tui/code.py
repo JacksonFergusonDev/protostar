@@ -76,7 +76,7 @@ def _source_lines(source: CodeSource) -> list[Text]:
 
 def diff_text(
     before: CodeSource | None,
-    after: CodeSource,
+    after: CodeSource | None,
     *,
     labels: DiffLabels | None = None,
 ) -> Text:
@@ -86,15 +86,18 @@ def diff_text(
     retain syntax colors. Normalize line endings like the plain CLI diff.
     """
     old = normalize_newlines(before.text) if before is not None else ""
-    new = normalize_newlines(after.text)
+    new = normalize_newlines(after.text) if after is not None else ""
     old_lines = old.splitlines(keepends=True)
     new_lines = new.splitlines(keepends=True)
     old_styled = (
         _source_lines(CodeSource(old, before.path, before.language)) if before else []
     )
-    new_styled = _source_lines(CodeSource(new, after.path, after.language))
+    new_styled = (
+        _source_lines(CodeSource(new, after.path, after.language)) if after else []
+    )
     names = labels or DiffLabels(
-        f"a/{before.path}" if before else "/dev/null", f"b/{after.path}"
+        f"a/{before.path}" if before else "/dev/null",
+        f"b/{after.path}" if after else "/dev/null",
     )
     result = Text(style=TEXT)
     old_index = new_index = 0
@@ -135,5 +138,5 @@ def edit_text(edit: PreparedEdit) -> Text:
         CodeSource(edit.before.decode(), edit.path)
         if edit.before is not None
         else None,
-        CodeSource(edit.after.decode(), edit.path),
+        CodeSource(edit.after.decode(), edit.path) if edit.after is not None else None,
     )

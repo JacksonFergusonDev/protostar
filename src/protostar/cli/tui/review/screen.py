@@ -78,6 +78,7 @@ class Change(StrEnum):
 
     NEW = "new"
     MODIFIED = "modified"
+    REMOVED = "removed"
     CONFLICT = "conflict"
     EXISTS = "existing"
     LATER = "after setup"
@@ -86,6 +87,7 @@ class Change(StrEnum):
 _STYLES = {
     Change.NEW: "green",
     Change.MODIFIED: "yellow",
+    Change.REMOVED: "red",
     Change.CONFLICT: "red",
     Change.EXISTS: "dim",
     Change.LATER: "dim",
@@ -165,7 +167,13 @@ def classify(
     for path in sorted({*paths, *edits, *prepared.directories, *conflicts}):
         edit = edits.get(path)
         if edit is not None:
-            change = Change.NEW if edit.before is None else Change.MODIFIED
+            change = (
+                Change.NEW
+                if edit.before is None
+                else Change.REMOVED
+                if edit.after is None
+                else Change.MODIFIED
+            )
         elif path in prepared.directories:
             change = Change.NEW
         elif any(c.resolution is None for c in conflicts.get(path, ())):

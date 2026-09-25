@@ -182,14 +182,15 @@ def test_recipe_and_state_rollback_together(tmp_path, monkeypatch, mocker, failu
         "run",
         side_effect=AssertionError("no subprocess expected"),
     )
-    original_write = executor.fs.write_text
+    original_write = executor.fs.write_bytes
 
     def fail_after_write(path, content):
         original_write(path, content)
         if path == Path("pyproject.toml" if failure == "recipe" else "protostar.lock"):
             raise OSError("late write failure")
 
-    mocker.patch.object(executor.fs, "write_text", side_effect=fail_after_write)
+    # Every text write lands in write_bytes.
+    mocker.patch.object(executor.fs, "write_bytes", side_effect=fail_after_write)
     with pytest.raises(FileSystemError):
         executor.execute()
     assert target.read_bytes() == original

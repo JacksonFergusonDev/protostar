@@ -33,6 +33,7 @@ from .merge import (
     Resolutions,
     Value,
 )
+from .migrations import MigrationStep
 from .recipe import ProducerContribution, ToolSelection, decode_recipe
 from .reconciliation import Reconciliation
 from .registry import ResolvedHookRevision
@@ -62,11 +63,17 @@ class PreparationPhase(StrEnum):
 
 @dataclass(frozen=True)
 class PreparedEdit:
-    """An accepted direct byte change, never a proposed conflicted replacement."""
+    """An accepted direct byte change, never a proposed conflicted replacement.
+
+    Attributes:
+        path: The edited file.
+        before: Its bytes before the change, or None when it is created.
+        after: Its bytes after the change, or None when it is removed.
+    """
 
     path: str
     before: bytes | None
-    after: bytes
+    after: bytes | None
 
 
 @dataclass(frozen=True)
@@ -233,6 +240,7 @@ class PreparedReview:
     initialization_only: tuple[tuple[str, ...], ...]
     initialization_only_ide_probe: bool
     preserve_deleted_pyproject: bool
+    migrations: tuple[MigrationStep, ...] = ()
 
     @property
     def decisions(self) -> tuple[MergeConflict, ...]:
@@ -278,11 +286,12 @@ class PreparedReview:
                 {
                     "path": edit.path,
                     "before": edit.before.decode() if edit.before is not None else None,
-                    "after": edit.after.decode(),
+                    "after": edit.after.decode() if edit.after is not None else None,
                 }
                 for edit in self.edits
             ],
             "directories": list(self.directories),
+            "migrations": [step.to_dict() for step in self.migrations],
             "conflicts": [conflict_record(conflict) for conflict in self.conflicts],
             "resolved": [conflict_record(conflict) for conflict in self.resolved],
             "proposals": [
@@ -404,6 +413,9 @@ def prepare_review(
         PreparationPhase.BEFORE_INITIALIZERS,
         PreparationPhase.BEFORE_COMMANDS,
     ):
+        # Migrations move and retire files before any writer reads them.
+        decisions._migrate()
+        decisions._settle_retired()
         decisions._create_directories()
         decisions._write_injected_files()
         decisions._write_pre_commit_config()
@@ -433,9 +445,13 @@ def prepare_review(
         PreparationPhase.RECIPE,
     ):
         decisions._write_recipe()
+    changes: dict[str, bytes | None] = {
+        **dict.fromkeys(workspace.removed),
+        **workspace.contents,
+    }
     edits = tuple(
         PreparedEdit(path, workspace.inputs[path].original.file_content, content)
-        for path, content in sorted(workspace.contents.items())
+        for path, content in sorted(changes.items())
         if content != workspace.inputs[path].original.file_content
     )
     if (
@@ -515,6 +531,7 @@ def prepare_review(
         ),
         bool(manifest.tooling.ide_extensions),
         decisions._preserve_deleted_pyproject,
+        tuple(decisions.migration_steps),
     )
 
 

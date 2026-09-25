@@ -243,7 +243,8 @@ def generate_template_schema_fixture() -> None:
         return val
 
     blueprint_fields = list(fields(TemplateBlueprint))
-    table_fields = {"files", "pyproject_injections", "appends", "dev"}
+    # Tables come last: root keys after a table header would belong to it.
+    table_fields = {"files", "pyproject_injections", "appends", "dev", "migrations"}
     ordered_fields = [f for f in blueprint_fields if f.name not in table_fields] + [
         f for f in blueprint_fields if f.name in table_fields
     ]
@@ -308,6 +309,11 @@ def generate_template_schema_fixture() -> None:
                 dev_table.add(tomlkit.comment(f.metadata["description"]))
                 dev_table.add("pyproject", _python_to_tomlkit(example))
                 doc.add("dev", dev_table)
+            elif f.name == "migrations":
+                migrations = tomlkit.aot()
+                for migration in example:
+                    migrations.append(_python_to_tomlkit(migration))
+                doc.add("migrations", migrations)
             else:
                 doc.add(f.name, _python_to_tomlkit(example))
             doc.add(tomlkit.nl())

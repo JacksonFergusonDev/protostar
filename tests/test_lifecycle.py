@@ -27,6 +27,12 @@ from protostar.preparation import deleted as is_deleted
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
 
 
+def after(edit):
+    """Returns an edit's new bytes, which only a removal lacks."""
+    assert edit.after is not None
+    return edit.after
+
+
 def source_text(value):
     return (
         '[files]\n".github/renovate.json" = \'' + json.dumps({"value": value}) + "'\n"
@@ -82,7 +88,7 @@ def test_inspection_accepted_edits_and_preservation_are_read_only(project):
     review = inspect_project()
     assert any(
         edit.path == ".github/renovate.json"
-        and json.loads(edit.after) == {"value": "updated"}
+        and json.loads(after(edit)) == {"value": "updated"}
         for edit in review.edits
     )
     assert snapshot(Path.cwd()) == before
@@ -301,8 +307,8 @@ def test_structured_conflict_has_safe_sibling_and_state_only_advancement(
         c.location.keys == ("tool", "example", "value") for c in review.conflicts
     )
     edit = next(e for e in review.edits if e.path == "pyproject.toml")
-    assert b"value = 3" in edit.after
-    assert b"safe = true" in edit.after
+    assert b"value = 3" in after(edit)
+    assert b"safe = true" in after(edit)
     Path("pyproject.toml").write_text(text.replace("value = 1", "value = 2"))
     project.write_text(
         "[dev.pyproject]\nexample = " + "'''" + "[tool.example]\nvalue = 2\n" + "'''\n"
@@ -310,7 +316,7 @@ def test_structured_conflict_has_safe_sibling_and_state_only_advancement(
     review = inspect_project()
     assert review.state_changed
     assert not any(
-        b"value = " in e.after for e in review.edits if e.path == "pyproject.toml"
+        b"value = " in after(e) for e in review.edits if e.path == "pyproject.toml"
     )
 
 

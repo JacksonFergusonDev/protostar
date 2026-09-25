@@ -99,6 +99,33 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     "additionalProperties": False,
                 },
             }
+        elif f.name == "migrations":
+            renames = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "from": {"type": "string"},
+                        "to": {"type": "string"},
+                    },
+                    "required": ["from", "to"],
+                    "additionalProperties": False,
+                },
+            }
+            prop = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "version": {"type": "string"},
+                        "rename": renames,
+                        "remove": {"type": "array", "items": {"type": "string"}},
+                        "rename_variables": renames,
+                    },
+                    "required": ["version"],
+                    "additionalProperties": False,
+                },
+            }
         elif "list[list[str]]" in type_str:
             prop = {
                 "type": "array",
@@ -271,6 +298,7 @@ def emit_capabilities(
 def review_schema() -> dict[str, Any]:
     """Returns the schema for shipped status/diff JSON review envelopes."""
     from protostar.merge import ConflictReason, ResolutionChoice
+    from protostar.migrations import MigrationOutcome
     from protostar.network import RefKind
     from protostar.recipe import SelectionLayer, Tool
 
@@ -316,9 +344,19 @@ def review_schema() -> dict[str, Any]:
     review = record(
         {
             "edits": records(
-                {"path": string, "before": nullable_string, "after": string}
+                {"path": string, "before": nullable_string, "after": nullable_string}
             ),
             "directories": strings,
+            "migrations": records(
+                {
+                    "version": string,
+                    "path": string,
+                    "target": nullable_string,
+                    "outcome": {
+                        "enum": [outcome.value for outcome in MigrationOutcome]
+                    },
+                }
+            ),
             "conflicts": records(conflict),
             "resolved": records({**conflict, "resolution": choice}),
             # A proposal without a choice applies.

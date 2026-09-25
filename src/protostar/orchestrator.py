@@ -258,6 +258,7 @@ class Orchestrator:
             )
             producer = f"template:{template_id}"
             tool = None
+            manifest.migrations = tuple(blueprint.migrations)
             logger.debug("Injecting blueprint structural fields into manifest.")
 
             for edge in blueprint.dependency_includes:
