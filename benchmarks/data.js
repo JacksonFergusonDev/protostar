@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790293097357,
+  "lastUpdate": 1790294898001,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16869,6 +16869,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 834.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4d967c7283afa42ab8d6cadbef1cb2eb6a171864",
+          "message": "docs(agents): add cross-platform test invariants and boundary test (#334)",
+          "timestamp": "2026-09-24T17:05:51-07:00",
+          "tree_id": "13d74e5797bf3cdae1a6764d196c8ab0bd88cbfa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4d967c7283afa42ab8d6cadbef1cb2eb6a171864"
+        },
+        "date": 1790294896719,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 225.14,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 832.93,
             "unit": "ms"
           }
         ]
