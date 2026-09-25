@@ -127,6 +127,11 @@ it as yours and `desired` removes it. This covers seeded files, owned
 dependencies (after which the lock is refreshed), each `[tool.*]` table in
 `pyproject.toml`, append regions, and each step or key of a GitHub Actions
 workflow (for example the Codecov upload steps after you turn Codecov off).
+A whole configuration file whose tool you turn off, such as `zensical.toml`,
+`.github/codecov.yml`, `.readthedocs.yaml`, a workflow, the hook configuration,
+Renovate's, or the VS Code settings, is retracted key by key the same way. When
+nothing of Protostar's is left, the file is deleted if it holds nothing else and
+kept with only your own keys if it does.
 Seeded project metadata such as `[project].name` and dependency-group includes
 are never retracted. Workflow files are
 merged by job and by step name, so your own jobs, steps, triggers, and inputs stay.

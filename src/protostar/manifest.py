@@ -644,6 +644,47 @@ class EnvironmentManifest:
 
         return document_locations(target, self.tooling.hook_runner)
 
+    def declared_documents(self) -> set[str]:
+        """Returns every path a structured document this manifest declares is read at.
+
+        A document is declared while a producer contributes to it or a tool
+        generates it, even when this run holds it. ``pyproject.toml`` is always
+        declared: the recipe lives there. Each document counts under every path
+        its tool reads it from, so ownership recorded at an alias is declared.
+
+        Returns:
+            Workspace-relative POSIX paths.
+        """
+        from .documents import (
+            github_workflows,
+            pre_commit,
+            pyproject,
+            renovate,
+            vscode,
+        )
+
+        ctx = self._path_context()
+        targets = {pyproject.TARGET} | {
+            Path(render_template(path, ctx, escape_toml=False)).as_posix()
+            for path in self.filesystem.structured
+        }
+        if renovate.TARGET in {
+            Path(render_template(path, ctx, escape_toml=False)).as_posix()
+            for path in self.filesystem.file_injections
+        }:
+            targets.add(renovate.TARGET)
+        if self.tooling.wants_hooks:
+            targets.add(pre_commit.TARGET)
+        if self.tooling.wants_ci:
+            targets.add(github_workflows.CI_TARGET)
+        if self.tooling.wants_release:
+            targets.add(github_workflows.RELEASE_TARGET)
+        if self.ide_settings:
+            targets.add(vscode.SETTINGS_TARGET)
+        return {
+            path for target in targets for path in self.document_locations(target).paths
+        }
+
     def target_files(self) -> set[Path]:
         """Returns all concrete workspace file paths that this manifest intends to create or mutate.
 

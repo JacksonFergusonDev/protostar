@@ -784,6 +784,7 @@ def reconcile_jsonc(
     default_indent: str = "  ",
     resolutions: Resolutions = NO_RESOLUTIONS,
     proposing: bool = False,
+    complete: bool = False,
 ) -> JsoncReconciliation:
     """Confines accepted semantic edits to byte spans of the local document.
 
@@ -804,6 +805,8 @@ def reconcile_jsonc(
         resolutions: Choices settling conflicts, keyed by conflict identity.
         proposing: Whether the document existed before Protostar owned any of
             it, so each change into it is a proposal.
+        complete: Whether ``desired`` is the producers' complete declaration,
+            so owned keys it no longer declares are retracted.
 
     Returns:
         Resulting text, the owned baseline, and preserved-local conflicts.
@@ -833,7 +836,7 @@ def reconcile_jsonc(
             MISSING if missing_file else local,
             remote,
             location,
-            MergePolicy(proposing=proposing),
+            MergePolicy(complete=complete, proposing=proposing),
             resolutions,
         )
         value, baseline = result.value, result.baseline
@@ -861,6 +864,8 @@ def reconcile_jsonc(
         before: dict[str, Value],
         after: dict[str, Value],
     ) -> JsoncDocument:
+        for key in [key for key in before if key not in after]:
+            target = target.delete((*prefix, key))
         for key, child in after.items():
             old = before.get(key, MISSING)
             if semantic_equal(old, child):
