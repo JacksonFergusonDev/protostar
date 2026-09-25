@@ -244,13 +244,21 @@ def generate_template_schema_fixture() -> None:
 
     blueprint_fields = list(fields(TemplateBlueprint))
     # Tables come last: root keys after a table header would belong to it.
-    table_fields = {"files", "pyproject_injections", "appends", "dev", "migrations"}
+    table_fields = {
+        "files",
+        "pyproject_injections",
+        "appends",
+        "dev",
+        "options",
+        "optional",
+        "migrations",
+    }
     ordered_fields = [f for f in blueprint_fields if f.name not in table_fields] + [
         f for f in blueprint_fields if f.name in table_fields
     ]
 
     # These live under the [dev] table, which is emitted once, with pyproject.
-    dev_table_fields = ("dev_dependencies", "tool_dev_dependencies")
+    dev_table_fields = ("dev_dependencies",)
     fields_by_name = {f.name: f for f in blueprint_fields}
 
     for f in ordered_fields:
@@ -271,6 +279,10 @@ def generate_template_schema_fixture() -> None:
                 doc.add(tomlkit.comment("--- Development Environment ([dev]) ---"))
             elif f.name == "appends":
                 doc.add(tomlkit.comment("--- File Appends ---"))
+            elif f.name == "options":
+                doc.add(tomlkit.comment("--- Options ---"))
+            elif f.name == "optional":
+                doc.add(tomlkit.comment("--- Optional Content ---"))
             elif f.name == "tooling_overrides":
                 doc.add(tomlkit.comment("--- Tooling Opinions & Overrides ---"))
 
@@ -297,23 +309,20 @@ def generate_template_schema_fixture() -> None:
             example = f.metadata["example"]
             if f.name == "pyproject_injections":
                 dev_table = tomlkit.table()
-                for name, key in (
-                    ("dev_dependencies", "dev_dependencies"),
-                    ("tool_dev_dependencies", "tool_dependencies"),
-                ):
+                for name in dev_table_fields:
                     meta = fields_by_name[name].metadata
                     dev_table.add(tomlkit.comment(meta["description"]))
-                    dev_table.add(key, _python_to_tomlkit(meta["example"]))
+                    dev_table.add(name, _python_to_tomlkit(meta["example"]))
                     dev_table.add(tomlkit.nl())
                 dev_table.add(tomlkit.comment("--- pyproject.toml AST Injections ---"))
                 dev_table.add(tomlkit.comment(f.metadata["description"]))
                 dev_table.add("pyproject", _python_to_tomlkit(example))
                 doc.add("dev", dev_table)
-            elif f.name == "migrations":
-                migrations = tomlkit.aot()
-                for migration in example:
-                    migrations.append(_python_to_tomlkit(migration))
-                doc.add("migrations", migrations)
+            elif f.name in ("migrations", "optional"):
+                blocks = tomlkit.aot()
+                for block in example:
+                    blocks.append(_python_to_tomlkit(block))
+                doc.add(f.name, blocks)
             else:
                 doc.add(f.name, _python_to_tomlkit(example))
             doc.add(tomlkit.nl())

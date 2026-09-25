@@ -10,6 +10,7 @@ from urllib.error import HTTPError
 import pytest
 
 from protostar.errors import NetworkFetchError, TemplateResolutionError
+from protostar.options import Condition, parse_condition
 from protostar.template_check import (
     CheckRule,
     Severity,
@@ -277,6 +278,10 @@ SYNTHETIC_BASELINES: dict[str, dict[str, Any]] = {
 }
 
 
+def _requires(*terms: str) -> Condition:
+    return parse_condition(list(terms), "test", "test")
+
+
 class TestBaselineViolationDetector:
     """Proves the delta check bites, so it cannot pass vacuously."""
 
@@ -325,8 +330,18 @@ class TestBaselineViolationDetector:
         # `pretty = true` repeats the mypy baseline, but a ruff-bound payload is
         # only measured against ruff, so it is not flagged.
         payload = "[tool.mypy]\npretty = true\n"
-        assert find_baseline_violations(payload, SYNTHETIC_BASELINES, "ruff") == []
-        assert len(find_baseline_violations(payload, SYNTHETIC_BASELINES, "mypy")) == 1
+        assert (
+            find_baseline_violations(payload, SYNTHETIC_BASELINES, _requires("ruff"))
+            == []
+        )
+        assert (
+            len(
+                find_baseline_violations(
+                    payload, SYNTHETIC_BASELINES, _requires("mypy")
+                )
+            )
+            == 1
+        )
 
     def test_a_placeholder_key_parses(self) -> None:
         payload = '[tool.hatch.build.targets.wheel]\n<% PACKAGE_NAME %> = "x"\n'
@@ -349,13 +364,15 @@ class TestUnboundToolConfigDetector:
 
     def test_flags_tool_config_bound_to_the_wrong_tool(self) -> None:
         ((_, _, message),) = find_unbound_tool_config(
-            {"cov": ("[tool.coverage.run]\nbranch = true\n", "ruff")}, SYNTHETIC_OWNERS
+            {"cov": ("[tool.coverage.run]\nbranch = true\n", _requires("ruff"))},
+            SYNTHETIC_OWNERS,
         )
         assert 'expected "pytest"' in message
 
     def test_accepts_correctly_bound_config(self) -> None:
         assert not find_unbound_tool_config(
-            {"typing": ("[tool.mypy]\nstrict = true\n", "mypy")}, SYNTHETIC_OWNERS
+            {"typing": ("[tool.mypy]\nstrict = true\n", _requires("mypy"))},
+            SYNTHETIC_OWNERS,
         )
 
     def test_ignores_config_no_module_owns(self) -> None:

@@ -23,7 +23,8 @@ conflicts. An aggregate conflict may contain accepted sibling changes. Adapters
 must inspect the returned values rather than discard all changes on conflict.
 No diagnostic strings or prompts belong to this interface.
 
-- Omitted remote values retain local values and previous ownership.
+- Omitted remote values retain local values and previous ownership, unless the
+  policy is `complete`.
 - Missing unowned values may be added and owned. Existing equal values remain
   unowned; equality is insufficient for adoption.
 - Owned convergence advances the baseline without requiring a write.
@@ -47,7 +48,7 @@ new accepted members in desired order. Existing foreign equal members do not
 become owned. Policy validation examines all inputs before truth-table shortcuts,
 including lists inside unchanged mappings. Keyed record sequences are declared per YAML document; see [YAML document specs](#yaml-document-specs).
 
-A policy with `complete` set treats the remote value as one generator's complete document, so an owned mapping key it no longer declares is retracted rather than retained. Unedited owned content is removed from the value and the baseline; content the user already deleted only leaves the baseline; content that differs from its baseline, including foreign keys added inside it, is kept with its previous ownership and a `retracted` conflict. Retraction happens once, at the highest key that disappeared, so a partly edited record is never reduced to a fragment. Only complete-document adapters set it (GitHub Actions workflows and `.readthedocs.yaml`); every other adapter keeps the no-pruning default.
+A policy with `complete` set treats the remote value as one generator's complete document, so an owned mapping key it no longer declares is retracted rather than retained. Unedited owned content is removed from the value and the baseline; content the user already deleted only leaves the baseline; content that differs from its baseline, including foreign keys added inside it, is kept with its previous ownership and a `retracted` conflict. Retraction happens once, at the highest key that disappeared, so a partly edited record is never reduced to a fragment, except inside a `namespace_paths` mapping, whose keys are separate units retracted one at a time while foreign keys stay. `retained_paths` names owned paths another writer manages, which are never retracted. The complete-document adapters are GitHub Actions workflows, `.readthedocs.yaml`, and `pyproject.toml`, whose producers' aggregated contributions are their complete declaration: `[tool]` is its namespace, and its seed paths and `dependency-groups` (which the include writer owns) are retained. Every other adapter keeps the no-pruning default.
 
 ## State schema v1
 
@@ -380,8 +381,9 @@ local block whole and its previous text, with one `diverged` conflict per overla
 whose `LineSpan` is numbered in the final file, after other regions' accepted
 updates. A deleted region stays deleted. Deleting an owned region file protects
 newly introduced regions too. Digest-only region records from before region texts
-are rejected as unknown fields. Omitted region identities
-retain their baselines without pruning. Duplicate, nested, or malformed
+are rejected as unknown fields. An owned region identity nothing declares any more
+is retracted: removed when unedited (with the blank line appending put before it),
+kept with a `retracted` conflict when edited, and forgotten when already deleted. Duplicate, nested, or malformed
 boundaries raise domain errors, including boundaries injected by a new payload.
 
 Accepted texts and seeded paths enter the candidate state only, with final state
@@ -395,9 +397,9 @@ texts. If overlapping edits prevent the whole-file merge, clean region updates
 can still apply independently.
 A pre-existing unowned generated target can own a newly appended region without
 acquiring whole-file ownership. When a previously managed region is omitted, merge
-mode skips whole-file regeneration, because regenerating without the region would
-remove it and regions are never pruned; independently declared region updates
-still apply.
+mode skips whole-file regeneration for that run, because regenerating without the
+region would drop it without its decision; the region step retracts it (and from
+the whole-file baseline too), and the next run regenerates.
 
 ## PR G resolver and derived-artifact boundary
 
@@ -455,8 +457,8 @@ end-to-end evidence from focused synthetic-revision cases:
 `init --force-merge` is therefore safe reinitialization, not an update product.
 It requires the same selected template identity for a tracked project and
 reconciles only recorded contributions. It does not adopt pre-existing files,
-restore user-deleted content, prune omitted contributions, switch templates, or
-reconstruct/rerun a request from the lock state. Those capabilities, along with a
+restore user-deleted content, switch templates, or reconstruct/rerun a request
+from the lock state; omitted contributions are retracted as `sync` retracts them. Those capabilities, along with a
 user-facing `sync` command, remain deferred.
 
 ## Stage 2 shared preparation boundary

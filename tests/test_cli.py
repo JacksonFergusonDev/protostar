@@ -899,7 +899,9 @@ def test_handle_init_template_resolution(mocker):
     mock_source_load = mocker.patch(
         "protostar.cli.main.TemplateSource.load",
         return_value=mocker.Mock(
-            variables=frozenset(), render=mocker.Mock(return_value=blueprint)
+            variables=frozenset(),
+            options={},
+            render=mocker.Mock(return_value=blueprint),
         ),
     )
 
@@ -986,7 +988,7 @@ def test_cli_resolves_user_template_aliases(mocker) -> None:
     mocker.patch(
         "protostar.cli.main.TemplateSource.load",
         return_value=mocker.Mock(
-            variables=frozenset(), render=mocker.Mock(return_value=None)
+            variables=frozenset(), options={}, render=mocker.Mock(return_value=None)
         ),
     )
 

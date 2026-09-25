@@ -60,7 +60,7 @@ extend-select = ["I", "UP", "B"]
 content = "export PROJECT=example"
 ```
 
-Non-TOML appends use a stable named record containing exactly one string `content` field. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing unowned named region and warns when its desired content differs. Once owned, a region merges its desired updates line by line with local edits inside it, and keeps the local block whole when they overlap; explicit overwrite replaces only that region while retaining surrounding bytes. Delimiters use subtle editor-folding comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`) with deterministic 8-character hex tags, while the expanded logical identity and each region's last applied text are preserved in `protostar.lock`.
+Non-TOML appends use a stable named record containing a string `content` field and, optionally, a [`requires`](#optional-content) condition. Keep the record ID unchanged when its payload changes. The engine namespaces template IDs by their canonical source identity and module IDs by module identity. Merge initialization preserves an existing unowned named region and warns when its desired content differs. Once owned, a region merges its desired updates line by line with local edits inside it, and keeps the local block whole when they overlap; explicit overwrite replaces only that region while retaining surrounding bytes. Delimiters use subtle editor-folding comments (`# region: protostar <tag>` and `# endregion: protostar <tag>`) with deterministic 8-character hex tags, while the expanded logical identity and each region's last applied text are preserved in `protostar.lock`.
 
 Anonymous strings/arrays under `[appends]`, TOML append regions, append regions targeting a structurally merged YAML file (`.pre-commit-config.yaml`, `.github/codecov.yml`, `.readthedocs.yaml`, and the generated `.github/workflows/ci.yml` and `release.yml`, under any other name their tool reads them from), and the `__replace__`/`__remove__` control keys are rejected. Do not combine `[files]` with structured configuration or named regions targeting the same path. `protostar.lock` is reserved for engine state; `uv.lock` belongs to the resolver. Neither filename nor its descendants can be a template target.
 
@@ -74,9 +74,18 @@ Includes support the `dev` and `docs` groups and reject cycles. Execution applie
 
 Templates may declare an informational root `version` string. CLI and wizard resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and a repository template's locator is its canonical repository URL, with its path inside the repository alongside. The ref it was applied at and the commit that ref named are recorded separately, so they never change the template's identity. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance.
 
-### Tool-Bound Payloads & Dependencies
+### Optional Content
 
-A payload that configures a tool should say which one. Write it as a table with `content` and `requires`, and Protostar injects it only while that tool is enabled:
+Content that only applies sometimes says when with `requires`. A condition names what must hold:
+
+- a tool key, such as `"ruff"` or `"pytest"`, which holds while that tool is enabled (the keys are listed in the [Tooling & Flags Matrix](./tooling-matrix.md));
+- a bool option, such as `"compose"`, which holds while the option is on;
+- `"option=value"`, such as `"database=postgres"`, which holds while a choice option has that value;
+- or an array of them, such as `["pytest", "database=postgres"]`, which holds while all of them do.
+
+There is no "or" and no "not". To ship something for either of two choices, list it once for each. A question with two answers that each ship content is a choice option, not a bool.
+
+A payload that configures a tool should say which one. Write it as a table with `content` and `requires`, and Protostar injects it only while the condition holds:
 
 ```toml
 [dev.pyproject.linting]
@@ -87,18 +96,52 @@ extend-select = ["I", "UP", "B"]
 '''
 ```
 
-With this, `protostar init --template my-template --no-ruff` writes no `[tool.ruff]` at all, instead of leaving configuration behind for a tool that isn't installed. A project's recipe opt-out treats the payload the same way it treats the tool's own configuration.
+With this, `protostar init --template my-template --no-ruff` writes no `[tool.ruff]` at all, instead of leaving configuration behind for a tool that isn't installed. Plain string payloads are always injected. Use them for configuration that no toggle should remove, such as a `[build-system]` table. In TOML, put the plain string payloads before any `[dev.pyproject.<name>]` sub-tables. A named append region takes `requires` the same way, beside its `content`.
 
-Plain string payloads are always injected. Use them for configuration that no tool toggle should remove, such as a `[build-system]` table. The valid `requires` names are the tool keys in the [Tooling & Flags Matrix](./tooling-matrix.md) (for example `ruff`, `mypy`, `pytest`), and an unknown name is rejected when the template loads. In TOML, put the plain string payloads before any `[dev.pyproject.<name>]` sub-tables.
-
-Dev packages that only one tool needs belong in `[dev.tool_dependencies]`, keyed by the tool. They are installed only while that tool is enabled:
+Dependencies and files that apply only sometimes go in `[[optional]]` blocks. Each block has a `requires` and any of `dependencies`, `dev_dependencies`, `docs_dependencies`, and `files`:
 
 ```toml
-[dev.tool_dependencies]
-pytest = ["pytest-cov", "httpx"]
+[[optional]]
+requires = "pytest"
+dev_dependencies = ["pytest-cov", "httpx"]
+
+[[optional]]
+requires = "database=postgres"
+dependencies = ["psycopg[binary]"]
+files = ["src/<% PACKAGE_NAME %>/db.py", "migrations/"]
 ```
 
-With this, `--no-pytest` does not install `pytest-cov` or `httpx`. Packages in `[dev].dev_dependencies` are always installed, so keep that list for tools no toggle should remove. The tool names are validated the same way as `requires`.
+With this, `--no-pytest` does not install `pytest-cov` or `httpx`. Packages in `dependencies` and `[dev].dev_dependencies` are always installed, so keep those lists for what no toggle should remove. `files` lists template files by their path in `template/` or `[files]`, or every file under a path ending in `/`. A file no block lists always ships; one several blocks list ships while any of them holds. Listing a path the template doesn't ship, or naming an unknown tool or option, stops the template from loading.
+
+When a condition stops holding in an existing project, `protostar sync` takes back what it added: an unedited file, dependency, payload, or region is removed, and one you edited is kept as a `retracted` conflict for you to settle. Turning a tool off works the same way.
+
+### Template Options
+
+Options let a template ask for choices instead of text. Declare each in an `[options]` table:
+
+```toml
+[options.database]
+description = "The database the service uses."
+choices = ["none", "postgres", "sqlite"]
+default = "none"
+
+[options.compose]
+description = "Ship a compose.yaml for local services."
+default = false
+```
+
+An option with `choices` is a choice option: it needs at least two distinct values, made of letters, digits, dots, dashes, and underscores, and a `default` among them. An option without `choices` is a bool option with a `true` or `false` default. `description` is optional and appears beside the option when it is chosen. Every option must be named by some `requires`, and may not share a name with a tool or a variable.
+
+An option only chooses what the template includes. It never renders into text: `<% database %>` is a variable, and a template can't use the same name for both. Content that differs by choice is listed per choice, whole files at a time, with `[[optional]]`, payloads, and regions.
+
+Users choose with `--option`, on `init` and on `sync`:
+
+```bash
+protostar init --template my-template --option database=postgres --option compose=true
+protostar sync --option compose=false
+```
+
+The recipe editor shows a switch for each bool option and a choice for each choice option. The project recipe records the values in `[tool.protostar.options]`: every value passed with `--option`, and from the editor only those that differ from the template's default. A project that never chose follows the template, so a template that changes a default changes those projects on their next `sync`. A recorded value for an option the template no longer offers is dropped on `sync`; one the option no longer offers stops `sync` with an error naming the values it does.
 
 ## Level 2: The Multi-File Repository
 
@@ -211,12 +254,12 @@ It reports two kinds of finding:
 | `credential-variable` | A custom variable named like a credential |
 | `restated-baseline` | A `[dev.pyproject]` payload that repeats a module's baseline value, or redefines a baseline list instead of using an additive key |
 | `unbound-tool-config` | A payload that configures a tool without `requires` for that tool |
-| `unbound-tool-package` | A tool's package, such as `pytest-cov`, installed unconditionally instead of under `[dev.tool_dependencies]` |
+| `unbound-tool-package` | A tool's package, such as `pytest-cov`, installed unconditionally instead of in an `[[optional]]` block that requires the tool |
 | `inconsistent-migration` | A migration that removes or renames away a file the template still ships, renames a file to one it doesn't ship, or renames a variable the template doesn't use under its new name |
 
 The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be retrieved at all (a wrong path, a network failure, an HTTP error such as 404), nothing is checked: it prints the retrieval error and exits with that error's [exit code](cli-reference.md#posix-exit-codes), such as `65` or `75`, so a failure to download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
 
-The check covers a default `init`. Tool-bound content that only applies when a user turns on a tool the template leaves off is not planned, so still try the combinations you expect your users to choose.
+The check covers a default `init`, with every option at its default. Content that only applies when a user turns on a tool the template leaves off, or chooses another option value, is not planned, so still try the combinations you expect your users to choose.
 
 Each finding names the file and line it concerns, such as `protostar.toml:12`, including a key inside a `[dev.pyproject]` payload. A finding about something the template doesn't contain, such as a missing `name`, names only the file.
 

@@ -9,7 +9,7 @@ producer_version = "0.9.0"
 [template]
 origin = "built-in"
 locator = "lib"
-digest = "6c7512394c0dbdf9ff898090c0cef01c14b850912356a29f0766ee92ddbd3339"
+digest = "e3a7bf49081998adcc551adc27e3a109a4aea60a6bce481d19a29449f60752ad"
 display_name = "lib"
 
 [[files]]

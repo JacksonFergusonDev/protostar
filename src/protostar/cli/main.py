@@ -57,6 +57,7 @@ from protostar.modules import (
     TOOLING_MODULES,
     BootstrapModule,
 )
+from protostar.options import OptionValue
 from protostar.secret_guard import credential_named
 from protostar.sync_state import (
     check_one_shot_workspace,
@@ -197,6 +198,9 @@ def handle_init(args: argparse.Namespace) -> None:
         if source
         else None,
         tool_overrides=tool_overrides,
+        option_overrides=tuple(
+            sorted(_parse_option_flags(source, getattr(args, "options", [])).items())
+        ),
         docker=getattr(args, "docker", None),
         python_version=getattr(args, "python_version", None),
         variables=tuple(sorted(variables.items())),
@@ -492,6 +496,51 @@ def _resolve_template_variables(
         name: value for name, value in recorded.items() if name in source.variables
     }
     values.update(flags)
+    return values
+
+
+def _parse_option_flags(
+    source: TemplateSource | None, entries: list[str]
+) -> dict[str, OptionValue]:
+    """Parses repeated ``--option NAME=VALUE`` flags against a template's options.
+
+    Args:
+        source: The template being applied, if any.
+        entries: The raw ``--option`` arguments, in order.
+
+    Returns:
+        Each option's name mapped to its value.
+
+    Raises:
+        InvalidUsageError: If an entry is malformed, a name repeats or names
+            no option, or flags are given without a template.
+        InvalidOptionValueError: If a value is not one its option offers.
+    """
+    if entries and source is None:
+        raise InvalidUsageError(
+            "--option needs a template.",
+            hint="Pass --template or --from, or run init in a project that records one.",
+        )
+    offered = source.options if source else {}
+    values: dict[str, OptionValue] = {}
+    for entry in entries:
+        name, separator, value = entry.partition("=")
+        if not separator:
+            raise InvalidUsageError(
+                "Each --option must be NAME=VALUE.",
+                hint="VALUE is true or false, or one of the option's choices.",
+            )
+        if name not in offered:
+            raise InvalidUsageError(
+                f"The template has no option named {name!r}.",
+                hint=f"Its options are: {', '.join(sorted(offered)) or 'none'}.",
+            )
+        if name in values:
+            raise InvalidUsageError(
+                f"--option {name} is given more than once.",
+                hint="Pass each template option once.",
+            )
+        values[name] = offered[name].parse(value)
     return values
 
 

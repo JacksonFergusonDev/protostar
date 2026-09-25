@@ -18,6 +18,7 @@ from protostar.errors import (
     TemplateResolutionError,
 )
 from protostar.intent import PyprojectPayload
+from protostar.options import Condition, Term
 
 
 @pytest.fixture(autouse=True)
@@ -395,7 +396,9 @@ content = "[tool.other]\\ny = 2"
 
     assert blueprint.pyproject_injections == {
         "always": PyprojectPayload("[tool.hatch]\nx = 1"),
-        "typing": PyprojectPayload("[tool.mypy]\nstrict = true", "mypy"),
+        "typing": PyprojectPayload(
+            "[tool.mypy]\nstrict = true", Condition((Term("mypy"),))
+        ),
         "unbound_table": PyprojectPayload("[tool.other]\ny = 2"),
     }
 
@@ -412,11 +415,11 @@ content = "[tool.other]\\ny = 2"
         ),
         (
             '[dev.pyproject.typing]\ncontent = "[tool.x]"\nrequires = "flake9"',
-            "Unknown tool 'flake9'",
+            "neither a tool nor a declared option",
         ),
         (
             '[dev.pyproject.typing]\ncontent = "[tool.x]"\nrequires = 5',
-            "Unknown tool 5",
+            "Invalid requires",
         ),
     ],
 )
@@ -623,36 +626,60 @@ def test_template_blueprint_parse_rejects_wrong_field_types(
     assert exc_info.value.hint is not None
 
 
-def test_template_blueprint_parses_tool_bound_dev_dependencies():
+def test_template_blueprint_parses_optional_content():
     blueprint = TemplateBlueprint._parse(
         """
 [dev]
 dev_dependencies = ["always"]
 
-[dev.tool_dependencies]
-pytest = ["pytest-cov", "httpx"]
-mypy = []
+[[optional]]
+requires = "pytest"
+dev_dependencies = ["pytest-cov", "httpx"]
+
+[[optional]]
+requires = ["mypy", "pytest"]
+dependencies = ["typed"]
+docs_dependencies = ["docs-extra"]
 """,
         source="test.toml",
     )
 
     assert blueprint.dev_dependencies == ["always"]
-    assert blueprint.tool_dev_dependencies == {
-        "pytest": ["pytest-cov", "httpx"],
-        "mypy": [],
-    }
+    first, second = blueprint.optional
+    assert str(first.requires) == "pytest"
+    assert first.dev_dependencies == ("pytest-cov", "httpx")
+    assert str(second.requires) == "mypy, pytest"
+    assert second.dependencies == ("typed",)
+    assert second.docs_dependencies == ("docs-extra",)
 
 
 @pytest.mark.parametrize(
     ("body", "message"),
     [
-        ('[dev]\ntool_dependencies = ["pytest-cov"]', "Expected table"),
-        ('[dev.tool_dependencies]\nflake9 = ["x"]', "Unknown tool 'flake9'"),
-        ('[dev.tool_dependencies]\npytest = "pytest-cov"', "Expected an array"),
-        ("[dev.tool_dependencies]\npytest = [1]", "Expected an array"),
+        ('[dev.tool_dependencies]\npytest = ["x"]', "Unknown keys"),
+        ('[optional]\nrequires = "pytest"', "Expected an array of tables"),
+        ('[[optional]]\ndev_dependencies = ["x"]', "Invalid"),
+        ('[[optional]]\nrequires = "pytest"', "Invalid"),
+        (
+            '[[optional]]\nrequires = "flake9"\ndev_dependencies = ["x"]',
+            "neither a tool",
+        ),
+        (
+            '[[optional]]\nrequires = "pytest"\ndev_dependencies = "x"',
+            "Expected an array",
+        ),
+        ('[[optional]]\nrequires = []\ndev_dependencies = ["x"]', "Invalid requires"),
+        (
+            '[[optional]]\nrequires = "a b"\ndev_dependencies = ["x"]',
+            "Invalid requires",
+        ),
+        (
+            '[[optional]]\nrequires = "ruff=on"\ndev_dependencies = ["x"]',
+            "neither a tool",
+        ),
     ],
 )
-def test_template_blueprint_rejects_malformed_tool_dependencies(body, message):
+def test_template_blueprint_rejects_malformed_optional_content(body, message):
     with pytest.raises(ConfigurationError, match=message):
         TemplateBlueprint._parse(body, source="test.toml")
 

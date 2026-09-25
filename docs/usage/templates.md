@@ -205,6 +205,16 @@ Pass each value with `--var`, once per parameter:
 protostar init --from ./service.toml --var SERVICE_NAME=billing --var REGION=eu-west-1
 ```
 
+### Choosing Template Options
+
+A template can also offer [options](./authoring-templates.md#template-options): a switch, or a choice among named values, that decides which files, dependencies, and configuration it includes. Each has a default; choose another with `--option`, once per option:
+
+```bash
+protostar init --from ./service.toml --option database=postgres --option compose=true
+```
+
+Change a choice later with `protostar sync --option NAME=VALUE`. Content the new choice drops is retracted: removed when you haven't edited it, and otherwise kept as a conflict for you to settle.
+
 ### Interactive Resolution
 
 If a template requires parameters that were not supplied with `--var`, Protostar prompts for the missing values in an interactive terminal before any disk mutations occur. Without a terminal, including under `--json`, it stops with an error naming every missing parameter. Later runs of `init` reuse the recorded values.

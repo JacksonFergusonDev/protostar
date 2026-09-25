@@ -94,6 +94,9 @@ Auto-scaffolded using custom template.
 """<% PROJECT_NAME %> package."""
 __version__ = "0.1.0"
 '''
+"compose.yaml" = '''
+services: {}
+'''
 
 # --- Development Environment ([dev]) ---
 
@@ -105,13 +108,8 @@ dev_dependencies = [
     "ruff",
 ]
 
-# Development packages installed only while the named tool is enabled.
-
-[dev.tool_dependencies]
-pytest = ["pytest-cov"]
-
 # --- pyproject.toml AST Injections ---
-# Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` tool that injects it only while that tool is enabled.
+# Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` condition that injects it only while the condition holds.
 
 [dev.pyproject]
 build_backend = '''
@@ -128,10 +126,37 @@ extend-select = ["I", "UP", "B"]
 '''
 
 # --- File Appends ---
-# Named non-TOML regions with stable IDs and content.
+# Named non-TOML regions with stable IDs, content, and an optional requires condition.
 
 [appends.".envrc".project_environment]
 content = "export REGION=<% REGION %>"
+
+# --- Options ---
+# Choices the template offers. A bool option declares a bool default; a choice option declares its choices and a default among them. Content opts in with requires; an option never renders into text.
+
+[options.database]
+description = "The database the service uses."
+choices = ["none", "postgres", "sqlite"]
+default = "none"
+
+[options.compose]
+description = "Ship a compose.yaml."
+default = false
+
+# --- Optional Content ---
+# Content that applies only while its requires condition holds: a tool, a bool option, or option=value, or an array of them that must all hold. Files are template paths, or every file under a path ending in "/"; content listed by several blocks applies while any of them holds.
+
+[[optional]]
+requires = "pytest"
+dev_dependencies = ["pytest-cov"]
+
+[[optional]]
+requires = "database=postgres"
+dependencies = ["psycopg[binary]"]
+
+[[optional]]
+requires = "compose"
+files = ["compose.yaml"]
 
 # Changes a project makes as it moves past a template version: moved and removed seed files, and renamed variables. Requires a PEP 440 version.
 

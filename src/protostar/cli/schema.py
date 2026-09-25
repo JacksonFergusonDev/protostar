@@ -18,6 +18,17 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
     properties: dict[str, Any] = {}
     dev_properties: dict[str, Any] = {}
+    name_pattern = "^[A-Za-z_][A-Za-z0-9_]*$"
+    choice_pattern = "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+    term = {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*(=[A-Za-z0-9][A-Za-z0-9_.-]*)?$",
+    }
+    requires = {
+        "oneOf": [term, {"type": "array", "items": term, "minItems": 1}],
+        "description": 'A tool, a bool option, or "option=value", or an array of them that must all hold.',
+    }
+    strings = {"type": "array", "items": {"type": "string"}}
 
     for f in dataclasses.fields(TemplateBlueprint):
         if f.name == "reference":
@@ -45,21 +56,67 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     "propertyNames": {"pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:/-]*$"},
                     "additionalProperties": {
                         "type": "object",
-                        "properties": {"content": {"type": "string"}},
+                        "properties": {
+                            "content": {"type": "string"},
+                            "requires": requires,
+                        },
                         "required": ["content"],
                         "additionalProperties": False,
                     },
                 },
             }
-        elif f.name == "tool_dev_dependencies":
+        elif f.name == "options":
             prop = {
                 "type": "object",
-                "propertyNames": {
-                    "enum": sorted(
-                        mod.config_key for mod in TOOLING_MODULES if mod.config_key
-                    )
+                "propertyNames": {"pattern": name_pattern},
+                "additionalProperties": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "description": {"type": "string"},
+                                "default": {"type": "boolean"},
+                            },
+                            "required": ["default"],
+                            "additionalProperties": False,
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "description": {"type": "string"},
+                                "choices": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "pattern": choice_pattern,
+                                    },
+                                    "minItems": 2,
+                                    "uniqueItems": True,
+                                },
+                                "default": {"type": "string"},
+                            },
+                            "required": ["choices", "default"],
+                            "additionalProperties": False,
+                        },
+                    ]
                 },
-                "additionalProperties": {"type": "array", "items": {"type": "string"}},
+            }
+        elif f.name == "optional":
+            prop = {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "requires": requires,
+                        "dependencies": strings,
+                        "dev_dependencies": strings,
+                        "docs_dependencies": strings,
+                        "files": strings,
+                    },
+                    "required": ["requires"],
+                    "minProperties": 2,
+                    "additionalProperties": False,
+                },
             }
         elif f.name == "pyproject_injections":
             prop = {
@@ -71,14 +128,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                             "type": "object",
                             "properties": {
                                 "content": {"type": "string"},
-                                "requires": {
-                                    "enum": sorted(
-                                        mod.config_key
-                                        for mod in TOOLING_MODULES
-                                        if mod.config_key
-                                    ),
-                                    "description": "Inject this payload only while the tool is enabled.",
-                                },
+                                "requires": requires,
                             },
                             "required": ["content"],
                             "additionalProperties": False,
@@ -168,8 +218,6 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
         if f.name == "dev_dependencies":
             dev_properties["dev_dependencies"] = prop
-        elif f.name == "tool_dev_dependencies":
-            dev_properties["tool_dependencies"] = prop
         elif f.name == "pyproject_injections":
             dev_properties["pyproject"] = prop
         else:
@@ -178,7 +226,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     properties["variables"] = {
         "type": "object",
         "description": "Descriptions shown when asking for custom variables' values.",
-        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
+        "propertyNames": {"pattern": name_pattern},
         "additionalProperties": {
             "type": "object",
             "properties": {"description": {"type": "string"}},

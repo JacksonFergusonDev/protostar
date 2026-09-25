@@ -24,6 +24,7 @@ from .intent import (
     AppendContribution,
     DependencyGroup,
     DependencyInclude,
+    OptionalContent,
     PyprojectPayload,
     TemplateOrigin,
     TemplateReference,
@@ -34,6 +35,7 @@ from .intent import (
 from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
 from .migrations import Migration, parse_migrations
 from .network import RemoteTemplate, fetch_remote_template
+from .options import Condition, TemplateOption, parse_condition, parse_options
 
 logger = logging.getLogger("protostar")
 
@@ -540,51 +542,68 @@ def _parse_pyproject_payload(
     ):
         raise ConfigurationError(
             f"Invalid structured payload in configuration source '{source}' for '{location}'.",
-            hint='Use a TOML string, or a table with a string "content" and an optional "requires" tool name.',
+            hint='Use a TOML string, or a table with a string "content" and an optional "requires" condition.',
         )
 
     requires = raw.get("requires")
-    if requires is not None:
-        _validated_tool(requires, location, source)
-    return PyprojectPayload(raw["content"], requires)
+    return PyprojectPayload(
+        raw["content"],
+        parse_condition(requires, location, source) if requires is not None else None,
+    )
 
 
-def _validated_tool(name: object, location: str, source: str) -> str:
-    """Returns a known tool key, or raises listing the valid ones."""
-    # Local import: recipe sits above config in the import graph.
-    from .recipe import Tool
-
-    tools = sorted(tool.value for tool in Tool)
-    if not isinstance(name, str) or name not in tools:
+def _string_list(raw: object, location: str, source: str) -> tuple[str, ...]:
+    """Returns an array of strings, or raises naming where it belongs."""
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
         raise ConfigurationError(
-            f"Unknown tool {name!r} in configuration source '{source}' for '{location}'.",
-            hint=f"Use one of: {', '.join(tools)}.",
+            f"Type mismatch in configuration source '{source}' for '{location}'.\n"
+            "Expected an array of strings.",
+            hint='Define it as an array of strings: ["..."]',
         )
-    return name
+    return tuple(raw)
 
 
-def _parse_tool_dependencies(raw: object, source: str) -> dict[str, list[str]]:
-    """Parses [dev.tool_dependencies]: each tool maps to the packages it needs."""
-    if not isinstance(raw, dict):
+def _parse_optional(raw: object, source: str) -> list[OptionalContent]:
+    """Parses [[optional]]: blocks of content that apply while a condition holds."""
+    hint = (
+        'Use [[optional]] with requires = "..." and any of dependencies, '
+        "dev_dependencies, docs_dependencies, and files."
+    )
+    if not isinstance(raw, list):
         raise ConfigurationError(
-            f"Type mismatch in configuration source '{source}' for '[dev].tool_dependencies'.\n"
-            f"Expected table, but got {type(raw).__name__}.",
-            hint='Map each tool to its packages: [dev.tool_dependencies]\npytest = ["pytest-cov"]',
+            f"Type mismatch in configuration source '{source}' for '[[optional]]'.\n"
+            f"Expected an array of tables, but got {type(raw).__name__}.",
+            hint=hint,
         )
-    parsed: dict[str, list[str]] = {}
-    for tool, packages in raw.items():
-        location = f"[dev.tool_dependencies].{tool}"
-        _validated_tool(tool, location, source)
-        if not isinstance(packages, list) or not all(
-            isinstance(package, str) for package in packages
+    fields = ("dependencies", "dev_dependencies", "docs_dependencies", "files")
+    blocks: list[OptionalContent] = []
+    for index, entry in enumerate(raw):
+        location = f"[[optional]] #{index + 1}"
+        if (
+            not isinstance(entry, dict)
+            or "requires" not in entry
+            or set(entry) - {"requires", *fields}
+            or not set(entry) & set(fields)
         ):
             raise ConfigurationError(
-                f"Type mismatch in configuration source '{source}' for '{location}'.\n"
-                "Expected an array of strings.",
-                hint=f'Define the packages as an array: {tool} = ["package"]',
+                f"Invalid {location} in configuration source '{source}'.", hint=hint
             )
-        parsed[tool] = list(packages)
-    return parsed
+        values = {
+            name: _string_list(entry[name], f"{location}.{name}", source)
+            for name in fields
+            if name in entry
+        }
+        if "files" in values:
+            values["files"] = tuple(
+                Path(path).as_posix() + ("/" if path.endswith("/") else "")
+                for path in values["files"]
+            )
+        blocks.append(
+            OptionalContent(
+                parse_condition(entry["requires"], location, source), **values
+            )
+        )
+    return blocks
 
 
 # Root keys of a template that hold structure; every other root boolean is a
@@ -606,6 +625,8 @@ TEMPLATE_STRUCTURAL_KEYS: frozenset[str] = frozenset(
         "appends",
         "variables",
         "migrations",
+        "options",
+        "optional",
     }
 )
 
@@ -655,13 +676,6 @@ class TemplateBlueprint:
             "example": ["pytest", "mypy", "ruff"],
         },
     )
-    tool_dev_dependencies: dict[str, list[str]] = field(
-        default_factory=dict,
-        metadata={
-            "description": "Development packages installed only while the named tool is enabled.",
-            "example": {"pytest": ["pytest-cov"]},
-        },
-    )
     docs_dependencies: list[str] = field(
         default_factory=list,
         metadata={
@@ -704,13 +718,14 @@ class TemplateBlueprint:
             "example": {
                 "README.md": "# <% PROJECT_NAME %>\n\nAuto-scaffolded using custom template.",
                 "src/<% PACKAGE_NAME %>/__init__.py": '"""<% PROJECT_NAME %> package."""\n__version__ = "0.1.0"',
+                "compose.yaml": "services: {}\n",
             },
         },
     )
     pyproject_injections: dict[str, PyprojectPayload] = field(
         default_factory=dict,
         metadata={
-            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` tool that injects it only while that tool is enabled.",
+            "description": "Managed TOML configuration; personal metadata is seed-only; dependency tables and tool.protostar are forbidden. A payload is a TOML string, or a table with `content` and an optional `requires` condition that injects it only while the condition holds.",
             "example": {
                 "custom_linting": {
                     "requires": "ruff",
@@ -723,12 +738,40 @@ class TemplateBlueprint:
     appends: dict[str, dict[str, AppendContribution]] = field(
         default_factory=dict,
         metadata={
-            "description": "Named non-TOML regions with stable IDs and content.",
+            "description": "Named non-TOML regions with stable IDs, content, and an optional requires condition.",
             "example": {
                 ".envrc": {
                     "project_environment": {"content": "export REGION=<% REGION %>"}
                 }
             },
+        },
+    )
+    options: dict[str, TemplateOption] = field(
+        default_factory=dict,
+        metadata={
+            "description": "Choices the template offers. A bool option declares a bool default; a choice option declares its choices and a default among them. Content opts in with requires; an option never renders into text.",
+            "example": {
+                "database": {
+                    "description": "The database the service uses.",
+                    "choices": ["none", "postgres", "sqlite"],
+                    "default": "none",
+                },
+                "compose": {
+                    "description": "Ship a compose.yaml.",
+                    "default": False,
+                },
+            },
+        },
+    )
+    optional: list[OptionalContent] = field(
+        default_factory=list,
+        metadata={
+            "description": 'Content that applies only while its requires condition holds: a tool, a bool option, or option=value, or an array of them that must all hold. Files are template paths, or every file under a path ending in "/"; content listed by several blocks applies while any of them holds.',
+            "example": [
+                {"requires": "pytest", "dev_dependencies": ["pytest-cov"]},
+                {"requires": "database=postgres", "dependencies": ["psycopg[binary]"]},
+                {"requires": "compose", "files": ["compose.yaml"]},
+            ],
         },
     )
     migrations: list[Migration] = field(
@@ -874,9 +917,12 @@ class TemplateBlueprint:
                         )
                 instance.dev_dependencies = dev_deps
 
-            if "tool_dependencies" in dev_data:
-                instance.tool_dev_dependencies = _parse_tool_dependencies(
-                    dev_data["tool_dependencies"], source
+            unknown = sorted(set(dev_data) - {"dev_dependencies", "pyproject"})
+            if unknown:
+                raise ConfigurationError(
+                    f"Unknown keys in configuration source '{source}' for '[dev]': "
+                    f"{', '.join(unknown)}.",
+                    hint='Packages a tool or option needs go in [[optional]] with requires = "...".',
                 )
 
             if "pyproject" in dev_data:
@@ -924,15 +970,26 @@ class TemplateBlueprint:
                     validate_region_id(identity)
                     if (
                         not isinstance(record, dict)
-                        or set(record) != {"content"}
+                        or "content" not in record
+                        or set(record) - {"content", "requires"}
                         or not isinstance(record["content"], str)
                     ):
                         raise ConfigurationError(
                             f"Invalid named append record for '[appends].{path}'.",
-                            hint="Each stable ID must contain exactly one string content field.",
+                            hint="Each stable ID must contain a string content field "
+                            "and an optional requires condition.",
                         )
+                    requires = record.get("requires")
                     instance.appends.setdefault(path, {})[identity] = (
-                        AppendContribution(identity, record["content"])
+                        AppendContribution(
+                            identity,
+                            record["content"],
+                            parse_condition(
+                                requires, f"[appends].{path}.{identity}", source
+                            )
+                            if requires is not None
+                            else None,
+                        )
                     )
 
         if "version" in data:
@@ -971,6 +1028,10 @@ class TemplateBlueprint:
                 instance.dependency_includes.append(DependencyInclude(group, include))
 
         instance.migrations = list(parse_migrations(data, source))
+        if "options" in data:
+            instance.options = parse_options(data["options"], source)
+        if "optional" in data:
+            instance.optional = _parse_optional(data["optional"], source)
 
         # Extract tooling overrides dynamically (root-level boolean flags)
         for key, value in data.items():
@@ -1028,6 +1089,94 @@ class TemplateBlueprint:
                 dict.fromkeys(extract_variables(payload.content), "placeholder"),
             )
             validate_configuration(rendered)
+        self._validate_conditions()
+
+    def _validate_conditions(self) -> None:
+        """Checks that every condition names a tool or a declared option, rightly.
+
+        Raises:
+            ConfigurationError: If an option shares a tool's name, a term names
+                neither, a term's value doesn't fit its option, or no condition
+                names a declared option.
+        """
+        # Local import: recipe sits above config in the import graph.
+        from .recipe import Tool
+
+        tools = {tool.value for tool in Tool}
+        clashing = sorted(self.options.keys() & (tools | {"docker"}))
+        if clashing:
+            raise ConfigurationError(
+                f"Options share a name with a tool: {', '.join(clashing)}.",
+                hint="Rename each option; a requires term names a tool or an option.",
+            )
+        conditions: list[tuple[str, Condition]] = [
+            (f"[dev.pyproject].{identity}", payload.requires)
+            for identity, payload in self.pyproject_injections.items()
+            if payload.requires is not None
+        ]
+        conditions += [
+            (f"[appends].{path}.{identity}", record.requires)
+            for path, records in self.appends.items()
+            for identity, record in records.items()
+            if record.requires is not None
+        ]
+        conditions += [
+            (f"[[optional]] #{index + 1}", block.requires)
+            for index, block in enumerate(self.optional)
+        ]
+        used: set[str] = set()
+        for location, condition in conditions:
+            for term in condition.terms:
+                option = self.options.get(term.name)
+                if option is None:
+                    if term.name in tools and term.value is None:
+                        continue
+                    raise ConfigurationError(
+                        f"{location} requires {str(term)!r}, which is neither a "
+                        "tool nor a declared option.",
+                        hint=f"Declare [options.{term.name}], or name a tool: "
+                        f"{', '.join(sorted(tools))}.",
+                    )
+                used.add(term.name)
+                if option.choices and term.value not in option.choices:
+                    raise ConfigurationError(
+                        f"{location} requires {str(term)!r}, but option "
+                        f"{term.name!r} is a choice among: {', '.join(option.choices)}.",
+                        hint=f'Write requires = "{term.name}=VALUE" with one of its choices.',
+                    )
+                if not option.choices and term.value is not None:
+                    raise ConfigurationError(
+                        f"{location} requires {str(term)!r}, but option "
+                        f"{term.name!r} is on or off.",
+                        hint=f'Write requires = "{term.name}" to require it on.',
+                    )
+        unused = sorted(self.options.keys() - used)
+        if unused:
+            raise ConfigurationError(
+                f"[options] declares options no requires names: {', '.join(unused)}.",
+                hint="Gate content on each option with requires, or remove it.",
+            )
+
+    def _validate_optional_files(self) -> None:
+        """Checks that every file an [[optional]] block lists is one the template ships.
+
+        Raises:
+            ConfigurationError: If an entry matches no template file.
+        """
+        for index, block in enumerate(self.optional):
+            for entry in block.files:
+                probe = OptionalContent(block.requires, files=(entry,))
+                if not any(probe.covers(path) for path in self.files):
+                    raise ConfigurationError(
+                        f"[[optional]] #{index + 1} lists {entry!r}, which the "
+                        "template doesn't ship.",
+                        hint="List a path under template/ or in [files], or a "
+                        'directory ending in "/".',
+                    )
+
+    def gated(self, path: str) -> list[OptionalContent]:
+        """Returns the [[optional]] blocks that list a template file."""
+        return [block for block in self.optional if block.covers(path)]
 
 
 @dataclass(frozen=True)
@@ -1218,6 +1367,30 @@ class TemplateSource:
             )
         return {name: entry["description"] for name, entry in sorted(declared.items())}
 
+    @functools.cached_property
+    def options(self) -> dict[str, TemplateOption]:
+        """Options the template's ``[options]`` table offers, by name.
+
+        Declarations are read from the raw template, before any value renders,
+        so a caller can offer each option before choosing values.
+
+        Raises:
+            ConfigurationError: If the template is not valid TOML, or the table
+                is malformed.
+            TemplateResolutionError: If an option shares a variable's name.
+        """
+        target = self.reference.locator
+        options = parse_options(self._data.get("options", {}), target)
+        clashing = sorted(options.keys() & (self.variables | BUILT_IN_VARIABLES))
+        if clashing:
+            raise TemplateResolutionError(
+                target,
+                f"Options share a name with variables: {', '.join(clashing)}.",
+                hint="An option chooses content and a variable fills in text; "
+                "give each its own name.",
+            )
+        return options
+
     def render(self, context: Mapping[str, str]) -> TemplateBlueprint:
         """Renders the template entirely in memory.
 
@@ -1237,6 +1410,7 @@ class TemplateSource:
         """
         target = self.reference.locator
         _ = self.descriptions
+        _ = self.options
         missing = tuple(sorted(self.variables - context.keys()))
         if missing:
             raise MissingTemplateVariablesError(target, missing)
@@ -1256,4 +1430,5 @@ class TemplateSource:
         )
         blueprint.reference = replace(self.reference, version=blueprint.version or None)
         blueprint._validate_declarations()
+        blueprint._validate_optional_files()
         return blueprint

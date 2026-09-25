@@ -55,6 +55,7 @@ from ..keys import (
 )
 from ..review.screen import ReviewScreen
 from .metadata import MetadataFields, metadata_defaults, metadata_keys
+from .options import OptionFields, draft_options
 from .preview import PlanPreview
 from .variables import VariableFields, draft_variables
 
@@ -92,7 +93,7 @@ class _TemplateChoice(Enum):
 
 
 class RecipeScreen(KeyboardScreen[InitDecision]):
-    """Edit the template, its variables, tools, and metadata beside a live preview."""
+    """Edit the template, its variables and options, tools, and metadata beside a live preview."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+s", "continue", "Continue", show=False),
@@ -258,6 +259,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 yield VariableFields(
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
+                yield OptionFields(draft_options(self.draft))
                 yield Heading("Tools")
                 if notes := self._notes():
                     yield Static(notes, id="analysis-notes", classes="note")
@@ -360,7 +362,9 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         stays on the first row, the template.
         """
         fields = self.query_one(VariableFields)
-        await fields.show(self.draft.template.source if self.draft.template else None)
+        source = self.draft.template.source if self.draft.template else None
+        await fields.show(source)
+        await self.query_one(OptionFields).show(source)
         if fields.missing:
             self.query_one(f"#var-{fields.missing[0]}", Input).focus()
         else:
@@ -419,6 +423,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         return replace(
             self.draft,
             tool_choices=tuple(sorted(self.enabled.items())),
+            option_choices=tuple(sorted(self.query_one(OptionFields).values.items())),
             docker=self._docker(),
             variables=tuple(sorted(variables.items())),
             allowed_secrets=fields.allowed_secrets,
@@ -427,6 +432,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         )
 
     @on(VariableFields.Committed)
+    @on(OptionFields.Changed)
     @on(MetadataFields.Changed)
     def _changed(self) -> None:
         """Show the metadata the current tools read, and re-plan the preview."""
@@ -487,8 +493,10 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 choice.trusted,
             )
         if template:
-            # An invalid [variables] table is a template error, shown inline.
+            # An invalid [variables] or [options] table is a template error,
+            # shown inline.
             _ = template.source.descriptions
+            _ = template.source.options
         return template
 
     @work(exclusive=True, group="template")
@@ -515,6 +523,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
             self.query_one("#docker", Checkbox).value = self._docker()
         await self.query_one(VariableFields).show(template.source if template else None)
+        await self.query_one(OptionFields).show(template.source if template else None)
         self._refresh_tools()
         self._changed()
 

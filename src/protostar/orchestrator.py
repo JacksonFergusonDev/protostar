@@ -25,6 +25,7 @@ from .modules import (
     PrekModule,
     PythonCore,
 )
+from .options import Condition, resolve_options
 from .preparation import ExecutionPolicy
 from .progress import ProgressStep, no_progress
 from .sync_state import check_one_shot_workspace, check_workspace_identity
@@ -34,6 +35,7 @@ from .workflows import AgentsSpec, HookRunner, generate_agents_md
 if TYPE_CHECKING:
     from .config import UserConfig
     from .executor import SystemExecutor
+    from .recipe import Tool
     from .registry import ResolvedHookRevision
 
 logger = logging.getLogger("protostar")
@@ -268,21 +270,32 @@ class Orchestrator:
                 manifest.dependencies.add(dep)
 
             active_tools = {m.config_key for m in active_modules if m.config_key}
+            options = resolve_options(
+                blueprint.options, dict(req.recipe.options) if req.recipe else {}
+            )
+
+            def holds(condition: Condition | None) -> bool:
+                return condition is None or condition.holds(active_tools, options)
+
             for dep in blueprint.dev_dependencies:
                 manifest.dependencies.add_dev(dep)
 
-            for tool_key, packages in blueprint.tool_dev_dependencies.items():
-                if tool_key not in active_tools:
-                    logger.debug(f"Skipping {tool_key} dev dependencies: disabled.")
-                    continue
-                # Attribute the packages to their tool, like module output.
-                tool = Tool(tool_key)
-                for dep in packages:
-                    manifest.dependencies.add_dev(dep)
-            tool = None
-
             for dep in blueprint.docs_dependencies:
                 manifest.dependencies.add_docs(dep)
+
+            for block in blueprint.optional:
+                if not holds(block.requires):
+                    logger.debug(f"Skipping content that requires {block.requires}.")
+                    continue
+                # Attribute a block bound to one tool to it, like module output.
+                tool = _bound_tool(block.requires)
+                for dep in block.dependencies:
+                    manifest.dependencies.add(dep)
+                for dep in block.dev_dependencies:
+                    manifest.dependencies.add_dev(dep)
+                for dep in block.docs_dependencies:
+                    manifest.dependencies.add_docs(dep)
+            tool = None
 
             for d in blueprint.directories:
                 manifest.filesystem.add_directory(d)
@@ -299,13 +312,13 @@ class Orchestrator:
             if blueprint.pyproject_injections:
                 logger.debug("Injecting pyproject.toml payloads from configuration.")
                 for identity, payload in blueprint.pyproject_injections.items():
-                    if payload.requires and payload.requires not in active_tools:
+                    if not holds(payload.requires):
                         logger.debug(
-                            f"Skipping payload '{identity}': {payload.requires} is disabled."
+                            f"Skipping payload '{identity}': it requires {payload.requires}."
                         )
                         continue
                     # Attribute a tool-bound payload to its tool, like module output.
-                    tool = Tool(payload.requires) if payload.requires else None
+                    tool = _bound_tool(payload.requires)
                     manifest.filesystem.add_structured(
                         "pyproject.toml",
                         payload.content,
@@ -317,6 +330,8 @@ class Orchestrator:
                 logger.debug("Injecting generic file appends from configuration.")
                 for filepath, payloads in blueprint.appends.items():
                     for identity, record in payloads.items():
+                        if not holds(record.requires):
+                            continue
                         manifest.filesystem.add_region(
                             filepath,
                             record.content,
@@ -326,6 +341,10 @@ class Orchestrator:
             if blueprint.files:
                 logger.debug("Injecting static files from configuration.")
                 for filepath, content in blueprint.files.items():
+                    gates = blueprint.gated(filepath)
+                    # A file several blocks list ships while any of them holds.
+                    if gates and not any(holds(gate.requires) for gate in gates):
+                        continue
                     manifest.filesystem.add_file_injection(filepath, content)
 
         manifest.producer_contributions = tuple(contributions)
@@ -412,6 +431,15 @@ class Orchestrator:
             mutated_paths=executor.journal.mutated_paths,
             diagnostics=tuple(executor.diagnostics),
         )
+
+
+def _bound_tool(condition: Condition | None) -> Tool | None:
+    """Returns the one tool a condition names, which its content belongs to."""
+    from .recipe import Tool
+
+    names = condition.names if condition else frozenset()
+    tools = [Tool(name) for name in sorted(names & {tool.value for tool in Tool})]
+    return tools[0] if len(tools) == 1 else None
 
 
 def __getattr__(name: str) -> Any:

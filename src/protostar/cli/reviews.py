@@ -328,6 +328,7 @@ def _prepare_sync(args: argparse.Namespace) -> PreparedProject:
     from protostar.cli.main import (
         _check_allowed_secrets,
         _edit_variables,
+        _parse_option_flags,
         _parse_var_flags,
         _resolve_template_variables,
     )
@@ -338,6 +339,7 @@ def _prepare_sync(args: argparse.Namespace) -> PreparedProject:
         template, dict(located.recipe.variables), _parse_var_flags(args.variables)
     )
     allowed = _check_allowed_secrets(template, args.allowed_secrets)
+    options = _parse_option_flags(template, args.options)
     if (
         template is not None
         and template.variables - values.keys()
@@ -355,7 +357,9 @@ def _prepare_sync(args: argparse.Namespace) -> PreparedProject:
             command="sync",
         )
         values, allowed = dict(draft.variables), draft.allowed_secrets
-    return prepare_project(located, variables=values, allowed_secrets=allowed)
+    return prepare_project(
+        located, variables=values, allowed_secrets=allowed, options=options
+    )
 
 
 def handle_sync(args: argparse.Namespace) -> None:

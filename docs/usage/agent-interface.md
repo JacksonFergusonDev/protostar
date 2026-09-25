@@ -134,6 +134,11 @@ project recipe and must not be secrets: a credential-shaped value returns a
 `SecretDetectedError` whose `findings` name the variable and matching rule. If the
 value isn't a secret, retry with `--allow-secret NAME` for that variable.
 
+A template's options are chosen with `--option NAME=VALUE`, on `init` and `sync`.
+Every option has a default, so none is ever missing. A value the option doesn't
+offer returns an `InvalidOptionValueError` payload whose `option` and `values` name
+the option and every value it offers.
+
 ### 3. Headless Execution
 
 Once the plan is verified, the agent executes initialization:

@@ -27,6 +27,7 @@ from .ide import IDEType
 from .intent import TemplateOrigin, TemplateReference
 from .interpolation import BUILT_IN_VARIABLES, VARIABLE_NAME
 from .manifest import ProjectMetadata
+from .options import CHOICE_VALUE, OptionValue
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
@@ -223,7 +224,9 @@ class ProjectRecipe:
     """Immutable schema-v1 project recipe; it records no trust decisions.
 
     Template variable values are recorded as given: they are non-secret by
-    definition, and every value passes the secret guard when decoded.
+    definition, and every value passes the secret guard when decoded. Options
+    record only the values chosen away from the template's defaults, so a
+    project that never chose follows the template.
     """
 
     source: RecipeSource | None
@@ -235,6 +238,7 @@ class ProjectRecipe:
     context: tuple[tuple[str, str], ...]
     metadata: tuple[tuple[str, str | tuple[str, ...]], ...]
     variables: tuple[tuple[str, str], ...] = ()
+    options: tuple[tuple[str, OptionValue], ...] = ()
 
     def selections(self, opinions: dict[str, bool]) -> tuple[ToolSelection, ...]:
         """Resolves overrides, current template opinions, then captured defaults."""
@@ -291,11 +295,12 @@ class ProjectRecipe:
                 for k, v in sorted(self.metadata)
             },
             "variables": dict(sorted(self.variables)),
+            "options": dict(sorted(self.options)),
         }
 
 
 # Tables that are omitted from pyproject.toml while empty; an absent one means empty.
-_OPTIONAL_TABLES = frozenset({"tools", "metadata", "variables"})
+_OPTIONAL_TABLES = frozenset({"tools", "metadata", "variables", "options"})
 
 # The order recipe entries are written in, and where a late-added table belongs.
 _RECIPE_ORDER = (
@@ -310,6 +315,7 @@ _RECIPE_ORDER = (
     "context",
     "metadata",
     "variables",
+    "options",
 )
 
 
@@ -437,6 +443,15 @@ def decode_recipe(data: object) -> ProjectRecipe:
         for k, v in variables.items()
     ):
         raise _invalid()
+    options = data["options"]
+    if not isinstance(options, dict) or any(
+        not VARIABLE_NAME.fullmatch(k)
+        or not (
+            isinstance(v, bool) or (isinstance(v, str) and CHOICE_VALUE.fullmatch(v))
+        )
+        for k, v in options.items()
+    ):
+        raise _invalid()
     allowed = {
         "description",
         "license",
@@ -479,6 +494,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
             )
         ),
         tuple(sorted(variables.items())),
+        tuple(sorted(options.items())),
     )
 
 
@@ -623,6 +639,7 @@ class RecipeIntent:
     docker: bool = False
     python: str | None = None
     variables: tuple[tuple[str, str], ...] = ()
+    options: tuple[tuple[str, OptionValue], ...] = ()
 
 
 def establish_recipe(
@@ -675,6 +692,7 @@ def establish_recipe(
             )
         ),
         tuple(sorted(intent.variables)),
+        tuple(sorted(intent.options)),
     )
     return decode_recipe(recipe.to_dict())
 

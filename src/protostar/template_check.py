@@ -27,6 +27,7 @@ from typing import Any
 from .config import TEMPLATE_STRUCTURAL_KEYS, TemplateBlueprint, TemplateSource
 from .errors import ProtostarError, TemplateEncodingError, TemplateResolutionError
 from .interpolation import VARIABLE_PATTERN
+from .options import Condition
 from .toml_lines import TomlLineIndex
 
 __all__ = [
@@ -520,7 +521,7 @@ def _payload_findings(blueprint: TemplateBlueprint, where: _Where) -> Iterator[F
             message,
             where.file,
             "dev.dev_dependencies",
-            hint=f"Move it to [dev.tool_dependencies] {owner} = [...], so "
+            hint=f'Move it to [[optional]] with requires = "{owner}", so '
             f"--no-{owner} does not install it.",
             line=where.index.line_in_value(("dev", "dev_dependencies"), package),
         )
@@ -569,26 +570,29 @@ def _lookup(node: Any, path: tuple[str, ...]) -> Any:
 
 
 def find_baseline_violations(
-    payload: str, baselines: Mapping[str, dict[str, Any]], requires: str | None = None
+    payload: str,
+    baselines: Mapping[str, dict[str, Any]],
+    requires: Condition | None = None,
 ) -> list[tuple[tuple[str, ...], str]]:
     """Lists ways a template's TOML payload restates a module baseline.
 
     Overriding a baseline scalar with a different value is a legitimate delta.
     What is flagged is repeating a baseline value verbatim, and redefining a
     baseline list where an additive key (e.g. ``extend-select``) exists. A
-    payload bound to a tool is compared only with that tool's baseline; an
+    payload bound to tools is compared only with those tools' baselines; an
     unbound one with every baseline.
 
     Args:
         payload: The TOML payload.
         baselines: Each tool's baseline, keyed by tool.
-        requires: The tool the payload is bound to, if any.
+        requires: When the payload is injected, if it is gated.
 
     Returns:
         (key path within the payload, message) for each violation.
     """
-    if requires is not None:
-        baselines = {requires: baselines.get(requires, {})}
+    bound = _bound_tools(requires)
+    if bound:
+        baselines = {tool: baselines.get(tool, {}) for tool in sorted(bound)}
     violations: list[tuple[tuple[str, ...], str]] = []
     for path, value in _leaves(_parse_payload(payload)):
         dotted = ".".join(path)
@@ -616,8 +620,16 @@ def find_baseline_violations(
     return violations
 
 
+def _bound_tools(requires: Condition | None) -> frozenset[str]:
+    """Returns the tools a condition requires, which gated content belongs to."""
+    from .recipe import Tool
+
+    names = requires.names if requires is not None else frozenset()
+    return names & {tool.value for tool in Tool}
+
+
 def find_unbound_tool_config(
-    payloads: Mapping[str, tuple[str, str | None]], owners: Mapping[str, str]
+    payloads: Mapping[str, tuple[str, Condition | None]], owners: Mapping[str, str]
 ) -> list[tuple[str, tuple[str, ...], str]]:
     """Lists payloads that configure a tool without declaring ``requires`` for it.
 
@@ -632,13 +644,14 @@ def find_unbound_tool_config(
     for identity, (content, requires) in payloads.items():
         for table in _parse_payload(content).get("tool", {}):
             owner = owners.get(table)
-            if owner and requires != owner:
+            if owner and owner not in _bound_tools(requires):
+                declared = repr(str(requires)) if requires is not None else "None"
                 problems.append(
                     (
                         identity,
                         ("tool", table),
                         f"The payload configures tool.{table} but declares "
-                        f'requires = {requires!r}; expected "{owner}".',
+                        f'requires = {declared}; expected "{owner}".',
                     )
                 )
     return problems

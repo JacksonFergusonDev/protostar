@@ -378,6 +378,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Set a template variable, such as one a new template version adds; repeat for each. Values are saved to pyproject.toml, so never pass secrets.",
     )
     sync_parser.add_argument(
+        "--option",
+        action="append",
+        default=[],
+        dest="options",
+        metavar="NAME=VALUE",
+        help="Choose a template option: true or false, or one of its choices; repeat for each. Choices are saved to pyproject.toml.",
+    )
+    sync_parser.add_argument(
         "--allow-secret",
         action="append",
         default=[],
@@ -479,6 +487,15 @@ def build_parser() -> argparse.ArgumentParser:
         dest="variables",
         metavar="NAME=VALUE",
         help="Set a template variable; repeat for each. Values are saved to pyproject.toml, so never pass secrets.",
+    )
+
+    base_group.add_argument(
+        "--option",
+        action="append",
+        default=[],
+        dest="options",
+        metavar="NAME=VALUE",
+        help="Choose a template option: true or false, or one of its choices; repeat for each. Choices are saved to pyproject.toml.",
     )
 
     base_group.add_argument(
