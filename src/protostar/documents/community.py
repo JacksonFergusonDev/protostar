@@ -65,13 +65,15 @@ def _issue_form(stem: str) -> DocumentLocations:
 CONTRIBUTING_LOCATIONS = _health_file("CONTRIBUTING")
 CODE_OF_CONDUCT_LOCATIONS = _health_file("CODE_OF_CONDUCT")
 SECURITY_LOCATIONS = _health_file("SECURITY")
+# GitHub matches this name in any case, but case-insensitive filesystems do
+# too: listing `PULL_REQUEST_TEMPLATE.md` beside it would make the file Protostar
+# wrote look like its own duplicate on macOS and Windows.
 PULL_REQUEST_LOCATIONS = DocumentLocations(
     PULL_REQUEST_TARGET,
     aliases=tuple(
-        f"{folder}{name}"
+        f"{folder}pull_request_template.md"
         for folder in _FOLDERS
-        for name in ("pull_request_template.md", "PULL_REQUEST_TEMPLATE.md")
-        if f"{folder}{name}" != PULL_REQUEST_TARGET
+        if f"{folder}pull_request_template.md" != PULL_REQUEST_TARGET
     ),
 )
 BUG_REPORT_LOCATIONS = _issue_form("bug_report")

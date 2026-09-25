@@ -222,6 +222,14 @@ def test_plan_reports_an_existing_guide_under_github_as_a_collision(
 # --- Placement -------------------------------------------------------------
 
 
+@pytest.mark.parametrize("locations", community.LOCATIONS, ids=lambda loc: loc.target)
+def test_no_two_locations_differ_only_by_case(locations):
+    # On macOS and Windows such paths name one file, which would then look like
+    # a duplicate of itself.
+    folded = [path.casefold() for path in locations.paths]
+    assert len(folded) == len(set(folded))
+
+
 def community_intent():
     intent = EnvironmentManifest()
     CommunityModule().build(intent)
