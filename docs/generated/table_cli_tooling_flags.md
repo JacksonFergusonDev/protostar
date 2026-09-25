@@ -19,4 +19,5 @@
 | `--release` | `--no-release` | Scaffold GitHub Actions PyPI release workflows |
 | `--just` | `--no-just` | Scaffold a justfile for command execution |
 | `--agents` | `--no-agents` | Scaffold a managed AGENTS.md guide for coding agents |
+| `--community` | `--no-community` | Scaffold community health files: contributing guide, code of conduct, security policy, and issue and pull request templates |
 | `--docker` | `--no-docker` | Multi-stage `Dockerfile` and `.dockerignore` container scaffolding |

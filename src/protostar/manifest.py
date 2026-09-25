@@ -416,6 +416,8 @@ class ToolingManifest:
     just_typecheck_commands: list[str] = field(default_factory=list)
     just_clean_paths: list[str] = field(default_factory=list)
     wants_agents: bool = False
+    wants_community: bool = False
+    conventional_commits: bool = False
     ide_extensions: set[str | tuple[str, ...]] = field(default_factory=set)
 
     @property
@@ -432,6 +434,11 @@ class ToolingManifest:
                 hint="Choose either pre-commit or prek as your git hook manager.",
             )
         self.hook_runner = runner
+
+    def adopt_conventional_commits(self) -> None:
+        """Records that commit messages follow Conventional Commits."""
+        self.observe(("conventional_commits",))
+        self.conventional_commits = True
 
     def add_pre_commit_hook(self, payload: str) -> None:
         """Appends a raw YAML payload to the pre-commit configuration."""
@@ -499,6 +506,8 @@ class ToolingManifest:
             "just_typecheck_commands": list(self.just_typecheck_commands),
             "just_clean_paths": list(self.just_clean_paths),
             "wants_agents": self.wants_agents,
+            "wants_community": self.wants_community,
+            "conventional_commits": self.conventional_commits,
             "ide_extensions": sorted(
                 (_serialize_extension(ext) for ext in self.ide_extensions),
                 key=lambda x: x[0] if isinstance(x, list) else x,

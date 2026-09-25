@@ -9,7 +9,7 @@ producer_version = "0.9.0"
 [template]
 origin = "built-in"
 locator = "cli"
-digest = "18f528322fcfdba33222acc412c74e00ab87b3960b731b72a84eddaf735ffdaa"
+digest = "11503542ffc43c4cfe7141f139587dd291cae1aa6ecfbd4e99c95a5c12307b1f"
 display_name = "cli"
 
 [[files]]
@@ -18,9 +18,24 @@ policy = "seed-only"
 digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 
 [[files]]
+path = ".github/ISSUE_TEMPLATE/bug_report.yml"
+policy = "seed-only"
+digest = "1cf0d4500848c337893bc5a63557b33793f26b30f9e3f00090fdd1a00f10fc41"
+
+[[files]]
+path = ".github/ISSUE_TEMPLATE/feature_request.yml"
+policy = "seed-only"
+digest = "bd9612b52e1a29303327def7f01d102caabaf444463d54560cc7aa0e763e9ebb"
+
+[[files]]
 path = ".github/codecov.yml"
 policy = "structured-yaml"
 baseline = "comment:\n  behavior: default\n  layout: reach,diff,flags,files\n  require_changes: true\ncoverage:\n  precision: 2\n  range: 80...100\n  round: down\n  status:\n    patch:\n      default:\n        if_ci_failed: error\n        if_not_found: success\n        informational: false\n        target: 80%\n        threshold: 2%\n    project:\n      default:\n        if_ci_failed: error\n        if_not_found: error\n        target: 80%\n        threshold: 2%\nignore:\n  - tests/**\n  - docs/**\n  - scripts/**\n  - '**/__init__.py'\n"
+
+[[files]]
+path = ".github/pull_request_template.md"
+policy = "seed-only"
+digest = "0d5f79200b5e611bd11b0558dbe149cd1ba1bea3d663175231236c9bd81c57c7"
 
 [[files]]
 path = ".github/renovate.json"
@@ -53,9 +68,28 @@ policy = "seed-only"
 digest = "0a9c19eaad38cda8e9040bfacafc0d82d4734993e514c492dd65bc3e79b07f04"
 
 [[files]]
+path = "CODE_OF_CONDUCT.md"
+policy = "seed-only"
+digest = "cf19e82e8b790ae5820342979858846ad0df099fc18f67e2bdd5c97c3144ff7c"
+
+[[files]]
+path = "CONTRIBUTING.md"
+policy = "regions"
+
+[[files.regions]]
+tag = "b7a348d5"
+id = "contributing"
+baseline = "<!-- region: protostar b7a348d5 -->\n# Contributing to demo-project\n\n<!-- Protostar generates and updates this section from the project's tooling. Keep your own notes outside the surrounding Protostar markers. -->\n\nThank you for helping improve demo-project. This guide covers setting up a development environment and the checks every change passes.\n\n## Development Setup\n\n1. Install [uv](https://docs.astral.sh/uv/).\n1. Clone your fork and run `uv sync` to create the environment with Python 3.13.\n1. Run `uv run prek install` to install the git hooks.\n\nAdd dependencies with `uv add <package>`, or `uv add --dev <package>` for development tools, so `uv.lock` stays in sync.\n\n## Commands\n\n- `just format`: apply formatters and safe lint fixes.\n- `just lint`: run the linters.\n- `just typecheck`: run static type checks.\n- `just test`: run the test suite.\n- `just ci`: run lint, typecheck, test; the local check to pass before pushing.\n\n## Git Hooks\n\nprek runs the hooks in `.pre-commit-config.yaml` on every commit and runs the tests before every push. If a hook fails or rewrites a file, fix the cause, restage, and commit again.\n\n## Commit Messages\n\nCommit messages follow [Conventional Commits](https://www.conventionalcommits.org/), such as `feat: add an export command` or `fix: handle empty input`. Commitizen reads them to bump the version and write the changelog. The `commit-msg` hook rejects any other message.\n\n## Pull Requests\n\n1. For a larger change, open an issue first so the approach can be agreed before you start.\n1. Keep each pull request focused on one change, with tests that cover it.\n1. Make sure `just ci` passes before you push. CI runs the same checks on every pull request.\n1. Fill in the pull request template.\n\n## Conduct and Security\n\nEveryone taking part in this project is expected to follow its code of conduct. Report security vulnerabilities privately, as the security policy describes, never in a public issue.\n<!-- endregion: protostar b7a348d5 -->"
+
+[[files]]
 path = "README.md"
 policy = "seed-only"
 digest = "37c77381868c59a8a87717f8c70016477dc028054b636446323b9bfcf2c9bdf3"
+
+[[files]]
+path = "SECURITY.md"
+policy = "seed-only"
+digest = "a175ea0e5fdaeec384133992271ef166b26a56ee7e83232fa50bc5408480077e"
 
 [[files]]
 path = "docs/index.md"

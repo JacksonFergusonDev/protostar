@@ -58,6 +58,7 @@ class Tool(StrEnum):
     RELEASE = "release"
     JUST = "just"
     AGENTS = "agents"
+    COMMUNITY = "community"
 
 
 EXCLUSIVE_TOOL_PAIRS: tuple[frozenset[Tool], ...] = (

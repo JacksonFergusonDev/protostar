@@ -15,6 +15,7 @@ from ..workflows import HookRunner
 from ..yaml_ast import YamlDocumentSpec, YamlGuardPolicy
 from . import (
     codecov,
+    community,
     github_workflows,
     pre_commit,
     pyproject,
@@ -58,6 +59,7 @@ LOCATIONS: Mapping[str, DocumentLocations] = MappingProxyType(
         readthedocs.TARGET: readthedocs.LOCATIONS,
         renovate.TARGET: renovate.LOCATIONS,
         zensical.TARGET: zensical.LOCATIONS,
+        **{locations.target: locations for locations in community.LOCATIONS},
     }
 )
 # Every path a YAML document may be edited at, under any hook runner.

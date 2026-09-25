@@ -161,6 +161,7 @@ agents = false
 ci = false
 codecov = false
 commitizen = false
+community = false
 direnv = false
 just = false
 markdownlint = false

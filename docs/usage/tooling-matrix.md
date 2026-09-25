@@ -35,6 +35,26 @@ content = """
 
 A template cannot also ship `AGENTS.md` as a whole file under `[files]` while `--agents` is on; the two ownership models conflict and planning stops with an error.
 
+## Community Health Files
+
+`--community` (or `community = true` in your [global configuration](./configuration.md)) writes the files GitHub shows people who want to contribute. The `cli` and `lib` templates turn it on, because they are packages other people use and improve.
+
+| File | Content | Kept in sync |
+| :--- | :--- | :--- |
+| `CONTRIBUTING.md` | Setup, the checks a change passes, the hook runner, and the commit convention, from the project's tooling | Yes, as a managed block |
+| `CODE_OF_CONDUCT.md` | [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/), with the author email as the enforcement contact | No |
+| `SECURITY.md` | Asks for private reports, through GitHub's private vulnerability reporting and the author email | No |
+| `.github/ISSUE_TEMPLATE/bug_report.yml` | An issue form asking for steps to reproduce, the version, and one of the supported operating systems | No |
+| `.github/ISSUE_TEMPLATE/feature_request.yml` | An issue form asking for the problem before the solution | No |
+| `.github/ISSUE_TEMPLATE/config.yml` | Links the issue chooser to private vulnerability reporting; written only when a GitHub username is set | No |
+| `.github/pull_request_template.md` | A summary and a checklist of the checks the project can run | No |
+
+`CONTRIBUTING.md` works like the [managed AGENTS.md](#managed-agentsmd): Protostar owns only the block between its region markers, keeps it current on `protostar sync`, and shares the command list with `AGENTS.md`, so the two never disagree. Add project notes above or below the block. The other files are written once and are yours from then on: `protostar sync` never rewrites them, and a deleted one stays deleted.
+
+Without an author email, the code of conduct keeps the covenant's `[INSERT CONTACT METHOD]` placeholder so the missing contact is visible; set `author_email` in your configuration or the recipe editor to fill it in.
+
+GitHub reads a contributing guide, code of conduct, security policy, or pull request template from `.github/`, the repository root, or `docs/`. Protostar creates each at its most visible path, but when your project already has one in any of those places, it uses that file and never adds a second copy. A Markdown issue template with the same name as a form, such as `.github/ISSUE_TEMPLATE/bug_report.md`, keeps Protostar from adding the form beside it.
+
 ## Built-in Templates
 
 Built-in templates are project shapes that build on a base language footprint. They inject structural scaffolding, directories, and domain-specific dependencies into the environment manifest, and they add only the tooling configuration that defines their shape on top of each tool's casual-user defaults.

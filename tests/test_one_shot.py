@@ -16,7 +16,7 @@ from protostar.orchestrator import Orchestrator
 from protostar.preparation import ExecutionPolicy, prepare_review
 from protostar.recipe import edit_recipe, establish_recipe
 from protostar.sync_state import SyncState, serialize_state
-from protostar.workflows import AgentsSpec, HookRunner, generate_agents_md
+from protostar.workflows import GuideSpec, HookRunner, generate_agents_md
 
 
 def test_one_shot_resolves_dependencies_without_recording_protostar_state(
@@ -106,7 +106,7 @@ def test_one_shot_cli_and_agent_guidance():
     _, request = resolve_init(InitDraft(one_shot=args.one_shot), UserConfig())
     assert request.one_shot
     guide = generate_agents_md(
-        AgentsSpec("3.13", HookRunner.PREK, False, [], [], [], set(), one_shot=True)
+        GuideSpec("3.13", HookRunner.PREK, False, [], [], [], set(), one_shot=True)
     )
     assert "protostar sync" not in guide
     assert "[tool.protostar]" not in guide

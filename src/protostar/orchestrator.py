@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from .documents import community
 from .errors import (
     AggregatedDependencyError,
     ExecutionInterruptedError,
@@ -21,6 +22,7 @@ from .modules import (
     AGENTS_TARGET,
     AgentsModule,
     BootstrapModule,
+    CommunityModule,
     PreCommitModule,
     PrekModule,
     PythonCore,
@@ -30,7 +32,13 @@ from .preparation import ExecutionPolicy
 from .progress import ProgressStep, no_progress
 from .sync_state import check_one_shot_workspace, check_workspace_identity
 from .system_deps import GlobalExecutable
-from .workflows import AgentsSpec, HookRunner, generate_agents_md
+from .workflows import (
+    GuideSpec,
+    HookRunner,
+    generate_agents_md,
+    generate_contributing_md,
+    generate_pull_request_template,
+)
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -40,9 +48,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("protostar")
 
-__all__ = ["AGENTS_REGION_ID", "AGENTS_TARGET", "Orchestrator"]
+__all__ = [
+    "AGENTS_REGION_ID",
+    "AGENTS_TARGET",
+    "CONTRIBUTING_REGION_ID",
+    "Orchestrator",
+]
 
 AGENTS_REGION_ID = "agents"
+CONTRIBUTING_REGION_ID = "contributing"
 
 
 class Orchestrator:
@@ -208,7 +222,7 @@ class Orchestrator:
                     observe(
                         "tooling", (key, hashlib.sha256(command.encode()).hexdigest())
                     )
-            if mod.config_key in {"ci", "release", "just", "agents"}:
+            if mod.config_key in {"ci", "release", "just", "agents", "community"}:
                 observe("tooling", (f"wants_{mod.config_key}",))
             for key, value in manifest.ide_settings.items():
                 if before_ide.get(key) != value:
@@ -229,25 +243,35 @@ class Orchestrator:
                 description=f"Installing {runner.value} git hooks",
                 owned_files=[f".git/hooks/{kind}" for kind in sorted(hook_types)],
             )
-        if manifest.tooling.wants_agents:
+        tooling = manifest.tooling
+        guide = GuideSpec(
+            python_version=manifest.recipe.python,
+            hook_runner=tooling.hook_runner,
+            wants_just=tooling.wants_just,
+            format_commands=tooling.just_format_commands,
+            lint_commands=tooling.just_lint_commands,
+            typecheck_commands=tooling.just_typecheck_commands,
+            ci_flags=tooling.ci_flags,
+            conventional_commits=tooling.conventional_commits,
+            wants_ci=tooling.wants_ci,
+            one_shot=manifest.one_shot,
+        )
+        if tooling.wants_agents:
             producer = f"module:{AgentsModule.__name__}"
             tool = Tool.AGENTS
-            tooling = manifest.tooling
             manifest.filesystem.add_region(
-                AGENTS_TARGET,
-                generate_agents_md(
-                    AgentsSpec(
-                        python_version=manifest.recipe.python,
-                        hook_runner=tooling.hook_runner,
-                        wants_just=tooling.wants_just,
-                        format_commands=tooling.just_format_commands,
-                        lint_commands=tooling.just_lint_commands,
-                        typecheck_commands=tooling.just_typecheck_commands,
-                        ci_flags=tooling.ci_flags,
-                        one_shot=manifest.one_shot,
-                    )
-                ),
-                identity=AGENTS_REGION_ID,
+                AGENTS_TARGET, generate_agents_md(guide), identity=AGENTS_REGION_ID
+            )
+        if tooling.wants_community:
+            producer = f"module:{CommunityModule.__name__}"
+            tool = Tool.COMMUNITY
+            manifest.filesystem.add_region(
+                community.CONTRIBUTING_TARGET,
+                generate_contributing_md(guide),
+                identity=CONTRIBUTING_REGION_ID,
+            )
+            manifest.filesystem.add_file_injection(
+                community.PULL_REQUEST_TARGET, generate_pull_request_template(guide)
             )
 
         # Phase 4: Blueprint injection

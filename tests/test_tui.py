@@ -357,7 +357,7 @@ async def test_arrows_move_a_choice_highlight_and_space_chooses():
         def highlighted():
             return [b.id for b in choice.query(RadioButton) if b.has_class("-selected")]
 
-        screen.query_one("#tool-agents").focus()
+        screen.query_one("#tool-community").focus()
         await pilot.press("down")
         assert app.focused is choice
         assert highlighted() == ["none-0"]
