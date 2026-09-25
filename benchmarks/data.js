@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790373947722,
+  "lastUpdate": 1790377275876,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17209,6 +17209,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 901.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5dee6666cfb26db80a0b4c99c03b8754857d3183",
+          "message": "fix(sync): converge generated files in one run and release them when their tool is off (#341)\n\n* fix(sync): regenerate a generated file in the run that drops its region\n\nWhen a region inside a generated file (such as a template's justfile\nrecipes) stopped being declared, the generated writer skipped the whole\nfile for that run and left the region step to retract it, so a changed\ngenerated text only landed one sync later and sync --check failed once\nright after a real sync.\n\nThe writer now retracts omitted regions itself before merging: unedited\nones are removed and cut from the whole-file baseline, deleted ones are\nforgotten, and settled ones are taken or kept. A region kept with its\nedit is the user's, so it sits out the three-way merge and is appended\nafter it. Only a region still waiting for its decision holds the file.\n\n* feat(sync): release generated files whose tool is switched off\n\nTurning just or Docker off left justfile and Dockerfile behind, owned\n\nforever: their writers return early when the tool is off, the same hole\n#340 closed for structured documents.\n\nAn owned generated file that no tool generates and no declared region\ntargets is now released the way a seed is: deleted when its text matches\nthe whole-file baseline, forgotten when already deleted, and otherwise a\nretracted conflict for the whole file, whose local choice keeps it as the\nuser's and desired deletes it.\n\n* fix(sync): preserve CRLF line endings when cutting and attaching regions",
+          "timestamp": "2026-09-25T15:59:10-07:00",
+          "tree_id": "e24798272ac66d2a29cb7238f90a4372ac1527f5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5dee6666cfb26db80a0b4c99c03b8754857d3183"
+        },
+        "date": 1790377274027,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 187.17,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 681.78,
             "unit": "ms"
           }
         ]
