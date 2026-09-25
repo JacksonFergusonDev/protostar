@@ -44,11 +44,6 @@ def parse_args() -> argparse.Namespace:
         default=REPO_ROOT / "benchmark-gh.json",
         help="Output JSON file.",
     )
-    parser.add_argument(
-        "--gate-mode",
-        action="store_true",
-        help="Extract only the first result under a generic name for regression testing.",
-    )
     args = parser.parse_args()
     if (
         not args.input.is_absolute()
@@ -59,12 +54,11 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def process_benchmarks(input_file: Path, gate_mode: bool) -> list[BenchmarkOutput]:
+def process_benchmarks(input_file: Path) -> list[BenchmarkOutput]:
     """Process the Hyperfine benchmark results into the target schema.
 
     Args:
         input_file: Path to the Hyperfine JSON output file.
-        gate_mode: If True, returns only the first result mapped to a generic name.
 
     Returns:
         A list of dictionaries conforming to the github-action-benchmark schema.
@@ -76,17 +70,6 @@ def process_benchmarks(input_file: Path, gate_mode: bool) -> list[BenchmarkOutpu
     converted: list[BenchmarkOutput] = []
 
     if not results:
-        return converted
-
-    if gate_mode:
-        mean_ms: float = results[0].get("mean", 0.0) * 1000
-        converted.append(
-            {
-                "name": "Protostar Initialization Latency",
-                "unit": "ms",
-                "value": round(mean_ms, 2),
-            }
-        )
         return converted
 
     for result in results:
@@ -123,7 +106,7 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        converted_data = process_benchmarks(args.input, args.gate_mode)
+        converted_data = process_benchmarks(args.input)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}", file=sys.stderr)
         sys.exit(1)
