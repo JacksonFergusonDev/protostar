@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790366662922,
+  "lastUpdate": 1790369436524,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17141,6 +17141,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 845.35,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9c299892d7dafaf00ded44aa2eda72c1f89d6ad1",
+          "message": "feat(community): scaffold community health files with --community (#339)\n\n* feat(community): scaffold community health files with --community\n\nAdd a Community module that writes the files GitHub shows contributors:\nCONTRIBUTING.md, CODE_OF_CONDUCT.md (Contributor Covenant 2.1), SECURITY.md,\nbug report and feature request issue forms, the issue chooser config, and a\npull request template. The cli and lib templates enable it.\n\nCONTRIBUTING.md is a managed region rendered from the aggregated tooling,\nlike AGENTS.md, and shares its command list through a GuideSpec (formerly\nAgentsSpec). The pull request template's checklist is rendered from the same\nspec. The metadata-only files are seeds.\n\nSeeds and regions now resolve their document locations, so an existing\n.github/CONTRIBUTING.md or docs/CODE_OF_CONDUCT.md is adopted instead of\nduplicated at the root, and a renamed file keeps its ownership. Commitizen\nnow records the Conventional Commits convention, which both guides state.\n\n* fix(community): drop case variants of the pull request template path\n\nOn case-insensitive filesystems (macOS, Windows), `.github/PULL_REQUEST_TEMPLATE.md`\nnames the same file as the `.github/pull_request_template.md` Protostar writes,\nso every later run reported the scaffolded template as its own duplicate and\ncli/lib reviews never settled. List only the lowercase spelling, and guard every\ncommunity document against locations that differ only by case.",
+          "timestamp": "2026-09-25T13:48:29-07:00",
+          "tree_id": "28a61ae0c4106b44d3966b6eb5e18bab449632a7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9c299892d7dafaf00ded44aa2eda72c1f89d6ad1"
+        },
+        "date": 1790369434983,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 182.7,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 687.52,
             "unit": "ms"
           }
         ]
