@@ -48,6 +48,19 @@ identity can update the project. Changing template identity, switching to
 tooling-only mode, or retargeting an alias is not a supported lifecycle update.
 Missing sources fail visibly rather than falling back to cached content.
 
+## Keep Protostar versions in step
+
+Built-in output comes from the installed Protostar, so every contributor needs
+a release at least as new as the one that last wrote `protostar.lock`. The lock
+records that release as `producer_version`. When the installed Protostar is
+older, `init`, `status`, `diff`, and `sync` (including `--check`) refuse to run
+instead of treating the older output as an update. Upgrade Protostar, for
+example with `uv tool upgrade protostar`, and run the command again. In
+`--json` mode, the error carries `recorded_version` and `installed_version`.
+
+Pin the same release in CI, for example with `uvx protostar@0.9.0 sync --check`,
+so a new release doesn't change the check before the project is synced with it.
+
 ## Upgrade a repository template
 
 `status` starts with the template's ref and what its repository offers:

@@ -5,7 +5,11 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from protostar.errors import ConfigurationError, UnsupportedFilesystemNodeError
+from protostar.errors import (
+    ConfigurationError,
+    OutdatedProtostarError,
+    UnsupportedFilesystemNodeError,
+)
 from protostar.intent import (
     DependencyGroup,
     TemplateOrigin,
@@ -22,6 +26,7 @@ from protostar.sync_state import (
     PinProvenance,
     RegionState,
     SyncState,
+    check_producer_version,
     check_template_identity,
     check_workspace_identity,
     decode_toml_baseline,
@@ -331,6 +336,38 @@ def test_another_revision_is_allowed_but_another_source_is_rejected():
     with pytest.raises(ConfigurationError):
         check_template_identity(SyncState("0.9.0"), REF)
     check_template_identity(SyncState("0.9.0"), None)
+
+
+@pytest.mark.parametrize(
+    ("recorded", "installed", "refused"),
+    [
+        ("0.9.0", "0.9.0", False),
+        ("0.9.0", "0.10.0", False),
+        ("0.10.0", "0.9.0", True),
+        ("0.9.1", "0.9.1.dev3", True),
+        ("0.9.0", "unknown", False),
+        ("x", "0.9.0", False),
+    ],
+)
+def test_only_an_older_installed_protostar_is_refused(recorded, installed, refused):
+    state = SyncState(recorded)
+    if not refused:
+        check_producer_version(state, installed)
+        return
+    with pytest.raises(OutdatedProtostarError) as caught:
+        check_producer_version(state, installed)
+    assert caught.value.details() == {
+        "recorded_version": recorded,
+        "installed_version": installed,
+    }
+    assert caught.value.hint
+
+
+def test_workspace_state_from_a_newer_protostar_is_refused(tmp_path):
+    state = replace(sample_state(), producer_version="999.0")
+    (tmp_path / "protostar.lock").write_text(serialize_state(state))
+    with pytest.raises(OutdatedProtostarError, match=r"999\.0"):
+        read_workspace_state(tmp_path)
 
 
 def test_workspace_state_is_read_without_following_links(tmp_path):

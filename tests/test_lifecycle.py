@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import protostar
 from protostar.cli import main, schema, ui
 from protostar.cli.reviews import review_payload
 from protostar.config import TemplateSource, UserConfig
@@ -213,6 +214,36 @@ def test_sync_json_lists_missing_template_variables(project, monkeypatch, capsys
     error = json.loads(capsys.readouterr().out)["error"]
     assert error["type"] == "MissingTemplateVariablesError"
     assert error["missing_variables"] == ["REGION"]
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [["sync", "--check"], ["sync"], ["status"], ["diff"], ["init", "--force-merge"]],
+)
+def test_an_older_protostar_refuses_a_newer_lock(
+    project, argv, monkeypatch, capsys, mocker
+):
+    mocker.patch("protostar.config.UserConfig.load", return_value=UserConfig())
+    lock = Path("protostar.lock")
+    newer = lock.read_text().replace(
+        f'producer_version = "{protostar.__version__}"', 'producer_version = "999.0"'
+    )
+    lock.write_text(newer)
+    project.write_text(source_text("older"))
+    before = snapshot(Path.cwd())
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", *argv, "--json"])
+
+    with pytest.raises(SystemExit) as caught:
+        main()
+
+    assert caught.value.code != 0
+    error = json.loads(capsys.readouterr().out)["error"]
+    assert error["type"] == "OutdatedProtostarError"
+    assert error["recorded_version"] == "999.0"
+    assert error["installed_version"] == protostar.__version__
+    assert "999.0 or newer" in error["hint"]
+    assert snapshot(Path.cwd()) == before
 
 
 @pytest.mark.parametrize("archive_kind", ["zip", "tar"])

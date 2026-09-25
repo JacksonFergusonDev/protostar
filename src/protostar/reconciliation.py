@@ -83,6 +83,7 @@ from .sync_state import (
     FileState,
     RegionState,
     SyncState,
+    check_producer_version,
     check_template_identity,
     decode_toml_baseline,
     deserialize_state,
@@ -1497,6 +1498,7 @@ class Reconciliation:
             )
             if self._state_bytes is not None:
                 state = deserialize_state(self._state_bytes.decode("utf-8"))
+                check_producer_version(state, self.candidate_state.producer_version)
                 check_template_identity(state, self.manifest.template_reference)
                 self._committed = state
                 reference = self.manifest.template_reference
