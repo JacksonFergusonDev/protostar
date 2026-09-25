@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790369436524,
+  "lastUpdate": 1790373947722,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17175,6 +17175,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 687.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93008a4500d11e79d9266d96c8b8ac3235a18e93",
+          "message": "feat(sync): retract structured documents nothing declares any more (#340)\n\n* feat(jsonc): retract owned keys under a complete declaration\n\nreconcile_jsonc takes complete, like the TOML and YAML engines' policies,\nand deletes the keys the merge retracted instead of only setting values.\n\n* feat(sync): retract structured documents nothing declares any more\n\nTurning a tool off left its structured documents behind: the writers only\nvisit documents something declares, so zensical.toml, codecov.yml,\n.readthedocs.yaml, the workflows, the hook configuration, Renovate's, and\nthe VS Code settings kept their owned content and ownership records.\n\nEach owned TOML, YAML, or JSONC record no declared document reads is now\nreconciled against an empty complete declaration under its own spec, with\nseeds and retained paths included and guards off. Unedited units leave,\nedited ones become retracted conflicts, and foreign keys stay. A file left\nempty is deleted, one left with the user's keys becomes theirs, and one\nalready deleted is forgotten, with its hook pins.",
+          "timestamp": "2026-09-25T15:03:06-07:00",
+          "tree_id": "b9aecd6418f911935feca262e46b2fc1b30f1292",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/93008a4500d11e79d9266d96c8b8ac3235a18e93"
+        },
+        "date": 1790373945944,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 255.33,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 901.2,
             "unit": "ms"
           }
         ]
