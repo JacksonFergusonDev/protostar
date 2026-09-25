@@ -415,6 +415,7 @@ def prepare_review(
     ):
         # Migrations move and retire files before any writer reads them.
         decisions._migrate()
+        decisions._release_undeclared_seeds()
         decisions._settle_retired()
         decisions._create_directories()
         decisions._write_injected_files()

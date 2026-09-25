@@ -1,12 +1,13 @@
 """pyproject.toml policy: merge spec, layout, personal seeds, and group includes."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 
 import tomlkit
 import tomlkit.items
 
 from ..errors import ConfigurationError
 from ..intent import (
+    DependencyGroup,
     DependencyInclude,
     ResolverFootprint,
     StructuredContribution,
@@ -94,6 +95,41 @@ def declare_contribution(
         else None
     )
     return StructuredContribution(producer, content, resolver_footprint=footprint)
+
+
+def remove_requirements(
+    original: str, group: DependencyGroup, entries: Collection[str]
+) -> str:
+    """Returns the document without the given requirements in one group.
+
+    Args:
+        original: The pyproject.toml text.
+        group: The group whose array lists the requirements.
+        entries: The exact requirement strings to remove.
+
+    Returns:
+        The edited text, comments and layout otherwise intact.
+
+    Raises:
+        ConfigurationError: If the document or its dependency tables are invalid.
+    """
+    try:
+        doc = tomlkit.parse(original)
+    except tomlkit.exceptions.ParseError as e:
+        raise ConfigurationError(
+            "Invalid dependency configuration.",
+            hint="Correct pyproject.toml before removing requirements.",
+        ) from e
+    table = doc.get(
+        "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
+    )
+    array = table.get("dependencies" if group is DependencyGroup.MAIN else group.value)
+    if not isinstance(array, tomlkit.items.Array):
+        return original
+    for index in reversed(range(len(array))):
+        if isinstance(array[index], str) and str(array[index]) in entries:
+            del array[index]
+    return tomlkit.dumps(doc)
 
 
 def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:
