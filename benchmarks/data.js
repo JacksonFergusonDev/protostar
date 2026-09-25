@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790364078262,
+  "lastUpdate": 1790366662922,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17107,6 +17107,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 790.09,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "8cdc4d750ae8ddc257966198be27e2af06b62c44",
+          "message": "refactor(core): decouple executor in lifecycle and export dependencies in schema\n\nDefer SystemExecutor in PreparedProject.apply() to enforce separation\nbetween planning/review preparation and execution.\n\nDefer heavy export schema imports (TemplateBlueprint, TOOLING_MODULES, JSON)\ninside handler functions so CLI_API_VERSION access does not trigger tooling\nloads.\n\nGate typing-only imports behind TYPE_CHECKING in launch.py and ui.py.",
+          "timestamp": "2026-09-25T12:58:17-07:00",
+          "tree_id": "2faabfe9053ede1ba2df010633d6c841c33c8a39",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/8cdc4d750ae8ddc257966198be27e2af06b62c44"
+        },
+        "date": 1790366662016,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 240.75,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 845.35,
             "unit": "ms"
           }
         ]
