@@ -3,6 +3,7 @@
 import hashlib
 import json
 import tomllib
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -54,16 +55,15 @@ def test_builtin_reference_never_uses_installation_path(tmp_path):
     assert blueprint.reference.locator == "api"
 
 
-def test_remote_reference_never_uses_extraction_path(tmp_path, mocker):
-    source = tmp_path / "download.toml"
-    source.write_bytes(b'name = "remote"')
-    mocker.patch("protostar.config.resolve_remote_template", return_value=source)
+def test_remote_reference_records_the_url_and_digest(forge):
     url = "https://example.test/template.toml"
+    forge.plain[url] = b'name = "remote"'
     blueprint = TemplateSource.load(url).render({})
     assert blueprint.reference is not None
     assert blueprint.reference.origin == TemplateOrigin.REMOTE
     assert blueprint.reference.locator == url
-    assert blueprint.reference.digest == hashlib.sha256(source.read_bytes()).hexdigest()
+    assert blueprint.reference.digest == hashlib.sha256(b'name = "remote"').hexdigest()
+    assert (blueprint.reference.ref, blueprint.reference.revision) == (None, None)
 
 
 def test_planning_preserves_reference_and_region_identity_without_side_effects(
@@ -342,22 +342,35 @@ def test_equivalent_path_spellings_share_policy_and_collision_checks():
         )
 
 
-def test_remote_equivalent_locators_and_immutable_revision(tmp_path, mocker):
-    source = tmp_path / "remote.toml"
-    source.write_text('name = "remote"')
-    mocker.patch("protostar.config.resolve_remote_template", return_value=source)
-    commit = "a" * 40
+def test_remote_equivalent_locators_and_immutable_revision(forge):
+    repo = forge.repository("https://github.com/user/repo")
+    commit = repo.commit({"template.toml": 'name = "remote"'}, tag="v1.0.0")
     blob = TemplateSource.load(
         f"https://github.com/user/repo/blob/{commit}/template.toml"
-    ).render({})
+    ).reference
     raw = TemplateSource.load(
         f"https://raw.githubusercontent.com/user/repo/{commit}/template.toml"
-    ).render({})
-    assert blob.reference is not None
-    assert raw.reference is not None
-    assert blob.reference == raw.reference
-    assert blob.reference.source_revision == commit
-    assert blob.reference.identity == raw.reference.identity
+    ).reference
+    assert blob == raw
+    assert (blob.locator, blob.path) == (
+        "https://github.com/user/repo",
+        "template.toml",
+    )
+    assert (blob.ref, blob.revision) == (commit, commit)
+
+
+def test_every_ref_of_a_repository_shares_one_identity(forge):
+    repo = forge.repository("https://github.com/user/repo")
+    repo.commit({"protostar.toml": "version = '1'"}, tag="v1.0.0")
+    repo.commit({"protostar.toml": "version = '2'"}, tag="v2.0.0", branch="main")
+    first = TemplateSource.load("https://github.com/user/repo/tree/v1.0.0").reference
+    second = TemplateSource.load("https://github.com/user/repo").reference
+    main = TemplateSource.load("https://github.com/user/repo/tree/main").reference
+    assert (first.ref, second.ref, main.ref) == ("v1.0.0", "v2.0.0", "main")
+    assert first.digest != second.digest
+    assert first.identity == second.identity == main.identity
+    nested = replace(first, path="templates/api")
+    assert nested.identity != first.identity
 
 
 @pytest.mark.parametrize(
@@ -367,11 +380,10 @@ def test_remote_equivalent_locators_and_immutable_revision(tmp_path, mocker):
         "https://example.test/template.toml?token=secret",
     ],
 )
-def test_remote_credentials_never_enter_provenance(url, mocker):
-    fetch = mocker.patch("protostar.config.resolve_remote_template")
+def test_remote_credentials_never_enter_provenance(url, forge):
     with pytest.raises(ConfigurationError, match="credentials"):
         TemplateSource.load(url)
-    fetch.assert_not_called()
+    assert forge.requests == []
 
 
 def test_ancestor_workspace_rejected_before_mutation_or_resolution(

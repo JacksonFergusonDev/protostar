@@ -6,6 +6,7 @@
     "api_version",
     "status",
     "pending",
+    "template",
     "review",
     "diffs"
   ],
@@ -22,6 +23,56 @@
     },
     "check_passed": {
       "type": "boolean"
+    },
+    "template": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                null,
+                "tag",
+                "branch",
+                "commit"
+              ]
+            },
+            "newer": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "moved": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reachable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ref",
+            "revision",
+            "kind",
+            "newer",
+            "moved",
+            "reachable"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "review": {
       "type": "object",

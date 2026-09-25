@@ -35,7 +35,11 @@ def edit_recipe(
 
 
 def edit_variables(
-    draft: InitDraft, config: UserConfig, flagged: Collection[str] = ()
+    draft: InitDraft,
+    config: UserConfig,
+    flagged: Collection[str] = (),
+    *,
+    command: str = "init",
 ) -> InitDraft | None:
     """Collect a template's variables, or return None on cancellation.
 
@@ -44,11 +48,14 @@ def edit_variables(
         config: The user's configuration.
         flagged: Variables whose values the secret guard flagged; each must be
             changed or confirmed as not a secret.
+        command: The command the screen collects them for.
     """
     from .app import DecisionApp
     from .recipe.variables import VariablesScreen
 
-    return DecisionApp(VariablesScreen(draft, config, flagged)).decide()
+    return DecisionApp(
+        VariablesScreen(draft, config, flagged, command=command)
+    ).decide()
 
 
 def review_changes(draft: InitDraft, config: UserConfig) -> InitDecision | None:

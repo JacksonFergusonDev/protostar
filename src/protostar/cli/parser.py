@@ -364,6 +364,27 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="SELECTOR=CHOICE",
         help="Settle conflicts by id, or every conflict in a file by path. CHOICE is local (keep yours), desired (take the update), or both (text lines only). Repeatable.",
     )
+    sync_parser.add_argument(
+        "--to",
+        metavar="REF",
+        help="Move a repository template to a tag, branch, or full commit SHA, or to the newest release with 'latest'. Records the ref in pyproject.toml.",
+    )
+    sync_parser.add_argument(
+        "--var",
+        action="append",
+        default=[],
+        dest="variables",
+        metavar="NAME=VALUE",
+        help="Set a template variable, such as one a new template version adds; repeat for each. Values are saved to pyproject.toml, so never pass secrets.",
+    )
+    sync_parser.add_argument(
+        "--allow-secret",
+        action="append",
+        default=[],
+        dest="allowed_secrets",
+        metavar="NAME",
+        help="Keep a variable's value even though it looks like a credential; repeat for each.",
+    )
     sync_modes = sync_parser.add_mutually_exclusive_group()
     sync_modes.add_argument(
         "--dry-run",

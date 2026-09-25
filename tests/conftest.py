@@ -144,3 +144,145 @@ class RecordedProgress:
 def progress() -> RecordedProgress:
     """Provides a progress hook that records the engine's execution steps."""
     return RecordedProgress()
+
+
+class FakeRepository:
+    """One in-memory forge repository: commits, tags, and branches."""
+
+    def __init__(self, locator: str, default_branch: str = "main") -> None:
+        self.locator = locator
+        self.default_branch = default_branch
+        self.commits: dict[str, dict[str, bytes]] = {}
+        self.tags: dict[str, str] = {}
+        self.branches: dict[str, str] = {}
+
+    def commit(
+        self,
+        files: dict[str, str | bytes],
+        *,
+        tag: str | None = None,
+        branch: str | None = None,
+    ) -> str:
+        """Records a commit of ``files``, optionally tagging or advancing a branch."""
+        import hashlib
+
+        revision = hashlib.sha1(
+            f"{self.locator}:{len(self.commits)}".encode()
+        ).hexdigest()
+        self.commits[revision] = {
+            path: content.encode() if isinstance(content, str) else content
+            for path, content in files.items()
+        }
+        if tag is not None:
+            self.tags[tag] = revision
+        if branch is not None:
+            self.branches[branch] = revision
+        return revision
+
+    def advertisement(self) -> bytes:
+        """Returns the Git smart-HTTP ref advertisement for this repository."""
+
+        def line(text: str) -> bytes:
+            data = text.encode()
+            return f"{len(data) + 4:04x}".encode() + data
+
+        refs = [
+            *(
+                (revision, f"refs/heads/{name}")
+                for name, revision in self.branches.items()
+            ),
+            *((revision, f"refs/tags/{name}") for name, revision in self.tags.items()),
+        ]
+        head = self.branches.get(self.default_branch, "0" * 40)
+        capabilities = f"symref=HEAD:refs/heads/{self.default_branch} agent=fake"
+        body = line("# service=git-upload-pack\n") + b"0000"
+        body += line(f"{head} HEAD\0{capabilities}\n")
+        for revision, name in refs:
+            body += line(f"{revision} {name}\n")
+        return body + b"0000"
+
+    def archive(self, revision: str, *, tar: bool) -> bytes:
+        """Returns the repository at ``revision`` as a forge would archive it."""
+        import io
+        import tarfile
+        import zipfile
+
+        top = f"{self.locator.rsplit('/', 1)[1]}-{revision}"
+        buffer = io.BytesIO()
+        if tar:
+            with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+                for path, content in self.commits[revision].items():
+                    info = tarfile.TarInfo(f"{top}/{path}")
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+        else:
+            with zipfile.ZipFile(buffer, "w") as archive:
+                archive.writestr(f"{top}/", "")
+                for path, content in self.commits[revision].items():
+                    archive.writestr(f"{top}/{path}", content)
+        return buffer.getvalue()
+
+
+class FakeForge:
+    """Serves repositories over the URLs Protostar requests, entirely in memory."""
+
+    def __init__(self) -> None:
+        self.repositories: dict[str, FakeRepository] = {}
+        self.plain: dict[str, bytes] = {}
+        self.requests: list[str] = []
+        self.offline = False
+
+    def repository(self, locator: str, default_branch: str = "main") -> FakeRepository:
+        """Creates the repository served at ``locator``."""
+        repository = FakeRepository(locator, default_branch)
+        self.repositories[locator] = repository
+        return repository
+
+    def respond(self, url: str) -> bytes:
+        """Returns the body for ``url`` or raises the error a server would."""
+        from urllib.error import HTTPError, URLError
+
+        self.requests.append(url)
+        if self.offline:
+            raise URLError("offline")
+        if url in self.plain:
+            return self.plain[url]
+        for locator, repository in self.repositories.items():
+            owner_repo = locator.split("/", 3)[3]
+            raw_prefix = f"https://raw.githubusercontent.com/{owner_repo}/"
+            if not url.startswith((f"{locator}/", f"{locator}.git/", raw_prefix)):
+                continue
+            if url.endswith("/info/refs?service=git-upload-pack"):
+                return repository.advertisement()
+            for revision, files in repository.commits.items():
+                marker = f"{revision}/"
+                if url.endswith((f"{revision}.zip", f"-{revision}.zip")):
+                    return repository.archive(revision, tar=False)
+                if url.endswith(f"{revision}.tar.gz"):
+                    return repository.archive(revision, tar=True)
+                if marker in url:
+                    path = url.split(marker, 1)[1]
+                    if path in files:
+                        return files[path]
+        raise HTTPError(url, 404, "Not Found", {}, None)  # type: ignore[arg-type]
+
+    def open(self, url: str, timeout: float | None = None):
+        """Mimics ``OpenerDirector.open`` for a context-managed response."""
+        import io
+        from contextlib import closing
+
+        body = self.respond(url)
+
+        class Response(io.BytesIO):
+            def read(self, size: int | None = -1) -> bytes:
+                return super().read(-1 if size is None else size)
+
+        return closing(Response(body))
+
+
+@pytest.fixture
+def forge(mocker) -> FakeForge:
+    """Routes every template download and ref listing to an in-memory forge."""
+    fake = FakeForge()
+    mocker.patch("protostar.network._get_opener", return_value=fake)
+    return fake

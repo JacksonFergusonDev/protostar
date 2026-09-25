@@ -271,6 +271,7 @@ def emit_capabilities(
 def review_schema() -> dict[str, Any]:
     """Returns the schema for shipped status/diff JSON review envelopes."""
     from protostar.merge import ConflictReason, ResolutionChoice
+    from protostar.network import RefKind
     from protostar.recipe import SelectionLayer, Tool
 
     string = {"type": "string"}
@@ -354,17 +355,34 @@ def review_schema() -> dict[str, Any]:
             ),
         }
     )
+    # A repository template's applied ref and what its repository offers.
+    template = {
+        "oneOf": [
+            record(
+                {
+                    "ref": string,
+                    "revision": string,
+                    "kind": {"enum": [None, *[kind.value for kind in RefKind]]},
+                    "newer": nullable_string,
+                    "moved": nullable_string,
+                    "reachable": boolean,
+                }
+            ),
+            {"type": "null"},
+        ]
+    }
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Protostar project review v1",
         "type": "object",
-        "required": ["api_version", "status", "pending", "review", "diffs"],
+        "required": ["api_version", "status", "pending", "template", "review", "diffs"],
         "additionalProperties": False,
         "properties": {
             "api_version": {"const": CLI_API_VERSION},
             "status": {"const": "reviewed"},
             "pending": {"type": "boolean"},
             "check_passed": {"type": "boolean"},
+            "template": template,
             "review": review,
             "diffs": {
                 "type": "array",
@@ -389,11 +407,12 @@ def application_schema() -> dict[str, Any]:
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Protostar project application v1",
         "type": "object",
-        "required": ["api_version", "status", "review", "result"],
+        "required": ["api_version", "status", "template", "review", "result"],
         "additionalProperties": False,
         "properties": {
             "api_version": {"const": CLI_API_VERSION},
             "status": {"enum": ["success", "partial"]},
+            "template": review_schema()["properties"]["template"],
             "review": review_schema()["properties"]["review"],
             "result": {
                 "type": "object",

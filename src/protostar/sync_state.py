@@ -246,9 +246,20 @@ class SyncState:
                 raise _invalid("unsupported template origin.")
             _text(ref.locator, "template locator")
             _digest(ref.digest)
-            for value in (ref.display_name, ref.version, ref.source_revision):
+            for value in (ref.display_name, ref.version, ref.ref):
                 if value is not None:
                     _text(value, "template provenance")
+            if type(ref.path) is not str:
+                raise _invalid("template path must be a string.")
+            if ref.revision is not None and not re.fullmatch(
+                r"[0-9a-f]{40}|[0-9a-f]{64}", ref.revision
+            ):
+                raise _invalid("template revision must be a full commit SHA.")
+            if (ref.ref is None) != (ref.revision is None) or (
+                ref.origin is not TemplateOrigin.REMOTE
+                and (ref.ref is not None or ref.path)
+            ):
+                raise _invalid("only a remote template records a ref and its commit.")
             if ref.origin is TemplateOrigin.BUILT_IN and (
                 PurePosixPath(ref.locator).is_absolute()
                 or PureWindowsPath(ref.locator).drive
@@ -427,16 +438,21 @@ def deserialize_state(content: str) -> SyncState:
             ref = _record(
                 root["template"],
                 {"origin", "locator", "digest"},
-                {"display_name", "version", "source_revision"},
+                {"display_name", "version", "path", "ref", "revision"},
+            )
+            display_name, declared, ref_name, revision = (
+                _text(ref[key], key) if key in ref else None
+                for key in ("display_name", "version", "ref", "revision")
             )
             template = TemplateReference(
                 TemplateOrigin(_text(ref["origin"], "template origin")),
                 _text(ref["locator"], "template locator"),
                 _text(ref["digest"], "template digest"),
-                *(
-                    _text(ref[key], key) if key in ref else None
-                    for key in ("display_name", "version", "source_revision")
-                ),
+                display_name,
+                declared,
+                _text(ref["path"], "template path") if "path" in ref else "",
+                ref_name,
+                revision,
             )
         files = []
         for item in _records(root.get("files", [])):
@@ -526,7 +542,7 @@ def serialize_state(state: SyncState) -> str:
         data["template"] = {
             key: value
             for key, value in state.template.to_dict().items()
-            if value is not None
+            if value not in (None, "")
         }
     files: list[dict[str, object]] = []
     for record in sorted(state.files, key=lambda item: item.path):

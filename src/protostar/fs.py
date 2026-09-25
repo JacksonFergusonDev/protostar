@@ -13,9 +13,6 @@ __all__ = [
     "ArchiveFormat",
     "atomic_write_bytes",
     "atomic_write_text",
-    "safe_extract_archive",
-    "safe_extract_tar",
-    "safe_extract_zip",
 ]
 
 
@@ -138,99 +135,3 @@ def atomic_write_text(path: Path, content: str, encoding: str = "utf-8") -> None
     except UnicodeError as e:
         raise FileSystemError("write file", str(path), e) from e
     atomic_write_bytes(path, payload)
-
-
-def safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
-    """Safely extracts a zip archive, preventing path traversal vulnerabilities (Zip Slip).
-
-    Ensures that every member in the archive resolves to a path strictly within
-    the target directory before extraction.
-
-    Args:
-        zip_path: Path to the .zip archive.
-        target_dir: The directory where the archive should be extracted.
-
-    Raises:
-        SecurityViolationError: If any archive member attempts path traversal.
-    """
-    import zipfile
-
-    from .errors import SecurityViolationError
-
-    resolved_target_dir = target_dir.resolve()
-
-    with zipfile.ZipFile(zip_path, "r") as archive:
-        for member in archive.namelist():
-            # Create a path object for the extracted destination
-            member_path = (target_dir / member).resolve()
-
-            # Ensure the resolved path is strictly within the target directory
-            if not member_path.is_relative_to(resolved_target_dir):
-                raise SecurityViolationError(
-                    f"SECURITY VIOLATION: Zip archive member attempted path traversal outside target directory: {member}"
-                )
-
-        # If all members are safe, extract all
-        archive.extractall(path=target_dir)
-
-
-def safe_extract_tar(tar_path: Path, target_dir: Path) -> None:
-    """Safely extracts a tar archive, preventing path traversal vulnerabilities (Tar Slip).
-
-    Args:
-        tar_path: Path to the .tar, .tar.gz, .tar.bz2, or .tar.xz archive.
-        target_dir: The directory where the archive should be extracted.
-
-    Raises:
-        SecurityViolationError: If any archive member attempts path traversal.
-    """
-    import tarfile
-    from collections.abc import Iterator
-
-    from .errors import SecurityViolationError
-
-    resolved_target_dir = target_dir.resolve()
-
-    def _safe_members(archive_obj: tarfile.TarFile) -> Iterator[tarfile.TarInfo]:
-        for member in archive_obj:
-            member_path = (target_dir / member.name).resolve()
-            if not member_path.is_relative_to(resolved_target_dir):
-                raise SecurityViolationError(
-                    f"SECURITY VIOLATION: Tar archive member attempted path traversal outside target directory: {member.name}"
-                )
-            yield member
-
-    with tarfile.open(tar_path, "r:*") as archive:
-        archive.extractall(
-            path=target_dir, members=_safe_members(archive), filter="data"
-        )
-
-
-def safe_extract_archive(
-    archive_path: Path,
-    target_dir: Path,
-    archive_format: ArchiveFormat | None = None,
-) -> None:
-    """Safely extracts an archive file based on format detection or explicit specification.
-
-    Args:
-        archive_path: Path to the archive on disk.
-        target_dir: The directory where the archive should be extracted.
-        archive_format: Optional explicit ArchiveFormat.
-
-    Raises:
-        SecurityViolationError: If any member attempts path traversal.
-        TemplateResolutionError: If format cannot be determined or is unsupported.
-    """
-    from .errors import TemplateResolutionError
-
-    fmt = archive_format or ArchiveFormat.from_path(archive_path)
-    if fmt == ArchiveFormat.ZIP:
-        safe_extract_zip(archive_path, target_dir)
-    elif fmt is not None and fmt.is_tar:
-        safe_extract_tar(archive_path, target_dir)
-    else:
-        raise TemplateResolutionError(
-            str(archive_path),
-            f"Unsupported or unrecognized archive format for '{archive_path.name}'.",
-        )

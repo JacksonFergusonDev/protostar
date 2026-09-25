@@ -27,7 +27,8 @@ In a project that had no recipe, the Python version, author, and year come from 
 `[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.variables]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
 
 The schema-v1 recipe captures the resolved template origin and locator (or explicit
-`mode = "tooling-only"`), Python version, Docker selection, IDE, original tooling
+`mode = "tooling-only"`), and for a repository template its `path` inside the
+repository and the `ref` it follows (see [template versions](../usage/templates.md#template-versions)), Python version, Docker selection, IDE, original tooling
 fallbacks, built-in rendering context, template variable values, and non-secret
 project metadata. Template
 aliases are resolved when enrolled; the recipe records their exact source, not the

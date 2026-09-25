@@ -174,7 +174,13 @@ The schema checks structure only. `protostar check-template <file> --json` also 
 ## Project review envelopes
 
 `protostar status --json` and `protostar diff --json` return the same deterministic
-review envelope with `status: "reviewed"`, `pending`, `review`, and accepted `diffs`.
+review envelope with `status: "reviewed"`, `pending`, `template`, `review`, and
+accepted `diffs`. For a repository template, `template` holds the applied `ref` and
+`revision` (commit), the ref's `kind` (`tag`, `branch`, or `commit`, or `null` when
+the repository no longer has it), the `newer` release when one exists, the commit a
+`moved` tag or branch names now, and whether the repository was `reachable`. It is
+`null` for built-in, local, and plain-URL templates. A newer release is not pending
+work: move to it with `sync --to <ref>`.
 Discover its JSON Schema through `protostar help status --json` in
 `capabilities.review_schema`. The generated schema is included below.
 
@@ -221,7 +227,8 @@ example exits `1` without applying anything:
 --8<-- "agent_payload_check.json"
 ```
 
-`sync --json` returns `status: "success"` or `"partial"`, `review`, and `result`.
+`sync --json` returns `status: "success"` or `"partial"`, `template`, `review`, and
+`result`.
 Partial application exits `1` after committing safe updates; fatal failures use
 the error envelope with rollback context when available. Discover the application
 schema through `protostar help sync --json` in `capabilities.application_schema`.

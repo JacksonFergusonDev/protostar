@@ -57,7 +57,11 @@ from protostar.modules import (
     BootstrapModule,
 )
 from protostar.secret_guard import credential_named
-from protostar.sync_state import check_one_shot_workspace, check_workspace_identity
+from protostar.sync_state import (
+    check_one_shot_workspace,
+    check_workspace_identity,
+    read_workspace_state,
+)
 from protostar.system import is_interactive
 
 logger = logging.getLogger("protostar")
@@ -142,7 +146,11 @@ def handle_init(args: argparse.Namespace) -> None:
     )
     source: TemplateSource | None = None
     if not override_target and existing_recipe and existing_recipe.source:
-        source = existing_recipe.source.acquire(Path.cwd())
+        # A remote template stays on the commit the ledger records.
+        state = read_workspace_state(Path.cwd())
+        source = existing_recipe.source.acquire(
+            Path.cwd(), state.template if state else None
+        )
         is_external = existing_recipe.source.origin is not TemplateOrigin.BUILT_IN
         is_trusted = not is_external
     elif override_target:
@@ -258,7 +266,11 @@ def handle_init(args: argparse.Namespace) -> None:
 
 
 def _edit_variables(
-    draft: InitDraft, config: UserConfig, flagged: tuple[str, ...] = ()
+    draft: InitDraft,
+    config: UserConfig,
+    flagged: tuple[str, ...] = (),
+    *,
+    command: str = "init",
 ) -> InitDraft:
     """Opens the variables screen, raising if the user cancels it.
 
@@ -266,11 +278,12 @@ def _edit_variables(
         draft: The draft whose variables to collect.
         config: The user's configuration.
         flagged: Variables whose values the secret guard flagged.
+        command: The command the screen collects them for.
 
     Raises:
         ExecutionAbortedError: If the user cancels the screen.
     """
-    edited = edit_variables(draft, config, flagged)
+    edited = edit_variables(draft, config, flagged, command=command)
     if edited is None:
         raise ExecutionAbortedError("Variable entry cancelled by user.")
     return edited

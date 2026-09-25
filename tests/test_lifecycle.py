@@ -218,7 +218,7 @@ def test_remote_archives_are_in_memory_and_reject_unsafe_members(
     import zipfile
 
     from protostar.errors import SecurityViolationError
-    from protostar.network import acquire_inspection_source
+    from protostar.network import RemoteSource, acquire_remote
 
     def archive_bytes(name):
         output = io.BytesIO()
@@ -244,12 +244,13 @@ def test_remote_archives_are_in_memory_and_reject_unsafe_members(
     mocker.patch(
         "tempfile.TemporaryDirectory", side_effect=AssertionError("disk acquisition")
     )
-    acquired = acquire_inspection_source("https://example.com/source." + archive_kind)
+    source = RemoteSource("https://example.com/source." + archive_kind)
+    acquired = acquire_remote(source, None)
     assert acquired.template_bytes == b"[files]\n"
     assert acquired.files == {"example.txt": "hello"}
     opener.open.return_value = io.BytesIO(archive_bytes("../protostar.toml"))
     with pytest.raises(SecurityViolationError):
-        acquire_inspection_source("https://example.com/source." + archive_kind)
+        acquire_remote(source, None)
 
 
 def test_registry_frozen_once_and_tasks_reported_without_execution(project, mocker):

@@ -5,7 +5,6 @@ import functools
 import hashlib
 import logging
 import os
-import tempfile
 import tomllib
 import types
 import typing
@@ -33,7 +32,7 @@ from .intent import (
     validate_target,
 )
 from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
-from .network import resolve_remote_source, resolve_remote_template
+from .network import RemoteTemplate, fetch_remote_template
 
 logger = logging.getLogger("protostar")
 
@@ -1047,83 +1046,76 @@ class TemplateSource:
         Raises:
             TemplateResolutionError: If the target cannot be found or read.
         """
-        temp_dir: tempfile.TemporaryDirectory[str] | None = None
-        remote_source = None
+        if target.startswith("http://") or target.startswith("https://"):
+            return cls.from_remote(fetch_remote_template(target), display_name)
+        target_path = Path(target).expanduser()
+        if not target_path.exists():
+            raise TemplateResolutionError(
+                target, f"Configuration file not found: {target_path}"
+            )
 
-        try:
-            if target.startswith("http://") or target.startswith("https://"):
-                remote_source = resolve_remote_source(target)
-                temp_dir = tempfile.TemporaryDirectory()
-                temp_workspace = Path(temp_dir.name)
-                target_path = resolve_remote_template(
-                    remote_source.locator, temp_workspace
+        if target_path.is_file():
+            toml_path = target_path
+            base_dir = target_path.parent
+        else:
+            toml_path = target_path / "protostar.toml"
+            if not toml_path.exists():
+                raise TemplateResolutionError(
+                    target, f"Configuration file not found: {toml_path}"
                 )
-            else:
-                target_path = Path(target).expanduser()
-                if not target_path.exists():
-                    raise TemplateResolutionError(
-                        target, f"Configuration file not found: {target_path}"
-                    )
+            base_dir = target_path
 
-            if target_path.is_file():
-                toml_path = target_path
-                base_dir = target_path.parent
-            else:
-                toml_path = target_path / "protostar.toml"
-                if not toml_path.exists():
-                    raise TemplateResolutionError(
-                        target, f"Configuration file not found: {toml_path}"
-                    )
-                base_dir = target_path
+        template_bytes = toml_path.read_bytes()
+        try:
+            template_bytes.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise TemplateEncodingError(target, toml_path.name) from e
 
-            template_bytes = toml_path.read_bytes()
-            try:
-                template_bytes.decode("utf-8")
-            except UnicodeDecodeError as e:
-                raise TemplateEncodingError(target, toml_path.name) from e
+        raw_files: dict[str, str] = {}
+        template_dir = base_dir / "template"
+        if template_dir.exists() and template_dir.is_dir():
+            for file_path in template_dir.rglob("*"):
+                if file_path.is_dir():
+                    continue
+                if ".DS_Store" in file_path.parts or "__pycache__" in file_path.parts:
+                    continue
+                rel_path = str(file_path.relative_to(template_dir))
+                try:
+                    raw_files[rel_path] = file_path.read_text(encoding="utf-8")
+                except UnicodeDecodeError as e:
+                    raise TemplateEncodingError(
+                        target, f"template/{Path(rel_path).as_posix()}"
+                    ) from e
 
-            raw_files: dict[str, str] = {}
-            template_dir = base_dir / "template"
-            if template_dir.exists() and template_dir.is_dir():
-                for file_path in template_dir.rglob("*"):
-                    if file_path.is_dir():
-                        continue
-                    if (
-                        ".DS_Store" in file_path.parts
-                        or "__pycache__" in file_path.parts
-                    ):
-                        continue
-                    rel_path = str(file_path.relative_to(template_dir))
-                    try:
-                        raw_files[rel_path] = file_path.read_text(encoding="utf-8")
-                    except UnicodeDecodeError as e:
-                        raise TemplateEncodingError(
-                            target, f"template/{Path(rel_path).as_posix()}"
-                        ) from e
+        reference = TemplateReference(
+            TemplateOrigin.BUILT_IN if built_in else TemplateOrigin.LOCAL,
+            built_in or toml_path.expanduser().resolve().as_posix(),
+            hashlib.sha256(template_bytes).hexdigest(),
+            display_name,
+        )
+        return cls(template_bytes, raw_files, reference)
 
-            origin = (
-                TemplateOrigin.BUILT_IN
-                if built_in
-                else TemplateOrigin.REMOTE
-                if remote_source
-                else TemplateOrigin.LOCAL
-            )
-            locator = built_in or (
-                remote_source.locator
-                if remote_source
-                else toml_path.expanduser().resolve().as_posix()
-            )
-            reference = TemplateReference(
-                origin,
-                locator,
-                hashlib.sha256(template_bytes).hexdigest(),
-                display_name,
-                source_revision=remote_source.revision if remote_source else None,
-            )
-            return cls(template_bytes, raw_files, reference)
-        finally:
-            if temp_dir is not None:
-                temp_dir.cleanup()
+    @classmethod
+    def from_remote(
+        cls, remote: RemoteTemplate, display_name: str | None = None
+    ) -> "TemplateSource":
+        """Wraps a remote template acquired at one revision.
+
+        Args:
+            remote: The acquired template, its source, and its ref.
+            display_name: The name the user selected the template by.
+        """
+        acquired = remote.acquired
+        reference = TemplateReference(
+            TemplateOrigin.REMOTE,
+            remote.source.locator,
+            hashlib.sha256(acquired.template_bytes).hexdigest(),
+            display_name,
+            path=remote.source.path,
+            ref=remote.ref,
+            revision=remote.revision,
+        )
+        return cls(acquired.template_bytes, dict(acquired.files), reference)
 
     @functools.cached_property
     def variables(self) -> frozenset[str]:

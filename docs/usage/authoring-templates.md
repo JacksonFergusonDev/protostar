@@ -72,7 +72,7 @@ dependency_includes = [{ group = "dev", include = "docs" }]
 
 Includes support the `dev` and `docs` groups and reject cycles. Execution applies them before `uv add`; include-only changes declare a conditional `uv lock` action. Dependency resolver writes are bounded to `pyproject.toml` and `uv.lock` and journaled before invocation. Ordinary dependency additions need no extra lock action.
 
-Templates may declare an informational root `version` string. CLI and wizard resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and remote locators retain the canonical resolved download URL rather than temporary extraction paths. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Recognizable immutable commit locators also retain their source revision. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance. State and three-way reconciliation are subsequent milestones.
+Templates may declare an informational root `version` string. CLI and wizard resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and a repository template's locator is its canonical repository URL, with its path inside the repository alongside. The ref it was applied at and the commit that ref named are recorded separately, so they never change the template's identity. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance.
 
 ### Tool-Bound Payloads & Dependencies
 
@@ -240,9 +240,11 @@ When authoring a template, you do not need to commit and push to a remote reposi
 protostar init --from ~/Developer/templates/my-custom-template
 ```
 
-### Distribution & URL Translation
+### Distribution & Releases
 
-Once your template is ready, push it to your organization's version control platform. Protostar automatically translates standard web UI URLs into raw downloadable endpoints or archive targets for all major hosting providers (GitHub, GitLab, Bitbucket, Codeberg, and Sourcehut).
+Once your template is ready, push it to a repository on GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut. Protostar accepts the repository's web, raw, and archive URLs, and a path inside the repository, so one repository can hold several templates.
+
+Publish releases as tags that are [PEP 440](https://peps.python.org/pep-0440/) versions, such as `v1.3.0`. A new project starts on your newest release, `protostar status` tells existing projects when a newer one exists, and `protostar sync --to v1.3.0` moves them to it with a three-way merge that keeps their local edits. Tag pre-releases as such (`v2.0.0rc1`): they are offered only to projects already on a pre-release. Never move a published tag. Projects stay on the commit they applied, and `status` reports the moved tag as an update.
 
 You can invoke your template directly:
 
@@ -275,6 +277,6 @@ When building templates for your team or the open-source community, keep the fol
 
 ## Next Steps
 
-- **[Templates](./templates.md):** Learn about CLI options, URL translation, and template consumption.
+- **[Templates](./templates.md):** Learn about CLI options, repository URLs, template versions, and template consumption.
 - **[Global Configuration](./configuration.md):** Register your custom templates under `[templates]` in your `config.toml`.
 - **[Extending Protostar](../developer/extending-protostar.md):** Implement custom Python bootstrap modules if your project requires engine-level integrations.

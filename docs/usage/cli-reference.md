@@ -76,7 +76,10 @@ until application; no predicted dependency or lockfile diff is shown.
 Both commands support `--json`, `--verbose`, and help. They never prompt, execute
 subprocesses, write workspace files, or populate disk caches. Remote template
 acquisition may use the network and reads archive data entirely in memory.
-Initialization-only tasks and IDE probes are reported as excluded.
+Initialization-only tasks and IDE probes are reported as excluded. For a
+repository template, the first line names the applied ref and commit, and any newer
+release or moved ref the repository offers; see
+[template versions](templates.md#template-versions).
 
 The explicit current directory must contain `[tool.protostar]` in `pyproject.toml`
 and `protostar.lock`. For a Stage 1 project, rerun the original explicit
@@ -108,6 +111,13 @@ its contributions without pruning existing files, dependencies, or ownership.
 Initialization tasks, hook installation, arbitrary template tasks, and IDE probes
 never run. Only accepted dependency requests and required metadata lock refreshes
 invoke the resolver; unchanged repeats write nothing and run no subprocesses.
+
+`--to REF` moves a repository template to a tag, branch, full commit SHA, or
+`latest` (the newest release), records the ref in the recipe, and reviews the new
+revision like any other update; it combines with `--dry-run`, `--check`, and
+`--resolve`. `--var NAME=VALUE` supplies a variable the new revision adds, and
+`--allow-secret NAME` keeps a value the secret guard flags. Without `--to`, `sync`
+applies the commit `protostar.lock` records, however the ref has moved since.
 
 `--dry-run` presents the same accepted diffs as `diff`. `--check` is read-only and
 exits `1` for accepted work, baseline advancement, or conflicts; preserved local
