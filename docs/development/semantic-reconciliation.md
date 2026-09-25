@@ -398,10 +398,16 @@ appends) record the complete desired text and also retain individual region
 texts. If overlapping edits prevent the whole-file merge, clean region updates
 can still apply independently.
 A pre-existing unowned generated target can own a newly appended region without
-acquiring whole-file ownership. When a previously managed region is omitted, merge
-mode skips whole-file regeneration for that run, because regenerating without the
-region would drop it without its decision; the region step retracts it (and from
-the whole-file baseline too), and the next run regenerates.
+acquiring whole-file ownership. When a previously managed region is omitted, the
+generated writer retracts it before regenerating, so the file converges in the
+same run: an unedited region is removed from the file and cut from the whole-file
+baseline, one the user already deleted is forgotten, and a settled one is taken
+or kept. A region kept with its local edit is the user's, so it sits out the
+three-way merge (a generated line changed next to it would otherwise overlap) and
+is appended after the merged text. While an edited omitted region waits for its
+decision, the writer leaves the file alone and the region step reports it; the
+file regenerates in the run that settles it. A target where Protostar owns only
+regions (`regions` policy) is left to the region step.
 
 ## PR G resolver and derived-artifact boundary
 

@@ -512,6 +512,87 @@ def test_generated_region_omission_retracts_the_region(tmp_path, monkeypatch, mo
     assert not record.regions
 
 
+def test_generated_region_omission_regenerates_in_the_same_run(
+    tmp_path, monkeypatch, mocker
+):
+    """A dropped region and a changed generated text converge in one run."""
+    monkeypatch.chdir(tmp_path)
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v2\n")
+
+    def generated(e):
+        e.manifest.tooling.wants_just = True
+
+    run(mocker, generated)
+
+    assert Path("justfile").read_text() == "base v2\n"
+    (record,) = deserialize_state(Path("protostar.lock").read_text()).files
+    assert record.baseline == "base v2\n"
+    assert not record.regions
+    assert not run(mocker, generated).journal.touched_paths
+
+
+def _omitted_region_review(mocker, resolutions=None):
+    from protostar.preparation import prepare_review
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.wants_just = True
+    return manifest, prepare_review(
+        manifest, UserConfig(), resolutions=resolutions or {}
+    )
+
+
+def test_an_edited_omitted_region_holds_the_generated_file(
+    tmp_path, monkeypatch, mocker
+):
+    """An edited region waits for its decision; the file regenerates once settled."""
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    target.write_text(target.read_text().replace("recipe v1", "my recipe"))
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v2\n")
+
+    _, review = _omitted_region_review(mocker)
+    (conflict,) = review.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.identity == "template:recipes"
+    assert not review.edits
+
+
+@pytest.mark.parametrize(
+    ("choice", "kept"),
+    [(ResolutionChoice.LOCAL, True), (ResolutionChoice.DESIRED, False)],
+)
+def test_a_settled_omitted_region_regenerates_in_the_same_run(
+    tmp_path, monkeypatch, mocker, choice, kept
+):
+    monkeypatch.chdir(tmp_path)
+    target = Path("justfile")
+    justfile_regions(mocker, "base v1\n", "recipe v1")
+    target.write_text(target.read_text().replace("recipe v1", "my recipe"))
+    mocker.patch("protostar.reconciliation.generate_justfile", return_value="base v2\n")
+    _, review = _omitted_region_review(mocker)
+    (conflict,) = review.conflicts
+
+    manifest, review = _omitted_region_review(mocker, {conflict.id: choice})
+    assert not review.conflicts
+    assert [c.id for c in review.resolved] == [conflict.id]
+    executor = SystemExecutor(manifest, UserConfig(), review=review)
+    mocker.patch.object(executor, "_check_ide_extensions")
+    executor.execute()
+
+    text = target.read_text()
+    assert text.startswith("base v2\n")
+    assert ("my recipe" in text) is kept
+    (record,) = deserialize_state(Path("protostar.lock").read_text()).files
+    assert record.baseline == "base v2\n"
+    assert not record.regions
+    # The kept region is the user's: later runs leave it and ask nothing.
+    _, again = _omitted_region_review(mocker)
+    assert not again.conflicts
+    assert not again.edits
+
+
 def test_agents_md_region_merges_updates_and_protects_edits(
     tmp_path, monkeypatch, mocker
 ):
