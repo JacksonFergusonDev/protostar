@@ -3,18 +3,18 @@ import json
 import sys
 from typing import Any
 
-from rich.json import JSON
-
-from protostar.cli import ui
-from protostar.config import TemplateBlueprint
-from protostar.modules import TOOLING_MODULES
-
 CLI_API_VERSION = 1
 
 
 def handle_export_schema(args: argparse.Namespace) -> None:
     """Handles the 'export-schema' subcommand to output the template JSON schema."""
     import dataclasses
+
+    from rich.json import JSON
+
+    from protostar.cli import ui
+    from protostar.config import TemplateBlueprint
+    from protostar.modules import TOOLING_MODULES
 
     properties: dict[str, Any] = {}
     dev_properties: dict[str, Any] = {}
@@ -333,6 +333,8 @@ def emit_capabilities(
     parser: argparse.ArgumentParser, command: str | None = None
 ) -> None:
     """Emits the structured capabilities schema in JSON format and exits immediately."""
+    from protostar.cli import ui
+
     ui.emit_json(
         {
             "api_version": CLI_API_VERSION,

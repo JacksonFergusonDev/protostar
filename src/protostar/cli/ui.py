@@ -22,13 +22,13 @@ from protostar.errors import (
     SecurityViolationError,
     WorkspaceCollisionError,
 )
-from protostar.init_draft import InitDecision
 from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
 from protostar.merge import NO_RESOLUTIONS
 from protostar.models import ExecutionResult, InitRequest
 from protostar.progress import ProgressStep
 
 if TYPE_CHECKING:
+    from protostar.init_draft import InitDecision
     from protostar.orchestrator import Orchestrator
 
 # Marks the agent interface as experimental. Increment when the schema

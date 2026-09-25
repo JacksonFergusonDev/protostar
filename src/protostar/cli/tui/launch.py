@@ -1,12 +1,17 @@
 """Lazy entry point: importing this module never imports Textual."""
 
+from __future__ import annotations
+
 from collections.abc import Collection
+from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
 from protostar.init_draft import InitDecision, InitDraft
-from protostar.lifecycle import PreparedProject
 from protostar.merge import ResolutionChoice
 from protostar.templates import TemplateInfo
+
+if TYPE_CHECKING:
+    from protostar.lifecycle import PreparedProject
 
 
 def edit_recipe(

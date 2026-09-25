@@ -14,7 +14,6 @@ from .errors import (
     TemplateRefNotFoundError,
     UnversionedTemplateError,
 )
-from .executor import SystemExecutor
 from .intent import TemplateOrigin, TemplateReference
 from .journal import TransactionState
 from .manifest import CollisionStrategy, EnvironmentManifest
@@ -128,6 +127,8 @@ class PreparedProject:
         Args:
             progress: Brackets each resolver subprocess for the caller.
         """
+        from .executor import SystemExecutor
+
         executor = SystemExecutor(
             self.manifest, self.config, review=self.review, progress=progress
         )
