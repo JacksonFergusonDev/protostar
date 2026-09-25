@@ -31,7 +31,7 @@ from protostar.config import (
     TemplateSource,
     UserConfig,
 )
-from protostar.documents import pyproject
+from protostar.documents import community, pyproject
 from protostar.errors import WorkspaceCollisionError
 from protostar.fs import atomic_write_text
 from protostar.manifest import (
@@ -365,6 +365,8 @@ def generate_capability_tables() -> None:
             files.append("justfile")
         if test_manifest.tooling.wants_agents:
             files.append("AGENTS.md")
+        if test_manifest.tooling.wants_community:
+            files.extend([community.CONTRIBUTING_TARGET, community.PULL_REQUEST_TARGET])
         return ", ".join(f"`{f}`" for f in files) if files else "*None*"
 
     # Tooling integration matrix

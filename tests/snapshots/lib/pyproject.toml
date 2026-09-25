@@ -196,6 +196,7 @@ agents = false
 ci = false
 codecov = false
 commitizen = false
+community = false
 direnv = false
 just = false
 markdownlint = false
@@ -220,5 +221,7 @@ PROJECT_NAME = "demo-project"
 PYTHON_VERSION = "3.13"
 
 [tool.protostar.metadata]
+author_email = ""
+github_username = ""
 minimum_python = "3.13"
 supported_os = ["MacOS", "Linux", "Windows"]

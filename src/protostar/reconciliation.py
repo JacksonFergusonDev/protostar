@@ -386,6 +386,12 @@ class Reconciliation:
                 if located := self._locate(renovate.TARGET, FilePolicy.JSONC):
                     self._reconcile_document(located, content, FilePolicy.JSONC)
                 continue
+            # A seed an alias already holds is that file, never a second one.
+            resolved = self._follow(target.as_posix(), set())
+            if resolved is None:
+                continue
+            target = Path(resolved)
+            enforce_path_jail(target, Path.cwd())
             record = self._file_record(target, FilePolicy.SEED)
             overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
             if (
@@ -863,14 +869,20 @@ class Reconciliation:
                     and original_python != updated_python
                 ):
                     self._resolution_dirty = True
-        declared = {
-            render_template(filepath, self.interpolation_context): regions
-            for filepath, regions in self.manifest.filesystem.regions.items()
-        }
+        declared: dict[str, list[AppendContribution]] = {}
+        held: set[str] = set()
+        for filepath, regions in self.manifest.filesystem.regions.items():
+            # Regions go where the document's tool reads it, so an existing
+            # alias is extended instead of a second file created.
+            path = self._follow(
+                render_template(filepath, self.interpolation_context), held
+            )
+            if path is not None:
+                declared[path] = regions
         # A file whose owned regions nothing declares any more is visited too,
         # so they are retracted.
         for record in self.candidate_state.files:
-            if record.regions and record.path not in declared:
+            if record.regions and record.path not in declared.keys() | held:
                 declared[record.path] = []
         for filepath, regions in declared.items():
             target = Path(filepath)
@@ -989,6 +1001,34 @@ class Reconciliation:
             {record.path for record in self.candidate_state.files},
             lambda path: self.workspace.exists(Path(path)),
         )
+
+    def _follow(self, target: str, held: set[str]) -> str | None:
+        """Resolves a free-form document's file and follows a rename's ownership.
+
+        Args:
+            target: The document's canonical workspace path.
+            held: Collects the ownership record of a document that is held, so
+                its content is kept rather than retracted.
+
+        Returns:
+            The file that holds the document in this run, or ``None`` when
+            competing files leave it held.
+        """
+        resolution = self._resolve(target)
+        for conflict in resolution.conflicts:
+            self._merge_warning(conflict)
+        if resolution.path is None:
+            if resolution.owner is not None:
+                held.add(resolution.owner)
+            return None
+        if resolution.owner is not None and resolution.owner != resolution.path:
+            record = next(
+                r for r in self.candidate_state.files if r.path == resolution.owner
+            )
+            self.candidate_state = self.candidate_state.with_file(
+                replace(record, path=resolution.path)
+            ).without_file(resolution.owner)
+        return resolution.path
 
     def _existing(self, target: str) -> Path | None:
         """Returns the existing file a document would be reconciled in, if any."""

@@ -369,7 +369,13 @@ def test_stage_one_enrollment_preserves_applied_ownership(
         tomlkit.parse(project.read_text())["tool"]["foreign"]["local-key"] == "retain"
     )
     assert (tmp_path / "protostar.lock").read_bytes() == before
-    assert "protostar" not in str(deserialize_state(before.decode()).files)
+    # Region markers name Protostar; only the pyproject baseline must not.
+    [pyproject] = [
+        record
+        for record in deserialize_state(before.decode()).files
+        if record.path == "pyproject.toml"
+    ]
+    assert "protostar" not in str(pyproject)
 
 
 @pytest.mark.parametrize("template_alias", BUILTIN_TEMPLATES)

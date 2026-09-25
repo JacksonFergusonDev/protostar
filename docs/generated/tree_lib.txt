@@ -1,7 +1,11 @@
 .
 ├── .envrc
 ├── .github
+│   ├── ISSUE_TEMPLATE
+│   │   ├── bug_report.yml
+│   │   └── feature_request.yml
 │   ├── codecov.yml
+│   ├── pull_request_template.md
 │   ├── renovate.json
 │   └── workflows
 │       ├── ci.yml
@@ -11,7 +15,10 @@
 ├── .python-version
 ├── .readthedocs.yaml
 ├── CHANGELOG.md
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
 ├── README.md
+├── SECURITY.md
 ├── docs
 │   └── index.md
 ├── justfile

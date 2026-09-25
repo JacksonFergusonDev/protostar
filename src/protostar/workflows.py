@@ -15,21 +15,23 @@ from .workspace import (
 
 __all__ = [
     "DOCKERFILE",
-    "AgentsSpec",
     "CIFlag",
     "CIWorkflowSpec",
     "DockerfileSpec",
+    "GuideSpec",
     "HookRunner",
     "JustfileSpec",
     "TargetOS",
     "YAMLBuilder",
     "generate_agents_md",
     "generate_ci_workflow",
+    "generate_contributing_md",
     "generate_dockerfile",
     "generate_dockerignore",
     "generate_gitignore",
     "generate_justfile",
     "generate_pre_commit_config",
+    "generate_pull_request_template",
     "generate_release_workflow",
 ]
 
@@ -128,8 +130,12 @@ class JustfileSpec:
 
 
 @dataclass(frozen=True)
-class AgentsSpec:
-    """AGENTS.md specification, derived from the aggregated tooling state."""
+class GuideSpec:
+    """The project's tooling as the generated guides describe it.
+
+    AGENTS.md, CONTRIBUTING.md, and the pull request template all render from
+    one spec, so they state the same commands.
+    """
 
     python_version: str
     hook_runner: HookRunner
@@ -138,6 +144,8 @@ class AgentsSpec:
     lint_commands: list[str]
     typecheck_commands: list[str]
     ci_flags: set[CIFlag | str]
+    conventional_commits: bool = False
+    wants_ci: bool = False
     one_shot: bool = False
 
 
@@ -656,7 +664,92 @@ def _command_block(commands: list[str]) -> list[str]:
     return ["", "```bash", *commands, "```"]
 
 
-def generate_agents_md(spec: AgentsSpec) -> str:
+def _command_sections(spec: GuideSpec) -> list[str]:
+    """Renders the project's checks under a ``## Commands`` heading.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+
+    Returns:
+        The section's lines, or none when the project has no checks.
+    """
+    has_pytest = CIFlag.PYTEST in spec.ci_flags
+    if spec.wants_just:
+        commands: list[str] = []
+        if spec.format_commands:
+            commands.append("- `just format`: apply formatters and safe lint fixes.")
+        if spec.lint_commands:
+            commands.append("- `just lint`: run the linters.")
+        if spec.typecheck_commands:
+            commands.append("- `just typecheck`: run static type checks.")
+        if has_pytest:
+            commands.append("- `just test`: run the test suite.")
+        ci_deps = _just_ci_dependencies(
+            spec.lint_commands, spec.typecheck_commands, spec.ci_flags
+        )
+        if ci_deps:
+            commands.append(
+                f"- `just ci`: run {', '.join(ci_deps)}; "
+                "the local check to pass before pushing."
+            )
+        return ["", "## Commands", "", *commands] if commands else []
+
+    sections = [
+        ("Format", spec.format_commands),
+        ("Lint", spec.lint_commands),
+        ("Type Check", spec.typecheck_commands),
+        ("Test", ["uv run pytest"] if has_pytest else []),
+    ]
+    lines: list[str] = []
+    for title, commands in sections:
+        if commands:
+            lines.extend(["", f"### {title}", *_command_block(commands)])
+    return ["", "## Commands", *lines] if lines else []
+
+
+def _local_check(spec: GuideSpec, elsewhere: str) -> str | None:
+    """Names the local check a change passes before it is pushed, if any.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+        elsewhere: Where the raw commands are listed, when no ``just ci`` runs them.
+
+    Returns:
+        The check as the subject of a sentence, or ``None`` without one.
+    """
+    if spec.wants_just and _just_ci_dependencies(
+        spec.lint_commands, spec.typecheck_commands, spec.ci_flags
+    ):
+        return "`just ci` passes"
+    if spec.lint_commands or spec.typecheck_commands or CIFlag.PYTEST in spec.ci_flags:
+        return f"the commands {elsewhere} pass"
+    return None
+
+
+def _hook_push_clause(spec: GuideSpec) -> str:
+    """Describes the pre-push test hook the pytest module adds, if any."""
+    # The pytest module adds a pre-push hook alongside its CI flag.
+    if CIFlag.PYTEST in spec.ci_flags:
+        return " and runs the tests before every push"
+    return ""
+
+
+def _conventional_commits(spec: GuideSpec) -> str:
+    """Describes the commit message convention and who enforces it."""
+    enforced = (
+        " The `commit-msg` hook rejects any other message."
+        if spec.hook_runner is not HookRunner.NONE
+        else ""
+    )
+    return (
+        "Commit messages follow [Conventional Commits]"
+        "(https://www.conventionalcommits.org/), such as `feat: add an export "
+        "command` or `fix: handle empty input`. Commitizen reads them to bump the "
+        f"version and write the changelog.{enforced}"
+    )
+
+
+def generate_agents_md(spec: GuideSpec) -> str:
     """Assembles the Protostar-managed AGENTS.md section.
 
     Every line states a fact about the scaffolded project, never general advice,
@@ -694,59 +787,145 @@ def generate_agents_md(spec: AgentsSpec) -> str:
             "To change it, edit `[tool.protostar.tools]` and run `protostar sync`."
         )
 
-    has_pytest = CIFlag.PYTEST in spec.ci_flags
-    if spec.wants_just:
-        commands: list[str] = []
-        if spec.format_commands:
-            commands.append("- `just format`: apply formatters and safe lint fixes.")
-        if spec.lint_commands:
-            commands.append("- `just lint`: run the linters.")
-        if spec.typecheck_commands:
-            commands.append("- `just typecheck`: run static type checks.")
-        if has_pytest:
-            commands.append("- `just test`: run the test suite.")
-        ci_deps = _just_ci_dependencies(
-            spec.lint_commands, spec.typecheck_commands, spec.ci_flags
-        )
-        if ci_deps:
-            commands.append(
-                f"- `just ci`: run {', '.join(ci_deps)}; "
-                "the local check to pass before pushing."
-            )
-        if commands:
-            lines.extend(["", "## Commands", "", *commands])
-    else:
-        sections = [
-            ("Format", spec.format_commands),
-            ("Lint", spec.lint_commands),
-            ("Type Check", spec.typecheck_commands),
-            ("Test", ["uv run pytest"] if has_pytest else []),
-        ]
-        if any(commands for _, commands in sections):
-            lines.extend(["", "## Commands"])
-            for title, commands in sections:
-                if commands:
-                    lines.extend(["", f"### {title}", *_command_block(commands)])
+    lines.extend(_command_sections(spec))
 
     if spec.hook_runner is not HookRunner.NONE:
-        # The pytest module adds a pre-push hook alongside its CI flag.
-        push = (
-            " and runs the tests before every push"
-            if CIFlag.PYTEST in spec.ci_flags
-            else ""
-        )
         lines.extend(
             [
                 "",
                 "## Git Hooks",
                 "",
                 f"{spec.hook_runner.value} runs the hooks in `.pre-commit-config.yaml` "
-                f"on every commit{push}. Let them run rather than invoking the same "
-                "checks by hand first. If a hook fails or rewrites a file, fix the "
-                "cause, restage, and commit again.",
+                f"on every commit{_hook_push_clause(spec)}. Let them run rather than "
+                "invoking the same checks by hand first. If a hook fails or rewrites "
+                "a file, fix the cause, restage, and commit again.",
             ]
         )
 
+    if spec.conventional_commits:
+        lines.extend(["", "## Commits", "", _conventional_commits(spec)])
+
+    return "\n".join(lines) + "\n"
+
+
+def generate_contributing_md(spec: GuideSpec) -> str:
+    """Assembles the Protostar-managed CONTRIBUTING.md section.
+
+    Like AGENTS.md, it states only facts about the project's tooling, so it
+    stays accurate while Protostar keeps it in sync. The project name is left as
+    a placeholder for the executor to render.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+
+    Returns:
+        The Markdown section, opening with the document's top-level heading.
+    """
+    lines = ["# Contributing to <% PROJECT_NAME %>", ""]
+    if not spec.one_shot:
+        # A comment, so the notice reaches editors without showing on GitHub.
+        lines.extend(
+            [
+                "<!-- Protostar generates and updates this section from the "
+                "project's tooling. Keep your own notes outside the surrounding "
+                "Protostar markers. -->",
+                "",
+            ]
+        )
+    setup = [
+        "1. Install [uv](https://docs.astral.sh/uv/).",
+        f"1. Clone your fork and run `uv sync` to create the environment with "
+        f"Python {spec.python_version}.",
+    ]
+    if spec.hook_runner is not HookRunner.NONE:
+        setup.append(
+            f"1. Run `uv run {spec.hook_runner.value} install` to install the git hooks."
+        )
+    lines.extend(
+        [
+            "Thank you for helping improve <% PROJECT_NAME %>. This guide covers "
+            "setting up a development environment and the checks every change "
+            "passes.",
+            "",
+            "## Development Setup",
+            "",
+            *setup,
+            "",
+            "Add dependencies with `uv add <package>`, or `uv add --dev <package>` "
+            "for development tools, so `uv.lock` stays in sync.",
+        ]
+    )
+
+    lines.extend(_command_sections(spec))
+
+    if spec.hook_runner is not HookRunner.NONE:
+        lines.extend(
+            [
+                "",
+                "## Git Hooks",
+                "",
+                f"{spec.hook_runner.value} runs the hooks in `.pre-commit-config.yaml` "
+                f"on every commit{_hook_push_clause(spec)}. If a hook fails or "
+                "rewrites a file, fix the cause, restage, and commit again.",
+            ]
+        )
+
+    if spec.conventional_commits:
+        lines.extend(["", "## Commit Messages", "", _conventional_commits(spec)])
+
+    steps = [
+        "1. For a larger change, open an issue first so the approach can be "
+        "agreed before you start.",
+        "1. Keep each pull request focused on one change"
+        + (", with tests that cover it." if CIFlag.PYTEST in spec.ci_flags else "."),
+    ]
+    if check := _local_check(spec, "above"):
+        ci = " CI runs the same checks on every pull request." if spec.wants_ci else ""
+        steps.append(f"1. Make sure {check} before you push.{ci}")
+    steps.append("1. Fill in the pull request template.")
+    lines.extend(
+        [
+            "",
+            "## Pull Requests",
+            "",
+            *steps,
+            "",
+            "## Conduct and Security",
+            "",
+            "Everyone taking part in this project is expected to follow its code of "
+            "conduct. Report security vulnerabilities privately, as the security "
+            "policy describes, never in a public issue.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def generate_pull_request_template(spec: GuideSpec) -> str:
+    """Assembles the pull request template's checklist from the project's tooling.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+
+    Returns:
+        The Markdown template, listing only checks the project can run.
+    """
+    checklist = []
+    if spec.conventional_commits:
+        checklist.append("- [ ] Commit messages follow Conventional Commits.")
+    if check := _local_check(spec, "in the contributing guide"):
+        checklist.append(f"- [ ] {check[0].upper()}{check[1:]} locally.")
+    if CIFlag.PYTEST in spec.ci_flags:
+        checklist.append("- [ ] Tests cover the change.")
+    if CIFlag.ZENSICAL in spec.ci_flags:
+        checklist.append("- [ ] The documentation reflects the change.")
+    # A top-level heading first, so markdown linters accept the template.
+    lines = [
+        "# Summary",
+        "",
+        "<!-- What does this change, and why? Link the issue it resolves. -->",
+    ]
+    if checklist:
+        lines.extend(["", "## Checklist", "", *checklist])
     return "\n".join(lines) + "\n"
 
 

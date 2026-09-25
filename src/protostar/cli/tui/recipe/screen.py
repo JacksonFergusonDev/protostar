@@ -76,6 +76,7 @@ _GROUPS = {
         Tool.DIRENV,
         Tool.JUST,
         Tool.AGENTS,
+        Tool.COMMUNITY,
     ),
 }
 _NAMES = {Tool(module.config_key): module.name for module in TOOLING_MODULES}

@@ -9,6 +9,7 @@ from .base import (
     TableSignal,
 )
 from .ci_layer import CIModule, ReleaseModule
+from .community_layer import CommunityModule
 from .lang_layer import LICENSE_MAP, PythonCore
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
@@ -52,6 +53,7 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
     ReleaseModule(),
     JustModule(),
     AgentsModule(),
+    CommunityModule(),
 )
 
 __all__ = [
@@ -63,6 +65,7 @@ __all__ = [
     "CIModule",
     "CodecovModule",
     "CommitizenModule",
+    "CommunityModule",
     "DirenvModule",
     "JustModule",
     "MarkdownLintModule",

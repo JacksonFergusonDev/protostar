@@ -19,4 +19,5 @@
 | GitHub Actions Release | `--release` | Scaffold GitHub Actions PyPI release workflows | `.github/workflows/release.yml` |
 | Just | `--just` | Scaffold a justfile for command execution | `justfile` |
 | Agents | `--agents` | Scaffold a managed AGENTS.md guide for coding agents | `AGENTS.md` |
+| Community | `--community` | Scaffold community health files: contributing guide, code of conduct, security policy, and issue and pull request templates | `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md` |
 | Docker | `--docker` | Multi-stage `Dockerfile` and `.dockerignore` container scaffolding | `Dockerfile`, `.dockerignore` |

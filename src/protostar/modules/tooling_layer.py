@@ -652,6 +652,7 @@ class CommitizenModule(BootstrapModule):
         logger.debug("Building Commitizen tooling layer.")
 
         manifest.dependencies.add_dev("commitizen")
+        manifest.tooling.adopt_conventional_commits()
         manifest.filesystem.add_environment_artifact(".cz-cache/")
         manifest.filesystem.add_file_injection(
             "CHANGELOG.md",

@@ -64,6 +64,7 @@ agents = false
 ci = false
 codecov = false
 commitizen = false
+community = false
 direnv = false
 docker = false
 just = false

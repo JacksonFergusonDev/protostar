@@ -917,7 +917,8 @@
                   "ci",
                   "release",
                   "just",
-                  "agents"
+                  "agents",
+                  "community"
                 ]
               },
               "enabled": {
@@ -968,7 +969,8 @@
                   "ci",
                   "release",
                   "just",
-                  "agents"
+                  "agents",
+                  "community"
                 ]
               },
               "path": {

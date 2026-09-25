@@ -4,20 +4,22 @@ from typing import Any
 import pytest
 
 from protostar.workflows import (
-    AgentsSpec,
     CIFlag,
     CIWorkflowSpec,
     DockerfileSpec,
+    GuideSpec,
     HookRunner,
     JustfileSpec,
     YAMLBuilder,
     generate_agents_md,
     generate_ci_workflow,
+    generate_contributing_md,
     generate_dockerfile,
     generate_dockerignore,
     generate_gitignore,
     generate_justfile,
     generate_pre_commit_config,
+    generate_pull_request_template,
     generate_release_workflow,
 )
 
@@ -449,7 +451,7 @@ def test_yaml_builder():
 
 
 def _agents_spec(**overrides):
-    base = AgentsSpec(
+    base = GuideSpec(
         python_version="3.13",
         hook_runner=HookRunner.NONE,
         wants_just=True,
@@ -548,6 +550,104 @@ def test_generate_agents_md_never_contains_region_boundaries():
     content = generate_agents_md(_agents_spec(hook_runner=HookRunner.PREK))
 
     assert "region:" not in content
+
+
+def test_generate_agents_md_states_the_commit_convention():
+    content = generate_agents_md(
+        _agents_spec(conventional_commits=True, hook_runner=HookRunner.PREK)
+    )
+
+    assert "## Commits" in content
+    assert "The `commit-msg` hook rejects any other message." in content
+    assert "## Commits" not in generate_agents_md(_agents_spec())
+
+
+# --- CONTRIBUTING.md and the pull request template ---
+
+
+def test_generate_contributing_md_opens_with_the_project_heading():
+    content = generate_contributing_md(_agents_spec())
+
+    assert content.startswith("# Contributing to <% PROJECT_NAME %>\n")
+    assert "Protostar generates and updates this section" in content
+    assert "region:" not in content
+
+
+def test_generate_contributing_md_one_shot_has_no_sync_notice():
+    content = generate_contributing_md(_agents_spec(one_shot=True))
+
+    assert "Protostar" not in content
+
+
+def test_generate_contributing_md_shares_the_agents_commands():
+    spec = _agents_spec(wants_just=False)
+    commands = generate_agents_md(spec).split("## Commands")[1].split("\n## ")[0]
+
+    assert commands in generate_contributing_md(spec)
+
+
+def test_generate_contributing_md_installs_the_hook_runner():
+    content = generate_contributing_md(_agents_spec(hook_runner=HookRunner.PREK))
+
+    assert "1. Run `uv run prek install` to install the git hooks." in content
+    assert "## Git Hooks" in content
+    assert "install the git hooks" not in generate_contributing_md(_agents_spec())
+
+
+def test_generate_contributing_md_names_the_local_check():
+    just = generate_contributing_md(_agents_spec(wants_ci=True))
+    raw = generate_contributing_md(_agents_spec(wants_just=False))
+    bare = generate_contributing_md(
+        _agents_spec(
+            wants_just=False,
+            format_commands=[],
+            lint_commands=[],
+            typecheck_commands=[],
+            ci_flags=set(),
+        )
+    )
+
+    assert "Make sure `just ci` passes before you push. CI runs" in just
+    assert "Make sure the commands above pass before you push.\n" in raw
+    assert "Make sure" not in bare
+    assert "## Commands" not in bare
+
+
+def test_generate_contributing_md_states_the_commit_convention():
+    content = generate_contributing_md(_agents_spec(conventional_commits=True))
+
+    assert "## Commit Messages" in content
+    assert "commit-msg" not in content
+
+
+def test_generate_pull_request_template_lists_only_runnable_checks():
+    full = generate_pull_request_template(
+        _agents_spec(
+            conventional_commits=True, ci_flags={CIFlag.PYTEST, CIFlag.ZENSICAL}
+        )
+    )
+    bare = generate_pull_request_template(
+        _agents_spec(
+            wants_just=False,
+            format_commands=[],
+            lint_commands=[],
+            typecheck_commands=[],
+            ci_flags=set(),
+        )
+    )
+
+    assert full.startswith("# Summary\n")
+    assert "- [ ] Commit messages follow Conventional Commits." in full
+    assert "- [ ] `just ci` passes locally." in full
+    assert "- [ ] Tests cover the change." in full
+    assert "- [ ] The documentation reflects the change." in full
+    assert "## Checklist" not in bare
+
+
+def test_generate_pull_request_template_points_raw_commands_at_the_guide():
+    content = generate_pull_request_template(_agents_spec(wants_just=False))
+
+    assert "- [ ] The commands in the contributing guide pass locally." in content
 
 
 def _all_ci_variants():

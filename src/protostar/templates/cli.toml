@@ -25,6 +25,7 @@ ci = true
 release = true
 readthedocs = true
 rumdl = true
+community = true
 
 # --- Development Dependencies ---
 # Tied to the tool that needs them, so `--no-pytest` does not install them.

@@ -116,6 +116,8 @@
             ".ruff_cache"
         ],
         "wants_agents": false,
+        "wants_community": false,
+        "conventional_commits": false,
         "ide_extensions": [
             "charliermarsh.ruff"
         ]

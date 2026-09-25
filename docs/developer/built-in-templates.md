@@ -55,7 +55,7 @@ Built-ins fall into two tiers that differ in how much tooling they turn on by de
 | `ci` | on | off |
 | `rumdl` | on | off |
 
-`cli` and `lib` also turn on `release`, `readthedocs`, `zensical`, and `codecov`, because they are packages people install. `api` turns on `docker`, because it is a service people deploy.
+`cli` and `lib` also turn on `release`, `readthedocs`, `zensical`, and `codecov`, because they are packages people install, and `community`, because they are packages people contribute to. `api` turns on `docker`, because it is a service people deploy.
 
 **Product templates default to the full quality gate**, because a published package or a deployed service should not need a second pass to become production-ready.
 

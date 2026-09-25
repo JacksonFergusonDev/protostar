@@ -219,7 +219,8 @@ Scale or omit these sections based on the scope of the PR.
 - `src/protostar/toml_ast.py`: `tomlkit` aggregation and `TomlDocumentSpec`-driven reconciliation.
 - `src/protostar/yaml_ast.py`: Bounded `ruamel.yaml` round-trip codec and `YamlDocumentSpec`-driven reconciliation.
 - `src/protostar/jsonc_ast.py`: Stdlib-only lossless JSONC codec, byte-splice editor, and reconciliation adapter.
-- `src/protostar/documents/`: One module per managed file (`pyproject`, `pre_commit`, `github_workflows`, `codecov`, `renovate`, `vscode`, `zensical`) owning its target, merge spec, and guards, plus the path registries.
+- `src/protostar/documents/`: One module per managed file (`pyproject`, `pre_commit`, `github_workflows`, `codecov`, `renovate`, `vscode`, `zensical`, and the `community` health files) owning its target, merge spec, and guards, plus the path registries.
+- `src/protostar/community/`: Generators for the community health files that depend only on metadata, and the bundled Contributor Covenant.
 - `tests/snapshots/`: Scenario regression snapshots validated during CI.
 - `docs/generated/`: Generated capability tables, schemas, diffs, and trees snippeted into docs.
 - `docs/assets/terminals/`: Rendered CLI terminal help SVGs displayed in docs.
