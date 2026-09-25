@@ -37,6 +37,10 @@ def apply_generated(mocker, target, value, strategy=CollisionStrategy.MERGE):
             "protostar.reconciliation.Reconciliation._write_ci_workflow",
             lambda decisions: decisions._write_generated(target, value),
         )
+        # Declared as generated, so the file is not released as undeclared.
+        mocker.patch.object(
+            EnvironmentManifest, "generated_files", return_value={target.as_posix()}
+        )
 
     return run(mocker, setup)
 
@@ -591,6 +595,34 @@ def test_a_settled_omitted_region_regenerates_in_the_same_run(
     _, again = _omitted_region_review(mocker)
     assert not again.conflicts
     assert not again.edits
+
+
+def test_a_dockerfile_leaves_when_docker_is_switched_off(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    run(mocker, lambda e: setattr(e.manifest.tooling, "wants_docker", True))
+    assert Path("Dockerfile").exists()
+
+    run(mocker, lambda e: None)
+
+    assert not Path("Dockerfile").exists()
+    state = deserialize_state(Path("protostar.lock").read_text())
+    assert "Dockerfile" not in {r.path for r in state.files}
+
+
+def test_a_generated_file_that_still_receives_a_region_stays(
+    tmp_path, monkeypatch, mocker
+):
+    """A declared region keeps its file declared, generated text and all."""
+    monkeypatch.chdir(tmp_path)
+    justfile_regions(mocker, "base\n", "recipe")
+
+    def region_only(e):
+        e.manifest.filesystem.add_region(
+            "justfile", "recipe", identity="template:recipes"
+        )
+
+    assert not run(mocker, region_only).journal.touched_paths
+    assert Path("justfile").read_text().startswith("base\n")
 
 
 def test_agents_md_region_merges_updates_and_protects_edits(

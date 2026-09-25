@@ -409,6 +409,14 @@ decision, the writer leaves the file alone and the region step reports it; the
 file regenerates in the run that settles it. A target where Protostar owns only
 regions (`regions` policy) is left to the region step.
 
+A generated file whose tool is switched off (`EnvironmentManifest.generated_files`
+no longer lists it) and that receives no declared region is released the way a
+seed is, by `Reconciliation._release_undeclared_generated`: deleted when its text
+matches the whole-file baseline, forgotten when already deleted, and otherwise a
+`retracted` conflict for the whole file, whose `local` choice keeps it as the
+user's and `desired` deletes it. Generated text has no units to keep apart, so
+the decision is never split into hunks.
+
 ## PR G resolver and derived-artifact boundary
 
 System tasks establish the local project first (`uv init` when needed). Structured

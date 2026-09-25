@@ -96,7 +96,7 @@ from .sync_state import (
     deserialize_state,
     encode_toml_baseline,
 )
-from .text_merge import reconcile_text
+from .text_merge import is_edited, reconcile_text
 from .toml_ast import (
     TomlDocumentSpec,
     TomlReconciliation,
@@ -700,6 +700,61 @@ class Reconciliation:
                 raise FileSystemError(
                     "retract configuration", record.path, error
                 ) from error
+
+    def _release_undeclared_generated(self) -> None:
+        """Lets go of each owned generated file that nothing declares any more.
+
+        A tool switched off stops generating its file. It goes the way a seed
+        does: deleted when unedited, and otherwise a ``retracted`` conflict for
+        the whole file, since generated text has no units to keep apart. The
+        conflict's ``local`` choice keeps the file as the user's; ``desired``
+        deletes it. A file already deleted is forgotten. A file that still
+        receives a declared region is declared, and keeps its generated text.
+        """
+        declared = self.manifest.generated_files() | {
+            Path(render_template(path, self.interpolation_context)).as_posix()
+            for path in self.manifest.filesystem.regions
+        }
+        for record in [
+            r
+            for r in self.candidate_state.files
+            if r.policy is FilePolicy.TEXT and r.path not in declared
+        ]:
+            target = Path(record.path)
+            enforce_path_jail(target, Path.cwd())
+            self._validate_node(target)
+            if not self.workspace.exists(target):
+                self.candidate_state = self.candidate_state.without_file(record.path)
+                continue
+            local = self.workspace.read_bytes(target)
+            if is_edited(local, record.baseline or ""):
+                conflict = MergeConflict(
+                    MergeLocation(record.path),
+                    ConflictReason.RETRACTED,
+                    ConflictSides(
+                        record.baseline or MISSING,
+                        local.decode("utf-8", "replace"),
+                        MISSING,
+                        line=0,
+                    ),
+                )
+                settled = conflict.settle(self.resolutions)
+                if settled is None:
+                    self._report((conflict,), ())
+                    continue
+                self._report((), (settled,))
+                if settled.resolution is ResolutionChoice.LOCAL:
+                    self.candidate_state = self.candidate_state.without_file(
+                        record.path
+                    )
+                    continue
+            try:
+                self.fs.remove_file(target)
+            except OSError as error:
+                raise FileSystemError(
+                    "remove generated file", record.path, error
+                ) from error
+            self.candidate_state = self.candidate_state.without_file(record.path)
 
     def _release_document(self, path: str) -> None:
         """Forgets a structured document's ownership and the hook pins it held."""
