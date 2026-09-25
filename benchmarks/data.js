@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790354728543,
+  "lastUpdate": 1790358134956,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16971,6 +16971,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 832.8,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0230623a7524599c415e78d657aed8ff77b10027",
+          "message": "feat(sync)!: version repository templates by ref and upgrade with sync --to (#335)\n\nA repository template's identity is now its repository and in-repo path; the\nref it follows lives in the recipe and the commit that ref named lives in\nprotostar.lock. sync always applies the locked commit, status reports newer\nreleases and moved refs, and sync --to <ref|latest> moves the project with an\nordinary three-way merge. Refs are listed over Git smart HTTP and templates are\ndownloaded by commit, in memory.",
+          "timestamp": "2026-09-25T10:40:33-07:00",
+          "tree_id": "a4f4b6289e3854d7e7de26d502c9ebd48461b52f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0230623a7524599c415e78d657aed8ff77b10027"
+        },
+        "date": 1790358133448,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 144.49,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 543.55,
             "unit": "ms"
           }
         ]
