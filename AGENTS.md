@@ -171,6 +171,11 @@ Use these commands when targeted verification or debugging is necessary:
 1. **Filesystem Isolation in Tests:**
    - **Never** write to the host filesystem during tests. Always inject the `pytest` `tmp_path` fixture.
    - **Never** run live shell commands or package managers (`uv`, `git`, `cargo`) on the host system during tests. Patch `subprocess.run` with `pytest-mock`.
+1. **Cross-Platform Test Invariants (Windows Compatibility):**
+   - **No Hardcoded POSIX File Mode Assertions:** Windows NTFS and Python's Windows runtime do not support POSIX permission bits (`0o755`, `0o640`, `0o600`). Calling `os.chmod()` on Windows only toggles the read-only attribute (`0o444` vs `0o666`), and writable files always report mode `0o666` (`438`). Never assert specific octal permission values without guarding behind `if sys.platform != "win32":`, or assert relative mode invariance (`stat().st_mode == before`) instead of hardcoded octals. Tests mutating file modes must `pytest.skip(...)` on `sys.platform == "win32"`.
+   - **Path Representations:** Always use `pathlib.Path` objects or `.as_posix()` when asserting paths. Never compare raw string paths with `/` against `str(path)`.
+   - **Mandatory Windows File Locking:** Windows prohibits deleting, renaming, or unlinking open files. Always ensure file handles are closed (via context managers) before asserting rollbacks, ejections, or deletions; unclosed handles cause `PermissionError` during cleanup or transaction replay.
+   - **Invalid Filename Characters:** Do not use `<`, `>`, `:`, `"`, `|`, `?`, or `*` in test fixture file names.
 1. **Dependency Management:**
    - **Do NOT manually edit dependencies in `pyproject.toml`:** Always use `uv add <package>` (or `uv add --dev <package>`) to add, update, or remove workspace dependencies so that `uv.lock` remains synchronized.
 1. **Markdown Standards (`rumdl`):**
