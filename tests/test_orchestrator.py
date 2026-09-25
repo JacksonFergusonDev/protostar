@@ -35,6 +35,7 @@ from protostar.modules import (
     RuffModule,
     ZensicalModule,
 )
+from protostar.options import Condition, Term
 from protostar.orchestrator import AGENTS_REGION_ID, AGENTS_TARGET, Orchestrator
 from protostar.sync_state import SyncState, serialize_state
 
@@ -199,7 +200,9 @@ def _gated_payload_blueprint() -> TemplateBlueprint:
     blueprint = TemplateBlueprint()
     blueprint.pyproject_injections = {
         "always": PyprojectPayload("[tool.always]\nvalue = true"),
-        "lint": PyprojectPayload("[tool.ruff.lint]\nextend-select = ['D']", "ruff"),
+        "lint": PyprojectPayload(
+            "[tool.ruff.lint]\nextend-select = ['D']", Condition((Term("ruff"),))
+        ),
     }
     return blueprint
 
@@ -275,9 +278,9 @@ def test_plan_attributes_a_tool_bound_payload_to_its_tool(mocker, mock_config):
 
 
 def _tool_dependency_blueprint() -> TemplateBlueprint:
-    return TemplateBlueprint(
-        dev_dependencies=["always-dev"],
-        tool_dev_dependencies={"ruff": ["ruff-plugin"]},
+    return TemplateBlueprint._parse(
+        'dev.dev_dependencies = ["always-dev"]\n'
+        '[[optional]]\nrequires = "ruff"\ndev_dependencies = ["ruff-plugin"]\n'
     )
 
 

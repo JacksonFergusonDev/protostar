@@ -297,6 +297,9 @@ def reconcile_toml(
         after: dict[str, Value],
         keys: tuple[str, ...] = (),
     ) -> None:
+        # A complete policy retracts owned keys the producers stop declaring.
+        for key in [key for key in before if key not in after]:
+            del ast[key]
         for key, value in after.items():
             previous = before.get(key, MISSING)
             if semantic_equal(previous, value):

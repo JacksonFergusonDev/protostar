@@ -1,6 +1,7 @@
 """Dependency resolution and package installation via uv."""
 
 from collections import defaultdict
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from packaging.requirements import InvalidRequirement, Requirement
@@ -318,6 +319,95 @@ def select_dependencies(
         tuple(proposals),
         tuple(preserved),
         tuple(kept),
+    )
+
+
+@dataclass(frozen=True)
+class DependencyRetraction:
+    """Owned requirements nothing requests any more, and what becomes of each.
+
+    Attributes:
+        removed: Requirements to delete from the file, by group.
+        released: Identities Protostar stops owning.
+        conflicts: Edited requirements left in place, still owned, until settled.
+        resolved: Retractions a resolution settled.
+    """
+
+    removed: tuple[tuple[DependencyGroup, tuple[str, ...]], ...]
+    released: frozenset[tuple[str, str, str, str]]
+    conflicts: tuple[MergeConflict, ...] = ()
+    resolved: tuple[MergeConflict, ...] = ()
+
+
+def retract_requirements(
+    requested: Mapping[DependencyGroup, Sequence[str]],
+    local: Mapping[DependencyGroup, Sequence[str]],
+    records: tuple[DependencyState, ...],
+    resolutions: Resolutions = NO_RESOLUTIONS,
+) -> DependencyRetraction:
+    """Lets go of each owned requirement that no producer requests any more.
+
+    A tool or template option that is switched off stops requesting its
+    packages. An unedited requirement is removed; an edited one is a
+    ``retracted`` conflict until settled, where keeping it lets go of it and
+    taking the update removes it; one already gone only loses its ownership.
+
+    Args:
+        requested: Every group's requested requirements.
+        local: The requirements the file lists, by group.
+        records: Owned requirements.
+        resolutions: Choices settling decisions, keyed by identity.
+
+    Returns:
+        The removals, released ownership, and decisions.
+    """
+    wanted = {
+        (group, requirement_identity(entry))
+        for group, entries in requested.items()
+        for entry in entries
+    }
+    removed: dict[DependencyGroup, list[str]] = defaultdict(list)
+    released: set[tuple[str, str, str, str]] = set()
+    conflicts: list[MergeConflict] = []
+    resolved: list[MergeConflict] = []
+    for record in records:
+        identity = (record.name, record.marker)
+        if record.path != "pyproject.toml" or (record.group, identity) in wanted:
+            continue
+        entries = [
+            entry
+            for entry in local.get(record.group, ())
+            if requirement_identity(entry) == identity
+        ]
+        if len(entries) == 1 and normalized_requirement(
+            entries[0]
+        ) == normalized_requirement(record.materialized):
+            removed[record.group].append(entries[0])
+            released.add(record.identity)
+            continue
+        if entries:
+            found = MergeConflict(
+                _location(record.group, identity),
+                ConflictReason.RETRACTED,
+                ConflictSides(
+                    record.materialized,
+                    entries[0] if len(entries) == 1 else list(entries),
+                    MISSING,
+                ),
+            )
+            settled = found.settle(resolutions)
+            if settled is None:
+                conflicts.append(found)
+                continue
+            resolved.append(settled)
+            if settled.resolution is ResolutionChoice.DESIRED:
+                removed[record.group].extend(entries)
+        released.add(record.identity)
+    return DependencyRetraction(
+        tuple((group, tuple(entries)) for group, entries in removed.items()),
+        frozenset(released),
+        tuple(conflicts),
+        tuple(resolved),
     )
 
 

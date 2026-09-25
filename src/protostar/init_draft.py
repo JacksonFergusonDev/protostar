@@ -11,6 +11,7 @@ from .manifest import CollisionStrategy, ProjectMetadata
 from .merge import NO_RESOLUTIONS, Resolutions
 from .models import InitRequest
 from .modules import BootstrapModule, PythonCore, SystemWorkspaceModule
+from .options import OptionValue, resolve_options
 from .recipe import (
     ProjectRecipe,
     RecipeIntent,
@@ -40,6 +41,11 @@ class InitDraft:
     ``analysis`` describes a project that has no recipe yet. Its facts fill what
     the draft leaves unset, ahead of configuration defaults; its tools are only
     ever offered by the editor, never selected here.
+
+    Options follow tools: ``option_overrides`` are values flags set over the
+    recorded ones and are kept as given, while ``option_choices`` are every
+    option's value from the editor, of which only those away from the
+    template's defaults are recorded.
     """
 
     template: DraftTemplate | None = None
@@ -50,6 +56,8 @@ class InitDraft:
     metadata: tuple[tuple[str, str | tuple[str, ...]], ...] | None = None
     variables: tuple[tuple[str, str], ...] = ()
     allowed_secrets: frozenset[str] = frozenset()
+    option_overrides: tuple[tuple[str, OptionValue], ...] = ()
+    option_choices: tuple[tuple[str, OptionValue], ...] | None = None
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
     analysis: ProjectAnalysis | None = None
@@ -111,6 +119,20 @@ def resolve_init(
     variables.update(draft.variables)
     blueprint = source.render({**context, **variables}) if source else None
     opinions = blueprint.tooling_overrides if blueprint else {}
+    offered = source.options if source else {}
+    options = {
+        name: value
+        for name, value in (existing.options if existing else ())
+        if name in offered
+    }
+    options.update(draft.option_overrides)
+    if draft.option_choices is not None:
+        options = {
+            name: value
+            for name, value in draft.option_choices
+            if value != offered[name].default
+        }
+    resolve_options(offered, options)
 
     fallback = (
         dict(existing.fallback)
@@ -171,6 +193,7 @@ def resolve_init(
             docker,
             python,
             tuple(sorted(variables.items())),
+            tuple(sorted(options.items())),
         ),
     )
     recipe = replace(

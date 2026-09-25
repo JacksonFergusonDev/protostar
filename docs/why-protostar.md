@@ -96,6 +96,8 @@ When building templates in Copier, supporting optional features (e.g., Docker, p
     protostar init --template api-service --no-docker --direnv
     ```
 
+    A template's own choices work the same way. It declares [options](usage/authoring-templates.md#template-options), such as a database, and its files and dependencies opt in with `requires = "database=postgres"`, so no conditional ever appears inside a file.
+
 === "The Copier / Cookiecutter Way"
 
     The template author must maintain questions in `copier.yml` and wire conditionals into every file:

@@ -68,8 +68,9 @@ def test_dependencies_carry_no_version_pins(alias: str) -> None:
         *data.get("dev", {}).get("dev_dependencies", []),
         *(
             package
-            for packages in data.get("dev", {}).get("tool_dependencies", {}).values()
-            for package in packages
+            for block in data.get("optional", [])
+            for group in ("dependencies", "dev_dependencies", "docs_dependencies")
+            for package in block.get(group, [])
         ),
         *data.get("docs_dependencies", []),
     ]

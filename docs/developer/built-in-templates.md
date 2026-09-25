@@ -107,7 +107,7 @@ A few lists have no additive key. Ruff's `ignore` is the current example. A temp
 
 ### Tool Configuration Follows the Tool
 
-A payload that configures a tool declares it with `requires`, so `protostar init -t cli --no-mypy` writes no `[tool.mypy]`. Dev packages that only a tool needs (such as `pytest-cov`) go under `[dev.tool_dependencies]`, keyed by that tool, so `--no-pytest` does not install them. Payloads that no tool toggle should remove, such as a `[build-system]` table, stay plain strings and are always injected. Tool-bound payloads are also attributed to their tool in lifecycle reviews, so a project's recipe opt-out treats them like the tool's own configuration.
+A payload that configures a tool declares it with `requires`, so `protostar init -t cli --no-mypy` writes no `[tool.mypy]`. Dev packages that only a tool needs (such as `pytest-cov`) go in an `[[optional]]` block that requires that tool, so `--no-pytest` does not install them. Payloads that no tool toggle should remove, such as a `[build-system]` table, stay plain strings and are always injected. Tool-bound payloads are also attributed to their tool in lifecycle reviews, so a project's recipe opt-out treats them like the tool's own configuration.
 
 ## Conventions Every Built-in Follows
 
@@ -117,7 +117,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 1. **No version pins.** Dependencies are passed to `uv` so the environment resolves the latest compatible versions when the project is created.
 1. **Keep tasks to a minimum.** No `system_tasks`. A `post_install_tasks` entry is allowed only when the domain truly needs it (`nbdime` for notebook diffs), and it must be on the allowlist in the contract test, because built-ins run without a trust prompt.
 1. **Generated code formats cleanly for any project name.** Do not interpolate `<% PROJECT_NAME %>` into a line that `ruff format` would wrap for longer names. The `cli` template defines an `APP_NAME` constant for this reason: a version line that embedded the name failed `ruff format --check` for names over about 16 characters.
-1. **Tool configuration and tool packages declare the tool they need.** Test plugins such as `pytest-cov` go under `[dev.tool_dependencies]`, so disabling the tool installs none of them.
+1. **Tool configuration and tool packages declare the tool they need.** Test plugins such as `pytest-cov` go in an `[[optional]]` block with `requires = "pytest"`, so disabling the tool installs none of them.
 1. **Development tooling goes in the dev group; the docs group is for the documentation toolchain.** Built-ins declare no `docs_dependencies` at all, because the Zensical module supplies `zensical` and `mkdocstrings`. `uv sync` installs the dev group by default but not docs, so a notebook tool placed in the docs group is removed by the first `just sync`.
 1. **A new tool table needs a layout entry.** If a template writes a `[tool.<name>]` that `TOOL_SECTIONS` in `documents/pyproject_layout.py` does not list, it sorts unlabelled after the known tools. See [The pyproject.toml Layout](./pyproject-layout.md).
 1. **Tool configuration declares the tool it needs.** A payload that configures `ruff`, `mypy`, `pytest`, or another tool is a table with `requires = "<tool>"`, so disabling the tool leaves none of its configuration behind. Tool-agnostic payloads, such as `[build-system]`, stay plain strings.

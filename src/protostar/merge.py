@@ -269,9 +269,14 @@ class MergePolicy:
     Attributes:
         set_like_paths: Key paths whose scalar sequences merge by membership.
         protected_ancestor: Whether the adapter operates under a deleted owned ancestor.
-        complete: Whether the remote value is one generator's complete document, so
-            owned mapping keys it no longer declares are retracted: removed when
-            unedited, kept with a ``retracted`` conflict when edited.
+        complete: Whether the remote value is the producers' complete declaration,
+            so owned mapping keys it no longer declares are retracted: removed
+            when unedited, kept with a ``retracted`` conflict when edited.
+        retained_paths: Owned key paths another writer manages, which a
+            complete policy never retracts.
+        namespace_paths: Mappings whose keys are separate units, such as
+            pyproject's ``tool``, so a complete policy retracts each owned key
+            on its own; any other mapping is retracted as one unit.
         proposing: Whether the document existed before Protostar owned any of
             it, so every change into never-owned content is a proposal that can
             be declined.
@@ -280,10 +285,19 @@ class MergePolicy:
     set_like_paths: frozenset[tuple[str, ...]] = frozenset()
     protected_ancestor: bool = False
     complete: bool = False
+    retained_paths: frozenset[tuple[str, ...]] = frozenset()
+    namespace_paths: frozenset[tuple[str, ...]] = frozenset()
     proposing: bool = False
 
 
 DEFAULT_POLICY = MergePolicy()
+
+
+def _retained(path: tuple[str, ...], retained: frozenset[tuple[str, ...]]) -> bool:
+    """Returns whether a path is, holds, or lies under a retained path."""
+    return any(
+        path[: len(other)] == other or other[: len(path)] == path for other in retained
+    )
 
 
 @dataclass(frozen=True)
@@ -612,13 +626,42 @@ def reconcile(
                 proposals.extend(child.proposals)
                 preserved.extend(child.preserved)
             if policy.complete and isinstance(previous, dict):
-                for key in [k for k in previous if k not in incoming]:
+                for key in [
+                    k
+                    for k in previous
+                    if k not in incoming
+                    and not _retained((*loc.keys, k), policy.retained_paths)
+                ]:
                     local = values.get(key, MISSING)
                     if local is MISSING:
                         baseline.pop(key, None)
                     elif semantic_equal(local, previous[key]):
                         values.pop(key)
                         baseline.pop(key, None)
+                    elif (
+                        (*loc.keys, key) in policy.namespace_paths
+                        and isinstance(local, dict)
+                        and isinstance(previous[key], dict)
+                    ):
+                        # A namespace's keys are separate units: foreign ones
+                        # stay, and each owned one is retracted on its own.
+                        child = merge(
+                            previous[key],
+                            local,
+                            {},
+                            MergeLocation(loc.file, (*loc.keys, key), loc.identity),
+                            False,
+                        )
+                        if child.value:
+                            values[key] = child.value
+                        else:
+                            values.pop(key)
+                        if child.baseline:
+                            baseline[key] = child.baseline
+                        else:
+                            baseline.pop(key, None)
+                        conflicts.extend(child.conflicts)
+                        resolved.extend(child.resolved)
                     else:
                         found = MergeConflict(
                             MergeLocation(loc.file, (*loc.keys, key), loc.identity),

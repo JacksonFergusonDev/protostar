@@ -16,6 +16,7 @@ from .dependencies import (
     normalized_requirement,
     requirement_entries,
     requirement_identity,
+    retract_requirements,
     select_dependencies,
 )
 from .documents import (
@@ -489,6 +490,9 @@ class Reconciliation:
         if self.workspace.exists(Path(target)) or any(
             r.path == target for r in self.candidate_state.files
         ):
+            # The file stays where it is as the user's own, since nothing
+            # declares it there any more.
+            self.candidate_state = self.candidate_state.without_file(source)
             self._migrated(version, source, target, MigrationOutcome.TARGET_EXISTS)
             return
         if self.workspace.exists(Path(source)):
@@ -511,24 +515,49 @@ class Reconciliation:
         enforce_path_jail(Path(path), Path.cwd())
         self._validate_node(Path(path))
         record = self._seed(path)
-        if record is None:
-            self._migrated(version, path, None, MigrationOutcome.NOT_OWNED)
-            return
-        target = Path(path)
+        outcome = (
+            MigrationOutcome.NOT_OWNED if record is None else self._release_seed(record)
+        )
+        self._migrated(version, path, None, outcome)
+
+    def _release_seed(self, record: FileState) -> MigrationOutcome:
+        """Lets go of an owned seed: deleted when unedited, retired when edited."""
+        target = Path(record.path)
         if not self.workspace.exists(target):
-            self.candidate_state = self.candidate_state.without_file(path)
-            self._migrated(version, path, None, MigrationOutcome.FORGOTTEN)
-            return
+            self.candidate_state = self.candidate_state.without_file(record.path)
+            return MigrationOutcome.FORGOTTEN
         local = self.workspace.read_bytes(target)
         if record.digest == hashlib.sha256(local).hexdigest():
             self.fs.remove_file(target)
-            self.candidate_state = self.candidate_state.without_file(path)
-            self._migrated(version, path, None, MigrationOutcome.REMOVED)
-            return
+            self.candidate_state = self.candidate_state.without_file(record.path)
+            return MigrationOutcome.REMOVED
         self.candidate_state = self.candidate_state.with_file(
             replace(record, retired=True)
         )
-        self._migrated(version, path, None, MigrationOutcome.RETIRED)
+        return MigrationOutcome.RETIRED
+
+    def _release_undeclared_seeds(self) -> None:
+        """Lets go of each owned seed that no producer declares any more.
+
+        A tool or template option that is switched off stops declaring its
+        files, and a template can stop shipping one. Each goes the way a
+        migration's removal does: deleted when unedited, and otherwise kept as
+        a ``retracted`` conflict until settled. A seed a migration already
+        decided on this run keeps that outcome.
+        """
+        declared = {
+            Path(render_template(path, self.interpolation_context)).as_posix()
+            for path in self.manifest.filesystem.file_injections
+        } | {step.path for step in self.migration_steps}
+        for record in self.candidate_state.files:
+            if (
+                record.policy is FilePolicy.SEED
+                and not record.retired
+                and record.path not in declared
+            ):
+                enforce_path_jail(Path(record.path), Path.cwd())
+                self._validate_node(Path(record.path))
+                self._release_seed(record)
 
     def _settle_retired(self) -> None:
         """Reports each retired seed as a ``retracted`` conflict until settled.
@@ -834,8 +863,17 @@ class Reconciliation:
                     and original_python != updated_python
                 ):
                     self._resolution_dirty = True
-        for filepath, regions in self.manifest.filesystem.regions.items():
-            target = Path(render_template(filepath, self.interpolation_context))
+        declared = {
+            render_template(filepath, self.interpolation_context): regions
+            for filepath, regions in self.manifest.filesystem.regions.items()
+        }
+        # A file whose owned regions nothing declares any more is visited too,
+        # so they are retracted.
+        for record in self.candidate_state.files:
+            if record.regions and record.path not in declared:
+                declared[record.path] = []
+        for filepath, regions in declared.items():
+            target = Path(filepath)
             validate_target(target.as_posix())
             enforce_path_jail(target, Path.cwd())
             try:
@@ -881,18 +919,36 @@ class Reconciliation:
                 region_result.resolved,
                 preserved=region_result.preserved,
             )
-            if region_result.baselines:
+            text_baseline = record.baseline if record else None
+            if record is not None and text_baseline is not None:
+                # A generated file's text holds its regions; one that was cut
+                # leaves that text too.
+                cut = {
+                    r.id: r.baseline
+                    for r in record.regions
+                    if r.id not in region_result.baselines
+                    and r.baseline not in region_result.content
+                }
+                if cut:
+                    text_baseline = append_marker_blocks(
+                        text_baseline, [], target, baselines=cut
+                    ).content
+            if region_result.baselines or (
+                record is not None and record.policy is FilePolicy.TEXT
+            ):
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
                         target.as_posix(),
                         record.policy if record else FilePolicy.REGIONS,
-                        record.baseline if record else None,
+                        text_baseline,
                         regions=tuple(
                             RegionState(region_tag(identity), identity, baseline)
                             for identity, baseline in region_result.baselines.items()
                         ),
                     )
                 )
+            elif record is not None:
+                self.candidate_state = self.candidate_state.without_file(record.path)
             if region_result.content != original:
                 try:
                     self.fs.write_text(target, region_result.content)
@@ -1011,8 +1067,8 @@ class Reconciliation:
         if record is not None and any(
             r.id not in {c.id for c in contributions} for r in record.regions
         ):
-            # Regenerating without an omitted region would remove it, and regions
-            # are never pruned. Preserve the whole file instead.
+            # Regenerating without an omitted region would drop it unasked. The
+            # region step retracts it first, so the next run regenerates.
             return
         framed = append_marker_blocks(
             content,
@@ -1555,8 +1611,50 @@ class Reconciliation:
         except (OSError, UnicodeError) as e:
             raise FileSystemError("write project recipe", str(target), e) from e
 
+    def _release_undeclared_dependencies(self) -> None:
+        """Removes owned requirements that no producer requests any more.
+
+        The removal edits pyproject.toml directly, so the lock is refreshed
+        afterwards; see ``retract_requirements`` for each outcome.
+        """
+        dependencies = self.manifest.dependencies
+        if not self.candidate_state.dependencies:
+            return
+        target = Path(pyproject.TARGET)
+        original = (
+            self.workspace.read_text(target) if self.workspace.exists(target) else ""
+        )
+        data = tomllib.loads(original)
+        groups = (DependencyGroup.MAIN, DependencyGroup.DEV, DependencyGroup.DOCS)
+        retraction = retract_requirements(
+            {
+                DependencyGroup.MAIN: dependencies.dependencies,
+                DependencyGroup.DEV: dependencies.dev_dependencies,
+                DependencyGroup.DOCS: dependencies.docs_dependencies,
+            },
+            {group: requirement_entries(data, group) for group in groups},
+            self.candidate_state.dependencies,
+            self.resolutions,
+        )
+        self._report(retraction.conflicts, retraction.resolved)
+        updated = original
+        for group, entries in retraction.removed:
+            updated = pyproject.remove_requirements(updated, group, entries)
+        if updated != original:
+            self.fs.write_text(target, updated)
+            self._resolution_dirty = True
+        self.candidate_state = replace(
+            self.candidate_state,
+            dependencies=tuple(
+                r
+                for r in self.candidate_state.dependencies
+                if r.identity not in retraction.released
+            ),
+        )
+
     def _select_dependencies(self) -> tuple[DependencyManifest, set[DependencyGroup]]:
         """Selects resolver requests without predicting materialized requirements."""
+        self._release_undeclared_dependencies()
         dependencies = self.manifest.dependencies
         if not (
             dependencies.dependencies

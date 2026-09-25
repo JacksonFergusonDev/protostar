@@ -493,7 +493,8 @@ def test_unowned_generated_file_can_manage_new_region(tmp_path, monkeypatch, moc
     assert not Path("justfile").exists()
 
 
-def test_generated_region_omission_never_prunes(tmp_path, monkeypatch, mocker):
+def test_generated_region_omission_retracts_the_region(tmp_path, monkeypatch, mocker):
+    """A region nothing declares any more leaves; the generated text stays owned."""
     monkeypatch.chdir(tmp_path)
     mocker.patch("protostar.reconciliation.generate_justfile", return_value="base\n")
 
@@ -502,14 +503,13 @@ def test_generated_region_omission_never_prunes(tmp_path, monkeypatch, mocker):
         e.manifest.filesystem.add_region("justfile", "keep", identity="test:omitted")
 
     run(mocker, setup)
-    original = Path("justfile").read_bytes()
-    baseline = Path("protostar.lock").read_bytes()
-    mocker.patch(
-        "protostar.reconciliation.generate_justfile", return_value="changed base\n"
-    )
+    assert "keep" in Path("justfile").read_text()
     run(mocker, lambda e: setattr(e.manifest.tooling, "wants_just", True))
-    assert Path("justfile").read_bytes() == original
-    assert Path("protostar.lock").read_bytes() == baseline
+    assert Path("justfile").read_text() == "base\n"
+    state = deserialize_state(Path("protostar.lock").read_text())
+    (record,) = [r for r in state.files if r.path == "justfile"]
+    assert record.baseline == "base\n"
+    assert not record.regions
 
 
 def test_agents_md_region_merges_updates_and_protects_edits(

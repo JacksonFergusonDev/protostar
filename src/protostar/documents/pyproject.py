@@ -1,12 +1,13 @@
 """pyproject.toml policy: merge spec, layout, personal seeds, and group includes."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 
 import tomlkit
 import tomlkit.items
 
 from ..errors import ConfigurationError
 from ..intent import (
+    DependencyGroup,
     DependencyInclude,
     ResolverFootprint,
     StructuredContribution,
@@ -18,8 +19,28 @@ from ..toml_ast import TomlDocumentSpec, TomlLayout
 from .pyproject_layout import format_document, place_new_sections
 
 TARGET = "pyproject.toml"
+# Personal project metadata is filled in once; later edits are the user's.
+SEED_PATHS = frozenset(
+    ("project", key)
+    for key in (
+        "name",
+        "version",
+        "description",
+        "authors",
+        "maintainers",
+        "license",
+        "license-files",
+        "readme",
+        "urls",
+        "classifiers",
+        "keywords",
+    )
+)
 # Lint selections are sets in practice: a user's additions and Protostar's merge by
-# membership instead of replacing one another.
+# membership instead of replacing one another. The producers' contributions are
+# their complete declaration, so configuration a tool or template stops declaring
+# is retracted, one [tool] table at a time. Seeds are the user's once written, and
+# dependency-group includes have their own writer, so neither is retracted.
 SPEC = TomlDocumentSpec(
     policy=MergePolicy(
         frozenset(
@@ -30,26 +51,13 @@ SPEC = TomlDocumentSpec(
                 ("tool", "ruff", "lint", "extend-ignore"),
                 ("tool", "rumdl", "disable"),
             }
-        )
+        ),
+        complete=True,
+        retained_paths=SEED_PATHS | {("dependency-groups",)},
+        namespace_paths=frozenset({("tool",)}),
     ),
     super_tables=frozenset({("tool",)}),
-    # Personal project metadata is filled in once; later edits are the user's.
-    seed_paths=frozenset(
-        ("project", key)
-        for key in (
-            "name",
-            "version",
-            "description",
-            "authors",
-            "maintainers",
-            "license",
-            "license-files",
-            "readme",
-            "urls",
-            "classifiers",
-            "keywords",
-        )
-    ),
+    seed_paths=SEED_PATHS,
     layout=TomlLayout(create=format_document, extend=place_new_sections),
 )
 
@@ -94,6 +102,41 @@ def declare_contribution(
         else None
     )
     return StructuredContribution(producer, content, resolver_footprint=footprint)
+
+
+def remove_requirements(
+    original: str, group: DependencyGroup, entries: Collection[str]
+) -> str:
+    """Returns the document without the given requirements in one group.
+
+    Args:
+        original: The pyproject.toml text.
+        group: The group whose array lists the requirements.
+        entries: The exact requirement strings to remove.
+
+    Returns:
+        The edited text, comments and layout otherwise intact.
+
+    Raises:
+        ConfigurationError: If the document or its dependency tables are invalid.
+    """
+    try:
+        doc = tomlkit.parse(original)
+    except tomlkit.exceptions.ParseError as e:
+        raise ConfigurationError(
+            "Invalid dependency configuration.",
+            hint="Correct pyproject.toml before removing requirements.",
+        ) from e
+    table = doc.get(
+        "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
+    )
+    array = table.get("dependencies" if group is DependencyGroup.MAIN else group.value)
+    if not isinstance(array, tomlkit.items.Array):
+        return original
+    for index in reversed(range(len(array))):
+        if isinstance(array[index], str) and str(array[index]) in entries:
+            del array[index]
+    return tomlkit.dumps(doc)
 
 
 def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:

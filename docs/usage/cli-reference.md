@@ -53,6 +53,16 @@ A value that looks like a credential stops init. If it isn't a secret, keep it w
 
 In a terminal, Protostar prompts for any variable left out. Elsewhere, including under `--json`, a missing value fails with `MissingTemplateVariablesError`.
 
+#### Template Options
+
+A template that declares [options](authoring-templates.md#template-options) takes a choice for each through `--option`, repeated once per option: `true` or `false` for a bool option, or one of a choice option's values. An option left out takes the template's default:
+
+```bash
+protostar init --from ./api.toml --option database=postgres --option compose=true
+```
+
+An unknown option or a value the option doesn't offer stops init with the values it does offer.
+
 ### `protostar status` and `protostar diff`
 
 Inspect the current directory using its recorded project recipe and ownership ledger:
@@ -106,8 +116,10 @@ protostar sync --json
 
 `sync` applies safe updates and advances ownership state in one transaction.
 Conflicting local content and its applied baselines are retained while safe sibling
-updates commit. Deleted tracked files stay deleted. Removing a tool stops requesting
-its contributions without pruning existing files, dependencies, or ownership.
+updates commit. Deleted tracked files stay deleted. Removing a tool, or choosing a
+template option that drops content, retracts what it added: unedited files,
+dependencies, configuration tables, and regions are removed, and edited ones are
+kept as `retracted` conflicts.
 Initialization tasks, hook installation, arbitrary template tasks, and IDE probes
 never run. Only accepted dependency requests and required metadata lock refreshes
 invoke the resolver; unchanged repeats write nothing and run no subprocesses.
@@ -115,8 +127,9 @@ invoke the resolver; unchanged repeats write nothing and run no subprocesses.
 `--to REF` moves a repository template to a tag, branch, full commit SHA, or
 `latest` (the newest release), records the ref in the recipe, and reviews the new
 revision like any other update; it combines with `--dry-run`, `--check`, and
-`--resolve`. `--var NAME=VALUE` supplies a variable the new revision adds, and
-`--allow-secret NAME` keeps a value the secret guard flags. Without `--to`, `sync`
+`--resolve`. `--var NAME=VALUE` supplies a variable the new revision adds,
+`--allow-secret NAME` keeps a value the secret guard flags, and
+`--option NAME=VALUE` chooses a [template option](authoring-templates.md#template-options). Without `--to`, `sync`
 applies the commit `protostar.lock` records, however the ref has moved since.
 
 `--dry-run` presents the same accepted diffs as `diff`. `--check` is read-only and

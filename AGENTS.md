@@ -75,7 +75,7 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 
 - **Modules carry a casual-user baseline; templates carry only the delta.** Never move strict settings (`strict = true`, docstring rules) into a module. Templates must not repeat a module's baseline values.
 - **Use additive keys.** Sequences merge atomically, so redefine no baseline list (`select`) where an additive key (`extend-select`) exists. A list with no additive key, such as Ruff's `ignore`, may be redefined only as a strict superset.
-- **Tool-bound payloads declare `requires`.** A `[dev.pyproject]` payload that configures a tool is a table `{ requires = "<tool>", content = "..." }` so it is injected only while that tool is enabled. Tool-agnostic payloads stay plain strings. Dev packages only a tool needs go under `[dev.tool_dependencies]` keyed by that tool.
+- **Tool-bound payloads declare `requires`.** A `[dev.pyproject]` payload that configures a tool is a table `{ requires = "<tool>", content = "..." }` so it is injected only while that tool is enabled. Tool-agnostic payloads stay plain strings. Dev packages only a tool needs go in an `[[optional]]` block with `requires = "<tool>"`.
 - **Declare all eight quality flags explicitly** (`ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, `just`) in every built-in.
 - **A fresh scaffold must pass the gates its flags enable.** Do not enable `pytest` in a template that ships no test. Product templates (`cli`, `api`) are installable packages (`hatchling`, never `uv_build`).
 - **No version pins, no `system_tasks`, and `post_install_tasks` only from the allowlist** in `tests/test_builtin_template_contract.py`. Built-ins are trusted implicitly.

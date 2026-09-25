@@ -13,8 +13,8 @@ and additive tooling, while preserving user edits, deletions, and unowned conten
 It skips the change review, so a conflict it meets keeps your version; `init`
 ends by counting those you can still settle, and `protostar sync` lets you choose
 a side.
-It does not adopt existing configuration, switch templates, prune removed template
-content. After tracked initialization, use the [project lifecycle](lifecycle.md) commands
+It does not adopt existing configuration or switch templates, and like `sync` it
+retracts content Protostar no longer produces. After tracked initialization, use the [project lifecycle](lifecycle.md) commands
 `status`, `diff`, and `sync` to review and apply the recorded recipe.
 
 <div class="grid cards" markdown>
@@ -335,6 +335,7 @@ content, then repeats the ML template with `--mypy --docker --force-merge`:
 - __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).
 - __List Available Templates__: Run `protostar init --list-templates` to view all built-in templates and registered global aliases.
 - __Template Variables__: Supply a template's custom variables with `--var NAME=VALUE`, once per variable (e.g., `protostar init --from ./team.toml --var REGION=eu-west-1`). In a terminal, Protostar asks for any you leave out; elsewhere, including under `--json`, a missing value is an error. Values are saved in the project recipe, so never pass secrets. A value that looks like a credential stops init; if it isn't a secret, keep it with `--allow-secret NAME`. See [Template variables](../development/project-recipe.md#template-variables).
+- __Template Options__: Choose a template's [options](./authoring-templates.md#template-options) with `--option NAME=VALUE`, once per option: `true` or `false`, or one of a choice's values (e.g., `protostar init --from ./team.toml --option database=postgres`). An option left out takes the template's default. The recipe editor shows a switch or a choice for each.
 - __Python Version Overrides__: Override the default Python version for a single run using `--python-version` (e.g., `protostar init --template cli --python-version 3.13`).
 - __Verbose Output__: Append `--verbose` (or `-v`) to enable debug logs and full tracebacks.
 

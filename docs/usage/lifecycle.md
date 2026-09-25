@@ -116,15 +116,19 @@ an edit, and a merged file keeps your line endings.
 
 Local edits or deletions with unchanged desired intent are preserved and do not
 make checks fail. Deleted managed files stay deleted. Each preserved edit has an
-`id`, and you can [take its update later](#take-a-kept-change-later). Omitted
-template contributions retain their existing files and ownership; sync never
-prunes them unless a template [migration](authoring-templates.md#migrations)
-retires them. Equal foreign content remains unowned.
+`id`, and you can [take its update later](#take-a-kept-change-later). Equal
+foreign content remains unowned.
 
-GitHub Actions workflows are the exception to pruning, because each is one
-generator's complete output. When Protostar stops generating a step or key (for
-example the Codecov upload steps after you turn Codecov off), an unedited copy is
-removed and an edited copy is kept with a `retracted` conflict. Workflow files are
+Content Protostar stops producing is retracted: a tool you turn off, a
+[template option](authoring-templates.md#template-options) you change, or a file,
+dependency, or payload a new template version drops. An unedited copy is removed
+and an edited copy is kept with a `retracted` conflict, whose `local` choice keeps
+it as yours and `desired` removes it. This covers seeded files, owned
+dependencies (after which the lock is refreshed), each `[tool.*]` table in
+`pyproject.toml`, append regions, and each step or key of a GitHub Actions
+workflow (for example the Codecov upload steps after you turn Codecov off).
+Seeded project metadata such as `[project].name` and dependency-group includes
+are never retracted. Workflow files are
 merged by job and by step name, so your own jobs, steps, triggers, and inputs stay.
 An action version you or Renovate changed (including a SHA pin) is yours: a newer
 Protostar version of the same action does not conflict and `sync --check` passes.

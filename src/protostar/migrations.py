@@ -81,7 +81,7 @@ class MigrationOutcome(StrEnum):
     MOVED = "moved"
     """The file, local edits included, and its ownership moved to the new path."""
     TARGET_EXISTS = "target-exists"
-    """The new path already exists, so the file stayed where it is."""
+    """The new path already exists, so the file stayed where it is, as the user's."""
     REMOVED = "removed"
     """The file was unedited, so it was deleted."""
     RETIRED = "retired"

@@ -830,7 +830,7 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
     def revision(value, *, evolved=False):
         files = source_text(value)
         files += (
-            '"deleted.txt" = "keep absent"\n"omitted.txt" = "retain ownership"\n'
+            '"deleted.txt" = "keep absent"\n"omitted.txt" = "released"\n'
             if not evolved
             else '"safe.txt" = "accepted"\n'
         )
@@ -878,7 +878,8 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
     assert result["status"] == "partial"
     process.assert_called_once()
     assert not Path("deleted.txt").exists()
-    assert Path("omitted.txt").read_text() == "retain ownership"
+    # The revision stops shipping an unedited seed, so it is removed.
+    assert not Path("omitted.txt").exists()
     assert Path("safe.txt").read_text() == "accepted"
     assert Path("notes.txt").read_text().startswith("local prefix\n")
     assert "remote" in Path("notes.txt").read_text()
@@ -887,7 +888,7 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
         "safe": True,
     }
     state = deserialize_state(Path("protostar.lock").read_text())
-    assert any(record.path == "omitted.txt" for record in state.files)
+    assert not {"deleted.txt", "omitted.txt"} & {record.path for record in state.files}
     process.reset_mock()
     after = snapshot(Path.cwd())
     for _ in range(2):
@@ -967,6 +968,9 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     )
     assert any(hook["id"] == "mypy" for hook in local["hooks"])
     assert not Path(".github/renovate.json").exists()
+    # Renovate's unedited dev packages leave with it.
+    dev = tomlkit.parse(Path("pyproject.toml").read_text())["dependency-groups"]["dev"]
+    assert not {"check-jsonschema>=1", "json5>=1"} & set(dev)
     from protostar.sync_state import deserialize_state
 
     before = deserialize_state(retained.decode())
@@ -990,7 +994,10 @@ def test_recipe_tool_evolution_retains_keyed_hook_edits_and_deleted_artifacts(
     )
     prepared.apply()
     assert not Path(".github/renovate.json").exists()
-    process.assert_not_called()
+    # Its packages come back with it.
+    process.assert_called_once_with(
+        mocker.ANY, ["uv", "add", "--dev", "check-jsonschema", "json5"], timeout=600
+    )
 
 
 def test_action_pin_by_renovate_keeps_sync_check_passing(
@@ -1029,3 +1036,124 @@ def test_action_pin_by_renovate_keeps_sync_check_passing(
     ]
     assert invoke_sync(monkeypatch, capsys, "--check")["check_passed"] is True
     assert workflow.read_text() == pinned
+
+
+def _state():
+    from protostar.sync_state import read_workspace_state
+
+    state = read_workspace_state(Path.cwd())
+    assert state is not None
+    return state
+
+
+def _released(project, first, second):
+    """Applies ``first``, then prepares ``second`` over it."""
+    from protostar.lifecycle import prepare_project
+
+    project.write_text(first)
+    prepare_project().apply()
+    return lambda: (project.write_text(second), prepare_project())[1]
+
+
+def test_a_seed_nothing_declares_is_removed_or_retracted(project):
+    """An unedited seed leaves; an edited one waits for a decision."""
+    reprepare = _released(
+        project,
+        '[files]\n"plain.txt" = "a\\n"\n"edited.txt" = "b\\n"\n"gone.txt" = "c\\n"\n',
+        "[files]\n",
+    )
+    Path("edited.txt").write_text("mine\n")
+    Path("gone.txt").unlink()
+    prepared = reprepare()
+
+    (conflict,) = prepared.review.conflicts
+    assert conflict.location.file == "edited.txt"
+    assert conflict.reason is ConflictReason.RETRACTED
+    prepared.apply()
+    assert not Path("plain.txt").exists()
+    assert Path("edited.txt").read_text() == "mine\n"
+    owned = {record.path for record in _state().files}
+    assert not {"plain.txt", "gone.txt"} & owned
+    assert "edited.txt" in owned
+
+    from protostar.lifecycle import prepare_project
+
+    retracted = prepare_project()
+    (conflict,) = retracted.review.conflicts
+    retracted.resolve({conflict.id: ResolutionChoice.DESIRED}).apply()
+    assert not Path("edited.txt").exists()
+    assert "edited.txt" not in {record.path for record in _state().files}
+
+
+def test_an_edited_retracted_seed_kept_becomes_the_users(project):
+    from protostar.lifecycle import prepare_project
+
+    reprepare = _released(project, '[files]\n"edited.txt" = "b\\n"\n', "[files]\n")
+    Path("edited.txt").write_text("mine\n")
+    prepared = reprepare()
+    (conflict,) = prepared.review.conflicts
+    prepared.resolve({conflict.id: ResolutionChoice.LOCAL}).apply()
+
+    assert Path("edited.txt").read_text() == "mine\n"
+    assert "edited.txt" not in {record.path for record in _state().files}
+    assert not prepare_project().review.conflicts
+
+
+def _add_resolved(_runner, command, *, timeout):
+    """Stands in for `uv add` and `uv lock` on the main group."""
+    import tomlkit
+
+    if command[:2] == ["uv", "add"]:
+        doc = tomlkit.parse(Path("pyproject.toml").read_text())
+        doc["project"].setdefault("dependencies", []).extend(
+            package + ">=1" for package in command[2:]
+        )
+        Path("pyproject.toml").write_text(tomlkit.dumps(doc))
+    Path("uv.lock").write_text("resolved")
+
+
+def test_a_requirement_nothing_requests_is_removed_and_locked(project, mocker):
+    """An unedited owned requirement leaves with its producer, then uv relocks."""
+    import tomlkit
+
+    process = mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_add_resolved
+    )
+    reprepare = _released(
+        project, 'dependencies = ["example", "other"]\n', 'dependencies = ["other"]\n'
+    )
+    process.reset_mock()
+    reprepare().apply()
+
+    listed = tomlkit.parse(Path("pyproject.toml").read_text())["project"]
+    assert list(listed["dependencies"]) == ["other>=1"]
+    process.assert_called_once_with(mocker.ANY, ["uv", "lock"], timeout=600)
+    names = {r.name for r in _state().dependencies}
+    assert names == {"other"}
+
+
+def test_an_edited_requirement_nothing_requests_is_retracted(project, mocker):
+    import tomlkit
+
+    from protostar.lifecycle import prepare_project
+
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_add_resolved
+    )
+    reprepare = _released(project, 'dependencies = ["example"]\n', "name = 't'\n")
+    target = Path("pyproject.toml")
+    target.write_text(target.read_text().replace("example>=1", "example>=2"))
+    prepared = reprepare()
+
+    (conflict,) = prepared.review.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.identity == "example:"
+    prepared.apply()
+    assert "example>=2" in target.read_text()
+
+    retracted = prepare_project()
+    (conflict,) = retracted.review.conflicts
+    retracted.resolve({conflict.id: ResolutionChoice.DESIRED}).apply()
+    listed = tomlkit.parse(target.read_text())["project"]["dependencies"]
+    assert list(listed) == []
+    assert not prepare_project().review.conflicts

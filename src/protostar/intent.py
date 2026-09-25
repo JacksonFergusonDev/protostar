@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 from .errors import ConfigurationError
+from .options import Condition
 
 
 class TemplateOrigin(StrEnum):
@@ -111,16 +112,43 @@ def region_tag(identity: str) -> str:
 
 @dataclass(frozen=True)
 class PyprojectPayload:
-    """A managed pyproject.toml payload, optionally tied to a tooling module.
+    """A managed pyproject.toml payload, optionally gated on tools and options.
 
     Attributes:
         content: TOML text merged into pyproject.toml.
-        requires: Config key of the tool this payload configures. The payload is
-            injected only while that tool is active; None means always.
+        requires: When the payload is injected; None means always.
     """
 
     content: str
-    requires: str | None = None
+    requires: Condition | None = None
+
+
+@dataclass(frozen=True)
+class OptionalContent:
+    """Template content that applies only while its condition holds.
+
+    Content listed by several blocks applies while any of them holds.
+
+    Attributes:
+        requires: When the content applies.
+        dependencies: Runtime packages.
+        dev_dependencies: Development packages.
+        docs_dependencies: Documentation packages.
+        files: Template files, by path, or every file under a path ending in ``/``.
+    """
+
+    requires: Condition
+    dependencies: tuple[str, ...] = ()
+    dev_dependencies: tuple[str, ...] = ()
+    docs_dependencies: tuple[str, ...] = ()
+    files: tuple[str, ...] = ()
+
+    def covers(self, path: str) -> bool:
+        """Returns whether the block lists a template file."""
+        return any(
+            path == entry or (entry.endswith("/") and path.startswith(entry))
+            for entry in self.files
+        )
 
 
 @dataclass(frozen=True)
@@ -129,6 +157,7 @@ class AppendContribution:
 
     id: str
     content: str
+    requires: Condition | None = None
 
     @property
     def tag(self) -> str:

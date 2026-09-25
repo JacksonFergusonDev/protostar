@@ -23,6 +23,7 @@ from .migrations import rename_variables, select_migrations
 from .models import ExecutionResult, InitRequest, RollbackContext
 from .modules import PythonCore, SystemWorkspaceModule
 from .network import RefKind, RefListing, list_refs
+from .options import OptionValue, resolve_options
 from .orchestrator import Orchestrator
 from .preparation import ExecutionPolicy, PreparedReview, prepare_review
 from .progress import ProgressStep, no_progress
@@ -283,6 +284,7 @@ def prepare_project(
     *,
     variables: Mapping[str, str] | None = None,
     allowed_secrets: frozenset[str] = frozenset(),
+    options: Mapping[str, OptionValue] | None = None,
 ) -> PreparedProject:
     """Captures a project once for shared inspection and lifecycle application.
 
@@ -291,11 +293,13 @@ def prepare_project(
         variables: Values for template variables, over the recorded ones.
         allowed_secrets: Variables whose flagged values the user confirmed
             are not secrets.
+        options: Values for template options, over the recorded ones.
 
     Raises:
         MissingTemplateVariablesError: If a template variable still has no
             value; sync never prompts.
         SecretDetectedError: If a new value looks like a credential.
+        InvalidOptionValueError: If an option's value is one it doesn't offer.
     """
     located = located or locate_project()
     recipe, template = located.recipe, located.template
@@ -316,7 +320,18 @@ def prepare_project(
             for name, value in {**recorded, **given}.items()
             if name in template.variables
         }
-        recipe = replace(recipe, variables=tuple(sorted(values.items())))
+        # Values for options the template no longer offers are dropped.
+        chosen = {
+            name: value
+            for name, value in {**dict(recipe.options), **dict(options or {})}.items()
+            if name in template.options
+        }
+        resolve_options(template.options, chosen)
+        recipe = replace(
+            recipe,
+            variables=tuple(sorted(values.items())),
+            options=tuple(sorted(chosen.items())),
+        )
     blueprint = template.render(recipe.rendering_context()) if template else None
     state = located.state
     # plan() rejects a template other than the recorded one.

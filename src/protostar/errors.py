@@ -325,6 +325,29 @@ class MissingTemplateVariablesError(TemplateResolutionError):
         return {"missing_variables": list(self.variables)}
 
 
+class InvalidOptionValueError(ConfigurationError):
+    """Raised when a template option is given a value it does not offer."""
+
+    def __init__(self, option: str, value: str, values: tuple[str, ...]) -> None:
+        """Initializes the error with the option and the values it offers.
+
+        Args:
+            option: The option's name.
+            value: The value given.
+            values: Every value the option offers.
+        """
+        super().__init__(
+            f"Option {option!r} has no value {value!r}.",
+            hint=f"Choose one of: {', '.join(values)}, as `--option {option}=VALUE`.",
+        )
+        self.option = option
+        self.values = values
+
+    def details(self) -> dict[str, Any]:
+        """Returns the option and the values it offers."""
+        return {"option": self.option, "values": list(self.values)}
+
+
 class MissingDependencyError(ProtostarError):
     """Raised during pre-flight checks when a system-level executable is absent."""
 

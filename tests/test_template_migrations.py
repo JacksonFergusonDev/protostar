@@ -347,7 +347,10 @@ def test_a_rename_never_overwrites_an_existing_file(project, monkeypatch, capsys
     assert steps["settings.py"] == MigrationOutcome.TARGET_EXISTS.value
     assert Path("config.py").read_text() == "mine\n"
     assert Path("settings.py").exists()
-    assert "settings.py" in records()
+    # The file stays as the user's own, so a later sync leaves it alone.
+    assert "settings.py" not in records()
+    cli(monkeypatch, capsys, "sync")
+    assert Path("settings.py").exists()
 
 
 def test_a_deleted_seed_stays_deleted_where_it_moved(project, monkeypatch, capsys):

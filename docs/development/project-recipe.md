@@ -24,7 +24,7 @@ early file rendering and later TOML rendering consistent.
 
 In a project that had no recipe, the Python version, author, and year come from the project itself where it states them (see [existing projects](../usage/init.md#existing-projects)), and from your configuration otherwise.
 
-`[tool.protostar.tools]`, `[tool.protostar.metadata]`, and `[tool.protostar.variables]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
+`[tool.protostar.tools]`, `[tool.protostar.metadata]`, `[tool.protostar.variables]`, and `[tool.protostar.options]` are written only while they have entries, and an absent table means empty. `fallback` and `context` are always present.
 
 The schema-v1 recipe captures the resolved template origin and locator (or explicit
 `mode = "tooling-only"`), and for a repository template its `path` inside the
@@ -49,8 +49,9 @@ a late write failure rolls both back, including original bytes and modes.
 current same-source template opinion, then the fallback captured on enrollment.
 `true` requests a tool; `false` opts out of its contributions and warnings. An
 opt-out affects that module only: an independent template or another module can
-still contribute to the same file or dependency group. No files, dependencies, or
-ownership records are pruned when a tool is disabled.
+still contribute to the same file or dependency group. Disabling a tool retracts
+what it contributed: unedited files, dependencies, configuration tables, and
+regions are removed, and edited ones become `retracted` conflicts.
 
 The table is omitted while it has no entries, so a new project has none. To record a diversion, add the table:
 
@@ -115,3 +116,26 @@ Recorded values are not checked again. Keep secrets in the environment the
 project reads at runtime. Trust permissions and command lines are never
 serialized. Generated project files and ownership baselines contain rendered
 content; diffs are not a secret-redaction system.
+
+## Template options
+
+A template's [options](../usage/authoring-templates.md#template-options) record
+only the values a project chose. Every value passed with `--option` is recorded as
+given, and from the recipe editor only the values that differ from the template's
+defaults:
+
+```bash
+protostar init --from ./blueprint.toml --option database=postgres
+```
+
+```toml
+[tool.protostar.options]
+database = "postgres"
+```
+
+An option the table leaves out follows the template's default, like an omitted
+tool follows the template's opinion, so a template that changes a default changes
+those projects on their next `sync`. `sync --option NAME=VALUE` changes a value and
+records it. A value for an option the template no longer offers is dropped on the
+next `sync`; a value the option no longer offers stops `sync` with an
+`InvalidOptionValueError` naming the values it does (`error.values` in JSON).

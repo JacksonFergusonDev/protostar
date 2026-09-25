@@ -1544,3 +1544,65 @@ assert "pygments.lexers" in sys.modules
         text=True,
     )
     assert result.returncode == 0, result.stderr
+
+
+OPTIONS_TEMPLATE = """
+[options.compose]
+description = "Ship a compose.yaml."
+default = false
+
+[options.database]
+choices = ["none", "postgres", "sqlite"]
+default = "none"
+
+[[optional]]
+requires = "compose"
+files = ["compose.yaml"]
+
+[[optional]]
+requires = "database=postgres"
+dependencies = ["psycopg"]
+
+[files]
+"compose.yaml" = "services: {}\\n"
+"""
+
+
+@pytest.mark.asyncio
+async def test_options_are_chosen_from_the_keyboard(tmp_path):
+    draft = template_draft(
+        tmp_path / "t.toml",
+        OPTIONS_TEMPLATE,
+        option_overrides=(("database", "sqlite"),),
+    )
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        text = "\n".join(
+            str(widget.content) for widget in screen.query("OptionFields Static")
+        )
+        assert "Ship a compose.yaml." in text
+        choice = screen.query_one("#option-database", RadioSet)
+        # A value the flags chose starts selected.
+        assert choice.pressed_button.id == "option-database-2"
+
+        screen.query_one("#option-compose").focus()
+        await pilot.press("space")
+        await pilot.press("down")
+        assert app.focused is choice
+        await pilot.press("down", "space")
+        await settle(pilot)
+
+        assert dict(screen._current_draft().option_choices or ()) == {
+            "compose": True,
+            "database": "postgres",
+        }
+        await apply(pilot)
+        await settle(pilot)
+    decision = app.return_value
+    assert decision is not None
+    _modules, request = resolve_init(decision.draft, UserConfig())
+    # Only the values away from the template's defaults are recorded.
+    assert request.recipe is not None
+    assert request.recipe.options == (("compose", True), ("database", "postgres"))
