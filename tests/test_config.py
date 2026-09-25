@@ -110,25 +110,13 @@ def test_user_config_ruff_invalid_type(mocker) -> None:
         UserConfig.load(force_reload=True)
 
 
-def test_template_blueprint_load_remote_target(mocker, tmp_path):
+def test_template_blueprint_load_remote_target(forge):
     """Test that HTTP/HTTPS override targets route to the network module."""
-    # Patch the global variable to point to a sandboxed path that doesn't exist
-    mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "fake_global.toml")
-
-    def mock_resolve(url, temp_workspace):
-        (temp_workspace / "protostar.toml").write_text(
-            "[env]\nide = 'cursor'", encoding="utf-8"
-        )
-        return temp_workspace
-
-    mock_resolve_patch = mocker.patch(
-        "protostar.config.resolve_remote_template", side_effect=mock_resolve
-    )
+    forge.plain["https://example.com/config.toml"] = b"[env]\nide = 'cursor'"
 
     config = TemplateSource.load("https://example.com/config.toml").render({})
 
-    mock_resolve_patch.assert_called_once()
-    assert mock_resolve_patch.call_args[0][0] == "https://example.com/config.toml"
+    assert forge.requests == ["https://example.com/config.toml"]
     assert isinstance(config, TemplateBlueprint)
 
 

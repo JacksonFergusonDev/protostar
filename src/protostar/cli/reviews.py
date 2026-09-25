@@ -10,8 +10,15 @@ from rich.text import Text
 from protostar.cli import schema, ui
 from protostar.cli.diff import format_diff, normalize_newlines
 from protostar.cli.tui.launch import resolve_conflicts
+from protostar.config import UserConfig
 from protostar.errors import ExecutionAbortedError
-from protostar.lifecycle import inspect_project, prepare_project
+from protostar.init_draft import DraftTemplate, InitDraft
+from protostar.lifecycle import (
+    PreparedProject,
+    TemplateUpstream,
+    locate_project,
+    prepare_project,
+)
 from protostar.merge import (
     ConflictReason,
     MergeConflict,
@@ -53,12 +60,15 @@ def unified_diff(edit: PreparedEdit) -> str:
     )
 
 
-def review_payload(review: PreparedReview) -> dict[str, Any]:
+def review_payload(
+    review: PreparedReview, upstream: TemplateUpstream | None = None
+) -> dict[str, Any]:
     """Builds the common deterministic envelope for status and diff."""
     return {
         "api_version": schema.CLI_API_VERSION,
         "status": "reviewed",
         "pending": review.pending,
+        "template": upstream.to_dict() if upstream else None,
         "review": review.to_dict(),
         "diffs": [
             {"path": edit.path, "diff": unified_diff(edit)} for edit in review.edits
@@ -68,11 +78,46 @@ def review_payload(review: PreparedReview) -> dict[str, Any]:
 
 def handle_review(args: argparse.Namespace) -> None:
     """Inspects the current project and renders one non-blocking review."""
-    review = inspect_project()
+    project = prepare_project()
     if ui.is_json_mode:
-        ui.emit_json(review_payload(review))
+        ui.emit_json(review_payload(project.review, project.upstream))
         return
-    render_review(review, show_diffs=args.command == "diff")
+    render_upstream(project.upstream)
+    render_review(project.review, show_diffs=args.command == "diff")
+
+
+def render_upstream(upstream: TemplateUpstream | None) -> None:
+    """Renders the template's ref, and what its repository offers beyond it."""
+    if upstream is None:
+        return
+    line = Text.assemble(
+        ("Template ", "dim"),
+        (upstream.ref, "bold"),
+        (f" @ {upstream.revision[:12]}", "dim"),
+    )
+    if not upstream.reachable:
+        line.append("; its repository could not be checked for updates.", "dim")
+    elif upstream.newer:
+        line.append_text(
+            Text.assemble(
+                "; ",
+                (f"{upstream.newer} available", "bold yellow"),
+                f" (sync --to {upstream.newer}).",
+            )
+        )
+    elif upstream.moved:
+        line.append_text(
+            Text.assemble(
+                "; ",
+                (f"{upstream.ref} moved to {upstream.moved[:12]}", "bold yellow"),
+                f" (sync --to {upstream.ref}).",
+            )
+        )
+    elif upstream.kind is None:
+        line.append("; the repository no longer has this ref.", "yellow")
+    else:
+        line.append("; up to date.", "dim")
+    ui.console.print(line, soft_wrap=True)
 
 
 def render_review(
@@ -237,13 +282,53 @@ def _asks(args: argparse.Namespace, review: PreparedReview) -> bool:
     )
 
 
+def _prepare_sync(args: argparse.Namespace) -> PreparedProject:
+    """Locates the project at the requested ref and prepares its review.
+
+    Variables the template needs and nobody supplied are asked for on the
+    variables screen in an interactive terminal; elsewhere rendering raises
+    ``MissingTemplateVariablesError`` listing them all.
+    """
+    from protostar.cli.main import (
+        _check_allowed_secrets,
+        _edit_variables,
+        _parse_var_flags,
+        _resolve_template_variables,
+    )
+
+    located = locate_project(args.to)
+    template = located.template
+    values = _resolve_template_variables(
+        template, dict(located.recipe.variables), _parse_var_flags(args.variables)
+    )
+    allowed = _check_allowed_secrets(template, args.allowed_secrets)
+    if (
+        template is not None
+        and template.variables - values.keys()
+        and is_interactive()
+        and not (ui.is_json_mode or args.check)
+    ):
+        draft = _edit_variables(
+            InitDraft(
+                template=DraftTemplate(template, is_external=True),
+                variables=tuple(sorted(values.items())),
+                allowed_secrets=allowed,
+                existing_recipe=located.recipe,
+            ),
+            UserConfig(python_version=located.recipe.python, ide=located.recipe.ide),
+            command="sync",
+        )
+        values, allowed = dict(draft.variables), draft.allowed_secrets
+    return prepare_project(located, variables=values, allowed_secrets=allowed)
+
+
 def handle_sync(args: argparse.Namespace) -> None:
     """Reviews or applies the current recipe without task replay.
 
     In an interactive terminal, conflicts that can be settled open the
     conflict screen first; its choices are applied like ``--resolve``.
     """
-    project = prepare_project()
+    project = _prepare_sync(args)
     if args.resolve:
         project = project.resolve(
             select_resolutions(project.review.decisions, args.resolve)
@@ -256,12 +341,13 @@ def handle_sync(args: argparse.Namespace) -> None:
             project = project.resolve(choices)
     review = project.review
     if args.dry_run or args.check:
-        payload = review_payload(review)
+        payload = review_payload(review, project.upstream)
         if args.check:
             payload["check_passed"] = not review.pending
         if ui.is_json_mode:
             ui.emit_json(payload)
         else:
+            render_upstream(project.upstream)
             render_review(review, show_diffs=args.dry_run)
             if args.check:
                 if not review.pending:
@@ -292,11 +378,13 @@ def handle_sync(args: argparse.Namespace) -> None:
             {
                 "api_version": schema.CLI_API_VERSION,
                 "status": "partial" if partial else "success",
+                "template": project.upstream.to_dict() if project.upstream else None,
                 "review": review.to_dict(),
                 "result": result.to_dict(),
             }
         )
     else:
+        render_upstream(project.upstream)
         render_review(review, applied=True)
         settled = [
             c for c in review.resolved if c.reason is not ConflictReason.PRESERVED

@@ -569,7 +569,7 @@ def test_terminal_settles_a_flagged_var_on_the_variables_screen(
     mocker.patch("protostar.cli.main.is_interactive", return_value=True)
     screen = mocker.patch(
         "protostar.cli.main.edit_variables",
-        side_effect=lambda draft, config, flagged: replace(
+        side_effect=lambda draft, config, flagged, **_: replace(
             draft, allowed_secrets=frozenset(flagged)
         ),
     )

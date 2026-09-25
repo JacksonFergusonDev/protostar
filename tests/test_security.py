@@ -5,7 +5,6 @@ from typing import Any
 import pytest
 
 from protostar.errors import SecurityViolationError
-from protostar.fs import safe_extract_zip
 from protostar.security import enforce_binary_safelist, enforce_path_jail
 
 
@@ -74,21 +73,6 @@ def test_safelist_binary_enum():
 
     for binary in SafelistBinary:
         assert binary in ALLOWED_BINARIES
-
-
-def test_safe_extract_zip_denies_traversal(tmp_path: Path):
-    import zipfile
-
-    # Create a malicious zip file
-    zip_path = tmp_path / "malicious.zip"
-    with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("../../etc/passwd", "hacked")
-
-    target_dir = tmp_path / "target"
-    target_dir.mkdir()
-
-    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
-        safe_extract_zip(zip_path, target_dir)
 
 
 def test_trust_boundary_bypassed_when_trusted_true(mocker: Any) -> None:

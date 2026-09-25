@@ -35,7 +35,14 @@ DIGEST = "a" * 64
 REGION = "# region: protostar 12345678\nexport A=1\n# endregion: protostar 12345678"
 PROPERTY = settings(max_examples=200, deadline=None)
 REF = TemplateReference(
-    TemplateOrigin.BUILT_IN, "api", DIGEST, "my-alias", "v1", "revision"
+    TemplateOrigin.REMOTE,
+    "https://github.com/org/template",
+    DIGEST,
+    "my-alias",
+    "v1",
+    path="api",
+    ref="v1.0.0",
+    revision="b" * 40,
 )
 
 
@@ -298,15 +305,26 @@ def test_tooling_only_state_and_candidate_update():
     assert candidate.files[0].baseline == "x = 1\n"
 
 
-def test_same_source_revision_is_allowed_but_alias_retargeting_is_rejected():
+def test_another_revision_is_allowed_but_another_source_is_rejected():
     state = sample_state()
+    # Moving to another ref of the same repository keeps the identity.
     check_template_identity(
-        state, replace(REF, digest="b" * 64, version="v2", display_name="other alias")
+        state,
+        replace(
+            REF,
+            digest="b" * 64,
+            version="v2",
+            display_name="other alias",
+            ref="v2.0.0",
+            revision="c" * 40,
+        ),
     )
     for ref in (
         None,
-        replace(REF, locator="cli"),
-        replace(REF, origin=TemplateOrigin.REMOTE),
+        replace(REF, locator="https://github.com/org/other"),
+        replace(REF, path="cli"),
+        replace(REF, path=""),
+        replace(REF, origin=TemplateOrigin.LOCAL, ref=None, revision=None, path=""),
     ):
         with pytest.raises(ConfigurationError):
             check_template_identity(state, ref)
@@ -340,15 +358,26 @@ def test_workspace_identity_rejects_only_a_recorded_other_template(tmp_path):
     assert caught.value.hint
 
 
-def test_state_rejects_template_credentials_and_installation_identity():
+def test_state_rejects_template_credentials_installation_identity_and_bad_revisions():
     for ref in (
         replace(
             REF,
             origin=TemplateOrigin.REMOTE,
             locator="https://user:secret@example.org/a",
         ),
-        replace(REF, locator="/installed/package/api.toml"),
+        replace(
+            REF,
+            origin=TemplateOrigin.BUILT_IN,
+            locator="/installed/package/api.toml",
+            path="",
+            ref=None,
+            revision=None,
+        ),
         replace(REF, digest="bad"),
+        replace(REF, revision="not-a-sha"),
+        replace(REF, revision=None),
+        replace(REF, ref=None),
+        replace(REF, origin=TemplateOrigin.LOCAL),
     ):
         with pytest.raises(ConfigurationError):
             SyncState("0.9.0", ref)

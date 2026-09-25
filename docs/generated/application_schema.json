@@ -5,6 +5,7 @@
   "required": [
     "api_version",
     "status",
+    "template",
     "review",
     "result"
   ],
@@ -17,6 +18,56 @@
       "enum": [
         "success",
         "partial"
+      ]
+    },
+    "template": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string"
+            },
+            "revision": {
+              "type": "string"
+            },
+            "kind": {
+              "enum": [
+                null,
+                "tag",
+                "branch",
+                "commit"
+              ]
+            },
+            "newer": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "moved": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reachable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ref",
+            "revision",
+            "kind",
+            "newer",
+            "moved",
+            "reachable"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "review": {

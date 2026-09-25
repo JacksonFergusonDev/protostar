@@ -6,7 +6,9 @@
         "digest": "4fee3c38a8eaca5d6ef4f9c10bcd8c0e2518070dbd8408b19872e73e13e61356",
         "display_name": null,
         "version": null,
-        "source_revision": null
+        "path": "",
+        "ref": null,
+        "revision": null
     },
     "dependencies": {
         "dependencies": [

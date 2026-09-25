@@ -14,7 +14,7 @@ Protostar's template engine allows you to define declarative, reusable environme
 
 - :material-web: __External & Remote (`--from`)__
 
-    Fetch raw TOML blueprints directly from GitHub, GitLab, Codeberg, or local files with dynamic URL translation and archive unpacking.
+    Apply templates from a GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut repository at a release you choose, or from local files.
 
 - :material-card-account-details-outline: __Global Aliases (`[templates]`)__
 
@@ -77,67 +77,78 @@ protostar init -t api --no-docker
 
 The `--from` flag accepts local filesystem paths, direct raw TOML URLs, and repository web links.
 
-### Automatic URL Translation
+### Repository URLs
 
-Protostar automatically detects and translates standard web UI URLs into raw downloadable endpoints for all major hosting providers:
-
-| Provider | Web URL | Translated Endpoint |
-| :--- | :--- | :--- |
-| __GitHub__ | `https://github.com/user/repo/blob/main/api.toml` | `https://raw.githubusercontent.com/user/repo/main/api.toml` |
-| __GitLab__ | `https://gitlab.com/user/repo/-/blob/main/api.toml` | `https://gitlab.com/user/repo/-/raw/main/api.toml` |
-| __Bitbucket__ | `https://bitbucket.org/user/repo/src/main/api.toml` | `https://bitbucket.org/user/repo/raw/main/api.toml` |
-| __Codeberg__ | `https://codeberg.org/user/repo/src/branch/main/api.toml` | `https://codeberg.org/user/repo/raw/branch/main/api.toml` |
-| __Sourcehut__ | `https://git.sr.ht/~user/repo/tree/main/item/api.toml` | `https://git.sr.ht/~user/repo/blob/main/api.toml` |
-
-### Multi-File Repository Archives
-
-Protostar also natively supports full repository archives (`.zip` and `.tar.gz`). If your template includes companion files (e.g., custom configs, pre-populated source files, or scripts), point `--from` to the repository root:
+A template in a GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut repository is identified by its repository and its path inside that repository. The revision you apply is a separate choice, so the same template can move between releases without becoming a different template. Point `--from` at the repository, or at any web page, raw file, or archive in it:
 
 ```bash
+# The repository's newest release
 protostar init --from https://github.com/YourOrg/fastapi-template
+
+# A named tag, branch, or full commit SHA
+protostar init --from https://github.com/YourOrg/fastapi-template/tree/v1.2.0
+
+# A template in a subdirectory of the repository, at a branch
+protostar init --from https://github.com/YourOrg/templates/tree/main/services/api
 ```
 
-Protostar downloads the archive, extracts it safely using strict path traversal protection, resolves the contained `protostar.toml`, and injects all files from the `template/` directory into your workspace.
+Every form below names the same kind of thing: a repository, an optional ref, and an optional path.
 
-### Pinning a Template Revision
-
-Every URL translation preserves the ref already in the path, so you pin a single-file template by pointing at a tag or commit instead of a branch:
-
-| Provider | Pinned web URL |
+| Provider | Examples |
 | :--- | :--- |
-| __GitHub__ | `https://github.com/user/repo/blob/v1.2.0/api.toml` |
-| __GitLab__ | `https://gitlab.com/user/repo/-/blob/v1.2.0/api.toml` |
-| __Bitbucket__ | `https://bitbucket.org/user/repo/src/v1.2.0/api.toml` |
-| __Codeberg__ | `https://codeberg.org/user/repo/src/tag/v1.2.0/api.toml` |
-| __Sourcehut__ | `https://git.sr.ht/~user/repo/tree/v1.2.0/item/api.toml` |
+| __GitHub__ | `/tree/<ref>/<dir>`, `/blob/<ref>/api.toml`, `/archive/refs/tags/<tag>.zip`, `raw.githubusercontent.com/<owner>/<repo>/<ref>/api.toml` |
+| __GitLab__ | `/-/tree/<ref>/<dir>`, `/-/blob/<ref>/api.toml`, `/-/archive/<ref>/<repo>-<ref>.zip`; nested groups are supported |
+| __Bitbucket__ | `/src/<ref>/<dir>`, `/get/<ref>.zip` |
+| __Codeberg__ | `/src/tag/<ref>/<dir>`, `/src/branch/<ref>/<dir>`, `/archive/<ref>.zip` |
+| __Sourcehut__ | `/tree/<ref>/item/<dir>`, `/blob/<ref>/api.toml`, `/archive/<ref>.tar.gz` |
 
-A bare repository URL is __not__ pinned: it always resolves to the default branch archive (`.../archive/refs/heads/main.zip`). To pin a multi-file template, name the tagged archive explicitly:
+The path names either a template directory, which holds a `protostar.toml` and an optional `template/` directory of companion files, or a single `.toml` file. A path to a `protostar.toml` names its directory. Branch names may contain slashes: Protostar matches the longest ref the repository actually has.
 
-```bash
-# Pinned to the v1.2.0 tag rather than whatever main holds today
-protostar init --from https://github.com/YourOrg/fastapi-template/archive/refs/tags/v1.2.0.zip
-```
+Protostar lists the repository's tags and branches with one Git smart-HTTP request (the same one `git ls-remote` makes), without needing `git` installed, and then downloads the template's files for exactly one commit, in memory, rejecting unsafe archive members.
 
-The equivalent forms are `/-/archive/v1.2.0/repo-v1.2.0.zip` on GitLab, `/archive/v1.2.0.zip` on Codeberg, and `/get/v1.2.0.zip` on Bitbucket. Template source URLs may not carry credentials or query parameters, so always pin through the path as shown above.
+Any other HTTPS URL, such as a raw `protostar.toml` or an archive on your own server, is fetched exactly as given. It has no revisions to choose between. Template source URLs may not carry credentials or query parameters.
 
-#### Recorded Provenance
+### Template Versions
 
-Protostar records a SHA-256 digest of whichever template it resolved in `protostar.lock`, pinned or not, so `protostar status` can report when an unpinned source has drifted. A __full 40-character commit SHA__ in the URL is additionally recorded as the source revision; a tag is not, because a tag can be moved.
+A URL that names no ref starts on the repository's newest release: the highest tag that is a [PEP 440](https://peps.python.org/pep-0440/) version (`v1.2.0` and `1.2.0` both count), not counting pre-releases. A repository with no release tags starts on its default branch.
+
+The recipe in `pyproject.toml` records the ref, and `protostar.lock` records the commit it named:
 
 ```toml
-# Strongest pin: immutable, and recorded as the source revision
-[templates.backend]
-source = "https://raw.githubusercontent.com/YourOrg/standards/4f0b8c2d1e9a7b3c5d6e8f0a2b4c6d8e0f1a2b3c/backend.toml"
+[tool.protostar.source]
+origin = "remote"
+locator = "https://github.com/YourOrg/templates"
+path = "services/api"
+ref = "v1.2.0"
 ```
 
-#### Choosing Whether to Pin
+`protostar sync` always applies the recorded commit, so it is reproducible even if someone moves the tag or pushes to the branch. `protostar status` checks the repository and reports what it offers:
 
-The resolved locator is part of the project identity tracked in `protostar.lock`, so the choice is durable:
+```text
+Template v1.2.0 @ 4f0b8c2d1e9a; v1.3.0 available (sync --to v1.3.0).
+```
 
-- __Pin__ when reproducible scaffolds matter more than updates. Every `protostar init` from that alias produces the same result indefinitely.
-- __Leave floating__ (a branch ref, or a bare repository URL) when you want `protostar sync` to deliver template updates to existing projects.
+A branch reports when it has moved, and a moved tag is reported the same way. Nothing changes until you move the project yourself:
 
-A project scaffolded from a pinned URL stays on that revision. Editing the recorded source in `pyproject.toml` to bump the pin changes the tracked identity, and `protostar sync` refuses it as template switching.
+```bash
+protostar sync --to v1.3.0 --dry-run   # preview the upgrade
+protostar sync --to v1.3.0             # apply it and record the new ref
+protostar sync --to latest             # the newest release
+protostar sync --to main               # follow a branch, to its current commit
+```
+
+`sync --to` is an ordinary three-way sync against the new revision: your local edits are kept, and conflicts are reported exactly as for any other update. Editing `ref` in the recipe by hand and running `sync` does the same thing. `sync --check` does not fail just because a newer release exists; it checks that the recorded revision is applied. Pre-releases are offered only while the project is already on one.
+
+A new version that adds a template variable needs a value: `sync --to` asks for it in an interactive terminal, and otherwise takes `--var NAME=VALUE`.
+
+Aliases work the same way. An alias to a bare repository URL starts every new project on the newest release, and an alias that names a tag starts every project there:
+
+```toml
+[templates.backend]
+source = "https://github.com/YourOrg/standards/tree/v2.0.0/backend"
+```
+
+Built-in templates follow the installed Protostar version, and local templates follow their files, so neither has revisions for `--to` to move between.
 
 ## The Global Alias Registry
 

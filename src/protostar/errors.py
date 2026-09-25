@@ -229,6 +229,42 @@ class TemplateEncodingError(TemplateResolutionError):
         self.path = path
 
 
+class TemplateRefNotFoundError(TemplateResolutionError):
+    """Raised when a remote template's repository has no such tag, branch, or commit."""
+
+    def __init__(self, target: str, ref: str, releases: tuple[str, ...]) -> None:
+        """Initializes the error for one unknown ref.
+
+        Args:
+            target: The template's repository.
+            ref: The ref that names nothing in the repository.
+            releases: The repository's release tags, newest first.
+        """
+        super().__init__(
+            target,
+            f"The repository has no tag, branch, or commit named '{ref}'.",
+            hint=f"Its newest release tags are: {', '.join(releases[:5])}."
+            if releases
+            else "It has no release tags; name a branch or a full commit SHA.",
+            docs_path=DocsPage.TEMPLATES,
+        )
+        self.ref = ref
+
+
+class UnversionedTemplateError(ConfigurationError):
+    """Raised when a revision is requested for a template that has none."""
+
+    def __init__(self) -> None:
+        """Initializes the error."""
+        super().__init__(
+            "This project's template has no revisions to move between.",
+            hint="Only templates in a GitHub, GitLab, Bitbucket, Codeberg, or "
+            "Sourcehut repository have versions. Built-in templates follow the "
+            "installed Protostar, and local templates follow their files.",
+            docs_path=DocsPage.TEMPLATES,
+        )
+
+
 class MissingTemplateVariablesError(TemplateResolutionError):
     """Raised when a template needs variable values nobody supplied.
 
@@ -248,8 +284,8 @@ class MissingTemplateVariablesError(TemplateResolutionError):
             target,
             f"Template needs values for: {', '.join(variables)}.",
             hint=(
-                "Pass them with `protostar init --var NAME=VALUE`, or add them "
-                "under [tool.protostar.variables] in pyproject.toml."
+                "Pass each with `--var NAME=VALUE`, or add them under "
+                "[tool.protostar.variables] in pyproject.toml."
             ),
             docs_path=DocsPage.RECIPE_VARIABLES,
         )

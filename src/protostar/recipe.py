@@ -7,7 +7,7 @@ import importlib.resources
 import re
 import stat
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Any
@@ -32,6 +32,7 @@ from .workspace import resolve_package_name, resolve_project_name
 if TYPE_CHECKING:
     from .config import TemplateSource, UserConfig
     from .modules import BootstrapModule
+    from .network import RefListing, RemoteSource
 
 
 class Tool(StrEnum):
@@ -104,15 +105,69 @@ class ToolSelection:
 
 @dataclass(frozen=True)
 class RecipeSource:
-    """Exact source identity; revisions remain in the ownership ledger."""
+    """The template a project follows, and for a forge template, at which ref.
+
+    The commit that ref named when it was applied lives in the ownership
+    ledger, so the recipe records intent and the ledger records fact.
+    """
 
     origin: TemplateOrigin
     locator: str
+    path: str = ""
+    ref: str | None = None
 
-    def acquire(self, root: Path) -> TemplateSource:
-        """Acquires the recorded source, without consulting aliases."""
+    @property
+    def remote(self) -> RemoteSource | None:
+        """Where a remote template lives, or None for any other origin."""
+        if self.origin is not TemplateOrigin.REMOTE:
+            return None
+        from .network import parse_remote_url
+
+        return replace(parse_remote_url(self.locator).source, path=self.path)
+
+    def acquire(
+        self,
+        root: Path,
+        recorded: TemplateReference | None = None,
+        listing: RefListing | None = None,
+    ) -> TemplateSource:
+        """Acquires the recorded source, without consulting aliases.
+
+        A forge template is downloaded at the commit the ledger recorded while
+        the recipe still names the ref that commit was applied at, so a moved
+        tag or branch changes nothing until the recipe moves.
+
+        Args:
+            root: The project root, which local locators are relative to.
+            recorded: The template the ownership ledger records, if any.
+            listing: The repository's refs, when the caller already listed them.
+
+        Raises:
+            NetworkFetchError: If the source or its refs cannot be fetched.
+            TemplateRefNotFoundError: If the recipe's ref names nothing.
+        """
         from .config import TemplateSource
 
+        remote = self.remote
+        if remote is not None:
+            from .network import RemoteTemplate, acquire_remote, list_refs
+
+            revision = None
+            if self.ref is not None:
+                if (
+                    recorded is not None
+                    and recorded.ref == self.ref
+                    and recorded.revision is not None
+                ):
+                    revision = recorded.revision
+                else:
+                    listing = listing or list_refs(remote)
+                    revision = listing.resolve(self.ref, self.locator).revision
+            return TemplateSource.from_remote(
+                RemoteTemplate(
+                    remote, acquire_remote(remote, revision), self.ref, revision
+                )
+            )
         target = self.locator
         if self.origin is TemplateOrigin.BUILT_IN:
             target = str(
@@ -120,15 +175,23 @@ class RecipeSource:
                     f"{target}.toml"
                 )
             )
-        elif self.origin is TemplateOrigin.LOCAL:
+        else:
             target = str(root / target)
         return TemplateSource.load(
             target,
             built_in=self.locator if self.origin is TemplateOrigin.BUILT_IN else None,
         )
 
-    def inspect(self, root: Path) -> TemplateSource:
-        """Acquires the exact recorded revision with no remote disk acquisition."""
+    def inspect(
+        self,
+        root: Path,
+        recorded: TemplateReference | None = None,
+        listing: RefListing | None = None,
+    ) -> TemplateSource:
+        """Acquires the source like ``acquire``, rejecting links on the way.
+
+        Remote sources are acquired in memory, with nothing written to disk.
+        """
         if self.origin is not TemplateOrigin.REMOTE:
             from .review_workspace import capture_node
 
@@ -152,21 +215,7 @@ class RecipeSource:
             if template.is_dir():
                 for path in template.rglob("*"):
                     capture_node(path)
-            return self.acquire(root)
-        import hashlib
-
-        from .config import TemplateSource
-        from .network import acquire_inspection_source, resolve_remote_source
-
-        source = resolve_remote_source(self.locator)
-        acquired = acquire_inspection_source(source.locator)
-        reference = TemplateReference(
-            self.origin,
-            source.locator,
-            hashlib.sha256(acquired.template_bytes).hexdigest(),
-            source_revision=source.revision,
-        )
-        return TemplateSource(acquired.template_bytes, dict(acquired.files), reference)
+        return self.acquire(root, recorded, listing)
 
 
 @dataclass(frozen=True)
@@ -227,6 +276,8 @@ class ProjectRecipe:
                     "source": {
                         "origin": self.source.origin.value,
                         "locator": self.source.locator,
+                        **({"path": self.source.path} if self.source.path else {}),
+                        **({"ref": self.source.ref} if self.source.ref else {}),
                     }
                 }
                 if self.source
@@ -297,9 +348,14 @@ def decode_recipe(data: object) -> ProjectRecipe:
         raw = data.get("source")
         if (
             not isinstance(raw, dict)
-            or set(raw) != {"origin", "locator"}
+            or not {"origin", "locator"}
+            <= set(raw)
+            <= {"origin", "locator", "path", "ref"}
             or not isinstance(raw["locator"], str)
             or not raw["locator"]
+            or not isinstance(raw.get("path", ""), str)
+            or not isinstance(raw.get("ref", ""), str)
+            or raw.get("ref") == ""
         ):
             raise _invalid()
         try:
@@ -307,6 +363,9 @@ def decode_recipe(data: object) -> ProjectRecipe:
         except (ValueError, TypeError) as e:
             raise _invalid() from e
         locator = raw["locator"]
+        path, ref = raw.get("path", ""), raw.get("ref")
+        if origin is not TemplateOrigin.REMOTE and (path or ref is not None):
+            raise _invalid()
         if origin is TemplateOrigin.BUILT_IN:
             if locator not in {"api", "astro", "cli", "lib", "ml"}:
                 raise _invalid()
@@ -321,20 +380,26 @@ def decode_recipe(data: object) -> ProjectRecipe:
             ):
                 raise _invalid()
         else:
-            from urllib.parse import urlsplit
-
-            from .network import resolve_remote_source
+            from .errors import ProtostarError
+            from .network import parse_remote_url, template_path
 
             try:
+                request = parse_remote_url(locator)
                 if (
-                    not locator.startswith("https://")
-                    or not urlsplit(locator).hostname
-                    or resolve_remote_source(locator).locator != locator
+                    request.source.locator != locator
+                    or request.source.path
+                    or request.ref is not None
+                    or request.ref_and_path is not None
+                    or (
+                        request.source.versioned
+                        and (ref is None or template_path(path) != path)
+                    )
+                    or (not request.source.versioned and (path or ref is not None))
                 ):
                     raise _invalid()
-            except ValueError as e:
+            except ProtostarError as e:
                 raise _invalid() from e
-        source = RecipeSource(origin, locator)
+        source = RecipeSource(origin, locator, path, ref)
     elif data["mode"] != "tooling-only" or "source" in data:
         raise _invalid()
 
@@ -583,7 +648,9 @@ def establish_recipe(
         "AUTHOR_NAME": str(metadata.get("author_name") or "your-name"),
     }
     recipe = ProjectRecipe(
-        RecipeSource(reference.origin, reference.locator) if reference else None,
+        RecipeSource(reference.origin, reference.locator, reference.path, reference.ref)
+        if reference
+        else None,
         version,
         docker,
         IDEType(config.ide or IDEType.NONE),

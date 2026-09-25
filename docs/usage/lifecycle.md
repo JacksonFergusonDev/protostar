@@ -41,10 +41,30 @@ Each resolver subprocess it does run (`uv add` per dependency group, or `uv lock
 leaves a `✔` line on screen as it finishes.
 
 Built-in templates come from the installed Protostar version. Local templates use
-the recorded locator; remote templates use the exact recorded source. A revision
-at the same identity can update the project. Changing template identity, switching
-to tooling-only mode, or retargeting an alias is not a supported lifecycle update.
+the recorded locator. A repository template uses the commit `protostar.lock`
+records until you move it with `sync --to <ref>`; see
+[template versions](templates.md#template-versions). A revision at the same
+identity can update the project. Changing template identity, switching to
+tooling-only mode, or retargeting an alias is not a supported lifecycle update.
 Missing sources fail visibly rather than falling back to cached content.
+
+## Upgrade a repository template
+
+`status` starts with the template's ref and what its repository offers:
+
+```bash
+protostar status
+# Template v1.2.0 @ 4f0b8c2d1e9a; v1.3.0 available (sync --to v1.3.0).
+protostar sync --to v1.3.0 --dry-run
+protostar sync --to v1.3.0
+```
+
+`sync --to` records the new ref in the recipe, downloads that revision, and
+reviews it like any other update, in the same transaction. It accepts a tag, a
+branch, a full commit SHA, or `latest`. Variables the new version adds come from
+`--var NAME=VALUE`, or from the variables screen in an interactive terminal. When
+the repository can't be reached, `status` says so and still reviews the recorded
+commit.
 
 ## Preserve local intent and handle partial updates
 

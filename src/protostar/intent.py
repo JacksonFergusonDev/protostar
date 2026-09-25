@@ -23,21 +23,40 @@ class TemplateOrigin(StrEnum):
 
 @dataclass(frozen=True)
 class TemplateReference:
-    """Stable source identity plus informational revision provenance."""
+    """Stable source identity plus the revision a project applied.
+
+    Attributes:
+        origin: Where the template comes from.
+        locator: The built-in name, the local path, the repository URL of a
+            forge template, or the exact URL of any other remote template.
+        digest: SHA-256 of the template's ``protostar.toml`` bytes.
+        display_name: The name the template was selected by.
+        version: The template's own declared ``version``.
+        path: A forge template's path inside its repository.
+        ref: The tag, branch, or commit a forge template was applied at.
+        revision: The commit ``ref`` named when it was applied.
+    """
 
     origin: TemplateOrigin
     locator: str
     digest: str
     display_name: str | None = None
     version: str | None = None
-    source_revision: str | None = None
+    path: str = ""
+    ref: str | None = None
+    revision: str | None = None
 
     @property
     def identity(self) -> str:
-        """Returns a marker-safe source identity independent of payload revision."""
-        return hashlib.sha256(
-            f"{self.origin.value}:{self.locator}".encode()
-        ).hexdigest()
+        """Returns a marker-safe source identity independent of the revision.
+
+        A template's producers and managed regions are keyed by it, so moving
+        to another ref of the same repository keeps every one of them.
+        """
+        key = f"{self.origin.value}:{self.locator}"
+        if self.path:
+            key += f"#{self.path}"
+        return hashlib.sha256(key.encode()).hexdigest()
 
     def to_dict(self) -> dict[str, Any]:
         """Returns deterministic provenance without trust or interpolation answers."""
@@ -47,7 +66,9 @@ class TemplateReference:
             "digest": self.digest,
             "display_name": self.display_name,
             "version": self.version,
-            "source_revision": self.source_revision,
+            "path": self.path,
+            "ref": self.ref,
+            "revision": self.revision,
         }
 
 

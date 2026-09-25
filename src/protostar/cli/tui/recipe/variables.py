@@ -204,7 +204,7 @@ class VariableFields(Vertical):
 
 
 class VariablesScreen(KeyboardScreen[InitDraft]):
-    """The editor's variables step alone, for a flag-driven init.
+    """The editor's variables step alone, for a flag-driven init or a sync.
 
     It opens for values that are missing, or for values the secret guard
     flagged, which the user changes or confirms are not secrets.
@@ -215,12 +215,18 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
     ]
 
     def __init__(
-        self, draft: InitDraft, config: UserConfig, flagged: Collection[str] = ()
+        self,
+        draft: InitDraft,
+        config: UserConfig,
+        flagged: Collection[str] = (),
+        *,
+        command: str = "init",
     ) -> None:
         super().__init__()
         self.draft = draft
         self.config = config
         self.flagged = tuple(sorted(flagged))
+        self.command = command
 
     def compose(self) -> ComposeResult:
         """Compose the variable fields beside the plan preview."""
@@ -228,7 +234,7 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
             self.draft.template.source.reference if self.draft.template else None
         )
         name = (reference.display_name or reference.locator) if reference else ""
-        yield Masthead("init", "variables")
+        yield Masthead(self.command, "variables")
         if self.flagged:
             yield Headline(
                 "Values look like credentials",

@@ -426,14 +426,11 @@ def prepare_review(
         decisions._write_ignores()
         decisions._write_docker_artifacts()
         decisions._write_ide_settings()
-    if (
-        not manifest.one_shot
-        and policy is ExecutionPolicy.INITIALIZATION
-        and phase
-        in (
-            PreparationPhase.COMPLETE,
-            PreparationPhase.RECIPE,
-        )
+    # A lifecycle run writes the recipe too, which changes it only when the
+    # run moved it, as sync --to moves the template's ref.
+    if not manifest.one_shot and phase in (
+        PreparationPhase.COMPLETE,
+        PreparationPhase.RECIPE,
     ):
         decisions._write_recipe()
     edits = tuple(
