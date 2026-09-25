@@ -562,3 +562,33 @@ def test_conflicts_with_container_sides_are_hashable():
 
     assert {conflict, replace(conflict)} == {conflict}
     assert hash(conflict) != hash(replace(conflict, resolution=ResolutionChoice.LOCAL))
+
+
+def test_a_namespace_retracts_each_owned_key_and_keeps_foreign_ones():
+    policy = MergePolicy(complete=True, namespace_paths=frozenset({("tool",)}))
+    base: Value = {"tool": {"example": {"a": 1}, "edited": {"a": 1}}}
+    local: Value = {
+        "tool": {"example": {"a": 1}, "edited": {"a": 2}, "protostar": {"v": 1}}
+    }
+    result = reconcile(base, local, {}, MergeLocation("pyproject.toml"), policy)
+
+    assert result.value == {"tool": {"edited": {"a": 2}, "protostar": {"v": 1}}}
+    assert result.baseline == {"tool": {"edited": {"a": 1}}}
+    [conflict] = result.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.keys == ("tool", "edited")
+
+
+def test_a_retained_path_is_never_retracted():
+    policy = MergePolicy(
+        complete=True,
+        retained_paths=frozenset({("dependency-groups",), ("project", "name")}),
+    )
+    base: Value = {"dependency-groups": {"dev": []}, "project": {"name": "x"}}
+    result = reconcile(
+        base, deepcopy(base), {}, MergeLocation("pyproject.toml"), policy
+    )
+
+    assert result.value == base
+    assert result.baseline == base
+    assert not result.conflicts

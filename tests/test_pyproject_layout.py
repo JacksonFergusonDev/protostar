@@ -626,3 +626,57 @@ def test_a_merged_in_section_is_set_off_by_exactly_one_blank_line() -> None:
         "\n\n\n" not in merged[merged.index(BANNER[0]) : merged.index("# about black")]
     )
     assert '[tool.ruff.lint]\nselect = ["E"]\n\n# about black' in merged
+
+
+REMOVAL_ORIGINAL = """[project]
+name = "x"
+
+# ==================================================
+# Tool Configuration
+# ==================================================
+
+# ---- Ruff ---- #
+
+[tool.ruff]
+line-length = 88
+
+[tool.example]
+database = true
+
+# ---- Protostar ---- #
+
+[tool.protostar]
+version = 1
+"""
+
+
+@pytest.mark.parametrize(
+    ("removed", "expected"),
+    [
+        (
+            "example",
+            REMOVAL_ORIGINAL.replace("[tool.example]\ndatabase = true\n\n", ""),
+        ),
+        (
+            "ruff",
+            REMOVAL_ORIGINAL.replace(
+                "# ---- Ruff ---- #\n\n[tool.ruff]\nline-length = 88\n\n", ""
+            ),
+        ),
+    ],
+)
+def test_a_removed_table_takes_its_own_header_and_keeps_the_next(removed, expected):
+    merged = tomlkit.parse(REMOVAL_ORIGINAL)
+    del merged["tool"][removed]
+    assert place_new_sections(REMOVAL_ORIGINAL, merged) == expected
+
+
+def test_removing_every_managed_tool_keeps_the_banner_for_the_recipe():
+    merged = tomlkit.parse(REMOVAL_ORIGINAL)
+    del merged["tool"]["ruff"]
+    del merged["tool"]["example"]
+    assert place_new_sections(REMOVAL_ORIGINAL, merged) == REMOVAL_ORIGINAL.replace(
+        "# ---- Ruff ---- #\n\n[tool.ruff]\nline-length = 88\n\n"
+        "[tool.example]\ndatabase = true\n\n",
+        "",
+    )

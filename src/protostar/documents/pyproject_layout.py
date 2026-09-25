@@ -409,6 +409,44 @@ def _insert_ranked(sections: list[Section], new: Section) -> None:
     sections.insert(index, new)
 
 
+def _remove_section(
+    kept: list[Section],
+    before: list[Section],
+    continued: dict[int, Section],
+    index: int,
+) -> None:
+    """Closes the seam a removed section leaves, keeping the file's labels right.
+
+    The section before it announced it; the removed section's own tail announced
+    what follows. The comments directly above the removed table described it, so
+    they go with it. What the predecessor announced for the removed table moves
+    on to the next one, less the removed table's own header.
+    """
+    removed = before[index]
+    predecessor = next(
+        (continued[i] for i in range(index - 1, -1, -1) if i in continued), None
+    )
+    if predecessor is None:
+        return
+    newline = _newline(kept)
+    _take_leading_comments(predecessor)
+    banner, headers = _announced(predecessor.tail)
+    title = section_title(removed.path)
+    own = f"# ---- {title} ---- #" if title is not None else None
+    next_banner, next_headers = _announced(removed.tail)
+    headers = [
+        header
+        for header in dict.fromkeys([*headers, *next_headers])
+        if header != own or header in next_headers
+    ]
+    following = kept.index(predecessor) + 1 < len(kept)
+    if predecessor.body.strip():
+        predecessor.body = predecessor.body.rstrip("\r\n") + newline
+    predecessor.tail = (
+        _decoration(newline, banner or next_banner, headers) if following else ""
+    )
+
+
 def _keyless(path: SectionPath) -> bool:
     return path in ((), ("tool", ""))
 
@@ -432,6 +470,8 @@ def place_new_sections(
     seen: Counter[SectionPath] = Counter()
     kept: list[Section] = []
     added: list[Section] = []
+    # Each kept section, by the position of the original it continues.
+    continued: dict[int, Section] = {}
     for section in split_sections(merged):
         position = seen[section.path]
         seen[section.path] += 1
@@ -449,11 +489,19 @@ def place_new_sections(
                         original_section.tail,
                     )
                 )
+            continued[before.index(original_section)] = kept[-1]
         elif not _keyless(section.path):
             added.append(section)
+    removed = [
+        index
+        for index, section in enumerate(before)
+        if index not in continued and not _keyless(section.path)
+    ]
 
-    if not added:
+    if not added and not removed:
         return raw
+    for index in removed:
+        _remove_section(kept, before, continued, index)
     for section in sorted(added, key=lambda s: section_rank(s.path)):
         _insert_ranked(kept, section)
 

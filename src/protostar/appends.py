@@ -5,17 +5,19 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .errors import ConfigurationError
-from .intent import AppendContribution, validate_region_id
+from .intent import AppendContribution, region_tag, validate_region_id
 from .merge import (
+    MISSING,
     NO_RESOLUTIONS,
     ConflictReason,
+    ConflictSides,
     LineSpan,
     MergeConflict,
     MergeLocation,
     ResolutionChoice,
     Resolutions,
 )
-from .text_merge import preserved_text, reconcile_text
+from .text_merge import is_edited, preserved_text, reconcile_text
 
 __all__ = [
     "RegionResult",
@@ -101,6 +103,21 @@ class RegionResult:
     conflicts: tuple[MergeConflict, ...]
     resolved: tuple[MergeConflict, ...] = ()
     preserved: tuple[MergeConflict, ...] = ()
+
+
+def _cut(text: str, start: int, stop: int) -> str:
+    """Removes a region and the line break after it, and the blank line it needed."""
+    if text[stop : stop + 2] == "\r\n":
+        stop += 2
+    elif text[stop : stop + 1] == "\n":
+        stop += 1
+    head, tail = text[:start], text[stop:]
+    # Appending put one blank line before the region; one is enough.
+    if head.endswith("\n\n") and (not tail or tail.startswith("\n")):
+        head = head[:-1]
+    elif not head and tail.startswith("\n"):
+        tail = tail[1:]
+    return head + tail
 
 
 def append_marker_blocks(
@@ -246,7 +263,35 @@ def append_marker_blocks(
             )
             result += separator + framed + "\n"
             seen.add(tag)
-    if payloads:
+    declared = set(identities)
+    for identity in [i for i in applied if i not in declared]:
+        # A region nothing declares any more is retracted: removed when
+        # unedited, a decision when edited, and forgotten when already gone.
+        tag = region_tag(identity)
+        begin, end = marker(tag), marker(tag, True)
+        if begin not in result:
+            del applied[identity]
+            continue
+        start = result.index(begin)
+        stop = result.index(end, start) + len(end)
+        local_text = result[start:stop]
+        if is_edited(local_text.encode("utf-8"), applied[identity]):
+            found = MergeConflict(
+                MergeLocation(filepath.as_posix(), identity=identity),
+                ConflictReason.RETRACTED,
+                ConflictSides(applied[identity], local_text, MISSING, line=0),
+            )
+            choice = found.settle(resolutions)
+            if choice is None:
+                refused.append((AppendContribution(identity, ""), found))
+                continue
+            settled.append((AppendContribution(identity, ""), choice))
+            if choice.resolution is ResolutionChoice.LOCAL:
+                del applied[identity]
+                continue
+        del applied[identity]
+        result = _cut(result, start, stop)
+    if payloads or baselines:
         append_marker_blocks(result, [], filepath)
 
     def numbered(

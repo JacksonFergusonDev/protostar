@@ -281,6 +281,8 @@ def test_adding_tool_preserves_existing_document_presentation():
     desired = tomlkit.parse("[tool.ruff]\nline-length=88\n[tool.mypy]\nstrict=true\n")
     base = tomlkit.parse(original).unwrap()
     del base["project"]
+    # Only what the producers still declare is owned; the rest would retract.
+    del base["tool"]["pytest"]
     result = reconcile_toml(
         toml_spec("pyproject.toml"),
         original,

@@ -863,8 +863,17 @@ class Reconciliation:
                     and original_python != updated_python
                 ):
                     self._resolution_dirty = True
-        for filepath, regions in self.manifest.filesystem.regions.items():
-            target = Path(render_template(filepath, self.interpolation_context))
+        declared = {
+            render_template(filepath, self.interpolation_context): regions
+            for filepath, regions in self.manifest.filesystem.regions.items()
+        }
+        # A file whose owned regions nothing declares any more is visited too,
+        # so they are retracted.
+        for record in self.candidate_state.files:
+            if record.regions and record.path not in declared:
+                declared[record.path] = []
+        for filepath, regions in declared.items():
+            target = Path(filepath)
             validate_target(target.as_posix())
             enforce_path_jail(target, Path.cwd())
             try:
@@ -910,18 +919,36 @@ class Reconciliation:
                 region_result.resolved,
                 preserved=region_result.preserved,
             )
-            if region_result.baselines:
+            text_baseline = record.baseline if record else None
+            if record is not None and text_baseline is not None:
+                # A generated file's text holds its regions; one that was cut
+                # leaves that text too.
+                cut = {
+                    r.id: r.baseline
+                    for r in record.regions
+                    if r.id not in region_result.baselines
+                    and r.baseline not in region_result.content
+                }
+                if cut:
+                    text_baseline = append_marker_blocks(
+                        text_baseline, [], target, baselines=cut
+                    ).content
+            if region_result.baselines or (
+                record is not None and record.policy is FilePolicy.TEXT
+            ):
                 self.candidate_state = self.candidate_state.with_file(
                     FileState(
                         target.as_posix(),
                         record.policy if record else FilePolicy.REGIONS,
-                        record.baseline if record else None,
+                        text_baseline,
                         regions=tuple(
                             RegionState(region_tag(identity), identity, baseline)
                             for identity, baseline in region_result.baselines.items()
                         ),
                     )
                 )
+            elif record is not None:
+                self.candidate_state = self.candidate_state.without_file(record.path)
             if region_result.content != original:
                 try:
                     self.fs.write_text(target, region_result.content)
@@ -1040,8 +1067,8 @@ class Reconciliation:
         if record is not None and any(
             r.id not in {c.id for c in contributions} for r in record.regions
         ):
-            # Regenerating without an omitted region would remove it, and regions
-            # are never pruned. Preserve the whole file instead.
+            # Regenerating without an omitted region would drop it unasked. The
+            # region step retracts it first, so the next run regenerates.
             return
         framed = append_marker_blocks(
             content,

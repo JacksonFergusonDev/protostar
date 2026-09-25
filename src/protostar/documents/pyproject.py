@@ -19,8 +19,28 @@ from ..toml_ast import TomlDocumentSpec, TomlLayout
 from .pyproject_layout import format_document, place_new_sections
 
 TARGET = "pyproject.toml"
+# Personal project metadata is filled in once; later edits are the user's.
+SEED_PATHS = frozenset(
+    ("project", key)
+    for key in (
+        "name",
+        "version",
+        "description",
+        "authors",
+        "maintainers",
+        "license",
+        "license-files",
+        "readme",
+        "urls",
+        "classifiers",
+        "keywords",
+    )
+)
 # Lint selections are sets in practice: a user's additions and Protostar's merge by
-# membership instead of replacing one another.
+# membership instead of replacing one another. The producers' contributions are
+# their complete declaration, so configuration a tool or template stops declaring
+# is retracted, one [tool] table at a time. Seeds are the user's once written, and
+# dependency-group includes have their own writer, so neither is retracted.
 SPEC = TomlDocumentSpec(
     policy=MergePolicy(
         frozenset(
@@ -31,26 +51,13 @@ SPEC = TomlDocumentSpec(
                 ("tool", "ruff", "lint", "extend-ignore"),
                 ("tool", "rumdl", "disable"),
             }
-        )
+        ),
+        complete=True,
+        retained_paths=SEED_PATHS | {("dependency-groups",)},
+        namespace_paths=frozenset({("tool",)}),
     ),
     super_tables=frozenset({("tool",)}),
-    # Personal project metadata is filled in once; later edits are the user's.
-    seed_paths=frozenset(
-        ("project", key)
-        for key in (
-            "name",
-            "version",
-            "description",
-            "authors",
-            "maintainers",
-            "license",
-            "license-files",
-            "readme",
-            "urls",
-            "classifiers",
-            "keywords",
-        )
-    ),
+    seed_paths=SEED_PATHS,
     layout=TomlLayout(create=format_document, extend=place_new_sections),
 )
 

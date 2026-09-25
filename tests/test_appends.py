@@ -2,6 +2,7 @@ from pathlib import Path
 
 from protostar.appends import append_marker_blocks, get_comment_markers
 from protostar.intent import AppendContribution
+from protostar.merge import ConflictReason, ResolutionChoice
 
 
 def test_get_comment_markers_hash_family():
@@ -123,3 +124,64 @@ def test_append_marker_blocks_sql_comment_syntax():
     assert result.content
     assert f"-- region: protostar {payloads[0].tag}" in result.content
     assert f"-- endregion: protostar {payloads[0].tag}" in result.content
+
+
+def _owned_region() -> tuple[str, dict[str, str]]:
+    """A file holding one applied region, and its baselines."""
+    applied = append_marker_blocks(
+        "export A=1\n", [AppendContribution("gone", "export B=2")], Path(".envrc")
+    )
+    return applied.content, applied.baselines
+
+
+def test_a_region_nothing_declares_is_removed_when_unedited():
+    content, baselines = _owned_region()
+
+    result = append_marker_blocks(content, [], Path(".envrc"), baselines=baselines)
+
+    assert result.content == "export A=1\n"
+    assert result.baselines == {}
+    assert not result.conflicts
+
+
+def test_an_edited_region_nothing_declares_is_a_decision():
+    content, baselines = _owned_region()
+    edited = content.replace("export B=2", "export B=3")
+
+    result = append_marker_blocks(edited, [], Path(".envrc"), baselines=baselines)
+
+    assert result.content == edited
+    assert result.baselines == baselines
+    [conflict] = result.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    assert conflict.location.identity == "gone"
+
+    removed = append_marker_blocks(
+        edited,
+        [],
+        Path(".envrc"),
+        baselines=baselines,
+        resolutions={conflict.id: ResolutionChoice.DESIRED},
+    )
+    assert removed.content == "export A=1\n"
+    assert removed.baselines == {}
+    kept = append_marker_blocks(
+        edited,
+        [],
+        Path(".envrc"),
+        baselines=baselines,
+        resolutions={conflict.id: ResolutionChoice.LOCAL},
+    )
+    assert kept.content == edited
+    assert kept.baselines == {}
+
+
+def test_a_deleted_region_nothing_declares_is_forgotten():
+    _, baselines = _owned_region()
+
+    result = append_marker_blocks(
+        "export A=1\n", [], Path(".envrc"), baselines=baselines
+    )
+
+    assert result.content == "export A=1\n"
+    assert result.baselines == {}
