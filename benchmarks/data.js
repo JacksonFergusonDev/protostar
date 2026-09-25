@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790294898001,
+  "lastUpdate": 1790295042164,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -16903,6 +16903,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 832.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "59ec82c9ebcd82456f7753df119386671f601fa3",
+          "message": "fix(ci): relax benchmark gate to disaster threshold and track trends on gh-pages\n\nSet fail-on-alert to false in benchmark.yml so trend tracking on gh-pages\ndoes not fail CI on main due to GitHub runner variance.\n\nAlign benchmark names by removing obsolete --gate-mode and relax CI regression\nalert threshold to 250% as a coarse disaster guard.",
+          "timestamp": "2026-09-24T17:07:58-07:00",
+          "tree_id": "de3edffb6597d7bca5a366be37d83d1e6c989662",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/59ec82c9ebcd82456f7753df119386671f601fa3"
+        },
+        "date": 1790295040334,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 237.97,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 851.63,
             "unit": "ms"
           }
         ]
