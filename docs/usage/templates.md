@@ -215,6 +215,16 @@ protostar init --from ./service.toml --option database=postgres --option compose
 
 Change a choice later with `protostar sync --option NAME=VALUE`. Content the new choice drops is retracted: removed when you haven't edited it, and otherwise kept as a conflict for you to settle.
 
+### Choosing a Tier
+
+A template can offer two [tiers](./authoring-templates.md#template-tiers) of tooling for its shape: `workbench`, lean tooling for exploring and analyzing, and `production`, the full quality gate for building something to publish. It starts in the tier it names as its default; choose the other with `--tier`:
+
+```bash
+protostar init --from ./service.toml --tier workbench
+```
+
+Switch later with `protostar sync --tier production`. `protostar init --list-templates` shows each template's default tier.
+
 ### Interactive Resolution
 
 If a template requires parameters that were not supplied with `--var`, Protostar prompts for the missing values in an interactive terminal before any disk mutations occur. Without a terminal, including under `--json`, it stops with an error naming every missing parameter. Later runs of `init` reuse the recorded values.

@@ -193,7 +193,9 @@ content = "export COMPOSE=1"
             )
 
     def test_an_option_named_like_a_tool_is_rejected(self) -> None:
-        with pytest.raises(ConfigurationError, match="share a name with a tool: ruff"):
+        with pytest.raises(
+            ConfigurationError, match="share a name with a tool or the tier: ruff"
+        ):
             TemplateBlueprint._parse(
                 "[options.ruff]\ndefault = false\n"
                 '[[optional]]\nrequires = "ruff"\ndependencies = ["x"]\n',

@@ -97,6 +97,7 @@ def test_discover_templates_to_dict() -> None:
         "type": "built-in",
         "source": "protostar.templates",
         "trusted": True,
+        "tiers": None,
     }
 
 

@@ -15,6 +15,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     from protostar.cli import ui
     from protostar.config import TemplateBlueprint
     from protostar.modules import TOOLING_MODULES
+    from protostar.tiers import Tier
 
     properties: dict[str, Any] = {}
     dev_properties: dict[str, Any] = {}
@@ -26,7 +27,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
     }
     requires = {
         "oneOf": [term, {"type": "array", "items": term, "minItems": 1}],
-        "description": 'A tool, a bool option, or "option=value", or an array of them that must all hold.',
+        "description": 'A tool, a bool option, "option=value", or "tier=workbench" or "tier=production", or an array of them that must all hold.',
     }
     strings = {"type": "array", "items": {"type": "string"}}
 
@@ -44,6 +45,29 @@ def handle_export_schema(args: argparse.Namespace) -> None:
             properties["docker"] = {
                 "type": "boolean",
                 "description": "Containerize workspace environment with Docker.",
+            }
+            continue
+        if f.name == "tiers":
+            flags = sorted(
+                [mod.config_key for mod in TOOLING_MODULES if mod.config_key]
+                + ["docker"]
+            )
+            tier_flags = {
+                "type": "object",
+                "propertyNames": {"enum": flags},
+                "additionalProperties": {"type": "boolean"},
+                "minProperties": 1,
+            }
+            properties["tier"] = {
+                "enum": [tier.value for tier in Tier],
+                "description": "The tier a project follows until it chooses one; requires [tiers].",
+            }
+            properties["tiers"] = {
+                "type": "object",
+                "properties": {tier.value: tier_flags for tier in Tier},
+                "required": [tier.value for tier in Tier],
+                "additionalProperties": False,
+                "description": desc,
             }
             continue
 
@@ -250,6 +274,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
         "description": "Experimental JSON Schema for validating Protostar TOML templates.",
         "type": "object",
         "properties": properties,
+        "dependentRequired": {"tier": ["tiers"], "tiers": ["tier"]},
         "additionalProperties": False,
     }
 

@@ -30,6 +30,7 @@ from .recipe import ProjectRecipe, read_recipe, select_tooling
 from .registry import resolve_hook_revisions
 from .secret_guard import check_variable_values
 from .sync_state import STATE_FILE, SyncState, read_workspace_state
+from .tiers import Tier, resolve_tier
 
 LATEST = "latest"
 """The ``sync --to`` value that names the newest release."""
@@ -287,6 +288,7 @@ def prepare_project(
     variables: Mapping[str, str] | None = None,
     allowed_secrets: frozenset[str] = frozenset(),
     options: Mapping[str, OptionValue] | None = None,
+    tier: Tier | None = None,
     check_executables: bool = True,
 ) -> PreparedProject:
     """Captures a project once for shared inspection and lifecycle application.
@@ -297,6 +299,7 @@ def prepare_project(
         allowed_secrets: Variables whose flagged values the user confirmed
             are not secrets.
         options: Values for template options, over the recorded ones.
+        tier: The tier to follow, over the recorded one.
         check_executables: Whether to require the executables Protostar runs;
             only a review that is never applied skips the check.
 
@@ -313,6 +316,7 @@ def prepare_project(
         variables=variables,
         allowed_secrets=allowed_secrets,
         options=options,
+        tier=tier,
         check_executables=check_executables,
     )
     revisions = resolve_hook_revisions()
@@ -330,6 +334,7 @@ def plan_project(
     variables: Mapping[str, str] | None = None,
     allowed_secrets: frozenset[str] = frozenset(),
     options: Mapping[str, OptionValue] | None = None,
+    tier: Tier | None = None,
     check_executables: bool = True,
 ) -> tuple[EnvironmentManifest, UserConfig]:
     """Plans a located project's recipe exactly as ``sync`` applies it.
@@ -343,6 +348,7 @@ def plan_project(
         allowed_secrets: Variables whose flagged values the user confirmed
             are not secrets.
         options: Values for template options, over the recorded ones.
+        tier: The tier to follow, over the recorded one.
         check_executables: Whether to require the executables Protostar runs.
 
     Returns:
@@ -354,8 +360,10 @@ def plan_project(
             value.
         SecretDetectedError: If a new value looks like a credential.
         InvalidOptionValueError: If an option's value is one it doesn't offer.
+        ConfigurationError: If a tier is given for a template without tiers.
     """
     recipe, template = located.recipe, located.template
+    resolve_tier(template.tiers if template else None, tier)
     if template is not None:
         recorded = dict(recipe.variables)
         given = dict(variables or {})
@@ -384,6 +392,8 @@ def plan_project(
             recipe,
             variables=tuple(sorted(values.items())),
             options=tuple(sorted(chosen.items())),
+            # A recorded tier the template no longer offers is dropped.
+            tier=(tier or recipe.tier) if template.tiers else None,
         )
     blueprint = template.render(recipe.rendering_context()) if template else None
     state = located.state
@@ -396,7 +406,7 @@ def plan_project(
     modules = [
         SystemWorkspaceModule(),
         PythonCore(python_version=recipe.python),
-        *select_tooling(recipe, blueprint.tooling_overrides if blueprint else {}),
+        *select_tooling(recipe, blueprint.opinions(recipe.tier) if blueprint else {}),
     ]
     request = InitRequest(
         recipe=recipe,

@@ -257,9 +257,13 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
     if error_msg:
         console.print(Text.assemble(("Error: ", "bold red"), error_msg, "\n"))
 
+    # The tier column appears once any template offers a tier to choose.
+    tiered = any(tmpl.tiers for tmpl in discovered)
     table = Table(box=None, show_header=False, padding=(0, 2, 0, 0), expand=True)
     table.add_column("Template", style="bold cyan", no_wrap=True)
     table.add_column("Description", ratio=1)
+    if tiered:
+        table.add_column("Tier", no_wrap=True)
     table.add_column("Type", no_wrap=True)
 
     for tmpl in discovered:
@@ -269,8 +273,10 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
             if tmpl.type == TemplateType.BUILT_IN
             else Text("External", "yellow")
         )
-
-        table.add_row(Text(tmpl.name), Text(tmpl.description), type_str)
+        tier = [Text(f"{tmpl.tiers.default} tier" if tmpl.tiers else "")]
+        table.add_row(
+            Text(tmpl.name), Text(tmpl.description), *(tier if tiered else []), type_str
+        )
 
     console.print(heading("Available templates"))
     console.print(indented(table))
@@ -755,30 +761,22 @@ def print_recipe_summary(request: InitRequest) -> None:
     template = (
         (reference.display_name or reference.locator) if reference else "No template"
     )
+    blueprint = request.template_blueprint
+    tier = request.recipe.tier if request.recipe else None
     tools = ""
     if request.recipe:
-        opinions = (
-            request.template_blueprint.tooling_overrides
-            if request.template_blueprint
-            else {}
-        )
+        opinions = blueprint.opinions(tier) if blueprint else {}
         tools = ", ".join(
             selection.tool.value
             for selection in request.recipe.selections(opinions)
             if selection.enabled
         )
+    rows = [("Template", template)]
+    if blueprint and blueprint.tiers:
+        rows.append(("Tier", (tier or blueprint.tiers.default).value))
+    rows += [("Tools", tools or "None"), ("Docker", "yes" if request.docker else "no")]
     console.print(heading("Recipe"))
-    console.print(
-        indented(
-            _facts(
-                [
-                    ("Template", template),
-                    ("Tools", tools or "None"),
-                    ("Docker", "yes" if request.docker else "no"),
-                ]
-            )
-        )
-    )
+    console.print(indented(_facts(rows)))
 
 
 def print_review_summary(decision: InitDecision) -> None:

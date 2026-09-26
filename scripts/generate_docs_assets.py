@@ -252,6 +252,7 @@ def generate_template_schema_fixture() -> None:
         "options",
         "optional",
         "migrations",
+        "tiers",
     }
     ordered_fields = [f for f in blueprint_fields if f.name not in table_fields] + [
         f for f in blueprint_fields if f.name in table_fields
@@ -285,6 +286,8 @@ def generate_template_schema_fixture() -> None:
                 doc.add(tomlkit.comment("--- Optional Content ---"))
             elif f.name == "tooling_overrides":
                 doc.add(tomlkit.comment("--- Tooling Opinions & Overrides ---"))
+            elif f.name == "tiers":
+                doc.add(tomlkit.comment("--- Tiers ---"))
 
             if f.name != "pyproject_injections":
                 doc.add(tomlkit.comment(f.metadata["description"]))
@@ -295,13 +298,22 @@ def generate_template_schema_fixture() -> None:
                     "Dynamic precedence: CLI Flags > Template Opinions > Global UserConfig"
                 )
             )
+            # A tool the tiers set is set there, never also at the root.
+            tiered = set(fields_by_name["tiers"].metadata["example"]["workbench"])
             tooling_keys = sorted(
                 [mod.config_key for mod in TOOLING_MODULES if mod.config_key]
                 + ["docker"]
             )
             for key in tooling_keys:
-                default_val = key in ("ruff", "pytest")
-                doc.add(key, default_val)
+                if key not in tiered:
+                    doc.add(key, key == "ruff")
+            doc.add(tomlkit.nl())
+            doc.add(
+                tomlkit.comment(
+                    "The tier a project follows until it chooses one; requires [tiers]."
+                )
+            )
+            doc.add("tier", "workbench")
             doc.add(tomlkit.nl())
             continue
 
@@ -1073,8 +1085,9 @@ def _cli_template_engine(alias: str = "cli") -> tuple[Orchestrator, InitRequest]
     modules: list[BootstrapModule] = [SystemWorkspaceModule(), PythonCore()]
     for mod in TOOLING_MODULES:
         is_active = getattr(user_config, mod.config_key, False)
-        if blueprint and mod.config_key in blueprint.tooling_overrides:
-            is_active = blueprint.tooling_overrides[mod.config_key]
+        opinions = blueprint.opinions(None)
+        if mod.config_key in opinions:
+            is_active = opinions[mod.config_key]
         if is_active:
             modules.append(mod)
     request = InitRequest(template_blueprint=blueprint)

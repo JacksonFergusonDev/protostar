@@ -2,7 +2,6 @@
 
 import asyncio
 import importlib.resources
-import tomllib
 from collections.abc import Mapping
 from dataclasses import replace
 from enum import Enum, auto
@@ -42,6 +41,7 @@ from protostar.recipe import (
     validate_tools,
 )
 from protostar.templates import TemplateInfo, TemplateType
+from protostar.tiers import Tier
 
 from ..chrome import Heading, Headline, Masthead, Panel
 from ..keys import (
@@ -179,18 +179,18 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             self.found.pop(tool, None)
             self.displaced.pop(tool, None)
 
+    def _tier(self) -> Tier | None:
+        """The tier a flag pinned or the recipe records, while the template has tiers."""
+        source = self.draft.template.source if self.draft.template else None
+        if source is None or source.tiers is None:
+            return None
+        existing = self.draft.existing_recipe
+        return self.draft.tier or (existing.tier if existing else None)
+
     def _resolve_selections(self) -> None:
         source = self.draft.template.source if self.draft.template else None
-        try:
-            data = (
-                tomllib.loads(source.template_bytes.decode("utf-8")) if source else {}
-            )
-        except tomllib.TOMLDecodeError as exc:
-            raise ConfigurationError("Invalid template TOML.", hint=str(exc)) from exc
-        # Tool opinions are literal root booleans, independent of variable rendering.
-        self.opinions = {
-            key: value for key, value in data.items() if isinstance(value, bool)
-        }
+        # Tool opinions are literal booleans, independent of variable rendering.
+        self.opinions = source.opinions(self._tier()) if source else {}
         base_selections = {
             selection.tool: selection
             for selection in self.base_recipe.selections(self.opinions)
@@ -446,6 +446,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             self.draft,
             tool_choices=tuple(sorted(self.enabled.items())),
             option_choices=tuple(sorted(self.query_one(OptionFields).values.items())),
+            tier=self._tier(),
             docker=self._docker(),
             variables=tuple(sorted(variables.items())),
             allowed_secrets=fields.allowed_secrets,
@@ -527,10 +528,11 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 choice.trusted,
             )
         if template:
-            # An invalid [variables] or [options] table is a template error,
+            # An invalid [variables], [options], or [tiers] table is a template error,
             # shown inline.
             _ = template.source.descriptions
             _ = template.source.options
+            _ = template.source.tiers
         return template
 
     @work(exclusive=True, group="template")

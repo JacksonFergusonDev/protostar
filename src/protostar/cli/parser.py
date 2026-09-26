@@ -30,6 +30,7 @@ from protostar.sync_state import read_workspace_state
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables
 from protostar.templates import discover_templates
+from protostar.tiers import Tier
 
 
 def _resolve_usage_doc_path() -> DocsPage:
@@ -387,6 +388,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Choose a template option: true or false, or one of its choices; repeat for each. Choices are saved to pyproject.toml.",
     )
     sync_parser.add_argument(
+        "--tier",
+        choices=[tier.value for tier in Tier],
+        help="Follow the template's workbench tier (lean: exploring and analyzing) or production tier (the full quality gate: building something to publish). Only for templates that declare tiers; the choice is saved to pyproject.toml.",
+    )
+    sync_parser.add_argument(
         "--allow-secret",
         action="append",
         default=[],
@@ -508,6 +514,12 @@ def build_parser() -> argparse.ArgumentParser:
         dest="options",
         metavar="NAME=VALUE",
         help="Choose a template option: true or false, or one of its choices; repeat for each. Choices are saved to pyproject.toml.",
+    )
+
+    base_group.add_argument(
+        "--tier",
+        choices=[tier.value for tier in Tier],
+        help="Follow the template's workbench tier (lean: exploring and analyzing) or production tier (the full quality gate: building something to publish). Only for templates that declare tiers; the choice is saved to pyproject.toml.",
     )
 
     base_group.add_argument(
