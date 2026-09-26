@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790452018899,
+  "lastUpdate": 1790453452651,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17515,6 +17515,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 834.36,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "630205877df2d1cf69c6381b8d9ee2ea32ce5155",
+          "message": "feat(templates): workbench and production tiers (#354)\n\nA template can declare a workbench and a production tier: two tables of\ntool flags laid over its root flags, plus the tier it defaults to.\n--tier on init and sync chooses one, the recipe records it only when\npinned, and requires = \"tier=production\" gates tier-only content.\nNo built-in declares tiers yet, so every scaffold is unchanged.",
+          "timestamp": "2026-09-26T13:08:17-07:00",
+          "tree_id": "12dcb276b9ae79a82696f6bb11024c8b58484fe5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/630205877df2d1cf69c6381b8d9ee2ea32ce5155"
+        },
+        "date": 1790453451472,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 250.4,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 889.92,
             "unit": "ms"
           }
         ]
