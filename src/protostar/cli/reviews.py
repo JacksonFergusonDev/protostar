@@ -33,6 +33,7 @@ from protostar.preparation import (
     select_resolutions,
 )
 from protostar.system import is_interactive
+from protostar.system_deps import check_required_executables
 
 SETTLED = {
     ResolutionChoice.LOCAL: "kept local content",
@@ -368,6 +369,8 @@ def handle_sync(args: argparse.Namespace) -> None:
     In an interactive terminal, conflicts that can be settled open the
     conflict screen first; its choices are applied like ``--resolve``.
     """
+    # Nothing can be applied without these, so fail before asking anything.
+    check_required_executables()
     project = _prepare_sync(args)
     if args.resolve:
         project = project.resolve(
@@ -421,6 +424,7 @@ def handle_sync(args: argparse.Namespace) -> None:
                 "template": project.upstream.to_dict() if project.upstream else None,
                 "review": review.to_dict(),
                 "result": result.to_dict(),
+                **ui.missing_tools_payload(result.missing_tools),
             }
         )
     else:
@@ -448,5 +452,6 @@ def handle_sync(args: argparse.Namespace) -> None:
                 ),
             )
         )
+        ui.print_missing_tools(result.missing_tools)
     if partial:
         sys.exit(1)

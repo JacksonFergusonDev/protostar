@@ -17,15 +17,27 @@ from rich.tree import Tree
 
 from protostar.cli import schema
 from protostar.config import active_config_source
+from protostar.docs_registry import DocsPage
 from protostar.errors import (
     ProtostarError,
     SecurityViolationError,
     WorkspaceCollisionError,
 )
-from protostar.manifest import DiagnosticEvent, EnvironmentManifest, Severity
+from protostar.manifest import (
+    DiagnosticEvent,
+    EnvironmentManifest,
+    MissingTool,
+    Severity,
+)
 from protostar.merge import NO_RESOLUTIONS
 from protostar.models import ExecutionResult, InitRequest
 from protostar.progress import ProgressStep
+from protostar.system_deps import (
+    InstallCommand,
+    Platform,
+    available_package_managers,
+    install_command,
+)
 
 if TYPE_CHECKING:
     from protostar.init_draft import InitDecision
@@ -428,8 +440,85 @@ def _run_engine(
             console.print(
                 "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
             )
+        print_missing_tools(result.missing_tools)
 
     return result
+
+
+def missing_install(missing: frozenset[MissingTool]) -> InstallCommand | None:
+    """Returns the commands that install the missing tools here, or None.
+
+    Args:
+        missing: Enabled tools' executables missing from ``PATH``.
+    """
+    return install_command(
+        {item.executable for item in missing},
+        Platform.current(),
+        available_package_managers(),
+    )
+
+
+def missing_tools_payload(missing: frozenset[MissingTool]) -> dict[str, Any]:
+    """Returns the success envelope's install commands, when there are any.
+
+    Args:
+        missing: Enabled tools' executables missing from ``PATH``.
+    """
+    install = missing_install(missing)
+    return {"install_commands": list(install.lines)} if install else {}
+
+
+def missing_tools_report(
+    missing: frozenset[MissingTool], install: InstallCommand | None
+) -> Group:
+    """Renders the missing tools and the one command that installs them.
+
+    Args:
+        missing: Enabled tools' executables missing from ``PATH``.
+        install: The commands that install them, or None when none is known.
+
+    Returns:
+        A ``Not installed`` heading over the tools, then each command on its
+        own line, unstyled beyond color, so it copies cleanly.
+    """
+    names = sorted({item.executable.value for item in missing})
+    listed = " and ".join([", ".join(names[:-1]), names[-1]] if names[:-1] else names)
+    they, them, its, are = (
+        ("it", "it", "its", "is")
+        if len(names) == 1
+        else ("they", "them", "their", "are")
+    )
+    lines: list[RenderableType] = [
+        Text(
+            f"{listed} {are} not installed; {its} files are ready for when {they} {are}."
+        )
+    ]
+    if install is None:
+        lines.append(
+            Text.assemble(
+                f"Install {them}: ",
+                (DocsPage.TROUBLESHOOTING_DEPS.build_url(), "cyan"),
+            )
+        )
+    else:
+        lines.append(Text(f"Install {them} with:"))
+        lines.extend(Text(f"    {line}", "bold cyan") for line in install.lines)
+        if install.reload_shell:
+            lines.append(
+                Text(f"Then open a new terminal so your shell finds {them}.", "dim")
+            )
+    return Group(heading("Not installed", "bold yellow"), indented(Group(*lines)))
+
+
+def print_missing_tools(missing: frozenset[MissingTool]) -> None:
+    """Prints the missing tools block after a run, if any tool is missing.
+
+    Args:
+        missing: Enabled tools' executables missing from ``PATH``.
+    """
+    if missing:
+        console.print()
+        console.print(missing_tools_report(missing, missing_install(missing)))
 
 
 def _sync_pointer(events: Sequence[DiagnosticEvent]) -> Text | None:

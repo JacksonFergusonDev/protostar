@@ -54,12 +54,14 @@ class PlanPreview(VerticalScroll):
         # children down, and updating a removed line is harmless.
         self._summary = Static("Planning…", id="preview-summary")
         self._collisions = Static("", id="preview-collisions")
+        self._notes = Static("", id="preview-notes")
         self._tree = Static("", id="preview-tree")
 
     def compose(self) -> ComposeResult:
         """Compose the summary, collision, and tree lines."""
         yield self._summary
         yield self._collisions
+        yield self._notes
         yield self._tree
 
     @work(exclusive=True, group="preview")
@@ -105,6 +107,9 @@ class PlanPreview(VerticalScroll):
             collisions=Text(f"Already exist: {', '.join(collisions)}")
             if collisions
             else Text(""),
+            notes=Text(
+                "\n".join(event.message for event in manifest.diagnostics), "dim"
+            ),
             tree=plan_tree(manifest) if paths else Text(""),
         )
         self.post_message(self.PlanUpdated(error=None))
@@ -119,10 +124,14 @@ class PlanPreview(VerticalScroll):
         summary: Text,
         *,
         collisions: Text | None = None,
+        notes: Text | None = None,
         tree: RenderableType = "",
         error: bool = False,
     ) -> None:
         self._summary.update(summary)
         self._summary.set_class(error, "-error")
         self._collisions.update(collisions or Text(""))
+        self._notes.update(notes or Text(""))
+        # Most plans skip nothing, so the line takes no room until one does.
+        self._notes.display = bool(notes and notes.plain)
         self._tree.update(tree)

@@ -386,6 +386,15 @@ class MissingDependencyError(ProtostarError):
         self.missing = missing
         self.install = install
 
+    def details(self) -> dict[str, Any]:
+        """Returns the missing executables, and the commands that install them."""
+        record: dict[str, Any] = {
+            "missing_executables": [executable.value for executable in self.missing]
+        }
+        if self.install is not None:
+            record["install_commands"] = list(self.install.lines)
+        return record
+
 
 class CommandExecutionError(ProtostarError):
     """Raised when a managed subprocess exits with a non-zero status code."""

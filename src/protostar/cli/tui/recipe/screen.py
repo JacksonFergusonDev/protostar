@@ -26,6 +26,7 @@ from textual.widgets import (
     Static,
 )
 
+from protostar import system_deps
 from protostar.analysis import NoteKind, ProjectAnalysis
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
@@ -80,6 +81,17 @@ _GROUPS = {
     ),
 }
 _NAMES = {Tool(module.config_key): module.name for module in TOOLING_MODULES}
+
+
+def _not_installed() -> frozenset[Tool]:
+    """Returns the tools whose executables are missing from ``PATH``."""
+    return frozenset(
+        Tool(module.config_key)
+        for module in TOOLING_MODULES
+        if any(not system_deps.installed(item) for item in module.executables)
+    )
+
+
 _NAME_WIDTH = max(len(name) for name in _NAMES.values()) + 3
 _SOURCES = {
     SelectionLayer.TEMPLATE: "from template",
@@ -130,6 +142,8 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.displaced: dict[Tool, Tool] = {}
         self._analyzed: set[Tool] = set()
         self.docker_found = ""
+        # Nothing blocks on these: the marker only says what to install.
+        self.not_installed = _not_installed()
         self._resolve_selections()
         if self.analysis:
             self._select_found(self.analysis)
@@ -229,6 +243,8 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         if missing:
             requires = ", ".join(_NAMES[item] for item in sorted(missing))
             parts.append((f" · requires {requires}", "$text-warning"))
+        if tool in self.not_installed:
+            parts.append((" · not installed", "$text-faint"))
         return Content.assemble(*parts)
 
     def _docker_label(self) -> str | Content:

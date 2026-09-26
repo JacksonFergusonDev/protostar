@@ -14,6 +14,7 @@ from protostar.manifest import (
     DiagnosticEvent,
     DiagnosticPhase,
     EnvironmentManifest,
+    MissingTool,
     Severity,
 )
 from protostar.merge import (
@@ -25,6 +26,8 @@ from protostar.merge import (
 )
 from protostar.models import ExecutionResult, InitRequest, RollbackContext
 from protostar.orchestrator import Orchestrator
+from protostar.recipe import Tool
+from protostar.system_deps import GlobalExecutable, PackageManager, Platform
 
 
 def cp1252_stream(errors: str = "strict") -> io.TextIOWrapper:
@@ -89,6 +92,40 @@ def test_diagnostic_summary_warning_mark(legacy_console, mocker):
     ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
 
     assert "! [IDE] Missing extensions" in legacy_console()
+
+
+def test_missing_tools_install_command(legacy_console, mocker):
+    missing = frozenset(
+        {
+            MissingTool(GlobalExecutable.DIRENV, Tool.DIRENV),
+            MissingTool(GlobalExecutable.JUST, Tool.JUST),
+        }
+    )
+    mocker.patch.object(Orchestrator, "plan", return_value=EnvironmentManifest())
+    mocker.patch.object(
+        Orchestrator,
+        "execute",
+        return_value=ExecutionResult(frozenset(), frozenset(), (), missing),
+    )
+    mocker.patch.object(
+        ui, "available_package_managers", return_value={PackageManager.WINGET}
+    )
+    mocker.patch.object(Platform, "current", return_value=Platform.WINDOWS)
+    request = InitRequest()
+
+    ui._run_engine(Orchestrator([], UserConfig(), request=request), request)
+
+    lines = [line.rstrip() for line in legacy_console().splitlines()]
+    start = next(
+        i for i, line in enumerate(lines) if line.startswith("NOT INSTALLED -")
+    )
+    assert lines[start + 1 :] == [
+        "  direnv and just are not installed; their files are ready for when they are.",
+        "  Install them with:",
+        "      winget install --exact --id direnv.direnv",
+        "      winget install --exact --id Casey.Just",
+        "  Then open a new terminal so your shell finds them.",
+    ]
 
 
 def test_open_conflicts_with_a_choice_point_to_sync(legacy_console, mocker):

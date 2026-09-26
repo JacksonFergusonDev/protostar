@@ -28,6 +28,7 @@ from protostar.modules import TOOLING_MODULES
 from protostar.recipe import read_recipe
 from protostar.sync_state import read_workspace_state
 from protostar.system import is_interactive
+from protostar.system_deps import check_required_executables
 from protostar.templates import discover_templates
 
 
@@ -758,6 +759,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     if cmd == "init":
         if not is_interactive():
             return
+        # Nothing can be applied without these, so fail before the editor opens.
+        check_required_executables()
         user_config = UserConfig.load()
         catalog = discover_templates(user_config)
         existing_recipe = read_recipe(Path("pyproject.toml"))

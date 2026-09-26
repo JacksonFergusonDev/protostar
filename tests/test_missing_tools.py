@@ -3,10 +3,14 @@
 import json
 from dataclasses import replace
 
+import jsonschema  # type: ignore[import-untyped]
 import pytest
+from rich.console import Console
 
+from protostar.cli import schema, ui
+from protostar.cli.main import main
 from protostar.config import TemplateSource, UserConfig
-from protostar.errors import MissingDependencyError
+from protostar.errors import ExitCode, MissingDependencyError
 from protostar.executor import SystemExecutor
 from protostar.init_draft import InitDraft, resolve_init
 from protostar.lifecycle import inspect_project, prepare_project
@@ -15,7 +19,7 @@ from protostar.models import ExecutionResult
 from protostar.modules import DirenvModule, JustModule
 from protostar.orchestrator import Orchestrator
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
-from protostar.system_deps import GlobalExecutable
+from protostar.system_deps import GlobalExecutable, PackageManager, Platform
 
 DIRENV = MissingTool(GlobalExecutable.DIRENV, Tool.DIRENV)
 JUST = MissingTool(GlobalExecutable.JUST, Tool.JUST)
@@ -164,3 +168,122 @@ def test_missing_required_executable_fails_sync(
         prepare_project()
     # A read-only review is never applied, so it needs neither.
     inspect_project()
+
+
+# --- CLI reporting ---------------------------------------------------------
+
+
+@pytest.fixture
+def brew(mocker):
+    """Homebrew is the one package manager found, on any platform."""
+    mocker.patch(
+        "protostar.cli.ui.available_package_managers",
+        return_value=frozenset({PackageManager.BREW}),
+    )
+    mocker.patch(
+        "protostar.system_deps.available_package_managers",
+        return_value=frozenset({PackageManager.BREW}),
+    )
+
+
+def test_missing_uv_fails_before_the_editor_opens(
+    workspace, missing_executables, mocker, monkeypatch, brew
+):
+    missing_executables.add(GlobalExecutable.UV)
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "init"])
+    mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
+    editor = mocker.patch("protostar.cli.parser.edit_recipe")
+
+    with pytest.raises(SystemExit) as caught:
+        main()
+
+    assert caught.value.code == ExitCode.UNAVAILABLE
+    editor.assert_not_called()
+
+
+def test_missing_git_json_error_names_it_and_its_install_command(
+    workspace, missing_executables, monkeypatch, capsys, brew
+):
+    missing_executables.add(GlobalExecutable.GIT)
+    monkeypatch.setattr(ui, "is_json_mode", True)
+    monkeypatch.setattr(
+        "sys.argv", ["protostar", "init", "--template", "cli", "--json"]
+    )
+
+    with pytest.raises(SystemExit) as caught:
+        main()
+
+    assert caught.value.code == ExitCode.UNAVAILABLE
+    error = json.loads(capsys.readouterr().out)["error"]
+    assert error["type"] == "MissingDependencyError"
+    assert error["missing_executables"] == ["git"]
+    assert error["install_commands"] == ["brew install git"]
+
+
+def test_init_json_success_lists_missing_tools_and_install_commands(
+    workspace, monkeypatch, mocker, capsys, brew
+):
+    result = ExecutionResult(
+        frozenset(), frozenset(), (), missing_tools=frozenset({DIRENV, JUST})
+    )
+    mocker.patch("protostar.cli.ui._run_engine", return_value=result)
+    monkeypatch.setattr(ui, "is_json_mode", True)
+    monkeypatch.setattr("sys.argv", ["protostar", "init", "--json"])
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["result"]["missing_tools"] == [
+        {"executable": "direnv", "tool": "direnv"},
+        {"executable": "just", "tool": "just"},
+    ]
+    assert payload["install_commands"] == ["brew install direnv just"]
+
+
+def test_success_payload_has_no_install_commands_without_a_manager(mocker):
+    mocker.patch(
+        "protostar.cli.ui.available_package_managers", return_value=frozenset()
+    )
+    mocker.patch.object(Platform, "current", return_value=Platform.MACOS)
+
+    assert ui.missing_tools_payload(frozenset({DIRENV})) == {}
+    assert ui.missing_tools_payload(frozenset()) == {}
+
+
+def test_sync_reports_missing_tools_after_applying(
+    project, missing_executables, monkeypatch, capsys, brew
+):
+    missing_executables.update({GlobalExecutable.DIRENV, GlobalExecutable.JUST})
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync", "--json"])
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert [item["tool"] for item in payload["result"]["missing_tools"]] == [
+        "direnv",
+        "just",
+    ]
+    assert payload["install_commands"] == ["brew install direnv just"]
+    jsonschema.validate(payload, schema.application_schema())
+    assert [item["tool"] for item in payload["review"]["missing_tools"]] == [
+        "direnv",
+        "just",
+    ]
+
+
+def test_human_sync_ends_with_the_install_command(
+    project, missing_executables, monkeypatch, mocker, capsys, brew
+):
+    missing_executables.add(GlobalExecutable.JUST)
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr(ui, "console", Console(width=100, color_system=None))
+    mocker.patch("protostar.cli.reviews.is_interactive", return_value=False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync"])
+
+    main()
+
+    output = capsys.readouterr().out
+    assert "just is not installed; its files are ready for when it is." in output
+    assert output.rstrip().endswith("brew install just")

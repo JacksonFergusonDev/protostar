@@ -45,6 +45,7 @@ from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
 from protostar.sync_state import SyncState, serialize_state
+from protostar.system_deps import GlobalExecutable
 from protostar.templates import discover_templates
 
 
@@ -132,6 +133,28 @@ async def test_template_picker_and_docker():
     _, request = resolve_init(draft, UserConfig())
     assert request.template_reference is not None
     assert request.template_reference.origin.value == "built-in"
+
+
+@pytest.mark.asyncio
+async def test_missing_tools_are_marked_and_never_block(missing_executables):
+    missing_executables.update({GlobalExecutable.DIRENV, GlobalExecutable.JUST})
+    app = make_app(config=UserConfig(direnv=True, just=True))
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        for tool in ("direnv", "just"):
+            label = app.screen.query_one(f"#tool-{tool}", Checkbox).label.plain
+            assert "not installed" in label
+        ruff = app.screen.query_one("#tool-ruff", Checkbox).label.plain
+        assert "not installed" not in ruff
+        assert "Skipping `direnv allow`" in plain(app, "#preview-notes")
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, ReviewScreen)
+        steps = plain(app, "#steps-list")
+        assert "Skipped" in steps
+        assert "direnv allow" in steps
+        await pilot.press("a")
+    assert app.return_value is not None
 
 
 @pytest.mark.asyncio

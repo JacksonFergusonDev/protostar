@@ -134,6 +134,17 @@ project recipe and must not be secrets: a credential-shaped value returns a
 `SecretDetectedError` whose `findings` name the variable and matching rule. If the
 value isn't a secret, retry with `--allow-secret NAME` for that variable.
 
+#### Missing Tools
+
+Only `uv` and `git` block a run. Without either, `init` and `sync` exit with
+code `69` before planning, and the `MissingDependencyError` payload names them
+in `missing_executables`, with `install_commands` when a package manager was
+found. A binary that only a selected tool runs, such as `direnv` or `just`,
+never fails a run: the tool's files are still written, the steps that run it
+are skipped, and the success payload's `result.missing_tools` lists each one
+with its tool. Top-level `install_commands` holds the commands that install
+them, when a package manager was found; run them in order.
+
 A template's options are chosen with `--option NAME=VALUE`, on `init` and `sync`.
 Every option has a default, so none is ever missing. A value the option doesn't
 offer returns an `InvalidOptionValueError` payload whose `option` and `values` name

@@ -64,6 +64,7 @@ from protostar.sync_state import (
     read_workspace_state,
 )
 from protostar.system import is_interactive
+from protostar.system_deps import check_required_executables
 
 logger = logging.getLogger("protostar")
 
@@ -72,6 +73,8 @@ def handle_init(args: argparse.Namespace) -> None:
     """Handles the 'init' subcommand to scaffold environments."""
     if getattr(args, "list_templates", False):
         ui._print_templates_and_exit()
+    # Nothing can be applied without these, so fail before asking anything.
+    check_required_executables()
 
     override_target = getattr(args, "from_path", None)
     template_name = getattr(args, "template_name", None)
@@ -270,6 +273,7 @@ def handle_init(args: argparse.Namespace) -> None:
                 "api_version": schema.CLI_API_VERSION,
                 "status": "success",
                 "result": result.to_dict(),
+                **ui.missing_tools_payload(result.missing_tools),
             }
         )
 
