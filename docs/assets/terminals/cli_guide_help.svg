@@ -1,0 +1,105 @@
+<svg class="rich-terminal" viewBox="0 0 1202 342.79999999999995" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .cli_guide_help-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .cli_guide_help-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .cli_guide_help-r1 { fill: #4b5b64 }
+.cli_guide_help-r2 { fill: #22d3ee;font-weight: bold }
+.cli_guide_help-r3 { fill: #e2e8f0 }
+.cli_guide_help-r4 { fill: #22d3ee }
+    </style>
+
+    <defs>
+    <clipPath id="cli_guide_help-clip-terminal">
+      <rect x="0" y="0" width="1182.3999999999999" height="291.79999999999995" />
+    </clipPath>
+    <clipPath id="cli_guide_help-line-0">
+    <rect x="0" y="1.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-1">
+    <rect x="0" y="25.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-2">
+    <rect x="0" y="50.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-3">
+    <rect x="0" y="74.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-4">
+    <rect x="0" y="99.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-5">
+    <rect x="0" y="123.5" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-6">
+    <rect x="0" y="147.9" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-7">
+    <rect x="0" y="172.3" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-8">
+    <rect x="0" y="196.7" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-9">
+    <rect x="0" y="221.1" width="1183.4" height="24.65"/>
+            </clipPath>
+<clipPath id="cli_guide_help-line-10">
+    <rect x="0" y="245.5" width="1183.4" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#0a0a0a" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1200" height="340.8" rx="8"/><text class="cli_guide_help-title" fill="#e2e8f0" text-anchor="middle" x="600" y="27">zsh</text>
+            <g transform="translate(26,22)">
+            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
+            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
+            <circle cx="44" cy="0" r="7" fill="#28c840"/>
+            </g>
+
+    <g transform="translate(9, 41)" clip-path="url(#cli_guide_help-clip-terminal)">
+
+    <g class="cli_guide_help-matrix">
+    <text class="cli_guide_help-r1" x="0" y="20" textLength="24.4" clip-path="url(#cli_guide_help-line-0)">❯&#160;</text><text class="cli_guide_help-r2" x="24.4" y="20" textLength="122" clip-path="url(#cli_guide_help-line-0)">protostar&#160;</text><text class="cli_guide_help-r3" x="146.4" y="20" textLength="122" clip-path="url(#cli_guide_help-line-0)">help&#160;guide</text><text class="cli_guide_help-r3" x="1183.4" y="20" textLength="12.2" clip-path="url(#cli_guide_help-line-0)">
+</text><text class="cli_guide_help-r3" x="1183.4" y="44.4" textLength="12.2" clip-path="url(#cli_guide_help-line-1)">
+</text><text class="cli_guide_help-r3" x="0" y="68.8" textLength="1183.4" clip-path="url(#cli_guide_help-line-2)">Show&#160;the&#160;commands&#160;for&#160;working&#160;on&#160;the&#160;project&#160;in&#160;the&#160;current&#160;directory:&#160;running&#160;it,&#160;where&#160;its&#160;code</text><text class="cli_guide_help-r3" x="1183.4" y="68.8" textLength="12.2" clip-path="url(#cli_guide_help-line-2)">
+</text><text class="cli_guide_help-r3" x="0" y="93.2" textLength="439.2" clip-path="url(#cli_guide_help-line-3)">starts,&#160;its&#160;tests,&#160;checks,&#160;and&#160;docs.</text><text class="cli_guide_help-r3" x="1183.4" y="93.2" textLength="12.2" clip-path="url(#cli_guide_help-line-3)">
+</text><text class="cli_guide_help-r3" x="1183.4" y="117.6" textLength="12.2" clip-path="url(#cli_guide_help-line-4)">
+</text><text class="cli_guide_help-r2" x="0" y="142" textLength="85.4" clip-path="url(#cli_guide_help-line-5)">OPTIONS</text><text class="cli_guide_help-r1" x="97.6" y="142" textLength="1085.8" clip-path="url(#cli_guide_help-line-5)">─────────────────────────────────────────────────────────────────────────────────────────</text><text class="cli_guide_help-r3" x="1183.4" y="142" textLength="12.2" clip-path="url(#cli_guide_help-line-5)">
+</text><text class="cli_guide_help-r4" x="24.4" y="166.4" textLength="183" clip-path="url(#cli_guide_help-line-6)">-v,&#160;--verbose&#160;&#160;</text><text class="cli_guide_help-r3" x="244" y="166.4" textLength="890.6" clip-path="url(#cli_guide_help-line-6)">Enable&#160;verbose&#160;debug&#160;output&#160;and&#160;rich&#160;tracebacks.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_guide_help-r3" x="1183.4" y="166.4" textLength="12.2" clip-path="url(#cli_guide_help-line-6)">
+</text><text class="cli_guide_help-r4" x="24.4" y="190.8" textLength="183" clip-path="url(#cli_guide_help-line-7)">--config&#160;&lt;path&gt;</text><text class="cli_guide_help-r3" x="244" y="190.8" textLength="890.6" clip-path="url(#cli_guide_help-line-7)">Read&#160;global&#160;configuration&#160;from&#160;this&#160;file&#160;instead&#160;of&#160;the&#160;default&#160;location.</text><text class="cli_guide_help-r3" x="1183.4" y="190.8" textLength="12.2" clip-path="url(#cli_guide_help-line-7)">
+</text><text class="cli_guide_help-r4" x="24.4" y="215.2" textLength="183" clip-path="url(#cli_guide_help-line-8)">--no-config&#160;&#160;&#160;&#160;</text><text class="cli_guide_help-r3" x="244" y="215.2" textLength="890.6" clip-path="url(#cli_guide_help-line-8)">Ignore&#160;global&#160;configuration&#160;entirely&#160;and&#160;use&#160;built-in&#160;defaults.&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="cli_guide_help-r3" x="1183.4" y="215.2" textLength="12.2" clip-path="url(#cli_guide_help-line-8)">
+</text><text class="cli_guide_help-r3" x="1183.4" y="239.6" textLength="12.2" clip-path="url(#cli_guide_help-line-9)">
+</text><text class="cli_guide_help-r3" x="0" y="264" textLength="1146.8" clip-path="url(#cli_guide_help-line-10)">Reads&#160;the&#160;project&#160;recipe&#160;and&#160;pyproject.toml;&#160;never&#160;runs&#160;project&#160;commands&#160;or&#160;writes&#160;files.&#160;The&#160;</text><text class="cli_guide_help-r3" x="1183.4" y="264" textLength="12.2" clip-path="url(#cli_guide_help-line-10)">
+</text><text class="cli_guide_help-r3" x="0" y="288.4" textLength="719.8" clip-path="url(#cli_guide_help-line-11)">commands&#160;match&#160;the&#160;project&#x27;s&#160;AGENTS.md&#160;and&#160;CONTRIBUTING.md.</text><text class="cli_guide_help-r3" x="1183.4" y="288.4" textLength="12.2" clip-path="url(#cli_guide_help-line-11)">
+</text>
+    </g>
+    </g>
+</svg>

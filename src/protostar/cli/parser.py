@@ -407,6 +407,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sync_parser.set_defaults(func=handle_sync)
 
+    from protostar.cli.guide import handle_guide
+
+    guide_parser = subparsers.add_parser(
+        "guide",
+        help="Show how to run, test, check, and document this project.",
+        description="Show the commands for working on the project in the current directory: running it, where its code starts, its tests, checks, and docs.",
+        parents=[base_parser],
+        epilog="Reads the project recipe and pyproject.toml; never runs project commands or writes files. The commands match the project's AGENTS.md and CONTRIBUTING.md.",
+    )
+    guide_parser.set_defaults(func=handle_guide)
+
     from protostar.cli.eject import handle_eject
 
     eject_parser = subparsers.add_parser(

@@ -426,7 +426,7 @@ def record_headless(session: PTYSession) -> None:
     session.sleep(0.5)
     session.type("protostar init --template cli", char_delay=0.035, post_delay=0.3)
     session.enter(wait=0.0)
-    session.wait_for("Accretion disk stabilized", timeout=12.0, post_wait=0.4)
+    session.wait_for("Project ready.", timeout=12.0, post_wait=0.4)
     session.sleep(0.6)  # Viewing pause after initialization completes
 
     # Post-generation inspection using cli fixture line metrics
@@ -464,7 +464,7 @@ def record_wizard(session: PTYSession) -> None:
     # 4. Focus wraps backwards from the file tree to "Apply".
     session.key(shift_tab, wait=0.5)
     session.key(enter, wait=0.0)
-    session.wait_for("Accretion disk stabilized", timeout=20.0, post_wait=0.4)
+    session.wait_for("Project ready.", timeout=20.0, post_wait=0.4)
     session.sleep(0.6)  # Viewing pause after initialization completes
 
     # 5. Post-generation inspection using astro fixture line metrics
