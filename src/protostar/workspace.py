@@ -23,53 +23,67 @@ __all__ = [
     "validate_project_name",
 ]
 
-_PYTHON_FLOAT_PATTERN = re.compile(r"^\d+\.\d+(?:\.\d+)?$")
-MIN_SUPPORTED_PYTHON_MINOR = 8
-MAX_SUPPORTED_PYTHON_MINOR = 14
+_PYTHON_VERSION_PATTERN = re.compile(r"(\d+)\.\d+(?:\.\d+)?")
 
 
-def check_python_version(version: object, *, label: str = "Python version") -> str:
-    """Validates that a Python version is a float-like string within the supported range."""
-    if not isinstance(version, str) or not _PYTHON_FLOAT_PATTERN.fullmatch(version):
+def check_python_version(version: object, *, label: str = "Python version") -> None:
+    """Validates a Python 3 version such as ``3.13`` or ``3.13.1``.
+
+    No minor version is out of range: a project may support an old Python, and
+    a new one is valid the day it ships.
+
+    Args:
+        version: The value to check.
+        label: How error messages name the value.
+
+    Raises:
+        ConfigurationError: If the value is not a ``major.minor[.patch]``
+            version, or its major version is not 3.
+    """
+    match = (
+        _PYTHON_VERSION_PATTERN.fullmatch(version) if isinstance(version, str) else None
+    )
+    if match is None:
         raise ConfigurationError(
             f"Invalid {label}: {version!r}.",
-            hint=f"{label} must be a float value (e.g., '3.13').",
+            hint=f"Write the {label} as major.minor, such as '3.13'.",
         )
-    parts = version.split(".")
-    major, minor = int(parts[0]), int(parts[1])
-    if major != 3 or not (
-        MIN_SUPPORTED_PYTHON_MINOR <= minor <= MAX_SUPPORTED_PYTHON_MINOR
-    ):
+    if match.group(1) != "3":
         raise ConfigurationError(
-            f"Invalid {label}: {version!r}.",
-            hint=f"{label} is outside the accepted range (3.{MIN_SUPPORTED_PYTHON_MINOR} - 3.{MAX_SUPPORTED_PYTHON_MINOR}).",
+            f"Unsupported {label}: {version!r}.",
+            hint="Protostar scaffolds Python 3 projects; choose a 3.x version such as '3.13'.",
         )
-    return version
 
 
-def validate_package_name(name: object) -> str:
-    """Validates that a package name is a valid Python identifier."""
+def validate_package_name(name: object) -> None:
+    """Validates that a package name is a valid Python identifier.
+
+    Raises:
+        ConfigurationError: If the name is not an identifier.
+    """
     if not isinstance(name, str) or not name.isidentifier():
         raise ConfigurationError(
             f"Invalid package name: {name!r}.",
             hint="Package name must be a valid Python identifier (e.g., 'my_package').",
         )
-    return name
 
 
-def validate_project_name(name: object) -> str:
-    """Validates that a project name contains no illegal path characters."""
+def validate_project_name(name: object) -> None:
+    """Validates that a project name can name a single directory.
+
+    Raises:
+        ConfigurationError: If the name is empty, '.', '..', or contains a path
+            separator or null byte.
+    """
     if (
         not isinstance(name, str)
-        or not name.strip()
+        or name in {"", ".", ".."}
         or any(c in name for c in ("/", "\\", "\x00"))
-        or name in {".", ".."}
     ):
         raise ConfigurationError(
             f"Invalid project name: {name!r}.",
             hint="Project name cannot contain slashes or null bytes, and cannot be empty, '.', or '..'.",
         )
-    return name
 
 
 @dataclass(frozen=True, order=True)

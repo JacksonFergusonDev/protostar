@@ -820,21 +820,32 @@ async def test_invalid_minimum_python_shows_actionable_preview_error():
         await settle(pilot)
         summary = plain(app, "#preview-summary")
         assert "Invalid Python version: 'invalid'." in summary
-        assert "Python version must be a float value (e.g., '3.13')." in summary
+        assert "Write the Python version as major.minor, such as '3.13'." in summary
         field.focus()
         field.value = "2.7"
         await pilot.press("enter")
         await settle(pilot)
         summary = plain(app, "#preview-summary")
-        assert "Invalid Python version: '2.7'." in summary
-        assert "Python version is outside the accepted range (3.8 - 3.14)." in summary
-        field.focus()
-        field.value = ""
-        await pilot.press("enter")
+        assert "Unsupported Python version: '2.7'." in summary
+        assert "Protostar scaffolds Python 3 projects" in summary
+
+
+@pytest.mark.asyncio
+async def test_any_python_3_minimum_or_none_is_accepted():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        summary = plain(app, "#preview-summary")
-        assert "Invalid Python version: ''." in summary
-        assert "Python version must be a float value (e.g., '3.13')." in summary
+        continue_btn = app.screen.query_one("#continue", Button)
+        field = app.screen.query_one("#meta-minimum_python", Input)
+        # Clearing the field falls back to the default, like an old or new
+        # Python, is never an error.
+        for value in ("3.7", "3.15", ""):
+            field.focus()
+            field.value = value
+            await pilot.press("enter")
+            await settle(pilot)
+            assert "Invalid" not in plain(app, "#preview-summary")
+            assert not continue_btn.disabled
 
 
 @pytest.mark.asyncio
@@ -849,7 +860,7 @@ async def test_invalid_github_username_shows_actionable_preview_error():
         await settle(pilot)
         summary = plain(app, "#preview-summary")
         assert "Invalid GitHub username: '@octocat'." in summary
-        assert "Remove the leading '@' from GitHub username." in summary
+        assert "Drop the leading '@': use 'octocat'." in summary
 
 
 @pytest.mark.asyncio
@@ -866,7 +877,7 @@ async def test_invalid_docker_port_shows_actionable_preview_error():
         await settle(pilot)
         summary = plain(app, "#preview-summary")
         assert "Invalid container port: 'notaport'." in summary
-        assert "Container port must be an integer (e.g., '8000')." in summary
+        assert "Container port must be a whole number, such as '8000'." in summary
 
 
 @pytest.mark.asyncio

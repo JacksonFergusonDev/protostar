@@ -88,49 +88,76 @@ def test_strict_recipe_validation(mutation):
         decode_recipe(recipe().to_dict() | mutation)
 
 
+PYTHON_FORMAT_HINT = "Write the Python version as major.minor, such as '3.13'."
+PYTHON_MAJOR_HINT = (
+    "Protostar scaffolds Python 3 projects; choose a 3.x version such as '3.13'."
+)
+USERNAME_HINT = (
+    "A GitHub username is at most 39 letters, digits, and hyphens, "
+    "starting with a letter or digit."
+)
+
+
 @pytest.mark.parametrize(
-    ("invalid", "expected_hint"),
+    ("invalid", "message", "expected_hint"),
     [
-        ("foo", "Python version must be a float value (e.g., '3.13')."),
-        ("3.x", "Python version must be a float value (e.g., '3.13')."),
-        ("", "Python version must be a float value (e.g., '3.13')."),
-        ("3", "Python version must be a float value (e.g., '3.13')."),
-        ("2.7", "Python version is outside the accepted range (3.8 - 3.14)."),
-        ("4.0", "Python version is outside the accepted range (3.8 - 3.14)."),
-        ("3.5", "Python version is outside the accepted range (3.8 - 3.14)."),
-        ("3.15", "Python version is outside the accepted range (3.8 - 3.14)."),
+        ("foo", "Invalid", PYTHON_FORMAT_HINT),
+        ("3.x", "Invalid", PYTHON_FORMAT_HINT),
+        ("", "Invalid", PYTHON_FORMAT_HINT),
+        ("3", "Invalid", PYTHON_FORMAT_HINT),
+        (" 3.13", "Invalid", PYTHON_FORMAT_HINT),
+        (3.13, "Invalid", PYTHON_FORMAT_HINT),
+        ("2.7", "Unsupported", PYTHON_MAJOR_HINT),
+        ("4.0", "Unsupported", PYTHON_MAJOR_HINT),
+        ("03.13", "Unsupported", PYTHON_MAJOR_HINT),
     ],
 )
-def test_invalid_python_version_recipe_error(invalid, expected_hint):
+def test_invalid_python_version_recipe_error(invalid, message, expected_hint):
     with pytest.raises(ConfigurationError) as exc_info:
         decode_recipe(recipe().to_dict() | {"python": invalid})
-    assert f"Invalid Python version: {invalid!r}." in str(exc_info.value)
+    assert f"{message} Python version: {invalid!r}." in str(exc_info.value)
     assert exc_info.value.hint == expected_hint
 
 
+@pytest.mark.parametrize("valid", ["3.0", "3.7", "3.10", "3.15", "3.30", "3.13.1"])
+def test_any_python_3_version_decodes(valid):
+    current = dict(recipe().context) | {"PYTHON_VERSION": valid}
+    decoded = decode_recipe(
+        recipe().to_dict()
+        | {"python": valid, "context": current, "metadata": {"minimum_python": valid}}
+    )
+    assert decoded.python == valid
+
+
 @pytest.mark.parametrize(
-    ("invalid", "expected_hint"),
+    ("invalid", "message", "expected_hint"),
     [
-        ("foo", "minimum Python version must be a float value (e.g., '3.13')."),
-        ("2.7", "minimum Python version is outside the accepted range (3.8 - 3.14)."),
+        (
+            "foo",
+            "Invalid",
+            "Write the minimum Python version as major.minor, such as '3.13'.",
+        ),
+        ("2.7", "Unsupported", PYTHON_MAJOR_HINT),
     ],
 )
-def test_invalid_metadata_minimum_python_error(invalid, expected_hint):
+def test_invalid_metadata_minimum_python_error(invalid, message, expected_hint):
     with pytest.raises(ConfigurationError) as exc_info:
         decode_recipe(recipe().to_dict() | {"metadata": {"minimum_python": invalid}})
-    assert f"Invalid minimum Python version: {invalid!r}." in str(exc_info.value)
+    assert f"{message} minimum Python version: {invalid!r}." in str(exc_info.value)
     assert exc_info.value.hint == expected_hint
 
 
 @pytest.mark.parametrize(
     ("invalid", "expected_hint"),
     [
-        ("abc", "Container port must be an integer (e.g., '8000')."),
-        ("", "Container port must be an integer (e.g., '8000')."),
-        (0, "Container port is outside the accepted range (1 - 65535)."),
-        (65536, "Container port is outside the accepted range (1 - 65535)."),
-        ("70000", "Container port is outside the accepted range (1 - 65535)."),
-        (-1, "Container port is outside the accepted range (1 - 65535)."),
+        ("abc", "Container port must be a whole number, such as '8000'."),
+        ("+8000", "Container port must be a whole number, such as '8000'."),
+        (" 80 ", "Container port must be a whole number, such as '8000'."),
+        (0, "Container port must be between 1 and 65535."),
+        ("0", "Container port must be between 1 and 65535."),
+        (65536, "Container port must be between 1 and 65535."),
+        ("70000", "Container port must be between 1 and 65535."),
+        (-1, "Container port must be between 1 and 65535."),
     ],
 )
 def test_invalid_metadata_docker_port_error(invalid, expected_hint):
@@ -146,26 +173,21 @@ def test_valid_metadata_docker_port(valid):
     assert dict(decoded.metadata)["docker_port"] == valid
 
 
+@pytest.mark.parametrize("key", ["docker_port", "minimum_python", "github_username"])
+def test_empty_metadata_is_unset_not_invalid(key):
+    decoded = decode_recipe(recipe().to_dict() | {"metadata": {key: ""}})
+    assert dict(decoded.metadata)[key] == ""
+
+
 @pytest.mark.parametrize(
     ("invalid", "expected_hint"),
     [
-        ("@octocat", "Remove the leading '@' from GitHub username."),
-        (
-            "-user",
-            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
-        ),
-        (
-            "user-",
-            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
-        ),
-        (
-            "user_name",
-            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
-        ),
-        (
-            "a" * 40,
-            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
-        ),
+        ("@octocat", "Drop the leading '@': use 'octocat'."),
+        ("-user", USERNAME_HINT),
+        ("_user", USERNAME_HINT),
+        ("user.name", USERNAME_HINT),
+        ("user name", USERNAME_HINT),
+        ("a" * 40, USERNAME_HINT),
     ],
 )
 def test_invalid_metadata_github_username_error(invalid, expected_hint):
@@ -175,7 +197,12 @@ def test_invalid_metadata_github_username_error(invalid, expected_hint):
     assert exc_info.value.hint == expected_hint
 
 
-@pytest.mark.parametrize("valid", ["", "octocat", "user-name-123", "a"])
+# Legacy accounts may end in or repeat a hyphen; Enterprise Managed Users
+# carry an underscore suffix.
+@pytest.mark.parametrize(
+    "valid",
+    ["octocat", "user-name-123", "a", "user-", "a--b", "octocat_acme", "a" * 39],
+)
 def test_valid_metadata_github_username(valid):
     decoded = decode_recipe(
         recipe().to_dict() | {"metadata": {"github_username": valid}}
@@ -196,9 +223,7 @@ def test_invalid_context_package_name_error(invalid):
     )
 
 
-@pytest.mark.parametrize(
-    "invalid", ["foo/bar", "foo\\bar", "foo\0bar", "", "   ", ".", ".."]
-)
+@pytest.mark.parametrize("invalid", ["foo/bar", "foo\\bar", "foo\0bar", "", ".", ".."])
 def test_invalid_context_project_name_error(invalid):
     current = dict(recipe().context)
     current["PROJECT_NAME"] = invalid

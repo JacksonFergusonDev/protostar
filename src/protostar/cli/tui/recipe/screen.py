@@ -28,17 +28,8 @@ from textual.widgets import (
 
 from protostar.analysis import NoteKind, ProjectAnalysis
 from protostar.config import TemplateSource, UserConfig
-from protostar.errors import (
-    ConfigurationError,
-    MissingTemplateVariablesError,
-    ProtostarError,
-)
-from protostar.init_draft import (
-    DraftTemplate,
-    InitDecision,
-    InitDraft,
-    resolve_init,
-)
+from protostar.errors import ConfigurationError, ProtostarError
+from protostar.init_draft import DraftTemplate, InitDecision, InitDraft, check_draft
 from protostar.metadata import MetadataKey
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
@@ -426,15 +417,16 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             or self._plan_error
         )
 
-    def _check_draft(self, draft: InitDraft) -> None:
+    def _check_draft(self, draft: InitDraft) -> bool:
+        """Disable Continue at once for an invalid field; the preview says why."""
         try:
-            resolve_init(draft, self.config)
-            self._draft_error = False
-        except MissingTemplateVariablesError:
-            self._draft_error = False
-        except ProtostarError:
+            check_draft(draft)
+        except ConfigurationError:
             self._draft_error = True
+        else:
+            self._draft_error = False
         self._refresh_continue()
+        return not self._draft_error
 
     def _current_draft(self, variables: Mapping[str, str] | None = None) -> InitDraft:
         fields = self.query_one(VariableFields)
@@ -454,7 +446,8 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             variables=tuple(sorted(variables.items())),
             allowed_secrets=fields.allowed_secrets,
             metadata=tuple(sorted(metadata.items())),
-            python_version=str(minimum) if minimum is not None else None,
+            # An empty minimum leaves the configured or detected default.
+            python_version=str(minimum) if minimum else None,
         )
 
     @on(VariableFields.Committed)
@@ -619,10 +612,5 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         if variables is None:
             return
         draft = self._current_draft(variables)
-        try:
-            resolve_init(draft, self.config)
-        except ProtostarError:
-            self._draft_error = True
-            self._refresh_continue()
-            return
-        self.app.push_screen(ReviewScreen(draft, self.config, can_go_back=True))
+        if self._check_draft(draft):
+            self.app.push_screen(ReviewScreen(draft, self.config, can_go_back=True))

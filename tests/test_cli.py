@@ -1796,20 +1796,20 @@ def test_init_invalid_python_version_headless_json_mode(run_cli):
     assert payload["error"]["message"] == "Invalid Python version: 'invalid'."
     assert (
         payload["error"]["hint"]
-        == "Python version must be a float value (e.g., '3.13')."
+        == "Write the Python version as major.minor, such as '3.13'."
     )
 
 
-def test_init_out_of_range_python_version_headless_json_mode(run_cli):
+def test_init_python_2_version_headless_json_mode(run_cli):
     code, stdout, _stderr, _ = run_cli("init", "--python-version", "2.7", "--json")
     assert code != 0
     payload = json.loads(stdout)
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "ConfigurationError"
-    assert payload["error"]["message"] == "Invalid Python version: '2.7'."
+    assert payload["error"]["message"] == "Unsupported Python version: '2.7'."
     assert (
         payload["error"]["hint"]
-        == "Python version is outside the accepted range (3.8 - 3.14)."
+        == "Protostar scaffolds Python 3 projects; choose a 3.x version such as '3.13'."
     )
 
 
@@ -1818,7 +1818,7 @@ def test_init_invalid_python_version_headless_terminal_mode(run_cli):
     assert code != 0
     output = stdout + stderr
     assert "Invalid Python version: 'invalid'." in output
-    assert "Hint: Python version must be a float value (e.g., '3.13')." in output
+    assert "Hint: Write the Python version as major.minor, such as '3.13'." in output
 
 
 def test_sync_invalid_metadata_headless_json_mode(tmp_path, run_cli, monkeypatch):
@@ -1840,7 +1840,8 @@ def test_sync_invalid_metadata_headless_json_mode(tmp_path, run_cli, monkeypatch
     assert payload["error"]["type"] == "ConfigurationError"
     assert payload["error"]["message"] == "Invalid container port: 'invalid_port'."
     assert (
-        payload["error"]["hint"] == "Container port must be an integer (e.g., '8000')."
+        payload["error"]["hint"]
+        == "Container port must be a whole number, such as '8000'."
     )
 
 
@@ -1863,4 +1864,16 @@ def test_sync_invalid_github_username_headless_json_mode(
     assert payload["status"] == "error"
     assert payload["error"]["type"] == "ConfigurationError"
     assert payload["error"]["message"] == "Invalid GitHub username: '@octocat'."
-    assert payload["error"]["hint"] == "Remove the leading '@' from GitHub username."
+    assert payload["error"]["hint"] == "Drop the leading '@': use 'octocat'."
+
+
+def test_init_adopts_a_project_supporting_an_old_python(tmp_path, run_cli, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "legacy"\nrequires-python = ">=3.7"\n'
+    )
+
+    code, stdout, _stderr, _ = run_cli("init", "--dry-run", "--json")
+
+    assert code == 0, stdout
+    assert json.loads(stdout)["status"] == "planned"

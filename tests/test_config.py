@@ -822,28 +822,31 @@ def test_user_config_validates_python_version():
     with pytest.raises(ConfigurationError) as exc_info:
         UserConfig(python_version="invalid")
     assert "Invalid Python version: 'invalid'." in str(exc_info.value)
-    assert exc_info.value.hint == "Python version must be a float value (e.g., '3.13')."
+    assert (
+        exc_info.value.hint
+        == "Write the Python version as major.minor, such as '3.13'."
+    )
 
     with pytest.raises(ConfigurationError) as exc_info:
         UserConfig(python_version="2.7")
-    assert "Invalid Python version: '2.7'." in str(exc_info.value)
+    assert "Unsupported Python version: '2.7'." in str(exc_info.value)
     assert (
         exc_info.value.hint
-        == "Python version is outside the accepted range (3.8 - 3.14)."
+        == "Protostar scaffolds Python 3 projects; choose a 3.x version such as '3.13'."
     )
+
+    for valid in ("3.7", "3.15", "3.13.1"):
+        assert UserConfig(python_version=valid).python_version == valid
 
 
 def test_user_config_validates_github_username():
     with pytest.raises(ConfigurationError) as exc_info:
         UserConfig(github_username="@octocat")
     assert "Invalid GitHub username: '@octocat'." in str(exc_info.value)
-    assert exc_info.value.hint == "Remove the leading '@' from GitHub username."
+    assert exc_info.value.hint == "Drop the leading '@': use 'octocat'."
 
     with pytest.raises(ConfigurationError) as exc_info:
         UserConfig(github_username="-octocat")
     assert "Invalid GitHub username: '-octocat'." in str(exc_info.value)
     assert exc_info.value.hint is not None
-    assert (
-        "GitHub username may only contain alphanumeric characters"
-        in exc_info.value.hint
-    )
+    assert "starting with a letter or digit" in exc_info.value.hint

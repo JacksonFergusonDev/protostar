@@ -9,6 +9,7 @@ from .analysis import ProjectAnalysis, ProjectFacts
 from .config import TemplateSource, UserConfig
 from .manifest import CollisionStrategy, ProjectMetadata
 from .merge import NO_RESOLUTIONS, Resolutions
+from .metadata import validate_metadata
 from .models import InitRequest
 from .modules import BootstrapModule, PythonCore, SystemWorkspaceModule
 from .options import OptionValue, resolve_options
@@ -22,6 +23,7 @@ from .recipe import (
 )
 from .registry import ResolvedHookRevision
 from .secret_guard import check_variable_values
+from .workspace import check_python_version
 
 
 @dataclass(frozen=True)
@@ -81,6 +83,22 @@ class InitDecision:
     hook_revisions: tuple[ResolvedHookRevision, ...]
     confirmed_commands: tuple[tuple[str, ...], ...] = ()
     resolutions: Resolutions = NO_RESOLUTIONS
+
+
+def check_draft(draft: InitDraft) -> None:
+    """Validate the draft's own field values without resolving it.
+
+    It renders nothing, so an editor can call it on every change. The recipe
+    ``resolve_init`` decodes applies the same checks.
+
+    Raises:
+        ConfigurationError: If the Python version or a metadata value is
+            invalid.
+    """
+    if draft.python_version is not None:
+        check_python_version(draft.python_version)
+    if draft.metadata is not None:
+        validate_metadata(dict(draft.metadata))
 
 
 def resolve_init(
