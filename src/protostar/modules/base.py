@@ -63,14 +63,31 @@ class RequirementSignal:
 type Signal = PathSignal | TableSignal | SectionSignal | RequirementSignal
 
 
+@dataclass(frozen=True)
+class ToolInfo:
+    """What a tool does, written for someone who has never heard of it.
+
+    One record feeds ``--help``, the editor's tooltip and tool-information
+    popup, and the configuration editor, so they can't drift apart.
+
+    Attributes:
+        summary: One line saying what the tool does for the project.
+        adds: What enabling it adds or changes in the project.
+        workflow: The practical consequence for day-to-day work.
+        docs_url: The tool's official documentation.
+    """
+
+    summary: str
+    adds: str
+    workflow: str
+    docs_url: str
+
+
 class BootstrapModule(abc.ABC):
     """Appends module-specific requirements to the environment manifest."""
 
     cli_flags: ClassVar[tuple[str, ...]] = ()
     """The CLI flags to trigger this module (e.g., ('-p', '--python'))."""
-
-    cli_help: ClassVar[str] = ""
-    """The help description for the CLI flag."""
 
     config_key: ClassVar[str] = ""
     """The global configuration key used to evaluate if this module is active."""
@@ -80,6 +97,9 @@ class BootstrapModule(abc.ABC):
 
     optional_metadata: ClassVar[tuple[MetadataKey | str, ...]] = ()
     """The metadata keys that are nice to have but not strictly required."""
+
+    info: ClassVar[ToolInfo]
+    """What the tool does; every tooling module defines it."""
 
     signals: ClassVar[tuple[Signal, ...]] = ()
     """What in an existing project shows it already uses this module's tool."""

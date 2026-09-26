@@ -558,7 +558,7 @@ def build_parser() -> argparse.ArgumentParser:
             tooling_group.add_argument(
                 *mod.cli_flags,
                 action=argparse.BooleanOptionalAction,
-                help=mod.cli_help,
+                help=mod.info.summary,
                 dest=mod.__class__.__name__,
             )
 

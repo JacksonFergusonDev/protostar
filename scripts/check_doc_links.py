@@ -1,8 +1,12 @@
-"""Validates that all documentation paths in DocsPage resolve to real files and anchors.
+"""Validates Protostar's documentation links.
 
-Applies documentation URL routing convention:
+Every DocsPage path must resolve to a real file and anchor, following the
+documentation URL routing convention:
     usage/init/  ->  docs/usage/init.md
     getting-started/  ->  docs/getting-started.md
+
+Every tooling module's ``ToolInfo.docs_url`` must answer without an HTTP
+error, so a dead link to a tool's documentation fails the pre-push hook.
 
 Run:
     uv run python scripts/check_doc_links.py
@@ -10,6 +14,9 @@ Run:
 
 import re
 import sys
+import urllib.error
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 _repo_root = Path(__file__).resolve().parent.parent
@@ -58,6 +65,48 @@ def docs_path_to_file(docs_path: str) -> tuple[Path, str | None]:
     return file_path, (anchor if anchor else None)
 
 
+_USER_AGENT = "protostar-check-doc-links"
+_TIMEOUT_SECONDS = 20
+
+
+def check_url(url: str) -> str | None:
+    """Returns why the URL is dead, or ``None`` when it answers.
+
+    Some sites refuse ``HEAD``, so a refused ``HEAD`` is retried as ``GET``.
+    """
+    for method in ("HEAD", "GET"):
+        request = urllib.request.Request(
+            url, method=method, headers={"User-Agent": _USER_AGENT}
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS):
+                return None
+        except urllib.error.HTTPError as exc:
+            if method == "HEAD" and exc.code in {403, 405}:
+                continue
+            return f"HTTP {exc.code}"
+        except (urllib.error.URLError, TimeoutError) as exc:
+            return str(getattr(exc, "reason", exc))
+    return None
+
+
+def check_tool_urls() -> list[tuple[str, str, str]]:
+    """Returns each tooling module's dead documentation link and why."""
+    from protostar.modules import TOOLING_MODULES
+
+    urls = {module.name: module.info.docs_url for module in TOOLING_MODULES}
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        reasons = dict(zip(urls, pool.map(check_url, urls.values()), strict=True))
+    for name, url in urls.items():
+        if reasons[name] is None:
+            print(f"  \u2713  {name:35s}  {url}")
+    return [
+        (name, urls[name], reason)
+        for name, reason in reasons.items()
+        if reason is not None
+    ]
+
+
 def main() -> None:
     from protostar.docs_registry import DocsPage
 
@@ -88,6 +137,16 @@ def main() -> None:
         rel = resolved.relative_to(REPO_ROOT)
         print(f"  \u2713  {label:35s}  {docs_path!r:35s}  \u2192  {rel}")
 
+    print("\nValidating tool documentation links...\n")
+    dead = check_tool_urls()
+
+    if dead:
+        print(f"\n{'─' * 80}")
+        print(f"DEAD TOOL DOCUMENTATION LINKS ({len(dead)}):\n")
+        for name, url, reason in dead:
+            print(f"  \u2717  {name:35s}  {url}  [{reason}]")
+        print("\nUpdate the module's ToolInfo.docs_url.")
+
     if broken:
         print(f"\n{'─' * 80}")
         print(f"BROKEN DOCUMENTATION REFERENCES ({len(broken)}):\n")
@@ -101,6 +160,7 @@ def main() -> None:
             f"{len(broken)} broken reference(s) detected.\n"
             "Update the docs_path value in DocsPage, or create the missing file/anchor."
         )
+    if broken or dead:
         sys.exit(1)
 
     print(f"\nAll {len(valid)} documentation reference(s) are valid.")

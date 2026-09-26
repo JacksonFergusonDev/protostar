@@ -18,6 +18,7 @@ from .base import (
     RequirementSignal,
     SectionSignal,
     TableSignal,
+    ToolInfo,
 )
 
 if TYPE_CHECKING:
@@ -32,7 +33,21 @@ class DirenvModule(BootstrapModule):
     """Configures a .envrc file and evaluates it via direnv."""
 
     cli_flags = ("--direnv",)
-    cli_help = "Scaffold a .envrc and evaluate the virtual environment"
+    info = ToolInfo(
+        summary="Activate the project's environment whenever you enter its folder",
+        adds=(
+            "An .envrc file that creates the virtual environment if it is "
+            "missing and puts its commands on your PATH, plus .gitignore "
+            "entries for direnv's local files."
+        ),
+        workflow=(
+            "Entering the project folder in a terminal activates the "
+            "environment, and leaving deactivates it, so you never run `source "
+            ".venv/bin/activate`. It needs the direnv program installed and "
+            "hooked into your shell."
+        ),
+        docs_url="https://direnv.net/",
+    )
     config_key = "direnv"
     signals = (PathSignal(".envrc"),)
     executables = (GlobalExecutable.DIRENV,)
@@ -80,7 +95,18 @@ class MarkdownLintModule(BootstrapModule):
     """Configures a relaxed, pragmatic .markdownlint-cli2.yaml ruleset."""
 
     cli_flags = ("--markdownlint",)
-    cli_help = "Scaffold a relaxed .markdownlint-cli2.yaml configuration"
+    info = ToolInfo(
+        summary="Check Markdown files for formatting mistakes, with relaxed rules",
+        adds=(
+            "A .markdownlint-cli2.yaml configuration, a git hook, and a CI step "
+            "that lint every Markdown file."
+        ),
+        workflow=(
+            "Committing a Markdown file checks it and fixes what it can; a "
+            "problem it can't fix stops the commit until you do."
+        ),
+        docs_url="https://github.com/DavidAnson/markdownlint-cli2",
+    )
     config_key = "markdownlint"
     signals = tuple(
         PathSignal(name)
@@ -195,7 +221,18 @@ class RumdlModule(BootstrapModule):
     """Configures the rumdl fast markdown linter and formatter."""
 
     cli_flags = ("--rumdl",)
-    cli_help = "Scaffold rumdl fast markdown linter and formatter"
+    info = ToolInfo(
+        summary="Check and format Markdown files quickly",
+        adds=(
+            "rumdl as a development dependency, its settings in pyproject.toml, "
+            "and a git hook that checks and formats Markdown."
+        ),
+        workflow=(
+            "Committing a Markdown file reformats it and reports problems such "
+            "as broken heading levels; an unfixed problem stops the commit."
+        ),
+        docs_url="https://github.com/rvben/rumdl",
+    )
     config_key = "rumdl"
     signals = (
         PathSignal(".rumdl.toml"),
@@ -302,7 +339,16 @@ class RuffModule(BootstrapModule):
     """
 
     cli_flags = ("--ruff",)
-    cli_help = "Scaffold Ruff linter and formatter"
+    info = ToolInfo(
+        summary="Find common bugs and style problems in Python code, and format it",
+        adds="Ruff as a development dependency and its rules in pyproject.toml.",
+        workflow=(
+            "`ruff check` reports likely bugs and unused code, and `ruff "
+            "format` rewrites files in one consistent style. With a hook "
+            "manager, both run on every commit."
+        ),
+        docs_url="https://docs.astral.sh/ruff/",
+    )
     config_key = "ruff"
     signals = (
         PathSignal("ruff.toml"),
@@ -385,7 +431,16 @@ class MypyModule(BootstrapModule):
     """
 
     cli_flags = ("--mypy",)
-    cli_help = "Scaffold Mypy static type checker"
+    info = ToolInfo(
+        summary="Check type hints to catch mistakes before the code runs",
+        adds=("Mypy as a development dependency and its settings in pyproject.toml."),
+        workflow=(
+            "`mypy` reports calls that don't match their type hints, such as "
+            "passing text where a number is expected. Code without hints is "
+            "mostly left alone."
+        ),
+        docs_url="https://mypy.readthedocs.io/en/stable/",
+    )
     config_key = "mypy"
     signals = (
         PathSignal("mypy.ini"),
@@ -446,7 +501,15 @@ class TyModule(BootstrapModule):
     """Configures the Astral Ty static type checker."""
 
     cli_flags = ("--ty",)
-    cli_help = "Scaffold Ty static type checker"
+    info = ToolInfo(
+        summary="Check type hints quickly, with Astral's type checker",
+        adds="ty as a development dependency and its settings in pyproject.toml.",
+        workflow=(
+            "`ty check` reports calls that don't match their type hints. It is "
+            "newer than Mypy and much faster, and still gaining features."
+        ),
+        docs_url="https://docs.astral.sh/ty/",
+    )
     config_key = "ty"
     signals = (
         PathSignal("ty.toml"),
@@ -489,7 +552,19 @@ class PytestModule(BootstrapModule):
     """Configures the Pytest testing framework and coverage artifacts."""
 
     cli_flags = ("--pytest",)
-    cli_help = "Scaffold Pytest testing framework"
+    info = ToolInfo(
+        summary="Run the project's tests",
+        adds=(
+            "pytest and pytest-mock as development dependencies, a tests/ "
+            "directory, and test settings in pyproject.toml."
+        ),
+        workflow=(
+            "`uv run pytest` runs every test in tests/. With a hook manager, "
+            "the tests also run before each push, and a failing test stops the "
+            "push."
+        ),
+        docs_url="https://docs.pytest.org/",
+    )
     config_key = "pytest"
     signals = (
         PathSignal("pytest.ini"),
@@ -550,7 +625,19 @@ class PreCommitModule(BootstrapModule):
     """Configures pre-commit hooks and installs the git hook scripts."""
 
     cli_flags = ("--pre-commit",)
-    cli_help = "Scaffold pre-commit hooks and configuration"
+    info = ToolInfo(
+        summary="Run the project's checks automatically each time you commit",
+        adds=(
+            "A .pre-commit-config.yaml listing the checks, pre-commit as a "
+            "development dependency, and git hooks installed in the repository."
+        ),
+        workflow=(
+            "Checks run when you commit, and a failing check stops the commit. "
+            "Many checks fix the file themselves, so you add it again and "
+            "commit."
+        ),
+        docs_url="https://pre-commit.com/",
+    )
     config_key = "pre_commit"
     signals = (
         *(
@@ -582,8 +669,18 @@ class PrekModule(BootstrapModule):
     """Configures prek hooks and installs the git hook scripts."""
 
     cli_flags = ("--prek",)
-    cli_help = (
-        "Scaffold prek hooks and configuration (faster Rust alternative to pre-commit)"
+    info = ToolInfo(
+        summary=("Run the project's checks automatically each time you commit, faster"),
+        adds=(
+            "A .pre-commit-config.yaml listing the checks, prek as a "
+            "development dependency, and git hooks installed in the repository."
+        ),
+        workflow=(
+            "Checks run when you commit, and a failing check stops the commit. "
+            "It reads the same file as pre-commit and runs the same checks, "
+            "faster."
+        ),
+        docs_url="https://github.com/j178/prek",
     )
     config_key = "prek"
     signals = (
@@ -613,7 +710,20 @@ class CommitizenModule(BootstrapModule):
     """Configures commitizen for semantic version bumping and changelog generation."""
 
     cli_flags = ("--commitizen",)
-    cli_help = "Scaffold commitizen version bumping and changelog tooling"
+    info = ToolInfo(
+        summary=("Write commit messages in a standard form that sets the next version"),
+        adds=(
+            "Commitizen as a development dependency, its settings in "
+            "pyproject.toml, a CHANGELOG.md, and a hook that checks commit "
+            "messages."
+        ),
+        workflow=(
+            "Commit messages must follow Conventional Commits, such as `feat: "
+            "add login`, or the commit stops. `cz bump` then raises the version "
+            "and updates the changelog from them."
+        ),
+        docs_url="https://commitizen-tools.github.io/commitizen/",
+    )
     config_key = "commitizen"
     signals = (
         *(
@@ -675,7 +785,17 @@ class PyreflyModule(BootstrapModule):
     """Configures the Meta pyrefly static type checker."""
 
     cli_flags = ("--pyrefly",)
-    cli_help = "Scaffold pyrefly static type checker"
+    info = ToolInfo(
+        summary="Check type hints quickly, with Meta's type checker",
+        adds=(
+            "Pyrefly as a development dependency and its settings in pyproject.toml."
+        ),
+        workflow=(
+            "`pyrefly check` reports calls that don't match their type hints. "
+            "It is newer than Mypy and much faster."
+        ),
+        docs_url="https://pyrefly.org/",
+    )
     config_key = "pyrefly"
     signals = (
         PathSignal("pyrefly.toml"),
@@ -719,7 +839,16 @@ class RenovateModule(BootstrapModule):
     """Configures Renovate dependency update tooling."""
 
     cli_flags = ("--renovate",)
-    cli_help = "Scaffold Renovate dependency update configuration"
+    info = ToolInfo(
+        summary="Open pull requests that keep dependencies up to date",
+        adds="A .github/renovate.json configuration.",
+        workflow=(
+            "Once the Renovate app is installed on the GitHub repository, it "
+            "opens a pull request whenever a dependency, GitHub Action, or hook "
+            "has a new version. Nothing happens until the app is installed."
+        ),
+        docs_url="https://docs.renovatebot.com/",
+    )
     config_key = "renovate"
     signals = tuple(PathSignal(path) for path in renovate.LOCATIONS.paths)
 
@@ -805,7 +934,21 @@ class CodecovModule(BootstrapModule):
     """Configures opinionated Codecov coverage and status thresholds."""
 
     cli_flags = ("--codecov",)
-    cli_help = "Scaffold Codecov configuration"
+    info = ToolInfo(
+        summary=(
+            "Report how much of the code the tests exercise, on each pull request"
+        ),
+        adds=(
+            "A .github/codecov.yml with coverage targets, and a CI step that "
+            "uploads the test coverage report."
+        ),
+        workflow=(
+            "Each pull request gets a coverage comment, and its status check "
+            "fails when coverage drops below the target. It needs the Codecov "
+            "app and a CODECOV_TOKEN secret on the GitHub repository."
+        ),
+        docs_url="https://docs.codecov.com/docs",
+    )
     config_key = "codecov"
     signals = tuple(PathSignal(path) for path in codecov.LOCATIONS.paths)
 
@@ -866,7 +1009,19 @@ class ZensicalModule(BootstrapModule):
     """Configures a minimal Zensical documentation setup."""
 
     cli_flags = ("--zensical",)
-    cli_help = "Scaffold Zensical documentation"
+    info = ToolInfo(
+        summary="Build a documentation website from Markdown files",
+        adds=(
+            "Zensical as a development dependency, a zensical.toml site "
+            "configuration, and a first docs/index.md page."
+        ),
+        workflow=(
+            "Pages are Markdown files in docs/. `zensical serve` previews the "
+            "site as you write, and `zensical build` produces the finished "
+            "site."
+        ),
+        docs_url="https://zensical.org/docs/",
+    )
     config_key = "zensical"
     # A MkDocs site is a competitor, not Zensical: only its own file counts.
     signals = (
@@ -989,7 +1144,16 @@ class ReadTheDocsModule(BootstrapModule):
     """Configures Read the Docs build configuration for documentation hosting."""
 
     cli_flags = ("--readthedocs",)
-    cli_help = "Scaffold Read the Docs configuration"
+    info = ToolInfo(
+        summary="Publish the documentation website on Read the Docs",
+        adds=("A .readthedocs.yaml that tells Read the Docs how to build the site."),
+        workflow=(
+            "After you import the repository on readthedocs.org, every push "
+            "rebuilds and publishes the documentation. Nothing happens until "
+            "then."
+        ),
+        docs_url="https://docs.readthedocs.com/platform/stable/",
+    )
     config_key = "readthedocs"
     signals = tuple(PathSignal(path) for path in readthedocs.LOCATIONS.paths)
     required_metadata = (MetadataKey.MINIMUM_PYTHON,)
@@ -1057,7 +1221,19 @@ class JustModule(BootstrapModule):
     """Configures the justfile for project commands."""
 
     cli_flags = ("--just",)
-    cli_help = "Scaffold a justfile for command execution"
+    info = ToolInfo(
+        summary="Give the project's common commands short names, like `just test`",
+        adds=(
+            "A justfile with commands for testing, checking, formatting, and "
+            "cleaning up."
+        ),
+        workflow=(
+            "`just --list` shows every command, and `just <name>` runs one. It "
+            "needs the just program installed; each command is also a plain `uv "
+            "run` you can type yourself."
+        ),
+        docs_url="https://just.systems/man/en/",
+    )
     config_key = "just"
     signals = (PathSignal("justfile"), PathSignal("Justfile"), PathSignal(".justfile"))
     executables = (GlobalExecutable.JUST,)
@@ -1077,7 +1253,19 @@ class AgentsModule(BootstrapModule):
     """Configures a managed AGENTS.md guide for coding agents."""
 
     cli_flags = ("--agents",)
-    cli_help = "Scaffold a managed AGENTS.md guide for coding agents"
+    info = ToolInfo(
+        summary="Tell coding assistants how to work on the project",
+        adds=(
+            "An AGENTS.md listing the project's commands and conventions, in a "
+            "region Protostar keeps up to date."
+        ),
+        workflow=(
+            "Coding assistants such as Claude Code, Codex, and Cursor read it "
+            "before changing the project. Text you write outside the managed "
+            "region is yours and stays."
+        ),
+        docs_url="https://agents.md/",
+    )
     config_key = "agents"
     signals = (PathSignal(AGENTS_TARGET),)
 

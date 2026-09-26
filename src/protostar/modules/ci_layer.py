@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from protostar.documents import github_workflows
 from protostar.metadata import MetadataKey
 
-from .base import BootstrapModule, PathSignal
+from .base import BootstrapModule, PathSignal, ToolInfo
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -39,7 +39,18 @@ class CIModule(BootstrapModule):
     """Configures standard GitHub Actions CI workflows for testing and linting."""
 
     cli_flags = ("--ci",)
-    cli_help = "Scaffold standard GitHub Actions CI workflows"
+    info = ToolInfo(
+        summary="Run the checks and tests on GitHub for every push and pull request",
+        adds=(
+            "A .github/workflows/ci.yml workflow, and actionlint to check "
+            "workflow files."
+        ),
+        workflow=(
+            "Every push and pull request on GitHub runs the project's checks "
+            "and tests, and a pull request shows whether they passed."
+        ),
+        docs_url="https://docs.github.com/en/actions",
+    )
     config_key = "ci"
     signals = tuple(PathSignal(path) for path in github_workflows.CI_LOCATIONS.paths)
     required_metadata = (MetadataKey.SUPPORTED_OS, MetadataKey.MINIMUM_PYTHON)
@@ -61,7 +72,19 @@ class ReleaseModule(BootstrapModule):
     """Configures GitHub Actions release workflows for PyPI publishing."""
 
     cli_flags = ("--release",)
-    cli_help = "Scaffold GitHub Actions PyPI release workflows"
+    info = ToolInfo(
+        summary="Publish the package to PyPI when you push a version tag",
+        adds=(
+            "A .github/workflows/release.yml workflow, and actionlint to check "
+            "workflow files."
+        ),
+        workflow=(
+            "Pushing a tag such as `v1.2.0` builds the package and publishes it "
+            "to PyPI. It needs a trusted publisher set up for the project on "
+            "PyPI first; no password or token is stored."
+        ),
+        docs_url="https://docs.pypi.org/trusted-publishers/",
+    )
     config_key = "release"
     signals = tuple(
         PathSignal(path) for path in github_workflows.RELEASE_LOCATIONS.paths

@@ -375,7 +375,7 @@ def generate_capability_tables() -> None:
         [
             mod.name,
             _format_flags(mod.cli_flags),
-            mod.cli_help,
+            mod.info.summary,
             _get_module_scaffolded_files(mod),
         ]
         for mod in TOOLING_MODULES
@@ -586,7 +586,7 @@ def generate_capability_tables() -> None:
         [
             f"`{mod.cli_flags[0]}`",
             f"`{mod.cli_flags[0].replace('--', '--no-', 1)}`",
-            mod.cli_help,
+            mod.info.summary,
         ]
         for mod in TOOLING_MODULES
         if mod.cli_flags

@@ -34,6 +34,7 @@ from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.variables import VariablesScreen
 from protostar.cli.tui.review.screen import ReviewScreen
+from protostar.cli.tui.tool_info import ToolInfoScreen
 from protostar.config import TemplateAliasConfig, TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ExecutionAbortedError
 from protostar.executor import SystemExecutor
@@ -41,6 +42,7 @@ from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin, TemplateReference
 from protostar.manifest import CollisionStrategy
 from protostar.merge import ResolutionChoice
+from protostar.modules import MypyModule, PrekModule
 from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
@@ -487,6 +489,89 @@ async def test_buttons_show_their_keys_and_question_mark_lists_them_all():
         assert isinstance(app.screen, KeybindingsScreen)
         await pilot.press("question_mark")
         assert isinstance(app.screen, RecipeScreen)
+
+
+@pytest.mark.asyncio
+async def test_i_explains_the_focused_tool_and_esc_returns_to_it(mocker):
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        mypy = screen.query_one("#tool-mypy", Checkbox)
+        assert mypy.tooltip == MypyModule.info.summary
+        mypy.focus()
+        await pilot.pause()
+        assert "Tool info" in legend(app)
+        before = mypy.value
+        await pilot.press("i")
+        assert isinstance(app.screen, ToolInfoScreen)
+        assert app.screen.module.info == MypyModule.info
+        assert labels(app) == {"close": "Close  esc", "docs": "Open docs  o"}
+        opened = mocker.patch.object(app, "open_url")
+        await pilot.press("o")
+        opened.assert_called_once_with(MypyModule.info.docs_url)
+        await pilot.press("escape")
+        assert isinstance(app.screen, RecipeScreen)
+        assert app.focused is mypy
+        assert mypy.value == before
+        assert screen.enabled[Tool.MYPY] == before
+
+
+@pytest.mark.asyncio
+async def test_i_explains_the_highlighted_hook_manager_but_not_none():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        screen = app.screen
+        choice = screen.query_one("#exclusive-0", RadioSet)
+        screen.query_one("#tool-community").focus()
+        await pilot.press("down")
+        assert app.focused is choice
+        assert "Tool info" not in legend(app)
+        await pilot.press("i")
+        assert app.screen is screen
+        await pilot.press("down", "down")
+        assert "Tool info" in legend(app)
+        await pilot.press("i")
+        assert isinstance(app.screen, ToolInfoScreen)
+        assert app.screen.module.info == PrekModule.info
+        await pilot.press("escape")
+        assert app.focused is choice
+        assert choice.pressed_button.id == "none-0"
+
+
+@pytest.mark.asyncio
+async def test_i_typed_into_a_text_field_is_a_letter():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        field = app.screen.query_one("#meta-description", Input)
+        field.focus()
+        await pilot.press(*"ci")
+        assert field.value == "ci"
+        assert isinstance(app.screen, RecipeScreen)
+
+
+@pytest.mark.asyncio
+async def test_the_keybindings_list_names_tool_info():
+    app = make_app()
+    async with app.run_test() as pilot:
+        await settle(pilot)
+        await pilot.press("?")
+        assert ("i", "What the focused tool does to the project") in app.screen.rows
+
+
+def test_tool_info_snapshot(snap_compare, monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    app = make_app(config=UserConfig(author_name="Ada Lovelace"))
+
+    async def popup(pilot):
+        await settle(pilot)
+        pilot.app.screen.query_one("#tool-ruff").focus()
+        await pilot.press("i")
+        await pilot.pause()
+
+    assert snap_compare(app, terminal_size=(110, 50), run_before=popup)
 
 
 @pytest.mark.asyncio

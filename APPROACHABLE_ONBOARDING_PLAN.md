@@ -11,7 +11,7 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 | 1 | `feat(engine)!: missing tools are data, not a fatal pre-flight` | A (base) | Merged (#345) |
 | 2 | `feat(cli): report missing tools before the editor, in review, and after success` | A, on 1 | Merged (#346) |
 | 3 | `feat(cli): protostar guide and a success line that says what to do next` | A, on 2 | Merged (#347) |
-| 4 | `feat(tui): tool information on demand` | B (base) | Next |
+| 4 | `feat(tui): tool information on demand` | B (base) | Done |
 | 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Planned |
 | 6 | `feat(templates): group templates by purpose` | Standalone | Next |
 | 7 | `docs: first-project walkthrough and installation paths` | After all | Planned |
@@ -65,36 +65,7 @@ Stacks A and B and PR 6 are independent of each other and can run in parallel. W
   - **PR 1 (#345):** only `system_deps.REQUIRED` (`uv`, `git`) blocks, through `check_required_executables()`, which `plan()` calls for init and sync. Modules declare tool binaries in `executables`. Planning records the missing ones as `missing_tools` on the manifest, review, and `ExecutionResult`, and `DirenvModule` skips `direnv allow` with a diagnostic. `install_command()` is pure and takes the detected package managers. Deviations: `pre_flight()` and `AggregatedDependencyError` are deleted (one `MissingDependencyError` carries every missing binary), `plan(policy=)` became `plan(check_executables=)`, and tests control lookups through the `missing_executables` fixture.
   - **PR 2 (#346):** `init` and `sync` check required binaries before any screen. Missing tools show a `not installed` marker in the editor, a preview note, and a **Skipped** section in the review. Success ends with a **Not installed** block and one install command. JSON carries `missing_tools` and `install_commands`.
   - **PR 3 (#347):** `protostar guide` renders `GuideSpec` (now `EnvironmentManifest.guide_spec()`, with `just_recipes()`/`check_commands()` shared in `workflows.py`) and `[project.scripts]`, planning through `plan_project` as `sync` does. The success line is `Project ready.` plus the run command and a pointer to the guide. Remote templates are never cached, so an unreachable one yields a partial guide with a note. The `cd <name>` step was dropped because `init` always scaffolds in the current directory.
-
-## PR 4: `feat(tui): tool information on demand`
-
-**Goal:** anyone can learn what a tool does and what it will change, from the keyboard or the mouse, without adding permanent text to the editor.
-
-**Steps:**
-
-1. **Metadata.** A frozen `ToolInfo` on each tooling module, replacing `cli_help`:
-    - `summary`: one line, used for `--help` and the tooltip.
-    - `adds`: what enabling it adds or changes in the project.
-    - `workflow`: the practical consequence, for example "checks run when you commit, and a failing check stops the commit".
-    - `docs_url`: official documentation.
-
-    Delete `cli_help` and derive the flag help from `summary`. Write the copy for someone who has never heard of the tool, and state consequences, not categories.
-1. **Link checking.** Add `docs_url` values to `scripts/check_doc_links.py`, so a dead link fails the pre-push hook.
-1. **Tooltip.** Each tool control in the recipe editor gets its `summary` as a Textual tooltip.
-1. **`i` popup.** A modal on `KeyboardScreen` showing the full `ToolInfo`, bound to `i` only while a tool control has focus. The binding must not fire in `Input` or `Field` text entry. Check it doesn't collide with `Picker`, `ChoiceGroup`, or `Checklist` bindings.
-    - Show `i Tool info` on the control through `key_label`, and add it to the screen's `KEYS`.
-    - `Esc` closes the popup and restores focus without changing any value.
-    - The docs link opens only on an explicit key in the popup.
-1. **Reusable.** Put the popup in `cli/tui/` (not under `recipe/`) so PR 5 can use it.
-
-**Tests:**
-
-- `i` on a focused tool opens the popup, and `Esc` returns focus to the same control with its value unchanged.
-- `i` typed into a text field inserts the letter.
-- Every tooling module has complete `ToolInfo`: a contract test, so a new module can't ship without it.
-- `--help` output snapshots regenerate.
-
-**Done when:** every tool row answers "what does this do to my project?" in two keys.
+- **PR 4, `feat(tui): tool information on demand`.** `ToolInfo` (`summary`, `adds`, `workflow`, `docs_url`) on every tooling module replaced `cli_help`; the summary is the flag help, the template schema description, and the tooltip. `cli/tui/tool_info.py` holds `ToolInfoScreen` (`esc` closes, `o` opens the docs) and the tool controls that bind `i` only while focused: `ToolToggle`, `ToolRadio`, and `ToolChoice`, which offers `i` only while a tool, not "None", is highlighted. The Tools heading shows `Tool info  i`. `check_doc_links.py` requests every `docs_url` and fails on an HTTP error, and its hook now runs when `src/protostar/modules/` changes. Backticked commands in the copy render in the accent colour.
 
 ## PR 5: `feat(cli): interactive global configuration editor`
 

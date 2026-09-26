@@ -203,7 +203,7 @@ ChoiceGroup { height: auto; }
 
 /* --- Dialogs ----------------------------------------------------------- */
 
-LeaveScreen, KeybindingsScreen { align: center middle; background: $background 70%; }
+LeaveScreen, KeybindingsScreen, ToolInfoScreen { align: center middle; background: $background 70%; }
 #dialog {
     width: auto;
     max-width: 90;
@@ -223,7 +223,8 @@ LeaveScreen, KeybindingsScreen { align: center middle; background: $background 7
 #dialog Button.-error { background: $error; color: $background; }
 .dialog-actions { width: auto; height: auto; margin-top: 1; }
 .dialog-actions Button { margin-right: 2; }
-KeybindingsScreen #dialog { width: 72; max-width: 100%; }
+KeybindingsScreen #dialog, ToolInfoScreen #dialog { width: 72; max-width: 100%; }
+#dialog .info-heading { margin-top: 1; color: $text-faint; }
 
 /* --- Conflicts --------------------------------------------------------- */
 
