@@ -24,13 +24,14 @@ from .merge import MergeConflict
 from .metadata import LicenseType
 from .migrations import Migration
 from .sync_state import FilePolicy
+from .system_deps import GlobalExecutable
 from .workflows import DOCKERFILE, CIFlag, TargetOS
 from .workflows import HookRunner as HookRunner
 from .workspace import resolve_package_name, resolve_project_name
 
 if TYPE_CHECKING:
     from .documents.locations import DocumentLocations
-    from .recipe import ProducerContribution, ProjectRecipe, ToolSelection
+    from .recipe import ProducerContribution, ProjectRecipe, Tool, ToolSelection
 
 
 def _ignore_contribution(path: tuple[str, ...]) -> None:
@@ -77,6 +78,28 @@ class DiagnosticEvent:
     detail: str | None = None
     conflict: MergeConflict | None = None
     resolved: MergeConflict | None = None
+
+
+@dataclass(frozen=True, order=True)
+class MissingTool:
+    """An executable a selected tool runs, missing from ``PATH`` while planning.
+
+    Attributes:
+        executable: The missing executable.
+        tool: The enabled tool that runs it.
+    """
+
+    executable: GlobalExecutable
+    tool: Tool
+
+    def to_dict(self) -> dict[str, str]:
+        """Serializes the executable and its tool."""
+        return {"executable": self.executable.value, "tool": self.tool.value}
+
+
+def missing_tools_record(missing: frozenset[MissingTool]) -> list[dict[str, str]]:
+    """Serializes missing tools sorted by executable, then tool."""
+    return [item.to_dict() for item in sorted(missing)]
 
 
 class SystemTask:
@@ -626,6 +649,18 @@ class EnvironmentManifest:
     ide_settings: IDESettings = field(default_factory=lambda: cast(IDESettings, {}))
     collision_strategy: CollisionStrategy | None = CollisionStrategy.MERGE
     collisions: frozenset[Path] = frozenset()
+    missing_tools: frozenset[MissingTool] = frozenset()
+    """Executables enabled tools run that planning found missing from ``PATH``."""
+    diagnostics: list[DiagnosticEvent] = field(default_factory=list)
+    """Non-fatal notes from planning, such as a step skipped for a missing tool."""
+
+    def is_missing(self, executable: GlobalExecutable) -> bool:
+        """Returns whether planning found an enabled tool's executable missing.
+
+        Args:
+            executable: The executable a module's step runs.
+        """
+        return any(item.executable is executable for item in self.missing_tools)
 
     def add_ide_setting(self, key: IDESettingKey, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""
@@ -835,6 +870,7 @@ class EnvironmentManifest:
             if self.collision_strategy
             else None,
             "collisions": sorted(path.as_posix() for path in self.collisions),
+            "missing_tools": missing_tools_record(self.missing_tools),
             "metadata": dict(self.metadata),
             "ide_settings": dict(self.ide_settings),
             "dependencies": self.dependencies.to_dict(),

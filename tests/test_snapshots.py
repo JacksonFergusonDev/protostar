@@ -226,10 +226,7 @@ def test_exit_codes_documentation_matches_cli_behavior():
     # Assert accurate exit code mappings
     assert "| `78` | `os.EX_CONFIG` | `ConfigurationError` |" in content
     assert "| `65` | `os.EX_DATAERR` | `TemplateResolutionError` |" in content
-    assert (
-        "| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError`<br>`AggregatedDependencyError` |"
-        in content
-    )
+    assert "| `69` | `os.EX_UNAVAILABLE` | `MissingDependencyError` |" in content
     assert "| `74` | `os.EX_IOERR` | `FileSystemError` |" in content
     assert "| `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` |" in content
     assert "| `77` | `os.EX_NOPERM` | `SecurityViolationError` |" in content

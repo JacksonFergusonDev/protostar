@@ -2,14 +2,12 @@
 
 from email.message import Message
 from pathlib import Path
-from unittest.mock import patch
 from urllib.error import HTTPError
 
 import pytest
 
 from protostar.docs_registry import DOCS_BASE_URL, DocsPage
 from protostar.errors import (
-    AggregatedDependencyError,
     CommandExecutionError,
     CommandTimeoutError,
     ConfigurationError,
@@ -25,7 +23,7 @@ from protostar.errors import (
     TemplateResolutionError,
     WorkspaceCollisionError,
 )
-from protostar.system_deps import GlobalExecutable
+from protostar.system_deps import GlobalExecutable, InstallCommand
 
 
 def test_exit_code_values():
@@ -122,17 +120,32 @@ def test_template_resolution_error():
 
 def test_missing_dependency_error_formatting():
     err = MissingDependencyError(
-        dependency=GlobalExecutable.DIRENV,
-        purpose="environment switching",
+        (GlobalExecutable.GIT, GlobalExecutable.UV),
+        InstallCommand(("brew install git uv",), reload_shell=False),
     )
-    assert err.dependency == GlobalExecutable.DIRENV
-    assert "Missing dependency: 'direnv' is required for environment switching." in str(
-        err
-    )
+    assert err.missing == (GlobalExecutable.GIT, GlobalExecutable.UV)
+    assert str(err) == "Protostar needs git and uv, which are not installed."
+    assert err.hint == "Install them with:\n    brew install git uv"
     assert (
         err.docs_url
         == f"{DOCS_BASE_URL}usage/troubleshooting/#missing-dependencies-environment-checks"
     )
+
+
+def test_missing_dependency_error_reload_hint():
+    err = MissingDependencyError(
+        (GlobalExecutable.UV,),
+        InstallCommand(("winget install --exact --id astral-sh.uv",), True),
+    )
+    assert str(err) == "Protostar needs uv, which is not installed."
+    assert err.hint is not None
+    assert err.hint.startswith("Install it with:\n    winget install")
+    assert err.hint.endswith("Then open a new terminal so your shell finds it.")
+
+
+def test_missing_dependency_error_without_command():
+    err = MissingDependencyError((GlobalExecutable.GIT,), None)
+    assert err.hint == "Install git, then run the command again."
 
 
 def test_command_execution_error_properties_and_output_detail():
@@ -224,48 +237,3 @@ def test_security_violation_error():
         err.docs_url
         == f"{DOCS_BASE_URL}usage/troubleshooting/#remote-template-security-alerts"
     )
-
-
-def test_aggregated_dependency_error_empty_raises():
-    with pytest.raises(ValueError, match="requires at least one error"):
-        AggregatedDependencyError(())
-
-
-@pytest.mark.parametrize(
-    ("platform", "expected_cmd"),
-    [
-        ("darwin", "brew install uv git"),
-        ("win32", "winget install astral-sh.uv Git.Git"),
-        ("linux", "sudo apt install uv git"),
-    ],
-)
-def test_aggregated_dependency_error_platform_commands(platform, expected_cmd):
-    errors = (
-        MissingDependencyError(GlobalExecutable.UV, "package management"),
-        MissingDependencyError(GlobalExecutable.GIT, "version control"),
-    )
-    with patch("sys.platform", platform):
-        err = AggregatedDependencyError(errors)
-        assert "Missing 2 system dependencies" in str(err)
-        assert expected_cmd in (err.hint or "")
-
-
-@pytest.mark.parametrize(
-    ("shell", "platform", "expected_reload"),
-    [
-        ("", "win32", "close and reopen your terminal"),
-        ("/bin/zsh", "darwin", "source ~/.zshrc"),
-        ("/bin/bash", "darwin", "source ~/.bash_profile"),
-        ("/bin/bash", "linux", "source ~/.bashrc"),
-        ("/usr/bin/fish", "linux", "source ~/.config/fish/config.fish"),
-        ("/bin/csh", "linux", "source ~/.bashrc  # (or your shell's equivalent)"),
-    ],
-)
-def test_aggregated_dependency_error_shell_reloads(shell, platform, expected_reload):
-    errors = (MissingDependencyError(GlobalExecutable.UV, "package management"),)
-    with (
-        patch("sys.platform", platform),
-        patch.dict("os.environ", {"SHELL": shell}),
-    ):
-        err = AggregatedDependencyError(errors)
-        assert expected_reload in (err.hint or "")

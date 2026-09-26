@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.error import HTTPError
 
 from protostar.docs_registry import DocsPage
-from protostar.system_deps import GlobalExecutable
+from protostar.system_deps import GlobalExecutable, InstallCommand
 
 if TYPE_CHECKING:
     from .journal import RollbackResult
@@ -349,19 +349,42 @@ class InvalidOptionValueError(ConfigurationError):
 
 
 class MissingDependencyError(ProtostarError):
-    """Raised during pre-flight checks when a system-level executable is absent."""
+    """Raised when an executable Protostar itself needs is not on ``PATH``.
+
+    Only ``system_deps.REQUIRED`` executables raise this; a selected tool's
+    missing executable is reported as ``EnvironmentManifest.missing_tools``.
+    """
 
     def __init__(
         self,
-        dependency: GlobalExecutable,
-        purpose: str,
+        missing: tuple[GlobalExecutable, ...],
+        install: InstallCommand | None,
         *,
         docs_path: DocsPage | None = DocsPage.TROUBLESHOOTING_DEPS,
     ) -> None:
-        message = f"Missing dependency: '{dependency.value}' is required for {purpose}."
-        super().__init__(message, hint=None, docs_path=docs_path)
-        self.dependency = dependency
-        self.purpose = purpose
+        """Initializes the error with the executables and how to install them.
+
+        Args:
+            missing: The missing executables, sorted.
+            install: The commands that install them, or None when none is known.
+            docs_path: Where the installation instructions live.
+        """
+        names = " and ".join(executable.value for executable in missing)
+        them, are = ("it", "is") if len(missing) == 1 else ("them", "are")
+        if install is None:
+            hint = f"Install {names}, then run the command again."
+        else:
+            commands = "\n".join(f"    {line}" for line in install.lines)
+            hint = f"Install {them} with:\n{commands}"
+            if install.reload_shell:
+                hint += f"\n\nThen open a new terminal so your shell finds {them}."
+        super().__init__(
+            f"Protostar needs {names}, which {are} not installed.",
+            hint=hint,
+            docs_path=docs_path,
+        )
+        self.missing = missing
+        self.install = install
 
 
 class CommandExecutionError(ProtostarError):
@@ -587,60 +610,6 @@ class SecretDetectedError(SecurityViolationError):
                 for finding in self.findings
             ]
         }
-
-
-class AggregatedDependencyError(ProtostarError):
-    """Raised when multiple pre-flight executable checks fail."""
-
-    def __init__(
-        self,
-        errors: tuple[MissingDependencyError, ...],
-        *,
-        docs_path: DocsPage | None = DocsPage.TROUBLESHOOTING_DEPS,
-    ) -> None:
-        if not errors:
-            raise ValueError("AggregatedDependencyError requires at least one error.")
-
-        message = (
-            f"Missing {len(errors)} system dependencies required for this environment."
-        )
-
-        import sys
-
-        package_names = [e.dependency.package_name for e in errors]
-
-        if sys.platform == "darwin":
-            unified = f"Install missing tools via Homebrew:\n    brew install {' '.join(package_names)}"
-        elif sys.platform == "win32":
-            unified = f"Install missing tools via Winget:\n    winget install {' '.join(package_names)}"
-        else:
-            unified = f"Install missing tools via your system package manager (e.g. apt, pacman):\n    sudo apt install {' '.join(package_names)}"
-
-        import os
-
-        if sys.platform == "win32":
-            reload_hint = "Note: Please close and reopen your terminal for the PATH changes to take effect."
-        else:
-            shell = os.environ.get("SHELL", "")
-            if "zsh" in shell:
-                reload_cmd = "source ~/.zshrc"
-            elif "bash" in shell:
-                reload_cmd = (
-                    "source ~/.bash_profile"
-                    if sys.platform == "darwin"
-                    else "source ~/.bashrc"
-                )
-            elif "fish" in shell:
-                reload_cmd = "source ~/.config/fish/config.fish"
-            else:
-                reload_cmd = "source ~/.bashrc  # (or your shell's equivalent)"
-
-            reload_hint = f"Note: Reload your shell profile for the PATH changes to take effect:\n    {reload_cmd}"
-
-        hint = f"{unified}\n\n{reload_hint}"
-
-        super().__init__(message, hint=hint, docs_path=docs_path)
-        self.errors = errors
 
 
 class RollbackFailedError(ProtostarError):

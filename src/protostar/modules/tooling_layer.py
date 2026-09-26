@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
-import shutil
 from typing import TYPE_CHECKING
 
 from protostar.documents import codecov, pre_commit, readthedocs, renovate, zensical
-from protostar.errors import MissingDependencyError
 from protostar.intent import DependencyGroup, StructuredFormat
+from protostar.manifest import DiagnosticEvent, DiagnosticPhase, Severity
 from protostar.metadata import MetadataKey
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
@@ -36,19 +35,12 @@ class DirenvModule(BootstrapModule):
     cli_help = "Scaffold a .envrc and evaluate the virtual environment"
     config_key = "direnv"
     signals = (PathSignal(".envrc"),)
+    executables = (GlobalExecutable.DIRENV,)
 
     @property
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "direnv"
-
-    def pre_flight(self) -> None:
-        """Ensures direnv is installed and available before disk mutations occur."""
-        if not shutil.which("direnv"):
-            raise MissingDependencyError(
-                dependency=GlobalExecutable.DIRENV,
-                purpose="direnv integration",
-            )
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Appends direnv context ignores, injects the .envrc, and queues evaluation."""
@@ -69,6 +61,16 @@ class DirenvModule(BootstrapModule):
         )
 
         manifest.filesystem.add_file_injection(".envrc", content)
+        if manifest.is_missing(GlobalExecutable.DIRENV):
+            manifest.diagnostics.append(
+                DiagnosticEvent(
+                    DiagnosticPhase.DIRENV,
+                    "Skipping `direnv allow`; direnv is not installed. "
+                    "Run it in the project once direnv is installed.",
+                    Severity.SKIP,
+                )
+            )
+            return
         manifest.tasks.add_post_install_task(
             ["direnv", "allow"], description="Authorizing direnv workspace"
         )
@@ -563,14 +565,6 @@ class PreCommitModule(BootstrapModule):
         """Returns the human-readable module name."""
         return "Pre-Commit"
 
-    def pre_flight(self) -> None:
-        """Verifies that the 'git' executable is available in the system PATH."""
-        if not shutil.which("git"):
-            raise MissingDependencyError(
-                dependency=GlobalExecutable.GIT,
-                purpose="pre-commit hooks",
-            )
-
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags pre-commit activation and queues its dependency.
 
@@ -601,14 +595,6 @@ class PrekModule(BootstrapModule):
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "Prek"
-
-    def pre_flight(self) -> None:
-        """Verifies that the 'git' executable is available in the system PATH."""
-        if not shutil.which("git"):
-            raise MissingDependencyError(
-                dependency=GlobalExecutable.GIT,
-                purpose="prek hooks",
-            )
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Flags prek activation and queues its dependency.
@@ -1074,6 +1060,7 @@ class JustModule(BootstrapModule):
     cli_help = "Scaffold a justfile for command execution"
     config_key = "just"
     signals = (PathSignal("justfile"), PathSignal("Justfile"), PathSignal(".justfile"))
+    executables = (GlobalExecutable.JUST,)
 
     @property
     def name(self) -> str:

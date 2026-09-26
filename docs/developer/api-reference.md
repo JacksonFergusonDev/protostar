@@ -108,14 +108,6 @@ classDiagram
             show_root_toc_entry: true
             separate_signature: true
 
-    ::: protostar.errors.AggregatedDependencyError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
     ::: protostar.errors.CommandExecutionError
         options:
             show_source: true
@@ -210,10 +202,9 @@ classDiagram
 
     ```mermaid
     flowchart LR
-    M[BootstrapModule] -->|pre_flight| C{Valid?}
-    C -->|Yes| B["build(manifest)"]
-    C -->|No| E[ProtostarError]
+    M[BootstrapModule] --> B["build(manifest)"]
     B -->|Mutates state| EM[(EnvironmentManifest)]
+    B -->|Invalid| E[ProtostarError]
     ```
 
     ::: protostar.modules.base.BootstrapModule

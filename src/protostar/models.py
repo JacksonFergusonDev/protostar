@@ -7,7 +7,13 @@ from typing import Any
 
 from .config import TemplateBlueprint
 from .intent import TemplateReference
-from .manifest import CollisionStrategy, DiagnosticEvent, SystemTask
+from .manifest import (
+    CollisionStrategy,
+    DiagnosticEvent,
+    MissingTool,
+    SystemTask,
+    missing_tools_record,
+)
 from .recipe import ProjectRecipe
 
 __all__ = ["ExecutionResult", "InitRequest", "RollbackContext"]
@@ -87,11 +93,14 @@ class ExecutionResult:
         created_paths: Immutable set of relative paths created on disk.
         mutated_paths: Immutable set of relative paths modified on disk.
         diagnostics: Ordered tuple of non-fatal diagnostic events emitted during execution.
+        missing_tools: Executables enabled tools run that were missing from
+            ``PATH``; the steps that run them were skipped.
     """
 
     created_paths: frozenset[str]
     mutated_paths: frozenset[str]
     diagnostics: tuple[DiagnosticEvent, ...]
+    missing_tools: frozenset[MissingTool] = frozenset()
 
     @property
     def touched_paths(self) -> frozenset[str]:
@@ -133,4 +142,5 @@ class ExecutionResult:
             "mutated_paths": sorted(self.mutated_paths),
             "touched_paths": sorted(self.touched_paths),
             "diagnostics": diagnostics,
+            "missing_tools": missing_tools_record(self.missing_tools),
         }

@@ -15,13 +15,15 @@ Use the `tmp_path` fixture provided by `pytest` for any test requiring an actual
 === "Logical Validation (Mocked)"
 
     ```python
-    def test_direnv_module_aborts_if_not_installed(mocker):
-        # Patch shutil.which to simulate direnv not being installed
-        mocker.patch("protostar.modules.tooling_layer.shutil.which", return_value=None)
+    def test_missing_direnv_is_reported(missing_executables, tmp_path, monkeypatch):
+        # Every test finds each executable on PATH unless it adds it to this set
+        monkeypatch.chdir(tmp_path)
+        missing_executables.add(GlobalExecutable.DIRENV)
 
-        module = DirenvModule()
-        with pytest.raises(RuntimeError, match="direnv is not installed"):
-            module.pre_flight()
+        manifest = Orchestrator([DirenvModule()], UserConfig()).plan()
+        assert manifest.missing_tools == {
+            MissingTool(GlobalExecutable.DIRENV, Tool.DIRENV)
+        }
     ```
 
 === "Physical Sandbox (`tmp_path`)"

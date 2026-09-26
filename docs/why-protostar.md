@@ -184,7 +184,7 @@ Generic scaffolding tools execute shell hooks imperatively. If a required tool (
 
 Protostar pairs a **two-phase headless architecture** with **pipeline transactionality**:
 
-1. **`plan()` (Read-Only Phase):** All modules declare requirements into a centralized `EnvironmentManifest`. System checks verify all dependencies upfront before touching disk.
+1. **`plan()` (Read-Only Phase):** All modules declare requirements into a centralized `EnvironmentManifest`. System checks verify that `uv` and `git` exist upfront before touching disk; a tool's own binary, like `direnv`, is reported rather than fatal.
 1. **`execute()` (Transactional Side-Effect Phase):** Disk mutations and subprocesses run only after the entire plan is validated. Direct file writes, AST merges, and declared dependency targets are tracked by a `MutationJournal`. If a step fails or is interrupted by the user (`Ctrl+C`), active managed processes are cleanly terminated and tracked workspace changes are automatically rolled back to their pre-run state. (External tools such as `git init` may still leave undeclared artifacts behind, as arbitrary external subprocess effects cannot be inferred).
 
 *(For a deeper visual breakdown of this two-phase execution, see [Design Principles](./design-principles.md)).*

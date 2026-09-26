@@ -24,7 +24,7 @@ from .modules import PythonCore, SystemWorkspaceModule
 from .network import RefKind, RefListing, list_refs
 from .options import OptionValue, resolve_options
 from .orchestrator import Orchestrator
-from .preparation import ExecutionPolicy, PreparedReview, prepare_review
+from .preparation import PreparedReview, prepare_review
 from .progress import ProgressStep, no_progress
 from .recipe import ProjectRecipe, read_recipe, select_tooling
 from .registry import resolve_hook_revisions
@@ -154,6 +154,7 @@ class PreparedProject:
             created_paths=executor.journal.created_paths,
             mutated_paths=executor.journal.mutated_paths,
             diagnostics=tuple(executor.diagnostics),
+            missing_tools=self.manifest.missing_tools,
         )
 
 
@@ -277,7 +278,7 @@ def migrate_variables(
 
 def inspect_project() -> PreparedReview:
     """Reviews the explicit current project without prompts or subprocesses."""
-    return prepare_project().review
+    return prepare_project(check_executables=False).review
 
 
 def prepare_project(
@@ -286,6 +287,7 @@ def prepare_project(
     variables: Mapping[str, str] | None = None,
     allowed_secrets: frozenset[str] = frozenset(),
     options: Mapping[str, OptionValue] | None = None,
+    check_executables: bool = True,
 ) -> PreparedProject:
     """Captures a project once for shared inspection and lifecycle application.
 
@@ -295,8 +297,11 @@ def prepare_project(
         allowed_secrets: Variables whose flagged values the user confirmed
             are not secrets.
         options: Values for template options, over the recorded ones.
+        check_executables: Whether to require the executables Protostar runs;
+            only a review that is never applied skips the check.
 
     Raises:
+        MissingDependencyError: If an executable Protostar runs is missing.
         MissingTemplateVariablesError: If a template variable still has no
             value; sync never prompts.
         SecretDetectedError: If a new value looks like a credential.
@@ -358,7 +363,7 @@ def prepare_project(
         },
     )
     manifest = Orchestrator(modules, config, request).plan(
-        policy=ExecutionPolicy.LIFECYCLE
+        check_executables=check_executables
     )
     revisions = resolve_hook_revisions()
     return PreparedProject(

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from protostar.metadata import MetadataKey
+from protostar.system_deps import GlobalExecutable
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -83,18 +84,17 @@ class BootstrapModule(abc.ABC):
     signals: ClassVar[tuple[Signal, ...]] = ()
     """What in an existing project shows it already uses this module's tool."""
 
+    executables: ClassVar[tuple[GlobalExecutable, ...]] = ()
+    """Executables the tool runs, beyond ``system_deps.REQUIRED``.
+
+    Planning reports each one missing from ``PATH`` in
+    ``EnvironmentManifest.missing_tools`` instead of failing.
+    """
+
     @property
     @abc.abstractmethod
     def name(self) -> str:
         """Returns the human-readable identifier for the module."""
-        pass
-
-    def pre_flight(self) -> None:  # noqa: B027
-        """Verifies system prerequisites before manifest building begins.
-
-        Raises:
-            RuntimeError: If a critical dependency (e.g., 'uv', 'cargo') is missing.
-        """
         pass
 
     @abc.abstractmethod

@@ -79,7 +79,7 @@ def review_payload(
 
 def handle_review(args: argparse.Namespace) -> None:
     """Inspects the current project and renders one non-blocking review."""
-    project = prepare_project()
+    project = prepare_project(check_executables=False)
     if ui.is_json_mode:
         ui.emit_json(review_payload(project.review, project.upstream))
         return

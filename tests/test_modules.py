@@ -1,11 +1,14 @@
 import tomllib
 
-import pytest
-
 from protostar.config import UserConfig
-from protostar.errors import MissingDependencyError
 from protostar.intent import StructuredFormat
-from protostar.manifest import EnvironmentManifest, HookRunner
+from protostar.manifest import (
+    DiagnosticPhase,
+    EnvironmentManifest,
+    HookRunner,
+    MissingTool,
+    Severity,
+)
 from protostar.modules import (
     AgentsModule,
     CodecovModule,
@@ -25,6 +28,7 @@ from protostar.modules import (
     TyModule,
     ZensicalModule,
 )
+from protostar.recipe import Tool
 from protostar.system_deps import GlobalExecutable
 
 
@@ -125,30 +129,23 @@ def test_python_module_ide_injection_inactive(manifest, mocker):
     assert "python.defaultInterpreterPath" not in manifest.ide_settings
 
 
-def test_python_module_pre_flight_missing_uv(mocker):
-    """Test PythonCore aborts pre-flight if uv is missing."""
-    mod = PythonCore()
-    mocker.patch("shutil.which", return_value=None)
-
-    with pytest.raises(MissingDependencyError) as exc_info:
-        mod.pre_flight()
-
-    assert exc_info.value.dependency == "uv"
-    assert "Python scaffolding" in exc_info.value.purpose
-
-
 # --- DirenvModule Tests ---
 
 
-def test_direnv_pre_flight_missing(mocker):
-    """Test DirenvModule aborts pre-flight if direnv is missing."""
-    mocker.patch("shutil.which", return_value=None)
+def test_direnv_skips_allow_when_direnv_is_missing(manifest):
+    """A missing direnv still writes .envrc, but queues no `direnv allow`."""
+    manifest.missing_tools = frozenset(
+        {MissingTool(GlobalExecutable.DIRENV, Tool.DIRENV)}
+    )
 
-    with pytest.raises(MissingDependencyError) as exc_info:
-        DirenvModule().pre_flight()
+    DirenvModule().build(manifest)
 
-    assert exc_info.value.dependency == "direnv"
-    assert "direnv integration" in exc_info.value.purpose
+    assert ".envrc" in manifest.filesystem.file_injections
+    assert not manifest.tasks.post_install_tasks
+    (note,) = manifest.diagnostics
+    assert note.phase is DiagnosticPhase.DIRENV
+    assert note.severity is Severity.SKIP
+    assert "direnv allow" in note.message
 
 
 def test_direnv_build(manifest):
@@ -318,17 +315,6 @@ def test_pyrefly_module_build():
 # --- PreCommitModule Tests ---
 
 
-def test_pre_commit_pre_flight_missing(mocker):
-    """Test PreCommitModule aborts pre-flight if git is missing."""
-    mocker.patch("shutil.which", return_value=None)
-
-    with pytest.raises(MissingDependencyError) as exc_info:
-        PreCommitModule().pre_flight()
-
-    assert exc_info.value.dependency == "git"
-    assert "pre-commit hooks" in exc_info.value.purpose
-
-
 def test_pre_commit_build_uv(manifest):
     """Test PreCommitModule configures standard hooks routing via uv."""
     mod = PreCommitModule()
@@ -341,17 +327,6 @@ def test_pre_commit_build_uv(manifest):
 
 
 # --- PrekModule Tests ---
-
-
-def test_prek_pre_flight_missing(mocker):
-    """Test PrekModule aborts pre-flight if git is missing."""
-    mocker.patch("shutil.which", return_value=None)
-
-    with pytest.raises(MissingDependencyError) as exc_info:
-        PrekModule().pre_flight()
-
-    assert exc_info.value.dependency == "git"
-    assert "prek hooks" in exc_info.value.purpose
 
 
 def test_prek_build_uv(manifest):
@@ -389,37 +364,6 @@ def test_mypy_module_injects_ide_extension():
         "ms-python.mypy-type-checker",
         "matangover.mypy",
     ) in manifest.tooling.ide_extensions
-
-
-def test_python_core_pre_flight_missing_uv(mocker):
-    mocker.patch("shutil.which", return_value=None)
-    module = PythonCore()
-
-    with pytest.raises(MissingDependencyError) as exc_info:
-        module.pre_flight()
-
-    assert exc_info.value.dependency == "uv"
-    assert "Python scaffolding" in exc_info.value.purpose
-
-
-def test_direnv_module_pre_flight_missing_direnv(mocker):
-    mocker.patch("shutil.which", return_value=None)
-    module = DirenvModule()
-
-    with pytest.raises(MissingDependencyError) as exc_info:
-        module.pre_flight()
-
-    assert exc_info.value.dependency == "direnv"
-
-
-def test_pre_commit_module_pre_flight_missing_git(mocker):
-    mocker.patch("shutil.which", return_value=None)
-    module = PreCommitModule()
-
-    with pytest.raises(MissingDependencyError) as exc_info:
-        module.pre_flight()
-
-    assert exc_info.value.dependency == "git"
 
 
 def test_commitizen_module_injects_dev_dependency():
@@ -470,12 +414,6 @@ def test_commitizen_module_adds_gitignore_entry():
 
     assert ".cz-cache/" in manifest.filesystem.vcs_ignores
     assert ".cz-cache/" in manifest.filesystem.workspace_hides
-
-
-def test_commitizen_module_pre_flight_inherited():
-    """Verify CommitizenModule inherits a working no-op pre_flight without error."""
-    module = CommitizenModule()
-    module.pre_flight()
 
 
 def test_renovate_module_properties():
@@ -622,30 +560,12 @@ def test_system_workspace_module_properties():
     assert module.name == "System Workspace"
 
 
-def test_system_workspace_pre_flight_raises_on_missing_git(
-    tmp_path, monkeypatch, mocker
-):
-    """Verify that pre_flight raises MissingDependencyError when git is missing and repo uninitialized."""
-    monkeypatch.chdir(tmp_path)
-    mocker.patch("shutil.which", return_value=None)
-
-    module = SystemWorkspaceModule()
-    with pytest.raises(MissingDependencyError) as exc_info:
-        module.pre_flight()
-
-    assert exc_info.value.dependency == GlobalExecutable.GIT
-    assert "git repository initialization" in str(exc_info.value)
-
-
-def test_system_workspace_skips_git_init_if_already_repo(tmp_path, monkeypatch, mocker):
+def test_system_workspace_skips_git_init_if_already_repo(tmp_path, monkeypatch):
     """Verify that git init is skipped when .git directory is already present."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".git").mkdir()
-    # Even if git was absent from PATH, existing repo does not trigger MissingDependencyError
-    mocker.patch("shutil.which", return_value=None)
 
     module = SystemWorkspaceModule()
-    module.pre_flight()
 
     manifest = EnvironmentManifest()
     module.build(manifest)
@@ -656,13 +576,11 @@ def test_system_workspace_skips_git_init_if_already_repo(tmp_path, monkeypatch, 
     assert ".DS_Store" in manifest.filesystem.workspace_hides
 
 
-def test_system_workspace_queues_git_init_in_clean_dir(tmp_path, monkeypatch, mocker):
-    """Verify that git init is queued when .git is absent and git executable is found."""
+def test_system_workspace_queues_git_init_in_clean_dir(tmp_path, monkeypatch):
+    """Verify that git init is queued when .git is absent."""
     monkeypatch.chdir(tmp_path)
-    mocker.patch("shutil.which", return_value="/usr/bin/git")
 
     module = SystemWorkspaceModule()
-    module.pre_flight()
 
     manifest = EnvironmentManifest()
     module.build(manifest)

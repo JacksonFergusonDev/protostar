@@ -10,7 +10,7 @@ Protostar's architecture strictly isolates state definition from execution. This
 
 Bootstrap modules define the structural environment footprint. To create a new module, subclass `BootstrapModule` from `protostar.modules.base`.
 
-You must define its CLI flags, a human-readable name, and the `build` method. You can also optionally define `pre_flight` checks and `required_languages` to enforce strict footprint constraints.
+You must define its CLI flags, a human-readable name, and the `build` method. Declare the binaries your tool runs in `executables`.
 
 !!! tip "Dynamic CLI Registration"
     The CLI parser dynamically reads the `cli_flags` and `cli_help` attributes at runtime. Once you append your module to the `TOOLING_MODULES` tuple in `protostar/modules/__init__.py`, it will automatically appear in the `protostar init --help` output.
@@ -21,6 +21,7 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
     ```python
     from protostar.modules import BootstrapModule, PathSignal
     from protostar.manifest import EnvironmentManifest
+    from protostar.system_deps import GlobalExecutable
 
     class JustModule(BootstrapModule):
         """Configures a justfile for project task execution."""
@@ -30,16 +31,12 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
         config_key = "just"
         # What shows an existing project already uses this tool.
         signals = (PathSignal("justfile"), PathSignal("Justfile"))
+        # Binaries the tool runs; planning reports each missing one.
+        executables = (GlobalExecutable.JUST,)
 
         @property
         def name(self) -> str:
             return "Just"
-
-        def pre_flight(self) -> None:
-            import shutil
-            if not shutil.which("just"):
-                from protostar.errors import MissingDependencyError
-                raise MissingDependencyError("just", purpose="task runner", hint="Install: brew install just")
 
         def build(self, manifest: EnvironmentManifest) -> None:
             content = r"""default:
@@ -65,8 +62,8 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
                 show_root_toc_entry: true
                 separate_signature: true
 
-??? abstract "Deep Dive: Pre-flight vs Build"
-    - **`pre_flight()`**: Executes before *any* state changes occur. If `shutil.which("just")` fails here, the orchestrator immediately halts, guaranteeing the environment remains untouched.
+??? abstract "Deep Dive: Executables vs Build"
+    - **`executables`**: Never blocks a run. Before any module builds, planning records each one missing from `$PATH` in `manifest.missing_tools`, so `build()` can skip a step that runs it (`manifest.is_missing(...)`) and record why in `manifest.diagnostics`. Only the binaries Protostar itself runs (`system_deps.REQUIRED`: `uv` and `git`) fail planning.
     - **`build()`**: Only queues state changes. Notice how we use `manifest.filesystem.add_file_injection()` instead of `Path("justfile").write_text()`.
 
 ## Signals: Recognizing an Existing Project

@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import importlib.resources
 import logging
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
-from protostar.errors import MissingDependencyError
 from protostar.ide import IDEType
 from protostar.metadata import LicenseType
-from protostar.system_deps import GlobalExecutable
 from protostar.workflows import TargetOS
 
 if TYPE_CHECKING:
@@ -59,14 +56,6 @@ class PythonCore(BootstrapModule):
     def name(self) -> str:
         """Returns the human-readable module name."""
         return "Python (uv)"
-
-    def pre_flight(self) -> None:
-        """Ensures uv is available."""
-        if not shutil.which("uv"):
-            raise MissingDependencyError(
-                dependency=GlobalExecutable.UV,
-                purpose="Python scaffolding",
-            )
 
     def build(self, manifest: EnvironmentManifest) -> None:
         """Queues initialization, ignores artifacts, and handles IDE configuration bindings.

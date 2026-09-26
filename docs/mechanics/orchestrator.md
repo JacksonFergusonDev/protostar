@@ -22,7 +22,7 @@ flowchart TD
     classDef error fill:#7f1d1d,stroke:#f87171,stroke-width:1px,color:#fff;
     classDef success fill:#14532d,stroke:#4ade80,stroke-width:1px,color:#fff;
 
-    Req([InitRequest]):::boundary --> Plan["Phase 1: plan()<br/>• Pre-flight binary verification<br/>• Manifest aggregation<br/>• Manifest-first collision checks"]:::phase
+    Req([InitRequest]):::boundary --> Plan["Phase 1: plan()<br/>• uv and git verification<br/>• Manifest aggregation<br/>• Manifest-first collision checks"]:::phase
 
     Plan -->|Validation Failure| Err["Raise ProtostarError<br/>(Caught by CLI Presentation Layer)"]:::error
     Plan -->|Plan Validated| Manifest[(EnvironmentManifest)]:::state
@@ -38,7 +38,7 @@ flowchart TD
 === "1. Planning (`plan()`)"
     The `plan()` phase calculates the target state and verifies safety without performing disk mutations:
 
-    1. **Pre-Flight Verification:** Asserts workspace accessibility, clean/git repository status, and runs `pre_flight()` across all loaded modules to assert that required binaries (`uv`, `git`, etc.) exist in `$PATH`.
+    1. **Executable Check:** Asserts workspace accessibility and clean/git repository status, fails if a binary Protostar itself runs (`uv` or `git`) is missing from `$PATH`, and records each binary an enabled tool declares in `executables` but `$PATH` lacks in `manifest.missing_tools`.
     2. **Manifest Aggregation:** Evaluates language and tooling modules to populate an `EnvironmentManifest` with file injections, AST merge payloads, ignore patterns, and system tasks.
     3. **Blueprint Injection:** Injects any template blueprint files and configurations into the manifest with variable interpolation.
     4. **Manifest-First Collision Check:** Derives planned target files via `manifest.target_files()` and records existing targets in `manifest.collisions`. Planning returns the manifest even if a collision choice is pending.

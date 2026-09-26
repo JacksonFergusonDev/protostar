@@ -488,7 +488,7 @@ template tasks, IDE probes, or registry acquisition. This is a headless backend
 boundary; no public lifecycle command ships with this refactor.
 
 Tool selection resolves project overrides, current template opinions, and captured
-fallback before effective modules run pre-flight checks or declare contributions.
+fallback before effective modules declare their executables or contributions.
 Producer attribution survives into the review, so opting out of one producer does
 not suppress another producer contributing to the same target.
 

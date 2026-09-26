@@ -32,7 +32,6 @@ from protostar.config import (
 )
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
-    AggregatedDependencyError,
     CommandExecutionError,
     ConfigurationError,
     ExecutionAbortedError,
@@ -232,11 +231,8 @@ def handle_init(args: argparse.Namespace) -> None:
             def name(self) -> str:
                 return "CrashTest"
 
-            def pre_flight(self) -> None:
-                raise TypeError("INTENTIONAL_CRASH")
-
             def build(self, manifest: Any) -> None:
-                pass
+                raise TypeError("INTENTIONAL_CRASH")
 
         modules.append(CrashModule())
 
@@ -744,7 +740,7 @@ def main() -> None:
             )  # 65: Data format error (e.g., bad zip, missing variables)
         if isinstance(e, NetworkFetchError):
             sys.exit(ExitCode.TEMPFAIL)  # 75: Temporary failure (network drop)
-        if isinstance(e, (MissingDependencyError, AggregatedDependencyError)):
+        if isinstance(e, MissingDependencyError):
             sys.exit(
                 ExitCode.UNAVAILABLE
             )  # 69: Expected background tool executable missing

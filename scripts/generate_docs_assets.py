@@ -717,8 +717,8 @@ def generate_capability_tables() -> None:
         [
             "`69`",
             "`os.EX_UNAVAILABLE`",
-            "`MissingDependencyError`<br>`AggregatedDependencyError`",
-            "Missing required system binary (`uv`, `git`, etc.)",
+            "`MissingDependencyError`",
+            "Missing required system binary (`uv` or `git`)",
         ],
         [
             "`70`",
