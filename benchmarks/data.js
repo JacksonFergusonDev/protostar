@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790449266833,
+  "lastUpdate": 1790451415084,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17447,6 +17447,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 969.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "eb00252f2f716d631e6e7c7c69dc23041b5487b1",
+          "message": "docs(repo): add PR template, security policy, and modernize issue templates (#353)",
+          "timestamp": "2026-09-26T12:34:15-07:00",
+          "tree_id": "7af7579985493fe5f217c6754a8352b88395e874",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/eb00252f2f716d631e6e7c7c69dc23041b5487b1"
+        },
+        "date": 1790451414261,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 264.16,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 916.71,
             "unit": "ms"
           }
         ]
