@@ -1349,6 +1349,8 @@ def generate_tui_svgs() -> None:
         _demo_project(),
         mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
         mock.patch("protostar.metadata.get_git_config", return_value=None),
+        # Every tool installed, so the host's PATH never marks a row.
+        mock.patch("shutil.which", _stub_which),
     ):
         asyncio.run(_capture_tui_screens())
     orig_cwd = Path.cwd()
