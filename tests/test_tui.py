@@ -148,18 +148,23 @@ async def test_tools_constraints_and_provenance():
         rtd.scroll_visible(immediate=True)
         await pilot.pause()
         await pilot.click("#tool-zensical")
+        await pilot.pause()
         assert not rtd.disabled
         await pilot.click("#tool-readthedocs")
+        await pilot.pause()
         await pilot.click("#tool-zensical")
+        await pilot.pause()
         assert rtd.disabled
         assert not rtd.value
         app.screen.query_one("#tool-ruff").scroll_visible(immediate=True)
         await pilot.pause()
         await pilot.click("#tool-ruff")
+        await pilot.pause()
         assert "your choice" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         app.screen.query_one("#tool-prek", RadioButton).scroll_visible(immediate=True)
         await pilot.pause()
         await pilot.click("#tool-prek")
+        await pilot.pause()
         assert not app.screen.query_one("#tool-pre_commit", RadioButton).value
         await apply(pilot)
     choices = dict(app.return_value.draft.tool_choices)
