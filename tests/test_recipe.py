@@ -88,6 +88,129 @@ def test_strict_recipe_validation(mutation):
         decode_recipe(recipe().to_dict() | mutation)
 
 
+@pytest.mark.parametrize(
+    ("invalid", "expected_hint"),
+    [
+        ("foo", "Python version must be a float value (e.g., '3.13')."),
+        ("3.x", "Python version must be a float value (e.g., '3.13')."),
+        ("", "Python version must be a float value (e.g., '3.13')."),
+        ("3", "Python version must be a float value (e.g., '3.13')."),
+        ("2.7", "Python version is outside the accepted range (3.8 - 3.14)."),
+        ("4.0", "Python version is outside the accepted range (3.8 - 3.14)."),
+        ("3.5", "Python version is outside the accepted range (3.8 - 3.14)."),
+        ("3.15", "Python version is outside the accepted range (3.8 - 3.14)."),
+    ],
+)
+def test_invalid_python_version_recipe_error(invalid, expected_hint):
+    with pytest.raises(ConfigurationError) as exc_info:
+        decode_recipe(recipe().to_dict() | {"python": invalid})
+    assert f"Invalid Python version: {invalid!r}." in str(exc_info.value)
+    assert exc_info.value.hint == expected_hint
+
+
+@pytest.mark.parametrize(
+    ("invalid", "expected_hint"),
+    [
+        ("foo", "minimum Python version must be a float value (e.g., '3.13')."),
+        ("2.7", "minimum Python version is outside the accepted range (3.8 - 3.14)."),
+    ],
+)
+def test_invalid_metadata_minimum_python_error(invalid, expected_hint):
+    with pytest.raises(ConfigurationError) as exc_info:
+        decode_recipe(recipe().to_dict() | {"metadata": {"minimum_python": invalid}})
+    assert f"Invalid minimum Python version: {invalid!r}." in str(exc_info.value)
+    assert exc_info.value.hint == expected_hint
+
+
+@pytest.mark.parametrize(
+    ("invalid", "expected_hint"),
+    [
+        ("abc", "Container port must be an integer (e.g., '8000')."),
+        ("", "Container port must be an integer (e.g., '8000')."),
+        (0, "Container port is outside the accepted range (1 - 65535)."),
+        (65536, "Container port is outside the accepted range (1 - 65535)."),
+        ("70000", "Container port is outside the accepted range (1 - 65535)."),
+        (-1, "Container port is outside the accepted range (1 - 65535)."),
+    ],
+)
+def test_invalid_metadata_docker_port_error(invalid, expected_hint):
+    with pytest.raises(ConfigurationError) as exc_info:
+        decode_recipe(recipe().to_dict() | {"metadata": {"docker_port": invalid}})
+    assert f"Invalid container port: {invalid!r}." in str(exc_info.value)
+    assert exc_info.value.hint == expected_hint
+
+
+@pytest.mark.parametrize("valid", [8000, "8000", 1, 65535, "1", "65535"])
+def test_valid_metadata_docker_port(valid):
+    decoded = decode_recipe(recipe().to_dict() | {"metadata": {"docker_port": valid}})
+    assert dict(decoded.metadata)["docker_port"] == valid
+
+
+@pytest.mark.parametrize(
+    ("invalid", "expected_hint"),
+    [
+        ("@octocat", "Remove the leading '@' from GitHub username."),
+        (
+            "-user",
+            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
+        ),
+        (
+            "user-",
+            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
+        ),
+        (
+            "user_name",
+            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
+        ),
+        (
+            "a" * 40,
+            "GitHub username may only contain alphanumeric characters and single hyphens, and cannot begin or end with a hyphen (maximum 39 characters).",
+        ),
+    ],
+)
+def test_invalid_metadata_github_username_error(invalid, expected_hint):
+    with pytest.raises(ConfigurationError) as exc_info:
+        decode_recipe(recipe().to_dict() | {"metadata": {"github_username": invalid}})
+    assert f"Invalid GitHub username: {invalid!r}." in str(exc_info.value)
+    assert exc_info.value.hint == expected_hint
+
+
+@pytest.mark.parametrize("valid", ["", "octocat", "user-name-123", "a"])
+def test_valid_metadata_github_username(valid):
+    decoded = decode_recipe(
+        recipe().to_dict() | {"metadata": {"github_username": valid}}
+    )
+    assert dict(decoded.metadata)["github_username"] == valid
+
+
+@pytest.mark.parametrize("invalid", ["my-package", "123pkg", "pkg name", "pkg.name"])
+def test_invalid_context_package_name_error(invalid):
+    current = dict(recipe().context)
+    current["PACKAGE_NAME"] = invalid
+    with pytest.raises(ConfigurationError) as exc_info:
+        decode_recipe(recipe().to_dict() | {"context": current})
+    assert f"Invalid package name: {invalid!r}." in str(exc_info.value)
+    assert (
+        exc_info.value.hint
+        == "Package name must be a valid Python identifier (e.g., 'my_package')."
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid", ["foo/bar", "foo\\bar", "foo\0bar", "", "   ", ".", ".."]
+)
+def test_invalid_context_project_name_error(invalid):
+    current = dict(recipe().context)
+    current["PROJECT_NAME"] = invalid
+    with pytest.raises(ConfigurationError) as exc_info:
+        decode_recipe(recipe().to_dict() | {"context": current})
+    assert f"Invalid project name: {invalid!r}." in str(exc_info.value)
+    assert (
+        exc_info.value.hint
+        == "Project name cannot contain slashes or null bytes, and cannot be empty, '.', or '..'."
+    )
+
+
 def test_recorded_variables_render_and_persist():
     recorded = replace(recipe(), variables=(("REGION", "eu-west-1"),))
 

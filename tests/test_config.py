@@ -816,3 +816,34 @@ def test_disabled_configuration_ignores_the_default_file(mocker, tmp_path):
     select_config_source(None, disabled=True)
 
     assert UserConfig.load().author_name is None
+
+
+def test_user_config_validates_python_version():
+    with pytest.raises(ConfigurationError) as exc_info:
+        UserConfig(python_version="invalid")
+    assert "Invalid Python version: 'invalid'." in str(exc_info.value)
+    assert exc_info.value.hint == "Python version must be a float value (e.g., '3.13')."
+
+    with pytest.raises(ConfigurationError) as exc_info:
+        UserConfig(python_version="2.7")
+    assert "Invalid Python version: '2.7'." in str(exc_info.value)
+    assert (
+        exc_info.value.hint
+        == "Python version is outside the accepted range (3.8 - 3.14)."
+    )
+
+
+def test_user_config_validates_github_username():
+    with pytest.raises(ConfigurationError) as exc_info:
+        UserConfig(github_username="@octocat")
+    assert "Invalid GitHub username: '@octocat'." in str(exc_info.value)
+    assert exc_info.value.hint == "Remove the leading '@' from GitHub username."
+
+    with pytest.raises(ConfigurationError) as exc_info:
+        UserConfig(github_username="-octocat")
+    assert "Invalid GitHub username: '-octocat'." in str(exc_info.value)
+    assert exc_info.value.hint is not None
+    assert (
+        "GitHub username may only contain alphanumeric characters"
+        in exc_info.value.hint
+    )

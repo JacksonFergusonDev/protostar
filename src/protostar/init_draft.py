@@ -94,8 +94,10 @@ def resolve_init(
         if draft.analysis is not None and existing is None
         else ProjectFacts()
     )
-    python = draft.python_version or (
-        facts.python_version.value if facts.python_version else None
+    python = (
+        draft.python_version
+        if draft.python_version is not None
+        else (facts.python_version.value if facts.python_version else None)
     )
     config = (
         replace(user_config, python_version=existing.python, ide=existing.ide)

@@ -7,16 +7,69 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .errors import ConfigurationError
+
 __all__ = [
     "PackageName",
     "ProjectName",
     "PythonVersion",
+    "check_python_version",
     "generate_python_version_range",
     "resolve_package_name",
     "resolve_project_name",
     "resolve_python_version",
     "sanitize_package_name",
+    "validate_package_name",
+    "validate_project_name",
 ]
+
+_PYTHON_FLOAT_PATTERN = re.compile(r"^\d+\.\d+(?:\.\d+)?$")
+MIN_SUPPORTED_PYTHON_MINOR = 8
+MAX_SUPPORTED_PYTHON_MINOR = 14
+
+
+def check_python_version(version: object, *, label: str = "Python version") -> str:
+    """Validates that a Python version is a float-like string within the supported range."""
+    if not isinstance(version, str) or not _PYTHON_FLOAT_PATTERN.fullmatch(version):
+        raise ConfigurationError(
+            f"Invalid {label}: {version!r}.",
+            hint=f"{label} must be a float value (e.g., '3.13').",
+        )
+    parts = version.split(".")
+    major, minor = int(parts[0]), int(parts[1])
+    if major != 3 or not (
+        MIN_SUPPORTED_PYTHON_MINOR <= minor <= MAX_SUPPORTED_PYTHON_MINOR
+    ):
+        raise ConfigurationError(
+            f"Invalid {label}: {version!r}.",
+            hint=f"{label} is outside the accepted range (3.{MIN_SUPPORTED_PYTHON_MINOR} - 3.{MAX_SUPPORTED_PYTHON_MINOR}).",
+        )
+    return version
+
+
+def validate_package_name(name: object) -> str:
+    """Validates that a package name is a valid Python identifier."""
+    if not isinstance(name, str) or not name.isidentifier():
+        raise ConfigurationError(
+            f"Invalid package name: {name!r}.",
+            hint="Package name must be a valid Python identifier (e.g., 'my_package').",
+        )
+    return name
+
+
+def validate_project_name(name: object) -> str:
+    """Validates that a project name contains no illegal path characters."""
+    if (
+        not isinstance(name, str)
+        or not name.strip()
+        or any(c in name for c in ("/", "\\", "\x00"))
+        or name in {".", ".."}
+    ):
+        raise ConfigurationError(
+            f"Invalid project name: {name!r}.",
+            hint="Project name cannot contain slashes or null bytes, and cannot be empty, '.', or '..'.",
+        )
+    return name
 
 
 @dataclass(frozen=True, order=True)

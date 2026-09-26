@@ -429,7 +429,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             variables=tuple(sorted(variables.items())),
             allowed_secrets=fields.allowed_secrets,
             metadata=tuple(sorted(metadata.items())),
-            python_version=str(minimum) if minimum else None,
+            python_version=str(minimum) if minimum is not None else None,
         )
 
     @on(VariableFields.Committed)

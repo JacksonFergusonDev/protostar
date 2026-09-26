@@ -311,6 +311,14 @@ class UserConfig:
                 "Cannot configure both 'pre_commit = true' and 'prek = true'.",
                 hint="Choose either pre_commit or prek as your default git hook manager in your configuration.",
             )
+        if self.python_version is not None:
+            from .workspace import check_python_version
+
+            check_python_version(self.python_version)
+        if self.github_username:
+            from .metadata import validate_github_username
+
+            validate_github_username(self.github_username)
 
         normalized: dict[str, TemplateAliasConfig] = {}
         for k, v in self.templates.items():

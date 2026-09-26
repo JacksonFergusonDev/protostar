@@ -61,7 +61,11 @@ class PlanPreview(VerticalScroll):
             self._show(Text(f"Waiting for values: {', '.join(exc.variables)}."))
             return
         except ProtostarError as exc:
-            self._show(Text(str(exc)), error=True)
+            hint = f"  {exc.hint}" if exc.hint else ""
+            self._show(
+                Text.assemble(str(exc), (hint, "dim") if hint else ""),
+                error=True,
+            )
             return
         paths, _ = planned_paths(manifest)
         dependencies = manifest.dependencies

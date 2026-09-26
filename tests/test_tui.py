@@ -809,6 +809,67 @@ async def test_preview_lists_collisions(workspace):
 
 
 @pytest.mark.asyncio
+async def test_invalid_minimum_python_shows_actionable_preview_error():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        field = app.screen.query_one("#meta-minimum_python", Input)
+        field.focus()
+        field.value = "invalid"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid Python version: 'invalid'." in summary
+        assert "Python version must be a float value (e.g., '3.13')." in summary
+        field.focus()
+        field.value = "2.7"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid Python version: '2.7'." in summary
+        assert "Python version is outside the accepted range (3.8 - 3.14)." in summary
+        field.focus()
+        field.value = ""
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid Python version: ''." in summary
+        assert "Python version must be a float value (e.g., '3.13')." in summary
+
+
+@pytest.mark.asyncio
+async def test_invalid_github_username_shows_actionable_preview_error():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        field = app.screen.query_one("#meta-github_username", Input)
+        field.focus()
+        field.value = "@octocat"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid GitHub username: '@octocat'." in summary
+        assert "Remove the leading '@' from GitHub username." in summary
+
+
+@pytest.mark.asyncio
+async def test_invalid_docker_port_shows_actionable_preview_error():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#docker", Checkbox).value = True
+        await settle(pilot)
+        field = app.screen.query_one("#meta-docker_port", Input)
+        field.focus()
+        field.value = "notaport"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid container port: 'notaport'." in summary
+        assert "Container port must be an integer (e.g., '8000')." in summary
+
+
+@pytest.mark.asyncio
 async def test_variables_step_focuses_the_missing_value(tmp_path):
     draft = template_draft(
         tmp_path / "t.toml",
