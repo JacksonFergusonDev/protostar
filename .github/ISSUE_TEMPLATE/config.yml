@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: GitHub Discussions
-    url: https://github.com/jacksonfergusondev/protostar/discussions
-    about: Please ask questions and discuss ideas here before opening an issue.
+  - name: Documentation
+    url: https://protostar.jacksonferguson.me/
+    about: Check the Protostar documentation and guides before filing an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/JacksonFergusonDev/protostar/security/advisories/new
+    about: Report vulnerabilities privately, never in a public issue.
