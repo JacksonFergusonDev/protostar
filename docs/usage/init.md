@@ -241,6 +241,7 @@ The editor is built for the keyboard; the mouse works too. Moving never changes 
 | `Space` | Toggle a checkbox, choose an option, or open a menu. |
 | `Enter` | Same as `Space`; in a text field, accept it and move on. |
 | `Tab` / `Shift+Tab` | Next or previous control; the tool checkboxes count as one stop. |
+| `i` | On a tool, what it does to the project; on the tier, what each tier turns on. |
 | `Ctrl+S` | Continue to the change review. |
 | `Esc` | Cancel, after asking. |
 | `Ctrl+C` | Quit immediately. |

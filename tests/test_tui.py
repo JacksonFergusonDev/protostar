@@ -1,6 +1,7 @@
 """Recipe decisions, lazy CLI boundary, and terminal presentation."""
 
 import contextlib
+import importlib.resources
 import io
 import os
 import random
@@ -32,6 +33,7 @@ from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
 from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
+from protostar.cli.tui.recipe.tier import TierFields, TierInfoScreen
 from protostar.cli.tui.recipe.variables import VariablesScreen
 from protostar.cli.tui.review.screen import ReviewScreen
 from protostar.cli.tui.tool_info import ToolInfoScreen
@@ -560,6 +562,7 @@ async def test_the_keybindings_list_names_tool_info():
         await settle(pilot)
         await pilot.press("?")
         assert ("i", "What the focused tool does to the project") in app.screen.rows
+        assert ("i", "What each tier turns on, on the tier") in app.screen.rows
 
 
 def test_tool_info_snapshot(snap_compare, monkeypatch):
@@ -621,6 +624,191 @@ async def test_the_tools_follow_the_chosen_tier(tmp_path, tier, mypy):
         assert "from template" in checkbox.label.plain
         # The tier a flag pinned reaches the draft the editor continues with.
         assert app.decision_screen._current_draft().tier is tier
+
+
+def builtin_draft(alias, **changes):
+    target = importlib.resources.files("protostar.templates").joinpath(f"{alias}.toml")
+    source = TemplateSource.load(str(target), built_in=alias, display_name=alias)
+    return InitDraft(template=DraftTemplate(source), **changes)
+
+
+def pressed_tier(app):
+    return app.screen.query_one("#tier", RadioSet).pressed_button.id
+
+
+def enabled_tools(app):
+    return {tool for tool, enabled in app.decision_screen.enabled.items() if enabled}
+
+
+@pytest.mark.asyncio
+async def test_the_tier_control_shows_only_for_a_template_with_tiers():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        tiers = app.screen.query_one(TierFields)
+        assert not tiers.display
+        assert not app.screen.query("#tier")
+        app.screen.query_one("#template", Select).value = next(
+            item for item in app.decision_screen.catalog if item.alias == "astro"
+        )
+        await settle(pilot)
+        assert tiers.display
+        assert pressed_tier(app) == "tier-workbench"
+        # The tier sits directly under the template: one key down reaches it.
+        app.screen.query_one("#template").focus()
+        await pilot.press("down")
+        assert app.focused is app.screen.query_one("#tier")
+        # Tab passes over both tiers in one stop.
+        await pilot.press("tab")
+        assert app.focused is app.screen.query_one("#docker")
+        app.screen.query_one("#template", Select).value = _TemplateChoice.NONE
+        await settle(pilot)
+        assert not tiers.display
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("draft", "pressed"),
+    [
+        (builtin_draft("astro"), "tier-workbench"),
+        (builtin_draft("cli"), "tier-production"),
+        (builtin_draft("astro", tier=Tier.PRODUCTION), "tier-production"),
+        (
+            builtin_draft(
+                "cli",
+                existing_recipe=replace(
+                    establish_recipe(UserConfig()), tier=Tier.WORKBENCH
+                ),
+            ),
+            "tier-workbench",
+        ),
+    ],
+    ids=["default-workbench", "default-production", "pinned", "recorded"],
+)
+async def test_the_tier_starts_at_the_pinned_recorded_or_default_tier(draft, pressed):
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert pressed_tier(app) == pressed
+
+
+@pytest.mark.asyncio
+async def test_switching_tier_flips_exactly_the_tiers_tools():
+    draft = builtin_draft("astro")
+    tiers = draft.template.source.tiers
+    differing = {
+        Tool(key)
+        for key, enabled in tiers.flags(Tier.PRODUCTION).items()
+        if enabled != tiers.flags(Tier.WORKBENCH)[key]
+    }
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        # A choice made before the switch gives way to the new tier's opinion.
+        app.screen.query_one("#tool-mypy", Checkbox).toggle()
+        await settle(pilot)
+        app.screen.query_one("#tool-mypy", Checkbox).toggle()
+        await settle(pilot)
+        workbench = enabled_tools(app)
+        app.screen.query_one("#tier").focus()
+        await pilot.press("down", "space")
+        await settle(pilot)
+        assert pressed_tier(app) == "tier-production"
+        assert enabled_tools(app) ^ workbench == differing
+        assert "from template" in app.screen.query_one("#tool-ci", Checkbox).label.plain
+        # The hook manager the tier picks replaces "None", alone.
+        choice = app.screen.query_one("#exclusive-0", RadioSet)
+        assert choice.pressed_button.id == "tool-prek"
+        assert not app.screen.query_one("#none-0", RadioButton).value
+        # The review shows the production tools.
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, ReviewScreen)
+        review = app.screen.review
+        assert review is not None
+        paths = {entry.path for entry in review.entries}
+        assert ".github/workflows/ci.yml" in paths
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("recorded", "keys", "expected"),
+    [
+        (None, ("down", "space"), Tier.PRODUCTION),
+        (None, ("down", "space", "up", "space"), None),
+        (Tier.PRODUCTION, ("space",), None),
+    ],
+    ids=["away-from-default", "back-to-default", "recorded-to-default"],
+)
+async def test_the_draft_records_a_tier_only_away_from_the_default(
+    recorded, keys, expected
+):
+    existing = (
+        replace(establish_recipe(UserConfig()), tier=recorded) if recorded else None
+    )
+    app = make_app(builtin_draft("astro", existing_recipe=existing))
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#tier").focus()
+        app.screen.query_one("#tier", RadioSet).enter(1)
+        await pilot.press(*keys)
+        await settle(pilot)
+        draft = app.decision_screen._current_draft()
+    _, request = resolve_init(draft, UserConfig())
+    assert request.recipe is not None
+    assert request.recipe.tier is expected
+
+
+@pytest.mark.asyncio
+async def test_a_chosen_tier_outlasts_a_template_switch():
+    app = make_app(builtin_draft("astro"))
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#tier").focus()
+        app.screen.query_one("#tier", RadioSet).enter(1)
+        await pilot.press("down", "space")
+        await settle(pilot)
+        app.screen.query_one("#template", Select).value = next(
+            item for item in app.decision_screen.catalog if item.alias == "ml"
+        )
+        await settle(pilot)
+        assert pressed_tier(app) == "tier-production"
+        assert Tool.CI in enabled_tools(app)
+
+
+@pytest.mark.asyncio
+async def test_i_on_the_tier_explains_what_each_tier_turns_on():
+    app = make_app(builtin_draft("astro"))
+    async with app.run_test(size=(110, 50)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#tier").focus()
+        await pilot.press("i")
+        assert isinstance(app.screen, TierInfoScreen)
+        text = " ".join(str(widget.render()) for widget in app.screen.query(Static))
+        assert "GitHub Actions CI" in text
+        # Only what the tiers disagree on: Ruff is on in both.
+        assert "Ruff" not in text
+        await pilot.press("escape")
+        assert isinstance(app.screen, RecipeScreen)
+
+
+def test_tier_info_snapshot(snap_compare, monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    app = make_app(builtin_draft("cli"), UserConfig(author_name="Ada Lovelace"))
+
+    async def popup(pilot):
+        await settle(pilot)
+        pilot.app.screen.query_one("#tier").focus()
+        await pilot.press("i")
+        await pilot.pause()
+
+    assert snap_compare(app, terminal_size=(110, 50), run_before=popup)
+
+
+def test_tiered_editor_snapshot(snap_compare, monkeypatch):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    app = make_app(builtin_draft("astro"), UserConfig(author_name="Ada Lovelace"))
+    assert snap_compare(app, terminal_size=(110, 50), run_before=settle)
 
 
 @pytest.mark.asyncio

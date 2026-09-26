@@ -41,7 +41,7 @@ from protostar.recipe import (
     validate_tools,
 )
 from protostar.templates import TemplateInfo, TemplateType
-from protostar.tiers import Tier
+from protostar.tiers import TemplateTiers, Tier
 
 from ..chrome import Heading, Headline, Masthead, Panel
 from ..keys import (
@@ -65,6 +65,7 @@ from ..tool_info import (
 from .metadata import MetadataFields, metadata_defaults, metadata_keys
 from .options import OptionFields, draft_options
 from .preview import PlanPreview
+from .tier import TIER_INFO_KEY, TierFields
 from .variables import VariableFields, draft_variables
 
 _NAMES = {Tool(module.config_key): module.name for module in TOOLING_MODULES}
@@ -95,7 +96,7 @@ class _TemplateChoice(Enum):
 class RecipeScreen(KeyboardScreen[InitDecision]):
     """Edit the template, its variables and options, tools, and metadata beside a live preview."""
 
-    KEYS = (*FORM_KEYS[:2], TOOL_INFO_KEY, *FORM_KEYS[2:])
+    KEYS = (*FORM_KEYS[:2], TOOL_INFO_KEY, TIER_INFO_KEY, *FORM_KEYS[2:])
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+s", "continue", "Continue", show=False),
@@ -122,6 +123,9 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.enabled: dict[Tool, bool] = {}
         self.sources: dict[Tool, str] = {}
         self.docker_override = draft.docker
+        # A tier chosen here outlasts a template switch: the names mean the
+        # same thing in every template.
+        self.tier_choice: Tier | None = None
         self._selected_template: TemplateInfo | _TemplateChoice | None = None
         # A recorded recipe already says what the project uses.
         self.analysis = None if draft.existing_recipe else draft.analysis
@@ -179,13 +183,21 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             self.found.pop(tool, None)
             self.displaced.pop(tool, None)
 
-    def _tier(self) -> Tier | None:
-        """The tier a flag pinned or the recipe records, while the template has tiers."""
+    def _tiers(self) -> TemplateTiers | None:
         source = self.draft.template.source if self.draft.template else None
-        if source is None or source.tiers is None:
+        return source.tiers if source else None
+
+    def _tier(self) -> Tier | None:
+        """The tier chosen here, pinned by a flag, or recorded, while the template has tiers.
+
+        None follows the template's default.
+        """
+        if self._tiers() is None:
             return None
         existing = self.draft.existing_recipe
-        return self.draft.tier or (existing.tier if existing else None)
+        return (
+            self.tier_choice or self.draft.tier or (existing.tier if existing else None)
+        )
 
     def _resolve_selections(self) -> None:
         source = self.draft.template.source if self.draft.template else None
@@ -264,6 +276,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 yield Heading("Template")
                 yield self._template_select()
                 yield Static("", id="template-status", markup=False)
+                yield TierFields()
                 yield VariableFields(
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
@@ -373,6 +386,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         fields = self.query_one(VariableFields)
         source = self.draft.template.source if self.draft.template else None
         await fields.show(source)
+        await self.query_one(TierFields).show(self._tiers(), self._tier())
         await self.query_one(OptionFields).show(source)
         if fields.missing:
             self.query_one(f"#var-{fields.missing[0]}", Input).focus()
@@ -401,7 +415,11 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             chosen = [tool for tool in sorted(pair) if self.enabled[tool]]
             if len(chosen) <= 1:
                 target = f"tool-{chosen[0]}" if chosen else f"none-{index}"
-                self.query_one(f"#{target}", RadioButton).value = True
+                # Pressed directly: a change the tier made arrives while
+                # RadioButton.Changed is held, so the set would never hear it.
+                self.query_one(f"#exclusive-{index}", ToolChoice).show(
+                    self.query_one(f"#{target}", RadioButton)
+                )
         # Invalid inherited choices stay visible and must be resolved
         # explicitly. Continue disables at once; the preview says why.
         try:
@@ -442,11 +460,13 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             }
         metadata = self.query_one(MetadataFields).values()
         minimum = metadata.get(MetadataKey.MINIMUM_PYTHON)
+        chosen = self.tier_choice if self._tiers() else None
         return replace(
             self.draft,
             tool_choices=tuple(sorted(self.enabled.items())),
             option_choices=tuple(sorted(self.query_one(OptionFields).values.items())),
-            tier=self._tier(),
+            tier=None if chosen else self._tier(),
+            tier_choice=chosen,
             docker=self._docker(),
             variables=tuple(sorted(variables.items())),
             allowed_secrets=fields.allowed_secrets,
@@ -560,6 +580,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
             self.query_one("#docker", Checkbox).value = self._docker()
         await self.query_one(VariableFields).show(template.source if template else None)
+        await self.query_one(TierFields).show(self._tiers(), self._tier())
         await self.query_one(OptionFields).show(template.source if template else None)
         self._refresh_tools()
         self._changed()
@@ -583,6 +604,32 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             del self.overrides[tool]
         if chosen:
             self._resolve_selections()
+
+    @on(TierFields.Changed)
+    def choose_tier(self, event: TierFields.Changed) -> None:
+        """The tier's tools follow it, as a template's follow a template switch.
+
+        Choices made for the tools the tiers set give way to the new tier's
+        opinion; a tool analysis found still stands.
+        """
+        tiers = self._tiers()
+        if tiers is None or event.tier is (self._tier() or tiers.default):
+            return
+        self.tier_choice = event.tier
+        for key in tiers.flags(event.tier):
+            if key == "docker":
+                if not self.docker_found:
+                    self.docker_override = None
+                continue
+            tool = Tool(key)
+            if tool not in self.found and tool not in self.displaced:
+                self.overrides.pop(tool, None)
+        self._resolve_selections()
+        self._follow_template()
+        with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
+            self.query_one("#docker", Checkbox).value = self._docker()
+        self._refresh_tools()
+        self._changed()
 
     def _status(self, message: Text) -> None:
         status = self.query_one("#template-status", Static)

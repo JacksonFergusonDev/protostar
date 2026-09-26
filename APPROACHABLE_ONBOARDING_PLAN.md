@@ -14,9 +14,9 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 | 4 | `feat(tui): tool information on demand` | B (base) | Merged (#350) |
 | 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Merged (#351) |
 | 6 | `feat(templates): workbench and production tiers` | C (base) | Merged (#354) |
-| 7 | `feat(templates): every built-in offers both tiers` | C, on 6 | Done (#355) |
-| 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Next |
-| 9 | `docs: first-project walkthrough and installation paths` | After all | Planned |
+| 7 | `feat(templates): every built-in offers both tiers` | C, on 6 | Merged (#355) |
+| 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Done (#356) |
+| 9 | `docs: first-project walkthrough and installation paths` | After all | Next |
 
 ## Stacks
 
@@ -75,24 +75,10 @@ Within a stack, each PR branches from the previous one and is retargeted to `mai
 - **Stack B (PRs 4–5).**
   - **PR 4 (#350):** `ToolInfo` (`summary`, `adds`, `workflow`, `docs_url`) on every tooling module replaced `cli_help`; the summary is the flag help, the template schema description, and the tooltip. `cli/tui/tool_info.py` holds `ToolInfoScreen` (`esc` closes, `o` opens the docs), `TOOL_GROUPS`, and the tool controls that bind `i` only while focused: `ToolToggle`, `ToolRadio`, and `ToolChoice`, which offers `i` only while a tool, not "None", is highlighted. The Tools heading shows `Tool info  i`. `check_doc_links.py` requests every `docs_url` and fails on an HTTP error, and its hook now runs when `src/protostar/modules/` changes.
   - **PR 5 (#351):** bare `protostar config` opens `ConfigScreen` (`cli/tui/config/`): identity, editor, default Python, and tool defaults, with the same `i` popup and a live **Changes** diff of the file. `config_edit.edit_config()` applies the values through `tomlkit`, writing only keys whose effective value changed, each after its commented example when the file has one. The app exits with `SaveConfig` or `OpenInEditor`, and the CLI writes (refusing if the file changed meanwhile) or opens `$EDITOR`. Identity prefills through `resolve_auto_metadata`, so Git's name and email appear until saved. `--edit` keeps the old behavior; non-interactive and `--json` runs of bare `config` raise `InvalidUsageError` pointing to it. `UserConfig.parse()` is the public text parser.
-- **Stack C (PRs 6–7).**
+- **Stack C (PRs 6–8).**
   - **PR 6 (#354):** `tiers.py` holds `Tier`, `TemplateTiers`, `parse_tiers`, `template_opinions`, and `resolve_tier`. A template declares a root `tier` default and `[tiers.workbench]`/`[tiers.production]` tool-flag tables (any tool or `docker`; both tiers set the same tools; a tool set there can't also be set at the root). `TemplateBlueprint.opinions(tier)` and `TemplateSource.opinions(tier)` replace every direct read of `tooling_overrides`. The tier is a first-class recipe field, `[tool.protostar] tier`, deliberately not an option, since options only choose content; it is recorded only when pinned by `--tier`, and `sync` drops it once the template stops declaring tiers. `requires = "tier=production"` gates content, and options may not be named `tier`. `--tier` on `init` and `sync` is an `InvalidUsageError` for a template without tiers. `TemplateInfo.tiers` feeds the listing JSON, and the text table gains a tier column once any template has tiers. The editor already follows a pinned or recorded tier's opinions; `InitDraft.tier` carries the flag.
   - **PR 7 (#355):** every built-in declares both tiers. The rule for where a flag goes, from the maintainer: production infrastructure goes in the tiers (all off in workbench, all on in production); what the user wants in the project either way (`ruff`, `direnv`, `just`) stays at the root. So `release`, `readthedocs`, `zensical`, `codecov`, and `community` (`cli`, `lib`) and `docker` (`api`) are production-only. Strict `mypy`, docstring `ruff`, and the coverage threshold require `tier=production` as well as their tool. Tests ship only while `pytest` is on. Production `astro`/`ml` ship a small `src/` package and a test, and point pytest at `src/` (`pythonpath` joined `ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY`). `check-template` plans every tier. The contract tests require both tiers, the right defaults, and all-off/all-on tiers. By the maintainer's choice, CI still scaffolds only default tiers; new snapshot scenarios cover `astro_production` and `cli_workbench`, and every non-default tier was scaffolded and gated by hand. Found on the way: the generated `check-added-large-files` hook rejected a scientific stack's `uv.lock` (over 500 KB), so it now excludes `uv.lock`. The contract doc's enforcement table was stale (it cited the exhaustive suite removed in #282) and was rewritten.
-
-## PR 8: `feat(tui): choose the tier beside the template`
-
-**Goal:** the recipe editor asks "which template?" and then "workbench or production?" in place, with no extra keystroke for someone who accepts the default.
-
-**Steps:**
-
-1. **Control.** A two-choice `ChoiceGroup` (`Workbench`, `Production`) directly under the template picker, shown only while the chosen template declares tiers, preselected to the recorded tier or the template's default.
-1. **Explanation.** `i` on the tier control opens the same `ToolInfoScreen`-style popup, explaining what each tier turns on for this template (its actual flag differences), written for someone who has never heard of a quality gate.
-1. **Tools follow the tier.** Switching tier resets the tool toggles to the new tier's opinions, the same way switching template does, and the live preview updates. The draft records the tier only when it differs from the template's default.
-1. **Keys.** List the control in the screen's `KEYS` so `?` shows it. `Tab` treats the group as one control.
-
-**Tests:** driven by `pilot.press`: the control appears only for templates with tiers; its default and recorded preselection; switching tier flips exactly the tier's tools; the draft records a tier only when non-default; `i` opens the popup. Regenerate the editor SVG snapshots.
-
-**Done when:** a first-time user who picks `astro` sees Workbench selected, can switch to Production with one key, and the review shows the production tools.
+  - **PR 8 (#356):** `cli/tui/recipe/tier.py` holds `TierFields` (a `TierChoice` under the template picker, shown only while the template declares tiers, preselected to the pinned, recorded, or default tier, the default marked) and `TierInfoScreen`, which `i` opens: each tier's purpose for a newcomer, and the tools only that tier turns on, read from the template's flags, with each tool's `ToolInfo` summary. `tool_info.prose` became public for it. Switching tier drops choices made for the tiers' tools (a tool analysis found still stands) and re-applies the hook manager, as a template switch does. A tier chosen in the editor outlasts a template switch, since the names mean the same thing in every template. `InitDraft.tier_choice` carries it, beside the flag's `tier`, like `option_choices` beside `option_overrides`: it replaces a pinned or recorded tier and is recorded only away from the template's default, so switching back to the default drops a recorded tier. Found on the way: setting a hook manager's radio from a handler that runs under Textual's held `RadioButton.Changed` never unpressed "None", so `_refresh_tools` presses the set through `Choice.show`. `KEYS` gained the tier's `i` row, and `docs/usage/init.md` lists `i`.
 
 ## PR 9: `docs: first-project walkthrough and installation paths`
 
