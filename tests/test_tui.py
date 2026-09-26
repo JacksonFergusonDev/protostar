@@ -174,6 +174,52 @@ async def test_tools_constraints_and_provenance():
 
 
 @pytest.mark.asyncio
+async def test_a_template_replaces_the_chosen_hook_manager():
+    app = make_app(config=UserConfig(pre_commit=False, prek=False))
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        prek = app.screen.query_one("#tool-prek", RadioButton)
+        pre_commit = app.screen.query_one("#tool-pre_commit", RadioButton)
+        pre_commit.scroll_visible(immediate=True)
+        await pilot.pause()
+        await pilot.click("#tool-pre_commit")
+        await settle(pilot)
+        assert pre_commit.value
+        app.screen.query_one("#template", Select).value = next(
+            item for item in app.decision_screen.catalog if item.alias == "cli"
+        )
+        await settle(pilot)
+        assert prek.value
+        assert "from template" in prek.label.plain
+        assert not pre_commit.value
+        assert not app.screen.query_one("#continue", Button).disabled
+        assert not app.screen.query_one("#preview-summary", Static).has_class("-error")
+        # Choosing again after the template is loaded is kept.
+        await pilot.click("#tool-pre_commit")
+        await settle(pilot)
+        assert pre_commit.value
+        assert not prek.value
+        await apply(pilot)
+    choices = dict(app.return_value.draft.tool_choices)
+    assert choices[Tool.PRE_COMMIT]
+    assert not choices[Tool.PREK]
+
+
+@pytest.mark.asyncio
+async def test_invalid_recorded_tools_show_only_in_the_preview():
+    recipe = replace(
+        establish_recipe(UserConfig()),
+        tools=((Tool.PRE_COMMIT, True), (Tool.PREK, True)),
+    )
+    app = make_app(InitDraft(existing_recipe=recipe))
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        assert app.screen.query_one("#continue", Button).disabled
+        assert "pre-commit" in plain(app, "#preview-summary")
+        assert not app.screen.query("#constraints")
+
+
+@pytest.mark.asyncio
 async def test_tool_provenance_reverts_when_aligned_with_config_or_template():
     app = make_app(config=UserConfig(ruff=True, pytest=False))
     async with app.run_test(size=(110, 55)) as pilot:
@@ -460,7 +506,13 @@ async def test_alias_and_load_error(tmp_path):
         )
         await settle(pilot)
         assert app.screen.query_one("#continue", Button).disabled
-        assert "not found" in plain(app, "#template-status")
+        # A hard error shows in the preview and nowhere else.
+        assert "not found" in plain(app, "#preview-summary")
+        assert not app.screen.query_one("#template-status", Static).display
+        # Editing another field keeps the error in place of a stale plan.
+        app.screen.query_one("#tool-ruff", Checkbox).toggle()
+        await settle(pilot)
+        assert "not found" in plain(app, "#preview-summary")
         await pilot.press("ctrl+s")
         assert isinstance(app.screen, RecipeScreen)
         app.screen.query_one("#template", Select).value = next(
