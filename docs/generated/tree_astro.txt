@@ -3,6 +3,7 @@
 ├── .gitattributes
 ├── .gitignore
 ├── .python-version
+├── README.md
 ├── data
 │   ├── catalogs
 │   └── fits

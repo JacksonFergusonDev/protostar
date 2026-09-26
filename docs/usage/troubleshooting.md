@@ -44,17 +44,13 @@ The command comes from the package manager Protostar finds. Where it finds none,
     brew install direnv just
     ```
 
-=== "Debian & Ubuntu"
+=== "Linux"
     ```bash
-    sudo apt install direnv just
+    sudo apt install direnv
+    uv tool install rust-just
     ```
 
-    Debian 12 and Ubuntu releases before 24.04 don't package `just`. Install it with uv instead: `uv tool install rust-just`.
-
-=== "Fedora"
-    ```bash
-    sudo dnf install direnv just
-    ```
+    Use `sudo dnf install direnv` on Fedora, or `sudo pacman -S direnv` on Arch. `just` installs with uv on every distribution: the same current release everywhere, with no `sudo`, including releases that don't package it, such as Debian 12.
 
 === "Windows"
     ```powershell

@@ -9,7 +9,7 @@ producer_version = "0.9.0"
 [template]
 origin = "built-in"
 locator = "astro"
-digest = "7228e9306020c3aa5a61d53e5b0cabd7e65082323b3fa65d21766339ee97b633"
+digest = "42c3bd341e140b185bad7155f8c47c9f405667048166337e81e0be6c12f65159"
 display_name = "astro"
 
 [[files]]
@@ -41,6 +41,11 @@ baseline = "default_install_hook_types:\n  - pre-commit\n  - commit-msg\n  - pre
 path = "CHANGELOG.md"
 policy = "seed-only"
 digest = "0a9c19eaad38cda8e9040bfacafc0d82d4734993e514c492dd65bc3e79b07f04"
+
+[[files]]
+path = "README.md"
+policy = "seed-only"
+digest = "4bb87ac35b32fc2ad36b2f5517041345a3fe9cce419275ece69a658dd56cf840"
 
 [[files]]
 path = "justfile"
@@ -194,14 +199,6 @@ name = "pandas"
 marker = ""
 declared = "pandas"
 materialized = "pandas>=3.0.5"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "photutils"
-marker = ""
-declared = "photutils"
-materialized = "photutils>=3.0.0"
 
 [[dependencies]]
 path = "pyproject.toml"

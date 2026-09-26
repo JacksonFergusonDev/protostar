@@ -133,7 +133,7 @@ sync-secret-rules: sync
 demo-prewarm: sync
     @printf "\n{{ blue }}=== Pre-warming Demo Environment & Caches ==={{ nc }}\n"
     @uv pip install --dry-run \
-        numpy scipy pandas matplotlib astropy astroquery photutils specutils nbdime \
+        numpy scipy pandas matplotlib astropy astroquery specutils nbdime \
         mypy pytest pytest-cov pytest-mock ruff rumdl typer rich commitizen prek zensical \
         --quiet 2>/dev/null || true
     @python3 -m compileall -q src/

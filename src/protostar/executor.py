@@ -5,8 +5,15 @@ from pathlib import Path
 
 from .config import UserConfig
 from .dependencies import install_dependencies
-from .errors import ConfigurationError, FileSystemError, StaleReviewError
+from .errors import (
+    CommandExecutionError,
+    CommandTimeoutError,
+    ConfigurationError,
+    FileSystemError,
+    StaleReviewError,
+)
 from .fs_transaction import TransactionAwareFS
+from .git_hooks import HookAction
 from .ide import check_ide_extensions
 from .intent import ResolverFootprint
 from .journal import MutationJournal
@@ -126,6 +133,7 @@ class SystemExecutor(Reconciliation):
                 )
                 self._apply_review(prepared)
                 self._resolve_review(prepared)
+                self._apply_hooks(prepared.hooks)
             else:
                 if review is not None:
                     raise ConfigurationError(
@@ -221,6 +229,38 @@ class SystemExecutor(Reconciliation):
             except BaseException:
                 self.interrupted_task = task
                 raise
+
+    def _apply_hooks(self, hooks: HookAction) -> None:
+        """Brings the clone's installed git hooks in line with the recipe.
+
+        A failed install is not fatal: the project's files are already right,
+        and a hook is a convenience local to this clone. It is reported with
+        the command that installs the hooks by hand.
+        """
+        for path in hooks.remove:
+            try:
+                self.fs.remove_file(Path(path))
+            except OSError as error:
+                raise FileSystemError("remove git hook", path, error) from error
+        task = hooks.install
+        if task is None:
+            return
+        enforce_binary_safelist(task.command)
+        for owned in task.owned_files:
+            self.journal.record_mutation(Path(owned))
+        with self.progress(task.description or f"Running {shlex.join(task.command)}"):
+            try:
+                self.process_runner.run(task.command, timeout=task.timeout)
+            except (CommandExecutionError, CommandTimeoutError) as error:
+                self.add_diagnostic(
+                    DiagnosticPhase.PRE_COMMIT,
+                    "Could not install git hooks; run "
+                    f"`{shlex.join(task.command)}` to install them.",
+                    Severity.WARNING,
+                    detail=str(error),
+                )
+                return
+        self.completed_tasks.append(task)
 
     def _validate_resolver_project(self) -> None:
         """Prevents uv from discovering an undeclared ancestor project."""

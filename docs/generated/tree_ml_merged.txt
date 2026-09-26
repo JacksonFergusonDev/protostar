@@ -5,6 +5,7 @@
 ├── .gitignore
 ├── .python-version
 ├── Dockerfile
+├── README.md
 ├── data
 │   ├── 01_raw
 │   │   └── .gitkeep

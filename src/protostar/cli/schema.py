@@ -452,6 +452,9 @@ def review_schema() -> dict[str, Any]:
             ),
             "initialization_only": {"type": "array", "items": strings},
             "initialization_only_ide_probe": boolean,
+            "hooks": record(
+                {"install": {"oneOf": [strings, {"type": "null"}]}, "remove": strings}
+            ),
             "missing_tools": missing_tools_schema(),
             "selections": records(
                 {

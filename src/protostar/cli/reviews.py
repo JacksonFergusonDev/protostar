@@ -2,6 +2,7 @@
 
 import argparse
 import difflib
+import shlex
 import sys
 from typing import Any, cast
 
@@ -255,11 +256,20 @@ def render_review(
                 else "Lock refresh required after accepted metadata changes."
             )
             ui.console.print(Text(msg, "green" if applied else ""))
+    if review.hooks.install is not None:
+        command = shlex.join(review.hooks.install.command)
+        msg = "Ran" if applied else "Will run"
+        ui.console.print(Text(f"Git hooks: {msg} {command}."))
+    for path in review.hooks.remove:
+        msg = "Removed" if applied else "Will remove"
+        ui.console.print(
+            Text(f"Git hooks: {msg} {path}; its hook manager is no longer set up.")
+        )
     if review.initialization_only or review.initialization_only_ide_probe:
         ui.console.print(
             Text("Initialization-only tasks and IDE probes are excluded.", "dim")
         )
-    if not review.pending:
+    if not review.pending and not review.hooks.pending:
         ui.console.print(Text("No pending work.", "dim"))
 
 

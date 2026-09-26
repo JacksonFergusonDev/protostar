@@ -10,7 +10,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "astro"
-digest = "7228e9306020c3aa5a61d53e5b0cabd7e65082323b3fa65d21766339ee97b633"
+digest = "42c3bd341e140b185bad7155f8c47c9f405667048166337e81e0be6c12f65159"
 display_name = "astro"
 
 [[files]]
@@ -22,6 +22,11 @@ digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 path = ".gitattributes"
 policy = "seed-only"
 digest = "fba8c29612852cc79d5ad6be11f1534d1be2801a9bd2c74ef46a73e56b597db5"
+
+[[files]]
+path = "README.md"
+policy = "seed-only"
+digest = "4bb87ac35b32fc2ad36b2f5517041345a3fe9cce419275ece69a658dd56cf840"
 
 [[files]]
 path = "justfile"
@@ -88,14 +93,6 @@ name = "pandas"
 marker = ""
 declared = "pandas"
 materialized = "pandas>=3.0.5"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "photutils"
-marker = ""
-declared = "photutils"
-materialized = "photutils>=3.0.0"
 
 [[dependencies]]
 path = "pyproject.toml"

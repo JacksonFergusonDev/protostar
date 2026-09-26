@@ -9,6 +9,7 @@
 ├── .pre-commit-config.yaml
 ├── .python-version
 ├── CHANGELOG.md
+├── README.md
 ├── data
 │   ├── catalogs
 │   └── fits

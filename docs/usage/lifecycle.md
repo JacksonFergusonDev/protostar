@@ -34,9 +34,19 @@ accepted requirements and their `pyproject.toml`/`uv.lock` footprint. Their outp
 is unknown until application, so previews do not invent a resulting lockfile diff.
 
 `sync` applies safe edits and composite ownership state transactionally. It never
-reruns project initialization, Git initialization, hook installation, arbitrary
-template tasks, or IDE extension probes. It is not an environment reinstall or a
-package upgrade command. An unchanged repeat writes nothing and runs no subprocess.
+reruns project initialization, Git initialization, arbitrary template tasks, or IDE
+extension probes. It is not an environment reinstall or a package upgrade command.
+An unchanged repeat writes nothing and runs no subprocess.
+
+`sync` does keep this clone's git hooks in line with the recipe, since they live
+in `.git/hooks`, outside the project's files. When the recipe wants a hook manager
+and one of its hooks is missing, as after switching to the production tier or in a
+fresh clone, `sync` runs its install. It removes the hooks a manager generated that
+can now only fail: those of a manager the recipe switched away from, and all of
+them once no hook manager is selected and no hook configuration is left. A hook
+you wrote yourself is never removed. A failed install is a warning, not a
+rollback. Hooks never count as pending work, so `sync --check` passes in a
+checkout without them, as in CI.
 Each resolver subprocess it does run (`uv add` per dependency group, or `uv lock`)
 leaves a `✔` line on screen as it finishes.
 

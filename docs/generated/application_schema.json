@@ -888,6 +888,35 @@
         "initialization_only_ide_probe": {
           "type": "boolean"
         },
+        "hooks": {
+          "type": "object",
+          "properties": {
+            "install": {
+              "oneOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "install",
+            "remove"
+          ],
+          "additionalProperties": false
+        },
         "missing_tools": {
           "type": "array",
           "items": {
@@ -1042,6 +1071,7 @@
         "resolver",
         "initialization_only",
         "initialization_only_ide_probe",
+        "hooks",
         "missing_tools",
         "selections",
         "producers"

@@ -84,6 +84,14 @@ _PACKAGES: dict[PackageManager, dict[GlobalExecutable, str]] = {
     },
 }
 
+_UV_TOOLS: dict[GlobalExecutable, str] = {GlobalExecutable.JUST: "rust-just"}
+"""PyPI packages whose ``uv tool install`` provides an executable.
+
+On Linux these install through uv rather than the system package manager:
+every distribution and architecture gets the same current release, with no
+``sudo``, including releases that don't package it (Debian 12 has no ``just``).
+"""
+
 REQUIRED = frozenset({GlobalExecutable.UV, GlobalExecutable.GIT})
 """Executables Protostar itself needs, whatever the recipe selects."""
 
@@ -143,8 +151,9 @@ def install_command(
     """Builds the commands that install every missing executable.
 
     Homebrew is used wherever it is found. Otherwise Windows uses winget, one
-    command per package, and other Linux systems use uv's installer for uv and
-    the first package manager found for the rest.
+    command per package, and other Linux systems use uv's installer for uv,
+    ``uv tool install`` for executables PyPI provides (while uv is installed),
+    and the first package manager found for the rest.
 
     Args:
         missing: The executables to install.
@@ -172,17 +181,25 @@ def install_command(
     if platform is not Platform.LINUX:
         return None
     lines: list[str] = []
-    if GlobalExecutable.UV in wanted:
+    installs_uv = GlobalExecutable.UV in wanted
+    if installs_uv:
         lines.append(UV_INSTALLER)
+    # uv installed by the line above isn't found until a new terminal opens.
+    through_uv = [] if installs_uv else [e for e in wanted if e in _UV_TOOLS]
     rest = [
-        executable for executable in wanted if executable is not GlobalExecutable.UV
+        executable
+        for executable in wanted
+        if executable is not GlobalExecutable.UV and executable not in through_uv
     ]
     if rest:
         manager = next((m for m in _LINUX_MANAGERS if m in available), None)
         if manager is None:
             return None
         lines.extend(_single(manager, rest, reload_shell=False).lines)
-    return InstallCommand(tuple(lines), reload_shell=GlobalExecutable.UV in wanted)
+    if through_uv:
+        packages = " ".join(_UV_TOOLS[executable] for executable in through_uv)
+        lines.append(f"uv tool install {packages}")
+    return InstallCommand(tuple(lines), reload_shell=installs_uv)
 
 
 def _single(

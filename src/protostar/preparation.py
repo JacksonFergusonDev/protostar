@@ -17,6 +17,7 @@ from .errors import (
     UnmatchedResolutionError,
     UnsupportedResolutionError,
 )
+from .git_hooks import NO_HOOK_ACTION, HookAction, configurations, plan_hooks
 from .intent import DependencyGroup, ResolverFootprint
 from .manifest import (
     CollisionStrategy,
@@ -244,6 +245,7 @@ class PreparedReview:
     preserve_deleted_pyproject: bool
     migrations: tuple[MigrationStep, ...] = ()
     missing_tools: frozenset[MissingTool] = frozenset()
+    hooks: HookAction = NO_HOOK_ACTION
 
     @property
     def decisions(self) -> tuple[MergeConflict, ...]:
@@ -263,7 +265,11 @@ class PreparedReview:
 
     @property
     def pending(self) -> bool:
-        """Returns pending direct, state, resolver, or conflicting work."""
+        """Returns pending direct, state, resolver, or conflicting work.
+
+        Installed git hooks are local to each clone, so they never count: a
+        fresh checkout, as in CI, is not out of date for lacking them.
+        """
         return bool(
             self.edits
             or self.directories
@@ -319,6 +325,7 @@ class PreparedReview:
                 list(command) for command in self.initialization_only
             ],
             "initialization_only_ide_probe": self.initialization_only_ide_probe,
+            "hooks": self.hooks.to_dict(),
             "missing_tools": missing_tools_record(self.missing_tools),
             "selections": [
                 {
@@ -540,7 +547,25 @@ def prepare_review(
         decisions._preserve_deleted_pyproject,
         tuple(decisions.migration_steps),
         manifest.missing_tools,
+        _hooks(workspace.workspace_root, manifest, edits)
+        if policy is ExecutionPolicy.LIFECYCLE
+        else NO_HOOK_ACTION,
     )
+
+
+def _hooks(
+    root: Path, manifest: EnvironmentManifest, edits: Sequence[PreparedEdit]
+) -> HookAction:
+    """Plans the clone's git hooks against the files the edits leave behind.
+
+    ``init`` installs hooks as a post-install task instead, so only a
+    lifecycle review plans them.
+    """
+    written = {edit.path: edit.after is not None for edit in edits}
+    configured = [
+        name for name in configurations() if written.get(name, (root / name).is_file())
+    ]
+    return plan_hooks(root, manifest.tooling, configured)
 
 
 def _conflict_order(

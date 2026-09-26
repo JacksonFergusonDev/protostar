@@ -3,7 +3,7 @@
     "template_reference": {
         "origin": "built-in",
         "locator": "astro",
-        "digest": "7228e9306020c3aa5a61d53e5b0cabd7e65082323b3fa65d21766339ee97b633",
+        "digest": "42c3bd341e140b185bad7155f8c47c9f405667048166337e81e0be6c12f65159",
         "display_name": null,
         "version": null,
         "path": "",
@@ -20,7 +20,6 @@
             "matplotlib",
             "astropy",
             "astroquery",
-            "photutils",
             "specutils"
         ],
         "dev_dependencies": [
@@ -44,13 +43,14 @@
             "src"
         ],
         "file_injections": {
+            "README.md": "# <% PROJECT_NAME %>\n\nAstrophysics analysis for <% PROJECT_NAME %>, with Astropy.\n",
             ".gitattributes": "# Astrophysics binary safety\n*.fits binary\n*.fit  binary\n*.fts  binary\n\n# Improve Jupyter Notebook diffs\n*.ipynb text eol=lf\n"
         },
         "structured": {
             "pyproject.toml": [
                 {
                     "producer": "module:PythonCore",
-                    "content": "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\nauthors = [{ name = \"your-name\", email = \"your-email@example.com\" }]\n",
+                    "content": "[project]\ndescription = \"Add your description here.\"\nauthors = [{ name = \"your-name\", email = \"your-email@example.com\" }]\n",
                     "resolver_footprint": null,
                     "format": "toml"
                 },

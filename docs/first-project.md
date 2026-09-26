@@ -66,9 +66,6 @@ Press `A` to apply. Protostar writes the files and runs each step in turn:
 
 The packages go into the project's **virtual environment**: a folder named `.venv` inside the project that holds its own Python and packages, separate from every other project on your computer, so projects that need different versions never interfere. You never activate it by hand in this walkthrough: `uv run` runs a command inside it. If anything fails part-way, Protostar undoes everything it did (see [Automatic Rollback](usage/rollback.md)).
 
-!!! note "Linux on an ARM processor"
-    One of the template's packages, photutils, publishes no ready-built version for Linux on ARM (a Raspberry Pi, or a Linux virtual machine on an Apple silicon Mac), so uv builds it from source, which needs a C compiler. If the install fails with `No such file or directory: 'cc'`, install one with `sudo apt install build-essential` and run `protostar init` again.
-
 ## 5. Read the Success Line
 
 The run ends like this:
@@ -78,16 +75,17 @@ SUCCESS: Project ready.
 protostar guide shows how to test, check, and document it.
 ```
 
-The template also turned on two tools that are separate programs, [direnv](https://direnv.net/) and [just](https://just.systems/). If you haven't installed them, the output ends with one command that installs both, for example on Debian or Ubuntu:
+The template also turned on two tools that are separate programs, [direnv](https://direnv.net/) and [just](https://just.systems/). If you haven't installed them, the output ends with the commands that install both, for example on Debian or Ubuntu:
 
 ```text
 NOT INSTALLED ──────────────────────────────────────────────
   direnv and just are not installed; their files are ready for when they are.
   Install them with:
-      sudo apt install direnv just
+      sudo apt install direnv
+      uv tool install rust-just
 ```
 
-Run the command it shows you. The project is complete without them, so you can also skip this and use the longer commands the guide shows instead. direnv activates the project's virtual environment whenever you `cd` into the folder, once you have [hooked it into your shell](https://direnv.net/docs/hook.html) and run `direnv allow` in the project. See [Tool Binaries](usage/troubleshooting.md#tool-binaries-direnv-just) for other platforms.
+Run the commands it shows you. The project is complete without them, so you can also skip this and use the longer commands the guide shows instead. direnv activates the project's virtual environment whenever you `cd` into the folder, once you have [hooked it into your shell](https://direnv.net/docs/hook.html) and run `direnv allow` in the project. See [Tool Binaries](usage/troubleshooting.md#tool-binaries-direnv-just) for other platforms.
 
 ## 6. Ask the Project How to Work on It
 
@@ -177,7 +175,7 @@ Many problems Ruff finds, including this one, `just format` fixes for you: it re
 
 ## Where to Go Next
 
-- **More tooling when you need it.** When the project turns into something other people will install, switch it to the production tier: `protostar sync --tier production`. It adds tests, type checking, CI, and a **pre-commit hook**: a check git runs each time you commit, which stops the commit if a check fails, so a mistake never enters the project's history. After switching, run `uv run prek install` once to turn the hook on. See [Templates](usage/templates.md#choosing-a-tier) and the [Tooling & Flags Matrix](usage/tooling-matrix.md).
+- **More tooling when you need it.** When the project turns into something other people will install, switch it to the production tier: `protostar sync --tier production`. It adds tests, type checking, CI, and a **pre-commit hook**: a check git runs each time you commit, which stops the commit if a check fails, so a mistake never enters the project's history. `sync` installs the hook for you. See [Templates](usage/templates.md#choosing-a-tier) and the [Tooling & Flags Matrix](usage/tooling-matrix.md).
 - **Keep the project current.** `protostar sync` brings in updates to the template and tools without overwriting your edits. See [Project Lifecycle](usage/lifecycle.md).
 - **Set your defaults once.** `protostar config` opens a form for your name, email, editor, Python version, and the tools new projects start with. See [Global Configuration](usage/configuration.md).
 - **Everything `init` can do.** See [Environment Initialization](usage/init.md).
