@@ -233,7 +233,7 @@ When running `protostar init` without a `--template` flag in a terminal, Protost
 
 ![Protostar recipe editor](../assets/terminals/tui_recipe_editor.svg)
 
-The editor is built for the keyboard; the mouse works too. Moving never changes a value; only `Space` and `Enter` do. The footer shows the keys for whatever has focus, each button shows its own key, and `F1` lists them all.
+The editor is built for the keyboard; the mouse works too. Moving never changes a value; only `Space` and `Enter` do. The footer shows the keys for whatever has focus, each button shows its own key, and `?` lists them all.
 
 | Key | Action |
 | --- | --- |
@@ -244,6 +244,7 @@ The editor is built for the keyboard; the mouse works too. Moving never changes 
 | `Ctrl+S` | Continue to the change review. |
 | `Esc` | Cancel, after asking. |
 | `Ctrl+C` | Quit immediately. |
+| `?` | Show all keybindings. |
 
 __Continue__ opens the change review. It lists every planned path as new, modified, conflict, existing, or after setup, shows a diff for each file Protostar writes before running commands, and then the commands and packages that follow. Nothing runs until you choose __Apply__ (`A`). `↑` `↓` move between files, `PgUp` `PgDn` scroll the diff, and `Esc` goes back to the editor.
 

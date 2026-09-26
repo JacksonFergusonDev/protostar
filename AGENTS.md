@@ -102,7 +102,7 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 
 - **The keyboard is the primary path through every screen; the mouse is secondary.** Build screens on `KeyboardScreen` and the widgets in `src/protostar/cli/tui/keys.py` (`Form`, `ChoiceGroup`, `ActionBar`, `Toggle`, `Field`, `Picker`, `Choice`, `Checklist`), not on bare Textual widgets.
 - **Moving never changes a value.** `↑`/`↓` move between rows, and a list hands off to the next row at its edges instead of wrapping. Only `Space` and `Enter` change values. `Tab` moves between controls, and a `ChoiceGroup` counts as one.
-- **Every action has a key, shown on its own control** through `key_label`. The footer is the legend for moving. List each new key in the screen's `KEYS` or `key_rows()` so `F1` shows it.
+- **Every action has a key, shown on its own control** through `key_label`. The footer is the legend for moving. List each new key in the screen's `KEYS` or `key_rows()` so `?` shows it.
 - **`Esc` asks before leaving (`LeaveScreen`); `Ctrl+C` quits at once and never asks.**
 - **All TUI source uses `cli/tui/code.py`.** Render code, structured configuration, and source diffs through its shared renderers and palette. Pass the actual display language when serialization differs from the filename. Language selection is presentation-only; screens never choose their own syntax themes. Keep the Pygments adapter lazy so opening the recipe editor loads no lexers.
 - **Drive TUI tests with `pilot.press`.** Use `pilot.click` only in tests that are about the mouse.

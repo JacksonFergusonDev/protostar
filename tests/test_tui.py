@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 from rich.console import Console
@@ -29,7 +30,7 @@ from textual.worker import WorkerCancelled
 from protostar.analysis import analyze_project
 from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
-from protostar.cli.tui.keys import KeysScreen, LeaveScreen
+from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.variables import VariablesScreen
 from protostar.cli.tui.review.screen import ReviewScreen
@@ -371,7 +372,7 @@ async def test_menus_open_on_space_and_close_on_escape():
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
         template = app.screen.query_one("#template", Select)
-        assert legend(app) == {"Open", "Move", "Next", "Keys"}
+        assert legend(app) == {"Open", "Move", "Next", "Keybindings"}
         await pilot.press("space")
         assert template.expanded
         await pilot.press("escape")
@@ -386,7 +387,7 @@ async def test_tab_treats_the_tools_as_one_stop():
         await settle(pilot)
         await pilot.press("tab")
         assert app.focused.id == "docker"
-        assert legend(app) == {"Toggle", "Move", "Next", "Keys"}
+        assert legend(app) == {"Toggle", "Move", "Next", "Keybindings"}
         await pilot.press("down", "down")
         assert app.focused.id == "tool-mypy"
         await pilot.press("tab")
@@ -412,7 +413,7 @@ async def test_arrows_move_a_choice_highlight_and_space_chooses():
         await pilot.press("down")
         assert app.focused is choice
         assert highlighted() == ["none-0"]
-        assert legend(app) == {"Move", "Choose", "Next", "Keys"}
+        assert legend(app) == {"Move", "Choose", "Next", "Keybindings"}
         await pilot.press("down", "down")
         assert highlighted() == ["tool-prek"]
         assert choice.pressed_button.id == "none-0"
@@ -435,7 +436,7 @@ async def test_a_whole_init_from_the_keyboard():
         await pilot.press("tab", "space")  # Docker
         await pilot.press("tab", "down", "down", "space")  # prek
         await pilot.press("tab")
-        assert legend(app) == {"Move", "Accept", "Next", "Keys"}
+        assert legend(app) == {"Move", "Accept", "Next"}
         await pilot.press(*"Orbit", "enter")
         assert app.focused.id == "meta-license"
         await settle(pilot)
@@ -447,15 +448,21 @@ async def test_a_whole_init_from_the_keyboard():
 
 
 @pytest.mark.asyncio
-async def test_buttons_show_their_keys_and_f1_lists_them_all():
+async def test_buttons_show_their_keys_and_question_mark_lists_them_all():
     app = make_app()
     async with app.run_test() as pilot:
         await settle(pilot)
         assert labels(app) == {"cancel": "Cancel  esc", "continue": "Continue  ^s"}
-        await pilot.press("f1")
-        assert isinstance(app.screen, KeysScreen)
+        await pilot.press("?")
+        assert isinstance(app.screen, KeybindingsScreen)
         assert ("^s", "Continue") in app.screen.rows
+        assert ("?", "Show this list") in app.screen.rows
         await pilot.press("escape")
+        assert isinstance(app.screen, RecipeScreen)
+        # f1 still acts as a secondary fallback binding
+        await pilot.press("f1")
+        assert isinstance(app.screen, KeybindingsScreen)
+        await pilot.press("question_mark")
         assert isinstance(app.screen, RecipeScreen)
 
 
@@ -1408,7 +1415,7 @@ async def test_review_keys_scroll_the_diff_from_the_file_tree(collisions):
         await settle(pilot)
         tree = app.screen.query_one("#files", Tree)
         assert app.focused is tree
-        assert legend(app) == {"Move", "Scroll diff", "Next", "Keys"}
+        assert legend(app) == {"Move", "Scroll diff", "Next", "Keybindings"}
         await highlight(pilot, ".pre-commit-config.yaml")
         pane = app.screen.query_one("#diff-pane")
         assert pane.max_scroll_y > 0
@@ -1766,3 +1773,20 @@ async def test_options_are_chosen_from_the_keyboard(tmp_path):
     # Only the values away from the template's defaults are recorded.
     assert request.recipe is not None
     assert request.recipe.options == (("compose", True), ("database", "postgres"))
+
+
+def test_tui_does_not_use_broken_border_titles() -> None:
+    """Ensure no widget or style breaks borders with border_title or border_subtitle."""
+    tui_root = Path(__file__).parents[1] / "src" / "protostar" / "cli" / "tui"
+    for py_path in tui_root.rglob("*.py"):
+        text = py_path.read_text()
+        assert "border_title" not in text, f"{py_path} sets border_title"
+        assert "border_subtitle" not in text, f"{py_path} sets border_subtitle"
+
+    tcss_text = (tui_root / "protostar.tcss").read_text()
+    assert "border-title" not in tcss_text, (
+        "protostar.tcss contains border-title styles"
+    )
+    assert "border-subtitle" not in tcss_text, (
+        "protostar.tcss contains border-subtitle styles"
+    )
