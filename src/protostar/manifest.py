@@ -23,7 +23,7 @@ from .interpolation import render_template
 from .merge import MergeConflict
 from .metadata import LicenseType
 from .migrations import Migration
-from .sync_state import FilePolicy
+from .sync_state import STATE_FILE, FilePolicy
 from .system_deps import GlobalExecutable
 from .workflows import DOCKERFILE, CIFlag, GuideSpec, TargetOS
 from .workflows import HookRunner as HookRunner
@@ -842,6 +842,45 @@ class EnvironmentManifest:
             )
             for file in files
         }
+
+    def command_files(self) -> set[Path]:
+        """Returns the workspace files the declared commands create.
+
+        Clone-local ``.git/`` state, such as installed hooks, is not project
+        content and is left out.
+
+        Returns:
+            A set of Path objects that tasks declare as their own output.
+        """
+        tasks = (*self.tasks.system_tasks, *self.tasks.post_install_tasks)
+        return {
+            Path(path)
+            for task in tasks
+            for path in task.owned_files
+            if Path(path).parts[:1] != (".git",)
+        }
+
+    def planned_files(self) -> set[Path]:
+        """Returns every workspace file a run leaves behind, for previews.
+
+        Adds to ``written_files`` the files the declared commands create, the
+        resolver's footprint while any package is installed, and the reconciliation
+        state unless the run is one-shot.
+
+        Returns:
+            A set of Path objects representing every planned file.
+        """
+        files = self.written_files() | self.command_files()
+        dependencies = self.dependencies
+        if (
+            dependencies.dependencies
+            or dependencies.dev_dependencies
+            or dependencies.docs_dependencies
+        ):
+            files.update(Path(path) for path in dependencies.resolver_footprint.paths)
+        if not self.one_shot:
+            files.add(Path(STATE_FILE))
+        return files
 
     def colliding_files(self) -> set[Path]:
         """Returns the existing workspace files this manifest would edit.

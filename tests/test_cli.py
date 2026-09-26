@@ -1722,8 +1722,9 @@ def test_dry_run_count_includes_every_declared_path(monkeypatch):
 
     output = _render_dry_run(manifest, monkeypatch)
 
-    assert "5 files/directories to create or update" in output
+    assert "6 files/directories to create or update" in output
     for leaf in (
+        "protostar.lock",
         "docs/",
         "index.md",
         "pyproject.toml",
@@ -1736,7 +1737,7 @@ def test_dry_run_count_includes_every_declared_path(monkeypatch):
 def test_dry_run_without_paths_omits_the_filesystem_tree(monkeypatch):
     from protostar.manifest import EnvironmentManifest
 
-    output = _render_dry_run(EnvironmentManifest(), monkeypatch)
+    output = _render_dry_run(EnvironmentManifest(one_shot=True), monkeypatch)
 
     assert "0 files/directories to create or update" in output
     assert "Workspace Root" not in output
@@ -1756,7 +1757,7 @@ def test_dry_run_renders_placeholder_paths(monkeypatch):
 
     assert "demo_project/" in output
     assert "<%" not in output
-    assert "2 files/directories to create or update" in output
+    assert "3 files/directories to create or update" in output
 
 
 def test_dry_run_lists_files_generated_outside_the_filesystem_slice(monkeypatch):
@@ -1774,8 +1775,9 @@ def test_dry_run_lists_files_generated_outside_the_filesystem_slice(monkeypatch)
 
     output = _render_dry_run(manifest, monkeypatch)
 
-    assert "8 files/directories to create or update" in output
+    assert "9 files/directories to create or update" in output
     for leaf in (
+        "protostar.lock",
         ".pre-commit-config.yaml",
         "ci.yml",
         "release.yml",

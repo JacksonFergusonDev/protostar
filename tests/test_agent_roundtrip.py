@@ -44,6 +44,9 @@ def test_agent_dry_run_and_execute(capsys, monkeypatch, mocker, tmp_path):
     assert payload["status"] == "planned"
     assert "manifest" in payload
     assert len(payload["manifest"]["filesystem"]["directories"]) > 0
+    files = payload["paths"]["files"]
+    assert files == sorted(files)
+    assert {"protostar.lock", "uv.lock", ".python-version"} <= set(files)
 
     # Execute
     monkeypatch.setattr(

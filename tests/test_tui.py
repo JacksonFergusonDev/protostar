@@ -1480,6 +1480,9 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
             "justfile": "justfile  conflict",
             # No command creates it, so its merge shows before any runs.
             "pyproject.toml": "pyproject.toml  modified",
+            # Written by the resolver and by Protostar after everything runs.
+            "uv.lock": "uv.lock  after setup",
+            "protostar.lock": "protostar.lock  after setup",
         }
         assert "Already in the workspace: .pre-commit-config.yaml, justfile, " in (
             plain(app, "#collision-note")
@@ -1502,6 +1505,8 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         assert "+++ b/pyproject.toml" in diff
         await highlight(pilot, ".gitignore")
         assert "so it can't be shown yet" in plain(app, "#diff")
+        await highlight(pilot, "protostar.lock")
+        assert "Written after the commands and packages run." in plain(app, "#diff")
 
         await highlight(pilot, "justfile")
         await pilot.click("#strategy-overwrite")
@@ -2007,6 +2012,25 @@ def test_line_conflicts_name_the_kept_lines():
         "Lines 5-7: your edit is kept (diverged).",
         "After line 9: your edit is kept (diverged).",
     ]
+
+
+@pytest.mark.parametrize(
+    ("merged", "origin"),
+    [
+        (True, "Created by uv init, then Protostar merges its settings into it."),
+        (False, "Created by uv init. Its content"),
+    ],
+)
+def test_a_command_output_says_whether_protostar_merges_into_it(merged, origin):
+    from protostar.cli.tui.review.screen import Change, Entry, describe
+
+    entry = Entry(
+        ".python-version", Change.LATER, creator=("uv", "init"), merged=merged
+    )
+    console = Console(file=io.StringIO(), width=200, record=True)
+    console.print(describe(entry))
+
+    assert origin in console.export_text()
 
 
 def test_recipe_import_defers_pygments_until_code_is_rendered(tmp_path):

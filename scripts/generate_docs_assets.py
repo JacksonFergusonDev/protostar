@@ -25,6 +25,7 @@ from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
 from protostar.cli.palette import ANSI
+from protostar.cli.ui import planned_paths_record
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
@@ -911,6 +912,7 @@ def generate_agent_payloads() -> None:
                 "api_version": protostar.cli.schema.CLI_API_VERSION,
                 "status": "planned",
                 "manifest": manifest.to_dict(),
+                "paths": planned_paths_record(manifest),
                 "analysis": analyze_project(existing).to_dict(),
             }
             _write_generated_doc(
