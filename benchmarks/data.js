@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790377275876,
+  "lastUpdate": 1790384935087,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17243,6 +17243,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 681.78,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d9b3250858b4cc04da0a998621fee37c0ed1c16",
+          "message": "feat(recipe): actionable recipe validation and review navigation gating (#342)\n\n* feat(recipe): add actionable validation and error feedback for recipe and metadata fields\n\n- Centralize Python version check with float format and accepted range (3.8-3.14)\n- Add validation for container port (1-65535) and GitHub username format\n- Enforce valid Python identifier for package name and legal characters for project name\n- Wire metadata validator registry into decode_recipe\n- Render hints with error messages in TUI preview and propagate errors in headless mode\n\n* feat(tui): block navigation to review when recipe draft has fatal issues\n\n- Disable Continue button and guard ctrl+s when recipe draft has errors\n- Check draft validity synchronously on field change to update button state\n- Emit PlanUpdated message from PlanPreview to keep continue button in sync\n- Verify with TUI tests that ctrl+s and continue are blocked until issues resolved\n\n* fix(recipe): make recipe validation exact so it never rejects a valid value\n\nValidation now rejects only values that are actually invalid:\n\n- Python versions: any 3.x[.y] is accepted. The 3.8-3.14 range blocked\n  adopting a project with requires-python >=3.7 and would have broken every\n  recipe and config recording 3.15. A malformed version and a non-3 major\n  get separate hints.\n- GitHub usernames: legacy names ending in or repeating a hyphen, and\n  Enterprise Managed User `_shortcode` names, are accepted.\n- Container ports: exactly digits, so '+8000' and ' 80 ' no longer pass\n  and render verbatim into generated files.\n- Empty metadata is unset, not invalid, and clearing Minimum Python in the\n  editor falls back to the default again.\n- Project names: the rule main enforced; a whitespace-only name is not\n  newly rejected.\n\nThe editor checks field values with the new check_draft, which renders\nnothing, instead of running resolve_init on the UI thread. Nits:\nvalidator typing, the dead key branch in validate_metadata, lazy imports\nin config.py, and PlanPreview's unused error attribute.\n\n* test(tui): wait for tool clicks to be handled before asserting\n\nThe constraints test asserted right after pilot.click, before the\nCheckbox.Changed handler had run, which failed on a slow Windows runner.",
+          "timestamp": "2026-09-25T18:06:49-07:00",
+          "tree_id": "38d76d61f0eaad4fdee9c0893af1f8399fa0006b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1d9b3250858b4cc04da0a998621fee37c0ed1c16"
+        },
+        "date": 1790384933637,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 183.03,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 690.69,
             "unit": "ms"
           }
         ]
