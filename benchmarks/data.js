@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790463058345,
+  "lastUpdate": 1790465428632,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17685,6 +17685,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 899.68,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cabbcb4e66a514b6e1b42409e194a00a42f83118",
+          "message": "fix(sync): keep git hooks in line, install just with uv, and scaffold what pyproject names (#358)\n\n* fix(sync): keep git hooks in line, install just with uv, and scaffold what pyproject names\n\n* test(sync): restore JSON mode after the hook review test",
+          "timestamp": "2026-09-26T16:27:55-07:00",
+          "tree_id": "3ef0ce6d52107fc6dd2d9e6069507cd914764da2",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/cabbcb4e66a514b6e1b42409e194a00a42f83118"
+        },
+        "date": 1790465427779,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 243.91,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 885.91,
             "unit": "ms"
           }
         ]
