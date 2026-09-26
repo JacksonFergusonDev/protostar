@@ -58,10 +58,9 @@ Panel:focus-within > .panel-title { color: $accent; }
 VariableFields, MetadataFields, MetadataFields .field { height: auto; }
 
 #preview-summary { color: $text-muted; }
-#preview-summary.-error, #template-status.-error { color: $error; }
+#preview-summary.-error { color: $error; }
 #preview-collisions { color: $warning; }
 #template-status { height: auto; color: $text-muted; }
-#constraints { height: auto; color: $error; }
 
 /* --- Controls ---------------------------------------------------------- */
 

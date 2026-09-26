@@ -286,6 +286,37 @@ def test_template_opinions_evolve_only_under_omitted_overrides():
     assert decode_recipe(captured.to_dict()).selections({}) == captured.selections({})
 
 
+def test_the_highest_layer_to_enable_a_hook_manager_picks_the_pair():
+    configured = establish_recipe(UserConfig(pre_commit=True, prek=False))
+
+    def hooks(recipe, opinions):
+        return {
+            s.tool: (s.enabled, s.layer)
+            for s in recipe.selections(opinions)
+            if s.tool in {Tool.PRE_COMMIT, Tool.PREK}
+        }
+
+    # A template's prek displaces the configured pre-commit.
+    assert hooks(configured, {"prek": True}) == {
+        Tool.PREK: (True, SelectionLayer.TEMPLATE),
+        Tool.PRE_COMMIT: (False, SelectionLayer.TEMPLATE),
+    }
+    # A template that only switches prek off leaves the configured choice.
+    assert hooks(configured, {"prek": False})[Tool.PRE_COMMIT] == (
+        True,
+        SelectionLayer.FALLBACK,
+    )
+    # The project's recorded choice outranks the template's.
+    chosen = replace(configured, tools=((Tool.PRE_COMMIT, True),))
+    assert hooks(chosen, {"prek": True}) == {
+        Tool.PREK: (False, SelectionLayer.PROJECT),
+        Tool.PRE_COMMIT: (True, SelectionLayer.PROJECT),
+    }
+    # Both enabled in one layer is a real conflict, left for validation.
+    both = replace(configured, tools=((Tool.PRE_COMMIT, True), (Tool.PREK, True)))
+    assert all(enabled for enabled, _ in hooks(both, {}).values())
+
+
 @pytest.mark.parametrize(
     "payload",
     ["[tool.protostar]\nversion=1", "tool.protostar = {}", 'tool = "replace ancestor"'],

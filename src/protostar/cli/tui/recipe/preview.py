@@ -30,6 +30,13 @@ def _count(number: int, noun: str) -> str:
     return f"{number} {noun}{'' if number == 1 else 's'}"
 
 
+def _error(error: ProtostarError) -> Text:
+    message = Text(str(error))
+    if error.hint:
+        message.append(f"  {error.hint}", style="dim")
+    return message
+
+
 class PlanPreview(VerticalScroll):
     """The tree ``--dry-run`` prints, plus any collisions, for the current draft."""
 
@@ -70,10 +77,7 @@ class PlanPreview(VerticalScroll):
             self.post_message(self.PlanUpdated(error=None))
             return
         except ProtostarError as exc:
-            message = Text(str(exc))
-            if exc.hint:
-                message.append(f"  {exc.hint}", style="dim")
-            self._show(message, error=True)
+            self._show(_error(exc), error=True)
             self.post_message(self.PlanUpdated(error=exc))
             return
         paths, _ = planned_paths(manifest)
@@ -104,6 +108,11 @@ class PlanPreview(VerticalScroll):
             tree=plan_tree(manifest) if paths else Text(""),
         )
         self.post_message(self.PlanUpdated(error=None))
+
+    def show_error(self, error: ProtostarError) -> None:
+        """Show an error the editor found before planning, in place of the plan."""
+        self.workers.cancel_group(self, "preview")
+        self._show(_error(error), error=True)
 
     def _show(
         self,

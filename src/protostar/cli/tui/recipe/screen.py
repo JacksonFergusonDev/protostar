@@ -107,7 +107,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.draft = draft
         self.config = config
         self._recorded_template = draft.template
-        self._template_error = False
+        self._template_error: ProtostarError | None = None
         self._loading = False
         self._tools_invalid = False
         self._draft_error = False
@@ -266,7 +266,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 yield Heading("Tools")
                 if notes := self._notes():
                     yield Static(notes, id="analysis-notes", classes="note")
-                yield Static("", id="constraints", markup=False)
                 with ChoiceGroup(id="tools"):
                     yield Toggle(
                         self._docker_label(), value=self._docker(), id="docker"
@@ -396,22 +395,20 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             if len(chosen) <= 1:
                 target = f"tool-{chosen[0]}" if chosen else f"none-{index}"
                 self.query_one(f"#{target}", RadioButton).value = True
-        # Invalid inherited choices stay visible and must be resolved explicitly.
-        message = ""
+        # Invalid inherited choices stay visible and must be resolved
+        # explicitly. Continue disables at once; the preview says why.
         try:
             validate_tools(enabled)
-        except ConfigurationError as exc:
-            message = str(exc)
-        self._tools_invalid = bool(message)
-        constraints = self.query_one("#constraints", Static)
-        constraints.update(Text(message))
-        constraints.display = bool(message)
+        except ConfigurationError:
+            self._tools_invalid = True
+        else:
+            self._tools_invalid = False
         self._refresh_continue()
 
     def _refresh_continue(self) -> None:
         self.query_one("#continue", Button).disabled = (
             self._tools_invalid
-            or self._template_error
+            or self._template_error is not None
             or self._loading
             or self._draft_error
             or self._plan_error
@@ -467,7 +464,11 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         )
         draft = self._current_draft()
         self._check_draft(draft)
-        self.query_one(PlanPreview).update_plan(draft)
+        preview = self.query_one(PlanPreview)
+        if self._template_error is not None:
+            preview.show_error(self._template_error)
+        else:
+            preview.update_plan(draft)
 
     @on(PlanPreview.PlanUpdated)
     def _plan_updated(self, event: PlanPreview.PlanUpdated) -> None:
@@ -479,7 +480,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         """Acquire the selected source in a worker; remote templates take a while."""
         if not isinstance(event.value, (TemplateInfo, _TemplateChoice)):
             return
-        if event.value == self._selected_template and not self._template_error:
+        if event.value == self._selected_template and self._template_error is None:
             # Returning to the current template abandons any load still running.
             self.workers.cancel_group(self, "template")
             self._loading = False
@@ -538,14 +539,15 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 raise
         except ProtostarError as exc:
             self._loading = False
-            self._template_error = True
-            self._status(Text(str(exc)), error=True)
-            self._refresh_continue()
+            self._template_error = exc
+            self._status(Text(""))
+            self._changed()
             return
         self._loading = False
-        self._template_error = False
+        self._template_error = None
         self._selected_template = choice
         self._status(Text(""))
+        self._follow_template()
         with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
             self.query_one("#docker", Checkbox).value = self._docker()
         await self.query_one(VariableFields).show(template.source if template else None)
@@ -553,10 +555,29 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self._refresh_tools()
         self._changed()
 
-    def _status(self, message: Text, *, error: bool = False) -> None:
+    def _follow_template(self) -> None:
+        """A template that picks a hook manager replaces the one chosen before it.
+
+        A tool analysis found still stands: what the project uses outranks a
+        template's opinion.
+        """
+        chosen = {
+            tool
+            for pair in EXCLUSIVE_TOOL_PAIRS
+            if any(tool in self.opinions for tool in pair)
+            for tool in pair
+            if tool in self.overrides
+            and tool not in self.found
+            and tool not in self.displaced
+        }
+        for tool in chosen:
+            del self.overrides[tool]
+        if chosen:
+            self._resolve_selections()
+
+    def _status(self, message: Text) -> None:
         status = self.query_one("#template-status", Static)
         status.update(message)
-        status.set_class(error, "-error")
         status.display = bool(message)
 
     @on(Checkbox.Changed)

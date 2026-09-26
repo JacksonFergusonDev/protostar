@@ -261,15 +261,37 @@ class ProjectRecipe:
                 f"The template sets unknown tooling flags: {', '.join(invalid)}.",
                 hint=f"Use recognized tool names with boolean selections: {', '.join(sorted(known))}.",
             )
-        overrides, fallback = dict(self.tools), dict(self.fallback)
-        return tuple(
-            ToolSelection(tool, overrides[tool], SelectionLayer.PROJECT)
-            if tool in overrides
-            else ToolSelection(tool, opinions[tool], SelectionLayer.TEMPLATE)
-            if tool in opinions
-            else ToolSelection(tool, fallback[tool], SelectionLayer.FALLBACK)
-            for tool in Tool
+        layers = (
+            (SelectionLayer.PROJECT, dict(self.tools)),
+            (
+                SelectionLayer.TEMPLATE,
+                {
+                    Tool(key): value
+                    for key, value in opinions.items()
+                    if key != "docker"
+                },
+            ),
+            (SelectionLayer.FALLBACK, dict(self.fallback)),
         )
+        selections = {
+            tool: next(
+                ToolSelection(tool, values[tool], layer)
+                for layer, values in layers
+                if tool in values
+            )
+            for tool in Tool
+        }
+        # The highest layer that enables a member of an exclusive pair picks
+        # the pair: a template's prek displaces a configured pre-commit.
+        for pair in EXCLUSIVE_TOOL_PAIRS:
+            for layer, values in layers:
+                chosen = {tool for tool in pair if values.get(tool)}
+                if chosen:
+                    for tool in pair - chosen:
+                        if selections[tool].enabled:
+                            selections[tool] = ToolSelection(tool, False, layer)
+                    break
+        return tuple(selections.values())
 
     def rendering_context(self) -> dict[str, str]:
         """Returns the built-in context plus the recorded template variables."""
