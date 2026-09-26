@@ -203,16 +203,19 @@ ChoiceGroup { height: auto; }
 
 /* --- Dialogs ----------------------------------------------------------- */
 
-LeaveScreen, KeysScreen { align: center middle; background: $background 70%; }
+LeaveScreen, KeybindingsScreen { align: center middle; background: $background 70%; }
 #dialog {
     width: auto;
     max-width: 90;
     height: auto;
     padding: 1 2;
     border: hkey $accent;
-    border-title-color: $accent;
-    border-title-style: bold;
     background: $panel;
+}
+.dialog-title {
+    color: $accent;
+    text-style: bold;
+    margin-bottom: 1;
 }
 #dialog .question { text-style: bold; }
 #dialog .note { margin-top: 1; }
@@ -220,7 +223,7 @@ LeaveScreen, KeysScreen { align: center middle; background: $background 70%; }
 #dialog Button.-error { background: $error; color: $background; }
 .dialog-actions { width: auto; height: auto; margin-top: 1; }
 .dialog-actions Button { margin-right: 2; }
-KeysScreen #dialog { width: 72; max-width: 100%; }
+KeybindingsScreen #dialog { width: 72; max-width: 100%; }
 
 /* --- Conflicts --------------------------------------------------------- */
 

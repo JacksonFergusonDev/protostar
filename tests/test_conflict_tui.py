@@ -18,7 +18,7 @@ from protostar.cli import main, ui
 from protostar.cli.tui.app import DecisionApp
 from protostar.cli.tui.conflicts.screen import ConflictScreen
 from protostar.cli.tui.conflicts.sides import side_text
-from protostar.cli.tui.keys import KeysScreen, LeaveScreen
+from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
 from protostar.config import TemplateSource, UserConfig
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import prepare_project
@@ -269,12 +269,14 @@ async def test_choice_buttons_follow_the_highlighted_conflict(conflicted):
 
 
 @pytest.mark.asyncio
-async def test_escape_asks_before_leaving_and_f1_lists_the_keys(conflicted):
+async def test_escape_asks_before_leaving_and_question_mark_lists_the_keybindings(
+    conflicted,
+):
     app = make_app()
     async with app.run_test(size=(120, 40)) as pilot:
         await settle(pilot)
-        await pilot.press("f1")
-        assert isinstance(app.screen, KeysScreen)
+        await pilot.press("?")
+        assert isinstance(app.screen, KeybindingsScreen)
         await pilot.press("escape", "escape")
         assert isinstance(app.screen, LeaveScreen)
         assert app.screen.question == "Leave without syncing?"

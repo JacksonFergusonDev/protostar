@@ -276,8 +276,8 @@ class LeaveScreen(ModalScreen[bool]):
 
     def compose(self) -> ComposeResult:
         """Compose the question and its two answers, each showing its key."""
-        with Vertical(id="dialog") as dialog:
-            dialog.border_title = "LEAVE"
+        with Vertical(id="dialog"):
+            yield Static("LEAVE", classes="dialog-title")
             yield Label(self.question, classes="question")
             yield Static("Nothing has been written yet.", classes="note")
             with Horizontal(classes="dialog-actions"):
@@ -293,11 +293,11 @@ class LeaveScreen(ModalScreen[bool]):
         self.dismiss(event.button.id == "leave")
 
 
-class KeysScreen(ModalScreen[None]):
+class KeybindingsScreen(ModalScreen[None]):
     """Every key the screen underneath understands."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("escape,f1,question_mark", "dismiss", "Close"),
+        Binding("escape,question_mark,f1", "dismiss", "Close"),
     ]
 
     def __init__(self, rows: KeyRows) -> None:
@@ -312,8 +312,8 @@ class KeysScreen(ModalScreen[None]):
             text.append(keys.ljust(width + 3), "bold cyan")
             text.append(description + "\n")
         text.rstrip()
-        with Vertical(id="dialog") as dialog:
-            dialog.border_title = "KEYS"
+        with Vertical(id="dialog"):
+            yield Static("KEYBINDINGS", classes="dialog-title")
             yield Static(text)
             yield Static(Text("esc to close", style="dim"), classes="note")
 
@@ -338,7 +338,7 @@ class KeyboardScreen[ResultT](Screen[ResultT]):
     """
 
     KEYS: ClassVar[KeyRows] = FORM_KEYS
-    """The rows the keys list shows, besides f1 itself."""
+    """The rows the keybindings list shows, besides ? itself."""
 
     LEAVE: ClassVar[str] = "Leave without setting up the project?"
     """What escape asks before leaving."""
@@ -346,8 +346,8 @@ class KeyboardScreen[ResultT](Screen[ResultT]):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("tab", "step(1)", "Next"),
         Binding("shift+tab", "step(-1)", "Previous", show=False),
-        Binding("f1", "keys", "Keys"),
-        Binding("question_mark", "keys", "Keys", show=False),
+        Binding("question_mark", "keybindings", "Keybindings"),
+        Binding("f1", "keybindings", "Keybindings", show=False),
     ]
 
     def action_move(self, direction: int) -> None:
@@ -378,9 +378,11 @@ class KeyboardScreen[ResultT](Screen[ResultT]):
         """The keys this screen understands, for the keys list."""
         return self.KEYS
 
-    def action_keys(self) -> None:
+    def action_keybindings(self) -> None:
         """List every key this screen understands."""
-        self.app.push_screen(KeysScreen((*self.key_rows(), ("f1", "Show this list"))))
+        self.app.push_screen(
+            KeybindingsScreen((*self.key_rows(), ("?", "Show this list")))
+        )
 
     def action_cancel(self) -> None:
         """Ask before leaving without a result."""
