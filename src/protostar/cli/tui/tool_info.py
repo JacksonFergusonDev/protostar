@@ -59,8 +59,15 @@ def tool_module(tool: Tool) -> BootstrapModule:
     return _MODULES[tool]
 
 
-def _prose(text: str) -> Content:
-    """Renders copy whose backticked spans are commands, in the accent colour."""
+def prose(text: str) -> Content:
+    """Renders copy whose backticked spans are commands, in the accent colour.
+
+    Args:
+        text: The copy, with commands in backticks.
+
+    Returns:
+        The copy, ready for a widget.
+    """
     return Content.assemble(
         *(
             (part, "$accent") if index % 2 else part
@@ -91,11 +98,11 @@ class ToolInfoScreen(ModalScreen[None]):
         info = self.module.info
         with Vertical(id="dialog"):
             yield Static(Text(self.module.name.upper()), classes="dialog-title")
-            yield Label(_prose(info.summary), classes="question")
+            yield Label(prose(info.summary), classes="question")
             yield Static(Text("ADDS", style="bold"), classes="info-heading")
-            yield Static(_prose(info.adds))
+            yield Static(prose(info.adds))
             yield Static(Text("DAY TO DAY", style="bold"), classes="info-heading")
-            yield Static(_prose(info.workflow))
+            yield Static(prose(info.workflow))
             yield Static(Text(info.docs_url, style="dim"), classes="note")
             with Horizontal(classes="dialog-actions"):
                 close = Button(key_label("Close", "esc"), id="close")

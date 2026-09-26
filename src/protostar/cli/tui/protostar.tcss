@@ -205,7 +205,7 @@ ChoiceGroup { height: auto; }
 
 /* --- Dialogs ----------------------------------------------------------- */
 
-LeaveScreen, KeybindingsScreen, ToolInfoScreen { align: center middle; background: $background 70%; }
+LeaveScreen, KeybindingsScreen, ToolInfoScreen, TierInfoScreen { align: center middle; background: $background 70%; }
 #dialog {
     width: auto;
     max-width: 90;
@@ -227,6 +227,12 @@ LeaveScreen, KeybindingsScreen, ToolInfoScreen { align: center middle; backgroun
 .dialog-actions Button { margin-right: 2; }
 KeybindingsScreen #dialog, ToolInfoScreen #dialog { width: 72; max-width: 100%; }
 #dialog .info-heading { margin-top: 1; color: $text-faint; }
+TierInfoScreen #dialog { width: 90; max-width: 100%; }
+TierFields { height: auto; }
+.tier-turns-on { margin-top: 1; }
+.tier-tool { height: auto; }
+.tier-tool > Static { width: 1fr; height: auto; }
+.tier-tool > .tier-tool-name { width: 24; }
 
 /* --- Conflicts --------------------------------------------------------- */
 

@@ -223,7 +223,7 @@ A template can offer two [tiers](./authoring-templates.md#template-tiers) of too
 protostar init --from ./service.toml --tier workbench
 ```
 
-Switch later with `protostar sync --tier production`. `protostar init --list-templates` shows each template's default tier.
+In the recipe editor, the tier sits directly under the template picker, preselected to the default; `i` on it shows what each tier turns on for that template. Switch later with `protostar sync --tier production`. `protostar init --list-templates` shows each template's default tier.
 
 ### Interactive Resolution
 

@@ -145,7 +145,8 @@ next `sync`; a value the option no longer offers stops `sync` with an
 A template that declares [tiers](../usage/authoring-templates.md#template-tiers)
 lets a project follow its `workbench` or `production` tool opinions. The recipe
 records the tier only when it was passed with `--tier`, even when that is the
-template's default:
+template's default, or chosen in the recipe editor away from the template's
+default:
 
 ```bash
 protostar init --from ./blueprint.toml --tier production

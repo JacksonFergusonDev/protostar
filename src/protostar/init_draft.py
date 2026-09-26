@@ -48,8 +48,10 @@ class InitDraft:
     Options follow tools: ``option_overrides`` are values flags set over the
     recorded ones and are kept as given, while ``option_choices`` are every
     option's value from the editor, of which only those away from the
-    template's defaults are recorded. ``tier`` is a tier a flag pinned, and
-    is kept as given.
+    template's defaults are recorded. The tier follows the same split:
+    ``tier`` is a tier a flag pinned, and is kept as given, while
+    ``tier_choice`` is the tier the editor shows, recorded only when it is not
+    the template's default. It replaces a pinned or recorded tier.
     """
 
     template: DraftTemplate | None = None
@@ -63,6 +65,7 @@ class InitDraft:
     option_overrides: tuple[tuple[str, OptionValue], ...] = ()
     option_choices: tuple[tuple[str, OptionValue], ...] | None = None
     tier: Tier | None = None
+    tier_choice: Tier | None = None
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
     analysis: ProjectAnalysis | None = None
@@ -142,9 +145,11 @@ def resolve_init(
     variables.update(draft.variables)
     blueprint = source.render({**context, **variables}) if source else None
     tiers = blueprint.tiers if blueprint else None
-    resolve_tier(tiers, draft.tier)
+    resolve_tier(tiers, draft.tier_choice or draft.tier)
     # A recorded tier the template no longer offers is dropped.
     tier = draft.tier or (existing.tier if existing and tiers else None)
+    if draft.tier_choice is not None and tiers is not None:
+        tier = draft.tier_choice if draft.tier_choice is not tiers.default else None
     opinions = blueprint.opinions(tier) if blueprint else {}
     offered = source.options if source else {}
     options = {
