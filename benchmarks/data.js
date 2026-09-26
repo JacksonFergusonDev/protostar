@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790442746527,
+  "lastUpdate": 1790443552140,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17345,6 +17345,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 858.34,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "5249c6ea1252829dd6231fe199de914ad23e1021",
+          "message": "docs(plan): record the approachable onboarding plan\n\nSeven PRs in two stacks plus a standalone: missing tools reported as data\ninstead of a fatal pre-flight, an on-demand project guide, tool information\nin the editor, an interactive global configuration editor, purpose-grouped\ntemplates, and a first-project walkthrough.",
+          "timestamp": "2026-09-26T10:23:09-07:00",
+          "tree_id": "d4ef29684f5dc8b0966b32b80ded790b6ab7c009",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5249c6ea1252829dd6231fe199de914ad23e1021"
+        },
+        "date": 1790443551006,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 252.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 904.54,
             "unit": "ms"
           }
         ]
