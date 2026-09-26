@@ -28,6 +28,15 @@ BUILTIN_ALIASES = sorted(
 # always see the choice and never has to infer it from an omission.
 QUALITY_FLAGS = ("ruff", "mypy", "pytest", "prek", "ci", "rumdl", "direnv", "just")
 
+# Products start with the full quality gate; analysis starts lean.
+DEFAULT_TIERS = {
+    "api": "production",
+    "cli": "production",
+    "lib": "production",
+    "astro": "workbench",
+    "ml": "workbench",
+}
+
 # Built-ins are trusted implicitly, so what they may execute is deliberately tiny.
 ALLOWED_POST_INSTALL_TASKS = {("uv", "run", "nbdime", "config-git", "--enable")}
 
@@ -50,12 +59,50 @@ def test_builtin_templates_are_discovered() -> None:
 
 @pytest.mark.parametrize("alias", BUILTIN_ALIASES)
 def test_declares_every_quality_flag_explicitly(alias: str) -> None:
+    """Each quality flag is set at the root, or in both tiers when they differ."""
     data = _load(alias)
+    tiers = data.get("tiers", {})
     not_explicit = [
-        flag for flag in QUALITY_FLAGS if not isinstance(data.get(flag), bool)
+        flag
+        for flag in QUALITY_FLAGS
+        if not isinstance(data.get(flag), bool)
+        and not all(
+            isinstance(tiers.get(tier, {}).get(flag), bool)
+            for tier in ("workbench", "production")
+        )
     ]
     assert not not_explicit, (
         f"{alias}.toml must declare {not_explicit} explicitly as true or false."
+    )
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_offers_both_tiers_with_its_default(alias: str) -> None:
+    """Every built-in lets the user choose a tier, and starts in the right one."""
+    data = _load(alias)
+    assert set(data.get("tiers", {})) == {"workbench", "production"}, (
+        f"{alias}.toml must declare [tiers.workbench] and [tiers.production]."
+    )
+    assert data.get("tier") == DEFAULT_TIERS[alias], (
+        f"{alias}.toml must default to the {DEFAULT_TIERS[alias]} tier."
+    )
+
+
+@pytest.mark.parametrize("alias", BUILTIN_ALIASES)
+def test_tiers_switch_production_infrastructure_as_a_whole(alias: str) -> None:
+    """The tiers name only production infrastructure, all off, then all on.
+
+    A tool the project wants whichever tier it follows is set at the root, so
+    the tiers differ in every tool they name and in nothing else.
+    """
+    tiers = _load(alias)["tiers"]
+    assert not any(tiers["workbench"].values()), (
+        f"{alias}.toml's workbench tier turns on {tiers['workbench']}; "
+        "set a tool it keeps at the root."
+    )
+    assert all(tiers["production"].values()), (
+        f"{alias}.toml's production tier turns off {tiers['production']}; "
+        "set a tool it drops at the root."
     )
 
 

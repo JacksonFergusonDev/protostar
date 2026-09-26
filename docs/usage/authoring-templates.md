@@ -304,7 +304,7 @@ It reports two kinds of finding:
 
 The check exits `1` when the template has errors, and also on warnings with `--strict`. If the template can't be retrieved at all (a wrong path, a network failure, an HTTP error such as 404), nothing is checked: it prints the retrieval error and exits with that error's [exit code](cli-reference.md#posix-exit-codes), such as `65` or `75`, so a failure to download is never mistaken for a broken template. `--json` returns the findings as a JSON payload.
 
-The check covers a default `init`, with every option at its default. Content that only applies when a user turns on a tool the template leaves off, or chooses another option value, is not planned, so still try the combinations you expect your users to choose.
+The check covers a default `init`, with every option at its default, once in each tier when the template declares tiers. Content that only applies when a user turns on a tool the template leaves off, or chooses another option value, is not planned, so still try the combinations you expect your users to choose.
 
 Each finding names the file and line it concerns, such as `protostar.toml:12`, including a key inside a `[dev.pyproject]` payload. A finding about something the template doesn't contain, such as a missing `name`, names only the file.
 

@@ -9,9 +9,9 @@ hook_pins = []
 
 [template]
 origin = "built-in"
-locator = "astro"
-digest = "7228e9306020c3aa5a61d53e5b0cabd7e65082323b3fa65d21766339ee97b633"
-display_name = "astro"
+locator = "cli"
+digest = "cc7a1de28c078b3486e151003bcd09abfe343b6874fbc180aed7f118fed54945"
+display_name = "cli"
 
 [[files]]
 path = ".envrc"
@@ -19,9 +19,9 @@ policy = "seed-only"
 digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
 
 [[files]]
-path = ".gitattributes"
+path = "README.md"
 policy = "seed-only"
-digest = "fba8c29612852cc79d5ad6be11f1534d1be2801a9bd2c74ef46a73e56b597db5"
+digest = "37c77381868c59a8a87717f8c70016477dc028054b636446323b9bfcf2c9bdf3"
 
 [[files]]
 path = "justfile"
@@ -31,15 +31,17 @@ baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstabl
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
+baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"hatchling\"]\n\n[project]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[project.scripts]\ndemo-project = \"demo_project.cli:app\"\n\n[tool.hatch.build.targets.wheel]\npackages = [\"src/demo_project\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n"
 
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "nbdime"
-marker = ""
-declared = "nbdime"
-materialized = "nbdime>=4.0.4"
+[[files]]
+path = "src/demo_project/__init__.py"
+policy = "seed-only"
+digest = "8676db1404c13b556f9472e058e7bcedcacbeec6152d8b392fbc4468e9f000e5"
+
+[[files]]
+path = "src/demo_project/cli.py"
+policy = "seed-only"
+digest = "f04159e36b3200fd89d525cad62ce33c0d08161a162990cd87f9a9d4d78c295a"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -52,63 +54,15 @@ materialized = "ruff>=0.16.8"
 [[dependencies]]
 path = "pyproject.toml"
 group = "main"
-name = "astropy"
+name = "rich"
 marker = ""
-declared = "astropy"
-materialized = "astropy>=8.0.1"
+declared = "rich"
+materialized = "rich>=15.0.0"
 
 [[dependencies]]
 path = "pyproject.toml"
 group = "main"
-name = "astroquery"
+name = "typer"
 marker = ""
-declared = "astroquery"
-materialized = "astroquery>=0.4.11"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "matplotlib"
-marker = ""
-declared = "matplotlib"
-materialized = "matplotlib>=3.11.2"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "numpy"
-marker = ""
-declared = "numpy"
-materialized = "numpy>=2.5.3"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "pandas"
-marker = ""
-declared = "pandas"
-materialized = "pandas>=3.0.5"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "photutils"
-marker = ""
-declared = "photutils"
-materialized = "photutils>=3.0.0"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "scipy"
-marker = ""
-declared = "scipy"
-materialized = "scipy>=1.18.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "main"
-name = "specutils"
-marker = ""
-declared = "specutils"
-materialized = "specutils>=2.4.0"
+declared = "typer"
+materialized = "typer>=0.27.2"

@@ -1,4 +1,4 @@
-# Built-in template. Product tier: a deployed web service, full quality gate by default.
+# Built-in template: a web service, in the production tier by default.
 # Contract: docs/developer/built-in-templates.md
 
 name = "FastAPI"
@@ -21,23 +21,23 @@ directories = [
 vcs_ignores = [".env", "*.pem", "*.key", "sqlite.db"]
 
 # --- Tooling Opinions ---
+# Wanted in any project of this shape, whichever tier it follows.
 ruff = true
 direnv = true
-mypy = true
-pytest = true
-docker = true
 just = true
-rumdl = true
-prek = true
-ci = true
-commitizen = true
-renovate = true
+
+# The tiers set only production infrastructure: checks, automation, and the
+# container a deployed service ships in. Both declare the same tools; the root
+# never repeats them.
+tier = "production"
 
 # --- Development Dependencies ---
-# Tied to the tool that needs them, so `--no-pytest` does not install them.
+# Tied to the tool that needs them, so `--no-pytest` does not install them, and
+# the tests ship only with the tool that runs them.
 [[optional]]
 requires = "pytest"
 dev_dependencies = ["httpx", "pytest-asyncio"]
+files = ["tests/test_health.py"]
 
 # --- pyproject.toml AST Injections ---
 # The scaffold is an installable package: src layout with a real build backend, so
@@ -52,6 +52,27 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/<% PACKAGE_NAME %>"]
 '''
+
+# --- Tiers ---
+[tiers.workbench]
+mypy = false
+pytest = false
+prek = false
+ci = false
+rumdl = false
+commitizen = false
+renovate = false
+docker = false
+
+[tiers.production]
+mypy = true
+pytest = true
+prek = true
+ci = true
+rumdl = true
+commitizen = true
+renovate = true
+docker = true
 
 # --- Static File Injections ---
 [files]

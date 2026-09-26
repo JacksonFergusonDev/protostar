@@ -104,6 +104,16 @@ SCENARIOS: dict[str, RegressionScenario] = {
         commands=(("--template", "lib"),),
         description="Reusable Python library with PEP 561 typing and src-layout.",
     ),
+    "astro_production": RegressionScenario(
+        name="astro_production",
+        commands=(("--template", "astro", "--tier", "production"),),
+        description="Astronomy template in its non-default production tier: the full quality gate and a tested package.",
+    ),
+    "cli_workbench": RegressionScenario(
+        name="cli_workbench",
+        commands=(("--template", "cli", "--tier", "workbench"),),
+        description="CLI template in its non-default workbench tier: the same package with lean tooling.",
+    ),
 }
 
 FIXTURES: dict[str, list[list[str]]] = {

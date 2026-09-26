@@ -10,7 +10,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "1df69e5fd682b69ff4a5050c691ac245f05897d148c23e48eef300a09e66db1f"
+digest = "de3031649a7a394027cb242b26bd0786f2040396e1c5e753ab0dd4963744f953"
 display_name = "ml"
 
 [[files]]

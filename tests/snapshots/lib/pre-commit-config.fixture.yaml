@@ -11,6 +11,8 @@ repos:
   - repo: builtin
     hooks:
       - id: check-added-large-files
+        # A scientific stack's lock file passes the size limit, and belongs in Git.
+        exclude: ^uv\.lock$
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-symlinks

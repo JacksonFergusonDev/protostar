@@ -13,9 +13,9 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 | 3 | `feat(cli): protostar guide and a success line that says what to do next` | A, on 2 | Merged (#347) |
 | 4 | `feat(tui): tool information on demand` | B (base) | Merged (#350) |
 | 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Merged (#351) |
-| 6 | `feat(templates): workbench and production tiers` | C (base) | Next |
-| 7 | `feat(templates): every built-in offers both tiers` | C, on 6 | Planned |
-| 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Planned |
+| 6 | `feat(templates): workbench and production tiers` | C (base) | Done (#354) |
+| 7 | `feat(templates): every built-in offers both tiers` | C, on 6 | Done (#PR7) |
+| 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Next |
 | 9 | `docs: first-project walkthrough and installation paths` | After all | Planned |
 
 ## Stacks
@@ -75,39 +75,9 @@ Within a stack, each PR branches from the previous one and is retargeted to `mai
 - **Stack B (PRs 4–5).**
   - **PR 4 (#350):** `ToolInfo` (`summary`, `adds`, `workflow`, `docs_url`) on every tooling module replaced `cli_help`; the summary is the flag help, the template schema description, and the tooltip. `cli/tui/tool_info.py` holds `ToolInfoScreen` (`esc` closes, `o` opens the docs), `TOOL_GROUPS`, and the tool controls that bind `i` only while focused: `ToolToggle`, `ToolRadio`, and `ToolChoice`, which offers `i` only while a tool, not "None", is highlighted. The Tools heading shows `Tool info  i`. `check_doc_links.py` requests every `docs_url` and fails on an HTTP error, and its hook now runs when `src/protostar/modules/` changes.
   - **PR 5 (#351):** bare `protostar config` opens `ConfigScreen` (`cli/tui/config/`): identity, editor, default Python, and tool defaults, with the same `i` popup and a live **Changes** diff of the file. `config_edit.edit_config()` applies the values through `tomlkit`, writing only keys whose effective value changed, each after its commented example when the file has one. The app exits with `SaveConfig` or `OpenInEditor`, and the CLI writes (refusing if the file changed meanwhile) or opens `$EDITOR`. Identity prefills through `resolve_auto_metadata`, so Git's name and email appear until saved. `--edit` keeps the old behavior; non-interactive and `--json` runs of bare `config` raise `InvalidUsageError` pointing to it. `UserConfig.parse()` is the public text parser.
-
-## PR 6: `feat(templates): workbench and production tiers`
-
-**Goal:** a template can declare a workbench and a production tier, and `init` and `sync` resolve, record, and honor the chosen one. No built-in declares tiers yet, so every scaffold stays byte-identical.
-
-**Current state:** each built-in's tier exists only as a comment on its first line ("Product tier" or "Workbench tier"). Root-level bools in a template are parsed into `TemplateBlueprint.tooling_overrides`, which `resolve_init`, `lifecycle`, the orchestrator, and `cli/ui` read as the template's tool opinions.
-
-**Steps:**
-
-1. **Model.** A `Tier` `StrEnum` (`workbench`, `production`). The template schema gains a root `tier` (the default) and `[tiers.workbench]` and `[tiers.production]` tables of tool flags. Parse them in `config.py` into one frozen record on the blueprint, and replace direct reads of `tooling_overrides` with one method that returns the opinions for a tier: root flags with that tier's flags on top. Reject, as a `ConfigurationError` with a hint: one tier without the other; a default without tiers or tiers without a default; a key that is not a tool; the two tiers declaring different tools; a tool declared both at the root and in the tiers; an option named `tier`.
-1. **Conditions.** `requires` accepts `tier=workbench` and `tier=production`, validated like a choice option's term, so content only one tier needs (a test, a package) opts in with the existing machinery.
-1. **Resolution and recipe.** The chosen tier is `--tier`, else the recipe's, else the template's default. The recipe records `tier` in `[tool.protostar]` only when pinned by `--tier` or chosen differently from the default, like options; `sync` drops a recorded tier its template no longer offers. Tool overrides stay "differs from the opinion", now the tier's opinion.
-1. **Command line.** `--tier {workbench,production}` on `init` and `sync`. A template without tiers makes it an error with a hint, never a silent no-op. `--list-templates` shows each template's default tier, and its JSON includes the default and both tiers' flags. `TemplateInfo` exposes them.
-1. **Schema and docs.** Export the new keys in the template JSON schema, and document tiers in `docs/usage/authoring-templates.md` and `--tier` in `docs/usage/templates.md`.
-
-**Tests:** parsing and every rejection above; opinion layering and precedence (flag > recipe > tier > root); recording only a pinned or non-default tier; `sync` dropping a tier the template no longer offers and honoring a recorded one; `tier=` conditions; `--tier` on a template without tiers; listing text and JSON; schema snapshot.
-
-**Done when:** an external template with both tiers scaffolds its workbench and production flag sets through `--tier`, and a later `sync` keeps the recorded choice.
-
-## PR 7: `feat(templates): every built-in offers both tiers`
-
-**Goal:** `protostar init -t astro --tier production` and `protostar init -t cli --tier workbench` both produce a project that passes the gates its flags enable.
-
-**Steps:**
-
-1. **Split each built-in's flags.** Gate flags (`mypy`, `pytest`, `prek`, `ci`, `rumdl`, `commitizen`, `renovate`, `codecov`) move into the tiers; shape-bound flags stay at the root (for example `docker` for `api`, `ruff`, `direnv`, `just`). Decide per template whether publishing tools (`release`, `readthedocs`, `zensical`, `community`) are shape or tier, and record the reasoning in the template file.
-1. **Default tiers:** `cli`, `api`, `lib` → production; `astro`, `ml` → workbench. Each default must reproduce today's scaffold exactly, so default snapshots don't move.
-1. **Content for the non-default tier.** Production `astro` and `ml` need an importable package and at least one real test, gated with `requires = "tier=production"`; check whether strict mypy needs stubs (such as `pandas-stubs`) and add them as tier-gated dev dependencies. Workbench `cli`, `api`, and `lib` keep their package shape and entry points; ship their tests only while `pytest` is on.
-1. **Contract.** Replace the tier comment on each built-in's first line. "Declare every quality flag explicitly" now means at the root or in both tiers. Require every built-in to declare both tiers. The "fresh scaffold passes its gates" and "no trailing whitespace" checks cover both tiers. Update `docs/developer/built-in-templates.md`: the tier table becomes a per-tier flag table, and "Product templates are installable packages" becomes a rule of the shapes that are packages.
-1. **Cost.** The exhaustive suite runs each template's default tier in full. Decide whether the other tier gets the full scaffold or a planning-only gate check, bearing in mind `ml` builds a torch environment, and write the choice into the PR description.
-1. **Snapshots.** Add a scenario for each non-default tier, and regenerate.
-
-**Done when:** every built-in in both tiers passes the contract tests and its enabled gates, and default scaffolds are unchanged.
+- **Stack C (PRs 6–7).**
+  - **PR 6 (#354):** `tiers.py` holds `Tier`, `TemplateTiers`, `parse_tiers`, `template_opinions`, and `resolve_tier`. A template declares a root `tier` default and `[tiers.workbench]`/`[tiers.production]` tool-flag tables (any tool or `docker`; both tiers set the same tools; a tool set there can't also be set at the root). `TemplateBlueprint.opinions(tier)` and `TemplateSource.opinions(tier)` replace every direct read of `tooling_overrides`. The tier is a first-class recipe field, `[tool.protostar] tier`, deliberately not an option, since options only choose content; it is recorded only when pinned by `--tier`, and `sync` drops it once the template stops declaring tiers. `requires = "tier=production"` gates content, and options may not be named `tier`. `--tier` on `init` and `sync` is an `InvalidUsageError` for a template without tiers. `TemplateInfo.tiers` feeds the listing JSON, and the text table gains a tier column once any template has tiers. The editor already follows a pinned or recorded tier's opinions; `InitDraft.tier` carries the flag.
+  - **PR 7 (#PR7):** every built-in declares both tiers. The rule for where a flag goes, from the maintainer: production infrastructure goes in the tiers (all off in workbench, all on in production); what the user wants in the project either way (`ruff`, `direnv`, `just`) stays at the root. So `release`, `readthedocs`, `zensical`, `codecov`, and `community` (`cli`, `lib`) and `docker` (`api`) are production-only. Strict `mypy`, docstring `ruff`, and the coverage threshold require `tier=production` as well as their tool. Tests ship only while `pytest` is on. Production `astro`/`ml` ship a small `src/` package and a test, and point pytest at `src/` (`pythonpath` joined `ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY`). `check-template` plans every tier. The contract tests require both tiers, the right defaults, and all-off/all-on tiers. By the maintainer's choice, CI still scaffolds only default tiers; new snapshot scenarios cover `astro_production` and `cli_workbench`, and every non-default tier was scaffolded and gated by hand. Found on the way: the generated `check-added-large-files` hook rejected a scientific stack's `uv.lock` (over 500 KB), so it now excludes `uv.lock`. The contract doc's enforcement table was stale (it cited the exhaustive suite removed in #282) and was rewritten.
 
 ## PR 8: `feat(tui): choose the tier beside the template`
 

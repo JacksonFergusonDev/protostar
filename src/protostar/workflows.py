@@ -188,6 +188,8 @@ def generate_pre_commit_config(
   - repo: builtin
     hooks:
       - id: check-added-large-files
+        # A scientific stack's lock file passes the size limit, and belongs in Git.
+        exclude: ^uv\\.lock$
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-symlinks
@@ -207,6 +209,8 @@ def generate_pre_commit_config(
     rev: {resolved_core_rev}
     hooks:
       - id: check-added-large-files
+        # A scientific stack's lock file passes the size limit, and belongs in Git.
+        exclude: ^uv\\.lock$
       - id: check-merge-conflict
       - id: check-case-conflict
       - id: check-symlinks

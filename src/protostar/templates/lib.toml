@@ -1,34 +1,29 @@
-# Built-in template. Product tier: a published library package, full quality gate by default.
+# Built-in template: a library package, in the production tier by default.
 # Contract: docs/developer/built-in-templates.md
 
 name = "Library"
 description = "Reusable Python library (pip-installable, PEP 561 typed)"
 
 # --- Directory Architecture ---
-directories = ["src/<% PACKAGE_NAME %>", "tests"]
+directories = ["src/<% PACKAGE_NAME %>"]
 
 # --- Tooling Opinions ---
+# Wanted in any project of this shape, whichever tier it follows.
 ruff = true
 direnv = true
-mypy = true
-pytest = true
-prek = true
-commitizen = true
-renovate = true
-codecov = true
 just = true
-zensical = true
-ci = true
-release = true
-readthedocs = true
-rumdl = true
-community = true
+
+# The tiers set only production infrastructure: checks, automation, docs, and
+# publishing. Both declare the same tools; the root never repeats them.
+tier = "production"
 
 # --- Development Dependencies ---
-# Tied to the tool that needs them, so `--no-pytest` does not install them.
+# Tied to the tool that needs them, so `--no-pytest` does not install them, and
+# the tests ship only with the tool that runs them.
 [[optional]]
 requires = "pytest"
 dev_dependencies = ["pytest-cov"]
+files = ["tests/test_core.py"]
 
 # --- pyproject.toml AST Injections ---
 # Payloads that are not tied to a tool are plain strings and are always injected.
@@ -51,8 +46,10 @@ packages = ["src/<% PACKAGE_NAME %>"]
 # Additive on top of the Ruff module's baseline (A, B, C4, E, F, I, RUF, UP).
 # TC (type-checking) is library-specific: it enforces TYPE_CHECKING guards so
 # type-only imports don't become runtime transitive dependencies for consumers.
+# Docstring and naming rules are production polish, so a workbench library
+# keeps the baseline.
 [dev.pyproject.lib_ruff_config]
-requires = "ruff"
+requires = ["ruff", "tier=production"]
 content = '''
 [tool.ruff.lint]
 extend-select = [
@@ -82,7 +79,7 @@ convention = "google"
 # relaxed for tests. The tests override turns off warn_return_any, which the
 # baseline enables, because test doubles routinely return Any.
 [dev.pyproject.lib_mypy_config]
-requires = "mypy"
+requires = ["mypy", "tier=production"]
 content = '''
 [tool.mypy]
 strict = true
@@ -96,7 +93,7 @@ warn_return_any = false
 '''
 
 [dev.pyproject.lib_pytest_config]
-requires = "pytest"
+requires = ["pytest", "tier=production"]
 content = '''
 [tool.coverage.run]
 branch = true
@@ -107,6 +104,35 @@ show_missing = true
 skip_covered = true
 fail_under = 90
 '''
+
+# --- Tiers ---
+[tiers.workbench]
+mypy = false
+pytest = false
+prek = false
+ci = false
+rumdl = false
+commitizen = false
+renovate = false
+codecov = false
+zensical = false
+readthedocs = false
+release = false
+community = false
+
+[tiers.production]
+mypy = true
+pytest = true
+prek = true
+ci = true
+rumdl = true
+commitizen = true
+renovate = true
+codecov = true
+zensical = true
+readthedocs = true
+release = true
+community = true
 
 # --- Static File Injections ---
 [files]

@@ -1,4 +1,4 @@
-# Built-in template. Workbench tier: astrophysics analysis, lean by default.
+# Built-in template: astrophysics analysis, in the workbench tier by default.
 # Contract: docs/developer/built-in-templates.md
 
 name = "Astro"
@@ -33,19 +33,28 @@ vcs_ignores = [
 post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
 
 # --- Tooling Opinions ---
+# Wanted in any project of this shape, whichever tier it follows.
 ruff = true
 direnv = true
 just = true
-rumdl = false
-mypy = false
-pytest = false
-prek = false
-ci = false
+
+# Exploratory work starts lean. Production adds checks and automation, and a
+# package with a test, so its gates have code to check.
+tier = "workbench"
 
 # --- Development Dependencies ---
 # Notebook tooling belongs in the dev group so it survives `just sync`.
 [dev]
 dev_dependencies = ["nbdime"]
+
+[[optional]]
+requires = "tier=production"
+files = ["src/<% PACKAGE_NAME %>/"]
+
+# The test checks the production package, so it needs both.
+[[optional]]
+requires = ["pytest", "tier=production"]
+files = ["tests/test_photometry.py"]
 
 # --- pyproject.toml AST Injections ---
 [dev.pyproject.data_science_linting]
@@ -55,8 +64,75 @@ content = '''
 extend-select = ["PD", "NPY"]
 '''
 
+# Tests import the package from src/, which has no build backend to install it.
+# The baseline's "." stays, since pythonpath replaces rather than extends.
+[dev.pyproject.astro_pytest_path]
+requires = "pytest"
+content = '''
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+'''
+
+# --- Tiers ---
+[tiers.workbench]
+mypy = false
+pytest = false
+prek = false
+ci = false
+rumdl = false
+commitizen = false
+renovate = false
+
+[tiers.production]
+mypy = true
+pytest = true
+prek = true
+ci = true
+rumdl = true
+commitizen = true
+renovate = true
+
 # --- Static File Injections ---
 [files]
+"src/<% PACKAGE_NAME %>/__init__.py" = '''
+"""<% PROJECT_NAME %>: astrophysics analysis."""
+'''
+
+"src/<% PACKAGE_NAME %>/photometry.py" = '''
+"""Photometry helpers for <% PROJECT_NAME %>."""
+
+import numpy as np
+import numpy.typing as npt
+
+
+def magnitude(flux: npt.ArrayLike, zero_point: float = 0.0) -> npt.NDArray[np.float64]:
+    """Converts fluxes to astronomical magnitudes.
+
+    Args:
+        flux: Fluxes, in the units the zero point is defined for.
+        zero_point: The magnitude of a unit flux.
+
+    Returns:
+        The magnitude of each flux.
+    """
+    fluxes = np.asarray(flux, dtype=np.float64)
+    magnitudes: npt.NDArray[np.float64] = zero_point - 2.5 * np.log10(fluxes)
+    return magnitudes
+'''
+
+"tests/test_photometry.py" = '''
+"""Tests for the photometry helpers."""
+
+import numpy as np
+
+from <% PACKAGE_NAME %>.photometry import magnitude
+
+
+def test_a_hundredfold_flux_is_five_magnitudes_brighter() -> None:
+    """Magnitudes fall by five for every factor of a hundred in flux."""
+    np.testing.assert_allclose(magnitude([1.0, 100.0], zero_point=20.0), [20.0, 15.0])
+'''
+
 ".gitattributes" = '''
 # Astrophysics binary safety
 *.fits binary

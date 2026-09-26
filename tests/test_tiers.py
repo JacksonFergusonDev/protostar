@@ -400,10 +400,26 @@ def test_the_listing_shows_each_templates_tiers(demo, monkeypatch, capsys):
         "workbench": {"pytest": False},
         "production": {"pytest": True},
     }
-    assert listed["cli"]["tiers"] is None
+    assert listed["cli"]["tiers"]["default"] == "production"
 
     monkeypatch.setattr(ui, "is_json_mode", False)
     monkeypatch.setattr("sys.argv", ["protostar", "init", "--list-templates"])
     with pytest.raises(SystemExit):
         main()
     assert "workbench tier" in capsys.readouterr().out
+
+
+def test_check_template_plans_every_tier(tmp_path):
+    from protostar.template_check import check_template
+
+    template = tmp_path / "protostar.toml"
+    template.write_text(
+        'name = "Demo"\ndescription = "Demo"\ntier = "workbench"\n'
+        "[tiers.workbench]\nreadthedocs = false\n"
+        "[tiers.production]\nreadthedocs = true\n"
+    )
+    check = check_template(str(template))
+    assert [finding.message.split(":")[0] for finding in check.errors] == [
+        "In the production tier"
+    ]
+    assert "Read the Docs" in check.errors[0].message

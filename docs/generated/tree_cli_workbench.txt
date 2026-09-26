@@ -1,0 +1,13 @@
+.
+├── .envrc
+├── .gitignore
+├── .python-version
+├── README.md
+├── justfile
+├── protostar.lock
+├── pyproject.toml
+├── src
+│   └── demo_project
+│       ├── __init__.py
+│       └── cli.py
+└── uv.lock
