@@ -145,7 +145,7 @@ def test_handle_config_success(mocker, tmp_path):
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mock_run = mocker.patch("subprocess.run")
 
-    handle_config(argparse.Namespace())
+    handle_config(argparse.Namespace(edit=True))
 
     assert mock_config_file.exists()
     assert "ide =" in __import__("protostar.config").config.DEFAULT_CONFIG_CONTENT
@@ -271,7 +271,7 @@ def test_handle_config_errors(mocker, tmp_path):
     """Test missing binaries, empty env vars, and subprocess crashes in handle_config."""
     mock_config_file = tmp_path / "config.toml"
     mocker.patch("protostar.config.CONFIG_FILE", mock_config_file)
-    args = argparse.Namespace()
+    args = argparse.Namespace(edit=True)
 
     # 1. Empty EDITOR
     mocker.patch.dict("os.environ", {"EDITOR": ""})
@@ -494,7 +494,7 @@ def test_handle_config_parent_dir_creation(mocker, tmp_path):
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mocker.patch("subprocess.run")
 
-    handle_config(argparse.Namespace())
+    handle_config(argparse.Namespace(edit=True))
 
     assert mock_config_file.parent.exists()
     assert mock_config_file.exists()
@@ -1499,7 +1499,7 @@ def test_config_verbose_logging(capsys, monkeypatch, tmp_path, mocker):
     mocker.patch("protostar.config.CONFIG_FILE", mock_config)
     mocker.patch("subprocess.run")
 
-    monkeypatch.setattr(sys, "argv", ["protostar", "config", "-v"])
+    monkeypatch.setattr(sys, "argv", ["protostar", "config", "--edit", "-v"])
     try:
         main()
         captured = capsys.readouterr()
@@ -1653,7 +1653,9 @@ def test_main_renders_bracketed_error_text_literally(mocker):
 def test_main_routes_the_config_flag_to_the_selected_file(mocker, tmp_path):
     """`--config` survives real argument parsing and redirects the config command."""
     selected = tmp_path / "team.toml"
-    mocker.patch("sys.argv", ["protostar", "config", "--config", str(selected)])
+    mocker.patch(
+        "sys.argv", ["protostar", "config", "--edit", "--config", str(selected)]
+    )
     mocker.patch.dict("os.environ", {"EDITOR": "nano"})
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     mock_run = mocker.patch("subprocess.run")
@@ -1671,7 +1673,7 @@ def test_config_command_refuses_to_edit_while_disabled(mocker):
     select_config_source(None, disabled=True)
 
     with pytest.raises(InvalidUsageError, match="no configuration file to edit"):
-        handle_config(argparse.Namespace())
+        handle_config(argparse.Namespace(edit=True))
 
 
 def test_list_templates_surfaces_a_broken_config(mocker, tmp_path):

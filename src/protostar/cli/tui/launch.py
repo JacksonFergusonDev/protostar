@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from protostar.config import UserConfig
+from protostar.config_edit import ConfigDecision, EnvValue
 from protostar.init_draft import InitDecision, InitDraft
 from protostar.merge import ResolutionChoice
 from protostar.templates import TemplateInfo
@@ -89,3 +91,23 @@ def resolve_conflicts(project: PreparedProject) -> dict[str, ResolutionChoice] |
     from .conflicts.screen import ConflictScreen
 
     return DecisionApp(ConflictScreen(project)).decide()
+
+
+def edit_settings(
+    content: str, path: Path, prefill: Mapping[str, EnvValue]
+) -> ConfigDecision | None:
+    """Edit the global configuration as a form, or return None on cancellation.
+
+    Args:
+        content: The configuration file's text, or the default text for a
+            file that doesn't exist yet.
+        path: Where the file is.
+        prefill: Each editable key's starting value.
+
+    Returns:
+        The change to save, or a request to open the file in ``$EDITOR``.
+    """
+    from .app import DecisionApp
+    from .config.screen import ConfigScreen
+
+    return DecisionApp(ConfigScreen(content, path, prefill)).decide()

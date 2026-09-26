@@ -608,7 +608,11 @@ def generate_capability_tables() -> None:
     config_rows = [
         [
             "*(No args)*",
-            "Opens `config.toml` in your system's default `$EDITOR`.",
+            "Opens a form for your identity, editor, Python version, and tool defaults, and saves only what changed. Needs an interactive terminal.",
+        ],
+        [
+            "`--edit`",
+            "Opens `config.toml` in your system's default `$EDITOR`, seeding the default template if it is missing.",
         ],
         [
             "`--reset`",

@@ -610,10 +610,15 @@ def build_parser() -> argparse.ArgumentParser:
     # --- Config Subparser ---
     config_parser = subparsers.add_parser(
         "config",
-        help="Manage global Protostar configuration.",
-        description="Opens the global configuration file in your system's default $EDITOR.",
+        help="Set your identity, editor, Python version, and tool defaults.",
+        description="Edit your identity, editor, Python version, and tool defaults in a form.",
         usage=argparse.SUPPRESS,
         parents=[suppressed_base_parser],
+    )
+    config_parser.add_argument(
+        "--edit",
+        action="store_true",
+        help="Open the file in $EDITOR instead of the form.",
     )
     config_parser.add_argument(
         "-f",

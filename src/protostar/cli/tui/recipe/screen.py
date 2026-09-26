@@ -55,32 +55,18 @@ from ..keys import (
     key_label,
 )
 from ..review.screen import ReviewScreen
-from ..tool_info import TOOL_INFO_KEY, ToolChoice, ToolRadio, ToolToggle
+from ..tool_info import (
+    TOOL_GROUPS,
+    TOOL_INFO_KEY,
+    ToolChoice,
+    ToolRadio,
+    ToolToggle,
+)
 from .metadata import MetadataFields, metadata_defaults, metadata_keys
 from .options import OptionFields, draft_options
 from .preview import PlanPreview
 from .variables import VariableFields, draft_variables
 
-_GROUPS = {
-    "Quality": (
-        Tool.RUFF,
-        Tool.MYPY,
-        Tool.TY,
-        Tool.PYREFLY,
-        Tool.PYTEST,
-        Tool.RUMDL,
-        Tool.MARKDOWNLINT,
-    ),
-    "Automation": (Tool.CI, Tool.RELEASE, Tool.COMMITIZEN, Tool.RENOVATE, Tool.CODECOV),
-    "Documentation & workspace": (
-        Tool.ZENSICAL,
-        Tool.READTHEDOCS,
-        Tool.DIRENV,
-        Tool.JUST,
-        Tool.AGENTS,
-        Tool.COMMUNITY,
-    ),
-}
 _NAMES = {Tool(module.config_key): module.name for module in TOOLING_MODULES}
 
 
@@ -289,7 +275,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                     yield Toggle(
                         self._docker_label(), value=self._docker(), id="docker"
                     )
-                    for title, tools in _GROUPS.items():
+                    for title, tools in TOOL_GROUPS.items():
                         yield Label(title, classes="group")
                         for tool in tools:
                             yield ToolToggle(

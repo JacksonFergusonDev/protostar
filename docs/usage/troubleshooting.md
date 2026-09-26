@@ -74,7 +74,7 @@ When you load a template from an untrusted remote URL (`--from https://...`) tha
 
 To permanently trust a remote or team template and bypass security prompts:
 
-1. Run `protostar config` to open your global settings.
+1. Run `protostar config --edit` to open your global settings in `$EDITOR`.
 1. Register the template under the `[templates.<alias>]` table with `trusted = true`:
 
 ```toml

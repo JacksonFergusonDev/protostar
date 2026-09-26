@@ -31,7 +31,7 @@ Panel > * { background: $surface; }
 Panel > .panel-title { height: 1; padding: 0 1; color: $text-faint; text-style: bold; }
 Panel:focus-within > .panel-title { color: $accent; }
 /* The scrollbar meets the panel's edge. */
-#editor, PlanPreview, #files, #steps, #diff-pane {
+#editor, PlanPreview, #changes, #files, #steps, #diff-pane {
     height: 1fr;
     padding: 0 0 0 1;
     background: $surface;
@@ -55,10 +55,12 @@ Panel:focus-within > .panel-title { color: $accent; }
 .field-label { margin-top: 1; color: $text-muted; }
 .field-error { height: auto; color: $error; }
 .field-warning { color: $warning; }
-VariableFields, MetadataFields, MetadataFields .field { height: auto; }
+VariableFields, MetadataFields, .field { height: auto; }
 
-#preview-summary { color: $text-muted; }
+#preview-summary, #changes-summary { color: $text-muted; }
+#changes-summary.-error { color: $error; }
 #preview-summary.-error { color: $error; }
+#changes-diff { margin-top: 1; }
 #preview-collisions { color: $warning; }
 #template-status { height: auto; color: $text-muted; }
 

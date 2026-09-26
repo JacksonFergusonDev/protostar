@@ -11,8 +11,8 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 | 1 | `feat(engine)!: missing tools are data, not a fatal pre-flight` | A (base) | Merged (#345) |
 | 2 | `feat(cli): report missing tools before the editor, in review, and after success` | A, on 1 | Merged (#346) |
 | 3 | `feat(cli): protostar guide and a success line that says what to do next` | A, on 2 | Merged (#347) |
-| 4 | `feat(tui): tool information on demand` | B (base) | Done |
-| 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Planned |
+| 4 | `feat(tui): tool information on demand` | B (base) | Done (#350) |
+| 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Done (#351) |
 | 6 | `feat(templates): group templates by purpose` | Standalone | Next |
 | 7 | `docs: first-project walkthrough and installation paths` | After all | Planned |
 
@@ -65,39 +65,9 @@ Stacks A and B and PR 6 are independent of each other and can run in parallel. W
   - **PR 1 (#345):** only `system_deps.REQUIRED` (`uv`, `git`) blocks, through `check_required_executables()`, which `plan()` calls for init and sync. Modules declare tool binaries in `executables`. Planning records the missing ones as `missing_tools` on the manifest, review, and `ExecutionResult`, and `DirenvModule` skips `direnv allow` with a diagnostic. `install_command()` is pure and takes the detected package managers. Deviations: `pre_flight()` and `AggregatedDependencyError` are deleted (one `MissingDependencyError` carries every missing binary), `plan(policy=)` became `plan(check_executables=)`, and tests control lookups through the `missing_executables` fixture.
   - **PR 2 (#346):** `init` and `sync` check required binaries before any screen. Missing tools show a `not installed` marker in the editor, a preview note, and a **Skipped** section in the review. Success ends with a **Not installed** block and one install command. JSON carries `missing_tools` and `install_commands`.
   - **PR 3 (#347):** `protostar guide` renders `GuideSpec` (now `EnvironmentManifest.guide_spec()`, with `just_recipes()`/`check_commands()` shared in `workflows.py`) and `[project.scripts]`, planning through `plan_project` as `sync` does. The success line is `Project ready.` plus the run command and a pointer to the guide. Remote templates are never cached, so an unreachable one yields a partial guide with a note. The `cd <name>` step was dropped because `init` always scaffolds in the current directory.
-- **PR 4, `feat(tui): tool information on demand`.** `ToolInfo` (`summary`, `adds`, `workflow`, `docs_url`) on every tooling module replaced `cli_help`; the summary is the flag help, the template schema description, and the tooltip. `cli/tui/tool_info.py` holds `ToolInfoScreen` (`esc` closes, `o` opens the docs) and the tool controls that bind `i` only while focused: `ToolToggle`, `ToolRadio`, and `ToolChoice`, which offers `i` only while a tool, not "None", is highlighted. The Tools heading shows `Tool info  i`. `check_doc_links.py` requests every `docs_url` and fails on an HTTP error, and its hook now runs when `src/protostar/modules/` changes. Backticked commands in the copy render in the accent colour.
-
-## PR 5: `feat(cli): interactive global configuration editor`
-
-**Goal:** a beginner can set their identity, editor, Python version, and tool defaults through a clear form, without opening a TOML file.
-
-**Current state:** `protostar config` seeds `config.toml` if missing and opens it in `$EDITOR`, and `--reset` restores the default. The file already holds `author_name`, `author_email`, `github_username`, `ide`, `python_version`, and tool toggles. `metadata.py` falls back to `git config user.name` and `user.email` when author fields are unset.
-
-**Steps:**
-
-1. **Command surface.**
-    - In an interactive terminal, bare `protostar config` opens the form.
-    - `protostar config --edit` opens `$EDITOR` as today, and the form's action bar offers the same with `e`.
-    - `--reset` is unchanged.
-    - In non-interactive or `--json` runs, bare `config` raises `InvalidUsageError` with a hint pointing to `--edit`.
-1. **The form** (`cli/tui/config/`), built from `Form`, `Field`, `Picker`, and `Toggle`:
-    - **Identity:** name, email, and an optional GitHub username. Prefill from the file, then Git, through the existing resolver in `metadata.py`. Don't write a second resolver.
-    - **Environment:** IDE and default Python version.
-    - **Tool defaults:** one toggle per tool, with PR 4's tooltip and `i` popup. State in the section's help that a template's own choices win over these defaults.
-1. **Save.** A pure engine function applies the form's values to the parsed `tomlkit` document, preserving comments and unrelated keys. It writes only keys whose value changed. Before writing, show the change as a diff through `cli/tui/code.py`. Write only after confirmation, and never touch Git's configuration.
-1. **Docs.** Update the configuration page and the `config` help text.
-
-**Tests:**
-
-- Round-trip preserving comments and unknown keys.
-- Only changed keys are written.
-- Git prefill when the file has no identity; patch the git call.
-- `Esc` asks before leaving with unsaved changes.
-- The non-interactive `config` error.
-- `--edit` keeps today's behavior.
-- A cp1252 run of the saved-summary output.
-
-**Done when:** someone can go from no config file to a saved identity and IDE without seeing TOML.
+- **Stack B (PRs 4–5).**
+  - **PR 4 (#350):** `ToolInfo` (`summary`, `adds`, `workflow`, `docs_url`) on every tooling module replaced `cli_help`; the summary is the flag help, the template schema description, and the tooltip. `cli/tui/tool_info.py` holds `ToolInfoScreen` (`esc` closes, `o` opens the docs), `TOOL_GROUPS`, and the tool controls that bind `i` only while focused: `ToolToggle`, `ToolRadio`, and `ToolChoice`, which offers `i` only while a tool, not "None", is highlighted. The Tools heading shows `Tool info  i`. `check_doc_links.py` requests every `docs_url` and fails on an HTTP error, and its hook now runs when `src/protostar/modules/` changes.
+  - **PR 5 (#351):** bare `protostar config` opens `ConfigScreen` (`cli/tui/config/`): identity, editor, default Python, and tool defaults, with the same `i` popup and a live **Changes** diff of the file. `config_edit.edit_config()` applies the values through `tomlkit`, writing only keys whose effective value changed, each after its commented example when the file has one. The app exits with `SaveConfig` or `OpenInEditor`, and the CLI writes (refusing if the file changed meanwhile) or opens `$EDITOR`. Identity prefills through `resolve_auto_metadata`, so Git's name and email appear until saved. `--edit` keeps the old behavior; non-interactive and `--json` runs of bare `config` raise `InvalidUsageError` pointing to it. `UserConfig.parse()` is the public text parser.
 
 ## PR 6: `feat(templates): group templates by purpose`
 

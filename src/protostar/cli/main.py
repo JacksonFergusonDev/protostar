@@ -9,6 +9,7 @@ import subprocess
 import sys
 import traceback
 import urllib.parse
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rich.columns import Columns
@@ -22,13 +23,21 @@ from rich.text import Text
 
 from protostar.cli import parser, schema, ui
 from protostar.cli.docs_links import format_docs_link
-from protostar.cli.tui.launch import edit_variables, review_changes
+from protostar.cli.tui.launch import edit_settings, edit_variables, review_changes
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateSource,
     UserConfig,
     active_config_source,
+    clear_user_config_cache,
     select_config_source,
+)
+from protostar.config_edit import (
+    IDENTITY_KEYS,
+    ConfigEdit,
+    EnvValue,
+    SaveConfig,
+    config_values,
 )
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
@@ -52,6 +61,7 @@ from protostar.intent import TemplateOrigin
 from protostar.interpolation import VARIABLE_NAME
 from protostar.lifecycle import migrate_variables
 from protostar.manifest import CollisionStrategy
+from protostar.metadata import MetadataKey, resolve_auto_metadata
 from protostar.modules import (
     TOOLING_MODULES,
     BootstrapModule,
@@ -81,7 +91,6 @@ def handle_init(args: argparse.Namespace) -> None:
     flag_values = _parse_var_flags(getattr(args, "variables", []))
 
     from dataclasses import replace
-    from pathlib import Path
 
     from protostar.analysis import analyze_project
     from protostar.recipe import Tool, read_recipe
@@ -302,13 +311,57 @@ def _edit_variables(
     return edited
 
 
+def _config_prefill(config: UserConfig) -> dict[str, EnvValue]:
+    """The form's starting values: the file's, then Git's identity."""
+    values = config_values(config)
+    identity = resolve_auto_metadata(
+        {
+            MetadataKey.AUTHOR_NAME,
+            MetadataKey.AUTHOR_EMAIL,
+            MetadataKey.GITHUB_USERNAME,
+        },
+        config,
+    )
+    for key in IDENTITY_KEYS:
+        values[key] = identity.get(key) or None
+    return values
+
+
+def _save_config(config_path: Path, edit: ConfigEdit) -> None:
+    """Writes the form's change, unless the file changed while it was open."""
+    current = (
+        config_path.read_text(encoding="utf-8")
+        if config_path.exists()
+        else DEFAULT_CONFIG_CONTENT
+    )
+    if current != edit.before:
+        raise ConfigurationError(
+            f"{config_path} changed while the form was open; nothing was saved.",
+            hint="Run 'protostar config' again to edit the current file.",
+        )
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_text(config_path, edit.after)
+    clear_user_config_cache()
+    ui.console.print(
+        Text.assemble(
+            (f"{ui.glyph('✔', '+')} ", "green"),
+            ("Saved ", "bold green"),
+            (", ".join(edit.changed), "bold"),
+            (" to ", "bold green"),
+            (str(config_path), "cyan"),
+        )
+    )
+
+
 def handle_config(args: argparse.Namespace) -> None:
     """Handles the 'config' subcommand to manage global CLI settings.
 
-    Opens the global configuration file in the system's default editor.
-    Ensures the parent directory exists and seeds a default configuration
-    template if the file is missing. Safely tokenizes the $EDITOR environment
-    variable to support complex commands (e.g., 'code --wait').
+    In an interactive terminal, opens a form for the identity, environment,
+    and tool defaults, and writes only what changed once the user saves.
+    ``--edit`` opens the file in ``$EDITOR`` instead, seeding a default
+    configuration if the file is missing; the form's ``e`` does the same.
+    Safely tokenizes the $EDITOR environment variable to support complex
+    commands (e.g., 'code --wait').
 
     Args:
         args: Parsed CLI arguments mapping to this command.
@@ -368,6 +421,27 @@ def handle_config(args: argparse.Namespace) -> None:
             )
         )
         return
+
+    if not getattr(args, "edit", False):
+        if ui.is_json_mode or not is_interactive():
+            raise InvalidUsageError(
+                "The configuration form needs an interactive terminal.",
+                hint=f"Run 'protostar config --edit' to open it in $EDITOR, or edit {config_path} directly.",
+                docs_path=DocsPage.CONFIGURATION,
+            )
+        content = (
+            config_path.read_text(encoding="utf-8")
+            if config_path.exists()
+            else DEFAULT_CONFIG_CONTENT
+        )
+        config = UserConfig.parse(content, str(config_path))
+        decision = edit_settings(content, config_path, _config_prefill(config))
+        if decision is None:
+            ui.console.print("Configuration unchanged.", style="dim")
+            return
+        if isinstance(decision, SaveConfig):
+            _save_config(config_path, decision.edit)
+            return
 
     if not config_path.exists():
         logger.debug("Writing initial default configuration to %s", config_path)
