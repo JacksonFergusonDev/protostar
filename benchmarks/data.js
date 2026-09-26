@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790384935087,
+  "lastUpdate": 1790441681704,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17277,6 +17277,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 690.69,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0e041129cb7963f629aa285eaa8129a5f8411a65",
+          "message": "fix(tui): let a template pick the hook manager; show hard errors only in the preview (#343)\n\nA recipe layer that enables pre-commit or prek now decides the pair, so a\ntemplate's prek displaces a configured or lower-layer pre-commit instead of\nenabling both. In the editor, a template that picks a hook manager replaces\nthe one chosen before it. Blocking errors (tool constraints, template load\nfailures) show only in the preview.",
+          "timestamp": "2026-09-26T09:51:52-07:00",
+          "tree_id": "f61fe6e8ccefc344598a7d122446688186d75f05",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0e041129cb7963f629aa285eaa8129a5f8411a65"
+        },
+        "date": 1790441680558,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 283.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 937,
             "unit": "ms"
           }
         ]
