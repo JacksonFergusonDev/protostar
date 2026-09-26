@@ -1,24 +1,42 @@
 name: Feature Request
-description: Propose a new language module, IDE integration, or built-in template.
+description: Propose a new tooling module, built-in template, or CLI enhancement.
 title: "feat: <short description>"
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Proposing an addition to the Accretion Engine**
-        Protostar thrives on vertical integration. If you are proposing a new language or framework, please outline the exact files/commands it requires.
+        Protostar provides zero-friction Python environment scaffolding and lifecycle management.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - Tooling Module (e.g., linter, formatter, type checker)
+        - Built-in Template or Template Option
+        - CLI / TUI Workflow & Ergonomics
+        - Dependency & Sync Management
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: problem
     attributes:
-      label: The Problem (Logistical Entropy)
-      description: What manual configuration are you constantly doing that Protostar should automate?
+      label: Problem or Use Case
+      description: What challenge or repetitive configuration does this solve?
     validations:
       required: true
   - type: textarea
-    id: solution
+    id: proposal
     attributes:
-      label: Proposed Implementation
-      description: What specific CLI commands (e.g., `cargo init`) and ignores (e.g., `node_modules/`) does this require?
+      label: Proposed Solution
+      description: How should this work from a user's perspective? What flags, files, or pyproject.toml tables are involved?
     validations:
       required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any other approaches or existing workarounds you evaluated?
+    validations:
+      required: false

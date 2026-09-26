@@ -1,12 +1,12 @@
 name: Bug Report
-description: Report a reproducible issue with environment scaffolding.
+description: Report a bug or unexpected behavior in Protostar.
 title: "bug: <short description>"
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Thank you for reporting an issue.** To help reduce debugging entropy, please provide the exact state of your environment. You can determine your exact version footprint by executing `protostar --version`.
+        **Thank you for reporting an issue.** Please run `protostar --version` to help narrow down the environment state.
   - type: input
     id: version
     attributes:
@@ -20,7 +20,7 @@ body:
     attributes:
       label: Python Version
       description: What version of Python is executing Protostar?
-      placeholder: "e.g., 3.12.1"
+      placeholder: "e.g., 3.12.3"
     validations:
       required: true
   - type: dropdown
@@ -30,16 +30,27 @@ body:
       options:
         - macOS
         - Linux
+        - Windows
         - Windows (WSL)
         - Other
     validations:
       required: true
+  - type: dropdown
+    id: interface
+    attributes:
+      label: Interface Mode
+      options:
+        - CLI Flags (non-interactive)
+        - Interactive TUI (Recipe Editor / Review / Conflict Screen)
+        - Headless / Machine Mode (--json)
+    validations:
+      required: false
   - type: input
     id: command
     attributes:
       label: Command Executed
       description: What exact command did you run?
-      placeholder: "protostar init --python --scientific"
+      placeholder: "protostar init -t cli --ruff --mypy"
     validations:
       required: true
   - type: textarea
@@ -53,7 +64,15 @@ body:
     id: actual
     attributes:
       label: Actual Behavior / Traceback
-      description: What actually happened? Paste any error output here.
+      description: What actually happened? Paste any error output or tracebacks here.
       render: shell
     validations:
       required: true
+  - type: textarea
+    id: pyproject
+    attributes:
+      label: pyproject.toml / Recipe (Optional)
+      description: If this relates to sync, templates, or configuration, paste relevant sections from pyproject.toml.
+      render: toml
+    validations:
+      required: false
