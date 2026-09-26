@@ -4,7 +4,7 @@ This guide provides remediation steps for common operational errors, environment
 
 ## Missing Dependencies & Environment Checks
 
-Protostar needs `uv` and `git` for every project, and checks for them before writing files or modifying configurations. If either is missing, execution halts with a `MissingDependencyError` whose hint is one command that installs everything missing.
+Protostar needs `uv` and `git` for every project, and checks for them before writing files or modifying configurations. If either is missing, execution halts with a `MissingDependencyError` whose hint is one command that installs everything missing. [Installation](../installation.md) covers installing both on each platform.
 
 ### `uv` is not installed or not in `$PATH`
 
@@ -36,6 +36,33 @@ Protostar strongly recommends [uv](https://docs.astral.sh/uv/) for high-velocity
 A binary that only a selected tool runs never stops a run. The tool's files are still written, since they are correct whether or not the binary is installed. Protostar skips only the steps that need it, and ends its output with one command that installs every missing binary: without `direnv`, run `direnv allow` in the project once it is installed. The recipe editor marks such a tool `not installed`, and its preview and the change review list the step it skips.
 
 ![A run whose direnv and just are missing](../assets/terminals/cli_missing_tools.svg)
+
+The command comes from the package manager Protostar finds. Where it finds none, it links here instead:
+
+=== "macOS"
+    ```bash
+    brew install direnv just
+    ```
+
+=== "Debian & Ubuntu"
+    ```bash
+    sudo apt install direnv just
+    ```
+
+    Debian 12 and Ubuntu releases before 24.04 don't package `just`. Install it with uv instead: `uv tool install rust-just`.
+
+=== "Fedora"
+    ```bash
+    sudo dnf install direnv just
+    ```
+
+=== "Windows"
+    ```powershell
+    winget install --exact --id direnv.direnv
+    winget install --exact --id Casey.Just
+    ```
+
+direnv does nothing until it is [hooked into your shell](https://direnv.net/docs/hook.html): add its hook line to your shell's startup file, open a new terminal, and run `direnv allow` in the project. From then on, entering the project's folder activates its virtual environment.
 
 ## Workspace Collisions
 

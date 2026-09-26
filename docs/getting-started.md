@@ -7,23 +7,12 @@ icon: material/rocket
 
 ## Installation
 
-Protostar is designed to be installed globally as a standalone CLI tool, with native cross-platform support for Linux, macOS, and Windows.
+```bash
+brew install jacksonfergusondev/tap/protostar   # macOS
+uv tool install protostar                       # Linux and Windows
+```
 
-=== "macOS (Homebrew)"
-    ```bash
-    brew install jacksonfergusondev/tap/protostar
-    ```
-=== "Universal (uv)"
-    ```bash
-    uv tool install protostar
-    ```
-=== "Universal (pip)"
-    ```bash
-    pip install protostar
-    ```
-
-!!! warning "Dependency Isolation (ignore if using `brew` or `uv`)"
-    If you install Protostar into an existing Python environment with `pip`, it will bring in `textual` for the interactive recipe editor. In rare cases, this can conflict with other tools that pin `textual` or `rich` versions. For guaranteed isolation, prefer `uv tool` or Homebrew.
+Protostar needs `uv` and `git`. [Installation](installation.md) covers both on each platform, for a machine with no Python setup. New to Python tooling? [Your First Project](first-project.md) walks through a project from start to finish.
 
 `protostar init` is designed to be executed immediately after you `mkdir` a new project directory. It offers two distinct operational modes: an **interactive TUI** for discovery, and a **headless CLI** for speed.
 
