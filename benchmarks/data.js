@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790451415084,
+  "lastUpdate": 1790452018899,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17481,6 +17481,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 916.71,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "720c22b1d455b4eaa2d251801fc80284192f625f",
+          "message": "docs(plan): split PR 6 into workbench and production tiers (stack C)\n\nThe tier moves off the template and becomes a switch beside it, so a\nworkbench CLI or a production astro project can be asked for. PR 6\nbecomes three stacked PRs (engine, built-ins, recipe editor) and the\ndocs walkthrough becomes PR 9.",
+          "timestamp": "2026-09-26T12:44:31-07:00",
+          "tree_id": "8b38b22d3e3354ef324f0bd99556c7a7865d4e29",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/720c22b1d455b4eaa2d251801fc80284192f625f"
+        },
+        "date": 1790452017431,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 225.94,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 834.36,
             "unit": "ms"
           }
         ]
