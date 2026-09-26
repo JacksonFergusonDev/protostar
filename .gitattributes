@@ -1,0 +1,2 @@
+# Treat Asciinema recordings as binary assets
+*.cast binary linguist-generated=true
