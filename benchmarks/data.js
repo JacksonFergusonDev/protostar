@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790455888216,
+  "lastUpdate": 1790457642717,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17583,6 +17583,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 554.83,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af23c15ef670f760f4bebdf32cd174029dded0fb",
+          "message": "feat(tui): choose the tier beside the template (#356)\n\n* feat(tui): choose the tier beside the template\n\nThe recipe editor shows a Workbench/Production choice directly under the\ntemplate picker while the chosen template declares tiers, preselected to the\npinned, recorded, or default tier. `i` on it explains what each tier turns\non for that template. Switching tier resets the tier's tools to its opinions,\nand the draft records the tier only when it differs from the default\n(`InitDraft.tier_choice`).\n\n* docs(plan): mark PR 8 complete",
+          "timestamp": "2026-09-26T14:18:03-07:00",
+          "tree_id": "575a431f32a924332be7761e8dea20fdf91b800d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/af23c15ef670f760f4bebdf32cd174029dded0fb"
+        },
+        "date": 1790457641848,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 264.99,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 917,
             "unit": "ms"
           }
         ]
