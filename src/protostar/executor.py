@@ -87,7 +87,7 @@ class SystemExecutor(Reconciliation):
         self.journal = MutationJournal()
         self.fs = TransactionAwareFS(self.journal)
         self.process_runner = ProcessRunner()
-        self.diagnostics: list[DiagnosticEvent] = []
+        self.diagnostics: list[DiagnosticEvent] = list(manifest.diagnostics)
         self.proposals: list[MergeConflict] = []
         self.preserved: list[MergeConflict] = []
         self._owned_on_disk: frozenset[str] = frozenset()

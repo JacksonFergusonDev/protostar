@@ -12,7 +12,7 @@ By preventing modules from writing to disk directly during planning, Protostar k
 
 - :material-atom: __Atomicity__
 
-    If a pre-flight check fails or an invalid configuration is evaluated in the final loaded module, the process aborts cleanly. No partial directories are created; no half-written `.toml` files are left behind.
+    If `uv` or `git` is missing or an invalid configuration is evaluated in the final loaded module, the process aborts cleanly. No partial directories are created; no half-written `.toml` files are left behind.
 
 - :material-test-tube: __Testability__
 

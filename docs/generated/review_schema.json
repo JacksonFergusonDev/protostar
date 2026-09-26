@@ -892,6 +892,51 @@
         "initialization_only_ide_probe": {
           "type": "boolean"
         },
+        "missing_tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "executable",
+              "tool"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "executable": {
+                "enum": [
+                  "uv",
+                  "git",
+                  "direnv",
+                  "just"
+                ]
+              },
+              "tool": {
+                "enum": [
+                  "direnv",
+                  "markdownlint",
+                  "rumdl",
+                  "ruff",
+                  "mypy",
+                  "ty",
+                  "pyrefly",
+                  "pytest",
+                  "pre_commit",
+                  "prek",
+                  "commitizen",
+                  "renovate",
+                  "codecov",
+                  "zensical",
+                  "readthedocs",
+                  "ci",
+                  "release",
+                  "just",
+                  "agents",
+                  "community"
+                ]
+              }
+            }
+          }
+        },
         "selections": {
           "type": "array",
           "items": {
@@ -1001,6 +1046,7 @@
         "resolver",
         "initialization_only",
         "initialization_only_ide_probe",
+        "missing_tools",
         "selections",
         "producers"
       ],

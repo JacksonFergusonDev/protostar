@@ -50,9 +50,6 @@ class DummyModule(BootstrapModule):
     def name(self):
         return "Dummy"
 
-    def pre_flight(self):
-        self.pre_flight_called = True
-
     def build(self, manifest):
         manifest.filesystem.add_vcs_ignore("dummy_file.txt")
         manifest.filesystem.add_file_injection("dummy_marker.txt", "dummy payload")
@@ -65,15 +62,13 @@ class DummyModule(BootstrapModule):
 # ---------------------------------------------------------------------------
 
 
-def test_plan_calls_pre_flight_and_build(tmp_path, monkeypatch, mock_config):
-    """plan() should invoke pre_flight and build on each module."""
+def test_plan_builds_each_module(tmp_path, monkeypatch, mock_config):
+    """plan() should build each module into the manifest."""
     monkeypatch.chdir(tmp_path)
-    dummy_mod = DummyModule()
-    engine = Orchestrator([dummy_mod], mock_config)
+    engine = Orchestrator([DummyModule()], mock_config)
 
     manifest = engine.plan()
 
-    assert dummy_mod.pre_flight_called
     assert "dummy-pkg" in manifest.dependencies.dependencies
 
 
@@ -341,13 +336,13 @@ def test_plan_attributes_tool_bound_dev_dependencies_to_their_tool(mocker, mock_
 
 
 def test_plan_produces_clean_blueprint(mocker, mock_config):
-    """plan() produces a pure declarative blueprint with no runtime diagnostic state."""
+    """plan() produces a pure declarative blueprint with no execution diagnostics."""
     engine = Orchestrator([], mock_config)
     mocker.patch.object(Path, "exists", return_value=False)
 
     manifest = engine.plan()
 
-    assert not hasattr(manifest, "diagnostics")
+    assert manifest.diagnostics == []
 
 
 # ---------------------------------------------------------------------------
@@ -500,7 +495,7 @@ def test_plan_does_not_mutate_filesystem(mocker, mock_config):
     # plan() generates declarative structures without execution tracking or side effects
     assert isinstance(manifest, EnvironmentManifest)
     assert not hasattr(manifest.filesystem, "touched_paths")
-    assert not hasattr(manifest, "diagnostics")
+    assert manifest.diagnostics == []
 
 
 def test_plan_raises_on_conflicting_hook_runners(mock_config, mocker):

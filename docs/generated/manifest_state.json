@@ -146,5 +146,7 @@
         "python.terminal.activateEnvironment": true
     },
     "collision_strategy": "merge",
-    "collisions": []
+    "collisions": [],
+    "missing_tools": [],
+    "diagnostics": []
 }

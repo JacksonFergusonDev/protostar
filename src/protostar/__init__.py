@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     __version__: str
     from .errors import (
-        AggregatedDependencyError,
         CommandExecutionError,
         CommandTimeoutError,
         ConfigurationError,
@@ -35,7 +34,6 @@ from typing import Any
 logging.getLogger("protostar").addHandler(logging.NullHandler())
 
 _MODULE_LOOKUP: dict[str, str] = {
-    "AggregatedDependencyError": ".errors",
     "ArchiveFormat": ".fs",
     "BootstrapModule": ".modules.base",
     "CIFlag": ".workflows",
@@ -68,7 +66,6 @@ _MODULE_LOOKUP: dict[str, str] = {
 }
 
 __all__ = [
-    "AggregatedDependencyError",
     "ArchiveFormat",
     "BootstrapModule",
     "CIFlag",

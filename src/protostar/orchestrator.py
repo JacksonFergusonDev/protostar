@@ -8,14 +8,10 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from . import system_deps
 from .documents import community
-from .errors import (
-    AggregatedDependencyError,
-    ExecutionInterruptedError,
-    MissingDependencyError,
-    WorkspaceCollisionError,
-)
-from .manifest import EnvironmentManifest, ProjectMetadata
+from .errors import ExecutionInterruptedError, WorkspaceCollisionError
+from .manifest import EnvironmentManifest, MissingTool, ProjectMetadata
 from .merge import NO_RESOLUTIONS, Resolutions
 from .models import ExecutionResult, InitRequest
 from .modules import (
@@ -28,10 +24,8 @@ from .modules import (
     PythonCore,
 )
 from .options import Condition, resolve_options
-from .preparation import ExecutionPolicy
 from .progress import ProgressStep, no_progress
 from .sync_state import check_one_shot_workspace, check_workspace_identity
-from .system_deps import GlobalExecutable
 from .workflows import (
     GuideSpec,
     HookRunner,
@@ -101,21 +95,26 @@ class Orchestrator:
         """
         return manifest.colliding_files()
 
-    def plan(
-        self, *, policy: ExecutionPolicy = ExecutionPolicy.INITIALIZATION
-    ) -> EnvironmentManifest:
+    def plan(self, *, check_executables: bool = True) -> EnvironmentManifest:
         """Evaluates workspace state and assembles a declarative EnvironmentManifest.
 
         A fresh EnvironmentManifest is instantiated on every call, guaranteeing
         that retries (e.g. after a collision resolution) start from a clean slate.
 
+        An enabled tool's executable missing from ``PATH`` never fails planning:
+        it is recorded in ``missing_tools``, and the tool's module skips the
+        steps that run it.
+
         Args:
-            policy: Lifecycle reviews skip execution prerequisite checks.
+            check_executables: Whether to require the executables Protostar
+                itself runs. Only callers that never execute the plan, such
+                as a read-only review, skip the check.
 
         Raises:
             ConfigurationError: If conflicting modules or missing prerequisites are
                 detected, or the project's state records another template.
-            AggregatedDependencyError: If a module pre-flight check fails.
+            MissingDependencyError: If an executable Protostar itself runs is
+                missing.
 
         Returns:
             A populated EnvironmentManifest ready to be passed to execute().
@@ -171,18 +170,17 @@ class Orchestrator:
             or not module.config_key
             or Tool(module.config_key) in enabled_tools
         ]
-        # Pre-flight verification of effective producers only
         validate_tools({Tool(m.config_key) for m in active_modules if m.config_key})
-
-        missing_deps: dict[GlobalExecutable, MissingDependencyError] = {}
-        for mod in active_modules if policy is ExecutionPolicy.INITIALIZATION else []:
-            try:
-                mod.pre_flight()
-            except MissingDependencyError as e:
-                missing_deps[e.dependency] = e
-
-        if missing_deps:
-            raise AggregatedDependencyError(tuple(missing_deps.values()))
+        if check_executables:
+            system_deps.check_required_executables()
+        # Recorded before any module builds, so each can skip what it can't run.
+        manifest.missing_tools = frozenset(
+            MissingTool(executable, Tool(mod.config_key))
+            for mod in active_modules
+            if mod.config_key
+            for executable in mod.executables
+            if not system_deps.installed(executable)
+        )
 
         producer = ""
         tool: Tool | None = None
@@ -454,6 +452,7 @@ class Orchestrator:
             created_paths=executor.journal.created_paths,
             mutated_paths=executor.journal.mutated_paths,
             diagnostics=tuple(executor.diagnostics),
+            missing_tools=manifest.missing_tools,
         )
 
 

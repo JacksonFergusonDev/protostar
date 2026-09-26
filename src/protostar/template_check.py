@@ -280,7 +280,6 @@ def _plan_default_init(source: TemplateSource, variables: dict[str, str]) -> Non
     from .config import UserConfig
     from .init_draft import DraftTemplate, InitDraft, resolve_init
     from .orchestrator import Orchestrator
-    from .preparation import ExecutionPolicy
 
     config = UserConfig()
     draft = InitDraft(
@@ -291,10 +290,8 @@ def _plan_default_init(source: TemplateSource, variables: dict[str, str]) -> Non
     )
     with tempfile.TemporaryDirectory() as empty, contextlib.chdir(empty):
         modules, request = resolve_init(draft, config)
-        # No execution follows, so the tools execution needs are not checked.
-        Orchestrator(modules, config, request=request).plan(
-            policy=ExecutionPolicy.LIFECYCLE
-        )
+        # No execution follows, so the executables it needs are not checked.
+        Orchestrator(modules, config, request=request).plan(check_executables=False)
 
 
 def _raw_data(text: str) -> dict[str, Any] | None:

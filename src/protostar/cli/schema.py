@@ -427,6 +427,7 @@ def review_schema() -> dict[str, Any]:
             ),
             "initialization_only": {"type": "array", "items": strings},
             "initialization_only_ide_probe": boolean,
+            "missing_tools": missing_tools_schema(),
             "selections": records(
                 {
                     "tool": {"enum": [tool.value for tool in Tool]},
@@ -488,6 +489,25 @@ def review_schema() -> dict[str, Any]:
     }
 
 
+def missing_tools_schema() -> dict[str, Any]:
+    """Returns the schema of enabled tools' executables missing from ``PATH``."""
+    from protostar.recipe import Tool
+    from protostar.system_deps import GlobalExecutable
+
+    return {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["executable", "tool"],
+            "additionalProperties": False,
+            "properties": {
+                "executable": {"enum": [item.value for item in GlobalExecutable]},
+                "tool": {"enum": [tool.value for tool in Tool]},
+            },
+        },
+    }
+
+
 def application_schema() -> dict[str, Any]:
     """Returns success/partial lifecycle application envelopes with actual results."""
     strings = {"type": "array", "items": {"type": "string"}}
@@ -509,6 +529,7 @@ def application_schema() -> dict[str, Any]:
                     "mutated_paths",
                     "touched_paths",
                     "diagnostics",
+                    "missing_tools",
                 ],
                 "additionalProperties": False,
                 "properties": {
@@ -516,6 +537,7 @@ def application_schema() -> dict[str, Any]:
                     "mutated_paths": strings,
                     "touched_paths": strings,
                     "diagnostics": {"type": "array", "items": {"type": "object"}},
+                    "missing_tools": missing_tools_schema(),
                 },
             },
         },

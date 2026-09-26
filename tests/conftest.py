@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from protostar.manifest import EnvironmentManifest
+from protostar.system_deps import GlobalExecutable
 
 
 @pytest.fixture(autouse=True)
@@ -45,6 +46,21 @@ def isolate_git_repository(monkeypatch):
 
     for name in GIT_REPOSITORY_VARIABLES:
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def missing_executables(mocker) -> set[GlobalExecutable]:
+    """Executables every test treats as missing from ``PATH``; none by default.
+
+    Planning never reads the host's ``PATH`` in a test: add an executable to
+    the returned set to simulate it missing.
+    """
+    missing: set[GlobalExecutable] = set()
+    mocker.patch(
+        "protostar.system_deps.installed",
+        side_effect=lambda executable: executable not in missing,
+    )
+    return missing
 
 
 @pytest.fixture

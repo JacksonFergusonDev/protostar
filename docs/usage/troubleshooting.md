@@ -4,7 +4,7 @@ This guide provides remediation steps for common operational errors, environment
 
 ## Missing Dependencies & Environment Checks
 
-Protostar verifies system-level dependencies during its `pre_flight()` phase before writing files or modifying configurations. If a required binary is missing, execution halts with a `MissingDependencyError`.
+Protostar needs `uv` and `git` for every project, and checks for them before writing files or modifying configurations. If either is missing, execution halts with a `MissingDependencyError` whose hint is one command that installs everything missing.
 
 ### `uv` is not installed or not in `$PATH`
 
@@ -31,9 +31,9 @@ Protostar strongly recommends [uv](https://docs.astral.sh/uv/) for high-velocity
     export PATH="$HOME/.local/bin:$PATH"
     ```
 
-### Optional Binaries (`direnv`, `just`, `prek`)
+### Tool Binaries (`direnv`, `just`)
 
-If an optional tool (such as `direnv` or `just`) is not installed on your system when requested, Protostar logs a non-fatal diagnostic warning and safely skips subprocess initialization without aborting repository creation.
+A binary that only a selected tool runs never stops a run. The tool's files are still written, since they are correct whether or not the binary is installed. Protostar reports the binary in the result's `missing_tools` and skips only the steps that need it: without `direnv`, run `direnv allow` in the project once it is installed.
 
 ## Workspace Collisions
 

@@ -8,7 +8,7 @@ During standard CLI usage, operational errors are caught at the top level of the
 
 - :material-shield-alert-outline: __Fail-Fast Verification__
 
-    System dependencies and configuration constraints are verified during the `pre_flight()` phase *before* any disk mutations occur. If a binary is missing, execution halts immediately with `MissingDependencyError` before creating files or directories.
+    System dependencies and configuration constraints are verified during `plan()` *before* any disk mutations occur. If `uv` or `git` is missing, execution halts immediately with `MissingDependencyError` before creating files or directories. A binary only a selected tool runs never halts it: it is reported as `missing_tools`.
 
 - :material-console-line: __Rich Terminal Formatting__
 
@@ -41,7 +41,7 @@ flowchart TD
     P2 -->|Pass| P3["3. Side-Effect Execution"]:::phase
     P3 -->|Success| End([Environment Stabilized]):::success
 
-    P1 -.->|Missing binaries| E1["MissingDependencyError<br/>AggregatedDependencyError"]:::error
+    P1 -.->|Missing binaries| E1["MissingDependencyError"]:::error
     P2 -.->|Invalid TOML / Network / Zip| E2["ConfigurationError<br/>TemplateResolutionError<br/>NetworkFetchError"]:::error
     P3 -.->|Failure / Interrupt| RB["ProcessRunner Cleanup<br/>& MutationJournal Rollback"]:::rollback
 
@@ -66,7 +66,6 @@ ProtostarError (Exception)
  │    └── MissingTemplateVariablesError
  ├── WorkspaceCollisionError
  ├── MissingDependencyError
- ├── AggregatedDependencyError
  ├── CommandExecutionError
  ├── CommandTimeoutError
  ├── ProcessTerminationError
@@ -111,11 +110,7 @@ Raised during the engine's `plan()` phase when existing workspace files collide 
 
 ### `MissingDependencyError`
 
-Raised during pre-flight checks when a system-level binary (such as `uv`, `cargo`, `git`, `direnv`, or `just`) is missing from `$PATH`. Stores the missing dependency name, its operational purpose, and an installation hint.
-
-### `AggregatedDependencyError`
-
-Raised during pre-flight checks when multiple required system tools are absent from `$PATH`. Aggregates all missing binary failures into a single actionable shell command installation hint tailored to the host operating system.
+Raised during planning when a binary Protostar itself runs (`uv` or `git`) is missing from `$PATH`. Its `missing` attribute lists every missing one, and its hint is a single command that installs them all with the platform's package manager: Homebrew where it is found, winget on Windows, and on other Linux systems uv's installer plus the detected package manager. A binary only a selected tool runs, such as `direnv` or `just`, never raises it; see `missing_tools` in the execution result.
 
 ### `CommandExecutionError`
 

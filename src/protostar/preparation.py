@@ -23,6 +23,8 @@ from .manifest import (
     DependencyManifest,
     DiagnosticEvent,
     EnvironmentManifest,
+    MissingTool,
+    missing_tools_record,
 )
 from .merge import (
     MISSING,
@@ -241,6 +243,7 @@ class PreparedReview:
     initialization_only_ide_probe: bool
     preserve_deleted_pyproject: bool
     migrations: tuple[MigrationStep, ...] = ()
+    missing_tools: frozenset[MissingTool] = frozenset()
 
     @property
     def decisions(self) -> tuple[MergeConflict, ...]:
@@ -316,6 +319,7 @@ class PreparedReview:
                 list(command) for command in self.initialization_only
             ],
             "initialization_only_ide_probe": self.initialization_only_ide_probe,
+            "missing_tools": missing_tools_record(self.missing_tools),
             "selections": [
                 {
                     "tool": selection.tool.value,
@@ -535,6 +539,7 @@ def prepare_review(
         bool(manifest.tooling.ide_extensions),
         decisions._preserve_deleted_pyproject,
         tuple(decisions.migration_steps),
+        manifest.missing_tools,
     )
 
 

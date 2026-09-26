@@ -369,10 +369,9 @@ def test_handle_init_crash_test_injection(mocker):
     )
 
     assert crash_mod.name == "CrashTest"
-    crash_mod.build(None)
 
     with pytest.raises(TypeError, match="INTENTIONAL_CRASH"):
-        crash_mod.pre_flight()
+        crash_mod.build(None)
 
 
 def test_main_keyboard_interrupt_handling(mocker):
@@ -761,7 +760,7 @@ def test_main_routes_missing_dependency_to_posix_status(mocker):
     """Verify that a MissingDependencyError returns ExitCode.UNAVAILABLE (69)."""
     mocker.patch(
         "protostar.cli.parser.intercept_interactive_wizards",
-        side_effect=MissingDependencyError(GlobalExecutable.UV, "env scaffolding"),
+        side_effect=MissingDependencyError((GlobalExecutable.UV,), None),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 

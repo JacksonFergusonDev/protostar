@@ -49,9 +49,9 @@ A tooling module's configuration is a __baseline tuned for casual projects__: it
 
 ## The Module Contract
 
-### `pre_flight()`
+### `executables`
 
-Pre-flight checks. If a module requires external binaries (e.g., `git`, `uv`), it verifies their presence in `$PATH`. If the check fails, an exception is raised before any files or directories are created.
+The binaries the module's tool runs, such as `direnv`. Before any module builds, planning records each one missing from `$PATH` in `manifest.missing_tools`; it never fails. The module still writes the tool's files, and skips only the steps that run the binary. The binaries Protostar itself runs, `uv` and `git`, are checked by the engine instead, and are the only ones that fail a run.
 
 ### `build(manifest: EnvironmentManifest)`
 

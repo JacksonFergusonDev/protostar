@@ -64,12 +64,12 @@ flowchart TD
 
     A[CLI Input / Flags] --> B["Phase 1 · plan()"]:::phase
     B --> C[EnvironmentManifest]:::manifest
-    C -->|Pre-flight Checks Pass| D["Phase 2 · execute()"]:::phase
+    C -->|uv and git Found| D["Phase 2 · execute()"]:::phase
     C -.->|Dry Run / Inspect| E[--dry-run / --json]:::action
     D --> F[Atomic Disk Mutations]:::action
 ```
 
-**Phase 1 — `plan()`** is read-only. Every module declares what it needs — files to write, TOML payloads to inject, packages to install, subprocesses to run — into the manifest. Nothing touches disk. Pre-flight checks verify that required system binaries (`uv`, `git`, `direnv`) are present. If any check fails, the process aborts cleanly before the workspace is touched.
+**Phase 1 — `plan()`** is read-only. Every module declares what it needs — files to write, TOML payloads to inject, packages to install, subprocesses to run — into the manifest. Nothing touches disk. Planning checks that the binaries Protostar itself runs (`uv` and `git`) are on `$PATH`, and aborts cleanly before the workspace is touched if either is missing. A binary only a selected tool runs (`direnv`, `just`) never aborts a run: planning records it as missing, and execution skips only the steps that run it.
 
 **Phase 2 — `execute(manifest)`** is the *only* place side effects are permitted. The `SystemExecutor` reads the validated manifest and applies mutations in a strict deterministic order within an atomic transaction boundary.
 
@@ -124,10 +124,6 @@ When you toggle `--no-direnv`, the `direnv` module simply isn't loaded. When you
 
     ```python
     class DockerModule(BootstrapModule):
-        def pre_flight(self, system: System) -> None:
-            # Verify docker is accessible if needed
-            ...
-
         def build(self, manifest: EnvironmentManifest) -> None:
             manifest.filesystem.add_file_injection(
                 Path("Dockerfile"), self._render_dockerfile()
@@ -194,7 +190,7 @@ So each module's defaults are what a casual user would thank it for. The `cli` t
 
 **All system dependency checks run during `plan()` — before `execute()` is called and before any file is written.**
 
-Pre-flight checks are declared by each `BootstrapModule` via `pre_flight()`. They run as a batch during the planning phase. If `uv` is missing from `$PATH`, Protostar raises `MissingDependencyError` with the binary name, its purpose, and an installation hint — and the process exits immediately with `os.EX_UNAVAILABLE`.
+Only the binaries Protostar itself runs block: `uv` and `git`. If either is missing from `$PATH`, Protostar raises `MissingDependencyError` naming every missing binary with one command that installs them all, and the process exits immediately with `os.EX_UNAVAILABLE`. A binary that only a selected tool runs, such as `direnv`, is declared by the tool's module and reported as `missing_tools` instead: the files it configures are correct whether or not it is installed.
 
 No file has been created. No directory has been staged. The workspace is exactly as you left it.
 
@@ -332,8 +328,8 @@ The same structured information is available programmatically via `--json`, wher
   "status": "error",
   "error": {
     "type": "MissingDependencyError",
-    "message": "Required dependency 'uv' is not installed or not found in $PATH.",
-    "hint": "Install uv: curl -LsSf https://astral.sh/uv/install.sh | sh",
+    "message": "Protostar needs uv, which is not installed.",
+    "hint": "Install it with:\n    brew install uv",
     "docs_url": "https://protostar.jacksonferguson.me/usage/troubleshooting/"
   }
 }
