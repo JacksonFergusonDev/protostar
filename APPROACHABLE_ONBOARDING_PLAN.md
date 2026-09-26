@@ -15,8 +15,8 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 | 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Merged (#351) |
 | 6 | `feat(templates): workbench and production tiers` | C (base) | Merged (#354) |
 | 7 | `feat(templates): every built-in offers both tiers` | C, on 6 | Merged (#355) |
-| 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Done (#356) |
-| 9 | `docs: first-project walkthrough and installation paths` | After all | Next |
+| 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Merged (#356) |
+| 9 | `docs: first-project walkthrough and installation paths` | After all | Done (#PRNUM) |
 
 ## Stacks
 
@@ -79,29 +79,4 @@ Within a stack, each PR branches from the previous one and is retargeted to `mai
   - **PR 6 (#354):** `tiers.py` holds `Tier`, `TemplateTiers`, `parse_tiers`, `template_opinions`, and `resolve_tier`. A template declares a root `tier` default and `[tiers.workbench]`/`[tiers.production]` tool-flag tables (any tool or `docker`; both tiers set the same tools; a tool set there can't also be set at the root). `TemplateBlueprint.opinions(tier)` and `TemplateSource.opinions(tier)` replace every direct read of `tooling_overrides`. The tier is a first-class recipe field, `[tool.protostar] tier`, deliberately not an option, since options only choose content; it is recorded only when pinned by `--tier`, and `sync` drops it once the template stops declaring tiers. `requires = "tier=production"` gates content, and options may not be named `tier`. `--tier` on `init` and `sync` is an `InvalidUsageError` for a template without tiers. `TemplateInfo.tiers` feeds the listing JSON, and the text table gains a tier column once any template has tiers. The editor already follows a pinned or recorded tier's opinions; `InitDraft.tier` carries the flag.
   - **PR 7 (#355):** every built-in declares both tiers. The rule for where a flag goes, from the maintainer: production infrastructure goes in the tiers (all off in workbench, all on in production); what the user wants in the project either way (`ruff`, `direnv`, `just`) stays at the root. So `release`, `readthedocs`, `zensical`, `codecov`, and `community` (`cli`, `lib`) and `docker` (`api`) are production-only. Strict `mypy`, docstring `ruff`, and the coverage threshold require `tier=production` as well as their tool. Tests ship only while `pytest` is on. Production `astro`/`ml` ship a small `src/` package and a test, and point pytest at `src/` (`pythonpath` joined `ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY`). `check-template` plans every tier. The contract tests require both tiers, the right defaults, and all-off/all-on tiers. By the maintainer's choice, CI still scaffolds only default tiers; new snapshot scenarios cover `astro_production` and `cli_workbench`, and every non-default tier was scaffolded and gated by hand. Found on the way: the generated `check-added-large-files` hook rejected a scientific stack's `uv.lock` (over 500 KB), so it now excludes `uv.lock`. The contract doc's enforcement table was stale (it cited the exhaustive suite removed in #282) and was rewritten.
   - **PR 8 (#356):** `cli/tui/recipe/tier.py` holds `TierFields` (a `TierChoice` under the template picker, shown only while the template declares tiers, preselected to the pinned, recorded, or default tier, the default marked) and `TierInfoScreen`, which `i` opens: each tier's purpose for a newcomer, and the tools only that tier turns on, read from the template's flags, with each tool's `ToolInfo` summary. `tool_info.prose` became public for it. Switching tier drops choices made for the tiers' tools (a tool analysis found still stands) and re-applies the hook manager, as a template switch does. A tier chosen in the editor outlasts a template switch, since the names mean the same thing in every template. `InitDraft.tier_choice` carries it, beside the flag's `tier`, like `option_choices` beside `option_overrides`: it replaces a pinned or recorded tier and is recorded only away from the template's default, so switching back to the default drops a recorded tier. Found on the way: setting a hook manager's radio from a handler that runs under Textual's held `RadioButton.Changed` never unpressed "None", so `_refresh_tools` presses the set through `Choice.show`. `KEYS` gained the tier's `i` row, and `docs/usage/init.md` lists `i`.
-
-## PR 9: `docs: first-project walkthrough and installation paths`
-
-**Goal:** one page takes a newcomer from nothing installed to a project they have run, changed, and checked.
-
-**Steps:**
-
-1. **Installation page.** One recommended path per platform, written for someone with no Python setup.
-    - The page states which path gets `uv` and `git` for the reader and which doesn't.
-    - Move pip into a note for people installing into an existing environment.
-    - **Out of repository:** have the Homebrew formula in `jacksonfergusondev/homebrew-tap` declare `depends_on "uv"` and `depends_on "git"`, so brew users never see PR 2's blocking check. Record this in the PR description; it is not part of this diff.
-1. **Walkthrough page.** On a clean machine, the reader:
-    - Installs.
-    - Runs `protostar init`, picks `astro`, and keeps the workbench tier.
-    - Uses `i` on one tool.
-    - Reads the success line and runs `protostar guide`.
-    - Runs the project.
-    - Makes an edit.
-    - Runs the checks, fixes a deliberate lint failure, and reruns.
-
-    Define terms (virtual environment, lint, pre-commit hook) where they first matter, with links to the reference pages rather than inline detail.
-1. **Reference updates.** Document tool information, the configuration editor, `protostar guide`, and missing-tool reporting on their reference pages.
-1. **Demos.** Re-record both demos (`just demo-headless`, `just demo-wizard`), since stacks A, B, and C changed CLI output.
-1. **Validation.** Walk the page on a fresh macOS sandbox (`just sandbox`) and a clean Debian container (`just sandbox-linux`). Record in the PR description anything that needed coaching.
-
-**Done when:** the walkthrough completes on both sandboxes with no step that isn't on the page, and `zensical build --strict` and `check-doc-links` pass.
+- **PR 9 (#PRNUM):** `docs/installation.md` gives one path per platform from nothing installed (Homebrew on macOS; git from the system package manager, uv's installer, and `uv tool install` on Linux; winget on Windows), says which path brings uv and git, and moves pip into a note. `docs/first-project.md` walks a newcomer through `protostar init` with `astro` in the workbench tier, `i` on the tier and on Ruff, the success line, `protostar guide`, running Python in the project, a new script, and a deliberate lint failure fixed and rerun, defining virtual environment, lint, and pre-commit hook where each first matters. Both sit before Getting Started in the nav, whose install section shrank to a pointer. Troubleshooting gained per-platform direnv and just installs and direnv's shell hook; `init.md` and the tooling matrix lost their pre-tier "product templates" wording. Both demos were re-recorded. Walked on Debian 13 (amd64) from a bare image and on macOS with only uv and git on `PATH`; the editor's keys were checked with a pilot. Found on the way, left for later: Debian 12 doesn't package `just`, so the printed `apt` command fails there (`uv tool install rust-just` works); photutils has no Linux ARM wheel, so `astro` needs a C compiler there; `sync --tier production` doesn't install git hooks, since hook installation is init-only, so the walkthrough says to run `uv run prek install`. Out of repository: the Homebrew formula should add `depends_on "git"` (it already depends on uv).

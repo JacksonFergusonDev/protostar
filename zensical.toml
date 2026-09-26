@@ -8,6 +8,8 @@ copyright = "&copy; 2026 Jackson Ferguson. <a href=\"https://github.com/jacksonf
 
 nav = [
     { "Home" = "index.md" },
+    { "Installation" = "installation.md" },
+    { "Your First Project" = "first-project.md" },
     { "Getting Started" = "getting-started.md" },
     { "Why Protostar?" = "why-protostar.md" },
     { "Design Principles" = "design-principles.md" },
