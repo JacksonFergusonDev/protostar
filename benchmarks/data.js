@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790443552140,
+  "lastUpdate": 1790446913805,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17379,6 +17379,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 904.54,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9a50f55fa47878b21dee6e401c8b82ded0dc29a3",
+          "message": "feat(cli): protostar guide and a success line that says what to do next (#347)\n\n`protostar guide` answers \"how do I work on this project?\" on demand:\nrun the app, where its code starts, tests, checks, docs, and `just\n--list`, each with a plain-language explanation. It plans the recorded\nrecipe as sync does and renders the same GuideSpec as AGENTS.md and\nCONTRIBUTING.md, whose command lists now come from shared helpers, so\nthe three cannot disagree. A missing tool's commands give way to the\nones they run. init's success line now names the run command and points\nto the guide.",
+          "timestamp": "2026-09-26T11:19:22-07:00",
+          "tree_id": "4b53c46ddfe28cd318ceaf3b7f0245eb2196d86d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9a50f55fa47878b21dee6e401c8b82ded0dc29a3"
+        },
+        "date": 1790446911769,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 230.13,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 838.09,
             "unit": "ms"
           }
         ]
