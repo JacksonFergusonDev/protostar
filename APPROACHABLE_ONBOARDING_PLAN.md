@@ -13,7 +13,7 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 | 3 | `feat(cli): protostar guide and a success line that says what to do next` | A, on 2 | Merged (#347) |
 | 4 | `feat(tui): tool information on demand` | B (base) | Merged (#350) |
 | 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Merged (#351) |
-| 6 | `feat(templates): workbench and production tiers` | C (base) | Done (#354) |
+| 6 | `feat(templates): workbench and production tiers` | C (base) | Merged (#354) |
 | 7 | `feat(templates): every built-in offers both tiers` | C, on 6 | Done (#PR7) |
 | 8 | `feat(tui): choose the tier beside the template` | C, on 7 | Next |
 | 9 | `docs: first-project walkthrough and installation paths` | After all | Planned |
