@@ -328,7 +328,8 @@ def steps_text(manifest: EnvironmentManifest) -> RenderableType:
         manifest: The planned manifest.
 
     Returns:
-        Commands, packages by group, and the commands that run after install.
+        Commands, packages by group, the commands that run after install, and
+        the steps planning skipped, such as one whose tool is not installed.
     """
     dependencies = manifest.dependencies
     packages = (
@@ -349,6 +350,7 @@ def steps_text(manifest: EnvironmentManifest) -> RenderableType:
             "After install",
             [shlex.join(task.command) for task in manifest.tasks.post_install_tasks],
         ),
+        ("Skipped", [event.message for event in manifest.diagnostics]),
     )
     parts: list[RenderableType] = []
     for title, lines in sections:

@@ -1110,6 +1110,41 @@ def _stub_which(name: str) -> str | None:
     return None if name in ("code", "cursor") else f"/usr/bin/{name}"
 
 
+def _stub_which_without_tools(name: str) -> str | None:
+    """Reports every binary present except the IDE CLIs, direnv, and just."""
+    return None if name in ("direnv", "just") else _stub_which(name)
+
+
+def generate_cli_missing_tools_svg() -> None:
+    """Captures an init whose direnv and just are missing, ending with their install command.
+
+    Homebrew is stubbed present, so the command is the same on every host.
+    """
+    original_global_console = protostar.cli.ui.console
+    record_console = _recording_console(terminal=False)
+    _print_prompt(record_console, "init --template cli")
+
+    try:
+        protostar.cli.ui.console = record_console
+        with (
+            _demo_project(),
+            mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
+            mock.patch.object(ProcessRunner, "run", _stub_subprocess),
+            mock.patch("shutil.which", _stub_which_without_tools),
+        ):
+            engine, request = _cli_template_engine()
+            protostar.cli.ui._run_engine(engine, request)
+
+        _render_and_write_svg(
+            record_console,
+            title="zsh",
+            filename="cli_missing_tools.svg",
+            unique_id="cli_missing_tools",
+        )
+    finally:
+        protostar.cli.ui.console = original_global_console
+
+
 def generate_cli_init_svg() -> None:
     """Captures the init progress trail by running the real engine on stubbed subprocesses.
 
@@ -1314,6 +1349,8 @@ def generate_tui_svgs() -> None:
         _demo_project(),
         mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
         mock.patch("protostar.metadata.get_git_config", return_value=None),
+        # Every tool installed, so the host's PATH never marks a row.
+        mock.patch("shutil.which", _stub_which),
     ):
         asyncio.run(_capture_tui_screens())
     orig_cwd = Path.cwd()
@@ -1334,6 +1371,7 @@ def generate_docs_assets() -> None:
     generate_cli_help_svgs()
     generate_cli_dry_run_svg()
     generate_cli_init_svg()
+    generate_cli_missing_tools_svg()
     generate_tui_svgs()
     generate_default_config()
     generate_capability_tables()

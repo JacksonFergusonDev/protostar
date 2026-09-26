@@ -169,7 +169,7 @@ When running in `--json` mode, Protostar suppresses all terminal UI formatting, 
 The error envelope guarantees:
 
 - __Clean Parsing:__ `stdout` contains only valid JSON. Debug traces and logs are routed exclusively to `stderr`.
-- __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`), plus any error-specific fields from the exception's `details()`, such as `paths` for collisions, `findings` for detected secrets, and `missing_variables` for template variables without a value.
+- __Structured Fields:__ Error objects include `type`, `message`, and optional contextual helpers (`hint`, `docs_url`), plus any error-specific fields from the exception's `details()`, such as `paths` for collisions, `findings` for detected secrets, `missing_variables` for template variables without a value, and `missing_executables` with `install_commands` for a missing `uv` or `git`.
 - __POSIX Status Codes:__ The process exits with the exact same POSIX exit code defined in the matrix below, allowing scripts to check either exit codes or the parsed JSON payload.
 
 ## POSIX Exit Code Matrix

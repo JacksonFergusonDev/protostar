@@ -33,7 +33,9 @@ Protostar strongly recommends [uv](https://docs.astral.sh/uv/) for high-velocity
 
 ### Tool Binaries (`direnv`, `just`)
 
-A binary that only a selected tool runs never stops a run. The tool's files are still written, since they are correct whether or not the binary is installed. Protostar reports the binary in the result's `missing_tools` and skips only the steps that need it: without `direnv`, run `direnv allow` in the project once it is installed.
+A binary that only a selected tool runs never stops a run. The tool's files are still written, since they are correct whether or not the binary is installed. Protostar skips only the steps that need it, and ends its output with one command that installs every missing binary: without `direnv`, run `direnv allow` in the project once it is installed. The recipe editor marks such a tool `not installed`, and its preview and the change review list the step it skips.
+
+![A run whose direnv and just are missing](../assets/terminals/cli_missing_tools.svg)
 
 ## Workspace Collisions
 

@@ -522,6 +522,8 @@ def application_schema() -> dict[str, Any]:
             "status": {"enum": ["success", "partial"]},
             "template": review_schema()["properties"]["template"],
             "review": review_schema()["properties"]["review"],
+            # Only when a command installs the tools the result lists missing.
+            "install_commands": strings,
             "result": {
                 "type": "object",
                 "required": [
