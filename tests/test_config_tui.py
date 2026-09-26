@@ -19,7 +19,8 @@ from protostar.config_edit import ConfigEdit, OpenInEditor, SaveConfig
 from protostar.errors import ConfigurationError, InvalidUsageError
 from protostar.modules import MypyModule
 
-PATH = Path("/home/ada/.config/protostar/config.toml")
+# A bare name renders the same on Windows, whose paths use backslashes.
+PATH = Path("config.toml")
 GIT = {"user.name": "Ada Lovelace", "user.email": "ada@example.com"}
 
 
@@ -127,6 +128,8 @@ async def test_e_opens_the_editor_but_types_into_a_field():
         await pilot.pause()
         field = app.screen.query_one("#python_version", Input)
         field.focus()
+        # Focus selects the text; let it land before moving past the selection.
+        await pilot.pause()
         await pilot.press("end", "e")
         assert field.value == "3.13e"
         assert isinstance(app.screen, ConfigScreen)
