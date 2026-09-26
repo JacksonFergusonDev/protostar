@@ -69,8 +69,8 @@ _USER_AGENT = "protostar-check-doc-links"
 _TIMEOUT_SECONDS = 20
 
 
-def check_url(url: str) -> str | None:
-    """Returns why the URL is dead, or ``None`` when it answers.
+def _request(url: str) -> str | None:
+    """Returns why one attempt at the URL failed, or ``None`` when it answers.
 
     Some sites refuse ``HEAD``, so a refused ``HEAD`` is retried as ``GET``.
     """
@@ -88,6 +88,18 @@ def check_url(url: str) -> str | None:
         except (urllib.error.URLError, TimeoutError) as exc:
             return str(getattr(exc, "reason", exc))
     return None
+
+
+def check_url(url: str) -> str | None:
+    """Returns why the URL is dead, or ``None`` when it answers.
+
+    A dropped connection or a busy server is retried once, so one flaky
+    request doesn't block a push; a 404 fails at once.
+    """
+    reason = _request(url)
+    if reason is None or (reason.startswith("HTTP 4") and reason != "HTTP 429"):
+        return reason
+    return _request(url)
 
 
 def check_tool_urls() -> list[tuple[str, str, str]]:
