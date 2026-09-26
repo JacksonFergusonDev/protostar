@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from . import system_deps
+from . import git_hooks, system_deps
 from .documents import community
 from .errors import ExecutionInterruptedError, WorkspaceCollisionError
 from .manifest import EnvironmentManifest, MissingTool, ProjectMetadata
@@ -22,6 +22,7 @@ from .modules import (
     PreCommitModule,
     PrekModule,
     PythonCore,
+    declare_readme,
 )
 from .options import Condition, OptionValue, resolve_options
 from .progress import ProgressStep, no_progress
@@ -236,12 +237,12 @@ class Orchestrator:
             runner_module = PrekModule if runner is HookRunner.PREK else PreCommitModule
             producer = f"module:{runner_module.__name__}"
             tool = Tool(runner_module.config_key)
-            # Every hook type is known only now, so each installed script is owned.
-            hook_types = {"pre-commit", *manifest.tooling.pre_commit_install_hook_types}
+            hooks = git_hooks.install_task(manifest.tooling)
             manifest.tasks.add_post_install_task(
-                ["uv", "run", runner.value, "install"],
-                description=f"Installing {runner.value} git hooks",
-                owned_files=[f".git/hooks/{kind}" for kind in sorted(hook_types)],
+                hooks.command,
+                timeout=hooks.timeout,
+                description=hooks.description,
+                owned_files=hooks.owned_files,
             )
         tooling = manifest.tooling
         guide = manifest.guide_spec()
@@ -366,6 +367,11 @@ class Orchestrator:
                     if gates and not any(holds(gate.requires) for gate in gates):
                         continue
                     manifest.filesystem.add_file_injection(filepath, content)
+
+        if any(isinstance(mod, PythonCore) for mod in active_modules):
+            producer = f"module:{PythonCore.__name__}"
+            tool = None
+            declare_readme(manifest)
 
         manifest.producer_contributions = tuple(contributions)
         from .manifest import _ignore_contribution

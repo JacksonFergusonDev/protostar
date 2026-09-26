@@ -858,3 +858,32 @@ def test_plan_reports_an_existing_agents_md_as_a_collision(
     manifest = Orchestrator([AgentsModule()], mock_config).plan()
 
     assert Path(AGENTS_TARGET) in manifest.collisions
+
+
+def _declares_readme(manifest):
+    return any(
+        'readme = "README.md"' in c.content
+        for c in manifest.filesystem.structured["pyproject.toml"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("on_disk", "from_template", "declared"),
+    [(False, False, False), (True, False, True), (False, True, True)],
+)
+def test_the_readme_is_declared_only_while_the_project_has_one(
+    tmp_path, monkeypatch, mock_config, mocker, on_disk, from_template, declared
+):
+    """A readme pyproject.toml names but nothing creates breaks the build backend."""
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("shutil.which", return_value="/usr/bin/tool")
+    if on_disk:
+        Path("README.md").write_text("# Mine\n")
+    blueprint = TemplateBlueprint()
+    if from_template:
+        blueprint.files = {"README.md": "# Demo\n"}
+    engine = Orchestrator(
+        [PythonCore()], mock_config, request=InitRequest(template_blueprint=blueprint)
+    )
+
+    assert _declares_readme(engine.plan()) is declared

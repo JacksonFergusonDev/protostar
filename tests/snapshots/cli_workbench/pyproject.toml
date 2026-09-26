@@ -7,8 +7,8 @@ dependencies = [
     "typer>=0.27.2",
 ]
 description = "Add your description here."
-readme = "README.md"
 authors = [{ name = "your-name", email = "your-email@example.com" }]
+readme = "README.md"
 
 [project.scripts]
 demo-project = "demo_project.cli:app"

@@ -10,7 +10,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "de3031649a7a394027cb242b26bd0786f2040396e1c5e753ab0dd4963744f953"
+digest = "b45427e107a881f4a2dfbd9ebb1c538b84c0cfc96891cc351dab08f22501785c"
 display_name = "ml"
 
 [[files]]
@@ -27,6 +27,11 @@ digest = "1e77f3d50d9272b7cf6d64f6c7c023ee5bb2cc75b8b4b48d0837740ff47f44fe"
 path = "Dockerfile"
 policy = "text"
 baseline = "# syntax=docker/dockerfile:1\n\n# --- Builder Stage ---\nFROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder\n\nWORKDIR /app\n\n# Enable bytecode compilation and copy mode for uv\nENV UV_COMPILE_BYTECODE=1\nENV UV_LINK_MODE=copy\n\n# Install dependencies using cache and bind mounts for optimal layer caching\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    --mount=type=bind,source=uv.lock,target=uv.lock \\\n    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \\\n    uv sync --frozen --no-install-project --no-dev\n\n# Copy application source and build the environment\nADD . /app\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    uv sync --frozen --no-dev\n\n# --- Runtime Stage ---\nFROM python:3.13-slim-bookworm AS runtime\n\nWORKDIR /app\n\n# Security: Run as a non-privileged user\nRUN useradd -m -u 10001 appuser\nUSER appuser\n\n# Copy virtual environment and application code from builder\nCOPY --from=builder --chown=appuser:appuser /app /app\n\nENV PATH=\"/app/.venv/bin:$PATH\"\nENV PYTHONUNBUFFERED=1\n\nCMD [\"python\", \"-m\", \"demo_project\"]\n"
+
+[[files]]
+path = "README.md"
+policy = "seed-only"
+digest = "7fa9d1491c6e7b2a27f6972c9dccb7cc36c9de263333a3ea2c3979035e32747a"
 
 [[files]]
 path = "data/01_raw/.gitkeep"

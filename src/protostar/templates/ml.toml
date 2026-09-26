@@ -114,6 +114,12 @@ renovate = true
 
 # --- Static File Injections ---
 [files]
+"README.md" = '''
+# <% PROJECT_NAME %>
+
+Machine learning experiments for <% PROJECT_NAME %>.
+'''
+
 "src/<% PACKAGE_NAME %>/__init__.py" = '''
 """<% PROJECT_NAME %>: machine learning experiments."""
 '''

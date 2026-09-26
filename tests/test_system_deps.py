@@ -85,10 +85,26 @@ def test_linux_installer_alone_covers_uv_with_no_manager():
 
 def test_apt_is_preferred_over_later_linux_managers():
     command = install_command(
-        {JUST}, Platform.LINUX, {PackageManager.PACMAN, PackageManager.APT}
+        {DIRENV}, Platform.LINUX, {PackageManager.PACMAN, PackageManager.APT}
     )
 
-    assert command == InstallCommand(("sudo apt install just",), False)
+    assert command == InstallCommand(("sudo apt install direnv",), False)
+
+
+@pytest.mark.parametrize("available", [{PackageManager.APT}, set()])
+def test_linux_installs_just_with_uv_whatever_the_manager(available):
+    """Debian 12 packages no just, and uv needs no package manager or sudo."""
+    command = install_command({JUST}, Platform.LINUX, available)
+
+    assert command == InstallCommand(("uv tool install rust-just",), False)
+
+
+def test_linux_installs_packaged_tools_first_then_uv_tools():
+    command = install_command({DIRENV, JUST}, Platform.LINUX, {PackageManager.DNF})
+
+    assert command == InstallCommand(
+        ("sudo dnf install direnv", "uv tool install rust-just"), False
+    )
 
 
 def test_nothing_missing_needs_no_command():

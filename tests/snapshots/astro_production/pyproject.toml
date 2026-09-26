@@ -8,12 +8,10 @@ dependencies = [
     "matplotlib>=3.11.2",
     "numpy>=2.5.3",
     "pandas>=3.0.5",
-    "photutils>=3.0.0",
     "scipy>=1.18.1",
     "specutils>=2.4.0",
 ]
 description = "Add your description here."
-readme = "README.md"
 authors = [{ name = "your-name", email = "your-email@example.com" }]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -23,6 +21,7 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Operating System :: Microsoft :: Windows",
 ]
+readme = "README.md"
 
 [dependency-groups]
 dev = [

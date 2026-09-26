@@ -11,7 +11,7 @@ from .base import (
 )
 from .ci_layer import CIModule, ReleaseModule
 from .community_layer import CommunityModule
-from .lang_layer import LICENSE_MAP, PythonCore
+from .lang_layer import LICENSE_MAP, PythonCore, declare_readme
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
     AGENTS_TARGET,
@@ -90,4 +90,5 @@ __all__ = [
     "ToolInfo",
     "TyModule",
     "ZensicalModule",
+    "declare_readme",
 ]

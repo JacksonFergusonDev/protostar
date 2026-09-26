@@ -30,6 +30,27 @@ LICENSE_MAP: dict[str, tuple[str, str]] = {
 }
 
 
+README = "README.md"
+"""The readme ``[project]`` declares while the project has one."""
+
+
+def declare_readme(manifest: EnvironmentManifest) -> None:
+    """Declares the project's readme once one exists or is planned.
+
+    Templates add their files after every module builds, so this runs last.
+    Declaring a readme the project lacks breaks the build backend.
+
+    Args:
+        manifest: The planned project, with every file added.
+    """
+    if Path(README).is_file() or Path(README) in manifest.target_files():
+        manifest.filesystem.add_structured(
+            "pyproject.toml",
+            f'[project]\nreadme = "{README}"\n',
+            producer=f"module:{PythonCore.__name__}:readme",
+        )
+
+
 class PythonCore(BootstrapModule):
     """Configures a modern Python environment using uv as the fundamental baseline."""
 
@@ -92,7 +113,6 @@ class PythonCore(BootstrapModule):
 
         project_metadata_payload = f"""[project]
 description = "{desc}"
-readme = "README.md"
 authors = [{{ name = "{name}", email = "{email}" }}]
 """
         project_license = manifest.metadata.get("license")
