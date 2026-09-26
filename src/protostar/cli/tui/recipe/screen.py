@@ -28,8 +28,17 @@ from textual.widgets import (
 
 from protostar.analysis import NoteKind, ProjectAnalysis
 from protostar.config import TemplateSource, UserConfig
-from protostar.errors import ConfigurationError, ProtostarError
-from protostar.init_draft import DraftTemplate, InitDecision, InitDraft
+from protostar.errors import (
+    ConfigurationError,
+    MissingTemplateVariablesError,
+    ProtostarError,
+)
+from protostar.init_draft import (
+    DraftTemplate,
+    InitDecision,
+    InitDraft,
+    resolve_init,
+)
 from protostar.metadata import MetadataKey
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
@@ -110,6 +119,8 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self._template_error = False
         self._loading = False
         self._tools_invalid = False
+        self._draft_error = False
+        self._plan_error = False
         self.catalog = catalog
         self.base_recipe = draft.existing_recipe or establish_recipe(config)
         self.overrides = dict(draft.tool_overrides)
@@ -408,8 +419,22 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
 
     def _refresh_continue(self) -> None:
         self.query_one("#continue", Button).disabled = (
-            self._tools_invalid or self._template_error or self._loading
+            self._tools_invalid
+            or self._template_error
+            or self._loading
+            or self._draft_error
+            or self._plan_error
         )
+
+    def _check_draft(self, draft: InitDraft) -> None:
+        try:
+            resolve_init(draft, self.config)
+            self._draft_error = False
+        except MissingTemplateVariablesError:
+            self._draft_error = False
+        except ProtostarError:
+            self._draft_error = True
+        self._refresh_continue()
 
     def _current_draft(self, variables: Mapping[str, str] | None = None) -> InitDraft:
         fields = self.query_one(VariableFields)
@@ -447,7 +472,14 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 docker=self._docker(),
             )
         )
-        self.query_one(PlanPreview).update_plan(self._current_draft())
+        draft = self._current_draft()
+        self._check_draft(draft)
+        self.query_one(PlanPreview).update_plan(draft)
+
+    @on(PlanPreview.PlanUpdated)
+    def _plan_updated(self, event: PlanPreview.PlanUpdated) -> None:
+        self._plan_error = event.error is not None
+        self._refresh_continue()
 
     @on(Select.Changed, "#template")
     def select_template(self, event: Select.Changed) -> None:
@@ -584,9 +616,13 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         if self.query_one("#continue", Button).disabled:
             return
         variables = self.query_one(VariableFields).values()
-        if variables is not None:
-            self.app.push_screen(
-                ReviewScreen(
-                    self._current_draft(variables), self.config, can_go_back=True
-                )
-            )
+        if variables is None:
+            return
+        draft = self._current_draft(variables)
+        try:
+            resolve_init(draft, self.config)
+        except ProtostarError:
+            self._draft_error = True
+            self._refresh_continue()
+            return
+        self.app.push_screen(ReviewScreen(draft, self.config, can_go_back=True))

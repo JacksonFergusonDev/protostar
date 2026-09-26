@@ -870,6 +870,37 @@ async def test_invalid_docker_port_shows_actionable_preview_error():
 
 
 @pytest.mark.asyncio
+async def test_fatal_recipe_issues_block_continue_and_ctrl_s():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        continue_btn = app.screen.query_one("#continue", Button)
+        assert not continue_btn.disabled
+
+        field = app.screen.query_one("#meta-minimum_python", Input)
+        field.focus()
+        field.value = "invalid"
+        await pilot.press("enter")
+        await settle(pilot)
+
+        assert continue_btn.disabled
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, RecipeScreen)
+
+        # Fix the field and verify Continue is re-enabled and ctrl+s works
+        field.focus()
+        field.value = "3.13"
+        await pilot.press("enter")
+        await settle(pilot)
+
+        assert not continue_btn.disabled
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, ReviewScreen)
+
+
+@pytest.mark.asyncio
 async def test_variables_step_focuses_the_missing_value(tmp_path):
     draft = template_draft(
         tmp_path / "t.toml",
