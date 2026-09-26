@@ -39,7 +39,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                 if mod.config_key:
                     properties[mod.config_key] = {
                         "type": "boolean",
-                        "description": mod.cli_help,
+                        "description": mod.info.summary,
                     }
             properties["docker"] = {
                 "type": "boolean",

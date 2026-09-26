@@ -89,19 +89,34 @@ class Panel(Vertical):
 
 
 class Heading(Static):
-    """An uppercase section label followed by a rule to the panel's edge."""
+    """An uppercase section label followed by a rule to the panel's edge.
 
-    def __init__(self, label: str) -> None:
+    A section whose controls share an action shows it, and its key, at the
+    rule's end.
+    """
+
+    def __init__(self, label: str, *, key: tuple[str, str] | None = None) -> None:
         """Create the heading.
 
         Args:
             label: The section's name.
+            key: The action its controls share and the key for it.
         """
         super().__init__(classes="section")
         self.label = label
+        self.key = key
 
     def render(self) -> Content:
         """Render the label, then a hairline across the remaining width."""
         title = self.label.upper()
-        rule = "─" * max(0, self.content_region.width - len(title) - 1)
-        return Content.assemble((title, "bold $accent"), " ", (rule, "$hairline"))
+        tail = (
+            Content.assemble(
+                " ", (self.key[0], "$text-faint"), "  ", (self.key[1], "dim")
+            )
+            if self.key
+            else Content()
+        )
+        rule = "─" * max(
+            0, self.content_region.width - len(title) - 1 - tail.cell_length
+        )
+        return Content.assemble((title, "bold $accent"), " ", (rule, "$hairline"), tail)

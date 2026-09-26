@@ -8,10 +8,10 @@ Make Protostar usable by people new to Python tooling without adding a single ke
 
 | PR | Title | Stack | Status |
 |---|---|---|---|
-| 1 | `feat(engine)!: missing tools are data, not a fatal pre-flight` | A (base) | Next |
-| 2 | `feat(cli): report missing tools before the editor, in review, and after success` | A, on 1 | Planned |
-| 3 | `feat(cli): protostar guide and a success line that says what to do next` | A, on 2 | Planned |
-| 4 | `feat(tui): tool information on demand` | B (base) | Next |
+| 1 | `feat(engine)!: missing tools are data, not a fatal pre-flight` | A (base) | Merged (#345) |
+| 2 | `feat(cli): report missing tools before the editor, in review, and after success` | A, on 1 | Merged (#346) |
+| 3 | `feat(cli): protostar guide and a success line that says what to do next` | A, on 2 | Merged (#347) |
+| 4 | `feat(tui): tool information on demand` | B (base) | Done |
 | 5 | `feat(cli): interactive global configuration editor` | B, on 4 | Planned |
 | 6 | `feat(templates): group templates by purpose` | Standalone | Next |
 | 7 | `docs: first-project walkthrough and installation paths` | After all | Planned |
@@ -61,147 +61,11 @@ Stacks A and B and PR 6 are independent of each other and can run in parallel. W
 
 ## Finished
 
-Nothing yet.
-
-## PR 1: `feat(engine)!: missing tools are data, not a fatal pre-flight`
-
-**Goal:** the engine distinguishes binaries Protostar needs from binaries a selected tool needs. It reports the second group as data instead of raising, and builds install commands in one pure function. No CLI rendering changes beyond what the new error and result fields require.
-
-**Current state:**
-
-- **Checks are imperative `pre_flight()` bodies.**
-  - `PythonCore` (`modules/lang_layer.py`) checks for uv.
-  - `SystemWorkspaceModule` (`modules/system_layer.py`) checks for git only when `.git` is absent.
-  - `PreCommitModule` and `PrekModule` (`modules/tooling_layer.py`) check for git.
-  - `DirenvModule` checks for direnv.
-- **All failures are fatal.** `Orchestrator.plan()` collects every `MissingDependencyError` into `AggregatedDependencyError` and raises inside planning, so the TUI's review preparation fails after the user has made every choice.
-- **Initialization only.** Checks run only under `ExecutionPolicy.INITIALIZATION`. `sync` never checks.
-- **`just` isn't in `GlobalExecutable`.** Every built-in enables it, and nothing notices when it's missing.
-- **The install command is built inside `AggregatedDependencyError.__init__`** (`errors.py`). Its gaps:
-  - `sudo apt install uv` fails: uv isn't packaged in Debian or Ubuntu.
-  - Multiple winget ids in one command is unverified.
-  - It always prints a shell-reload hint, which Homebrew installs don't need.
-
-**Steps:**
-
-1. **Two kinds of executable.** In `system_deps.py`, add `JUST` to `GlobalExecutable` and a `REQUIRED` set (`UV`, `GIT`). Everything else is tool-dependent. Keep per-platform package ids on the enum.
-1. **Modules declare executables.** Add `executables: ClassVar[tuple[GlobalExecutable, ...]]` to `BootstrapModule`, matching how modules declare `signals`. Declare direnv on `DirenvModule` and just on `JustModule`. Delete the `which` checks from every `pre_flight()`. Delete `pre_flight()` itself if nothing else uses it (pre-1.0: no shim).
-1. **Required check.** A pure `check_required_executables() -> None` in `system_deps.py` raises `AggregatedDependencyError` for missing required binaries. `Orchestrator.plan()` calls it for initialization and sync, so API and headless callers are covered. PR 2 calls the same function earlier from the CLI.
-1. **Missing tools as data.** `plan()` records `missing_tools: frozenset[MissingTool]` on the manifest: each entry is a frozen dataclass holding the executable and the `Tool` that needs it. Only enabled modules count. The prepared review and `ExecutionResult` carry it, and `to_dict()` serializes it sorted as `missing_tools`. This runs for sync as well as initialization.
-1. **Skip only what needs the binary.** When direnv is missing, `DirenvModule.build()` still writes `.envrc` but declares no `direnv allow` task. It records a non-fatal diagnostic saying the workspace needs `direnv allow` once direnv is installed. Nothing executes `just`, so it needs no change.
-1. **Install command builder.** A pure `install_command(missing, platform, available) -> InstallCommand | None` in `system_deps.py`. `available` is the set of package managers found on PATH (brew, winget, apt, dnf, pacman), which the caller supplies so the function stays testable.
-    - `InstallCommand` holds a list of command lines and whether a shell reload is needed.
-    - Rules: brew when present, on any platform. winget on Windows, with one command per id if multi-id install is not supported. On other Linux systems, uv's official installer for uv plus the detected manager for the rest. No command, just the tool names and the docs link, when nothing is detected.
-    - A reload hint only where a fresh PATH entry needs it (Windows, and uv's installer).
-    - `AggregatedDependencyError` uses it for its hint instead of building text itself.
-1. **`AGENTS.md`.** Replace the pre-flight wording where it appears, and state the rule: only `system_deps.REQUIRED` may block, and tool-dependent binaries are reported.
-
-**Tests:**
-
-- `install_command` for each platform and manager combination, including none detected and brew on Linux. No real `which` calls: pass `available` explicitly.
-- A missing direnv or just yields `missing_tools` in the manifest and the result, with `.envrc` written and no `direnv allow` task.
-- A missing uv or git raises `AggregatedDependencyError` from `plan()` for both init and sync.
-- `sync` reports `missing_tools`.
-- JSON serialization is sorted and deterministic.
-- Patch `shutil.which` in every test. Never depend on the host's PATH.
-
-**Done when:**
-
-- `rg "shutil.which" src/protostar/modules` finds nothing.
-- `rg "def pre_flight" src` finds only what still has a non-executable reason to exist.
-- A recipe with direnv and just enabled plans on a PATH without them.
-
-## PR 2: `feat(cli): report missing tools before the editor, in review, and after success`
-
-**Goal:** the user learns about a missing binary at the one moment they can act on it without losing work.
-
-**Steps:**
-
-1. **Before any screen.** `init` and `sync` call `check_required_executables()` before launching the TUI or planning. On failure, render the existing error panel with the install command. In JSON mode, the error envelope carries the missing names and command lines in `details()`.
-1. **In the recipe editor and review.** A tool whose binary is missing shows a quiet `not installed` marker beside its row. The preview's diagnostics say what will be skipped (for direnv, the `direnv allow` step). The user can untick the tool or keep it. Nothing blocks.
-1. **After success.** When the result's `missing_tools` is non-empty, end the output with a short block: which tools are missing, the single install command from `install_command`, and the reload hint if any. Print it after the TUI has exited, as plain terminal text the user can copy.
-1. **JSON.** The success payload includes `missing_tools` and, when a command exists, `install_commands`. No extra output on stderr.
-
-**Tests:**
-
-- Missing uv exits with `ExitCode.UNAVAILABLE` before the TUI launches: assert the launch function is never called.
-- The review renders the `not installed` marker, driven by `pilot.press`.
-- Success output with missing tools, as an SVG snapshot and under strict cp1252.
-- The JSON payload shape for both success and error.
-
-**Done when:** a run with direnv and just enabled on a bare PATH succeeds, and ends with one copyable install command.
-
-## PR 3: `feat(cli): protostar guide and a success line that says what to do next`
-
-**Goal:** answer "how do I work on this project?" on demand, and make the success line point there.
-
-**Steps:**
-
-1. **Discovery (engine).** A new `src/protostar/guide.py` builds a `ProjectGuide` from:
-    - **`GuideSpec`:** from planning the recorded recipe, exactly as `sync` plans it. `plan()` is read-only.
-    - **Entrypoints:** `[project.scripts]` in `pyproject.toml`, and the module or file each one points to, so the guide can name the starting source file.
-    - **`missing_tools`:** from PR 1.
-
-    It runs no project command and imports no project code. A recipe that can't be planned offline (for example, a remote template that isn't cached) yields a guide with the static parts and a note, not an error. Verify how `sync` acquires templates and reuse that path.
-1. **Content.** Grouped actions, each with a short plain-language explanation:
-    - Run the app.
-    - Where the code starts.
-    - Run the tests.
-    - Check and format.
-    - Build or preview the docs.
-    - Everything else: `just --list`, when just is enabled.
-
-    Show an action only when the spec supports it. When a recommended command's binary is missing, show the `uv run …` form and say how to install the missing tool. Commands come from `GuideSpec`, never recomputed.
-1. **Command.** Add `protostar guide` to `parser.py` with help text, shell completion, and `--json` (a `guide` payload following the existing envelope). For a directory with no recorded recipe, say what the guide can't know and point to `protostar init`. Never invent commands.
-1. **Success line.** Replace "Accretion disk stabilized. Environment ready." with a plain line, then one next step:
-    - `cd <name>` when the project was created in a new directory.
-    - The run command when an entrypoint exists.
-    - `protostar guide` as the pointer for the rest.
-
-    Keep it to two or three lines. The PR 2 missing-tools block stays below it.
-1. **`AGENTS.md`.** Add `guide.py` to the layout map, with the rule that guide content comes only from `GuideSpec` and recorded project facts.
-
-**Tests:**
-
-- Guide output for a lib, a cli, and a workbench recipe (SVG snapshots).
-- A project with just disabled.
-- A project with just enabled but missing.
-- An edited `pyproject.toml` whose entrypoint was removed: the action disappears.
-- A directory with no recipe.
-- JSON payload determinism.
-- The subprocess and import boundaries: patch `subprocess.run` and assert it is never called.
-
-**Done when:** the guide's commands match AGENTS.md's commands for every built-in snapshot scenario.
-
-## PR 4: `feat(tui): tool information on demand`
-
-**Goal:** anyone can learn what a tool does and what it will change, from the keyboard or the mouse, without adding permanent text to the editor.
-
-**Steps:**
-
-1. **Metadata.** A frozen `ToolInfo` on each tooling module, replacing `cli_help`:
-    - `summary`: one line, used for `--help` and the tooltip.
-    - `adds`: what enabling it adds or changes in the project.
-    - `workflow`: the practical consequence, for example "checks run when you commit, and a failing check stops the commit".
-    - `docs_url`: official documentation.
-
-    Delete `cli_help` and derive the flag help from `summary`. Write the copy for someone who has never heard of the tool, and state consequences, not categories.
-1. **Link checking.** Add `docs_url` values to `scripts/check_doc_links.py`, so a dead link fails the pre-push hook.
-1. **Tooltip.** Each tool control in the recipe editor gets its `summary` as a Textual tooltip.
-1. **`i` popup.** A modal on `KeyboardScreen` showing the full `ToolInfo`, bound to `i` only while a tool control has focus. The binding must not fire in `Input` or `Field` text entry. Check it doesn't collide with `Picker`, `ChoiceGroup`, or `Checklist` bindings.
-    - Show `i Tool info` on the control through `key_label`, and add it to the screen's `KEYS`.
-    - `Esc` closes the popup and restores focus without changing any value.
-    - The docs link opens only on an explicit key in the popup.
-1. **Reusable.** Put the popup in `cli/tui/` (not under `recipe/`) so PR 5 can use it.
-
-**Tests:**
-
-- `i` on a focused tool opens the popup, and `Esc` returns focus to the same control with its value unchanged.
-- `i` typed into a text field inserts the letter.
-- Every tooling module has complete `ToolInfo`: a contract test, so a new module can't ship without it.
-- `--help` output snapshots regenerate.
-
-**Done when:** every tool row answers "what does this do to my project?" in two keys.
+- **Stack A (PRs 1–3), merged as #345, #346, and #347.**
+  - **PR 1 (#345):** only `system_deps.REQUIRED` (`uv`, `git`) blocks, through `check_required_executables()`, which `plan()` calls for init and sync. Modules declare tool binaries in `executables`. Planning records the missing ones as `missing_tools` on the manifest, review, and `ExecutionResult`, and `DirenvModule` skips `direnv allow` with a diagnostic. `install_command()` is pure and takes the detected package managers. Deviations: `pre_flight()` and `AggregatedDependencyError` are deleted (one `MissingDependencyError` carries every missing binary), `plan(policy=)` became `plan(check_executables=)`, and tests control lookups through the `missing_executables` fixture.
+  - **PR 2 (#346):** `init` and `sync` check required binaries before any screen. Missing tools show a `not installed` marker in the editor, a preview note, and a **Skipped** section in the review. Success ends with a **Not installed** block and one install command. JSON carries `missing_tools` and `install_commands`.
+  - **PR 3 (#347):** `protostar guide` renders `GuideSpec` (now `EnvironmentManifest.guide_spec()`, with `just_recipes()`/`check_commands()` shared in `workflows.py`) and `[project.scripts]`, planning through `plan_project` as `sync` does. The success line is `Project ready.` plus the run command and a pointer to the guide. Remote templates are never cached, so an unreachable one yields a partial guide with a note. The `cd <name>` step was dropped because `init` always scaffolds in the current directory.
+- **PR 4, `feat(tui): tool information on demand`.** `ToolInfo` (`summary`, `adds`, `workflow`, `docs_url`) on every tooling module replaced `cli_help`; the summary is the flag help, the template schema description, and the tooltip. `cli/tui/tool_info.py` holds `ToolInfoScreen` (`esc` closes, `o` opens the docs) and the tool controls that bind `i` only while focused: `ToolToggle`, `ToolRadio`, and `ToolChoice`, which offers `i` only while a tool, not "None", is highlighted. The Tools heading shows `Tool info  i`. `check_doc_links.py` requests every `docs_url` and fails on an HTTP error, and its hook now runs when `src/protostar/modules/` changes. Backticked commands in the copy render in the accent colour.
 
 ## PR 5: `feat(cli): interactive global configuration editor`
 

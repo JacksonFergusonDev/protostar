@@ -10,16 +10,18 @@ Protostar's architecture strictly isolates state definition from execution. This
 
 Bootstrap modules define the structural environment footprint. To create a new module, subclass `BootstrapModule` from `protostar.modules.base`.
 
-You must define its CLI flags, a human-readable name, and the `build` method. Declare the binaries your tool runs in `executables`.
+You must define its CLI flags, a human-readable name, its `info`, and the `build` method. Declare the binaries your tool runs in `executables`.
+
+`info` is a `ToolInfo` written for someone who has never heard of the tool. Its `summary` is the flag's `--help` line and the recipe editor's tooltip. `adds` and `workflow` fill the editor's tool-information popup (`i`), and `docs_url` is checked by `scripts/check_doc_links.py`. A contract test fails for a tooling module without one.
 
 !!! tip "Dynamic CLI Registration"
-    The CLI parser dynamically reads the `cli_flags` and `cli_help` attributes at runtime. Once you append your module to the `TOOLING_MODULES` tuple in `protostar/modules/__init__.py`, it will automatically appear in the `protostar init --help` output.
+    The CLI parser dynamically reads the `cli_flags` and `info.summary` attributes at runtime. Once you append your module to the `TOOLING_MODULES` tuple in `protostar/modules/__init__.py`, it will automatically appear in the `protostar init --help` output.
 
 Here is a complete example of a module that scaffolds a `justfile` (a modern `Makefile` alternative):
 
 === "Example Implementation"
     ```python
-    from protostar.modules import BootstrapModule, PathSignal
+    from protostar.modules import BootstrapModule, PathSignal, ToolInfo
     from protostar.manifest import EnvironmentManifest
     from protostar.system_deps import GlobalExecutable
 
@@ -27,7 +29,12 @@ Here is a complete example of a module that scaffolds a `justfile` (a modern `Ma
         """Configures a justfile for project task execution."""
 
         cli_flags = ("--just",)
-        cli_help = "Scaffold a standard justfile for project tasks"
+        info = ToolInfo(
+            summary="Give the project's common commands short names, like `just test`",
+            adds="A justfile with commands for testing and checking.",
+            workflow="`just --list` shows every command, and `just <name>` runs one.",
+            docs_url="https://just.systems/man/en/",
+        )
         config_key = "just"
         # What shows an existing project already uses this tool.
         signals = (PathSignal("justfile"), PathSignal("Justfile"))

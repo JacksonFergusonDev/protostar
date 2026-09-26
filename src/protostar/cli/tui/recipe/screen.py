@@ -45,8 +45,8 @@ from protostar.templates import TemplateInfo, TemplateType
 
 from ..chrome import Heading, Headline, Masthead, Panel
 from ..keys import (
+    FORM_KEYS,
     ActionBar,
-    Choice,
     ChoiceGroup,
     Form,
     KeyboardScreen,
@@ -55,6 +55,7 @@ from ..keys import (
     key_label,
 )
 from ..review.screen import ReviewScreen
+from ..tool_info import TOOL_INFO_KEY, ToolChoice, ToolRadio, ToolToggle
 from .metadata import MetadataFields, metadata_defaults, metadata_keys
 from .options import OptionFields, draft_options
 from .preview import PlanPreview
@@ -107,6 +108,8 @@ class _TemplateChoice(Enum):
 
 class RecipeScreen(KeyboardScreen[InitDecision]):
     """Edit the template, its variables and options, tools, and metadata beside a live preview."""
+
+    KEYS = (*FORM_KEYS[:2], TOOL_INFO_KEY, *FORM_KEYS[2:])
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("ctrl+s", "continue", "Continue", show=False),
@@ -279,7 +282,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
                 yield OptionFields(draft_options(self.draft))
-                yield Heading("Tools")
+                yield Heading("Tools", key=("Tool info", "i"))
                 if notes := self._notes():
                     yield Static(notes, id="analysis-notes", classes="note")
                 with ChoiceGroup(id="tools"):
@@ -289,22 +292,24 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                     for title, tools in _GROUPS.items():
                         yield Label(title, classes="group")
                         for tool in tools:
-                            yield Toggle(
+                            yield ToolToggle(
                                 self._label(tool),
+                                tool,
                                 value=self.enabled[tool],
                                 id=f"tool-{tool}",
                             )
                 yield Label("Git hook manager", classes="group")
                 for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
-                    with Choice(id=f"exclusive-{index}"):
+                    with ToolChoice(id=f"exclusive-{index}"):
                         yield RadioButton(
                             "None",
                             value=not any(self.enabled[tool] for tool in pair),
                             id=f"none-{index}",
                         )
                         for tool in sorted(pair):
-                            yield RadioButton(
+                            yield ToolRadio(
                                 self._label(tool),
+                                tool,
                                 value=self.enabled[tool],
                                 id=f"tool-{tool}",
                             )

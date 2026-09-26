@@ -110,7 +110,7 @@ check-snapshots: sync
     @printf "\n{{ blue }}=== Verifying Regression Snapshots & Documentation Assets ==={{ nc }}\n"
     uv run python scripts/run_snapshots.py
 
-# Validate that embedded documentation links in errors resolve to real files
+# Validate embedded documentation links and every tool's documentation URL
 check-doc-links: sync
     @printf "\n{{ blue }}=== Validating Embedded Documentation Links ==={{ nc }}\n"
     uv run python scripts/check_doc_links.py

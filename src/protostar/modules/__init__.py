@@ -7,6 +7,7 @@ from .base import (
     SectionSignal,
     Signal,
     TableSignal,
+    ToolInfo,
 )
 from .ci_layer import CIModule, ReleaseModule
 from .community_layer import CommunityModule
@@ -86,6 +87,7 @@ __all__ = [
     "Signal",
     "SystemWorkspaceModule",
     "TableSignal",
+    "ToolInfo",
     "TyModule",
     "ZensicalModule",
 ]

@@ -16,7 +16,7 @@ from protostar.documents import community
 from protostar.metadata import MetadataKey
 from protostar.workflows import TargetOS
 
-from .base import BootstrapModule, PathSignal
+from .base import BootstrapModule, PathSignal, ToolInfo
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -36,9 +36,18 @@ class CommunityModule(BootstrapModule):
     """Configures the community health files GitHub surfaces to contributors."""
 
     cli_flags = ("--community",)
-    cli_help = (
-        "Scaffold community health files: contributing guide, code of conduct, "
-        "security policy, and issue and pull request templates"
+    info = ToolInfo(
+        summary="Add the files GitHub shows people who want to contribute",
+        adds=(
+            "A contributing guide, code of conduct, security policy, and issue "
+            "and pull request templates."
+        ),
+        workflow=(
+            "GitHub links these from the repository and pre-fills new issues "
+            "and pull requests with the templates. Nothing changes for your own "
+            "work."
+        ),
+        docs_url="https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions",
     )
     config_key = "community"
     signals = tuple(
