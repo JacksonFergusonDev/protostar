@@ -157,7 +157,7 @@ Built-in templates follow the installed Protostar version, and local templates f
 Instead of memorizing long URLs or local paths, you can register templates in your global configuration file (`~/.config/protostar/config.toml`). Protostar supports both shorthand string aliases and rich configuration tables:
 
 ```toml
-# Run `protostar config` to edit this file
+# Run `protostar config --edit` to edit this file
 
 # Shorthand string aliases:
 [templates]

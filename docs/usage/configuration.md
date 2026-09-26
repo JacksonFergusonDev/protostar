@@ -4,11 +4,23 @@ description: "Configure Protostar's global defaults, including preferred tools, 
 
 # Global Configuration
 
-Your global configuration file acts as the baseline defaults for environment initialization (which can be overridden by templates or CLI flags). Open it in your system's default `$EDITOR` by running:
+Your global configuration file acts as the baseline defaults for environment initialization (which can be overridden by templates or CLI flags). Edit its common settings as a form by running:
 
 ```bash
 protostar config
 ```
+
+The form covers your identity (name, email, and GitHub username), your editor, the default Python version, and which tools a new project starts with. Name and email start from your Git configuration when the file leaves them unset; Protostar reads Git's configuration but never writes it. Press `i` on a tool to see what it does, as in the recipe editor. A template's own tool choices still win over these defaults.
+
+Beside the form, the **Changes** panel shows exactly what saving will change in the file. `Ctrl+S` saves; only the settings whose values changed are written, and comments, other keys, and your `[templates]` stay as they are. `Esc` leaves without saving, asking first if you changed anything.
+
+The file stays the source of truth and is always yours to edit by hand. For everything the form doesn't cover, such as `[templates]` aliases, `license`, and `supported_os`, open it in your system's default `$EDITOR`, either with `e` in the form or directly:
+
+```bash
+protostar config --edit
+```
+
+The form needs an interactive terminal. Outside one, or with `--json`, bare `protostar config` fails and points to `--edit`.
 
 ![Protostar Config Help](../assets/terminals/cli_config_help.svg)
 
@@ -43,7 +55,7 @@ PROTOSTAR_CONFIG=./ci/protostar.toml protostar init --template cli
 PROTOSTAR_CONFIG= protostar init --template cli
 ```
 
-A `--config` flag takes precedence over `PROTOSTAR_CONFIG`, which takes precedence over the default location. `protostar config` follows the same selection, so `protostar config --config ./ci/protostar.toml` edits that file and seeds it with the default template if it does not yet exist.
+A `--config` flag takes precedence over `PROTOSTAR_CONFIG`, which takes precedence over the default location. `protostar config` follows the same selection, so `protostar config --config ./ci/protostar.toml` edits that file. The form saves to it, and `--edit` seeds it with the default template if it does not yet exist.
 
 ### Why Select One
 
@@ -57,7 +69,7 @@ Selection is deliberate, so a `--config` or `PROTOSTAR_CONFIG` path that does no
 
 ## The Default Baseline
 
-When you first run `protostar config` a configuration file is created and opened at `~/.config/protostar/config.toml`:
+When you first save from `protostar config`, or run `protostar config --edit`, a configuration file is created at `~/.config/protostar/config.toml` from this default:
 
 ```toml
 --8<-- "default_config.toml"

@@ -277,3 +277,25 @@ def test_template_check_marks(legacy_console, monkeypatch, tmp_path):
     written = legacy_console()
     assert "+ Template check passed with 2 warnings." in written
     assert "protostar.toml -> name" in written
+
+
+def test_the_saved_configuration_summary_is_cp1252_safe(
+    mocker, tmp_path, legacy_console
+):
+    import argparse
+
+    from protostar.cli.main import handle_config
+    from protostar.config import DEFAULT_CONFIG_CONTENT
+    from protostar.config_edit import ConfigEdit, SaveConfig
+
+    path = tmp_path / "protostar" / "config.toml"
+    mocker.patch("protostar.config.CONFIG_FILE", path)
+    mocker.patch("protostar.cli.main.is_interactive", return_value=True)
+    edit = ConfigEdit(
+        DEFAULT_CONFIG_CONTENT, DEFAULT_CONFIG_CONTENT + "mypy = true\n", ("mypy",)
+    )
+    mocker.patch("protostar.cli.main.edit_settings", return_value=SaveConfig(edit))
+    handle_config(argparse.Namespace())
+    output = legacy_console()
+    assert output.startswith("+ Saved mypy to ")
+    assert str(path) in output.replace("\n", "")

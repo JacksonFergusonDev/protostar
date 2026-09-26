@@ -167,7 +167,7 @@ rendered into files.
 
 ### `protostar config`
 
-Manages your default preferences stored in `~/.config/protostar/config.toml`.
+Edits your default preferences stored in `~/.config/protostar/config.toml`, as a form or in `$EDITOR`.
 
 ```bash
 protostar config [OPTIONS]

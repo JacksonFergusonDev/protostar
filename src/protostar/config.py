@@ -346,6 +346,22 @@ class UserConfig:
         return instance
 
     @classmethod
+    def parse(cls, content: str, source: str) -> "UserConfig":
+        """Parses configuration text over the built-in defaults.
+
+        Args:
+            content: The configuration file's TOML text.
+            source: Where the text came from, for error messages.
+
+        Returns:
+            The configuration the text describes.
+
+        Raises:
+            ConfigurationError: If the text is invalid.
+        """
+        return cls._parse_and_merge(content, source, cls())
+
+    @classmethod
     def _parse_and_merge(
         cls, content: str, source: str, instance: "UserConfig"
     ) -> "UserConfig":

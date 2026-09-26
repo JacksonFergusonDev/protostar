@@ -22,6 +22,28 @@ from .keys import Choice, Toggle, key_label
 TOOL_INFO_KEY: tuple[str, str] = ("i", "What the focused tool does to the project")
 """The keybindings row for every screen with tool controls."""
 
+TOOL_GROUPS: dict[str, tuple[Tool, ...]] = {
+    "Quality": (
+        Tool.RUFF,
+        Tool.MYPY,
+        Tool.TY,
+        Tool.PYREFLY,
+        Tool.PYTEST,
+        Tool.RUMDL,
+        Tool.MARKDOWNLINT,
+    ),
+    "Automation": (Tool.CI, Tool.RELEASE, Tool.COMMITIZEN, Tool.RENOVATE, Tool.CODECOV),
+    "Documentation & workspace": (
+        Tool.ZENSICAL,
+        Tool.READTHEDOCS,
+        Tool.DIRENV,
+        Tool.JUST,
+        Tool.AGENTS,
+        Tool.COMMUNITY,
+    ),
+}
+"""Every tool with its own checkbox, by purpose; hook managers are a choice."""
+
 _MODULES = {Tool(module.config_key): module for module in TOOLING_MODULES}
 
 
