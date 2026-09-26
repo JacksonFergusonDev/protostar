@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790446913805,
+  "lastUpdate": 1790449266833,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17413,6 +17413,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 838.09,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "25526f3910ed6cfd18aa0e2d0163ad372280cfe5",
+          "message": "feat(cli): interactive global configuration editor (#351)\n\n* feat(cli): interactive global configuration editor\n\nBare `protostar config` opens a form for identity, editor, default\nPython, and tool defaults, beside a live diff of the file. Saving writes\nonly the keys whose value changed, through tomlkit, each after its\ncommented example. `--edit` keeps the $EDITOR flow, which the form's `e`\nalso reaches; non-interactive and --json runs point to it.\n\n* docs(plan): record the configuration editor's PR number\n\n* test(tui): keep the config form tests independent of Windows paths and focus timing",
+          "timestamp": "2026-09-26T11:58:20-07:00",
+          "tree_id": "bbb8fcbc1b3d9cd8cf5ad1883d5b77478951ea3c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/25526f3910ed6cfd18aa0e2d0163ad372280cfe5"
+        },
+        "date": 1790449265955,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 259.37,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 969.93,
             "unit": "ms"
           }
         ]
