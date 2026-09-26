@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790441681704,
+  "lastUpdate": 1790442746527,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17311,6 +17311,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 937,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba3cdf0ed19086ba72d4ee48a5cecc07a7bd132b",
+          "message": "feat(tui): rename keys to keybindings, rebind to ?, and preserve dialog borders (#344)",
+          "timestamp": "2026-09-26T10:09:55-07:00",
+          "tree_id": "e6b895166cb2c8b65bef9f4f85357aade8d1614c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ba3cdf0ed19086ba72d4ee48a5cecc07a7bd132b"
+        },
+        "date": 1790442745381,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 240.73,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 858.34,
             "unit": "ms"
           }
         ]
