@@ -33,9 +33,11 @@ from .intent import (
     validate_target,
 )
 from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_template
+from .metadata import validate_github_username
 from .migrations import Migration, parse_migrations
 from .network import RemoteTemplate, fetch_remote_template
 from .options import Condition, TemplateOption, parse_condition, parse_options
+from .workspace import check_python_version
 
 logger = logging.getLogger("protostar")
 
@@ -311,6 +313,10 @@ class UserConfig:
                 "Cannot configure both 'pre_commit = true' and 'prek = true'.",
                 hint="Choose either pre_commit or prek as your default git hook manager in your configuration.",
             )
+        if self.python_version is not None:
+            check_python_version(self.python_version)
+        if self.github_username:
+            validate_github_username(self.github_username)
 
         normalized: dict[str, TemplateAliasConfig] = {}
         for k, v in self.templates.items():

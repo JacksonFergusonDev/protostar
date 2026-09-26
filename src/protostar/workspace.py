@@ -7,16 +7,83 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .errors import ConfigurationError
+
 __all__ = [
     "PackageName",
     "ProjectName",
     "PythonVersion",
+    "check_python_version",
     "generate_python_version_range",
     "resolve_package_name",
     "resolve_project_name",
     "resolve_python_version",
     "sanitize_package_name",
+    "validate_package_name",
+    "validate_project_name",
 ]
+
+_PYTHON_VERSION_PATTERN = re.compile(r"(\d+)\.\d+(?:\.\d+)?")
+
+
+def check_python_version(version: object, *, label: str = "Python version") -> None:
+    """Validates a Python 3 version such as ``3.13`` or ``3.13.1``.
+
+    No minor version is out of range: a project may support an old Python, and
+    a new one is valid the day it ships.
+
+    Args:
+        version: The value to check.
+        label: How error messages name the value.
+
+    Raises:
+        ConfigurationError: If the value is not a ``major.minor[.patch]``
+            version, or its major version is not 3.
+    """
+    match = (
+        _PYTHON_VERSION_PATTERN.fullmatch(version) if isinstance(version, str) else None
+    )
+    if match is None:
+        raise ConfigurationError(
+            f"Invalid {label}: {version!r}.",
+            hint=f"Write the {label} as major.minor, such as '3.13'.",
+        )
+    if match.group(1) != "3":
+        raise ConfigurationError(
+            f"Unsupported {label}: {version!r}.",
+            hint="Protostar scaffolds Python 3 projects; choose a 3.x version such as '3.13'.",
+        )
+
+
+def validate_package_name(name: object) -> None:
+    """Validates that a package name is a valid Python identifier.
+
+    Raises:
+        ConfigurationError: If the name is not an identifier.
+    """
+    if not isinstance(name, str) or not name.isidentifier():
+        raise ConfigurationError(
+            f"Invalid package name: {name!r}.",
+            hint="Package name must be a valid Python identifier (e.g., 'my_package').",
+        )
+
+
+def validate_project_name(name: object) -> None:
+    """Validates that a project name can name a single directory.
+
+    Raises:
+        ConfigurationError: If the name is empty, '.', '..', or contains a path
+            separator or null byte.
+    """
+    if (
+        not isinstance(name, str)
+        or name in {"", ".", ".."}
+        or any(c in name for c in ("/", "\\", "\x00"))
+    ):
+        raise ConfigurationError(
+            f"Invalid project name: {name!r}.",
+            hint="Project name cannot contain slashes or null bytes, and cannot be empty, '.', or '..'.",
+        )
 
 
 @dataclass(frozen=True, order=True)

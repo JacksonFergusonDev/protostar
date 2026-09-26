@@ -148,18 +148,23 @@ async def test_tools_constraints_and_provenance():
         rtd.scroll_visible(immediate=True)
         await pilot.pause()
         await pilot.click("#tool-zensical")
+        await pilot.pause()
         assert not rtd.disabled
         await pilot.click("#tool-readthedocs")
+        await pilot.pause()
         await pilot.click("#tool-zensical")
+        await pilot.pause()
         assert rtd.disabled
         assert not rtd.value
         app.screen.query_one("#tool-ruff").scroll_visible(immediate=True)
         await pilot.pause()
         await pilot.click("#tool-ruff")
+        await pilot.pause()
         assert "your choice" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         app.screen.query_one("#tool-prek", RadioButton).scroll_visible(immediate=True)
         await pilot.pause()
         await pilot.click("#tool-prek")
+        await pilot.pause()
         assert not app.screen.query_one("#tool-pre_commit", RadioButton).value
         await apply(pilot)
     choices = dict(app.return_value.draft.tool_choices)
@@ -806,6 +811,109 @@ async def test_preview_lists_collisions(workspace):
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
         assert "Already exist: pyproject.toml" in plain(app, "#preview-collisions")
+
+
+@pytest.mark.asyncio
+async def test_invalid_minimum_python_shows_actionable_preview_error():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        field = app.screen.query_one("#meta-minimum_python", Input)
+        field.focus()
+        field.value = "invalid"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid Python version: 'invalid'." in summary
+        assert "Write the Python version as major.minor, such as '3.13'." in summary
+        field.focus()
+        field.value = "2.7"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Unsupported Python version: '2.7'." in summary
+        assert "Protostar scaffolds Python 3 projects" in summary
+
+
+@pytest.mark.asyncio
+async def test_any_python_3_minimum_or_none_is_accepted():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        continue_btn = app.screen.query_one("#continue", Button)
+        field = app.screen.query_one("#meta-minimum_python", Input)
+        # Clearing the field falls back to the default, like an old or new
+        # Python, is never an error.
+        for value in ("3.7", "3.15", ""):
+            field.focus()
+            field.value = value
+            await pilot.press("enter")
+            await settle(pilot)
+            assert "Invalid" not in plain(app, "#preview-summary")
+            assert not continue_btn.disabled
+
+
+@pytest.mark.asyncio
+async def test_invalid_github_username_shows_actionable_preview_error():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        field = app.screen.query_one("#meta-github_username", Input)
+        field.focus()
+        field.value = "@octocat"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid GitHub username: '@octocat'." in summary
+        assert "Drop the leading '@': use 'octocat'." in summary
+
+
+@pytest.mark.asyncio
+async def test_invalid_docker_port_shows_actionable_preview_error():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#docker", Checkbox).value = True
+        await settle(pilot)
+        field = app.screen.query_one("#meta-docker_port", Input)
+        field.focus()
+        field.value = "notaport"
+        await pilot.press("enter")
+        await settle(pilot)
+        summary = plain(app, "#preview-summary")
+        assert "Invalid container port: 'notaport'." in summary
+        assert "Container port must be a whole number, such as '8000'." in summary
+
+
+@pytest.mark.asyncio
+async def test_fatal_recipe_issues_block_continue_and_ctrl_s():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        continue_btn = app.screen.query_one("#continue", Button)
+        assert not continue_btn.disabled
+
+        field = app.screen.query_one("#meta-minimum_python", Input)
+        field.focus()
+        field.value = "invalid"
+        await pilot.press("enter")
+        await settle(pilot)
+
+        assert continue_btn.disabled
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, RecipeScreen)
+
+        # Fix the field and verify Continue is re-enabled and ctrl+s works
+        field.focus()
+        field.value = "3.13"
+        await pilot.press("enter")
+        await settle(pilot)
+
+        assert not continue_btn.disabled
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, ReviewScreen)
 
 
 @pytest.mark.asyncio

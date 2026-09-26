@@ -27,8 +27,15 @@ from .ide import IDEType
 from .intent import TemplateOrigin, TemplateReference
 from .interpolation import BUILT_IN_VARIABLES, VARIABLE_NAME
 from .manifest import ProjectMetadata
+from .metadata import validate_metadata
 from .options import CHOICE_VALUE, OptionValue
-from .workspace import resolve_package_name, resolve_project_name
+from .workspace import (
+    check_python_version,
+    resolve_package_name,
+    resolve_project_name,
+    validate_package_name,
+    validate_project_name,
+)
 
 if TYPE_CHECKING:
     from .config import TemplateSource, UserConfig
@@ -340,11 +347,8 @@ def decode_recipe(data: object) -> ProjectRecipe:
     ):
         raise _invalid()
     data = {**{table: {} for table in _OPTIONAL_TABLES}, **data}
-    if (
-        not isinstance(data["python"], str)
-        or not re.fullmatch(r"3\.\d+(?:\.\d+)?", data["python"])
-        or type(data["docker"]) is not bool
-    ):
+    check_python_version(data["python"])
+    if type(data["docker"]) is not bool:
         raise _invalid()
     try:
         ide = IDEType(data["ide"])
@@ -431,11 +435,10 @@ def decode_recipe(data: object) -> ProjectRecipe:
         or any(not isinstance(v, str) for v in context.values())
     ):
         raise _invalid()
+    validate_package_name(context["PACKAGE_NAME"])
+    validate_project_name(context["PROJECT_NAME"])
     if (
-        not context["PACKAGE_NAME"].isidentifier()
-        or any(c in context["PROJECT_NAME"] for c in ("/", "\\", "\x00"))
-        or context["PROJECT_NAME"] in {"", ".", ".."}
-        or not re.fullmatch(r"\d{4}", context["CURRENT_YEAR"])
+        not re.fullmatch(r"\d{4}", context["CURRENT_YEAR"])
         or context["PYTHON_VERSION"] != data["python"]
     ):
         raise _invalid()
@@ -470,6 +473,11 @@ def decode_recipe(data: object) -> ProjectRecipe:
             not (
                 isinstance(v, str)
                 or (
+                    k == "docker_port"
+                    and isinstance(v, int)
+                    and not isinstance(v, bool)
+                )
+                or (
                     k == "supported_os"
                     and isinstance(v, list)
                     and all(isinstance(x, str) for x in v)
@@ -481,6 +489,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
         raise _invalid()
     if "supported_os" in metadata and not isinstance(metadata["supported_os"], list):
         raise _invalid()
+    validate_metadata(metadata)
     return ProjectRecipe(
         source,
         data["python"],
@@ -652,7 +661,7 @@ def establish_recipe(
     reference = intent.reference
     python = intent.python
     docker = intent.docker
-    version = python or config.python_version or "3.13"
+    version = python if python is not None else (config.python_version or "3.13")
     project_name = resolve_project_name(metadata)
     if not Path("pyproject.toml").exists() and not any(
         metadata.get(k) for k in ("project_name", "name")

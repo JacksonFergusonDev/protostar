@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import enum
-from collections.abc import Callable
+import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from .errors import ConfigurationError
 from .system import get_git_config
 from .workflows import TargetOS
+from .workspace import check_python_version
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -20,6 +23,10 @@ __all__ = [
     "MetadataKey",
     "PromptType",
     "resolve_auto_metadata",
+    "validate_docker_port",
+    "validate_github_username",
+    "validate_metadata",
+    "validate_minimum_python",
 ]
 
 
@@ -94,6 +101,69 @@ class MetadataField:
     choices: list[str] | None
     auto_resolver: Callable[[UserConfig], Any | None] | None
     default: Any | None
+    validator: Callable[[object], None] | None = None
+
+
+# Leading character alphanumeric, then alphanumerics and hyphens. Accounts from
+# before GitHub's current rules may end in or repeat a hyphen, and Enterprise
+# Managed Users carry an ``_shortcode`` suffix, so neither is rejected.
+_GITHUB_USERNAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,38}")
+_PORT_PATTERN = re.compile(r"[0-9]+")
+_MAX_PORT = 65535
+
+
+def validate_github_username(value: object) -> None:
+    """Validates a GitHub user or organization name.
+
+    Raises:
+        ConfigurationError: If the value could not name a GitHub account.
+    """
+    if not isinstance(value, str):
+        raise ConfigurationError(
+            f"Invalid GitHub username: {value!r}.",
+            hint="GitHub username must be a string.",
+        )
+    if value.startswith("@"):
+        raise ConfigurationError(
+            f"Invalid GitHub username: {value!r}.",
+            hint=f"Drop the leading '@': use {value[1:]!r}.",
+        )
+    if not _GITHUB_USERNAME_PATTERN.fullmatch(value):
+        raise ConfigurationError(
+            f"Invalid GitHub username: {value!r}.",
+            hint="A GitHub username is at most 39 letters, digits, and hyphens, starting with a letter or digit.",
+        )
+
+
+def validate_docker_port(value: object) -> None:
+    """Validates a container port: a whole number from 1 to 65535.
+
+    Raises:
+        ConfigurationError: If the value is not a port number.
+    """
+    if isinstance(value, int) and not isinstance(value, bool):
+        port = value
+    elif isinstance(value, str) and _PORT_PATTERN.fullmatch(value):
+        port = int(value)
+    else:
+        raise ConfigurationError(
+            f"Invalid container port: {value!r}.",
+            hint="Container port must be a whole number, such as '8000'.",
+        )
+    if not 1 <= port <= _MAX_PORT:
+        raise ConfigurationError(
+            f"Invalid container port: {value!r}.",
+            hint=f"Container port must be between 1 and {_MAX_PORT}.",
+        )
+
+
+def validate_minimum_python(value: object) -> None:
+    """Validates a minimum Python version such as ``3.10``.
+
+    Raises:
+        ConfigurationError: If the value is not a Python 3 version.
+    """
+    check_python_version(value, label="minimum Python version")
 
 
 METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
@@ -136,6 +206,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
         choices=None,
         auto_resolver=lambda cfg: cfg.github_username,
         default="",
+        validator=validate_github_username,
     ),
     MetadataKey.MINIMUM_PYTHON: MetadataField(
         key=MetadataKey.MINIMUM_PYTHON,
@@ -144,6 +215,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
         choices=None,
         auto_resolver=lambda cfg: cfg.python_version,
         default="3.13",
+        validator=validate_minimum_python,
     ),
     MetadataKey.SUPPORTED_OS: MetadataField(
         key=MetadataKey.SUPPORTED_OS,
@@ -160,8 +232,23 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
         choices=None,
         auto_resolver=None,
         default="8000",
+        validator=validate_docker_port,
     ),
 }
+
+
+def validate_metadata(metadata: Mapping[str, object]) -> None:
+    """Validates each metadata value that has a validator.
+
+    An empty value leaves the field unset, so it is never invalid.
+
+    Raises:
+        ConfigurationError: If a value is invalid for its field.
+    """
+    for key, field in METADATA_FIELDS.items():
+        value = metadata.get(key)
+        if value not in (None, "") and field.validator is not None:
+            field.validator(value)
 
 
 def resolve_auto_metadata(

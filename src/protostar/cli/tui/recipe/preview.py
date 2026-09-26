@@ -7,6 +7,7 @@ from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
+from textual.message import Message
 from textual.widgets import Static
 
 from protostar.cli.ui import plan_tree, planned_paths
@@ -31,6 +32,13 @@ def _count(number: int, noun: str) -> str:
 
 class PlanPreview(VerticalScroll):
     """The tree ``--dry-run`` prints, plus any collisions, for the current draft."""
+
+    class PlanUpdated(Message):
+        """Posted when planning finishes or fails."""
+
+        def __init__(self, *, error: ProtostarError | None = None) -> None:
+            super().__init__()
+            self.error = error
 
     def __init__(self, config: UserConfig) -> None:
         super().__init__()
@@ -59,9 +67,14 @@ class PlanPreview(VerticalScroll):
             manifest = await asyncio.to_thread(_plan, draft, self.config)
         except MissingTemplateVariablesError as exc:
             self._show(Text(f"Waiting for values: {', '.join(exc.variables)}."))
+            self.post_message(self.PlanUpdated(error=None))
             return
         except ProtostarError as exc:
-            self._show(Text(str(exc)), error=True)
+            message = Text(str(exc))
+            if exc.hint:
+                message.append(f"  {exc.hint}", style="dim")
+            self._show(message, error=True)
+            self.post_message(self.PlanUpdated(error=exc))
             return
         paths, _ = planned_paths(manifest)
         dependencies = manifest.dependencies
@@ -90,6 +103,7 @@ class PlanPreview(VerticalScroll):
             else Text(""),
             tree=plan_tree(manifest) if paths else Text(""),
         )
+        self.post_message(self.PlanUpdated(error=None))
 
     def _show(
         self,
