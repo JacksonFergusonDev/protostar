@@ -75,6 +75,7 @@ from protostar.sync_state import (
 )
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables
+from protostar.tiers import Tier
 
 logger = logging.getLogger("protostar")
 
@@ -212,6 +213,7 @@ def handle_init(args: argparse.Namespace) -> None:
         option_overrides=tuple(
             sorted(_parse_option_flags(source, getattr(args, "options", [])).items())
         ),
+        tier=_check_tier_flag(source, getattr(args, "tier", None)),
         docker=getattr(args, "docker", None),
         python_version=getattr(args, "python_version", None),
         variables=tuple(sorted(variables.items())),
@@ -616,6 +618,36 @@ def _parse_option_flags(
             )
         values[name] = offered[name].parse(value)
     return values
+
+
+def _check_tier_flag(source: TemplateSource | None, tier: str | None) -> Tier | None:
+    """Checks that ``--tier`` names a tier the template declares.
+
+    Args:
+        source: The template being applied, if any.
+        tier: The ``--tier`` argument, which the parser limits to tier names.
+
+    Returns:
+        The tier.
+
+    Raises:
+        InvalidUsageError: If a tier is given for no template, or for one
+            that declares no tiers.
+    """
+    if tier is None:
+        return None
+    if source is None:
+        raise InvalidUsageError(
+            "--tier needs a template.",
+            hint="Pass --template or --from, or run init in a project that records one.",
+        )
+    if source.tiers is None:
+        raise InvalidUsageError(
+            "The template declares no tiers.",
+            hint="Remove --tier; only templates with a workbench and a production "
+            "tier offer the choice.",
+        )
+    return Tier(tier)
 
 
 def _check_allowed_secrets(

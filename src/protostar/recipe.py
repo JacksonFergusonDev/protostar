@@ -29,6 +29,7 @@ from .interpolation import BUILT_IN_VARIABLES, VARIABLE_NAME
 from .manifest import ProjectMetadata
 from .metadata import validate_metadata
 from .options import CHOICE_VALUE, OptionValue
+from .tiers import Tier, parse_tier
 from .workspace import (
     check_python_version,
     resolve_package_name,
@@ -233,8 +234,8 @@ class ProjectRecipe:
 
     Template variable values are recorded as given: they are non-secret by
     definition, and every value passes the secret guard when decoded. Options
-    record only the values chosen away from the template's defaults, so a
-    project that never chose follows the template.
+    and the tier record only values pinned by a flag or chosen away from the
+    template's defaults, so a project that never chose follows the template.
     """
 
     source: RecipeSource | None
@@ -247,6 +248,7 @@ class ProjectRecipe:
     metadata: tuple[tuple[str, str | tuple[str, ...]], ...]
     variables: tuple[tuple[str, str], ...] = ()
     options: tuple[tuple[str, OptionValue], ...] = ()
+    tier: Tier | None = None
 
     def selections(self, opinions: dict[str, bool]) -> tuple[ToolSelection, ...]:
         """Resolves overrides, current template opinions, then captured defaults."""
@@ -305,6 +307,7 @@ class ProjectRecipe:
             "python": self.python,
             "docker": self.docker,
             "ide": self.ide.value,
+            **({"tier": self.tier.value} if self.tier else {}),
             **(
                 {
                     "source": {
@@ -339,6 +342,7 @@ _RECIPE_ORDER = (
     "python",
     "docker",
     "ide",
+    "tier",
     "source",
     "tools",
     "fallback",
@@ -362,7 +366,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
         raise _invalid()
     required = {"version", "mode", "python", "docker", "ide", "fallback", "context"}
     if (
-        set(data) - (required | _OPTIONAL_TABLES | {"source"})
+        set(data) - (required | _OPTIONAL_TABLES | {"source", "tier"})
         or not required <= set(data)
         or type(data["version"]) is not int
         or data["version"] != 1
@@ -433,7 +437,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
             except ProtostarError as e:
                 raise _invalid() from e
         source = RecipeSource(origin, locator, path, ref)
-    elif data["mode"] != "tooling-only" or "source" in data:
+    elif data["mode"] != "tooling-only" or "source" in data or "tier" in data:
         raise _invalid()
 
     def tools(key: str) -> tuple[tuple[Tool, bool], ...]:
@@ -527,7 +531,18 @@ def decode_recipe(data: object) -> ProjectRecipe:
         ),
         tuple(sorted(variables.items())),
         tuple(sorted(options.items())),
+        _decode_tier(data.get("tier")),
     )
+
+
+def _decode_tier(raw: object) -> Tier | None:
+    """Reads a recorded tier, which only a template recipe may hold."""
+    if raw is None:
+        return None
+    try:
+        return parse_tier(raw, "The recorded tier")
+    except ConfigurationError as e:
+        raise _invalid() from e
 
 
 def read_recipe(path: Path) -> ProjectRecipe | None:
@@ -672,6 +687,7 @@ class RecipeIntent:
     python: str | None = None
     variables: tuple[tuple[str, str], ...] = ()
     options: tuple[tuple[str, OptionValue], ...] = ()
+    tier: Tier | None = None
 
 
 def establish_recipe(
@@ -725,6 +741,7 @@ def establish_recipe(
         ),
         tuple(sorted(intent.variables)),
         tuple(sorted(intent.options)),
+        intent.tier,
     )
     return decode_recipe(recipe.to_dict())
 

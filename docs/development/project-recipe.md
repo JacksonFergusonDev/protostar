@@ -29,7 +29,7 @@ In a project that had no recipe, the Python version, author, and year come from 
 The schema-v1 recipe captures the resolved template origin and locator (or explicit
 `mode = "tooling-only"`), and for a repository template its `path` inside the
 repository and the `ref` it follows (see [template versions](../usage/templates.md#template-versions)), Python version, Docker selection, IDE, original tooling
-fallbacks, built-in rendering context, template variable values, and non-secret
+fallbacks, built-in rendering context, template variable values, the chosen tier, and non-secret
 project metadata. Template
 aliases are resolved when enrolled; the recipe records their exact source, not the
 alias. Local relative locators resolve against the project directory. Unknown
@@ -139,3 +139,26 @@ those projects on their next `sync`. `sync --option NAME=VALUE` changes a value 
 records it. A value for an option the template no longer offers is dropped on the
 next `sync`; a value the option no longer offers stops `sync` with an
 `InvalidOptionValueError` naming the values it does (`error.values` in JSON).
+
+## Template tier
+
+A template that declares [tiers](../usage/authoring-templates.md#template-tiers)
+lets a project follow its `workbench` or `production` tool opinions. The recipe
+records the tier only when it was passed with `--tier`, even when that is the
+template's default:
+
+```bash
+protostar init --from ./blueprint.toml --tier production
+```
+
+```toml
+[tool.protostar]
+tier = "production"
+```
+
+Without a recorded tier, a project follows the template's default tier, so a
+template that changes its default changes those projects on their next `sync`.
+Tool diversions in `[tool.protostar.tools]` are measured against the tier's
+opinions and still win over them. `sync --tier NAME` changes the tier and records
+it. A recorded tier is dropped on the next `sync` once the template stops declaring
+tiers, and a tooling-only recipe never holds one.

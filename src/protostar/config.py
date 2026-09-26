@@ -36,7 +36,8 @@ from .interpolation import BUILT_IN_VARIABLES, extract_variables, render_templat
 from .metadata import validate_github_username
 from .migrations import Migration, parse_migrations
 from .network import RemoteTemplate, fetch_remote_template
-from .options import Condition, TemplateOption, parse_condition, parse_options
+from .options import Condition, TemplateOption, Term, parse_condition, parse_options
+from .tiers import TIER_TERM, TemplateTiers, Tier, parse_tiers, template_opinions
 from .workspace import check_python_version
 
 logger = logging.getLogger("protostar")
@@ -652,6 +653,8 @@ TEMPLATE_STRUCTURAL_KEYS: frozenset[str] = frozenset(
         "migrations",
         "options",
         "optional",
+        "tier",
+        "tiers",
     }
 )
 
@@ -825,6 +828,24 @@ class TemplateBlueprint:
             "example": None,
         },
     )
+    tiers: TemplateTiers | None = field(
+        default=None,
+        metadata={
+            "description": "The workbench and production tiers: each a table of tool flags laid over the root flags. Declare both or neither, with tier naming the default.",
+            "example": {
+                "workbench": {"mypy": False, "pytest": False},
+                "production": {"mypy": True, "pytest": True},
+            },
+        },
+    )
+
+    def opinions(self, tier: Tier | None) -> dict[str, bool]:
+        """Returns the template's tool opinions: its root flags, then the tier's.
+
+        Args:
+            tier: The chosen tier, or None for the template's default.
+        """
+        return template_opinions(self.tooling_overrides, self.tiers, tier)
 
     @classmethod
     def _parse(cls, content: str, source: str = "unknown") -> "TemplateBlueprint":
@@ -1062,6 +1083,7 @@ class TemplateBlueprint:
         for key, value in data.items():
             if key not in TEMPLATE_STRUCTURAL_KEYS and isinstance(value, bool):
                 instance.tooling_overrides[key] = value
+        instance.tiers = parse_tiers(data, source)
 
         instance._validate_declarations()
         return instance
@@ -1128,11 +1150,12 @@ class TemplateBlueprint:
         from .recipe import Tool
 
         tools = {tool.value for tool in Tool}
-        clashing = sorted(self.options.keys() & (tools | {"docker"}))
+        clashing = sorted(self.options.keys() & (tools | {"docker", TIER_TERM}))
         if clashing:
             raise ConfigurationError(
-                f"Options share a name with a tool: {', '.join(clashing)}.",
-                hint="Rename each option; a requires term names a tool or an option.",
+                f"Options share a name with a tool or the tier: {', '.join(clashing)}.",
+                hint="Rename each option; a requires term names a tool, an option, "
+                "or the tier.",
             )
         conditions: list[tuple[str, Condition]] = [
             (f"[dev.pyproject].{identity}", payload.requires)
@@ -1152,6 +1175,9 @@ class TemplateBlueprint:
         used: set[str] = set()
         for location, condition in conditions:
             for term in condition.terms:
+                if term.name == TIER_TERM:
+                    self._check_tier_term(location, term)
+                    continue
                 option = self.options.get(term.name)
                 if option is None:
                     if term.name in tools and term.value is None:
@@ -1180,6 +1206,27 @@ class TemplateBlueprint:
             raise ConfigurationError(
                 f"[options] declares options no requires names: {', '.join(unused)}.",
                 hint="Gate content on each option with requires, or remove it.",
+            )
+
+    def _check_tier_term(self, location: str, term: Term) -> None:
+        """Checks a ``tier=...`` term against the tiers the template declares.
+
+        Raises:
+            ConfigurationError: If the template declares no tiers, or the term
+                names no tier.
+        """
+        if self.tiers is None:
+            raise ConfigurationError(
+                f"{location} requires {str(term)!r}, but the template declares "
+                "no tiers.",
+                hint='Declare tier = "..." with [tiers.workbench] and '
+                "[tiers.production], or remove the term.",
+            )
+        if term.value not in {tier.value for tier in Tier}:
+            raise ConfigurationError(
+                f"{location} requires {str(term)!r}, but the tier is one of: "
+                f"{', '.join(tier.value for tier in Tier)}.",
+                hint='Write requires = "tier=workbench" or "tier=production".',
             )
 
     def _validate_optional_files(self) -> None:
@@ -1416,6 +1463,36 @@ class TemplateSource:
             )
         return options
 
+    @functools.cached_property
+    def tiers(self) -> TemplateTiers | None:
+        """The tiers the raw template declares, if any.
+
+        Tiers set only tool flags, which no variable renders into, so a caller
+        can offer them before any value is known.
+
+        Raises:
+            ConfigurationError: If the template is not valid TOML, or its
+                tiers are malformed.
+        """
+        return parse_tiers(self._data, self.reference.locator)
+
+    def opinions(self, tier: Tier | None) -> dict[str, bool]:
+        """Returns the raw template's tool opinions for a tier.
+
+        Args:
+            tier: The chosen tier, or None for the template's default.
+
+        Raises:
+            ConfigurationError: If the template is not valid TOML, or its
+                tiers are malformed.
+        """
+        root = {
+            key: value
+            for key, value in self._data.items()
+            if key not in TEMPLATE_STRUCTURAL_KEYS and isinstance(value, bool)
+        }
+        return template_opinions(root, self.tiers, tier)
+
     def render(self, context: Mapping[str, str]) -> TemplateBlueprint:
         """Renders the template entirely in memory.
 
@@ -1436,6 +1513,7 @@ class TemplateSource:
         target = self.reference.locator
         _ = self.descriptions
         _ = self.options
+        _ = self.tiers
         missing = tuple(sorted(self.variables - context.keys()))
         if missing:
             raise MissingTemplateVariablesError(target, missing)

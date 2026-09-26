@@ -23,9 +23,10 @@ from .modules import (
     PrekModule,
     PythonCore,
 )
-from .options import Condition, resolve_options
+from .options import Condition, OptionValue, resolve_options
 from .progress import ProgressStep, no_progress
 from .sync_state import check_one_shot_workspace, check_workspace_identity
+from .tiers import TIER_TERM, resolve_tier
 from .workflows import (
     HookRunner,
     generate_agents_md,
@@ -156,7 +157,9 @@ class Orchestrator:
         from .recipe import ProducerContribution, Tool, validate_tools
 
         opinions = (
-            req.template_blueprint.tooling_overrides if req.template_blueprint else {}
+            req.template_blueprint.opinions(manifest.recipe.tier)
+            if req.template_blueprint
+            else {}
         )
         manifest.selections = manifest.recipe.selections(opinions)
         enabled_tools = {
@@ -280,9 +283,16 @@ class Orchestrator:
                 manifest.dependencies.add(dep)
 
             active_tools = {m.config_key for m in active_modules if m.config_key}
-            options = resolve_options(
-                blueprint.options, dict(req.recipe.options) if req.recipe else {}
+            options: dict[str, OptionValue] = {
+                **resolve_options(
+                    blueprint.options, dict(req.recipe.options) if req.recipe else {}
+                )
+            }
+            tier = resolve_tier(
+                blueprint.tiers, req.recipe.tier if req.recipe else None
             )
+            if tier is not None:
+                options[TIER_TERM] = tier.value
 
             def holds(condition: Condition | None) -> bool:
                 return condition is None or condition.holds(active_tools, options)

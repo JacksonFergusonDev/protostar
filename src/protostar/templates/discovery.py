@@ -15,6 +15,9 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from protostar.errors import ConfigurationError
+from protostar.tiers import TemplateTiers, parse_tiers
+
 if TYPE_CHECKING:
     from protostar.config import UserConfig
 
@@ -37,6 +40,8 @@ class TemplateInfo:
         type: Whether the template is built-in or a global user alias.
         source: Package resource, local file path, or remote URL.
         trusted: Whether the template is trusted to execute system tasks.
+        tiers: The workbench and production tiers the template declares, if
+            they could be read without fetching it.
     """
 
     alias: str
@@ -45,6 +50,7 @@ class TemplateInfo:
     type: TemplateType
     source: str
     trusted: bool = True
+    tiers: TemplateTiers | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Converts TemplateInfo to a serializable dictionary."""
@@ -55,6 +61,7 @@ class TemplateInfo:
             "type": str(self.type),
             "source": self.source,
             "trusted": self.trusted,
+            "tiers": self.tiers.to_dict() if self.tiers else None,
         }
 
 
@@ -64,6 +71,14 @@ _TEMPLATE_SUFFIX = ".toml"
 def _builtin_alias(path: Traversable) -> str:
     """Returns the alias a packaged template resource is addressed by."""
     return path.name[: -len(_TEMPLATE_SUFFIX)]
+
+
+def _read_tiers(data: dict[str, Any], source: str) -> TemplateTiers | None:
+    """Reads a template's tiers for listing; malformed ones surface when it loads."""
+    try:
+        return parse_tiers(data, source)
+    except ConfigurationError:
+        return None
 
 
 def _builtin_template_files() -> tuple[Traversable, ...]:
@@ -124,9 +139,11 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
             data = tomllib.loads(content)
             name = data.get("name") or alias
             description = data.get("description", "")
+            tiers = _read_tiers(data, alias)
         except (OSError, tomllib.TOMLDecodeError, AttributeError, TypeError):
             name = alias
             description = ""
+            tiers = None
 
         discovered.append(
             TemplateInfo(
@@ -136,6 +153,7 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
                 type=TemplateType.BUILT_IN,
                 source="protostar.templates",
                 trusted=True,
+                tiers=tiers,
             )
         )
 
@@ -153,9 +171,11 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
             name = alias_cfg.name or alias
             description = alias_cfg.description
             trusted = alias_cfg.trusted
+            tiers = None
 
-            # If no explicit description was provided in config, try reading local file
-            if not description and not (
+            # A local file can say what the config leaves out; a remote one
+            # is never fetched here.
+            if not (
                 source.startswith(("http://", "https://", "git@", "ssh://"))
                 or "://" in source
             ):
@@ -165,10 +185,12 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
                         file_data = tomllib.loads(
                             local_path.read_text(encoding="utf-8")
                         )
-                        if not alias_cfg.name and file_data.get("name"):
-                            name = str(file_data["name"])
-                        if file_data.get("description"):
-                            description = str(file_data["description"])
+                        if not description:
+                            if not alias_cfg.name and file_data.get("name"):
+                                name = str(file_data["name"])
+                            if file_data.get("description"):
+                                description = str(file_data["description"])
+                        tiers = _read_tiers(file_data, source)
                 except (OSError, tomllib.TOMLDecodeError):
                     pass
 
@@ -183,6 +205,7 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
                     type=TemplateType.GLOBAL_ALIAS,
                     source=source,
                     trusted=trusted,
+                    tiers=tiers,
                 )
             )
 

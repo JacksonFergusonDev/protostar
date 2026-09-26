@@ -49,6 +49,7 @@ from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
 from protostar.sync_state import SyncState, serialize_state
 from protostar.system_deps import GlobalExecutable
 from protostar.templates import discover_templates
+from protostar.tiers import Tier
 
 
 @pytest.fixture(autouse=True)
@@ -601,6 +602,25 @@ async def test_recorded_values_and_template_switch_preserve_choices():
         await settle(pilot)
         assert not app.screen.query_one("#tool-ruff", Checkbox).value
         assert app.decision_screen.draft.template is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("tier", "mypy"), [(None, False), (Tier.PRODUCTION, True)])
+async def test_the_tools_follow_the_chosen_tier(tmp_path, tier, mypy):
+    draft = template_draft(
+        tmp_path / "tiered.toml",
+        'tier = "workbench"\n[tiers.workbench]\nmypy = false\n'
+        "[tiers.production]\nmypy = true\n",
+        tier=tier,
+    )
+    app = make_app(draft)
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        checkbox = app.screen.query_one("#tool-mypy", Checkbox)
+        assert checkbox.value is mypy
+        assert "from template" in checkbox.label.plain
+        # The tier a flag pinned reaches the draft the editor continues with.
+        assert app.decision_screen._current_draft().tier is tier
 
 
 @pytest.mark.asyncio

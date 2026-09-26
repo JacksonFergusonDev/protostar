@@ -69,11 +69,9 @@ direnv = false
 docker = false
 just = false
 markdownlint = false
-mypy = false
 pre_commit = false
 prek = false
 pyrefly = false
-pytest = true
 readthedocs = false
 release = false
 renovate = false
@@ -81,6 +79,9 @@ ruff = true
 rumdl = false
 ty = false
 zensical = false
+
+# The tier a project follows until it chooses one; requires [tiers].
+tier = "workbench"
 
 # --- Static File Injections ---
 # Exact file paths mapped to their raw template contents.
@@ -166,6 +167,17 @@ version = "1.0.0"
 rename = [{from = "src/<% PACKAGE_NAME %>/settings.py",to = "src/<% PACKAGE_NAME %>/config.py"}]
 remove = ["setup.cfg"]
 rename_variables = [{from = "ORG",to = "ORGANIZATION"}]
+
+# --- Tiers ---
+# The workbench and production tiers: each a table of tool flags laid over the root flags. Declare both or neither, with tier naming the default.
+
+[tiers.workbench]
+mypy = false
+pytest = false
+
+[tiers.production]
+mypy = true
+pytest = true
 
 # --- Custom Variables ---
 # Optional descriptions shown when asking for a custom variable's value.

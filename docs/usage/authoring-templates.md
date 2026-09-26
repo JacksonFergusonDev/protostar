@@ -81,6 +81,7 @@ Content that only applies sometimes says when with `requires`. A condition names
 - a tool key, such as `"ruff"` or `"pytest"`, which holds while that tool is enabled (the keys are listed in the [Tooling & Flags Matrix](./tooling-matrix.md));
 - a bool option, such as `"compose"`, which holds while the option is on;
 - `"option=value"`, such as `"database=postgres"`, which holds while a choice option has that value;
+- `"tier=workbench"` or `"tier=production"`, which holds while the project follows that [tier](#template-tiers);
 - or an array of them, such as `["pytest", "database=postgres"]`, which holds while all of them do.
 
 There is no "or" and no "not". To ship something for either of two choices, list it once for each. A question with two answers that each ship content is a choice option, not a bool.
@@ -130,7 +131,7 @@ description = "Ship a compose.yaml for local services."
 default = false
 ```
 
-An option with `choices` is a choice option: it needs at least two distinct values, made of letters, digits, dots, dashes, and underscores, and a `default` among them. An option without `choices` is a bool option with a `true` or `false` default. `description` is optional and appears beside the option when it is chosen. Every option must be named by some `requires`, and may not share a name with a tool or a variable.
+An option with `choices` is a choice option: it needs at least two distinct values, made of letters, digits, dots, dashes, and underscores, and a `default` among them. An option without `choices` is a bool option with a `true` or `false` default. `description` is optional and appears beside the option when it is chosen. Every option must be named by some `requires`, and may not share a name with a tool, a variable, or `tier`.
 
 An option only chooses what the template includes. It never renders into text: `<% database %>` is a variable, and a template can't use the same name for both. Content that differs by choice is listed per choice, whole files at a time, with `[[optional]]`, payloads, and regions.
 
@@ -142,6 +143,50 @@ protostar sync --option compose=false
 ```
 
 The recipe editor shows a switch for each bool option and a choice for each choice option. The project recipe records the values in `[tool.protostar.options]`: every value passed with `--option`, and from the editor only those that differ from the template's default. A project that never chose follows the template, so a template that changes a default changes those projects on their next `sync`. A recorded value for an option the template no longer offers is dropped on `sync`; one the option no longer offers stops `sync` with an error naming the values it does.
+
+### Template Tiers
+
+A template describes a project's shape: its structure, dependencies, and files. How much tooling that shape starts with is a separate choice, and a template can offer it as two tiers:
+
+- `workbench`, for exploring and analyzing: lean tooling that stays out of the way.
+- `production`, for building something to publish: the full quality gate.
+
+Declare the tier a project starts with as `tier` at the root, and both tiers as tables of tool flags:
+
+```toml
+ruff = true
+direnv = true
+tier = "workbench"
+
+[tiers.workbench]
+mypy = false
+pytest = false
+ci = false
+
+[tiers.production]
+mypy = true
+pytest = true
+ci = true
+```
+
+A tier's flags are laid over the root flags. Set a tool at the root when both tiers agree, and in both tiers when they differ: each tier must set the same tools, and a tool set in the tiers can't also be set at the root. A tier may set any tool flag, and `docker`. Declare both tiers or neither; a template without tiers offers no tier to choose.
+
+Configuration follows the tools, so a payload with `requires = "mypy"` already arrives with production and leaves with workbench. Content that belongs to a tier rather than to one tool, such as a smoke test that production's `pytest` needs, requires the tier:
+
+```toml
+[[optional]]
+requires = "tier=production"
+files = ["tests/test_smoke.py"]
+```
+
+Users choose with `--tier`, on `init` and on `sync`:
+
+```bash
+protostar init --template my-template --tier production
+protostar sync --tier workbench
+```
+
+An explicit tool flag still wins over either tier, so `--tier production --no-ci` is production without CI. The project recipe records the tier as `tier` in `[tool.protostar]` only when it was passed with `--tier`, so a project that never chose follows the template's default. A recorded tier is dropped on `sync` once the template stops declaring tiers.
 
 ## Level 2: The Multi-File Repository
 

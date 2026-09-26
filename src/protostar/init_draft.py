@@ -23,6 +23,7 @@ from .recipe import (
 )
 from .registry import ResolvedHookRevision
 from .secret_guard import check_variable_values
+from .tiers import Tier, resolve_tier
 from .workspace import check_python_version
 
 
@@ -47,7 +48,8 @@ class InitDraft:
     Options follow tools: ``option_overrides`` are values flags set over the
     recorded ones and are kept as given, while ``option_choices`` are every
     option's value from the editor, of which only those away from the
-    template's defaults are recorded.
+    template's defaults are recorded. ``tier`` is a tier a flag pinned, and
+    is kept as given.
     """
 
     template: DraftTemplate | None = None
@@ -60,6 +62,7 @@ class InitDraft:
     allowed_secrets: frozenset[str] = frozenset()
     option_overrides: tuple[tuple[str, OptionValue], ...] = ()
     option_choices: tuple[tuple[str, OptionValue], ...] | None = None
+    tier: Tier | None = None
     collision_strategy: CollisionStrategy | None = None
     existing_recipe: ProjectRecipe | None = None
     analysis: ProjectAnalysis | None = None
@@ -138,7 +141,11 @@ def resolve_init(
     }
     variables.update(draft.variables)
     blueprint = source.render({**context, **variables}) if source else None
-    opinions = blueprint.tooling_overrides if blueprint else {}
+    tiers = blueprint.tiers if blueprint else None
+    resolve_tier(tiers, draft.tier)
+    # A recorded tier the template no longer offers is dropped.
+    tier = draft.tier or (existing.tier if existing and tiers else None)
+    opinions = blueprint.opinions(tier) if blueprint else {}
     offered = source.options if source else {}
     options = {
         name: value
@@ -214,6 +221,7 @@ def resolve_init(
             python,
             tuple(sorted(variables.items())),
             tuple(sorted(options.items())),
+            tier,
         ),
     )
     recipe = replace(
