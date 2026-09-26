@@ -50,6 +50,7 @@ from protostar.modules import (
     RuffModule,
     SystemWorkspaceModule,
 )
+from protostar.options import Condition
 from protostar.orchestrator import Orchestrator
 from protostar.system import ProcessRunner
 
@@ -405,7 +406,13 @@ def generate_capability_tables() -> None:
     )
 
     # Built-in Template matrix
-    template_headers = ["Template", "Description", "Invocation", "Dependencies"]
+    template_headers = [
+        "Template",
+        "Description",
+        "Default tier",
+        "Invocation",
+        "Dependencies",
+    ]
     template_rows = []
 
     try:
@@ -420,6 +427,7 @@ def generate_capability_tables() -> None:
                     [
                         f"`{name}`",
                         content.get("description", ""),
+                        str(content.get("tier", "*None*")).capitalize(),
                         f"`protostar init --template {name}`",
                         deps_formatted,
                     ]
@@ -807,6 +815,18 @@ def generate_manifest_state() -> None:
     target = importlib.resources.files("protostar.templates").joinpath("astro.toml")
     if target.is_file():
         blueprint = TemplateSource.load(str(target), built_in="astro").render({})
+        # Gated content applies as a default init would decide: ruff on, the
+        # template's default tier.
+        tier = blueprint.tiers.default.value if blueprint.tiers else None
+        options = {"tier": tier} if tier else {}
+
+        def holds(condition: Condition | None) -> bool:
+            return condition is None or condition.holds({"ruff"}, options)
+
+        def ships(path: str) -> bool:
+            blocks = [block for block in blueprint.optional if block.covers(path)]
+            return not blocks or any(holds(block.requires) for block in blocks)
+
         for dep in blueprint.dependencies:
             manifest.dependencies.add(dep)
         for dep in blueprint.dev_dependencies:
@@ -822,9 +842,12 @@ def generate_manifest_state() -> None:
         for cmd in blueprint.post_install_tasks:
             manifest.tasks.add_post_install_task(cmd)
         for filepath, content in blueprint.files.items():
-            manifest.filesystem.add_file_injection(filepath, content)
+            if ships(filepath):
+                manifest.filesystem.add_file_injection(filepath, content)
         manifest.template_reference = blueprint.reference
         for identity, payload in blueprint.pyproject_injections.items():
+            if not holds(payload.requires):
+                continue
             manifest.filesystem.add_structured(
                 "pyproject.toml",
                 payload.content,

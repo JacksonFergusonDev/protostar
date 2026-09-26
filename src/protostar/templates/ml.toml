@@ -1,4 +1,4 @@
-# Built-in template. Workbench tier: machine learning and data science, lean by default.
+# Built-in template: machine learning and data science, in the workbench tier by default.
 # Contract: docs/developer/built-in-templates.md
 
 name = "ML"
@@ -44,14 +44,14 @@ vcs_ignores = [
 ]
 
 # --- Tooling Opinions ---
+# Wanted in any project of this shape, whichever tier it follows.
 ruff = true
 direnv = true
-pytest = false
 just = true
-rumdl = false
-mypy = false
-prek = false
-ci = false
+
+# Exploratory work starts lean. Production adds checks and automation, and
+# package code with a test, so its gates have code to check.
+tier = "workbench"
 
 # --- Post-Install Subprocesses ---
 post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
@@ -62,6 +62,15 @@ post_install_tasks = [["uv", "run", "nbdime", "config-git", "--enable"]]
 # group by default but not docs, so anything here survives `just sync`.
 [dev]
 dev_dependencies = ["jupyterlab", "nbdime", "ipywidgets"]
+
+[[optional]]
+requires = "tier=production"
+files = ["src/<% PACKAGE_NAME %>/__init__.py", "src/<% PACKAGE_NAME %>/data/split.py"]
+
+# The test checks the production package, so it needs both.
+[[optional]]
+requires = ["pytest", "tier=production"]
+files = ["tests/test_split.py"]
 
 # --- pyproject.toml AST Injections ---
 # Configure Ruff to lint/format inside notebooks
@@ -75,8 +84,80 @@ extend-include = ["*.ipynb"]
 extend-select = ["NPY", "PD"] # NumPy and Pandas specific linting rules
 '''
 
+# Tests import the package from src/, which has no build backend to install it.
+# The baseline's "." stays, since pythonpath replaces rather than extends.
+[dev.pyproject.ml_pytest_path]
+requires = "pytest"
+content = '''
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+'''
+
+# --- Tiers ---
+[tiers.workbench]
+mypy = false
+pytest = false
+prek = false
+ci = false
+rumdl = false
+commitizen = false
+renovate = false
+
+[tiers.production]
+mypy = true
+pytest = true
+prek = true
+ci = true
+rumdl = true
+commitizen = true
+renovate = true
+
 # --- Static File Injections ---
 [files]
+"src/<% PACKAGE_NAME %>/__init__.py" = '''
+"""<% PROJECT_NAME %>: machine learning experiments."""
+'''
+
+"src/<% PACKAGE_NAME %>/data/split.py" = '''
+"""Dataset splitting for <% PROJECT_NAME %>."""
+
+import numpy as np
+import numpy.typing as npt
+
+
+def split_indices(
+    n_samples: int, test_fraction: float = 0.2, seed: int = 0
+) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.int64]]:
+    """Shuffles sample indices reproducibly and splits them into train and test.
+
+    Args:
+        n_samples: How many samples the dataset has.
+        test_fraction: The share of samples held out for testing.
+        seed: Seeds the shuffle, so a split can be reproduced.
+
+    Returns:
+        The training indices and the test indices.
+    """
+    indices = np.random.default_rng(seed).permutation(n_samples)
+    n_test = int(n_samples * test_fraction)
+    return indices[n_test:], indices[:n_test]
+'''
+
+"tests/test_split.py" = '''
+"""Tests for the dataset split."""
+
+import numpy as np
+
+from <% PACKAGE_NAME %>.data.split import split_indices
+
+
+def test_every_sample_lands_in_exactly_one_split() -> None:
+    """The train and test indices partition the dataset."""
+    train, test = split_indices(10, test_fraction=0.3)
+    assert len(test) == 3
+    np.testing.assert_array_equal(np.sort(np.concatenate([train, test])), np.arange(10))
+'''
+
 "data/01_raw/.gitkeep" = ""
 "data/02_processed/.gitkeep" = ""
 "data/03_features/.gitkeep" = ""

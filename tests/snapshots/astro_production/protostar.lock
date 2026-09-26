@@ -8,19 +8,19 @@ producer_version = "0.9.0"
 
 [template]
 origin = "built-in"
-locator = "api"
-digest = "47719ad22f8524befb1a2d51a1cafd1eb1a87312f4a88aa7943740d50c126b35"
-display_name = "api"
-
-[[files]]
-path = ".env.example"
-policy = "seed-only"
-digest = "457b2295526ecb3850a3b4a239a5709448cfb23c5c4302e25df83a0775701097"
+locator = "astro"
+digest = "7228e9306020c3aa5a61d53e5b0cabd7e65082323b3fa65d21766339ee97b633"
+display_name = "astro"
 
 [[files]]
 path = ".envrc"
 policy = "seed-only"
 digest = "0f07e21202b6f86e25296e5ff2265b6b05e6e23db19c393fbf16cab69bf8c028"
+
+[[files]]
+path = ".gitattributes"
+policy = "seed-only"
+digest = "fba8c29612852cc79d5ad6be11f1534d1be2801a9bd2c74ef46a73e56b597db5"
 
 [[files]]
 path = ".github/renovate.json"
@@ -43,16 +43,6 @@ policy = "seed-only"
 digest = "0a9c19eaad38cda8e9040bfacafc0d82d4734993e514c492dd65bc3e79b07f04"
 
 [[files]]
-path = "Dockerfile"
-policy = "text"
-baseline = "# syntax=docker/dockerfile:1\n\n# --- Builder Stage ---\nFROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder\n\nWORKDIR /app\n\n# Enable bytecode compilation and copy mode for uv\nENV UV_COMPILE_BYTECODE=1\nENV UV_LINK_MODE=copy\n\n# Install dependencies using cache and bind mounts for optimal layer caching\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    --mount=type=bind,source=uv.lock,target=uv.lock \\\n    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \\\n    uv sync --frozen --no-install-project --no-dev\n\n# Copy application source and build the environment\nADD . /app\nRUN --mount=type=cache,target=/root/.cache/uv \\\n    uv sync --frozen --no-dev\n\n# --- Runtime Stage ---\nFROM python:3.13-slim-bookworm AS runtime\n\nWORKDIR /app\n\n# Security: Run as a non-privileged user\nRUN useradd -m -u 10001 appuser\nUSER appuser\n\n# Copy virtual environment and application code from builder\nCOPY --from=builder --chown=appuser:appuser /app /app\n\nENV PATH=\"/app/.venv/bin:$PATH\"\nENV PYTHONUNBUFFERED=1\n\nEXPOSE 8000\n\nCMD [\"uvicorn\", \"demo_project.main:app\", \"--host\", \"0.0.0.0\", \"--port\", \"8000\"]\n"
-
-[[files]]
-path = "README.md"
-policy = "seed-only"
-digest = "586754ffd7d90f437e71a38df2f5a1cff9625886a8420596518ced2d9e9016aa"
-
-[[files]]
 path = "justfile"
 policy = "text"
 baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run rumdl check --fix .\n    uv run rumdl fmt .\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run rumdl check .\n    uv run rumdl fmt --check .\n    uv run ruff check .\n    uv run ruff format --check .\n    uv run actionlint\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run static type checking\ntypecheck: sync\n    @printf \"\\n{{ blue }}=== Running Type Checks ==={{ nc }}\\n\"\n    uv run mypy .\n    @printf \"{{ green }}✔ Type checking passed{{ nc }}\\n\"\n\n# Run the full automated testing matrix\ntest: sync\n    @printf \"\\n{{ blue }}=== Running Tests ==={{ nc }}\\n\"\n    uv run pytest\n    @printf \"{{ green }}✔ All tests passed{{ nc }}\\n\"\n\n# Run tests with coverage\ntest-cov: sync\n    @printf \"\\n{{ blue }}=== Running Tests with Coverage ==={{ nc }}\\n\"\n    uv run pytest --cov\n    @printf \"{{ green }}✔ Coverage run complete{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint typecheck test\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .rumdl_cache \\\n        .ruff_cache \\\n        .mypy_cache \\\n        .pytest_cache \\\n        htmlcov \\\n        .coverage \\\n        coverage.xml\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n"
@@ -60,22 +50,22 @@ baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstabl
 [[files]]
 path = "pyproject.toml"
 policy = "structured-toml"
-baseline = "[build-system]\nbuild-backend = \"hatchling.build\"\nrequires = [\"hatchling\"]\n\n[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.hatch.build.targets.wheel]\npackages = [\"src/demo_project\"]\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
+baseline = "[project]\nclassifiers = [\"Programming Language :: Python :: 3\", \"Programming Language :: Python :: 3.13\", \"Programming Language :: Python :: 3.14\", \"Operating System :: MacOS\", \"Operating System :: POSIX :: Linux\", \"Operating System :: Microsoft :: Windows\"]\ndescription = \"Add your description here.\"\nreadme = \"README.md\"\n[[project.authors]]\nemail = \"your-email@example.com\"\nname = \"your-name\"\n\n[tool.commitizen]\nchangelog_incremental = true\nname = \"cz_conventional_commits\"\ntag_format = \"v$version\"\nupdate_changelog_on_bump = true\nversion_provider = \"pep621\"\nversion_scheme = \"semver2\"\n\n[tool.mypy]\ncheck_untyped_defs = true\nexplicit_package_bases = true\nmypy_path = \"src\"\npretty = true\npython_version = \"3.13\"\nshow_error_codes = true\nshow_error_context = true\nwarn_return_any = true\nwarn_unused_configs = true\n\n[tool.pytest.ini_options]\naddopts = \"--strict-markers\"\npythonpath = [\".\", \"src\"]\ntestpaths = [\"tests\"]\n\n[tool.ruff]\nline-length = 88\n\n[tool.ruff.lint]\nextend-select = [\"PD\", \"NPY\"]\nignore = [\"E501\"]\nselect = [\"A\", \"B\", \"C4\", \"E\", \"F\", \"I\", \"RUF\", \"UP\"]\n\n[tool.rumdl]\ndisable = [\"MD013\", \"MD033\", \"MD077\"]\n\n[tool.rumdl.MD003]\nstyle = \"atx\"\n\n[tool.rumdl.MD004]\nstyle = \"dash\"\n\n[tool.rumdl.MD009]\nbr-spaces = 2\nstrict = false\n\n[tool.rumdl.MD024]\nsiblings-only = true\n\n[tool.rumdl.MD029]\nstyle = \"one\"\n\n[tool.rumdl.per-file-ignores]\n\"docs/**/*.md\" = [\"MD041\", \"MD046\"]\n"
 
 [[files]]
-path = "src/demo_project/core/config.py"
+path = "src/demo_project/__init__.py"
 policy = "seed-only"
-digest = "828fc44972bbcbbc1ef6d8d08f55ececf8a82ac1a0acf2865b3d0910594e47af"
+digest = "51c3b5f1d316a293d99d94391e4dcc2c383ea1c76db90aabcfdfcd7dfa3756d0"
 
 [[files]]
-path = "src/demo_project/main.py"
+path = "src/demo_project/photometry.py"
 policy = "seed-only"
-digest = "98277962dbdea60bf90f0e254e958679985c7cd1ab5faaba37d5747af6284989"
+digest = "6de819c9f985150387d1822a7aa4bf0d7f55b8ede90bef50e55b591eb1f3190a"
 
 [[files]]
-path = "tests/test_health.py"
+path = "tests/test_photometry.py"
 policy = "seed-only"
-digest = "cd94b52d2df329e7c006522cdca4437d5e4c8bbeac9d51148c9d8485c1683e8c"
+digest = "fbe23400854655791b2eea1ea540fe228db47bce92116999c39b1e88ee2ff08f"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -104,14 +94,6 @@ materialized = "commitizen>=4.18.1"
 [[dependencies]]
 path = "pyproject.toml"
 group = "dev"
-name = "httpx"
-marker = ""
-declared = "httpx"
-materialized = "httpx>=0.28.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
 name = "json5"
 marker = ""
 declared = "json5"
@@ -128,6 +110,14 @@ materialized = "mypy>=2.3.1"
 [[dependencies]]
 path = "pyproject.toml"
 group = "dev"
+name = "nbdime"
+marker = ""
+declared = "nbdime"
+materialized = "nbdime>=4.0.4"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "dev"
 name = "prek"
 marker = ""
 declared = "prek"
@@ -140,14 +130,6 @@ name = "pytest"
 marker = ""
 declared = "pytest"
 materialized = "pytest>=9.1.1"
-
-[[dependencies]]
-path = "pyproject.toml"
-group = "dev"
-name = "pytest-asyncio"
-marker = ""
-declared = "pytest-asyncio"
-materialized = "pytest-asyncio>=1.4.0"
 
 [[dependencies]]
 path = "pyproject.toml"
@@ -176,26 +158,66 @@ materialized = "rumdl>=0.2.73"
 [[dependencies]]
 path = "pyproject.toml"
 group = "main"
-name = "fastapi"
+name = "astropy"
 marker = ""
-declared = "fastapi"
-materialized = "fastapi>=0.141.1"
+declared = "astropy"
+materialized = "astropy>=8.0.1"
 
 [[dependencies]]
 path = "pyproject.toml"
 group = "main"
-name = "pydantic-settings"
+name = "astroquery"
 marker = ""
-declared = "pydantic-settings"
-materialized = "pydantic-settings>=2.15.0"
+declared = "astroquery"
+materialized = "astroquery>=0.4.11"
 
 [[dependencies]]
 path = "pyproject.toml"
 group = "main"
-name = "uvicorn"
+name = "matplotlib"
 marker = ""
-declared = "uvicorn"
-materialized = "uvicorn>=0.53.0"
+declared = "matplotlib"
+materialized = "matplotlib>=3.11.2"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "numpy"
+marker = ""
+declared = "numpy"
+materialized = "numpy>=2.5.3"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "pandas"
+marker = ""
+declared = "pandas"
+materialized = "pandas>=3.0.5"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "photutils"
+marker = ""
+declared = "photutils"
+materialized = "photutils>=3.0.0"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "scipy"
+marker = ""
+declared = "scipy"
+materialized = "scipy>=1.18.1"
+
+[[dependencies]]
+path = "pyproject.toml"
+group = "main"
+name = "specutils"
+marker = ""
+declared = "specutils"
+materialized = "specutils>=2.4.0"
 
 [[hook_pins]]
 path = ".pre-commit-config.yaml"

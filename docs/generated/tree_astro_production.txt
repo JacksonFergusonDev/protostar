@@ -1,0 +1,25 @@
+.
+├── .envrc
+├── .gitattributes
+├── .github
+│   ├── renovate.json
+│   └── workflows
+│       └── ci.yml
+├── .gitignore
+├── .pre-commit-config.yaml
+├── .python-version
+├── CHANGELOG.md
+├── data
+│   ├── catalogs
+│   └── fits
+├── justfile
+├── notebooks
+├── protostar.lock
+├── pyproject.toml
+├── src
+│   └── demo_project
+│       ├── __init__.py
+│       └── photometry.py
+├── tests
+│   └── test_photometry.py
+└── uv.lock

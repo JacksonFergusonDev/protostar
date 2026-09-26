@@ -18,7 +18,7 @@ import re
 import tempfile
 import tomllib
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import cache
 from pathlib import PurePath, PurePosixPath
@@ -28,6 +28,7 @@ from .config import TEMPLATE_STRUCTURAL_KEYS, TemplateBlueprint, TemplateSource
 from .errors import ProtostarError, TemplateEncodingError, TemplateResolutionError
 from .interpolation import VARIABLE_PATTERN
 from .options import Condition
+from .tiers import Tier
 from .toml_lines import TomlLineIndex
 
 __all__ = [
@@ -154,7 +155,12 @@ _NON_MODULE_FLAGS = frozenset({"docker"})
 
 # Tools whose config has no additive key, so a template must redefine the whole
 # list. Redefining is only allowed when it keeps every baseline entry.
-ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY = frozenset({("tool", "ruff", "lint", "ignore")})
+ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY = frozenset(
+    {
+        ("tool", "ruff", "lint", "ignore"),
+        ("tool", "pytest", "ini_options", "pythonpath"),
+    }
+)
 
 # Package-name prefixes that only make sense while a tool is enabled.
 TOOL_PACKAGE_OWNERS: Mapping[str, str] = {
@@ -174,7 +180,8 @@ def check_template(target: str) -> TemplateCheck:
     """Checks one template without writing to the project or running anything.
 
     The template is rendered with a placeholder for every custom variable and
-    planned as a default ``protostar init`` into an empty scratch directory,
+    planned as a default ``protostar init``, once per tier when it declares
+    tiers, into an empty scratch directory,
     using Protostar's built-in configuration rather than the caller's, so the
     result is the same on every machine.
 
@@ -221,10 +228,16 @@ def check_template(target: str) -> TemplateCheck:
     except ProtostarError as e:
         errors.append(_error_finding(e, manifest_file))
     else:
-        try:
-            _plan_default_init(source, variables)
-        except ProtostarError as e:
-            errors.append(_error_finding(e, manifest_file))
+        for tier in tuple(Tier) if source.tiers else (None,):
+            try:
+                _plan_init(source, variables, tier)
+            except ProtostarError as e:
+                finding = _error_finding(e, manifest_file)
+                if tier is not None:
+                    finding = replace(
+                        finding, message=f"In the {tier} tier: {finding.message}"
+                    )
+                errors.append(finding)
         warnings.extend(_payload_findings(blueprint, where))
         warnings.extend(_migration_findings(source, blueprint, where))
     return TemplateCheck(target, (*errors, *warnings))
@@ -269,13 +282,20 @@ def _error_finding(error: ProtostarError, file: str) -> Finding:
     )
 
 
-def _plan_default_init(source: TemplateSource, variables: dict[str, str]) -> None:
+def _plan_init(
+    source: TemplateSource, variables: dict[str, str], tier: Tier | None
+) -> None:
     """Plans a default ``protostar init`` of the template into an empty directory.
 
     Planning reads the working directory (for collisions and recorded state),
     so it runs in an empty scratch directory: the template is judged as a
     fresh project would receive it, never against whatever the author's
     checkout contains. Nothing is written there.
+
+    Args:
+        source: The template.
+        variables: A placeholder value for each custom variable.
+        tier: The tier to plan, or None for a template without tiers.
     """
     from .config import UserConfig
     from .init_draft import DraftTemplate, InitDraft, resolve_init
@@ -285,6 +305,7 @@ def _plan_default_init(source: TemplateSource, variables: dict[str, str]) -> Non
     draft = InitDraft(
         template=DraftTemplate(source, is_external=True),
         variables=tuple(sorted(variables.items())),
+        tier=tier,
         # Explicit, so resolving metadata never asks git for the author.
         metadata=(),
     )
