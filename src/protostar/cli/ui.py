@@ -6,6 +6,7 @@ import shlex
 import sys
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from rich.console import Console, Group, RenderableType
@@ -19,10 +20,12 @@ from protostar.cli import schema
 from protostar.config import active_config_source
 from protostar.docs_registry import DocsPage
 from protostar.errors import (
+    ConfigurationError,
     ProtostarError,
     SecurityViolationError,
     WorkspaceCollisionError,
 )
+from protostar.guide import Entrypoint, read_entrypoints
 from protostar.manifest import (
     DiagnosticEvent,
     EnvironmentManifest,
@@ -437,12 +440,47 @@ def _run_engine(
             if not request.one_shot and (pointer := _sync_pointer(result.diagnostics)):
                 console.print(pointer)
         else:
-            console.print(
-                "\n[bold green]SUCCESS:[/bold green] Accretion disk stabilized. Environment ready."
-            )
+            console.print("\n[bold green]SUCCESS:[/bold green] Project ready.")
+        try:
+            entrypoints = read_entrypoints(Path.cwd())
+        except ConfigurationError:
+            # The project was written; an unreadable file only drops the run hint.
+            entrypoints = ()
+        console.print(next_steps(entrypoints, request.one_shot))
         print_missing_tools(result.missing_tools)
 
     return result
+
+
+def next_steps(entrypoints: Sequence[Entrypoint], one_shot: bool) -> Text:
+    """Says how to run the new project, and where to learn the rest.
+
+    Args:
+        entrypoints: The commands ``[project.scripts]`` installs.
+        one_shot: Whether the project records no recipe, which the guide needs.
+
+    Returns:
+        One line per step: running the app, when it installs a command, then
+        ``protostar guide``.
+    """
+    line = Text()
+    if entrypoints:
+        line.append("Run it with ")
+        for index, entry in enumerate(entrypoints):
+            if index:
+                line.append(" or ")
+            line.append(f"uv run {entry.name}", "bold cyan")
+        line.append(".")
+    if not one_shot:
+        if line:
+            line.append("\n")
+        line.append_text(
+            Text.assemble(
+                ("protostar guide", "bold cyan"),
+                " shows how to test, check, and document it.",
+            )
+        )
+    return line
 
 
 def missing_install(missing: frozenset[MissingTool]) -> InstallCommand | None:

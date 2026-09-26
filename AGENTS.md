@@ -208,6 +208,7 @@ Scale or omit these sections based on the scope of the PR.
 - `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).
 - `src/protostar/init_draft.py`: Shared init draft and resolver for flags and interactive choices.
+- `src/protostar/guide.py`: `protostar guide`'s content: a fourth renderer of the `GuideSpec` AGENTS.md and CONTRIBUTING.md render from. Its commands come only from that spec and recorded project facts (`[project.scripts]`, `missing_tools`); it plans the recorded recipe as `sync` does, runs nothing, and never recomputes a command.
 - `src/protostar/analysis.py`: Read-only analysis of a project with no recipe yet: the tools it uses (from module signals) and the facts that pre-fill its first recipe.
 - `src/protostar/manifest.py`: `EnvironmentManifest` definition and aggregation state.
 - `src/protostar/executor.py`: `SystemExecutor` coordinating transactional side-effects and rollback.

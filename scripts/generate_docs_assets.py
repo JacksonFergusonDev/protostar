@@ -1009,7 +1009,7 @@ def generate_cli_help_svgs() -> None:
             config_parser = subparsers.choices["config"]
             _render_svg(config_parser, "help config", "cli_config_help.svg")
         if subparsers:
-            for command in ("status", "diff", "sync"):
+            for command in ("status", "diff", "sync", "guide"):
                 _render_svg(
                     subparsers.choices[command],
                     f"help {command}",
@@ -1061,10 +1061,10 @@ def _demo_project() -> Iterator[None]:
             os.chdir(orig_cwd)
 
 
-def _cli_template_engine() -> tuple[Orchestrator, InitRequest]:
-    """Builds the engine `protostar init --template cli` would run with defaults."""
-    target = importlib.resources.files("protostar.templates").joinpath("cli.toml")
-    blueprint = TemplateSource.load(str(target), built_in="cli").render({})
+def _cli_template_engine(alias: str = "cli") -> tuple[Orchestrator, InitRequest]:
+    """Builds the engine `protostar init --template <alias>` would run with defaults."""
+    target = importlib.resources.files("protostar.templates").joinpath(f"{alias}.toml")
+    blueprint = TemplateSource.load(str(target), built_in=alias).render({})
     user_config = UserConfig()
     modules: list[BootstrapModule] = [SystemWorkspaceModule(), PythonCore()]
     for mod in TOOLING_MODULES:
@@ -1141,6 +1141,41 @@ def generate_cli_missing_tools_svg() -> None:
             filename="cli_missing_tools.svg",
             unique_id="cli_missing_tools",
         )
+    finally:
+        protostar.cli.ui.console = original_global_console
+
+
+def generate_guide_svgs() -> None:
+    """Captures `protostar guide` for a library, a CLI, and a workbench project.
+
+    Each project is scaffolded by the real engine on stubbed subprocesses, so
+    the guide reads the recipe, ledger, and pyproject.toml execution wrote.
+    """
+    from protostar.cli.guide import render_guide
+    from protostar.guide import project_guide
+
+    original_global_console = protostar.cli.ui.console
+    try:
+        for alias in ("lib", "cli", "ml"):
+            record_console = _recording_console(terminal=False)
+            with (
+                _demo_project(),
+                mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
+                mock.patch.object(ProcessRunner, "run", _stub_subprocess),
+                mock.patch("shutil.which", _stub_which),
+            ):
+                engine, request = _cli_template_engine(alias)
+                protostar.cli.ui.console = _recording_console(terminal=False)
+                protostar.cli.ui._run_engine(engine, request)
+                _print_prompt(record_console, "guide")
+                record_console.print(render_guide(project_guide()))
+
+            _render_and_write_svg(
+                record_console,
+                title="zsh",
+                filename=f"cli_guide_{alias}.svg",
+                unique_id=f"cli_guide_{alias}",
+            )
     finally:
         protostar.cli.ui.console = original_global_console
 
@@ -1372,6 +1407,7 @@ def generate_docs_assets() -> None:
     generate_cli_dry_run_svg()
     generate_cli_init_svg()
     generate_cli_missing_tools_svg()
+    generate_guide_svgs()
     generate_tui_svgs()
     generate_default_config()
     generate_capability_tables()

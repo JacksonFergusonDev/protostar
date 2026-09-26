@@ -27,7 +27,6 @@ from .options import Condition, resolve_options
 from .progress import ProgressStep, no_progress
 from .sync_state import check_one_shot_workspace, check_workspace_identity
 from .workflows import (
-    GuideSpec,
     HookRunner,
     generate_agents_md,
     generate_contributing_md,
@@ -242,18 +241,7 @@ class Orchestrator:
                 owned_files=[f".git/hooks/{kind}" for kind in sorted(hook_types)],
             )
         tooling = manifest.tooling
-        guide = GuideSpec(
-            python_version=manifest.recipe.python,
-            hook_runner=tooling.hook_runner,
-            wants_just=tooling.wants_just,
-            format_commands=tooling.just_format_commands,
-            lint_commands=tooling.just_lint_commands,
-            typecheck_commands=tooling.just_typecheck_commands,
-            ci_flags=tooling.ci_flags,
-            conventional_commits=tooling.conventional_commits,
-            wants_ci=tooling.wants_ci,
-            one_shot=manifest.one_shot,
-        )
+        guide = manifest.guide_spec()
         if tooling.wants_agents:
             producer = f"module:{AgentsModule.__name__}"
             tool = Tool.AGENTS

@@ -63,6 +63,21 @@ protostar init --from ./api.toml --option database=postgres --option compose=tru
 
 An unknown option or a value the option doesn't offer stops init with the values it does offer.
 
+### `protostar guide`
+
+Show how to work on the project in the current directory: the command that runs it, the file its code starts in, and its tests, checks, and docs, each with a short explanation:
+
+```bash
+protostar guide
+protostar guide --json
+```
+
+![Guide command help](../assets/terminals/cli_guide_help.svg)
+
+The commands come from the same tooling state that renders the project's `AGENTS.md` and `CONTRIBUTING.md`, so the three always agree. An action appears only when the project has it: the run command comes from `[project.scripts]`, and the justfile's recipes appear only while `just` is enabled. If a tool's binary is missing, such as `just`, the guide shows the commands its recipes run instead and ends with the command that installs it. The guide reads the recipe and `pyproject.toml`; it never runs a project command or writes a file. Without a recipe, it says what it cannot know and points to `protostar init`.
+
+![Guide for a CLI project](../assets/terminals/cli_guide_cli.svg)
+
 ### `protostar status` and `protostar diff`
 
 Inspect the current directory using its recorded project recipe and ownership ledger:

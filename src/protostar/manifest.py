@@ -25,7 +25,7 @@ from .metadata import LicenseType
 from .migrations import Migration
 from .sync_state import FilePolicy
 from .system_deps import GlobalExecutable
-from .workflows import DOCKERFILE, CIFlag, TargetOS
+from .workflows import DOCKERFILE, CIFlag, GuideSpec, TargetOS
 from .workflows import HookRunner as HookRunner
 from .workspace import resolve_package_name, resolve_project_name
 
@@ -661,6 +661,31 @@ class EnvironmentManifest:
             executable: The executable a module's step runs.
         """
         return any(item.executable is executable for item in self.missing_tools)
+
+    def guide_spec(self) -> GuideSpec:
+        """Returns the project's tooling as the generated guides describe it.
+
+        AGENTS.md, CONTRIBUTING.md, the pull request template, and
+        ``protostar guide`` all render from it, once every module has built.
+
+        Raises:
+            ConfigurationError: If planning has not chosen a recipe yet.
+        """
+        if self.recipe is None:
+            raise ConfigurationError("The guide needs a planned recipe.")
+        tooling = self.tooling
+        return GuideSpec(
+            python_version=self.recipe.python,
+            hook_runner=tooling.hook_runner,
+            wants_just=tooling.wants_just,
+            format_commands=tooling.just_format_commands,
+            lint_commands=tooling.just_lint_commands,
+            typecheck_commands=tooling.just_typecheck_commands,
+            ci_flags=tooling.ci_flags,
+            conventional_commits=tooling.conventional_commits,
+            wants_ci=tooling.wants_ci,
+            one_shot=self.one_shot,
+        )
 
     def add_ide_setting(self, key: IDESettingKey, value: Any) -> None:
         """Sets a key-value configuration for the requested IDE."""

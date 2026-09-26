@@ -267,6 +267,12 @@ If a step fails or you interrupt it, that step is marked `✖`, every tracked ch
 is rolled back, and the error report follows. Piped output omits the spinner but
 keeps the checklist lines; `--json` suppresses the checklist entirely.
 
+A successful run ends with what to do next: the command that runs the app, when
+the project installs one, and `protostar guide`, which shows how to test, check,
+and document the project. If a selected tool's binary is missing, the output ends
+with the one command that installs it; see
+[Tool Binaries](troubleshooting.md#tool-binaries-direnv-just).
+
 ## Existing Projects
 
 When `init` runs in a directory that already holds a project but has no recipe yet, Protostar first reads what the project has. It only reads: nothing is written and no command runs.

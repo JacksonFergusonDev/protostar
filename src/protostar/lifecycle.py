@@ -308,6 +308,53 @@ def prepare_project(
         InvalidOptionValueError: If an option's value is one it doesn't offer.
     """
     located = located or locate_project()
+    manifest, config = plan_project(
+        located,
+        variables=variables,
+        allowed_secrets=allowed_secrets,
+        options=options,
+        check_executables=check_executables,
+    )
+    revisions = resolve_hook_revisions()
+    return PreparedProject(
+        manifest,
+        config,
+        prepare_review(manifest, config, hook_revisions=revisions),
+        located.upstream,
+    )
+
+
+def plan_project(
+    located: LocatedProject,
+    *,
+    variables: Mapping[str, str] | None = None,
+    allowed_secrets: frozenset[str] = frozenset(),
+    options: Mapping[str, OptionValue] | None = None,
+    check_executables: bool = True,
+) -> tuple[EnvironmentManifest, UserConfig]:
+    """Plans a located project's recipe exactly as ``sync`` applies it.
+
+    Planning is read-only, so a caller that only reads the plan, such as
+    ``protostar guide``, can call this without preparing a review.
+
+    Args:
+        located: The located project.
+        variables: Values for template variables, over the recorded ones.
+        allowed_secrets: Variables whose flagged values the user confirmed
+            are not secrets.
+        options: Values for template options, over the recorded ones.
+        check_executables: Whether to require the executables Protostar runs.
+
+    Returns:
+        The planned manifest, and the configuration the recipe records.
+
+    Raises:
+        MissingDependencyError: If an executable Protostar runs is missing.
+        MissingTemplateVariablesError: If a template variable still has no
+            value.
+        SecretDetectedError: If a new value looks like a credential.
+        InvalidOptionValueError: If an option's value is one it doesn't offer.
+    """
     recipe, template = located.recipe, located.template
     if template is not None:
         recorded = dict(recipe.variables)
@@ -365,10 +412,4 @@ def prepare_project(
     manifest = Orchestrator(modules, config, request).plan(
         check_executables=check_executables
     )
-    revisions = resolve_hook_revisions()
-    return PreparedProject(
-        manifest,
-        config,
-        prepare_review(manifest, config, hook_revisions=revisions),
-        located.upstream,
-    )
+    return manifest, config

@@ -149,6 +149,13 @@ class GuideSpec:
     one_shot: bool = False
 
 
+TEST_COMMAND = "uv run pytest"
+"""The command that runs the test suite, as the justfile and guides state it."""
+
+DOCS_SERVE_COMMAND = "uv run zensical serve -o"
+"""The command that previews the documentation, as the justfile and guides state it."""
+
+
 DOCKERFILE = "Dockerfile"
 """Workspace path of the generated container image definition."""
 
@@ -575,7 +582,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
                 "# Run the full automated testing matrix",
                 "test: sync",
                 '    @printf "\\n{{ blue }}=== Running Tests ==={{ nc }}\\n"',
-                "    uv run pytest",
+                f"    {TEST_COMMAND}",
                 '    @printf "{{ green }}✔ All tests passed{{ nc }}\\n"',
                 "",
                 "# Run tests with coverage",
@@ -636,7 +643,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
                 "# Start the documentation preview server",
                 "serve: sync",
                 '    @printf "\\n{{ blue }}=== Launching Zensical Server ==={{ nc }}\\n"',
-                "    uv run zensical serve -o",
+                f"    {DOCS_SERVE_COMMAND}",
             ]
         )
 
@@ -664,6 +671,88 @@ def _command_block(commands: list[str]) -> list[str]:
     return ["", "```bash", *commands, "```"]
 
 
+class Check(enum.StrEnum):
+    """A kind of check the guides give a command for."""
+
+    FORMAT = "format"
+    LINT = "lint"
+    TYPECHECK = "typecheck"
+    TEST = "test"
+    CI = "ci"
+
+
+@dataclass(frozen=True)
+class JustRecipe:
+    """A justfile recipe the guides name, and what it does.
+
+    Attributes:
+        check: What the recipe checks.
+        summary: What running it does, as a lowercase clause.
+    """
+
+    check: Check
+    summary: str
+
+    @property
+    def command(self) -> str:
+        """Returns the command that runs the recipe."""
+        return f"just {self.check.value}"
+
+
+def just_recipes(spec: GuideSpec) -> list[JustRecipe]:
+    """Returns the justfile recipes the project's checks have, in run order.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+    """
+    recipes: list[JustRecipe] = []
+    if spec.format_commands:
+        recipes.append(JustRecipe(Check.FORMAT, "apply formatters and safe lint fixes"))
+    if spec.lint_commands:
+        recipes.append(JustRecipe(Check.LINT, "run the linters"))
+    if spec.typecheck_commands:
+        recipes.append(JustRecipe(Check.TYPECHECK, "run static type checks"))
+    if CIFlag.PYTEST in spec.ci_flags:
+        recipes.append(JustRecipe(Check.TEST, "run the test suite"))
+    ci_deps = _just_ci_dependencies(
+        spec.lint_commands, spec.typecheck_commands, spec.ci_flags
+    )
+    if ci_deps:
+        recipes.append(
+            JustRecipe(
+                Check.CI,
+                f"run {', '.join(ci_deps)}; the local check to pass before pushing",
+            )
+        )
+    return recipes
+
+
+def check_commands(spec: GuideSpec) -> list[tuple[Check, list[str]]]:
+    """Returns the commands each check runs, without just, in run order.
+
+    Args:
+        spec: The aggregated tooling state to describe.
+
+    Returns:
+        Each check that has commands, with them.
+    """
+    checks = [
+        (Check.FORMAT, spec.format_commands),
+        (Check.LINT, spec.lint_commands),
+        (Check.TYPECHECK, spec.typecheck_commands),
+        (Check.TEST, [TEST_COMMAND] if CIFlag.PYTEST in spec.ci_flags else []),
+    ]
+    return [(check, list(commands)) for check, commands in checks if commands]
+
+
+_CHECK_TITLES = {
+    Check.FORMAT: "Format",
+    Check.LINT: "Lint",
+    Check.TYPECHECK: "Type Check",
+    Check.TEST: "Test",
+}
+
+
 def _command_sections(spec: GuideSpec) -> list[str]:
     """Renders the project's checks under a ``## Commands`` heading.
 
@@ -673,37 +762,15 @@ def _command_sections(spec: GuideSpec) -> list[str]:
     Returns:
         The section's lines, or none when the project has no checks.
     """
-    has_pytest = CIFlag.PYTEST in spec.ci_flags
     if spec.wants_just:
-        commands: list[str] = []
-        if spec.format_commands:
-            commands.append("- `just format`: apply formatters and safe lint fixes.")
-        if spec.lint_commands:
-            commands.append("- `just lint`: run the linters.")
-        if spec.typecheck_commands:
-            commands.append("- `just typecheck`: run static type checks.")
-        if has_pytest:
-            commands.append("- `just test`: run the test suite.")
-        ci_deps = _just_ci_dependencies(
-            spec.lint_commands, spec.typecheck_commands, spec.ci_flags
-        )
-        if ci_deps:
-            commands.append(
-                f"- `just ci`: run {', '.join(ci_deps)}; "
-                "the local check to pass before pushing."
-            )
+        commands = [
+            f"- `{recipe.command}`: {recipe.summary}." for recipe in just_recipes(spec)
+        ]
         return ["", "## Commands", "", *commands] if commands else []
 
-    sections = [
-        ("Format", spec.format_commands),
-        ("Lint", spec.lint_commands),
-        ("Type Check", spec.typecheck_commands),
-        ("Test", ["uv run pytest"] if has_pytest else []),
-    ]
     lines: list[str] = []
-    for title, commands in sections:
-        if commands:
-            lines.extend(["", f"### {title}", *_command_block(commands)])
+    for check, commands in check_commands(spec):
+        lines.extend(["", f"### {_CHECK_TITLES[check]}", *_command_block(commands)])
     return ["", "## Commands", *lines] if lines else []
 
 
