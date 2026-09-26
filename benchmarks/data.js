@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790453452651,
+  "lastUpdate": 1790455888216,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17549,6 +17549,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 889.92,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bd58a9100c15c2a48b992b8a61f05cacc66e5c5c",
+          "message": "feat(templates): every built-in offers both tiers (#355)\n\n* feat(templates): every built-in offers both tiers\n\nEach built-in declares a workbench and a production tier. Production\ninfrastructure (checks, automation, docs, publishing, the api container)\nmoves into the tiers; what a project of the shape wants either way stays\nat the root. Defaults are unchanged: cli, api, and lib start in\nproduction, astro and ml in workbench. Production astro and ml ship a\ntested package, check-template plans every tier, and the generated\nlarge-file hook no longer rejects a scientific stack's uv.lock.\n\n* docs(plan): PR 6 merged\n\n* docs(plan): record PR 7 as #355",
+          "timestamp": "2026-09-26T13:49:46-07:00",
+          "tree_id": "022fc227f7471f62d2606d09355bdb2d315fb19f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/bd58a9100c15c2a48b992b8a61f05cacc66e5c5c"
+        },
+        "date": 1790455887018,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 154.49,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 554.83,
             "unit": "ms"
           }
         ]
