@@ -154,18 +154,8 @@ authors = [{{ name = "{name}", email = "{email}" }}]
                     classifiers.append(f'"Programming Language :: Python :: {version}"')
 
         for os_name in supported_os:
-            try:
-                target_os = (
-                    os_name if isinstance(os_name, TargetOS) else TargetOS(str(os_name))
-                )
+            if (target_os := TargetOS.from_string(os_name)) is not None:
                 classifiers.append(f'"{target_os.trove_classifier}"')
-            except ValueError:
-                if os_name == "MacOS":
-                    classifiers.append('"Operating System :: MacOS"')
-                elif os_name == "Linux":
-                    classifiers.append('"Operating System :: POSIX :: Linux"')
-                elif os_name == "Windows":
-                    classifiers.append('"Operating System :: Microsoft :: Windows"')
 
         if license_classifier:
             classifiers.append(f'"{license_classifier}"')

@@ -42,7 +42,6 @@ _PYTHON_VERSION_FILE = ".python-version"
 _LICENSE_FILES = ("LICENSE", "LICENSE.txt", "LICENSE.md", "COPYING")
 _GITHUB_URL = re.compile(r"^https?://(?:www\.)?github\.com/([A-Za-z0-9-]+)/", re.I)
 _COPYRIGHT = re.compile(r"^\s*copyright\s+(?:\(c\)\s*|©\s*)?(\d{4})\b", re.I)
-_OS_INDEPENDENT = "Operating System :: OS Independent"
 
 
 class NoteKind(StrEnum):
@@ -440,15 +439,7 @@ def _supported_os(project: dict[str, Any]) -> Fact[tuple[TargetOS, ...]] | None:
     classifiers = project.get("classifiers")
     if not isinstance(classifiers, list):
         return None
-    names = [item for item in classifiers if isinstance(item, str)]
-    if _OS_INDEPENDENT in names:
-        targets = tuple(TargetOS)
-    else:
-        targets = tuple(
-            target
-            for target in TargetOS
-            if any(name.startswith(target.trove_classifier) for name in names)
-        )
+    targets = TargetOS.from_iterable(classifiers)
     if not targets:
         return None
     return Fact(targets, f"{pyproject.TARGET} [project].classifiers")

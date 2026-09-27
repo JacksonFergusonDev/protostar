@@ -91,6 +91,48 @@ class TargetOS(enum.StrEnum):
         }
         return mapping[self]
 
+    @classmethod
+    def from_string(cls, value: object) -> "TargetOS | None":
+        """Parses an operating system name or Trove classifier into a TargetOS."""
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, str):
+            return None
+        cleaned = value.strip()
+        for target in cls:
+            if cleaned == target.value or cleaned.startswith(target.trove_classifier):
+                return target
+        return None
+
+    @classmethod
+    def from_iterable(cls, values: object) -> tuple["TargetOS", ...]:
+        """Parses an iterable of operating system names or classifiers into TargetOS enums."""
+        if not isinstance(values, list | tuple | set):
+            return ()
+        raw_items = [
+            item.strip() if isinstance(item, str) else item
+            for item in values
+            if isinstance(item, str | cls)
+        ]
+        if any(item == "Operating System :: OS Independent" for item in raw_items):
+            return tuple(cls)
+        if any(
+            isinstance(item, str) and item.startswith("Operating System ::")
+            for item in raw_items
+        ):
+            return tuple(
+                target
+                for target in cls
+                if any(cls.from_string(item) == target for item in raw_items)
+            )
+        seen: set[TargetOS] = set()
+        result: list[TargetOS] = []
+        for item in raw_items:
+            if (target := cls.from_string(item)) is not None and target not in seen:
+                seen.add(target)
+                result.append(target)
+        return tuple(result)
+
 
 class CIFlag(enum.StrEnum):
     """Enumeration of feature flags for CI workflow and justfile generators."""
@@ -172,6 +214,22 @@ class DockerfileSpec:
     docker_port: str | None = None
 
 
+_DEFAULT_CORE_HOOKS = """      - id: check-added-large-files
+        # A scientific stack's lock file passes the size limit, and belongs in Git.
+        exclude: ^uv\\.lock$
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: trailing-whitespace
+        exclude: \\.py$
+      - id: end-of-file-fixer
+        exclude: \\.py$
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml"""
+
+
 def generate_pre_commit_config(
     local_hooks: list[str] | None = None,
     remote_hooks: list[str] | None = None,
@@ -183,45 +241,16 @@ def generate_pre_commit_config(
 ) -> str:
     """Assembles and formats the .pre-commit-config.yaml content."""
     if hook_runner == HookRunner.PREK:
-        base_yaml = """repos:
-  # Generic hooks (configured to IGNORE Python)
-  - repo: builtin
-    hooks:
-      - id: check-added-large-files
-        # A scientific stack's lock file passes the size limit, and belongs in Git.
-        exclude: ^uv\\.lock$
-      - id: check-merge-conflict
-      - id: check-case-conflict
-      - id: check-symlinks
-      - id: check-executables-have-shebangs
-      - id: trailing-whitespace
-        exclude: \\.py$
-      - id: end-of-file-fixer
-        exclude: \\.py$
-      - id: check-yaml
-      - id: check-json
-      - id: check-toml"""
+        repo_header = "  - repo: builtin\n    hooks:"
     else:
         resolved_core_rev = core_rev or RemoteHook.PRE_COMMIT_HOOKS.placeholder
-        base_yaml = f"""repos:
-  # Generic hooks (configured to IGNORE Python)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: {resolved_core_rev}
-    hooks:
-      - id: check-added-large-files
-        # A scientific stack's lock file passes the size limit, and belongs in Git.
-        exclude: ^uv\\.lock$
-      - id: check-merge-conflict
-      - id: check-case-conflict
-      - id: check-symlinks
-      - id: check-executables-have-shebangs
-      - id: trailing-whitespace
-        exclude: \\.py$
-      - id: end-of-file-fixer
-        exclude: \\.py$
-      - id: check-yaml
-      - id: check-json
-      - id: check-toml"""
+        repo_header = (
+            f"  - repo: https://github.com/pre-commit/pre-commit-hooks\n"
+            f"    rev: {resolved_core_rev}\n"
+            f"    hooks:"
+        )
+
+    base_yaml = f"repos:\n  # Generic hooks (configured to IGNORE Python)\n{repo_header}\n{_DEFAULT_CORE_HOOKS}"
 
     repo_blocks: list[str] = []
 
@@ -296,12 +325,9 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     }
     os_matrix = []
     for os_name in spec.supported_os:
-        try:
-            target_os = (
-                os_name if isinstance(os_name, TargetOS) else TargetOS(str(os_name))
-            )
+        if (target_os := TargetOS.from_string(os_name)) is not None:
             os_matrix.append(target_os.runner_name)
-        except ValueError:
+        else:
             os_matrix.append(runner_map.get(str(os_name), "ubuntu-latest"))
 
     if not os_matrix:

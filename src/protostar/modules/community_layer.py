@@ -24,14 +24,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger("protostar")
 
 
-def _supported_os(values: object) -> tuple[TargetOS, ...]:
-    """Returns the recognized operating systems among the recorded metadata."""
-    if not isinstance(values, list | tuple):
-        return ()
-    known = {target.value: target for target in TargetOS}
-    return tuple(known[str(value)] for value in values if str(value) in known)
-
-
 class CommunityModule(ToolModule):
     """Configures the community health files GitHub surfaces to contributors."""
 
@@ -91,7 +83,7 @@ class CommunityModule(ToolModule):
             repository_url=(
                 f"https://github.com/{github}/{Path.cwd().name}" if github else None
             ),
-            supported_os=_supported_os(
+            supported_os=TargetOS.from_iterable(
                 manifest.metadata.get(MetadataKey.SUPPORTED_OS.value)
             ),
         )
