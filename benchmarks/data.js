@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790529217704,
+  "lastUpdate": 1790531857136,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17991,6 +17991,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 975.26,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "336677a499a99497915886be0f11aed94397fd4a",
+          "message": "refactor(core): resolve split-brain in PythonCore and template provenance enums (#364)\n\nResolve architectural split-brain and duplicate source-of-truth issues:\n\n- Remove direct UserConfig.load() disk reads from PythonCore, injecting active\n  UserConfig in memory via constructor and Orchestrator.\n- Remove dead project_license parameter and self.license attribute from PythonCore.\n- Unify divergent TemplateType into TemplateOrigin and add is_alias flag to TemplateInfo.\n- Update tests and scripts to align with unified template provenance and memory-first\n  config.",
+          "timestamp": "2026-09-27T10:54:56-07:00",
+          "tree_id": "2fdfe59aafa70cb1ee254e4eb219cd1ad985880e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/336677a499a99497915886be0f11aed94397fd4a"
+        },
+        "date": 1790531856281,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 262.1,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 931.91,
             "unit": "ms"
           }
         ]
