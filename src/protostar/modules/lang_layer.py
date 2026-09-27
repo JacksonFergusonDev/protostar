@@ -160,12 +160,7 @@ authors = [{{ name = "{name}", email = "{email}" }}]
                 )
                 classifiers.append(f'"{target_os.trove_classifier}"')
             except ValueError:
-                if os_name == "MacOS":
-                    classifiers.append('"Operating System :: MacOS"')
-                elif os_name == "Linux":
-                    classifiers.append('"Operating System :: POSIX :: Linux"')
-                elif os_name == "Windows":
-                    classifiers.append('"Operating System :: Microsoft :: Windows"')
+                pass
 
         if license_classifier:
             classifiers.append(f'"{license_classifier}"')
