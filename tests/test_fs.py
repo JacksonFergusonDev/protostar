@@ -83,3 +83,17 @@ def test_atomic_write_text_handles_encoding_error(tmp_path: Path) -> None:
     assert not target_file.exists()
     leftover_files = [f for f in tmp_path.iterdir() if f.name != "config.toml"]
     assert len(leftover_files) == 0, f"Temporary files leaked: {leftover_files}"
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX modes")
+def test_a_new_file_follows_the_umask_not_the_temporary_file(tmp_path: Path) -> None:
+    previous = os.umask(0o022)
+    try:
+        atomic_write_bytes(tmp_path / "README.md", b"hi\n")
+        os.umask(0o027)
+        atomic_write_bytes(tmp_path / "private.txt", b"hi\n")
+    finally:
+        os.umask(previous)
+
+    assert (tmp_path / "README.md").stat().st_mode & 0o777 == 0o644
+    assert (tmp_path / "private.txt").stat().st_mode & 0o777 == 0o640

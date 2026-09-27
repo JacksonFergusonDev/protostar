@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
+from packaging.requirements import InvalidRequirement, Requirement
+
 from .errors import ConfigurationError
 from .intent import (
     AppendContribution,
@@ -171,6 +173,21 @@ IDESettingKey = Literal[
 ]
 
 
+def _check_requirement(package: str) -> None:
+    """Rejects a requirement uv would not read as one, before any plan uses it.
+
+    Raises:
+        ConfigurationError: If ``package`` is not a PEP 508 requirement.
+    """
+    try:
+        Requirement(package)
+    except InvalidRequirement as error:
+        raise ConfigurationError(
+            f"Invalid dependency requirement '{package}'.",
+            hint="Use a valid PEP 508 requirement, such as 'requests>=2'.",
+        ) from error
+
+
 @dataclass
 class DependencyManifest:
     """Domain slice managing environment dependencies."""
@@ -208,18 +225,21 @@ class DependencyManifest:
 
     def add(self, package: str) -> None:
         """Queues a dependency for installation, preventing duplicates."""
+        _check_requirement(package)
         self.observe(("dependencies", package))
         if package not in self.dependencies:
             self.dependencies.append(package)
 
     def add_dev(self, package: str) -> None:
         """Queues a development dependency for installation, preventing duplicates."""
+        _check_requirement(package)
         self.observe(("dev_dependencies", package))
         if package not in self.dev_dependencies:
             self.dev_dependencies.append(package)
 
     def add_docs(self, package: str) -> None:
         """Queues a documentation dependency for installation, preventing duplicates."""
+        _check_requirement(package)
         self.observe(("docs_dependencies", package))
         if package not in self.docs_dependencies:
             self.docs_dependencies.append(package)

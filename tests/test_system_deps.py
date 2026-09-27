@@ -1,5 +1,9 @@
 """Install commands for missing executables, and the required-executable check."""
 
+import os
+import sys
+from pathlib import Path
+
 import pytest
 
 from protostar import system_deps
@@ -163,3 +167,36 @@ def test_current_platform(mocker, value, expected):
     mocker.patch("protostar.system_deps.sys.platform", value)
 
     assert Platform.current() is expected
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="only Windows searches the cwd")
+def test_a_planted_batch_file_is_never_found_in_place_of_git(tmp_path, monkeypatch):
+    # Reproduces the hijack a template could stage: `git.bat` in the project.
+    monkeypatch.delenv(system_deps.NO_CURRENT_DIRECTORY_SEARCH, raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "git.bat").write_text("@echo hijacked\r\n")
+    (tmp_path / "prek.cmd").write_text("@echo hijacked\r\n")
+
+    for name in ("git", "prek"):
+        found = system_deps.find_executable(name)
+        assert found is None or not Path(found).resolve().is_relative_to(
+            tmp_path.resolve()
+        )
+    # The switch is set only for the lookup.
+    assert system_deps.NO_CURRENT_DIRECTORY_SEARCH not in os.environ
+
+
+def test_windows_lookups_disable_the_current_directory_search(mocker, monkeypatch):
+    monkeypatch.setattr("protostar.system_deps.sys.platform", "win32")
+    monkeypatch.setenv(system_deps.NO_CURRENT_DIRECTORY_SEARCH, "0")
+    seen = []
+
+    def which(name):
+        seen.append(os.environ.get(system_deps.NO_CURRENT_DIRECTORY_SEARCH))
+        return
+
+    mocker.patch("protostar.system_deps.shutil.which", side_effect=which)
+
+    assert system_deps.find_executable("git") is None
+    assert seen == ["1"]
+    assert os.environ[system_deps.NO_CURRENT_DIRECTORY_SEARCH] == "0"

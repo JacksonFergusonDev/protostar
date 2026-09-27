@@ -404,7 +404,9 @@ def decode_recipe(data: object) -> ProjectRecipe:
         if origin is not TemplateOrigin.REMOTE and (path or ref is not None):
             raise _invalid()
         if origin is TemplateOrigin.BUILT_IN:
-            if locator not in {"api", "astro", "cli", "lib", "ml"}:
+            from .templates import builtin_template_aliases
+
+            if locator not in builtin_template_aliases():
                 raise _invalid()
         elif origin is TemplateOrigin.LOCAL:
             if (

@@ -5,6 +5,7 @@ import functools
 import hashlib
 import logging
 import os
+import stat
 import tomllib
 import types
 import typing
@@ -1251,6 +1252,40 @@ class TemplateBlueprint:
         return [block for block in self.optional if block.covers(path)]
 
 
+def _template_files(template_dir: Path, target: str) -> list[Path]:
+    """Lists a local template's ``template/`` files, refusing links.
+
+    A link would copy whatever it points at, such as a credentials file, into
+    the project, so every node must be a regular file or directory.
+
+    Raises:
+        TemplateResolutionError: If a node is a link or special file.
+    """
+    files: list[Path] = []
+    stack = [template_dir]
+    while stack:
+        node = stack.pop()
+        try:
+            mode = node.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):
+            kind = "a symbolic link" if stat.S_ISLNK(mode) else "a special file"
+            raise TemplateResolutionError(
+                target,
+                f"'{node.relative_to(template_dir.parent).as_posix()}' is {kind}; "
+                "templates may hold only regular files.",
+                hint="Replace it with a copy of the file it stands for.",
+            )
+        if node.name in {".DS_Store", "__pycache__"}:
+            continue
+        if stat.S_ISDIR(mode):
+            stack.extend(node.iterdir())
+        elif node != template_dir:
+            files.append(node)
+    return sorted(files)
+
+
 @dataclass(frozen=True)
 class TemplateSource:
     """One acquired template revision, held in memory until it is rendered.
@@ -1317,19 +1352,14 @@ class TemplateSource:
 
         raw_files: dict[str, str] = {}
         template_dir = base_dir / "template"
-        if template_dir.exists() and template_dir.is_dir():
-            for file_path in template_dir.rglob("*"):
-                if file_path.is_dir():
-                    continue
-                if ".DS_Store" in file_path.parts or "__pycache__" in file_path.parts:
-                    continue
-                rel_path = str(file_path.relative_to(template_dir))
-                try:
-                    raw_files[rel_path] = file_path.read_text(encoding="utf-8")
-                except UnicodeDecodeError as e:
-                    raise TemplateEncodingError(
-                        target, f"template/{Path(rel_path).as_posix()}"
-                    ) from e
+        for file_path in _template_files(template_dir, target):
+            rel_path = str(file_path.relative_to(template_dir))
+            try:
+                raw_files[rel_path] = file_path.read_text(encoding="utf-8")
+            except UnicodeDecodeError as e:
+                raise TemplateEncodingError(
+                    target, f"template/{Path(rel_path).as_posix()}"
+                ) from e
 
         reference = TemplateReference(
             TemplateOrigin.BUILT_IN if built_in else TemplateOrigin.LOCAL,

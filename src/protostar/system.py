@@ -2,7 +2,6 @@
 
 import logging
 import os
-import shutil
 import signal
 import subprocess
 import sys
@@ -11,6 +10,7 @@ from contextlib import contextmanager
 from typing import Any
 
 from .errors import CommandExecutionError, CommandTimeoutError, ProcessTerminationError
+from .system_deps import NO_CURRENT_DIRECTORY_SEARCH, find_executable
 
 logger = logging.getLogger("protostar")
 
@@ -45,13 +45,21 @@ def subprocess_environment() -> dict[str, str]:
     Drops the active Python environment, so tools resolve the project's own,
     and git's repository-local variables, so every git operation targets the
     repository in the working directory. Git configuration such as
-    ``GIT_CONFIG_GLOBAL`` and identity variables are kept.
+    ``GIT_CONFIG_GLOBAL`` and identity variables are kept. On Windows it also
+    stops the child looking up executables in the working directory.
 
     Returns:
         A copy of ``os.environ`` without those variables.
     """
     removed = {"VIRTUAL_ENV", "PYTHONHOME", *GIT_REPOSITORY_VARIABLES}
-    return {key: value for key, value in os.environ.items() if key not in removed}
+    environment = {
+        key: value for key, value in os.environ.items() if key not in removed
+    }
+    if sys.platform == "win32":
+        # A child resolving its own commands (git running a hook, uv running
+        # git) must not find a file the project holds either.
+        environment[NO_CURRENT_DIRECTORY_SEARCH] = "1"
+    return environment
 
 
 class ProcessRunner:
@@ -94,10 +102,16 @@ class ProcessRunner:
             CommandExecutionError: If the process returns a non-zero exit code.
             ProcessTerminationError: If an interrupted process cannot be reaped.
         """
-        exe = shutil.which(cmd[0])
-        resolved_cmd = list(cmd)
-        if exe:
-            resolved_cmd[0] = exe
+        exe = find_executable(cmd[0])
+        if exe is None:
+            # Never hand a bare name to the OS: Windows would search the
+            # working directory for it.
+            raise CommandExecutionError(
+                command=cmd,
+                returncode=127,
+                stderr=f"'{cmd[0]}' was not found on PATH.",
+            )
+        resolved_cmd = [exe, *cmd[1:]]
 
         clean_env = subprocess_environment()
         if env is not None:
@@ -256,7 +270,7 @@ def get_git_config(key: str) -> str | None:
     """Gets a global git configuration value."""
     try:
         result = subprocess.run(
-            [shutil.which("git") or "git", "config", "--global", key],
+            [find_executable("git") or "git", "config", "--global", key],
             capture_output=True,
             text=True,
             encoding="utf-8",

@@ -15,13 +15,14 @@ import tarfile
 import zipfile
 from dataclasses import dataclass, replace
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING
+from typing import IO, TYPE_CHECKING
 from urllib.error import URLError
 from urllib.parse import urlsplit
 
 from packaging.version import InvalidVersion, Version
 
 if TYPE_CHECKING:
+    from http.client import HTTPMessage
     from urllib.request import OpenerDirector
 
 from .errors import (
@@ -51,8 +52,11 @@ __all__ = [
 ]
 
 _TIMEOUT = 10
-_MAX_RAW_TEMPLATE = 1024 * 1024
-_MAX_ADVERTISEMENT = 16 * 1024 * 1024
+_MIB = 1024 * 1024
+_MAX_RAW_TEMPLATE = _MIB
+_MAX_ADVERTISEMENT = 16 * _MIB
+_MAX_ARCHIVE = 64 * _MIB
+_MAX_EXTRACTED = 256 * _MIB
 _SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
 
 _opener: "OpenerDirector | None" = None
@@ -62,8 +66,31 @@ def _get_opener() -> "OpenerDirector":
     global _opener
     if _opener is None:
         import urllib.request
+        from urllib.error import HTTPError
 
-        _opener = urllib.request.build_opener()
+        class HttpsRedirects(urllib.request.HTTPRedirectHandler):
+            """Follows redirects only to HTTPS, which urllib alone doesn't require."""
+
+            def redirect_request(
+                self,
+                req: urllib.request.Request,
+                fp: IO[bytes],
+                code: int,
+                msg: str,
+                headers: "HTTPMessage",
+                newurl: str,
+            ) -> urllib.request.Request | None:
+                if urlsplit(newurl).scheme != "https":
+                    raise HTTPError(
+                        newurl,
+                        code,
+                        "refused a redirect to a non-HTTPS URL",
+                        headers,
+                        fp,
+                    )
+                return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+        _opener = urllib.request.build_opener(HttpsRedirects)
     return _opener
 
 
@@ -532,17 +559,43 @@ class AcquiredTemplate:
     files: dict[str, str]
 
 
-def _download(url: str, limit: int | None = None) -> bytes:
+def _download(url: str, limit: int) -> bytes:
+    """Downloads a URL's body, refusing one larger than ``limit`` bytes.
+
+    Raises:
+        NetworkFetchError: If the request fails.
+        TemplateResolutionError: If the body is larger than ``limit``.
+    """
     try:
         with _get_opener().open(url, timeout=_TIMEOUT) as response:
-            return bytes(response.read(limit) if limit else response.read())
+            payload = bytes(response.read(limit + 1))
     except URLError as error:
         raise NetworkFetchError(url, original=error) from error
+    if len(payload) > limit:
+        raise TemplateResolutionError(
+            url, f"The download is larger than {limit // _MIB} MiB."
+        )
+    return payload
 
 
 def _read_archive(payload: bytes, fmt: ArchiveFormat, url: str) -> dict[str, bytes]:
-    """Reads every regular file of an archive, rejecting unsafe members."""
+    """Reads every regular file of an archive, rejecting unsafe members.
+
+    Members are read against one budget of ``_MAX_EXTRACTED`` bytes, so a small
+    archive that unpacks to gigabytes is refused before it fills memory.
+    """
     files: dict[str, bytes] = {}
+    budget = _MAX_EXTRACTED
+
+    def read(stream: IO[bytes]) -> bytes:
+        nonlocal budget
+        content = stream.read(budget + 1)
+        if len(content) > budget:
+            raise TemplateResolutionError(
+                url, f"The archive unpacks to more than {_MAX_EXTRACTED // _MIB} MiB."
+            )
+        budget -= len(content)
+        return content
 
     def validate(name: str) -> str:
         path = PurePosixPath(name)
@@ -571,7 +624,8 @@ def _read_archive(payload: bytes, fmt: ArchiveFormat, url: str) -> dict[str, byt
                             f"Unsupported archive member: {name}"
                         )
                     if not member.is_dir():
-                        add(name, archive.read(member))
+                        with archive.open(member) as stream:
+                            add(name, read(stream))
         else:
             with tarfile.open(fileobj=io.BytesIO(payload), mode="r:*") as tar_archive:
                 for tar_member in tar_archive:
@@ -584,7 +638,7 @@ def _read_archive(payload: bytes, fmt: ArchiveFormat, url: str) -> dict[str, byt
                         )
                     content = tar_archive.extractfile(tar_member)
                     if content is not None:
-                        add(name, content.read())
+                        add(name, read(content))
     except (zipfile.BadZipFile, tarfile.TarError, OSError) as error:
         raise TemplateResolutionError(url, "Cannot read template archive.") from error
     return files
@@ -643,7 +697,7 @@ def acquire_remote(source: RemoteSource, revision: str | None) -> AcquiredTempla
         except UnicodeError as error:
             raise TemplateEncodingError(source.locator, "protostar.toml") from error
         return AcquiredTemplate(payload, {})
-    files = _read_archive(_download(url), fmt, url)
+    files = _read_archive(_download(url, _MAX_ARCHIVE), fmt, url)
     root = _template_root(files, source, url)
     prefix = f"{root.parent / 'template'}/"
     template: dict[str, str] = {}

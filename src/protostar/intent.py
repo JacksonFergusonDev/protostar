@@ -169,8 +169,22 @@ class AppendContribution:
         return {"id": self.id, "tag": self.tag, "content": self.content}
 
 
+def _names_git_directory(part: str) -> bool:
+    """Returns whether a path component names the repository's ``.git``.
+
+    Case-insensitive filesystems (macOS, Windows) map ``.GIT`` onto it, Windows
+    drops trailing dots and spaces, and ``GIT~1`` is its 8.3 short name.
+    """
+    name = part.rstrip(". ").lower()
+    return name == ".git" or name == "git~1"
+
+
 def validate_target(path: str) -> None:
-    """Rejects escaping targets and the reserved engine state path."""
+    """Rejects escaping targets, the reserved engine state paths, and ``.git/``.
+
+    Git runs what ``.git/`` configures (``core.fsmonitor``, hooks, aliases), so
+    no contribution may write there.
+    """
     target = Path(path)
     posix = PurePosixPath(path)
     win = PureWindowsPath(path)
@@ -182,10 +196,12 @@ def validate_target(path: str) -> None:
         or ".." in target.parts
         or not target.parts
         or any(part in ("protostar.lock", "uv.lock") for part in target.parts)
+        or any(_names_git_directory(part) for part in win.parts)
     ):
         raise ConfigurationError(
             f"Unsupported contribution target '{path}'.",
-            hint="Use a relative workspace path outside reserved protostar.lock and resolver-owned uv.lock paths.",
+            hint="Use a relative workspace path outside .git/ and the reserved "
+            "protostar.lock and resolver-owned uv.lock paths.",
         )
 
 

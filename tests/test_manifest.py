@@ -371,3 +371,18 @@ def test_manifest_previews_rendered_directories_and_every_written_file():
         Path(".vscode/settings.json"),
     }
     assert manifest.target_files() == {Path("README.md")}
+
+
+@pytest.mark.parametrize(
+    "requirement", ["--index-url=https://evil.example/simple", "not a requirement"]
+)
+def test_invalid_requirements_are_rejected_when_planned(requirement):
+    # Rejected at planning, so a dry run reports it too, never reaching `uv add`.
+    manifest = EnvironmentManifest()
+    for add in (
+        manifest.dependencies.add,
+        manifest.dependencies.add_dev,
+        manifest.dependencies.add_docs,
+    ):
+        with pytest.raises(ConfigurationError, match="Invalid dependency requirement"):
+            add(requirement)
