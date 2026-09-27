@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790474824174,
+  "lastUpdate": 1790478625763,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17923,6 +17923,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 877.77,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "355afd425e14913b72395d421746abc67162a516",
+          "message": "fix(docs): larger demo text and full-width TUI panels\n\nThe demos recorded at 105 columns, so the player and README GIF scaled the\ntext down to roughly 13px. Record at 78 columns instead, show a two-level\ntree and a fixed excerpt of the Ruff configuration rather than paging\nthrough pyproject.toml, and match the demo background to the TUI's INK.\n\nThe recipe editor's body stopped two columns short of the right edge at\nevery width: Textual sized each 1fr sibling by the largest horizontal\nmargin among them, the headline's. The headline now insets its text with\npadding, so the panels keep an even one-column gutter.\n\nThe docs player's control bar overlays the recording instead of reserving\na strip that stayed empty while the bar was hidden.",
+          "timestamp": "2026-09-26T20:06:28-07:00",
+          "tree_id": "b0e0f288f93549f4de8e85489ae68bee8fb53cbe",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/355afd425e14913b72395d421746abc67162a516"
+        },
+        "date": 1790478624423,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 289.97,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1050.05,
             "unit": "ms"
           }
         ]
