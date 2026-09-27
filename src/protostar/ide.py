@@ -1,12 +1,12 @@
 """IDE extension verification."""
 
 import enum
-import shutil
 import subprocess
 from collections.abc import Callable
 
 from .manifest import Severity
 from .progress import ProgressStep, no_progress
+from .system_deps import find_executable
 
 __all__ = ["IDEType", "check_ide_extensions"]
 
@@ -60,14 +60,15 @@ def check_ide_extensions(
         return
 
     ide_binary = ide_type.binary_name
-    if not ide_binary or not shutil.which(ide_binary):
+    ide_path = find_executable(ide_binary) if ide_binary else None
+    if ide_path is None:
         return
 
     # A failed probe is a skip, not a failure, so it completes the step.
     with progress("Checking editor extensions"):
         try:
             result = subprocess.run(
-                [ide_binary, "--list-extensions"],
+                [ide_path, "--list-extensions"],
                 capture_output=True,
                 text=True,
                 check=True,

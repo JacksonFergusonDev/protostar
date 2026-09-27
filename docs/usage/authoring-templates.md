@@ -219,6 +219,8 @@ my-org-fastapi-template/
 
 Every file in `template/` must be UTF-8 text, because Protostar interpolates placeholders in each one. A binary file such as an image stops the template from loading with an error naming the file.
 
+Every entry in `template/` must also be a regular file or directory. A symbolic link stops the template from loading: it would copy whatever it points at, such as a credentials file, into the project. No template file may land inside `.git/`, in any spelling, because Git runs what that directory configures. A remote template's archive may be at most 64 MiB and unpack to at most 256 MiB, and a raw `protostar.toml` at most 1 MiB.
+
 ## Level 3: Variable Interpolation
 
 Protostar features a lightweight, regex-based templating engine that evaluates placeholders wrapped in `<% VARIABLE_NAME %>` delimiters. This interpolation runs across the `protostar.toml` manifest, inline `[files]` strings, and physical files housed within the `template/` directory.

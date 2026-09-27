@@ -6,12 +6,15 @@ tool the recipe selects. Planning reports a missing one as data, and execution
 skips only the steps that need it.
 
 Finding an executable searches ``PATH`` with ``shutil.which``, which starts no
-process, so planning may do it and stay read-only.
+process, so planning may do it and stay read-only. Every lookup goes through
+``find_executable``, which never finds a file in the working directory.
 """
 
 import enum
+import os
 import shutil
 import sys
+import threading
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 
@@ -127,19 +130,53 @@ class InstallCommand:
     reload_shell: bool
 
 
+NO_CURRENT_DIRECTORY_SEARCH = "NoDefaultCurrentDirectoryInExePath"
+"""Set, it stops Windows looking up executables in the current directory."""
+
+_lookup_lock = threading.Lock()
+
+
+def find_executable(name: str) -> str | None:
+    """Returns the path of an executable on ``PATH``, without starting a process.
+
+    On Windows, ``shutil.which`` searches the working directory before ``PATH``,
+    so a ``git.bat`` a template wrote into the project would run in place of
+    git. The lookup sets ``NoDefaultCurrentDirectoryInExePath`` while it runs,
+    which is the one switch Windows (and ``shutil.which``) consults.
+
+    Args:
+        name: The executable's name.
+
+    Returns:
+        Its path, or None when ``PATH`` has no such executable.
+    """
+    if sys.platform != "win32":
+        return shutil.which(name)
+    with _lookup_lock:
+        previous = os.environ.get(NO_CURRENT_DIRECTORY_SEARCH)
+        os.environ[NO_CURRENT_DIRECTORY_SEARCH] = "1"
+        try:
+            return shutil.which(name)
+        finally:
+            if previous is None:
+                del os.environ[NO_CURRENT_DIRECTORY_SEARCH]
+            else:
+                os.environ[NO_CURRENT_DIRECTORY_SEARCH] = previous
+
+
 def installed(executable: GlobalExecutable) -> bool:
     """Returns whether an executable is on ``PATH``, without starting a process.
 
     Args:
         executable: The executable to find.
     """
-    return shutil.which(executable.value) is not None
+    return find_executable(executable.value) is not None
 
 
 def available_package_managers() -> frozenset[PackageManager]:
     """Returns the package managers found on ``PATH``, without starting a process."""
     return frozenset(
-        manager for manager in PackageManager if shutil.which(manager.value)
+        manager for manager in PackageManager if find_executable(manager.value)
     )
 
 

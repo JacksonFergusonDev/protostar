@@ -4,7 +4,6 @@ import logging
 import os
 import platform
 import shlex
-import shutil
 import subprocess
 import sys
 import traceback
@@ -74,7 +73,7 @@ from protostar.sync_state import (
     read_workspace_state,
 )
 from protostar.system import is_interactive
-from protostar.system_deps import check_required_executables
+from protostar.system_deps import check_required_executables, find_executable
 from protostar.tiers import Tier
 
 logger = logging.getLogger("protostar")
@@ -464,7 +463,7 @@ def handle_config(args: argparse.Namespace) -> None:
     if not editor_cmd:
         raise ConfigurationError("The $EDITOR environment variable is empty.")
 
-    editor_binary = shutil.which(editor_cmd[0])
+    editor_binary = find_executable(editor_cmd[0])
     logger.debug(
         "Looked up editor binary '%s' in PATH: %s", editor_cmd[0], editor_binary
     )
@@ -474,6 +473,7 @@ def handle_config(args: argparse.Namespace) -> None:
             "Ensure your $EDITOR environment variable is set to a valid binary in your PATH."
         )
 
+    editor_cmd[0] = editor_binary
     editor_cmd.append(str(config_path))
     logger.debug("Launching editor command: %s", editor_cmd)
 
@@ -755,13 +755,12 @@ def main() -> None:
                 rb_group: list[RenderableType] = []
                 if ctx.touched_paths:
                     paths = sorted(ctx.touched_paths)
+                    # Paths come from templates and the filesystem: data, not markup.
+                    display_paths = [Text(p, "dim") for p in paths[:15]]
                     if len(paths) > 15:
-                        display_paths = [f"[dim]{p}[/dim]" for p in paths[:15]]
                         display_paths.append(
-                            f"[dim]...and {len(paths) - 15} more paths[/dim]"
+                            Text(f"...and {len(paths) - 15} more paths", "dim")
                         )
-                    else:
-                        display_paths = [f"[dim]{p}[/dim]" for p in paths]
 
                     rb_group.append(
                         Text.from_markup(

@@ -16,8 +16,18 @@ __all__ = [
 ]
 
 
+def _new_file_mode() -> int:
+    """Returns the mode ``open()`` would give a new file under the current umask."""
+    umask = os.umask(0)
+    os.umask(umask)
+    return 0o666 & ~umask
+
+
 def atomic_write_bytes(path: Path, content: bytes, *, mode: int | None = None) -> None:
     """Atomically writes bytes to a regular file.
+
+    An existing file keeps its mode. A new one gets the mode ``open()`` would
+    give it, not the owner-only mode of the temporary file it is written from.
 
     Args:
         path: Destination file path.
@@ -35,8 +45,11 @@ def atomic_write_bytes(path: Path, content: bytes, *, mode: int | None = None) -
             target_stat = None
         except OSError as e:
             raise FileSystemError("inspect file mode", str(path), e) from e
-        if target_stat is not None:
-            effective_mode = stat.S_IMODE(target_stat.st_mode)
+        effective_mode = (
+            _new_file_mode()
+            if target_stat is None
+            else stat.S_IMODE(target_stat.st_mode)
+        )
 
     file_descriptor = -1
     temp_path: Path | None = None

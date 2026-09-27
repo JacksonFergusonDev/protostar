@@ -176,7 +176,7 @@ def test_process_runner_retains_unreaped_process_after_termination_failure(mocke
 
 def test_process_runner_timeout_windows(mocker, monkeypatch):
     monkeypatch.setattr("protostar.system.sys.platform", "win32")
-    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    mocker.patch("protostar.system.find_executable", return_value="uv")
     monkeypatch.setattr(
         "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
     )
@@ -202,7 +202,7 @@ def test_process_runner_timeout_windows(mocker, monkeypatch):
 
 def test_process_runner_keyboard_interrupt_windows(mocker, monkeypatch):
     monkeypatch.setattr("protostar.system.sys.platform", "win32")
-    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    mocker.patch("protostar.system.find_executable", return_value="uv")
     monkeypatch.setattr(
         "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
     )
@@ -229,7 +229,7 @@ def test_process_runner_keyboard_interrupt_windows(mocker, monkeypatch):
 
 def test_process_runner_windows_termination_failure(mocker, monkeypatch):
     monkeypatch.setattr("protostar.system.sys.platform", "win32")
-    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    mocker.patch("protostar.system.find_executable", return_value="uv")
     monkeypatch.setattr(
         "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
     )
@@ -254,7 +254,7 @@ def test_process_runner_windows_termination_failure(mocker, monkeypatch):
 
 def test_process_runner_windows_process_group(mocker, monkeypatch):
     monkeypatch.setattr("protostar.system.sys.platform", "win32")
-    mocker.patch("protostar.system.shutil.which", return_value="uv")
+    mocker.patch("protostar.system.find_executable", return_value="uv")
     monkeypatch.setattr(
         "protostar.system.subprocess.CREATE_NEW_PROCESS_GROUP", 512, raising=False
     )
@@ -295,3 +295,25 @@ def test_execute_subprocess_uses_short_lived_runner(mocker):
     execute_subprocess(["uv", "sync"], timeout=30)
 
     run.assert_called_once_with(["uv", "sync"], timeout=30, env=None)
+
+
+def test_a_command_missing_from_path_is_never_started(mocker):
+    # A bare name handed to the OS would be searched for in the working
+    # directory on Windows.
+    mocker.patch("protostar.system.find_executable", return_value=None)
+    popen = mocker.patch("protostar.system.subprocess.Popen")
+
+    with pytest.raises(CommandExecutionError) as exc_info:
+        ProcessRunner().run(["prek", "install"])
+
+    popen.assert_not_called()
+    assert exc_info.value.returncode == 127
+    assert "not found on PATH" in exc_info.value.stderr
+
+
+def test_windows_children_do_not_search_the_working_directory(monkeypatch):
+    from protostar.system import subprocess_environment
+    from protostar.system_deps import NO_CURRENT_DIRECTORY_SEARCH
+
+    monkeypatch.setattr("protostar.system.sys.platform", "win32")
+    assert subprocess_environment()[NO_CURRENT_DIRECTORY_SEARCH] == "1"

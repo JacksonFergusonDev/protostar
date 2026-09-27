@@ -149,7 +149,9 @@ def test_handle_config_success(mocker, tmp_path):
 
     assert mock_config_file.exists()
     assert "ide =" in __import__("protostar.config").config.DEFAULT_CONFIG_CONTENT
-    mock_run.assert_called_once_with(["nano", str(mock_config_file)], check=True)
+    mock_run.assert_called_once_with(
+        ["/usr/bin/nano", str(mock_config_file)], check=True
+    )
 
 
 def test_handle_config_reset_confirmed(mocker, tmp_path):
@@ -1663,7 +1665,7 @@ def test_main_routes_the_config_flag_to_the_selected_file(mocker, tmp_path):
     main()
 
     assert selected.exists()
-    mock_run.assert_called_once_with(["nano", str(selected)], check=True)
+    mock_run.assert_called_once_with(["/usr/bin/nano", str(selected)], check=True)
 
 
 def test_config_command_refuses_to_edit_while_disabled(mocker):
@@ -1880,3 +1882,40 @@ def test_init_adopts_a_project_supporting_an_old_python(tmp_path, run_cli, monke
 
     assert code == 0, stdout
     assert json.loads(stdout)["status"] == "planned"
+
+
+def test_rolled_back_paths_are_shown_literally_not_as_markup(mocker):
+    """A template file named like Rich markup neither crashes nor styles the report."""
+    import io
+
+    from rich.console import Console
+
+    from protostar.cli import main
+    from protostar.errors import ProtostarError
+    from protostar.models import RollbackContext
+
+    mocker.patch("protostar.cli.main.parser.build_parser")
+    err = ProtostarError("Command execution failed")
+    err.rollback_context = RollbackContext(
+        touched_paths=frozenset({"docs/[/x].md", "[bold]b.md"}),
+        completed_tasks=(),
+        interrupted_task=None,
+        is_external=False,
+    )
+    mocker.patch("protostar.cli.parser.intercept_interactive_wizards", side_effect=err)
+    mock_print = mocker.patch("protostar.cli.ui.console.print")
+    mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
+
+    with pytest.raises(SystemExit):
+        main()
+
+    panel = next(
+        call.args[0]
+        for call in mock_print.call_args_list
+        if call.args and hasattr(call.args[0], "renderable")
+    )
+    buf = io.StringIO()
+    Console(file=buf, width=120, legacy_windows=False).print(panel)
+
+    assert "docs/[/x].md" in buf.getvalue()
+    assert "[bold]b.md" in buf.getvalue()

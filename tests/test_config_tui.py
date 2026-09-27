@@ -230,7 +230,7 @@ def test_the_form_hands_off_to_the_editor(mocker, config_file):
     mocker.patch("shutil.which", return_value="/usr/bin/nano")
     run = mocker.patch("subprocess.run")
     handle_config(argparse.Namespace())
-    run.assert_called_once_with(["nano", str(config_file)], check=True)
+    run.assert_called_once_with(["/usr/bin/nano", str(config_file)], check=True)
     assert config_file.read_text() == DEFAULT_CONFIG_CONTENT
 
 

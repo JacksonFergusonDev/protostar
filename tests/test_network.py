@@ -488,3 +488,67 @@ def test_forges_are_recognized_by_domain():
     assert GitHost.from_domain("github.com") is GitHost.GITHUB
     assert GitHost.from_domain("git.sr.ht") is GitHost.SOURCEHUT
     assert GitHost.from_domain("example.com") is None
+
+
+def test_an_oversized_raw_template_is_refused_not_truncated(forge, monkeypatch):
+    monkeypatch.setattr("protostar.network._MAX_RAW_TEMPLATE", len(TEMPLATE) - 1)
+    forge.plain["https://example.com/api.toml"] = TEMPLATE.encode()
+
+    with pytest.raises(TemplateResolutionError, match="larger than"):
+        fetch_remote_template("https://example.com/api.toml")
+
+
+def test_an_oversized_archive_download_is_refused(forge, monkeypatch):
+    archive = _zip({"protostar.toml": TEMPLATE})
+    monkeypatch.setattr("protostar.network._MAX_ARCHIVE", len(archive) - 1)
+    forge.plain["https://example.com/t.zip"] = archive
+
+    with pytest.raises(TemplateResolutionError, match="larger than"):
+        fetch_remote_template("https://example.com/t.zip")
+
+
+def test_an_archive_that_unpacks_past_the_budget_is_refused(forge, monkeypatch):
+    # Zeros compress a thousandfold: the archive is small, its contents are not.
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("protostar.toml", TEMPLATE)
+        archive.writestr("template/bomb.txt", "0" * 100_000)
+    monkeypatch.setattr("protostar.network._MAX_EXTRACTED", 50_000)
+    forge.plain["https://example.com/t.zip"] = buffer.getvalue()
+
+    with pytest.raises(TemplateResolutionError, match="unpacks to more than"):
+        fetch_remote_template("https://example.com/t.zip")
+
+
+@pytest.mark.parametrize(
+    ("target", "followed"),
+    [("https://mirror.example/t.zip", True), ("http://mirror.example/t.zip", False)],
+)
+def test_redirects_are_followed_only_to_https(monkeypatch, target, followed):
+    import urllib.request
+    from http.client import HTTPMessage
+    from urllib.error import HTTPError
+
+    monkeypatch.setattr("protostar.network._opener", None)
+    from protostar.network import _get_opener
+
+    handler = next(
+        h
+        # OpenerDirector.handlers exists at runtime but not in typeshed.
+        for h in vars(_get_opener())["handlers"]
+        if isinstance(h, urllib.request.HTTPRedirectHandler)
+    )
+    request = urllib.request.Request("https://example.com/t.zip")
+    headers = HTTPMessage()
+
+    if followed:
+        redirected = handler.redirect_request(
+            request, io.BytesIO(), 302, "Found", headers, target
+        )
+        assert redirected is not None
+        assert redirected.full_url == target
+    else:
+        with pytest.raises(HTTPError, match="non-HTTPS"):
+            handler.redirect_request(
+                request, io.BytesIO(), 302, "Found", headers, target
+            )

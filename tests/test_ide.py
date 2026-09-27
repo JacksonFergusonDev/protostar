@@ -12,7 +12,7 @@ def test_ide_type_enum_properties():
 
 
 def test_ide_extension_check_with_enum(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mock_result = MagicMock()
     mock_result.stdout = "charliermarsh.ruff\n"
     mocker.patch("protostar.ide.subprocess.run", return_value=mock_result)
@@ -32,7 +32,7 @@ def test_ide_extension_check_with_enum(mocker):
 
 def test_ide_extension_probe_runs_inside_a_step(mocker, progress):
     """The IDE CLI probe is bracketed by a progress step."""
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mocker.patch(
         "protostar.ide.subprocess.run",
         side_effect=lambda *_, **__: (
@@ -57,7 +57,7 @@ def test_ide_extension_probe_runs_inside_a_step(mocker, progress):
 
 def test_ide_extension_probe_failure_completes_the_step(mocker, progress):
     """A crashed probe is a skip diagnostic, so its step completes rather than fails."""
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mocker.patch(
         "protostar.ide.subprocess.run",
         side_effect=subprocess.TimeoutExpired(["code"], 5),
@@ -77,7 +77,7 @@ def test_ide_extension_probe_failure_completes_the_step(mocker, progress):
 
 def test_ide_extension_check_without_cli_has_no_step(mocker, progress):
     """No step is shown when the IDE CLI is absent and nothing is probed."""
-    mocker.patch("protostar.ide.shutil.which", return_value=None)
+    mocker.patch("protostar.ide.find_executable", return_value=None)
 
     check_ide_extensions(
         ide=IDEType.VSCODE,
@@ -90,7 +90,7 @@ def test_ide_extension_check_without_cli_has_no_step(mocker, progress):
 
 
 def test_ide_extension_check_bypassed_if_wrong_ide(mocker):
-    mock_which = mocker.patch("protostar.ide.shutil.which")
+    mock_which = mocker.patch("protostar.ide.find_executable")
     diagnostics = []
 
     check_ide_extensions(
@@ -104,7 +104,7 @@ def test_ide_extension_check_bypassed_if_wrong_ide(mocker):
 
 
 def test_ide_extension_check_bypassed_if_none_enum(mocker):
-    mock_which = mocker.patch("protostar.ide.shutil.which")
+    mock_which = mocker.patch("protostar.ide.find_executable")
     diagnostics = []
 
     check_ide_extensions(
@@ -118,7 +118,7 @@ def test_ide_extension_check_bypassed_if_none_enum(mocker):
 
 
 def test_ide_extension_check_bypassed_if_binary_missing(mocker):
-    mock_which = mocker.patch("protostar.ide.shutil.which", return_value=None)
+    mock_which = mocker.patch("protostar.ide.find_executable", return_value=None)
     mock_run = mocker.patch("protostar.ide.subprocess.run")
     diagnostics = []
 
@@ -134,7 +134,7 @@ def test_ide_extension_check_bypassed_if_binary_missing(mocker):
 
 
 def test_ide_extension_check_succeeds_without_warnings(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/cursor")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/cursor")
 
     mock_result = MagicMock()
     mock_result.stdout = (
@@ -150,7 +150,7 @@ def test_ide_extension_check_succeeds_without_warnings(mocker):
     )
 
     mock_run.assert_called_once_with(
-        ["cursor", "--list-extensions"],
+        ["/usr/local/bin/cursor", "--list-extensions"],
         capture_output=True,
         text=True,
         check=True,
@@ -160,7 +160,7 @@ def test_ide_extension_check_succeeds_without_warnings(mocker):
 
 
 def test_ide_extension_check_flags_missing_extensions(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
 
     mock_result = MagicMock()
     mock_result.stdout = "charliermarsh.ruff\n"
@@ -180,7 +180,7 @@ def test_ide_extension_check_flags_missing_extensions(mocker):
 
 
 def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mocker.patch(
         "protostar.ide.subprocess.run",
         side_effect=subprocess.TimeoutExpired(cmd="code", timeout=5),
@@ -200,7 +200,7 @@ def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(mocker):
 
 
 def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mock_run = mocker.patch("protostar.ide.subprocess.run")
     mock_run.return_value = MagicMock(
         stdout="ms-python.mypy-type-checker\nother.extension\n"
@@ -217,7 +217,7 @@ def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
 
 
 def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mock_run = mocker.patch("protostar.ide.subprocess.run")
     mock_run.return_value = MagicMock(stdout="matangover.mypy\nother.extension\n")
     diagnostics = []
@@ -232,7 +232,7 @@ def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
 
 
 def test_ide_extension_check_fails_missing_tuple(mocker):
-    mocker.patch("protostar.ide.shutil.which", return_value="/usr/local/bin/code")
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
     mock_run = mocker.patch("protostar.ide.subprocess.run")
     mock_run.return_value = MagicMock(stdout="charliermarsh.ruff\nother.extension\n")
     diagnostics = []

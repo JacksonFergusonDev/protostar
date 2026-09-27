@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import sys
 import tomllib
 from dataclasses import replace
 from pathlib import Path
@@ -10,13 +11,14 @@ import pytest
 
 from protostar.appends import append_marker_blocks
 from protostar.config import TemplateBlueprint, TemplateSource, UserConfig
-from protostar.errors import ConfigurationError
+from protostar.errors import ConfigurationError, TemplateResolutionError
 from protostar.executor import SystemExecutor
 from protostar.intent import (
     AppendContribution,
     DependencyGroup,
     TemplateOrigin,
     region_tag,
+    validate_target,
 )
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.models import InitRequest
@@ -528,3 +530,65 @@ def test_all_builtins_use_supported_typed_declarations(name):
     blueprint = TemplateSource.load(str(target), built_in=name).render({})
     assert blueprint.reference is not None
     assert blueprint.reference.locator == name
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".git/config",
+        ".git/hooks/post-commit",
+        ".GIT/config",
+        ".git./config",
+        ".git /config",
+        "GIT~1/config",
+        ".git\\config",
+        "vendor/lib/.git/config",
+    ],
+)
+def test_targets_inside_git_are_rejected(path):
+    # Git runs what .git/ configures, so a template must never write there.
+    with pytest.raises(ConfigurationError, match="Unsupported contribution target"):
+        validate_target(path)
+
+
+@pytest.mark.parametrize(
+    "path", [".gitignore", ".gitattributes", ".github/workflows/ci.yml", "git/x"]
+)
+def test_git_lookalike_targets_are_allowed(path):
+    validate_target(path)
+
+
+def test_a_template_shipping_git_configuration_is_rejected(tmp_path):
+    (tmp_path / "protostar.toml").write_text('name = "t"\n')
+    (tmp_path / "template" / ".git").mkdir(parents=True)
+    (tmp_path / "template" / ".git" / "config").write_text("[core]\n")
+
+    with pytest.raises(ConfigurationError, match="Unsupported contribution target"):
+        TemplateSource.load(str(tmp_path)).render({})
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges")
+def test_a_linked_template_file_is_refused(tmp_path):
+    secret = tmp_path / "credentials"
+    secret.write_text("key\n")
+    template = tmp_path / "t"
+    (template / "template" / "docs").mkdir(parents=True)
+    (template / "protostar.toml").write_text('name = "t"\n')
+    (template / "template" / "docs" / "leak.txt").symlink_to(secret)
+
+    with pytest.raises(TemplateResolutionError, match="symbolic link"):
+        TemplateSource.load(str(template))
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlinks need privileges")
+def test_a_linked_template_directory_is_refused(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "id_rsa").write_text("key\n")
+    template = tmp_path / "t"
+    (template / "template").mkdir(parents=True)
+    (template / "protostar.toml").write_text('name = "t"\n')
+    (template / "template" / "ssh").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(TemplateResolutionError, match="symbolic link"):
+        TemplateSource.load(str(template))
