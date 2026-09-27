@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790470697643,
+  "lastUpdate": 1790474824174,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17889,6 +17889,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 918.77,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7972442c5aa986a41aa0f281224c44a382ee51cd",
+          "message": "fix(security): close template file-as-code holes and harden fetching (#362)\n\n- Reject contribution targets inside .git/ (any case, trailing dots or\n  spaces, GIT~1), which let a template set core.fsmonitor or hooks.\n- Look up every executable through system_deps.find_executable, which\n  stops Windows searching the working directory for a template's git.bat;\n  refuse a command missing from PATH instead of passing its bare name.\n- Refuse links and special files in a local template's template/ folder.\n- Give new files the umask's mode instead of mkstemp's 0600.\n- Render rolled-back paths as Text, not markup.\n- Validate dependency requirements when planned, so --dry-run reports them.\n- Cap remote downloads and archive extraction; follow redirects only to\n  HTTPS; stop silently truncating an oversized raw template.\n- Read built-in aliases from the packaged templates in recipe decoding.",
+          "timestamp": "2026-09-26T19:04:26-07:00",
+          "tree_id": "5f5833f4ef87941bc77d531eb13b4fdc22303086",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7972442c5aa986a41aa0f281224c44a382ee51cd"
+        },
+        "date": 1790474822118,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 249.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 877.77,
             "unit": "ms"
           }
         ]
