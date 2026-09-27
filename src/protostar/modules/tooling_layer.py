@@ -10,7 +10,7 @@ from protostar.metadata import MetadataKey
 from protostar.registry import RemoteHook
 from protostar.system_deps import GlobalExecutable
 from protostar.workflows import CIFlag, HookRunner
-from protostar.workspace import PythonVersion
+from protostar.workspace import DEFAULT_PYTHON_VERSION, PythonVersion
 
 from .base import (
     PathSignal,
@@ -1174,7 +1174,7 @@ class ReadTheDocsModule(ToolModule):
         raw_python = (
             manifest.metadata.get("minimum_python")
             or manifest.metadata.get("python_version")
-            or "3.13"
+            or DEFAULT_PYTHON_VERSION
         )
         try:
             min_python = str(PythonVersion.from_string(str(raw_python)))

@@ -123,6 +123,10 @@ def test_project_name_value_object() -> None:
 
 
 def test_resolve_python_version(tmp_path: Path) -> None:
+    from protostar.workspace import DEFAULT_PYTHON_VERSION
+
+    assert DEFAULT_PYTHON_VERSION == "3.13"
+
     # Resolves from minimum_python
     assert resolve_python_version({"minimum_python": "3.12"}) == "3.12"
     assert resolve_python_version({"minimum_python": ">=3.14"}) == "3.14"
@@ -135,7 +139,7 @@ def test_resolve_python_version(tmp_path: Path) -> None:
     pyproject.write_text('[project]\nrequires-python = ">=3.12"\n')
     assert resolve_python_version(pyproject_path=pyproject) == "3.12"
 
-    # Fallback to default or 3.13
+    # Fallback to default or DEFAULT_PYTHON_VERSION
     assert (
         resolve_python_version(
             metadata={}, pyproject_path=tmp_path / "absent.toml", default="3.10"
@@ -144,5 +148,5 @@ def test_resolve_python_version(tmp_path: Path) -> None:
     )
     assert (
         resolve_python_version(metadata={}, pyproject_path=tmp_path / "absent.toml")
-        == "3.13"
+        == DEFAULT_PYTHON_VERSION
     )
