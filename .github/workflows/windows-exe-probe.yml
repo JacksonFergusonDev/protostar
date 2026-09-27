@@ -1,0 +1,40 @@
+name: Windows executable lookup probe
+
+# Temporary probe: checks whether a file planted in the project directory
+# (such as a template's `git.bat`) is run in place of the real executable.
+# Delete this workflow once the result is recorded.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/windows-exe-probe.yml
+      - scripts/probe_windows_exe_lookup.py
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: Probe executable lookup on Windows
+    runs-on: windows-latest
+    timeout-minutes: 5
+    env:
+      PYTHONIOENCODING: "utf-8"
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      with:
+        python-version: "3.13"
+
+    - name: Install Protostar
+      run: uv sync --locked
+
+    - name: Run probe
+      shell: bash
+      run: |
+        PROBE_DIR="$RUNNER_TEMP/probe"
+        mkdir -p "$PROBE_DIR"
+        cd "$PROBE_DIR"
+        "$GITHUB_WORKSPACE/.venv/Scripts/python.exe" "$GITHUB_WORKSPACE/scripts/probe_windows_exe_lookup.py"
