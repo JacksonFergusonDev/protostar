@@ -76,7 +76,7 @@ test-benchmark-slower: sync
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test check-snapshots check-doc-links check-schemas
+ci: lint typecheck test docs check-snapshots check-doc-links check-schemas secrets
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -123,6 +123,12 @@ check-schemas: sync
 
 # Alias for check-schemas
 schema-check: check-schemas
+
+# Scan repository for hardcoded secrets with Gitleaks
+secrets:
+    @printf "\n{{ blue }}=== Scanning for Hardcoded Secrets ==={{ nc }}\n"
+    uv run prek run gitleaks --all-files
+    @printf "{{ green }}✔ No secrets detected{{ nc }}\n"
 
 # Regenerate the secret-detection rules from the gitleaks tag pinned in _fallbacks.py
 sync-secret-rules: sync
@@ -172,6 +178,15 @@ demo-all trials="5": (demo-wizard trials) (demo-headless trials)
 # Generate all demo drafts (single trial)
 demo-all-draft: demo-wizard-draft demo-headless-draft
     @printf "\n{{ blue }}=== All demo drafts generated ==={{ nc }}\n"
+
+# Build documentation site in strict mode
+docs: sync
+    @printf "\n{{ blue }}=== Building Documentation ==={{ nc }}\n"
+    uv run zensical build --strict
+    @printf "{{ green }}✔ Documentation build complete{{ nc }}\n"
+
+# Alias for docs
+docs-build: docs
 
 # Start the documentation preview server
 serve: sync

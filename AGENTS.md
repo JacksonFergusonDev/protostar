@@ -116,7 +116,7 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 
 The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated gating:
 
-- **On `git commit` (pre-commit):** Automatically runs `uv lock --check`, `ruff check --fix`, `ruff format`, `mypy`, `rumdl check/fmt`, `actionlint`, and `renovate schema check`.
+- **On `git commit` (pre-commit):** Automatically runs `uv lock --check`, `ruff check --fix`, `ruff format`, `mypy`, `rumdl check/fmt`, `actionlint`, `renovate schema check`, and `gitleaks`.
 - **On `git push` (pre-push):** Automatically runs `pytest`, `zensical build --strict`, `check-doc-links`, `check-schemas`, and `check-snapshots`.
 
 > **Agent Rule:** **Do NOT redundantly run `ruff`, `mypy`, `rumdl`, `just lint`, or `just ci` immediately before committing or pushing.** Let the hooks do the work. If a hook fails or formats a file, inspect the failure, adjust the code, and re-stage. Only run manual commands during active development/debugging (e.g. running a specific test file like `uv run pytest tests/test_foo.py`).
@@ -149,6 +149,8 @@ Use these commands when targeted verification or debugging is necessary:
 - **Fixture & Documentation Integrity:**
 
   ```bash
+  just docs                           # Build documentation site in strict mode (zensical build --strict)
+  just secrets                        # Scan repository for hardcoded secrets with Gitleaks
   just check-snapshots                # Regenerate and check snapshot drift in tests/snapshots/ and docs/
   just check-doc-links                # Validate embedded documentation URLs in error hints
   just check-schemas                  # Validate pre-commit, action, renovate, and metaschemas
