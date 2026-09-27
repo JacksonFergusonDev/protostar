@@ -48,7 +48,6 @@ exclude = [
     "/docs",
     "/scripts",
     "/zensical.toml",
-    "/.readthedocs.yaml",
 ]
 
 [tool.hatch.build.targets.wheel]
