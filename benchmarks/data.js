@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790470120247,
+  "lastUpdate": 1790470365387,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17821,6 +17821,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 758.8,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "7b78534be2fdf3a282bd52f1655c4c19cb80116c",
+          "message": "ci: add strict docs build and secret scanning to CI and Justfile",
+          "timestamp": "2026-09-26T17:49:32-07:00",
+          "tree_id": "00393996bb2d64d1b62d70067013838784e434c9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7b78534be2fdf3a282bd52f1655c4c19cb80116c"
+        },
+        "date": 1790470364538,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 243.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 870.46,
             "unit": "ms"
           }
         ]
