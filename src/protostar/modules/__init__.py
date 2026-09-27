@@ -8,9 +8,11 @@ from .base import (
     Signal,
     TableSignal,
     ToolInfo,
+    ToolModule,
 )
 from .ci_layer import CIModule, ReleaseModule
 from .community_layer import CommunityModule
+from .docker import DOCKER_INFO, DOCKER_NAME
 from .lang_layer import LICENSE_MAP, PythonCore, declare_readme
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
@@ -34,7 +36,7 @@ from .tooling_layer import (
     ZensicalModule,
 )
 
-TOOLING_MODULES: tuple[BootstrapModule, ...] = (
+TOOLING_MODULES: tuple[ToolModule, ...] = (
     DirenvModule(),
     MarkdownLintModule(),
     RumdlModule(),
@@ -59,6 +61,8 @@ TOOLING_MODULES: tuple[BootstrapModule, ...] = (
 
 __all__ = [
     "AGENTS_TARGET",
+    "DOCKER_INFO",
+    "DOCKER_NAME",
     "LICENSE_MAP",
     "TOOLING_MODULES",
     "AgentsModule",
@@ -88,6 +92,7 @@ __all__ = [
     "SystemWorkspaceModule",
     "TableSignal",
     "ToolInfo",
+    "ToolModule",
     "TyModule",
     "ZensicalModule",
     "declare_readme",

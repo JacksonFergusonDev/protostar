@@ -16,7 +16,7 @@ from protostar.documents import community
 from protostar.metadata import MetadataKey
 from protostar.workflows import TargetOS
 
-from .base import BootstrapModule, PathSignal, ToolInfo
+from .base import PathSignal, ToolInfo, ToolModule
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -32,7 +32,7 @@ def _supported_os(values: object) -> tuple[TargetOS, ...]:
     return tuple(known[str(value)] for value in values if str(value) in known)
 
 
-class CommunityModule(BootstrapModule):
+class CommunityModule(ToolModule):
     """Configures the community health files GitHub surfaces to contributors."""
 
     cli_flags = ("--community",)

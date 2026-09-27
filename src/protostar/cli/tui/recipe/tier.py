@@ -16,6 +16,7 @@ from textual.message import Message
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, RadioButton, RadioSet, Static
 
+from protostar.modules import DOCKER_INFO, DOCKER_NAME
 from protostar.recipe import Tool
 from protostar.tiers import TemplateTiers, Tier
 
@@ -48,7 +49,7 @@ _WIDTH = max(len(tier.value) for tier in Tier) + 3
 def _flag(key: str) -> tuple[str, str]:
     """Returns a tier flag's name and what it does."""
     if key == "docker":
-        return "Docker", "Build and run the project in a container"
+        return DOCKER_NAME, DOCKER_INFO.summary
     module = tool_module(Tool(key))
     return module.name, module.info.summary
 

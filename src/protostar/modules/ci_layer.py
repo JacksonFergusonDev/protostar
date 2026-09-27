@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from protostar.documents import github_workflows
 from protostar.metadata import MetadataKey
 
-from .base import BootstrapModule, PathSignal, ToolInfo
+from .base import PathSignal, ToolInfo, ToolModule
 
 if TYPE_CHECKING:
     from protostar.manifest import EnvironmentManifest
@@ -35,7 +35,7 @@ def _declare_actionlint(manifest: EnvironmentManifest) -> None:
         manifest.tooling.just_lint_commands.append("uv run actionlint")
 
 
-class CIModule(BootstrapModule):
+class CIModule(ToolModule):
     """Configures standard GitHub Actions CI workflows for testing and linting."""
 
     cli_flags = ("--ci",)
@@ -68,7 +68,7 @@ class CIModule(BootstrapModule):
         _declare_actionlint(manifest)
 
 
-class ReleaseModule(BootstrapModule):
+class ReleaseModule(ToolModule):
     """Configures GitHub Actions release workflows for PyPI publishing."""
 
     cli_flags = ("--release",)

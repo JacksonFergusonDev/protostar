@@ -98,9 +98,6 @@ class BootstrapModule(abc.ABC):
     optional_metadata: ClassVar[tuple[MetadataKey | str, ...]] = ()
     """The metadata keys that are nice to have but not strictly required."""
 
-    info: ClassVar[ToolInfo]
-    """What the tool does; every tooling module defines it."""
-
     signals: ClassVar[tuple[Signal, ...]] = ()
     """What in an existing project shows it already uses this module's tool."""
 
@@ -125,3 +122,16 @@ class BootstrapModule(abc.ABC):
             manifest (EnvironmentManifest): The centralized state object.
         """
         pass
+
+
+class ToolModule(BootstrapModule):
+    """Sets up one tool the user can switch on or off.
+
+    ``info`` is abstract, so mypy rejects instantiating a tool that doesn't
+    explain itself. A subclass satisfies it with a class attribute.
+    """
+
+    @property
+    @abc.abstractmethod
+    def info(self) -> ToolInfo:
+        """What the tool does, for ``--help``, the schema, and the TUI."""

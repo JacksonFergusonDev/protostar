@@ -31,7 +31,7 @@ from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDecision, InitDraft, check_draft
 from protostar.metadata import MetadataKey
-from protostar.modules import TOOLING_MODULES
+from protostar.modules import DOCKER_INFO, DOCKER_NAME, TOOLING_MODULES
 from protostar.recipe import (
     EXCLUSIVE_TOOL_PAIRS,
     TOOL_REQUIREMENTS,
@@ -51,13 +51,13 @@ from ..keys import (
     Form,
     KeyboardScreen,
     Picker,
-    Toggle,
     key_label,
 )
 from ..review.screen import ReviewScreen
 from ..tool_info import (
     TOOL_GROUPS,
     TOOL_INFO_KEY,
+    InfoToggle,
     ToolChoice,
     ToolRadio,
     ToolToggle,
@@ -250,9 +250,10 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
 
     def _docker_label(self) -> str | Content:
         if not self.docker_found:
-            return "Docker"
+            return DOCKER_NAME
         return Content.assemble(
-            "Docker".ljust(_NAME_WIDTH), (f"found · {self.docker_found}", "$text-faint")
+            DOCKER_NAME.ljust(_NAME_WIDTH),
+            (f"found · {self.docker_found}", "$text-faint"),
         )
 
     def _docker(self) -> bool:
@@ -285,8 +286,12 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 if notes := self._notes():
                     yield Static(notes, id="analysis-notes", classes="note")
                 with ChoiceGroup(id="tools"):
-                    yield Toggle(
-                        self._docker_label(), value=self._docker(), id="docker"
+                    yield InfoToggle(
+                        self._docker_label(),
+                        DOCKER_NAME,
+                        DOCKER_INFO,
+                        value=self._docker(),
+                        id="docker",
                     )
                     for title, tools in TOOL_GROUPS.items():
                         yield Label(title, classes="group")
