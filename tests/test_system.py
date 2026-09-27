@@ -31,8 +31,9 @@ def test_process_runner_success(mocker):
     popen = mocker.patch("protostar.system.subprocess.Popen", return_value=process)
 
     runner = ProcessRunner()
-    runner.run(["uv", "sync"])
+    output = runner.run(["uv", "sync"])
 
+    assert output == "out"
     assert runner.active_process is None
     if sys.platform == "win32":
         assert (

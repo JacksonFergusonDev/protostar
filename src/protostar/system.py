@@ -85,7 +85,7 @@ class ProcessRunner:
         cmd: list[str],
         timeout: int | None = None,
         env: dict[str, str] | None = None,
-    ) -> None:
+    ) -> str:
         """Executes a subprocess and captures diagnostic output on failure.
 
         Starts from ``subprocess_environment()``, so neither an active Python
@@ -96,6 +96,9 @@ class ProcessRunner:
             cmd: The command and its arguments.
             timeout: Optional execution timeout in seconds.
             env: Optional environment overrides.
+
+        Returns:
+            The standard output captured from the process.
 
         Raises:
             CommandTimeoutError: If the execution time limit is exceeded.
@@ -171,6 +174,7 @@ class ProcessRunner:
                 stdout=stdout,
                 stderr=stderr,
             )
+        return stdout or ""
 
     def terminate_active_process_tree(self) -> None:
         """Terminates and reaps the active process group, escalating if necessary."""

@@ -183,6 +183,7 @@ class SystemExecutor(Reconciliation):
                 message=msg,
                 severity=sev,
             ),
+            process_runner=self.process_runner,
             progress=self.progress,
         )
 
