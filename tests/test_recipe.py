@@ -438,7 +438,7 @@ def test_cli_preserves_diversions_and_frozen_context(tmp_path, monkeypatch, mock
         return ExecutionResult(frozenset(), frozenset(), ())
 
     mocker.patch("protostar.cli.ui._run_engine", side_effect=capture)
-    args = argparse.Namespace(docker=None, force_merge=True)
+    args = argparse.Namespace(force_merge=True)
     handle_init(args)
     desired = engines[-1].request.recipe
     assert desired == captured
@@ -476,7 +476,6 @@ def test_template_variables_persist_and_optout_keeps_independent_contributions(
     args = argparse.Namespace(
         from_path=str(source),
         variables=["ANSWER=template-answer"],
-        docker=None,
         RuffModule=False,
     )
     handle_init(args)
@@ -518,11 +517,7 @@ def test_missing_variables_fail_without_prompt_or_mutation_off_a_terminal(
     )
 
     with pytest.raises(MissingTemplateVariablesError) as caught:
-        handle_init(
-            argparse.Namespace(
-                from_path=str(source), variables=["REGION=eu"], docker=None
-            )
-        )
+        handle_init(argparse.Namespace(from_path=str(source), variables=["REGION=eu"]))
 
     assert caught.value.variables == ("TIER",)
     prompt.assert_not_called()
@@ -545,7 +540,7 @@ def test_json_mode_never_prompts_for_variables(tmp_path, monkeypatch, mocker):
     prompt = mocker.patch("protostar.cli.main.edit_variables")
 
     with pytest.raises(MissingTemplateVariablesError):
-        handle_init(argparse.Namespace(from_path=str(source), docker=None))
+        handle_init(argparse.Namespace(from_path=str(source)))
 
     prompt.assert_not_called()
 
@@ -568,9 +563,7 @@ def test_terminal_opens_the_variables_step_for_missing_variables(
         ),
     )
 
-    handle_init(
-        argparse.Namespace(from_path=str(source), variables=["REGION=eu"], docker=None)
-    )
+    handle_init(argparse.Namespace(from_path=str(source), variables=["REGION=eu"]))
 
     step.assert_called_once()
     draft = step.call_args.args[0]
@@ -603,7 +596,7 @@ def test_reinit_reuses_recorded_variables_and_flags_override_them(
         side_effect=AssertionError("nothing is missing"),
     )
 
-    handle_init(argparse.Namespace(variables=["TIER=gold"], docker=None))
+    handle_init(argparse.Namespace(variables=["TIER=gold"]))
 
     prompt.assert_not_called()
     # RETIRED is no longer used by the template, so it is not carried forward.
@@ -634,9 +627,7 @@ def test_var_flags_are_validated_against_the_template(
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
 
     with pytest.raises(InvalidUsageError, match=match):
-        handle_init(
-            argparse.Namespace(from_path=str(source), variables=variables, docker=None)
-        )
+        handle_init(argparse.Namespace(from_path=str(source), variables=variables))
 
 
 def test_var_flags_need_a_template(tmp_path, monkeypatch, mocker):
@@ -648,7 +639,7 @@ def test_var_flags_need_a_template(tmp_path, monkeypatch, mocker):
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
 
     with pytest.raises(InvalidUsageError, match="needs a template"):
-        handle_init(argparse.Namespace(variables=["REGION=eu"], docker=None))
+        handle_init(argparse.Namespace(variables=["REGION=eu"]))
 
 
 def test_dry_run_has_no_recipe_or_lock_write(tmp_path, monkeypatch, mocker):
@@ -662,7 +653,7 @@ def test_dry_run_has_no_recipe_or_lock_write(tmp_path, monkeypatch, mocker):
     )
     mocker.patch("shutil.which", return_value="/mock/command")
     with pytest.raises(SystemExit) as error:
-        handle_init(argparse.Namespace(docker=None, dry_run=True))
+        handle_init(argparse.Namespace(dry_run=True))
     assert error.value.code == 0
     assert [p.name for p in tmp_path.iterdir()] == ["config.toml"]
 
@@ -842,7 +833,7 @@ def test_template_docker_opinion_follows_flag_precedence(
     source.write_text(f'name="custom"\n{opinion}')
     engines = _capture_init_engines(mocker)
 
-    handle_init(argparse.Namespace(from_path=str(source), docker=flag))
+    handle_init(argparse.Namespace(from_path=str(source), DockerModule=flag))
 
     blueprint = engines[-1].request.template_blueprint
     assert blueprint is not None
@@ -873,7 +864,7 @@ def test_captured_recipe_docker_wins_over_a_later_template_opinion(
     source.write_text('name="custom"\ndocker=true\n')
     engines = _capture_init_engines(mocker)
 
-    handle_init(argparse.Namespace(from_path=str(source), docker=None))
+    handle_init(argparse.Namespace(from_path=str(source)))
 
     blueprint = engines[-1].request.template_blueprint
     assert blueprint is not None
@@ -892,7 +883,7 @@ def _cli_template_pyproject(tmp_path, monkeypatch, mocker, **flags):
 
     monkeypatch.chdir(tmp_path)
     engines = _capture_init_engines(mocker)
-    handle_init(argparse.Namespace(template_name="cli", docker=None, **flags))
+    handle_init(argparse.Namespace(template_name="cli", **flags))
     manifest = engines[-1].plan()
     return "\n".join(
         c.content for c in manifest.filesystem.structured["pyproject.toml"]
@@ -933,7 +924,7 @@ def _template_dev_dependencies(tmp_path, monkeypatch, mocker, template, **flags)
 
     monkeypatch.chdir(tmp_path)
     engines = _capture_init_engines(mocker)
-    handle_init(argparse.Namespace(template_name=template, docker=None, **flags))
+    handle_init(argparse.Namespace(template_name=template, **flags))
     return engines[-1].plan().dependencies.dev_dependencies
 
 

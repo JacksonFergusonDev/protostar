@@ -193,14 +193,7 @@ def handle_init(args: argparse.Namespace) -> None:
     tool_overrides = tuple(
         (Tool(mod.config_key), value)
         for mod in TOOLING_MODULES
-        if (
-            value := getattr(
-                args,
-                mod.__class__.__name__,
-                getattr(args, mod.config_key, None),
-            )
-        )
-        is not None
+        if (value := getattr(args, mod.__class__.__name__, None)) is not None
     )
     if getattr(args, "force_merge", False) and getattr(args, "force_replace", False):
         raise ConfigurationError("Choose either --force-merge or --force-replace.")
