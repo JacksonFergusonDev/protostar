@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790533457793,
+  "lastUpdate": 1790534343475,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18059,6 +18059,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 731.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe568044e1342b4832cde812eac23015f0b92424",
+          "message": "refactor: deduplicate pre-commit hooks, trove classifier fallbacks, and supported OS parsing (#366)\n\n* refactor(workflows): deduplicate default hooks block in pre-commit config\n\n* refactor(lang): remove dead trove classifier fallback in PythonCore\n\n* refactor(workflows): unify supported OS parsing across community and analysis",
+          "timestamp": "2026-09-27T11:36:33-07:00",
+          "tree_id": "ba425b31fa31abc5cee622b4e3c42efc49cd63d5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/fe568044e1342b4832cde812eac23015f0b92424"
+        },
+        "date": 1790534342357,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 237.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 859.79,
             "unit": "ms"
           }
         ]
