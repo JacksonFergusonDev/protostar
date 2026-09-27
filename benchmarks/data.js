@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790468776661,
+  "lastUpdate": 1790470120247,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17787,6 +17787,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 909.56,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b6f772d2ad4fff55d75b79af35b18bfcb382a02c",
+          "message": "fix(tui): explain Docker on i and hover, and require info on every tool (#360)\n\nDocker was a bare Toggle with no ToolInfo, so neither the tooltip nor\nthe i popup worked on it, and its description was written four ways.\nIt now has one DOCKER_INFO record, read by --help, the schema, the tier\npopup, and an InfoToggle in the recipe editor.\n\nTooling modules now subclass ToolModule, whose info is an abstract\nproperty, so mypy rejects instantiating a tool without one.",
+          "timestamp": "2026-09-26T17:46:22-07:00",
+          "tree_id": "a36335b584d4b36f4a6390c70f3c8c28dc461348",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b6f772d2ad4fff55d75b79af35b18bfcb382a02c"
+        },
+        "date": 1790470118599,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 216.84,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 758.8,
             "unit": "ms"
           }
         ]
