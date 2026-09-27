@@ -4,12 +4,13 @@ import pytest
 
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import MissingTemplateVariablesError, TemplateResolutionError
-from protostar.templates import TemplateType, discover_templates
+from protostar.intent import TemplateOrigin
+from protostar.templates import discover_templates
 
 BUILTIN_TEMPLATES = sorted(
     t.alias
     for t in discover_templates(config=UserConfig())
-    if t.type == TemplateType.BUILT_IN
+    if t.origin is TemplateOrigin.BUILT_IN
 )
 
 

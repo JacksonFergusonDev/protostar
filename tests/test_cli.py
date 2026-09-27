@@ -1074,7 +1074,15 @@ def test_list_templates_json_mode(capsys, monkeypatch):
     assert isinstance(payload["templates"], list)
     assert len(payload["templates"]) >= 5
     sample = payload["templates"][0]
-    for key in ("alias", "name", "description", "type", "source", "trusted"):
+    for key in (
+        "alias",
+        "name",
+        "description",
+        "origin",
+        "source",
+        "trusted",
+        "is_alias",
+    ):
         assert key in sample
 
 

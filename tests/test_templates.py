@@ -4,13 +4,16 @@ import time
 from typing import Any
 
 from protostar.config import TemplateAliasConfig, UserConfig
-from protostar.templates import TemplateInfo, TemplateType, discover_templates
+from protostar.intent import TemplateOrigin
+from protostar.templates import TemplateInfo, discover_templates
 
 
 def test_discover_builtin_templates() -> None:
     """Verifies that all built-in templates are discovered with rich metadata."""
     templates = discover_templates(config=UserConfig())
-    builtin_aliases = {t.alias: t for t in templates if t.type == TemplateType.BUILT_IN}
+    builtin_aliases = {
+        t.alias: t for t in templates if t.origin is TemplateOrigin.BUILT_IN
+    }
 
     expected_aliases = {"api", "astro", "cli", "lib", "ml"}
     assert expected_aliases.issubset(builtin_aliases.keys())
@@ -21,6 +24,9 @@ def test_discover_builtin_templates() -> None:
     assert "FastAPI web application scaffold" in api_tmpl.description
     assert api_tmpl.source == "protostar.templates"
     assert api_tmpl.trusted is True
+    assert api_tmpl.origin == TemplateOrigin.BUILT_IN
+    assert api_tmpl.is_alias is False
+    assert api_tmpl.is_built_in is True
 
     # Verify all built-ins have name, description, and are trusted
     for alias, tmpl in builtin_aliases.items():
@@ -62,21 +68,24 @@ def test_discover_templates_with_user_aliases(tmp_path: Any) -> None:
     shorthand = alias_map["shorthand-remote"]
     assert shorthand.name == "shorthand-remote"
     assert shorthand.description == "Global alias (https://example.com/template.toml)"
-    assert shorthand.type == TemplateType.GLOBAL_ALIAS
+    assert shorthand.origin == TemplateOrigin.REMOTE
+    assert shorthand.is_alias is True
     assert shorthand.trusted is False
 
     # Verify rich remote
     rich = alias_map["rich-remote"]
     assert rich.name == "Enterprise API"
     assert rich.description == "Enterprise scaffold"
-    assert rich.type == TemplateType.GLOBAL_ALIAS
+    assert rich.origin == TemplateOrigin.REMOTE
+    assert rich.is_alias is True
     assert rich.trusted is True
 
     # Verify local file metadata auto-discovery
     local = alias_map["local-file"]
     assert local.name == "Custom Local"
     assert local.description == "Local disk scaffold"
-    assert local.type == TemplateType.GLOBAL_ALIAS
+    assert local.origin == TemplateOrigin.LOCAL
+    assert local.is_alias is True
 
 
 def test_discover_templates_to_dict() -> None:
@@ -85,7 +94,7 @@ def test_discover_templates_to_dict() -> None:
         alias="api",
         name="FastAPI",
         description="Scaffold",
-        type=TemplateType.BUILT_IN,
+        origin=TemplateOrigin.BUILT_IN,
         source="protostar.templates",
         trusted=True,
     )
@@ -94,10 +103,11 @@ def test_discover_templates_to_dict() -> None:
         "alias": "api",
         "name": "FastAPI",
         "description": "Scaffold",
-        "type": "built-in",
+        "origin": "built-in",
         "source": "protostar.templates",
         "trusted": True,
         "tiers": None,
+        "is_alias": False,
     }
 
 

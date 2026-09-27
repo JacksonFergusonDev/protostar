@@ -238,7 +238,6 @@ def resolve_init(
 
     core = PythonCore(
         python_version=recipe.python,
-        project_license=str(metadata["license"]) if metadata.get("license") else None,
     )
     modules: list[BootstrapModule] = [SystemWorkspaceModule(), core, *tooling]
     template = draft.template

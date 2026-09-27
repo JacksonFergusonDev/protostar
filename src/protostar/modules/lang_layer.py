@@ -5,12 +5,12 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from protostar.config import UserConfig
 from protostar.ide import IDEType
 from protostar.metadata import LicenseType
 from protostar.workflows import TargetOS
 
 if TYPE_CHECKING:
+    from protostar.config import UserConfig
     from protostar.manifest import EnvironmentManifest
 
 from protostar.workspace import (
@@ -57,17 +57,19 @@ class PythonCore(BootstrapModule):
     def __init__(
         self,
         python_version: str | None = None,
-        project_license: str | None = None,
+        user_config: UserConfig | None = None,
     ) -> None:
         self._python_version = python_version
-        self.license = project_license
+        self._config = user_config
 
     @property
     def python_version(self) -> str | None:
-        """Lazily evaluates the requested python version from global config."""
-        if self._python_version is None:
-            self._python_version = UserConfig.load().python_version
-        return self._python_version
+        """Evaluates the requested python version."""
+        if self._python_version is not None:
+            return self._python_version
+        if self._config is not None:
+            return self._config.python_version
+        return None
 
     @python_version.setter
     def python_version(self, value: str | None) -> None:
@@ -96,8 +98,13 @@ class PythonCore(BootstrapModule):
 
         if not Path("pyproject.toml").exists():
             cmd = ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
-            if self.python_version:
-                cmd.extend(["--python", self.python_version])
+            version = (
+                self._python_version
+                or (manifest.recipe.python if manifest.recipe else None)
+                or self.python_version
+            )
+            if version:
+                cmd.extend(["--python", version])
             manifest.tasks.add_system_task(
                 cmd,
                 description="Initializing uv project",
@@ -183,7 +190,19 @@ Issues = "https://github.com/{github}/{repo_name}/issues"
         )
 
         # --- IDE Injection ---
-        ide = manifest.recipe.ide if manifest.recipe else UserConfig.load().ide
+        if manifest.recipe:
+            ide = manifest.recipe.ide
+        elif self._config and self._config.ide:
+            try:
+                ide = (
+                    self._config.ide
+                    if isinstance(self._config.ide, IDEType)
+                    else IDEType(self._config.ide)
+                )
+            except ValueError:
+                ide = IDEType.NONE
+        else:
+            ide = IDEType.NONE
         if ide in (IDEType.VSCODE, IDEType.CURSOR):
             import sys
 

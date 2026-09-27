@@ -10,23 +10,16 @@ import importlib.resources
 import os
 import tomllib
 from dataclasses import dataclass
-from enum import StrEnum
 from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from protostar.errors import ConfigurationError
+from protostar.intent import TemplateOrigin
 from protostar.tiers import TemplateTiers, parse_tiers
 
 if TYPE_CHECKING:
     from protostar.config import UserConfig
-
-
-class TemplateType(StrEnum):
-    """The origin type of a template."""
-
-    BUILT_IN = "built-in"
-    GLOBAL_ALIAS = "global-alias"
 
 
 @dataclass(frozen=True)
@@ -37,20 +30,27 @@ class TemplateInfo:
         alias: CLI identifier and lookup key (e.g., 'api', 'enterprise-api').
         name: Human-readable display name (e.g., 'FastAPI', 'Enterprise API').
         description: Brief summary of the template stack and purpose.
-        type: Whether the template is built-in or a global user alias.
+        origin: Where the template bytes originate (built-in, local, or remote).
         source: Package resource, local file path, or remote URL.
         trusted: Whether the template is trusted to execute system tasks.
         tiers: The workbench and production tiers the template declares, if
             they could be read without fetching it.
+        is_alias: Whether the template was discovered from a configured alias.
     """
 
     alias: str
     name: str
     description: str
-    type: TemplateType
+    origin: TemplateOrigin
     source: str
     trusted: bool = True
     tiers: TemplateTiers | None = None
+    is_alias: bool = False
+
+    @property
+    def is_built_in(self) -> bool:
+        """Whether the template is packaged with Protostar."""
+        return self.origin is TemplateOrigin.BUILT_IN
 
     def to_dict(self) -> dict[str, Any]:
         """Converts TemplateInfo to a serializable dictionary."""
@@ -58,10 +58,11 @@ class TemplateInfo:
             "alias": self.alias,
             "name": self.name,
             "description": self.description,
-            "type": str(self.type),
+            "origin": str(self.origin),
             "source": self.source,
             "trusted": self.trusted,
             "tiers": self.tiers.to_dict() if self.tiers else None,
+            "is_alias": self.is_alias,
         }
 
 
@@ -150,10 +151,11 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
                 alias=alias,
                 name=name,
                 description=description,
-                type=TemplateType.BUILT_IN,
+                origin=TemplateOrigin.BUILT_IN,
                 source="protostar.templates",
                 trusted=True,
                 tiers=tiers,
+                is_alias=False,
             )
         )
 
@@ -173,12 +175,15 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
             trusted = alias_cfg.trusted
             tiers = None
 
-            # A local file can say what the config leaves out; a remote one
-            # is never fetched here.
-            if not (
+            is_remote = (
                 source.startswith(("http://", "https://", "git@", "ssh://"))
                 or "://" in source
-            ):
+            )
+            origin = TemplateOrigin.REMOTE if is_remote else TemplateOrigin.LOCAL
+
+            # A local file can say what the config leaves out; a remote one
+            # is never fetched here.
+            if not is_remote:
                 try:
                     local_path = Path(os.path.expanduser(source)).resolve()
                     if local_path.is_file():
@@ -202,10 +207,11 @@ def discover_templates(config: "UserConfig | None" = None) -> list[TemplateInfo]
                     alias=alias,
                     name=name,
                     description=description,
-                    type=TemplateType.GLOBAL_ALIAS,
+                    origin=origin,
                     source=source,
                     trusted=trusted,
                     tiers=tiers,
+                    is_alias=True,
                 )
             )
 

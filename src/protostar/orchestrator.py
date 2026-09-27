@@ -197,6 +197,8 @@ class Orchestrator:
             tool = Tool(mod.config_key) if mod.config_key else None
             if isinstance(mod, PythonCore):
                 mod.python_version = manifest.recipe.python
+                if mod._config is None:
+                    mod._config = self.user_config
             # These command lists remain additive; capture every producer even
             # when another module declares the same command.
             command_fields = (
