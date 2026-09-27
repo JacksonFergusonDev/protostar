@@ -172,6 +172,22 @@ class DockerfileSpec:
     docker_port: str | None = None
 
 
+_DEFAULT_CORE_HOOKS = """      - id: check-added-large-files
+        # A scientific stack's lock file passes the size limit, and belongs in Git.
+        exclude: ^uv\\.lock$
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: trailing-whitespace
+        exclude: \\.py$
+      - id: end-of-file-fixer
+        exclude: \\.py$
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml"""
+
+
 def generate_pre_commit_config(
     local_hooks: list[str] | None = None,
     remote_hooks: list[str] | None = None,
@@ -183,45 +199,16 @@ def generate_pre_commit_config(
 ) -> str:
     """Assembles and formats the .pre-commit-config.yaml content."""
     if hook_runner == HookRunner.PREK:
-        base_yaml = """repos:
-  # Generic hooks (configured to IGNORE Python)
-  - repo: builtin
-    hooks:
-      - id: check-added-large-files
-        # A scientific stack's lock file passes the size limit, and belongs in Git.
-        exclude: ^uv\\.lock$
-      - id: check-merge-conflict
-      - id: check-case-conflict
-      - id: check-symlinks
-      - id: check-executables-have-shebangs
-      - id: trailing-whitespace
-        exclude: \\.py$
-      - id: end-of-file-fixer
-        exclude: \\.py$
-      - id: check-yaml
-      - id: check-json
-      - id: check-toml"""
+        repo_header = "  - repo: builtin\n    hooks:"
     else:
         resolved_core_rev = core_rev or RemoteHook.PRE_COMMIT_HOOKS.placeholder
-        base_yaml = f"""repos:
-  # Generic hooks (configured to IGNORE Python)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: {resolved_core_rev}
-    hooks:
-      - id: check-added-large-files
-        # A scientific stack's lock file passes the size limit, and belongs in Git.
-        exclude: ^uv\\.lock$
-      - id: check-merge-conflict
-      - id: check-case-conflict
-      - id: check-symlinks
-      - id: check-executables-have-shebangs
-      - id: trailing-whitespace
-        exclude: \\.py$
-      - id: end-of-file-fixer
-        exclude: \\.py$
-      - id: check-yaml
-      - id: check-json
-      - id: check-toml"""
+        repo_header = (
+            f"  - repo: https://github.com/pre-commit/pre-commit-hooks\n"
+            f"    rev: {resolved_core_rev}\n"
+            f"    hooks:"
+        )
+
+    base_yaml = f"repos:\n  # Generic hooks (configured to IGNORE Python)\n{repo_header}\n{_DEFAULT_CORE_HOOKS}"
 
     repo_blocks: list[str] = []
 
