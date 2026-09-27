@@ -12,7 +12,7 @@ Screen { background: $background; }
 /* --- Frame ------------------------------------------------------------- */
 
 Masthead { height: 1; padding: 0 2; background: $panel; }
-#headline { height: auto; margin: 1 2 0 2; }
+#headline { height: auto; margin: 1 0 0 0; padding: 0 2; }
 #title { width: auto; text-style: bold; color: $foreground; }
 #subtitle { width: 1fr; margin-left: 1; color: $text-muted; }
 #subtitle.-error { color: $error; }

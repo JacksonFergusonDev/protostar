@@ -31,12 +31,13 @@ _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
+from protostar.cli.palette import INK
 from scripts._common import SNAPSHOTS_DIR, VENV_BIN
 
-DEFAULT_COLS = 105
-DEFAULT_ROWS = 30
+DEFAULT_COLS = 78
+DEFAULT_ROWS = 32
 DEFAULT_WORKSPACE = "/tmp/demo_project"
-DEFAULT_SCROLL_DELAY = 0.075  # Seconds per line during pager scrolling
+EXCERPT_LINES = 24  # Lines of the target file shown after the tree
 CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J", "\x1b[2J")
 
 
@@ -53,7 +54,9 @@ class DemoTrialResult:
 # Single source of truth for demo colors: consumed by asciinema-player (docs) and agg (GIFs)
 DEFAULT_THEME: dict[str, str] = {
     "fg": "#cdd6f4",
-    "bg": "#0a0f1f",
+    # The TUI paints INK across the whole screen; any other terminal
+    # background shows as a border in the player's and agg's padding.
+    "bg": INK,
     "palette": "#1e1e2e:#f38ba8:#a6e3a1:#f9e2af:#89b4fa:#cba6f7:#22d3ee:#bac2de:#585b70:#f38ba8:#a6e3a1:#f9e2af:#89b4fa:#f5c2e7:#38bdf8:#a6adc8",
 }
 
@@ -64,14 +67,21 @@ def set_winsize(fd: int, rows: int, cols: int) -> None:
     fcntl.ioctl(fd, termios.TIOCSWINSZ, winsize)  # type: ignore[attr-defined, unused-ignore]
 
 
-def get_fixture_line_count(
-    fixture_template: str, relative_path: str = "pyproject.toml"
-) -> int:
-    """Extracts the exact line count of a generated file from tests/snapshots."""
+def get_fixture_excerpt(
+    fixture_template: str,
+    relative_path: str = "pyproject.toml",
+    anchor: str = "[tool.ruff]",
+    length: int = EXCERPT_LINES,
+) -> tuple[int, int]:
+    """Finds the 1-based line range of an excerpt in a generated file from tests/snapshots.
+
+    The excerpt starts at the first line equal to ``anchor`` (or the top of the
+    file when the anchor is missing) and spans ``length`` lines.
+    """
     fixture_file = SNAPSHOTS_DIR / fixture_template / relative_path
-    if fixture_file.exists():
-        return len(fixture_file.read_text(encoding="utf-8").splitlines())
-    return 60
+    lines = fixture_file.read_text(encoding="utf-8").splitlines()
+    start = next((i for i, line in enumerate(lines, 1) if line == anchor), 1)
+    return start, min(len(lines), start + length - 1)
 
 
 class PTYSession:
@@ -299,14 +309,6 @@ class PTYSession:
             os.write(self.master_fd, b"\x1b[B")
             self._drain(wait)
 
-    def scroll_pager(
-        self, lines: int = 15, delay: float = DEFAULT_SCROLL_DELAY
-    ) -> None:
-        """Scrolls down inside a pager (bat/less) using standard vi/less navigation keys."""
-        for _ in range(lines):
-            os.write(self.master_fd, b"j")
-            self._drain(delay)
-
     def space(self, wait: float = 0.4) -> None:
         """Sends Space keypress."""
         os.write(self.master_fd, b" ")
@@ -385,40 +387,34 @@ class PTYSession:
                 f.write(json.dumps(ev) + "\n")
 
 
-MAX_SCROLL_LINES = 32  # Maximum lines to scroll during demo previews
-
-
 def inspect_project_file(
     session: PTYSession,
     template: str,
     target_file: str = "pyproject.toml",
-    scroll_delay: float = DEFAULT_SCROLL_DELAY,
-    max_scroll: int = MAX_SCROLL_LINES,
 ) -> None:
     """Executes the standard post-initialization inspection with eza and bat.
 
-    Dynamically calculates the exact number of lines to scroll through bat
-    based on the total line count in tests/snapshots/<template>/<target_file>,
-    capped at max_scroll for demo brevity and pacing.
+    Shows the top two levels of the tree, then a static excerpt of the target
+    file (its Ruff configuration) located in tests/snapshots/<template>, held
+    long enough to read. Scrolling text is unreadable in a GIF, so the demo
+    never pages through a file.
     """
     session.sleep(0.4)
     session.type(
-        "eza --tree --git-ignore --all --icons", char_delay=0.03, post_delay=0.2
+        "eza --tree --level=2 --git-ignore --all --icons",
+        char_delay=0.03,
+        post_delay=0.2,
     )
     session.enter(wait=2.2)
 
-    session.type(f"bat {target_file}", char_delay=0.03, post_delay=0.2)
+    start, end = get_fixture_excerpt(template, target_file)
+    session.type(
+        f"bat --style=plain --paging=never -r {start}:{end} {target_file}",
+        char_delay=0.03,
+        post_delay=0.2,
+    )
     session.enter(wait=0.3)
-    session.sleep(0.8)  # Initial pause to view file header
-
-    # Calculate lines to scroll (capped for crisp demo pacing)
-    total_lines = get_fixture_line_count(template, target_file)
-    visible_lines = max(1, session.rows - 5)
-    needed_lines = max(5, total_lines - visible_lines + 4)
-    lines_to_scroll = min(needed_lines, max_scroll)
-
-    session.scroll_pager(lines=lines_to_scroll, delay=scroll_delay)
-    session.sleep(2.0)  # Hold view at end of file preview
+    session.sleep(3.0)  # Hold the excerpt long enough to read
 
 
 def record_headless(session: PTYSession) -> None:

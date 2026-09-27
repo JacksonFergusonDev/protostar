@@ -412,8 +412,20 @@
     box-shadow: none;
 }
 
+/* The player sizes itself inline to the terminal plus its control bar; the
+   bar overlays the recording's bottom rows instead, so no strip stays empty
+   while it is hidden. */
 .protostar-asciinema .ap-player {
-    background: #0a0f1f;
+    position: relative;
+    height: auto !important;
+    background: #0a0a0a;
+}
+
+.protostar-asciinema .ap-control-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 .protostar-asciinema .ap-control-bar,
@@ -421,7 +433,7 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
-    background: rgba(10, 15, 31, 0.92);
+    background: rgba(10, 10, 10, 0.92);
     backdrop-filter: blur(4px);
 }
 
