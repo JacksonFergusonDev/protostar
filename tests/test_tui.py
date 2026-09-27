@@ -44,7 +44,7 @@ from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin, TemplateReference
 from protostar.manifest import CollisionStrategy
 from protostar.merge import ResolutionChoice
-from protostar.modules import MypyModule, PrekModule
+from protostar.modules import DOCKER_INFO, MypyModule, PrekModule
 from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
@@ -415,7 +415,7 @@ async def test_tab_treats_the_tools_as_one_stop():
         await settle(pilot)
         await pilot.press("tab")
         assert app.focused.id == "docker"
-        assert legend(app) == {"Toggle", "Move", "Next", "Keybindings"}
+        assert legend(app) == {"Toggle", "Move", "Next", "Tool info", "Keybindings"}
         await pilot.press("down", "down")
         assert app.focused.id == "tool-mypy"
         await pilot.press("tab")
@@ -508,7 +508,7 @@ async def test_i_explains_the_focused_tool_and_esc_returns_to_it(mocker):
         before = mypy.value
         await pilot.press("i")
         assert isinstance(app.screen, ToolInfoScreen)
-        assert app.screen.module.info == MypyModule.info
+        assert app.screen.info == MypyModule.info
         assert labels(app) == {"close": "Close  esc", "docs": "Open docs  o"}
         opened = mocker.patch.object(app, "open_url")
         await pilot.press("o")
@@ -518,6 +518,23 @@ async def test_i_explains_the_focused_tool_and_esc_returns_to_it(mocker):
         assert app.focused is mypy
         assert mypy.value == before
         assert screen.enabled[Tool.MYPY] == before
+
+
+@pytest.mark.asyncio
+async def test_i_explains_docker_like_any_tool():
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        docker = app.screen.query_one("#docker", Checkbox)
+        assert docker.tooltip == DOCKER_INFO.summary
+        await pilot.press("tab")
+        assert app.focused is docker
+        assert "Tool info" in legend(app)
+        await pilot.press("i")
+        assert isinstance(app.screen, ToolInfoScreen)
+        assert app.screen.info == DOCKER_INFO
+        await pilot.press("escape")
+        assert app.focused is docker
 
 
 @pytest.mark.asyncio
@@ -537,7 +554,7 @@ async def test_i_explains_the_highlighted_hook_manager_but_not_none():
         assert "Tool info" in legend(app)
         await pilot.press("i")
         assert isinstance(app.screen, ToolInfoScreen)
-        assert app.screen.module.info == PrekModule.info
+        assert app.screen.info == PrekModule.info
         await pilot.press("escape")
         assert app.focused is choice
         assert choice.pressed_button.id == "none-0"

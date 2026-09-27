@@ -24,7 +24,7 @@ from protostar.docs_registry import DocsPage
 from protostar.errors import ExecutionAbortedError, InvalidUsageError
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin
-from protostar.modules import TOOLING_MODULES
+from protostar.modules import DOCKER_INFO, TOOLING_MODULES
 from protostar.recipe import read_recipe
 from protostar.sync_state import read_workspace_state
 from protostar.system import is_interactive
@@ -562,7 +562,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--docker",
         action=argparse.BooleanOptionalAction,
         default=None,
-        help="Generate Dockerfile and .dockerignore container scaffolding",
+        help=DOCKER_INFO.summary,
     )
 
     for mod in TOOLING_MODULES:

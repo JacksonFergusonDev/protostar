@@ -13,12 +13,12 @@ from protostar.workflows import CIFlag, HookRunner
 from protostar.workspace import PythonVersion
 
 from .base import (
-    BootstrapModule,
     PathSignal,
     RequirementSignal,
     SectionSignal,
     TableSignal,
     ToolInfo,
+    ToolModule,
 )
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ logger = logging.getLogger("protostar")
 AGENTS_TARGET = "AGENTS.md"
 
 
-class DirenvModule(BootstrapModule):
+class DirenvModule(ToolModule):
     """Configures a .envrc file and evaluates it via direnv."""
 
     cli_flags = ("--direnv",)
@@ -91,7 +91,7 @@ class DirenvModule(BootstrapModule):
         )
 
 
-class MarkdownLintModule(BootstrapModule):
+class MarkdownLintModule(ToolModule):
     """Configures a relaxed, pragmatic .markdownlint-cli2.yaml ruleset."""
 
     cli_flags = ("--markdownlint",)
@@ -217,7 +217,7 @@ config:
         manifest.filesystem.add_file_injection(".markdownlint-cli2.yaml", content)
 
 
-class RumdlModule(BootstrapModule):
+class RumdlModule(ToolModule):
     """Configures the rumdl fast markdown linter and formatter."""
 
     cli_flags = ("--rumdl",)
@@ -332,7 +332,7 @@ style = "one"
         )
 
 
-class RuffModule(BootstrapModule):
+class RuffModule(ToolModule):
     """Configures the Ruff linter and formatter with a sensible baseline.
 
     The baseline suits casual projects; stricter rule sets belong in templates.
@@ -424,7 +424,7 @@ ignore = [
         )
 
 
-class MypyModule(BootstrapModule):
+class MypyModule(ToolModule):
     """Configures the Mypy static type checker with a sensible baseline.
 
     Strict mode is intentionally left to templates that want it.
@@ -497,7 +497,7 @@ explicit_package_bases = true
         )
 
 
-class TyModule(BootstrapModule):
+class TyModule(ToolModule):
     """Configures the Astral Ty static type checker."""
 
     cli_flags = ("--ty",)
@@ -548,7 +548,7 @@ unused-ignore-comment = "warn"
         )
 
 
-class PytestModule(BootstrapModule):
+class PytestModule(ToolModule):
     """Configures the Pytest testing framework and coverage artifacts."""
 
     cli_flags = ("--pytest",)
@@ -621,7 +621,7 @@ pythonpath = [
         )
 
 
-class PreCommitModule(BootstrapModule):
+class PreCommitModule(ToolModule):
     """Configures pre-commit hooks and installs the git hook scripts."""
 
     cli_flags = ("--pre-commit",)
@@ -665,7 +665,7 @@ class PreCommitModule(BootstrapModule):
         manifest.dependencies.add_dev("pre-commit")
 
 
-class PrekModule(BootstrapModule):
+class PrekModule(ToolModule):
     """Configures prek hooks and installs the git hook scripts."""
 
     cli_flags = ("--prek",)
@@ -706,7 +706,7 @@ class PrekModule(BootstrapModule):
         manifest.dependencies.add_dev("prek")
 
 
-class CommitizenModule(BootstrapModule):
+class CommitizenModule(ToolModule):
     """Configures commitizen for semantic version bumping and changelog generation."""
 
     cli_flags = ("--commitizen",)
@@ -781,7 +781,7 @@ changelog_incremental = true
         )
 
 
-class PyreflyModule(BootstrapModule):
+class PyreflyModule(ToolModule):
     """Configures the Meta pyrefly static type checker."""
 
     cli_flags = ("--pyrefly",)
@@ -835,7 +835,7 @@ type-checking-mode = "strict"
         )
 
 
-class RenovateModule(BootstrapModule):
+class RenovateModule(ToolModule):
     """Configures Renovate dependency update tooling."""
 
     cli_flags = ("--renovate",)
@@ -930,7 +930,7 @@ class RenovateModule(BootstrapModule):
         )
 
 
-class CodecovModule(BootstrapModule):
+class CodecovModule(ToolModule):
     """Configures opinionated Codecov coverage and status thresholds."""
 
     cli_flags = ("--codecov",)
@@ -1005,7 +1005,7 @@ ignore:
         )
 
 
-class ZensicalModule(BootstrapModule):
+class ZensicalModule(ToolModule):
     """Configures a minimal Zensical documentation setup."""
 
     cli_flags = ("--zensical",)
@@ -1140,7 +1140,7 @@ generator = false
         )
 
 
-class ReadTheDocsModule(BootstrapModule):
+class ReadTheDocsModule(ToolModule):
     """Configures Read the Docs build configuration for documentation hosting."""
 
     cli_flags = ("--readthedocs",)
@@ -1217,7 +1217,7 @@ build:
         )
 
 
-class JustModule(BootstrapModule):
+class JustModule(ToolModule):
     """Configures the justfile for project commands."""
 
     cli_flags = ("--just",)
@@ -1249,7 +1249,7 @@ class JustModule(BootstrapModule):
         manifest.tooling.wants_just = True
 
 
-class AgentsModule(BootstrapModule):
+class AgentsModule(ToolModule):
     """Configures a managed AGENTS.md guide for coding agents."""
 
     cli_flags = ("--agents",)

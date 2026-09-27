@@ -1,6 +1,6 @@
 """What a tool does, on demand: a tooltip on hover and a popup on ``i``.
 
-Both read the module's ``ToolInfo``, the record ``--help`` reads too. Only a
+Both read the tool's ``ToolInfo``, the record ``--help`` reads too. Only a
 focused tool control binds ``i``, so typing it into a text field inserts it.
 """
 
@@ -14,7 +14,7 @@ from textual.content import Content, ContentText
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, RadioButton, Static
 
-from protostar.modules import TOOLING_MODULES, BootstrapModule
+from protostar.modules import TOOLING_MODULES, ToolInfo, ToolModule
 from protostar.recipe import Tool
 
 from .keys import Choice, Toggle, key_label
@@ -47,7 +47,7 @@ TOOL_GROUPS: dict[str, tuple[Tool, ...]] = {
 _MODULES = {Tool(module.config_key): module for module in TOOLING_MODULES}
 
 
-def tool_module(tool: Tool) -> BootstrapModule:
+def tool_module(tool: Tool) -> ToolModule:
     """Returns the module that sets up the tool.
 
     Args:
@@ -84,20 +84,35 @@ class ToolInfoScreen(ModalScreen[None]):
         Binding("o", "open_docs", "Open docs"),
     ]
 
-    def __init__(self, module: BootstrapModule) -> None:
+    def __init__(self, name: str, info: ToolInfo) -> None:
         """Create the popup.
 
         Args:
-            module: The tooling module whose ``info`` to show.
+            name: The tool's display name.
+            info: What the tool does.
         """
         super().__init__()
-        self.module = module
+        self.tool_name = name
+        self.info = info
+
+    @classmethod
+    def of(cls, tool: Tool) -> "ToolInfoScreen":
+        """Create the popup for a tooling module's tool.
+
+        Args:
+            tool: The tool.
+
+        Returns:
+            The popup, showing its module's ``info``.
+        """
+        module = tool_module(tool)
+        return cls(module.name, module.info)
 
     def compose(self) -> ComposeResult:
         """Compose the information and the two keys that leave it."""
-        info = self.module.info
+        info = self.info
         with Vertical(id="dialog"):
-            yield Static(Text(self.module.name.upper()), classes="dialog-title")
+            yield Static(Text(self.tool_name.upper()), classes="dialog-title")
             yield Label(prose(info.summary), classes="question")
             yield Static(Text("ADDS", style="bold"), classes="info-heading")
             yield Static(prose(info.adds))
@@ -114,7 +129,7 @@ class ToolInfoScreen(ModalScreen[None]):
 
     def action_open_docs(self) -> None:
         """Open the tool's documentation in the browser."""
-        self.app.open_url(self.module.info.docs_url)
+        self.app.open_url(self.info.docs_url)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Answer the clicked button."""
@@ -124,12 +139,43 @@ class ToolInfoScreen(ModalScreen[None]):
             self.dismiss()
 
 
-class ToolToggle(Toggle):
-    """A tool's checkbox, with its summary on hover and its details on ``i``."""
+class InfoToggle(Toggle):
+    """A checkbox with its tool's summary on hover and its details on ``i``."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("i", "tool_info", "Tool info"),
     ]
+
+    def __init__(
+        self,
+        label: ContentText,
+        name: str,
+        info: ToolInfo,
+        *,
+        value: bool = False,
+        id: str | None = None,  # noqa: A002 - Textual's name
+    ) -> None:
+        """Create the checkbox.
+
+        Args:
+            label: The checkbox's label.
+            name: The display name of the tool it switches on or off.
+            info: What that tool does.
+            value: Whether it starts checked.
+            id: The widget's id.
+        """
+        super().__init__(label, value, id=id)
+        self.tool_name = name
+        self.info = info
+        self.tooltip = info.summary
+
+    def action_tool_info(self) -> None:
+        """Show what the tool does."""
+        self.app.push_screen(ToolInfoScreen(self.tool_name, self.info))
+
+
+class ToolToggle(InfoToggle):
+    """A tooling module's checkbox."""
 
     def __init__(
         self,
@@ -147,13 +193,9 @@ class ToolToggle(Toggle):
             value: Whether it starts checked.
             id: The widget's id.
         """
-        super().__init__(label, value, id=id)
+        module = tool_module(tool)
+        super().__init__(label, module.name, module.info, value=value, id=id)
         self.tool = tool
-        self.tooltip = tool_module(tool).info.summary
-
-    def action_tool_info(self) -> None:
-        """Show what the tool does."""
-        self.app.push_screen(ToolInfoScreen(tool_module(self.tool)))
 
 
 class ToolRadio(RadioButton):
@@ -207,4 +249,4 @@ class ToolChoice(Choice):
     def action_tool_info(self) -> None:
         """Show what the highlighted tool does."""
         if button := self._highlighted():
-            self.app.push_screen(ToolInfoScreen(tool_module(button.tool)))
+            self.app.push_screen(ToolInfoScreen.of(button.tool))

@@ -150,7 +150,7 @@ async def test_i_explains_a_tool_default():
         mypy.focus()
         await pilot.press("i")
         assert isinstance(app.screen, ToolInfoScreen)
-        assert app.screen.module.info == MypyModule.info
+        assert app.screen.info == MypyModule.info
         await pilot.press("escape")
         assert app.focused is mypy
         assert not mypy.value

@@ -14,7 +14,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
     from protostar.cli import ui
     from protostar.config import TemplateBlueprint
-    from protostar.modules import TOOLING_MODULES
+    from protostar.modules import DOCKER_INFO, TOOLING_MODULES
     from protostar.tiers import Tier
 
     properties: dict[str, Any] = {}
@@ -44,7 +44,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                     }
             properties["docker"] = {
                 "type": "boolean",
-                "description": "Containerize workspace environment with Docker.",
+                "description": DOCKER_INFO.summary,
             }
             continue
         if f.name == "tiers":
