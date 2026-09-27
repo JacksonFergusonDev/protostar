@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Protocol
 
 from .errors import FileSystemError, StaleReviewError, UnsupportedFilesystemNodeError
-from .intent import validate_target
 from .journal import NodeKind, OriginalState
+from .security import enforce_path_jail
 
 
 class WorkspaceReader(Protocol):
@@ -123,10 +123,7 @@ class ReviewWorkspace:
 
     def normalize_path(self, path: Path) -> Path:
         """Normalizes a validated relative target inside the explicit root."""
-        relative = path.relative_to(self.workspace_root) if path.is_absolute() else path
-        if relative.as_posix() not in {"protostar.lock", "uv.lock"}:
-            validate_target(relative.as_posix())
-        return self.workspace_root / relative
+        return enforce_path_jail(path, self.workspace_root, dereference_leaf=False)
 
     def capture(self, path: Path, *, directory: bool = False) -> CapturedInput:
         """Captures the path and every relevant ancestor before reading."""

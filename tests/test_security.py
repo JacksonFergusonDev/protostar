@@ -5,7 +5,12 @@ from typing import Any
 import pytest
 
 from protostar.errors import SecurityViolationError
-from protostar.security import enforce_binary_safelist, enforce_path_jail
+from protostar.security import (
+    enforce_binary_safelist,
+    enforce_path_jail,
+    is_safe_relative_path,
+    names_git_directory,
+)
 
 
 def test_enforce_path_jail_outside_traversal(tmp_path: Path):
@@ -35,7 +40,61 @@ def test_enforce_path_jail_symlink_bypass(tmp_path: Path):
 def test_enforce_path_jail_valid_path(tmp_path: Path):
     target = tmp_path / "sub" / "file.txt"
     # Should not raise
-    enforce_path_jail(target, tmp_path)
+    normalized = enforce_path_jail(target, tmp_path)
+    assert normalized == (tmp_path / "sub" / "file.txt").resolve()
+
+
+def test_enforce_path_jail_dereference_leaf_false_preserves_leaf_symlink(
+    tmp_path: Path,
+):
+    real_file = tmp_path / "real.txt"
+    real_file.write_text("content")
+    symlink_file = tmp_path / "link.txt"
+    os.symlink(real_file, symlink_file)
+
+    # dereference_leaf=False keeps the symlink path rather than resolving to real.txt
+    result = enforce_path_jail(symlink_file, tmp_path, dereference_leaf=False)
+    assert result == symlink_file.resolve().parent / "link.txt"
+    assert result.is_symlink()
+
+    # dereference_leaf=True resolves to the target
+    dereferenced = enforce_path_jail(symlink_file, tmp_path, dereference_leaf=True)
+    assert dereferenced == real_file.resolve()
+
+
+def test_enforce_path_jail_dereference_leaf_false_catches_traversal(tmp_path: Path):
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    target = sub / "../../etc/passwd"
+    with pytest.raises(SecurityViolationError, match="SECURITY VIOLATION"):
+        enforce_path_jail(target, tmp_path, dereference_leaf=False)
+
+
+def test_is_safe_relative_path():
+    assert is_safe_relative_path("foo")
+    assert is_safe_relative_path("foo/bar.txt")
+    assert is_safe_relative_path("src/app/main.py")
+
+    assert not is_safe_relative_path("")
+    assert not is_safe_relative_path("/etc/passwd")
+    assert not is_safe_relative_path("../escape")
+    assert not is_safe_relative_path("foo/../../escape")
+    assert not is_safe_relative_path("C:/windows/system32")
+    assert not is_safe_relative_path("D:file.txt")
+
+
+def test_names_git_directory():
+    assert names_git_directory(".git")
+    assert names_git_directory(".GIT")
+    assert names_git_directory(".git.")
+    assert names_git_directory(".git ")
+    assert names_git_directory("git~1")
+    assert names_git_directory("GIT~1")
+
+    assert not names_git_directory(".gitignore")
+    assert not names_git_directory(".gitattributes")
+    assert not names_git_directory("git")
+    assert not names_git_directory("github")
 
 
 def test_enforce_binary_safelist_deny():

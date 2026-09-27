@@ -482,3 +482,30 @@ def test_changed_desired_manifest_rejects_prepared_review(
         executor.execute()
     assert not executor.journal.touched_paths
     assert snapshot(tmp_path) == before
+
+
+def test_review_workspace_normalize_path(tmp_path: Path):
+    from protostar.errors import SecurityViolationError
+    from protostar.review_workspace import ReviewWorkspace
+
+    ws = ReviewWorkspace(tmp_path)
+    (tmp_path / "sub").mkdir()
+
+    assert (
+        ws.normalize_path(Path("sub/file.txt"))
+        == (tmp_path / "sub" / "file.txt").resolve()
+    )
+    assert (
+        ws.normalize_path(Path("protostar.lock"))
+        == (tmp_path / "protostar.lock").resolve()
+    )
+    assert (
+        ws.normalize_path(tmp_path / "sub" / "file.txt")
+        == (tmp_path / "sub" / "file.txt").resolve()
+    )
+
+    with pytest.raises(SecurityViolationError):
+        ws.normalize_path(Path("sub/../../outside.txt"))
+
+    with pytest.raises(SecurityViolationError):
+        ws.normalize_path(Path("/etc/passwd"))

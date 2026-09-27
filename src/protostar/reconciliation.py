@@ -208,6 +208,19 @@ class Reconciliation:
         )
 
     @property
+    def workspace_root(self) -> Path:
+        """Returns the workspace root directory."""
+        if hasattr(self.journal, "workspace_root") and isinstance(
+            self.journal.workspace_root, Path
+        ):
+            return self.journal.workspace_root
+        if hasattr(self.workspace, "workspace_root") and isinstance(
+            self.workspace.workspace_root, Path
+        ):
+            return self.workspace.workspace_root
+        return Path.cwd()
+
+    @property
     def interpolation_context(self) -> dict[str, str]:
         """Dynamically generates the context for template interpolation."""
         if self.manifest.recipe:
@@ -389,7 +402,7 @@ class Reconciliation:
             )
             content = render_template(content, self.interpolation_context)
             target = Path(interpolated_filepath)
-            enforce_path_jail(target, Path.cwd())
+            enforce_path_jail(target, self.workspace_root)
             if target == Path(renovate.TARGET):
                 if located := self._locate(renovate.TARGET, FilePolicy.JSONC):
                     self._reconcile_document(located, content, FilePolicy.JSONC)
@@ -399,7 +412,7 @@ class Reconciliation:
             if resolved is None:
                 continue
             target = Path(resolved)
-            enforce_path_jail(target, Path.cwd())
+            enforce_path_jail(target, self.workspace_root)
             record = self._file_record(target, FilePolicy.SEED)
             overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
             if (
@@ -495,7 +508,7 @@ class Reconciliation:
         """Moves an owned seed, local edits included, and its ownership."""
         for path in (source, target):
             validate_target(path)
-            enforce_path_jail(Path(path), Path.cwd())
+            enforce_path_jail(Path(path), self.workspace_root)
             self._validate_node(Path(path))
         record = self._seed(source)
         if record is None:
@@ -526,7 +539,7 @@ class Reconciliation:
         ``retracted`` conflict asks whether to keep or delete it.
         """
         validate_target(path)
-        enforce_path_jail(Path(path), Path.cwd())
+        enforce_path_jail(Path(path), self.workspace_root)
         self._validate_node(Path(path))
         record = self._seed(path)
         outcome = (
@@ -569,7 +582,7 @@ class Reconciliation:
                 and not record.retired
                 and record.path not in declared
             ):
-                enforce_path_jail(Path(record.path), Path.cwd())
+                enforce_path_jail(Path(record.path), self.workspace_root)
                 self._validate_node(Path(record.path))
                 self._release_seed(record)
 
@@ -620,7 +633,7 @@ class Reconciliation:
             and r.path not in declared
         ]:
             target = Path(record.path)
-            enforce_path_jail(target, Path.cwd())
+            enforce_path_jail(target, self.workspace_root)
             self._validate_node(target)
             if not self.workspace.exists(target):
                 self._release_document(record.path)
@@ -721,7 +734,7 @@ class Reconciliation:
             if r.policy is FilePolicy.TEXT and r.path not in declared
         ]:
             target = Path(record.path)
-            enforce_path_jail(target, Path.cwd())
+            enforce_path_jail(target, self.workspace_root)
             self._validate_node(target)
             if not self.workspace.exists(target):
                 self.candidate_state = self.candidate_state.without_file(record.path)
@@ -773,7 +786,7 @@ class Reconciliation:
         for dir_path in self.manifest.filesystem.directories:
             interpolated_path = render_template(dir_path, self.interpolation_context)
             path = Path(interpolated_path)
-            enforce_path_jail(path, Path.cwd())
+            enforce_path_jail(path, self.workspace_root)
             try:
                 self.fs.ensure_directory(path)
             except OSError as e:
@@ -817,7 +830,7 @@ class Reconciliation:
             return
 
         target = Path("justfile")
-        enforce_path_jail(target, Path.cwd())
+        enforce_path_jail(target, self.workspace_root)
         full_content = generate_justfile(
             JustfileSpec(
                 format_commands=self.manifest.tooling.just_format_commands,
@@ -1061,7 +1074,7 @@ class Reconciliation:
         for filepath, regions in declared.items():
             target = Path(filepath)
             validate_target(target.as_posix())
-            enforce_path_jail(target, Path.cwd())
+            enforce_path_jail(target, self.workspace_root)
             try:
                 original = (
                     self.workspace.read_bytes(target).decode("utf-8")
@@ -1225,7 +1238,7 @@ class Reconciliation:
         if resolution.path is None:
             return None
         path = Path(resolution.path)
-        enforce_path_jail(path, Path.cwd())
+        enforce_path_jail(path, self.workspace_root)
         self._validate_node(path)
         record = (
             self._file_record(Path(resolution.owner), policy)
@@ -1261,7 +1274,7 @@ class Reconciliation:
 
     def _write_generated(self, target: Path, content: str) -> None:
         """Merges a generated file's update into the workspace three ways."""
-        enforce_path_jail(target, Path.cwd())
+        enforce_path_jail(target, self.workspace_root)
         self._validate_node(target)
         record = next(
             (r for r in self.candidate_state.files if r.path == target.as_posix()), None
@@ -1414,7 +1427,7 @@ class Reconciliation:
                 )
             )
             return
-        enforce_path_jail(target, Path.cwd())
+        enforce_path_jail(target, self.workspace_root)
         record = self._file_record(target, FilePolicy.TOML)
         baseline = (
             decode_toml_baseline(record.baseline)
@@ -1560,7 +1573,7 @@ class Reconciliation:
             return
 
         gitignore = Path(".gitignore")
-        enforce_path_jail(gitignore, Path.cwd())
+        enforce_path_jail(gitignore, self.workspace_root)
         try:
             existing_content = (
                 self.workspace.read_text(gitignore)
@@ -1590,8 +1603,8 @@ class Reconciliation:
 
         dockerfile = Path(DOCKERFILE)
         dockerignore = Path(".dockerignore")
-        enforce_path_jail(dockerfile, Path.cwd())
-        enforce_path_jail(dockerignore, Path.cwd())
+        enforce_path_jail(dockerfile, self.workspace_root)
+        enforce_path_jail(dockerignore, self.workspace_root)
         self._validate_node(dockerignore)
 
         try:
@@ -1790,7 +1803,7 @@ class Reconciliation:
             return
         target = self.journal.normalize_path(target)
         for node in (target, *target.parents):
-            if node == self.journal.workspace_root:
+            if node == self.workspace_root:
                 break
             try:
                 mode = node.lstat().st_mode

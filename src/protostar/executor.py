@@ -279,7 +279,7 @@ class SystemExecutor(Reconciliation):
         validate_resolver_workspace(self.journal.workspace_root)
         self._validate_resolver_project()
         for path in footprint.paths:
-            enforce_path_jail(Path(path), Path.cwd())
+            enforce_path_jail(Path(path), self.journal.workspace_root)
             self.journal.record_mutation(Path(path))
         with self.progress("Refreshing uv.lock"):
             self.process_runner.run(["uv", "lock"], timeout=600)
