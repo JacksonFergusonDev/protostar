@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790465428632,
+  "lastUpdate": 1790468615120,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17719,6 +17719,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 885.91,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "b134aa7722c8bc4729c91a45650750f145ca4274",
+          "message": "docs: streamline landing page hero hierarchy and remove overview section",
+          "timestamp": "2026-09-26T17:20:52-07:00",
+          "tree_id": "c7e12cc5c4bfe635dd8095ced7611532d351c7f7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b134aa7722c8bc4729c91a45650750f145ca4274"
+        },
+        "date": 1790468613936,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 247.18,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 887.23,
             "unit": "ms"
           }
         ]
