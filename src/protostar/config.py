@@ -332,6 +332,16 @@ class UserConfig:
         _validate_template_aliases(normalized)
         self.templates = normalized
 
+    def __getattr__(self, name: str) -> Any:
+        """Falls back safely for known tool attributes if omitted from explicit fields."""
+        from .recipe import Tool
+
+        if name in {tool.value for tool in Tool}:
+            return False
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
+
     @classmethod
     def load(cls, force_reload: bool = False) -> "UserConfig":
         """Loads and parses the global Protostar configuration file.
