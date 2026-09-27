@@ -405,7 +405,7 @@ def plan_project(
     config = UserConfig(python_version=recipe.python, ide=recipe.ide)
     modules = [
         SystemWorkspaceModule(),
-        PythonCore(python_version=recipe.python),
+        PythonCore(python_version=recipe.python, user_config=config),
         *select_tooling(recipe, blueprint.opinions(recipe.tier) if blueprint else {}),
     ]
     request = InitRequest(

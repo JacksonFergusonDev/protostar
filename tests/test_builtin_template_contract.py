@@ -15,13 +15,14 @@ from typing import Any
 import pytest
 
 from protostar.config import UserConfig
+from protostar.intent import TemplateOrigin
 from protostar.template_check import check_template
-from protostar.templates import TemplateType, discover_templates
+from protostar.templates import discover_templates
 
 BUILTIN_ALIASES = sorted(
     t.alias
     for t in discover_templates(config=UserConfig())
-    if t.type == TemplateType.BUILT_IN
+    if t.origin is TemplateOrigin.BUILT_IN
 )
 
 # Every built-in states each of these explicitly, as true or false, so a reader can

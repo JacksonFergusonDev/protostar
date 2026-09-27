@@ -30,6 +30,7 @@ from protostar.analysis import NoteKind, ProjectAnalysis
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDecision, InitDraft, check_draft
+from protostar.intent import TemplateOrigin
 from protostar.metadata import MetadataKey
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
@@ -40,7 +41,7 @@ from protostar.recipe import (
     establish_recipe,
     validate_tools,
 )
-from protostar.templates import TemplateInfo, TemplateType
+from protostar.templates import TemplateInfo
 from protostar.tiers import TemplateTiers, Tier
 
 from ..chrome import Heading, Headline, Masthead, Panel
@@ -327,7 +328,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             (Text("No template"), _TemplateChoice.NONE)
         ]
         options.extend(
-            (Text(f"{item.name} · {item.type.value} — {item.description}"), item)
+            (Text(f"{item.name} · {item.origin.value} — {item.description}"), item)
             for item in self.catalog
         )
         initial: TemplateInfo | _TemplateChoice = _TemplateChoice.NONE
@@ -340,7 +341,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                     if item.alias == reference.display_name
                     or item.source == reference.locator
                     or (
-                        item.type is TemplateType.BUILT_IN
+                        item.origin is TemplateOrigin.BUILT_IN
                         and item.alias == reference.locator
                     )
                 ),
@@ -499,7 +500,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         if choice is _TemplateChoice.RECORDED:
             template = self._recorded_template
         elif isinstance(choice, TemplateInfo):
-            external = choice.type is TemplateType.GLOBAL_ALIAS
+            external = choice.origin is not TemplateOrigin.BUILT_IN
             target = (
                 choice.source
                 if external

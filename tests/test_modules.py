@@ -36,11 +36,7 @@ def test_python_module_uv_build(manifest, mocker):
     """Test Python manifest mutation prioritizes uv by default and enforces bare initialization."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
-    # Prevent IDE injection to isolate build testing
-    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
-    mock_config.return_value = UserConfig(ide=None)
-
-    mod = PythonCore()
+    mod = PythonCore(user_config=UserConfig(ide=None))
     mod.build(manifest)
 
     assert ".venv/" in manifest.filesystem.vcs_ignores
@@ -67,10 +63,8 @@ def test_python_module_uv_build(manifest, mocker):
 def test_python_module_uv_with_version(manifest, mocker):
     """Test Python manifest includes the specific python version flag alongside bare initialization."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
-    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
-    mock_config.return_value = UserConfig(ide=None)
 
-    mod = PythonCore(python_version="3.12")
+    mod = PythonCore(python_version="3.12", user_config=UserConfig(ide=None))
     mod.build(manifest)
 
     assert any(
@@ -92,11 +86,7 @@ def test_python_module_ide_injection_active(manifest, mocker):
     """Test that the Python module dynamically injects the interpreter path for supported IDEs."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
-    # Mock global config to explicitly request VS Code
-    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
-    mock_config.return_value = UserConfig(ide="vscode")
-
-    mod = PythonCore()
+    mod = PythonCore(user_config=UserConfig(ide="vscode"))
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" in manifest.ide_settings
@@ -119,14 +109,41 @@ def test_python_module_ide_injection_inactive(manifest, mocker):
     """Test that the Python module skips IDE injection if the preferred IDE is unsupported or None."""
     mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
 
-    # Mock global config to represent an unconfigured or non-VS Code state
-    mock_config = mocker.patch("protostar.modules.lang_layer.UserConfig.load")
-    mock_config.return_value = UserConfig(ide=None)
-
-    mod = PythonCore()
+    mod = PythonCore(user_config=UserConfig(ide=None))
     mod.build(manifest)
 
     assert "python.defaultInterpreterPath" not in manifest.ide_settings
+
+
+def test_python_core_prefers_manifest_recipe(manifest, mocker):
+    """Test that PythonCore prefers manifest.recipe settings over its own user_config."""
+    from protostar.ide import IDEType
+    from protostar.recipe import RecipeIntent, establish_recipe
+
+    mocker.patch("protostar.modules.lang_layer.Path.exists", return_value=False)
+
+    recipe = establish_recipe(
+        UserConfig(ide=IDEType.VSCODE, python_version="3.12"),
+        RecipeIntent(python="3.11"),
+    )
+    manifest.recipe = recipe
+
+    mod = PythonCore(user_config=UserConfig(ide=IDEType.CURSOR, python_version="3.13"))
+    mod.build(manifest)
+
+    assert any(
+        t.command
+        == [
+            "uv",
+            "init",
+            "--no-workspace",
+            "--bare",
+            "--pin-python",
+            "--python",
+            "3.11",
+        ]
+        for t in manifest.tasks.system_tasks
+    )
 
 
 # --- DirenvModule Tests ---
@@ -533,13 +550,8 @@ def test_readthedocs_module_follows_minimum_python():
     assert 'python: "3.14"' in contribution.content
 
 
-def test_python_core_declarative_license_injection(mocker):
+def test_python_core_declarative_license_injection():
     """Test that PythonCore declaratively registers LICENSE injection and metadata."""
-    mocker.patch(
-        "protostar.modules.lang_layer.UserConfig.load",
-        return_value=UserConfig(ide=None),
-    )
-
     manifest = EnvironmentManifest()
     manifest.metadata["license"] = "MIT"
 

@@ -619,7 +619,7 @@ def test_plan_detects_license_collision_from_python_core(
     monkeypatch.chdir(tmp_path)
     (tmp_path / "LICENSE").touch()
     engine = Orchestrator(
-        [PythonCore(project_license="MIT")],
+        [PythonCore()],
         mock_config,
         request=InitRequest(metadata={"license": "MIT"}),
     )
@@ -636,7 +636,7 @@ def test_plan_ignores_license_collision_when_license_none(
     monkeypatch.chdir(tmp_path)
     (tmp_path / "LICENSE").touch()
     engine = Orchestrator(
-        [PythonCore(project_license=None)],
+        [PythonCore()],
         mock_config,
         request=InitRequest(metadata={"license": "None"}),
     )

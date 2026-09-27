@@ -117,7 +117,7 @@ def handle_init(args: argparse.Namespace) -> None:
         is_external = True
 
     if template_name:
-        from protostar.templates import TemplateType, discover_templates
+        from protostar.templates import discover_templates
 
         matched_info = None
         # 1. Match by alias (case-insensitive)
@@ -134,7 +134,7 @@ def handle_init(args: argparse.Namespace) -> None:
                     break
 
         if matched_info:
-            if matched_info.type == TemplateType.BUILT_IN:
+            if matched_info.origin is TemplateOrigin.BUILT_IN:
                 override_target = str(
                     importlib.resources.files("protostar.templates").joinpath(
                         f"{matched_info.alias}.toml"

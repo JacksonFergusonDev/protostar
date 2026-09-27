@@ -226,7 +226,8 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         error_msg: If provided, prints a red error warning before the table
             and exits with a status code of 1 instead of 0.
     """
-    from protostar.templates import TemplateType, discover_templates
+    from protostar.intent import TemplateOrigin
+    from protostar.templates import discover_templates
 
     discovered = discover_templates()
     templates = [t.to_dict() for t in discovered]
@@ -270,7 +271,7 @@ def _print_templates_and_exit(error_msg: str | None = None) -> None:
         # External templates run code from elsewhere, so they stand out.
         type_str = (
             Text("Built-in", "dim")
-            if tmpl.type == TemplateType.BUILT_IN
+            if tmpl.origin is TemplateOrigin.BUILT_IN
             else Text("External", "yellow")
         )
         tier = [Text(f"{tmpl.tiers.default} tier" if tmpl.tiers else "")]

@@ -867,7 +867,7 @@ def generate_agent_payloads() -> None:
             )
             bootstrap_mods: list[BootstrapModule] = [
                 SystemWorkspaceModule(),
-                PythonCore(),
+                PythonCore(user_config=UserConfig()),
                 RuffModule(),
             ]
             for b_mod in bootstrap_mods:
