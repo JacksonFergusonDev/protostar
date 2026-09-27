@@ -55,7 +55,6 @@ class SystemExecutor(Reconciliation):
         self,
         manifest: EnvironmentManifest,
         config: UserConfig,
-        docker: bool = False,
         *,
         review: PreparedReview | None = None,
         hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
@@ -67,7 +66,6 @@ class SystemExecutor(Reconciliation):
         Args:
             manifest: The centralized state object containing all execution directives.
             config: The active Protostar configuration instance.
-            docker: If True, scaffolds a .dockerignore from the manifest ignores.
             review: Captured lifecycle decisions; consumes their frozen registry snapshot.
             hook_revisions: The registry snapshot a caller already reviewed. Without
                 one or a review, the executor takes its own when hooks are wanted.
@@ -88,9 +86,7 @@ class SystemExecutor(Reconciliation):
             )
         self.hook_revisions = hook_revisions
         self.config = config
-        self.docker = docker or manifest.tooling.wants_docker
-        if self.docker:
-            manifest.tooling.wants_docker = True
+        self.docker = manifest.tooling.wants_docker
         self.journal = MutationJournal()
         self.fs = TransactionAwareFS(self.journal)
         self.process_runner = ProcessRunner()

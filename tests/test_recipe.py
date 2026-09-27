@@ -19,8 +19,10 @@ from protostar.errors import (
     UnsupportedFilesystemNodeError,
 )
 from protostar.executor import SystemExecutor
+from protostar.ide import IDEType
 from protostar.intent import TemplateOrigin, validate_configuration
 from protostar.manifest import EnvironmentManifest
+from protostar.modules import DockerModule
 from protostar.recipe import (
     RecipeIntent,
     RecipeSource,
@@ -53,7 +55,7 @@ def test_round_trip_preserves_foreign_bytes_comments_and_recipe_comments(tmp_pat
     assert read_recipe(path) == recipe()
     assert edit_recipe(first, recipe()) == first
     commented = first.replace("ruff = true", "ruff = true # my default")
-    changed = edit_recipe(commented, replace(recipe(), docker=True))
+    changed = edit_recipe(commented, replace(recipe(), ide=IDEType.VSCODE))
     assert "# my default" in changed
     assert "[tool.other]\nvalue=42" in changed
 
@@ -755,7 +757,7 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
     target.chmod(0o640)
     lock.chmod(0o600)
     before = (target.read_bytes(), lock.read_bytes())
-    second = EnvironmentManifest(recipe=replace(recipe(), docker=True))
+    second = EnvironmentManifest(recipe=replace(recipe(), ide=IDEType.VSCODE))
     second.filesystem.add_structured(
         "pyproject.toml", "[tool.ruff]\nline-length=99", producer="module:test"
     )
@@ -768,7 +770,7 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
         if path == Path("protostar.lock") or (
             failure == "recipe"
             and "[tool.protostar]" in content
-            and "docker = true" in content
+            and 'ide = "vscode"' in content
         ):
             raise OSError("late failure")
 
@@ -842,8 +844,14 @@ def test_template_docker_opinion_follows_flag_precedence(
 
     handle_init(argparse.Namespace(from_path=str(source), docker=flag))
 
-    assert engines[-1].request.docker is expected
-    assert engines[-1].request.recipe.docker is expected
+    blueprint = engines[-1].request.template_blueprint
+    assert blueprint is not None
+    selections = {
+        s.tool: s.enabled
+        for s in engines[-1].request.recipe.selections(blueprint.opinions(None))
+    }
+    assert selections[Tool.DOCKER] is expected
+    assert any(isinstance(m, DockerModule) for m in engines[-1].modules) is expected
 
 
 def test_captured_recipe_docker_wins_over_a_later_template_opinion(
@@ -856,7 +864,10 @@ def test_captured_recipe_docker_wins_over_a_later_template_opinion(
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
-        edit_recipe('[project]\nname="foreign"\n', replace(recipe(), docker=False))
+        edit_recipe(
+            '[project]\nname="foreign"\n',
+            replace(recipe(), tools=((Tool.DOCKER, False),)),
+        )
     )
     source = tmp_path / "blueprint.toml"
     source.write_text('name="custom"\ndocker=true\n')
@@ -864,7 +875,14 @@ def test_captured_recipe_docker_wins_over_a_later_template_opinion(
 
     handle_init(argparse.Namespace(from_path=str(source), docker=None))
 
-    assert engines[-1].request.docker is False
+    blueprint = engines[-1].request.template_blueprint
+    assert blueprint is not None
+    selections = {
+        s.tool: s.enabled
+        for s in engines[-1].request.recipe.selections(blueprint.opinions(None))
+    }
+    assert selections[Tool.DOCKER] is False
+    assert any(isinstance(m, DockerModule) for m in engines[-1].modules) is False
 
 
 def _cli_template_pyproject(tmp_path, monkeypatch, mocker, **flags):
@@ -1084,9 +1102,9 @@ FOREIGN_PYPROJECT = '# mine\n[project]\nname="x"\n\n\n[tool.black]\nx = 1\n'
 def test_editing_a_recipe_leaf_changes_no_other_byte():
     first = edit_recipe(FOREIGN_PYPROJECT, recipe())
 
-    second = edit_recipe(first, replace(recipe(), docker=True))
+    second = edit_recipe(first, replace(recipe(), ide=IDEType.VSCODE))
 
-    assert second == first.replace("docker = false", "docker = true")
+    assert second == first.replace('ide = "none"', 'ide = "vscode"')
 
 
 def test_a_new_recipe_keeps_the_users_file_and_follows_their_last_tool():
@@ -1111,9 +1129,11 @@ def test_out_of_order_recipe_tables_are_edited_where_they_stand():
         "[tool.protostar.context]", "[tool.other]\nz = 1\n\n[tool.protostar.context]"
     )
 
-    updated = tomllib.loads(edit_recipe(scattered, replace(recipe(), docker=True)))
+    updated = tomllib.loads(
+        edit_recipe(scattered, replace(recipe(), ide=IDEType.VSCODE))
+    )
 
-    assert updated["tool"]["protostar"]["docker"] is True
+    assert updated["tool"]["protostar"]["ide"] == "vscode"
     assert updated["tool"]["other"] == {"z": 1}
 
 

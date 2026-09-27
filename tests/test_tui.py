@@ -128,7 +128,7 @@ async def test_template_picker_and_docker():
             item for item in app.decision_screen.catalog if item.alias == "api"
         )
         await settle(pilot)
-        assert app.screen.query_one("#docker", Checkbox).value
+        assert app.screen.query_one("#tool-docker", Checkbox).value
         assert (
             "from template" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
         )
@@ -414,14 +414,14 @@ async def test_tab_treats_the_tools_as_one_stop():
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
         await pilot.press("tab")
-        assert app.focused.id == "docker"
+        assert app.focused.id == "tool-ruff"
         assert legend(app) == {"Toggle", "Move", "Next", "Tool info", "Keybindings"}
-        await pilot.press("down", "down")
+        await pilot.press("down")
         assert app.focused.id == "tool-mypy"
         await pilot.press("tab")
         assert app.focused.id == "exclusive-0"
         await pilot.press("shift+tab")
-        assert app.focused.id == "docker"
+        assert app.focused.id == "tool-ruff"
         await pilot.press("shift+tab")
         assert app.focused.id == "template"
 
@@ -461,7 +461,7 @@ async def test_a_whole_init_from_the_keyboard():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        await pilot.press("tab", "space")  # Docker
+        await pilot.press("tab", *["down"] * 9, "space")  # Docker
         await pilot.press("tab", "down", "down", "space")  # prek
         await pilot.press("tab")
         assert legend(app) == {"Move", "Accept", "Next"}
@@ -470,7 +470,7 @@ async def test_a_whole_init_from_the_keyboard():
         await settle(pilot)
         await apply(pilot)
     draft = app.return_value.draft
-    assert draft.docker
+    assert dict(draft.tool_choices)[Tool.DOCKER]
     assert dict(draft.tool_choices)[Tool.PREK]
     assert dict(draft.metadata)["description"] == "Orbit"
 
@@ -525,9 +525,9 @@ async def test_i_explains_docker_like_any_tool():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        docker = app.screen.query_one("#docker", Checkbox)
+        docker = app.screen.query_one("#tool-docker", Checkbox)
         assert docker.tooltip == DOCKER_INFO.summary
-        await pilot.press("tab")
+        await pilot.press("tab", *["down"] * 9)
         assert app.focused is docker
         assert "Tool info" in legend(app)
         await pilot.press("i")
@@ -600,15 +600,14 @@ async def test_recorded_values_and_template_switch_preserve_choices():
     config = UserConfig(ruff=False)
     recipe = replace(
         establish_recipe(config),
-        tools=((Tool.RUFF, True),),
-        docker=True,
+        tools=((Tool.DOCKER, True), (Tool.RUFF, True)),
         metadata=(("description", "Recorded"),),
     )
     app = make_app(InitDraft(existing_recipe=recipe), config)
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
         assert "from recipe" in app.screen.query_one("#tool-ruff", Checkbox).label.plain
-        assert app.screen.query_one("#docker", Checkbox).value
+        assert app.screen.query_one("#tool-docker", Checkbox).value
         assert app.screen.query_one("#meta-description", Input).value == "Recorded"
         app.screen.query_one("#tool-ruff").scroll_visible(immediate=True)
         await pilot.pause()
@@ -677,7 +676,7 @@ async def test_the_tier_control_shows_only_for_a_template_with_tiers():
         assert app.focused is app.screen.query_one("#tier")
         # Tab passes over both tiers in one stop.
         await pilot.press("tab")
-        assert app.focused is app.screen.query_one("#docker")
+        assert app.focused is app.screen.query_one("#tool-ruff")
         app.screen.query_one("#template", Select).value = _TemplateChoice.NONE
         await settle(pilot)
         assert not tiers.display
@@ -865,7 +864,7 @@ async def test_alias_and_load_error(tmp_path):
     assert draft.template.is_external
     assert draft.template.is_user_aliased
     assert not draft.template.is_trusted
-    assert draft.docker
+    assert dict(draft.tool_choices)[Tool.DOCKER]
 
 
 @pytest.mark.asyncio
@@ -898,7 +897,7 @@ async def test_remote_template_loads_in_a_worker(tmp_path, mocker):
         release.set()
         await settle(pilot)
         assert plain(app, "#template-status").strip() == ""
-        assert app.screen.query_one("#docker", Checkbox).value
+        assert app.screen.query_one("#tool-docker", Checkbox).value
         assert not app.screen.query_one("#continue", Button).disabled
 
 
@@ -931,7 +930,7 @@ async def test_reselecting_the_current_template_abandons_a_load(tmp_path, mocker
         release.set()
         await settle(pilot)
         assert app.decision_screen.draft.template is None
-        assert not app.screen.query_one("#docker", Checkbox).value
+        assert not app.screen.query_one("#tool-docker", Checkbox).value
 
 
 @pytest.mark.asyncio
@@ -1052,7 +1051,7 @@ async def test_metadata_defaults_follow_config_tools_and_docker():
         assert not screen.query_one("#meta-supported_os-row").display
         assert not screen.query_one("#meta-docker_port-row").display
         screen.query_one("#tool-ci", Checkbox).value = True
-        screen.query_one("#docker", Checkbox).value = True
+        screen.query_one("#tool-docker", Checkbox).value = True
         await settle(pilot)
         assert screen.query_one("#meta-supported_os-row").display
         assert screen.query_one("#meta-supported_os", SelectionList).selected == [
@@ -1115,7 +1114,7 @@ async def test_an_existing_project_prefills_its_tools_and_details(workspace):
         assert not rtd.value
         assert "found · .readthedocs.yaml" in rtd.label.plain
         assert "requires Zensical" in rtd.label.plain
-        docker = screen.query_one("#docker", Checkbox)
+        docker = screen.query_one("#tool-docker", Checkbox)
         assert docker.value
         assert "found · Dockerfile" in docker.label.plain
         assert "deploy.yml" in plain(app, "#analysis-notes")
@@ -1134,7 +1133,7 @@ async def test_an_existing_project_prefills_its_tools_and_details(workspace):
     assert choices[Tool.PREK]
     assert not choices[Tool.PRE_COMMIT]
     assert not choices[Tool.JUST]
-    assert draft.docker
+    assert choices[Tool.DOCKER]
     assert draft.python_version == "3.12"
 
 
@@ -1265,7 +1264,7 @@ async def test_invalid_docker_port_shows_actionable_preview_error():
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        app.screen.query_one("#docker", Checkbox).value = True
+        app.screen.query_one("#tool-docker", Checkbox).value = True
         await settle(pilot)
         field = app.screen.query_one("#meta-docker_port", Input)
         field.focus()
@@ -1402,9 +1401,7 @@ def test_existing_project_snapshot(snap_compare, monkeypatch, workspace):
 
 def test_editor_details_snapshot(snap_compare, monkeypatch):
     monkeypatch.delenv("NO_COLOR", raising=False)
-    app = make_app(
-        InitDraft(docker=True), UserConfig(ci=True, author_name="Ada Lovelace")
-    )
+    app = make_app(config=UserConfig(ci=True, docker=True, author_name="Ada Lovelace"))
 
     async def details(pilot):
         await settle(pilot)

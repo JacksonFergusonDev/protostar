@@ -422,8 +422,7 @@ def test_intercept_interactive_wizards_success(mocker):
 
     mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
     selections = InitDraft(
-        tool_choices=tuple((tool, False) for tool in Tool),
-        docker=True,
+        tool_choices=tuple((tool, tool is Tool.DOCKER) for tool in Tool),
         variables=(("REGION", "eu"),),
         metadata=(),
     )

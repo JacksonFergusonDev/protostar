@@ -176,7 +176,6 @@
         ]
       }
     ],
-    "docker": [],
     "facts": {
       "author_name": {
         "value": "Demo Author",

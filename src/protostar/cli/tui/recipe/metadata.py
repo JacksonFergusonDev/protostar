@@ -39,17 +39,15 @@ _BASE_KEYS = frozenset(
 
 
 def metadata_keys(
-    modules: Iterable[BootstrapModule], *, docker: bool
+    modules: Iterable[BootstrapModule],
 ) -> frozenset[MetadataKey]:
-    """Returns the metadata the enabled tooling modules and Docker read."""
+    """Returns the metadata the enabled tooling modules read."""
     keys = set(_BASE_KEYS)
     for module in modules:
         keys.update(
             MetadataKey(key)
             for key in (*module.required_metadata, *module.optional_metadata)
         )
-    if docker:
-        keys.add(MetadataKey.DOCKER_PORT)
     return frozenset(keys)
 
 

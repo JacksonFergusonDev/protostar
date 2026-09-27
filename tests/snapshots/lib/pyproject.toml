@@ -184,7 +184,6 @@ style = "one"
 version = 1
 mode = "template"
 python = "3.13"
-docker = false
 ide = "none"
 
 [tool.protostar.source]
@@ -198,6 +197,7 @@ codecov = false
 commitizen = false
 community = false
 direnv = false
+docker = false
 just = false
 markdownlint = false
 mypy = false

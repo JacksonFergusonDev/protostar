@@ -31,7 +31,7 @@ from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDecision, InitDraft, check_draft
 from protostar.metadata import MetadataKey
-from protostar.modules import DOCKER_INFO, DOCKER_NAME, TOOLING_MODULES
+from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
     EXCLUSIVE_TOOL_PAIRS,
     TOOL_REQUIREMENTS,
@@ -57,7 +57,6 @@ from ..review.screen import ReviewScreen
 from ..tool_info import (
     TOOL_GROUPS,
     TOOL_INFO_KEY,
-    InfoToggle,
     ToolChoice,
     ToolRadio,
     ToolToggle,
@@ -122,7 +121,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.opinions: dict[str, bool] = {}
         self.enabled: dict[Tool, bool] = {}
         self.sources: dict[Tool, str] = {}
-        self.docker_override = draft.docker
         # A tier chosen here outlasts a template switch: the names mean the
         # same thing in every template.
         self.tier_choice: Tier | None = None
@@ -134,7 +132,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.found: dict[Tool, str] = {}
         self.displaced: dict[Tool, Tool] = {}
         self._analyzed: set[Tool] = set()
-        self.docker_found = ""
         # Nothing blocks on these: the marker only says what to install.
         self.not_installed = _not_installed()
         self._resolve_selections()
@@ -172,10 +169,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             del self.overrides[tool]
         if blocked:
             self._resolve_selections()
-        if analysis.docker:
-            self.docker_found = analysis.docker[0]
-            if not self._docker():
-                self.docker_override = True
 
     def _forget(self, *tools: Tool) -> None:
         """The user decided these tools, so what analysis saw no longer shows."""
@@ -248,21 +241,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             parts.append((" · not installed", "$text-faint"))
         return Content.assemble(*parts)
 
-    def _docker_label(self) -> str | Content:
-        if not self.docker_found:
-            return DOCKER_NAME
-        return Content.assemble(
-            DOCKER_NAME.ljust(_NAME_WIDTH),
-            (f"found · {self.docker_found}", "$text-faint"),
-        )
-
-    def _docker(self) -> bool:
-        if self.docker_override is not None:
-            return self.docker_override
-        if self.draft.existing_recipe:
-            return self.draft.existing_recipe.docker
-        return self.opinions.get("docker", False)
-
     def compose(self) -> ComposeResult:
         """Compose the editor sections beside the plan preview."""
         yield Masthead("init", "recipe")
@@ -286,13 +264,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                 if notes := self._notes():
                     yield Static(notes, id="analysis-notes", classes="note")
                 with ChoiceGroup(id="tools"):
-                    yield InfoToggle(
-                        self._docker_label(),
-                        DOCKER_NAME,
-                        DOCKER_INFO,
-                        value=self._docker(),
-                        id="docker",
-                    )
                     for title, tools in TOOL_GROUPS.items():
                         yield Label(title, classes="group")
                         for tool in tools:
@@ -472,7 +443,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             option_choices=tuple(sorted(self.query_one(OptionFields).values.items())),
             tier=None if chosen else self._tier(),
             tier_choice=chosen,
-            docker=self._docker(),
             variables=tuple(sorted(variables.items())),
             allowed_secrets=fields.allowed_secrets,
             metadata=tuple(sorted(metadata.items())),
@@ -487,12 +457,9 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         """Show the metadata the current tools read, and re-plan the preview."""
         self.query_one(MetadataFields).show(
             metadata_keys(
-                (
-                    module
-                    for module in TOOLING_MODULES
-                    if self.enabled[Tool(module.config_key)]
-                ),
-                docker=self._docker(),
+                module
+                for module in TOOLING_MODULES
+                if self.enabled[Tool(module.config_key)]
             )
         )
         draft = self._current_draft()
@@ -582,8 +549,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self._selected_template = choice
         self._status(Text(""))
         self._follow_template()
-        with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
-            self.query_one("#docker", Checkbox).value = self._docker()
         await self.query_one(VariableFields).show(template.source if template else None)
         await self.query_one(TierFields).show(self._tiers(), self._tier())
         await self.query_one(OptionFields).show(template.source if template else None)
@@ -622,17 +587,11 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             return
         self.tier_choice = event.tier
         for key in tiers.flags(event.tier):
-            if key == "docker":
-                if not self.docker_found:
-                    self.docker_override = None
-                continue
             tool = Tool(key)
             if tool not in self.found and tool not in self.displaced:
                 self.overrides.pop(tool, None)
         self._resolve_selections()
         self._follow_template()
-        with self.query_one("#docker", Checkbox).prevent(Checkbox.Changed):
-            self.query_one("#docker", Checkbox).value = self._docker()
         self._refresh_tools()
         self._changed()
 
@@ -644,14 +603,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
     @on(Checkbox.Changed)
     def toggle_tool(self, event: Checkbox.Changed) -> None:
         """Record explicit choices and update requirement availability."""
-        if event.checkbox.id == "docker":
-            if event.value == self._docker():
-                return
-            self.docker_override = event.value
-            self.docker_found = ""
-            event.checkbox.label = self._docker_label()
-            self._changed()
-            return
         tool = Tool(str(event.checkbox.id).removeprefix("tool-"))
         if self.enabled[tool] == event.value:
             return

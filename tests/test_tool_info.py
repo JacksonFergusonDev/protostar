@@ -6,12 +6,10 @@ import json
 import pytest
 
 from protostar.cli import parser, schema, ui
-from protostar.modules import DOCKER_INFO, DOCKER_NAME, TOOLING_MODULES, ToolInfo
+from protostar.modules import TOOLING_MODULES, ToolInfo
 
-DESCRIBED = {module.name: module.info for module in TOOLING_MODULES} | {
-    DOCKER_NAME: DOCKER_INFO
-}
-"""Every switchable tool, including Docker, which is a flag rather than a module."""
+DESCRIBED = {module.name: module.info for module in TOOLING_MODULES}
+"""Every switchable tool."""
 
 
 @pytest.mark.parametrize("info", DESCRIBED.values(), ids=DESCRIBED.keys())
@@ -44,7 +42,6 @@ def test_flag_help_is_the_tool_summary():
     for module in TOOLING_MODULES:
         if module.cli_flags:
             assert helps[module.__class__.__name__] == module.info.summary
-    assert helps["docker"] == DOCKER_INFO.summary
 
 
 def test_schema_describes_each_tool_by_its_summary(monkeypatch, capsys):
@@ -54,4 +51,3 @@ def test_schema_describes_each_tool_by_its_summary(monkeypatch, capsys):
     properties = json.loads(capsys.readouterr().out)["properties"]
     for module in TOOLING_MODULES:
         assert properties[module.config_key]["description"] == module.info.summary
-    assert properties["docker"]["description"] == DOCKER_INFO.summary

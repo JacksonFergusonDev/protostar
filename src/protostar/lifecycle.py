@@ -412,7 +412,6 @@ def plan_project(
         recipe=recipe,
         template_blueprint=blueprint,
         python_version=recipe.python,
-        docker=recipe.docker,
         collision_strategy=CollisionStrategy.MERGE,
         metadata={
             key: list(value) if isinstance(value, tuple) else value

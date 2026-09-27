@@ -13,6 +13,7 @@ from protostar.analysis import (
     Fact,
     NoteKind,
     ProjectAnalysis,
+    ToolEvidence,
     analyze_project,
 )
 from protostar.cli.main import main
@@ -144,7 +145,6 @@ def test_serializes_deterministically(legacy):
         "source": "pyproject.toml [project].classifiers",
     }
     assert payload["facts"]["supported_os"]["value"] == ["MacOS", "Linux"]
-    assert payload["docker"] == []
 
 
 def test_reads_without_writing_or_running_anything(legacy, mocker):
@@ -179,7 +179,7 @@ def test_a_tool_file_alone_makes_an_existing_project(tmp_path):
     analysis = analyze_project(tmp_path)
 
     assert analysis.existing
-    assert analysis.docker == ("Dockerfile",)
+    assert analysis.tools == (ToolEvidence(Tool.DOCKER, ("Dockerfile",)),)
 
 
 def test_legacy_ini_configuration_counts(tmp_path):

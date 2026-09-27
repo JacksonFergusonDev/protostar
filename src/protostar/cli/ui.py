@@ -790,7 +790,7 @@ def print_recipe_summary(request: InitRequest) -> None:
     rows = [("Template", template)]
     if blueprint and blueprint.tiers:
         rows.append(("Tier", (tier or blueprint.tiers.default).value))
-    rows += [("Tools", tools or "None"), ("Docker", "yes" if request.docker else "no")]
+    rows.append(("Tools", tools or "None"))
     console.print(heading("Recipe"))
     console.print(indented(_facts(rows)))
 

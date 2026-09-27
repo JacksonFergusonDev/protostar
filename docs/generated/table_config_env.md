@@ -24,6 +24,7 @@
 | `readthedocs` | `bool` | Whether to auto-scaffold Read the Docs configuration. |
 | `ci` | `bool` | Whether to auto-scaffold standard GitHub Actions CI workflows. |
 | `release` | `bool` | Whether to auto-scaffold GitHub Actions PyPI release workflows. |
+| `docker` | `bool` | Whether to auto-scaffold container artifacts (.dockerignore, Dockerfile). |
 | `just` | `bool` | Whether to auto-scaffold a justfile for command execution. |
 | `agents` | `bool` | Whether to auto-scaffold a managed AGENTS.md guide for coding agents. |
 | `community` | `bool` | Whether to auto-scaffold community health files and issue templates. |

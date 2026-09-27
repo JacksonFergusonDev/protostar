@@ -150,9 +150,6 @@ class TemplateCheck:
 # appear, including a bare TOML key, and matches no credential rule.
 _PLACEHOLDER_VALUE = "placeholder"
 
-# Root booleans that are valid but belong to no tooling module.
-_NON_MODULE_FLAGS = frozenset({"docker"})
-
 # Tools whose config has no additive key, so a template must redefine the whole
 # list. Redefining is only allowed when it keeps every baseline entry.
 ATOMIC_LISTS_WITHOUT_ADDITIVE_KEY = frozenset(
@@ -334,7 +331,7 @@ def _unknown_keys(raw: dict[str, Any], where: _Where) -> Iterator[Finding]:
     """
     from .recipe import Tool
 
-    flags = {tool.value for tool in Tool} | _NON_MODULE_FLAGS
+    flags = {tool.value for tool in Tool}
     for key, value in raw.items():
         if key in TEMPLATE_STRUCTURAL_KEYS or isinstance(value, bool):
             continue
