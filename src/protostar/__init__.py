@@ -27,7 +27,12 @@ if TYPE_CHECKING:
     from .network import GitHost
     from .security import SafelistBinary
     from .workflows import CIFlag, TargetOS
-    from .workspace import PackageName, ProjectName, PythonVersion
+    from .workspace import (
+        DEFAULT_PYTHON_VERSION,
+        PackageName,
+        ProjectName,
+        PythonVersion,
+    )
 from typing import Any
 
 # Neutralize the logger before any runtime execution to prevent stderr leakage
@@ -40,6 +45,7 @@ _MODULE_LOOKUP: dict[str, str] = {
     "CommandExecutionError": ".errors",
     "CommandTimeoutError": ".errors",
     "ConfigurationError": ".errors",
+    "DEFAULT_PYTHON_VERSION": ".workspace",
     "DependencyGroup": ".intent",
     "DiagnosticPhase": ".manifest",
     "EnvironmentManifest": ".manifest",
@@ -66,6 +72,7 @@ _MODULE_LOOKUP: dict[str, str] = {
 }
 
 __all__ = [
+    "DEFAULT_PYTHON_VERSION",
     "ArchiveFormat",
     "BootstrapModule",
     "CIFlag",

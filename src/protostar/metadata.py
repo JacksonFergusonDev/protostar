@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from .errors import ConfigurationError
 from .system import get_git_config
 from .workflows import TargetOS
-from .workspace import check_python_version
+from .workspace import DEFAULT_PYTHON_VERSION, check_python_version
 
 if TYPE_CHECKING:
     from .config import UserConfig
@@ -214,7 +214,7 @@ METADATA_FIELDS: dict[MetadataKey, MetadataField] = {
         prompt_type=PromptType.TEXT,
         choices=None,
         auto_resolver=lambda cfg: cfg.python_version,
-        default="3.13",
+        default=DEFAULT_PYTHON_VERSION,
         validator=validate_minimum_python,
     ),
     MetadataKey.SUPPORTED_OS: MetadataField(

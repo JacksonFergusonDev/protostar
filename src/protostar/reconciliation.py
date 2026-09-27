@@ -215,9 +215,9 @@ class Reconciliation:
         return {
             "PROJECT_NAME": resolve_project_name(self.manifest.metadata),
             "PACKAGE_NAME": resolve_package_name(self.manifest.metadata),
-            "PYTHON_VERSION": resolve_python_version(self.manifest.metadata)
-            or self.config.python_version
-            or "3.13",
+            "PYTHON_VERSION": resolve_python_version(
+                self.manifest.metadata, default=self.config.python_version
+            ),
             "CURRENT_YEAR": str(datetime.date.today().year),
             "AUTHOR_NAME": self.manifest.metadata.get("author_name") or "your-name",
         }
@@ -789,7 +789,7 @@ class Reconciliation:
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
                 supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
-                min_python=self.manifest.metadata.get("minimum_python", "3.13"),
+                min_python=resolve_python_version(self.manifest.metadata),
                 ci_flags=self.manifest.tooling.ci_flags,
                 ci_steps=self.manifest.tooling.ci_steps,
             )

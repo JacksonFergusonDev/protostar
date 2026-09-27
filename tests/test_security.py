@@ -57,6 +57,7 @@ def test_enforce_binary_safelist_allow():
     enforce_binary_safelist(["prek", "run"])
     enforce_binary_safelist(["pre-commit", "run"])
     enforce_binary_safelist(["/usr/local/bin/direnv", "allow"])
+    enforce_binary_safelist(["just", "build"])
 
 
 def test_safelist_binary_enum():
@@ -70,9 +71,22 @@ def test_safelist_binary_enum():
     assert SafelistBinary.PRE_COMMIT.value == "pre-commit"
     assert SafelistBinary.PREK.value == "prek"
     assert SafelistBinary.DIRENV.value == "direnv"
+    assert SafelistBinary.JUST.value == "just"
 
     for binary in SafelistBinary:
         assert binary in ALLOWED_BINARIES
+
+
+def test_global_executables_covered_by_safelist():
+    """Ensures every GlobalExecutable is authorized in SafelistBinary."""
+    from protostar.security import SafelistBinary
+    from protostar.system_deps import GlobalExecutable
+
+    safelist_values = {b.value for b in SafelistBinary}
+    for global_exe in GlobalExecutable:
+        assert global_exe.value in safelist_values, (
+            f"Global executable {global_exe.value} is missing from SafelistBinary"
+        )
 
 
 def test_trust_boundary_bypassed_when_trusted_true(mocker: Any) -> None:

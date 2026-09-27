@@ -10,6 +10,7 @@ from typing import Any
 from .errors import ConfigurationError
 
 __all__ = [
+    "DEFAULT_PYTHON_VERSION",
     "PackageName",
     "ProjectName",
     "PythonVersion",
@@ -22,6 +23,9 @@ __all__ = [
     "validate_package_name",
     "validate_project_name",
 ]
+
+DEFAULT_PYTHON_VERSION: str = "3.13"
+"""The project-wide default Python version to scaffold or target when unconfigured."""
 
 _PYTHON_VERSION_PATTERN = re.compile(r"(\d+)\.\d+(?:\.\d+)?")
 
@@ -194,7 +198,7 @@ def resolve_python_version(
         The resolved python version string.
     """
     if metadata:
-        raw = metadata.get("minimum_python") or metadata.get("python_version")
+        raw = metadata.get("minimum_python")
         if raw:
             try:
                 return str(PythonVersion.from_string(str(raw)))
@@ -221,7 +225,7 @@ def resolve_python_version(
     if default:
         return default
 
-    return "3.13"
+    return DEFAULT_PYTHON_VERSION
 
 
 def generate_python_version_range(

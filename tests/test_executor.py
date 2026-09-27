@@ -320,7 +320,7 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
 def test_executor_writes_dockerfile_default(mocker, mock_config):
     """Test that the executor writes a multi-stage Dockerfile with default configuration."""
     manifest = EnvironmentManifest()
-    manifest.metadata = cast(ProjectMetadata, {"python_version": "3.12"})
+    manifest.metadata = cast(ProjectMetadata, {"minimum_python": "3.12"})
     manifest.tooling.wants_docker = True
     executor = SystemExecutor(manifest, mock_config)
 
@@ -349,7 +349,7 @@ def test_executor_writes_dockerfile_with_api_template(mocker, mock_config):
     manifest = EnvironmentManifest()
     manifest.dependencies.dependencies = ["fastapi", "uvicorn"]
     manifest.metadata = cast(
-        ProjectMetadata, {"docker_port": "8080", "python_version": "3.13"}
+        ProjectMetadata, {"docker_port": "8080", "minimum_python": "3.13"}
     )
     manifest.tooling.wants_docker = True
     executor = SystemExecutor(manifest, mock_config)

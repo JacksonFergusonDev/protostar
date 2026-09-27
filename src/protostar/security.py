@@ -24,6 +24,7 @@ class SafelistBinary(enum.StrEnum):
     PRE_COMMIT = "pre-commit"
     PREK = "prek"
     DIRENV = "direnv"
+    JUST = "just"
 
 
 ALLOWED_BINARIES: frozenset[SafelistBinary | str] = frozenset(SafelistBinary)

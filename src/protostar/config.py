@@ -39,7 +39,7 @@ from .migrations import Migration, parse_migrations
 from .network import RemoteTemplate, fetch_remote_template
 from .options import Condition, TemplateOption, Term, parse_condition, parse_options
 from .tiers import TIER_TERM, TemplateTiers, Tier, parse_tiers, template_opinions
-from .workspace import check_python_version
+from .workspace import DEFAULT_PYTHON_VERSION, check_python_version
 
 logger = logging.getLogger("protostar")
 
@@ -137,7 +137,7 @@ def active_config_source() -> ConfigSource:
     return ConfigSource.explicit(Path(raw).expanduser())
 
 
-DEFAULT_CONFIG_CONTENT = """[env]
+DEFAULT_CONFIG_CONTENT = f"""[env]
 # Preferred IDE: 'vscode', 'cursor', or 'none'
 # ide = "vscode"
 
@@ -147,7 +147,7 @@ DEFAULT_CONFIG_CONTENT = """[env]
 # github_username = "your-github-username"
 
 # Default Python version
-python_version = "3.13"
+python_version = "{DEFAULT_PYTHON_VERSION}"
 # supported_os = ["MacOS", "Linux", "Windows"]
 
 # Optional dev tool toggles for Python
@@ -286,7 +286,7 @@ class UserConfig:
     author_email: str | None = None
     github_username: str | None = None
     direnv: bool = False
-    python_version: str | None = "3.13"
+    python_version: str | None = DEFAULT_PYTHON_VERSION
     license: str | None = None
     supported_os: list[str] = field(default_factory=list)
     markdownlint: bool = False
@@ -331,6 +331,16 @@ class UserConfig:
                 normalized[k] = v
         _validate_template_aliases(normalized)
         self.templates = normalized
+
+    def __getattr__(self, name: str) -> Any:
+        """Falls back safely for known tool attributes if omitted from explicit fields."""
+        from .recipe import Tool
+
+        if name in {tool.value for tool in Tool}:
+            return False
+        raise AttributeError(
+            f"{type(self).__name__!r} object has no attribute {name!r}"
+        )
 
     @classmethod
     def load(cls, force_reload: bool = False) -> "UserConfig":

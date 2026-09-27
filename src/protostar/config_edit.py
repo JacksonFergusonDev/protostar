@@ -56,7 +56,7 @@ def config_values(config: UserConfig) -> dict[str, EnvValue]:
     """
     values: dict[str, EnvValue] = {}
     for key in EDITABLE_KEYS:
-        value = getattr(config, key)
+        value = getattr(config, key, False if key in TOOL_KEYS else None)
         values[key] = value if value is None or isinstance(value, bool) else str(value)
     return values
 

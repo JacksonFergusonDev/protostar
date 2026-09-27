@@ -31,6 +31,7 @@ from .metadata import validate_metadata
 from .options import CHOICE_VALUE, OptionValue
 from .tiers import Tier, parse_tier
 from .workspace import (
+    DEFAULT_PYTHON_VERSION,
     check_python_version,
     resolve_package_name,
     resolve_project_name,
@@ -690,7 +691,11 @@ def establish_recipe(
     metadata = intent.metadata or {}
     reference = intent.reference
     python = intent.python
-    version = python if python is not None else (config.python_version or "3.13")
+    version = (
+        python
+        if python is not None
+        else (config.python_version or DEFAULT_PYTHON_VERSION)
+    )
     project_name = resolve_project_name(metadata)
     if not Path("pyproject.toml").exists() and not any(
         metadata.get(k) for k in ("project_name", "name")
