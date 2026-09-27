@@ -87,6 +87,36 @@ def test_enums_properties():
         TargetOS.WINDOWS.trove_classifier == "Operating System :: Microsoft :: Windows"
     )
 
+    assert TargetOS.from_string("MacOS") is TargetOS.MACOS
+    assert (
+        TargetOS.from_string("Operating System :: MacOS :: MacOS X") is TargetOS.MACOS
+    )
+    assert TargetOS.from_string("Operating System :: POSIX :: Linux") is TargetOS.LINUX
+    assert TargetOS.from_string("Windows") is TargetOS.WINDOWS
+    assert TargetOS.from_string(TargetOS.LINUX) is TargetOS.LINUX
+    assert TargetOS.from_string("Unknown") is None
+    assert TargetOS.from_string(123) is None
+
+    assert TargetOS.from_iterable(["MacOS", "Linux"]) == (
+        TargetOS.MACOS,
+        TargetOS.LINUX,
+    )
+    assert TargetOS.from_iterable(["Linux", "MacOS"]) == (
+        TargetOS.LINUX,
+        TargetOS.MACOS,
+    )
+    assert TargetOS.from_iterable(
+        [
+            "Operating System :: POSIX :: Linux",
+            "Operating System :: MacOS :: MacOS X",
+        ]
+    ) == (TargetOS.MACOS, TargetOS.LINUX)
+    assert TargetOS.from_iterable(["Operating System :: OS Independent"]) == tuple(
+        TargetOS
+    )
+    assert TargetOS.from_iterable(None) == ()
+    assert TargetOS.from_iterable(["Invalid", "Linux"]) == (TargetOS.LINUX,)
+
     assert LicenseType.MIT.resource_filename == "mit.txt"
     assert LicenseType.MIT.trove_classifier == "License :: OSI Approved :: MIT License"
     assert LicenseType.NONE.resource_filename is None

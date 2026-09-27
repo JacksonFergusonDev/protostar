@@ -91,6 +91,48 @@ class TargetOS(enum.StrEnum):
         }
         return mapping[self]
 
+    @classmethod
+    def from_string(cls, value: object) -> "TargetOS | None":
+        """Parses an operating system name or Trove classifier into a TargetOS."""
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, str):
+            return None
+        cleaned = value.strip()
+        for target in cls:
+            if cleaned == target.value or cleaned.startswith(target.trove_classifier):
+                return target
+        return None
+
+    @classmethod
+    def from_iterable(cls, values: object) -> tuple["TargetOS", ...]:
+        """Parses an iterable of operating system names or classifiers into TargetOS enums."""
+        if not isinstance(values, list | tuple | set):
+            return ()
+        raw_items = [
+            item.strip() if isinstance(item, str) else item
+            for item in values
+            if isinstance(item, str | cls)
+        ]
+        if any(item == "Operating System :: OS Independent" for item in raw_items):
+            return tuple(cls)
+        if any(
+            isinstance(item, str) and item.startswith("Operating System ::")
+            for item in raw_items
+        ):
+            return tuple(
+                target
+                for target in cls
+                if any(cls.from_string(item) == target for item in raw_items)
+            )
+        seen: set[TargetOS] = set()
+        result: list[TargetOS] = []
+        for item in raw_items:
+            if (target := cls.from_string(item)) is not None and target not in seen:
+                seen.add(target)
+                result.append(target)
+        return tuple(result)
+
 
 class CIFlag(enum.StrEnum):
     """Enumeration of feature flags for CI workflow and justfile generators."""
@@ -283,12 +325,9 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     }
     os_matrix = []
     for os_name in spec.supported_os:
-        try:
-            target_os = (
-                os_name if isinstance(os_name, TargetOS) else TargetOS(str(os_name))
-            )
+        if (target_os := TargetOS.from_string(os_name)) is not None:
             os_matrix.append(target_os.runner_name)
-        except ValueError:
+        else:
             os_matrix.append(runner_map.get(str(os_name), "ubuntu-latest"))
 
     if not os_matrix:
