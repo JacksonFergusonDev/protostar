@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790531857136,
+  "lastUpdate": 1790533457793,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18025,6 +18025,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 931.91,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c038e12ea325d04749488cd18cd5b11926e1c84a",
+          "message": "refactor(core): consolidate tooling, metadata, and security sources of truth (#365)\n\n* fix(security): permit just in execution binary safelist\n\n* refactor(core): centralize default Python version in DEFAULT_PYTHON_VERSION constant\n\n* refactor(metadata): eliminate python_version identifier split in favor of minimum_python\n\n* refactor(tools): synchronize tool declarations and harden configuration against drift",
+          "timestamp": "2026-09-27T11:22:03-07:00",
+          "tree_id": "c423aadc47cedb950667f7356fb6dd3c502c6c84",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c038e12ea325d04749488cd18cd5b11926e1c84a"
+        },
+        "date": 1790533455760,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 198.91,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 731.79,
             "unit": "ms"
           }
         ]
