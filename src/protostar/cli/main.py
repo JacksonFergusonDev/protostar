@@ -261,6 +261,7 @@ def handle_init(args: argparse.Namespace) -> None:
                     "api_version": schema.CLI_API_VERSION,
                     "status": "planned",
                     "manifest": manifest.to_dict(),
+                    "paths": ui.planned_paths_record(manifest),
                     "analysis": analysis.to_dict() if analysis else None,
                 }
             )

@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -7,6 +8,7 @@ from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
@@ -127,37 +129,137 @@ def _write_snapshot_file(filepath: Path, content: bytes) -> None:
     atomic_write_bytes(filepath, content)
 
 
-def generate_tree(dir_path: Path) -> str:
-    """Executes the tree CLI utility to generate a clean directory structure text representation."""
+# The one view of a scaffold that docs trees show and planned trees must match.
+TREE_FILTER = ("-a", "-I", ".git", "--gitignore", "--noreport")
+
+
+def _run_tree(dir_path: Path, *flags: str) -> str:
+    """Runs the tree CLI utility over a scaffold with the shared filter."""
     env = os.environ.copy()
     env["LC_ALL"] = "C"
 
     result = subprocess.run(
-        [
-            "tree",
-            "-a",
-            "-I",
-            ".git",
-            "--gitignore",
-            "--noreport",
-            "--charset=utf-8",
-            ".",
-        ],
+        ["tree", *TREE_FILTER, *flags, "."],
         cwd=dir_path,
         env=env,
         capture_output=True,
         text=True,
         check=True,
     )
-    return result.stdout.strip()
+    return result.stdout
+
+
+def generate_tree(dir_path: Path) -> str:
+    """Executes the tree CLI utility to generate a clean directory structure text representation."""
+    return _run_tree(dir_path, "--charset=utf-8").strip()
+
+
+@dataclass(frozen=True)
+class TreePaths:
+    """The files and directories of a tree, as POSIX paths relative to its root."""
+
+    files: frozenset[str]
+    directories: frozenset[str]
+
+    def __or__(self, other: "TreePaths") -> "TreePaths":
+        """Returns the union of two trees."""
+        return TreePaths(self.files | other.files, self.directories | other.directories)
+
+
+def scaffold_paths(dir_path: Path) -> TreePaths:
+    """Returns every file and directory the docs tree of a scaffold shows."""
+    files: set[str] = set()
+    directories: set[str] = set()
+
+    def walk(nodes: list[dict[str, Any]], parent: str) -> None:
+        for node in nodes:
+            path = f"{parent}{node['name']}"
+            if node["type"] == "directory":
+                directories.add(path)
+                walk(node.get("contents", []), f"{path}/")
+            else:
+                files.add(path)
+
+    (root,) = json.loads(_run_tree(dir_path, "-J"))
+    walk(root.get("contents", []), "")
+    return TreePaths(frozenset(files), frozenset(directories))
+
+
+def _planned_paths(flags: list[str], cwd: Path, env: dict[str, str]) -> TreePaths:
+    """Returns the paths a dry run of one init command plans."""
+    result = subprocess.run(
+        ["protostar", "--json", "init", *flags, "--dry-run"],
+        cwd=cwd,
+        check=True,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    paths = json.loads(result.stdout)["paths"]
+    return TreePaths(frozenset(paths["files"]), frozenset(paths["directories"]))
+
+
+class PlanDriftError(Exception):
+    """A scaffold's tree differs from the tree its dry run showed."""
+
+
+def check_planned_tree(
+    scenario: str, cwd: Path, planned: TreePaths, existing: TreePaths
+) -> None:
+    """Fails when a scaffold's tree differs from what its dry runs planned.
+
+    Args:
+        scenario: The scenario name, for the report.
+        cwd: The finished scaffold.
+        planned: Every path the scenario's dry runs planned.
+        existing: Every path already present before one of its commands ran.
+
+    Raises:
+        PlanDriftError: If the scaffold has a path no dry run planned, or a
+            planned path never appeared.
+    """
+    actual = scaffold_paths(cwd)
+    parents = {
+        "/".join(parts[:index])
+        for path in planned.files | planned.directories
+        for parts in [path.split("/")]
+        for index in range(1, len(parts))
+    }
+    unplanned = sorted(
+        (actual.files - planned.files - existing.files)
+        | (actual.directories - planned.directories - existing.directories - parents)
+    )
+    # A planned path the gitignore hides from the tree still counts as created.
+    missing = sorted(
+        path
+        for path in planned.files | planned.directories
+        if not (cwd / path).exists()
+    )
+    if unplanned or missing:
+        lines = [f"Scenario [{scenario}]: the dry-run tree differs from the scaffold."]
+        lines += [f"  created but not planned: {path}" for path in unplanned]
+        lines += [f"  planned but not created: {path}" for path in missing]
+        lines.append(
+            "Declare each command's output in its task's owned_files, or "
+            "list the file in EnvironmentManifest.planned_files()."
+        )
+        raise PlanDriftError("\n".join(lines))
 
 
 def _execute_fixture_scenario(
     commands: list[list[str]], cwd: Path, env: dict[str, str]
-) -> None:
-    """Executes a defined sequence of Protostar commands within an isolated environment."""
+) -> tuple[TreePaths, TreePaths]:
+    """Executes a defined sequence of Protostar commands within an isolated environment.
+
+    Returns:
+        The paths the commands' dry runs planned, and the paths already present
+        before each command ran.
+    """
+    planned = existing = TreePaths(frozenset(), frozenset())
     for flags in commands:
         try:
+            existing |= scaffold_paths(cwd)
+            planned |= _planned_paths(flags, cwd, env)
             subprocess.run(
                 ["protostar", "init", *flags],
                 cwd=cwd,
@@ -173,6 +275,7 @@ def _execute_fixture_scenario(
             if e.stderr:
                 print(f"STDERR:\n{e.stderr}", file=sys.stderr)
             raise
+    return planned, existing
 
 
 def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
@@ -267,18 +370,20 @@ def _build_fixture_scenario(
         static_cwd.mkdir()
 
         if scenario.seed_fn is not None:
-            _execute_fixture_scenario(
+            planned, existing = _execute_fixture_scenario(
                 [list(c) for c in scenario.commands[:1]], static_cwd, isolated_env
             )
             scenario.seed_fn(static_cwd, isolated_env)
-            _execute_fixture_scenario(
+            rerun = _execute_fixture_scenario(
                 [list(c) for c in scenario.commands[1:]], static_cwd, isolated_env
             )
+            planned, existing = planned | rerun[0], existing | rerun[1]
         else:
-            _execute_fixture_scenario(
+            planned, existing = _execute_fixture_scenario(
                 [list(c) for c in scenario.commands], static_cwd, isolated_env
             )
         _extract_and_write_targets(static_cwd, scenario.name)
+        check_planned_tree(scenario.name, static_cwd, planned, existing)
         print(f"  ✔ Scenario [{scenario.name}] snapshots generated")
 
 

@@ -148,6 +148,18 @@
       "post_install_tasks": []
     }
   },
+  "paths": {
+    "files": [
+      ".gitignore",
+      ".python-version",
+      ".vscode/settings.json",
+      "LICENSE",
+      "protostar.lock",
+      "pyproject.toml",
+      "uv.lock"
+    ],
+    "directories": []
+  },
   "analysis": {
     "existing": true,
     "tools": [

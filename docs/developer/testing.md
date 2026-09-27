@@ -107,6 +107,12 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
     generated workspace files. Dependency versions are frozen consistently across
     the state record and `pyproject.toml`, so snapshot review covers ownership changes
     as well as user-visible output.
+
+    Before each scenario command, the runner also takes the `--dry-run --json`
+    plan and fails when the finished scaffold's tree (the one the docs show)
+    has a file no plan listed, or lacks one a plan listed. The dry-run tree,
+    the recipe editor's preview, and the change review all read that plan, so
+    this keeps every preview tree true to what `init` leaves behind.
     ```bash
     just check-snapshots
     ```

@@ -111,6 +111,7 @@ class Entry:
     edit: PreparedEdit | None = None
     conflicts: tuple[MergeConflict, ...] = ()
     creator: tuple[str, ...] | None = None
+    merged: bool = False
 
     @property
     def open(self) -> tuple[MergeConflict, ...]:
@@ -157,11 +158,11 @@ def classify(
     conflicts: dict[str, list[MergeConflict]] = {}
     for conflict in (*prepared.conflicts, *prepared.resolved, *prepared.proposals):
         conflicts.setdefault(conflict.location.file, []).append(conflict)
+    tasks = (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
     creators = {
-        path: tuple(task.command)
-        for task in manifest.tasks.system_tasks
-        for path in task.owned_files
+        path: tuple(task.command) for task in tasks for path in task.owned_files
     }
+    written = {path.as_posix() for path in manifest.written_files()}
     paths, directories = planned_paths(manifest)
     entries: list[Entry] = []
     for path in sorted({*paths, *edits, *prepared.directories, *conflicts}):
@@ -190,6 +191,7 @@ def classify(
                 edit,
                 tuple(conflicts.get(path, ())),
                 creators.get(path),
+                path in written,
             )
         )
     return tuple(entries)
@@ -302,12 +304,15 @@ def describe(entry: Entry, *, one_shot: bool = False) -> RenderableType:
             )
         )
     elif entry.change is Change.LATER:
-        origin = (
-            f"Created by {shlex.join(entry.creator)}, then Protostar merges its "
-            "settings into it."
-            if entry.creator
-            else "Written after the commands and packages run."
-        )
+        if entry.creator is None:
+            origin = "Written after the commands and packages run."
+        elif entry.merged:
+            origin = (
+                f"Created by {shlex.join(entry.creator)}, then Protostar merges "
+                "its settings into it."
+            )
+        else:
+            origin = f"Created by {shlex.join(entry.creator)}."
         parts.append(
             Text(
                 f"{origin} Its content depends on their output, so it can't be shown yet."

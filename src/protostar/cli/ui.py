@@ -624,8 +624,24 @@ def planned_paths(manifest: EnvironmentManifest) -> tuple[list[str], set[str]]:
         the directories among them.
     """
     directories = {path.as_posix() for path in manifest.target_directories()}
-    paths = sorted(directories | {path.as_posix() for path in manifest.written_files()})
+    paths = sorted(directories | {path.as_posix() for path in manifest.planned_files()})
     return paths, directories
+
+
+def planned_paths_record(manifest: EnvironmentManifest) -> dict[str, list[str]]:
+    """Serializes the planned files and directories for the dry-run payload.
+
+    Args:
+        manifest: The planned environment manifest.
+
+    Returns:
+        The sorted POSIX paths of planned ``files`` and ``directories``.
+    """
+    paths, directories = planned_paths(manifest)
+    return {
+        "files": [path for path in paths if path not in directories],
+        "directories": sorted(directories),
+    }
 
 
 def plan_tree(manifest: EnvironmentManifest) -> Tree:

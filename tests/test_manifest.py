@@ -327,6 +327,34 @@ def test_manifest_target_files_comprehensive():
     assert Path(".gitignore") not in targets
 
 
+def test_planned_files_add_command_outputs_resolver_files_and_state():
+    """The preview lists every file a run leaves, not only those Protostar writes."""
+    manifest = EnvironmentManifest()
+    manifest.filesystem.add_file_injection("README.md", "# Readme\n")
+    manifest.tasks.add_system_task(
+        ["uv", "init"], owned_files=["pyproject.toml", ".python-version"]
+    )
+    manifest.tasks.add_system_task(["git", "init"], owned_trees=[".git"])
+    manifest.tasks.add_post_install_task(
+        ["prek", "install"], owned_files=[".git/hooks/pre-commit"]
+    )
+
+    assert manifest.planned_files() == {
+        Path("README.md"),
+        Path("pyproject.toml"),
+        Path(".python-version"),
+        Path("protostar.lock"),
+    }
+
+    manifest.dependencies.dev_dependencies.append("ruff")
+    assert Path("uv.lock") in manifest.planned_files()
+
+
+def test_one_shot_plans_no_reconciliation_state():
+    assert EnvironmentManifest(one_shot=True).planned_files() == set()
+    assert EnvironmentManifest().planned_files() == {Path("protostar.lock")}
+
+
 def test_manifest_previews_rendered_directories_and_every_written_file():
     """Previews add .gitignore and IDE settings; collision targets still exclude them."""
     manifest = EnvironmentManifest()
