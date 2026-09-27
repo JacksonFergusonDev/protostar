@@ -128,11 +128,9 @@ def test_resolve_python_version(tmp_path: Path) -> None:
     assert DEFAULT_PYTHON_VERSION == "3.13"
 
     # Resolves from minimum_python
+    assert resolve_python_version({"minimum_python": "3.11"}) == "3.11"
     assert resolve_python_version({"minimum_python": "3.12"}) == "3.12"
     assert resolve_python_version({"minimum_python": ">=3.14"}) == "3.14"
-
-    # Resolves from python_version
-    assert resolve_python_version({"python_version": "3.11"}) == "3.11"
 
     # Resolves from pyproject.toml
     pyproject = tmp_path / "pyproject.toml"

@@ -1171,11 +1171,7 @@ class ReadTheDocsModule(ToolModule):
         """
         logger.debug("Building Read the Docs tooling layer.")
 
-        raw_python = (
-            manifest.metadata.get("minimum_python")
-            or manifest.metadata.get("python_version")
-            or DEFAULT_PYTHON_VERSION
-        )
+        raw_python = manifest.metadata.get("minimum_python", DEFAULT_PYTHON_VERSION)
         try:
             min_python = str(PythonVersion.from_string(str(raw_python)))
         except ValueError:

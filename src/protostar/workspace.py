@@ -198,7 +198,7 @@ def resolve_python_version(
         The resolved python version string.
     """
     if metadata:
-        raw = metadata.get("minimum_python") or metadata.get("python_version")
+        raw = metadata.get("minimum_python")
         if raw:
             try:
                 return str(PythonVersion.from_string(str(raw)))
