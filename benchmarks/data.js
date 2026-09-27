@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790478625763,
+  "lastUpdate": 1790529217704,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17957,6 +17957,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1050.05,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "76d34c43bf8421bc2644cf87eb521af8b38adf81",
+          "message": "refactor(docker): elevate Docker to standard ToolModule (#363)\n\n* refactor(docker): elevate Docker to standard ToolModule\n\n* refactor(cli): remove config_key fallback in tool_overrides resolution",
+          "timestamp": "2026-09-27T10:10:49-07:00",
+          "tree_id": "94229046447dd656d36deaa3bc24bc679e20801b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/76d34c43bf8421bc2644cf87eb521af8b38adf81"
+        },
+        "date": 1790529216475,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 268.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 975.26,
             "unit": "ms"
           }
         ]
