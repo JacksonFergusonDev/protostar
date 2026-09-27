@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790468615120,
+  "lastUpdate": 1790468776661,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -17753,6 +17753,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 887.23,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b4ed3f8ed1abd303dbdebec67538635e1f84bbf8",
+          "message": "Include resolver and post-run files in planned paths output (#359)\n\n* fix(preview): show every file a run leaves in the planned tree\n\nThe dry-run tree, the recipe editor's preview, and the change review listed\nonly the files Protostar writes itself, so protostar.lock, uv.lock, and\n.python-version (from `uv init --pin-python`) never appeared although every\ninit leaves them behind.\n\nEnvironmentManifest.planned_files() now adds declared command outputs (a\ntask's owned_files, outside clone-local .git/), the resolver footprint while\nany package is installed, and protostar.lock unless the run is one-shot. The\nchange review says whether Protostar merges into a command's output.\n\nThe dry-run JSON gains `paths` (files and directories), and check-snapshots\ncompares each scenario's dry-run plan with the tree of the finished scaffold,\nfailing on any file created but not planned or planned but not created.\n\n* docs: regenerate the dry-run SVG with direnv on PATH\n\nThe previous render came from an environment without direnv, so it dropped\nthe `direnv allow` task CI plans.",
+          "timestamp": "2026-09-26T17:23:37-07:00",
+          "tree_id": "429cb4ea15d1843efdf1de588d3ea6d1f3887a0b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b4ed3f8ed1abd303dbdebec67538635e1f84bbf8"
+        },
+        "date": 1790468775474,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 253.26,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 909.56,
             "unit": "ms"
           }
         ]
