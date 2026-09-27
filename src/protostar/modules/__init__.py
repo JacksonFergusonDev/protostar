@@ -12,7 +12,7 @@ from .base import (
 )
 from .ci_layer import CIModule, ReleaseModule
 from .community_layer import CommunityModule
-from .docker import DOCKER_INFO, DOCKER_NAME
+from .docker import DOCKER_INFO, DOCKER_NAME, DockerModule
 from .lang_layer import LICENSE_MAP, PythonCore, declare_readme
 from .system_layer import SystemWorkspaceModule
 from .tooling_layer import (
@@ -54,6 +54,7 @@ TOOLING_MODULES: tuple[ToolModule, ...] = (
     ReadTheDocsModule(),
     CIModule(),
     ReleaseModule(),
+    DockerModule(),
     JustModule(),
     AgentsModule(),
     CommunityModule(),
@@ -72,6 +73,7 @@ __all__ = [
     "CommitizenModule",
     "CommunityModule",
     "DirenvModule",
+    "DockerModule",
     "JustModule",
     "MarkdownLintModule",
     "MypyModule",

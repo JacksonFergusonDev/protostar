@@ -137,9 +137,6 @@ class Orchestrator:
         if req.metadata:
             manifest.metadata.update(cast(ProjectMetadata, req.metadata))
 
-        if req.docker:
-            manifest.tooling.wants_docker = True
-
         from .recipe import RecipeIntent, decode_recipe, establish_recipe
 
         manifest.recipe = req.recipe or establish_recipe(
@@ -147,7 +144,6 @@ class Orchestrator:
             RecipeIntent(
                 manifest.template_reference,
                 manifest.metadata,
-                req.docker,
                 req.python_version,
             ),
         )
@@ -188,10 +184,6 @@ class Orchestrator:
         producer = ""
         tool: Tool | None = None
         contributions: list[ProducerContribution] = []
-        if req.docker:
-            contributions.append(
-                ProducerContribution("request", None, ("tooling", "wants_docker"))
-            )
 
         def observe(scope: str, path: tuple[str, ...]) -> None:
             contributions.append(ProducerContribution(producer, tool, (scope, *path)))
@@ -223,7 +215,14 @@ class Orchestrator:
                     observe(
                         "tooling", (key, hashlib.sha256(command.encode()).hexdigest())
                     )
-            if mod.config_key in {"ci", "release", "just", "agents", "community"}:
+            if mod.config_key in {
+                "ci",
+                "release",
+                "docker",
+                "just",
+                "agents",
+                "community",
+            }:
                 observe("tooling", (f"wants_{mod.config_key}",))
             for key, value in manifest.ide_settings.items():
                 if before_ide.get(key) != value:
@@ -425,7 +424,6 @@ class Orchestrator:
         executor = executor_cls(
             manifest,
             self.user_config,
-            self.request.docker,
             hook_revisions=hook_revisions,
             progress=progress,
             resolutions=resolutions,

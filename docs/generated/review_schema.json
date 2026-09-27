@@ -958,6 +958,7 @@
                   "readthedocs",
                   "ci",
                   "release",
+                  "docker",
                   "just",
                   "agents",
                   "community"
@@ -990,6 +991,7 @@
                   "readthedocs",
                   "ci",
                   "release",
+                  "docker",
                   "just",
                   "agents",
                   "community"
@@ -1042,6 +1044,7 @@
                   "readthedocs",
                   "ci",
                   "release",
+                  "docker",
                   "just",
                   "agents",
                   "community"

@@ -304,7 +304,6 @@ def generate_template_schema_fixture() -> None:
             tiered = set(fields_by_name["tiers"].metadata["example"]["workbench"])
             tooling_keys = sorted(
                 [mod.config_key for mod in TOOLING_MODULES if mod.config_key]
-                + ["docker"]
             )
             for key in tooling_keys:
                 if key not in tiered:
@@ -377,6 +376,8 @@ def generate_capability_tables() -> None:
             files.append(".github/workflows/release.yml")
         if test_manifest.tooling.wants_just:
             files.append("justfile")
+        if test_manifest.tooling.wants_docker:
+            files.extend(["Dockerfile", ".dockerignore"])
         if test_manifest.tooling.wants_agents:
             files.append("AGENTS.md")
         if test_manifest.tooling.wants_community:
@@ -394,14 +395,6 @@ def generate_capability_tables() -> None:
         ]
         for mod in TOOLING_MODULES
     ]
-    tool_rows.append(
-        [
-            "Docker",
-            "`--docker`",
-            "Multi-stage `Dockerfile` and `.dockerignore` container scaffolding",
-            "`Dockerfile`, `.dockerignore`",
-        ]
-    )
     _write_generated_doc(
         "table_tooling.md", _format_markdown_table(tool_headers, tool_rows)
     )
@@ -612,13 +605,6 @@ def generate_capability_tables() -> None:
         for mod in TOOLING_MODULES
         if mod.cli_flags
     ]
-    tooling_flags_rows.append(
-        [
-            "`--docker`",
-            "`--no-docker`",
-            "Multi-stage `Dockerfile` and `.dockerignore` container scaffolding",
-        ]
-    )
     _write_generated_doc(
         "table_cli_tooling_flags.md",
         _format_markdown_table(tooling_flags_headers, tooling_flags_rows),

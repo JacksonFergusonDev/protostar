@@ -57,7 +57,6 @@ class InitDraft:
     template: DraftTemplate | None = None
     tool_overrides: tuple[tuple[Tool, bool], ...] = ()
     tool_choices: tuple[tuple[Tool, bool], ...] | None = None
-    docker: bool | None = None
     python_version: str | None = None
     metadata: tuple[tuple[str, str | tuple[str, ...]], ...] | None = None
     variables: tuple[tuple[str, str], ...] = ()
@@ -209,20 +208,11 @@ def resolve_init(
             for key, value in draft.metadata
         }
 
-    template_docker = bool(opinions.get("docker", False))
-    docker = (
-        draft.docker
-        if draft.docker is not None
-        else existing.docker
-        if existing
-        else template_docker
-    )
     recipe = establish_recipe(
         config,
         RecipeIntent(
             blueprint.reference if blueprint else None,
             cast(ProjectMetadata, metadata),
-            docker,
             python,
             tuple(sorted(variables.items())),
             tuple(sorted(options.items())),
@@ -258,7 +248,6 @@ def resolve_init(
         python_version=recipe.python,
         template_blueprint=blueprint,
         template_reference=blueprint.reference if blueprint else None,
-        docker=docker,
         collision_strategy=draft.collision_strategy,
         metadata=metadata,
         is_external=template.is_external if template else False,

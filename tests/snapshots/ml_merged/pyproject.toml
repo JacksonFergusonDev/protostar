@@ -74,7 +74,6 @@ explicit_package_bases = true
 version = 1
 mode = "template"
 python = "3.13"
-docker = true
 ide = "none"
 
 [tool.protostar.source]
@@ -82,6 +81,7 @@ origin = "built-in"
 locator = "ml"
 
 [tool.protostar.tools]
+docker = true
 mypy = true
 
 [tool.protostar.fallback]
@@ -91,6 +91,7 @@ codecov = false
 commitizen = false
 community = false
 direnv = false
+docker = false
 just = false
 markdownlint = false
 mypy = false

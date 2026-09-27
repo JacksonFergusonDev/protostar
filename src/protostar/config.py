@@ -168,6 +168,7 @@ python_version = "3.13"
 # readthedocs = true   # Scaffold Read the Docs configuration
 # ci = true            # Scaffold standard GitHub Actions CI workflows
 # release = true       # Scaffold GitHub Actions PyPI release workflows
+# docker = true        # Scaffold container artifacts (.dockerignore, Dockerfile)
 # just = true          # Scaffold a justfile for command execution
 # agents = true        # Scaffold a managed AGENTS.md guide for coding agents
 # community = true     # Scaffold community health files and issue templates
@@ -274,6 +275,7 @@ class UserConfig:
         readthedocs (bool): Whether to auto-scaffold Read the Docs configuration.
         ci (bool): Whether to auto-scaffold standard GitHub Actions CI workflows.
         release (bool): Whether to auto-scaffold GitHub Actions PyPI release workflows.
+        docker (bool): Whether to auto-scaffold container artifacts (.dockerignore, Dockerfile).
         just (bool): Whether to auto-scaffold a justfile for command execution.
         agents (bool): Whether to auto-scaffold a managed AGENTS.md guide for coding agents.
         community (bool): Whether to auto-scaffold community health files and issue templates.
@@ -303,6 +305,7 @@ class UserConfig:
     readthedocs: bool = False
     ci: bool = False
     release: bool = False
+    docker: bool = False
     just: bool = False
     agents: bool = False
     community: bool = False
@@ -1151,7 +1154,7 @@ class TemplateBlueprint:
         from .recipe import Tool
 
         tools = {tool.value for tool in Tool}
-        clashing = sorted(self.options.keys() & (tools | {"docker", TIER_TERM}))
+        clashing = sorted(self.options.keys() & (tools | {TIER_TERM}))
         if clashing:
             raise ConfigurationError(
                 f"Options share a name with a tool or the tier: {', '.join(clashing)}.",

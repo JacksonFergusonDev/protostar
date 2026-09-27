@@ -27,6 +27,7 @@ from protostar.modules import (
     AgentsModule,
     BootstrapModule,
     CommitizenModule,
+    DockerModule,
     JustModule,
     PreCommitModule,
     PrekModule,
@@ -432,7 +433,6 @@ def test_init_request_defaults():
     req = InitRequest()
     assert req.template_blueprint is None
     assert req.python_version is None
-    assert req.docker is False
     assert req.collision_strategy is None
     assert req.metadata is None
     assert req.is_external is False
@@ -443,7 +443,6 @@ def test_orchestrator_defaults_to_empty_request(mock_config):
     """Orchestrator initialized without a request defaults to a no-op InitRequest."""
     engine = Orchestrator([], mock_config)
     assert isinstance(engine.request, InitRequest)
-    assert engine.request.docker is False
 
 
 # ---------------------------------------------------------------------------
@@ -561,10 +560,10 @@ def test_plan_allows_readthedocs_with_zensical_order_independent(mock_config, mo
 def test_plan_detects_docker_collision_without_force_flag(
     tmp_path, monkeypatch, mock_config
 ):
-    """plan() raises WorkspaceCollisionError when req.docker is True and Dockerfile exists."""
+    """plan() raises WorkspaceCollisionError when DockerModule is enabled and Dockerfile exists."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "Dockerfile").touch()
-    engine = Orchestrator([], mock_config, request=InitRequest(docker=True))
+    engine = Orchestrator([DockerModule()], mock_config)
 
     manifest = engine.plan()
 
@@ -574,10 +573,10 @@ def test_plan_detects_docker_collision_without_force_flag(
 def test_plan_detects_dockerignore_collision_without_force_flag(
     tmp_path, monkeypatch, mock_config
 ):
-    """plan() raises WorkspaceCollisionError when req.docker is True and .dockerignore exists."""
+    """plan() raises WorkspaceCollisionError when DockerModule is enabled and .dockerignore exists."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".dockerignore").touch()
-    engine = Orchestrator([], mock_config, request=InitRequest(docker=True))
+    engine = Orchestrator([DockerModule()], mock_config)
 
     manifest = engine.plan()
 
@@ -587,10 +586,10 @@ def test_plan_detects_dockerignore_collision_without_force_flag(
 def test_plan_ignores_docker_collision_when_docker_disabled(
     tmp_path, monkeypatch, mock_config
 ):
-    """plan() ignores Dockerfile collision when req.docker is False."""
+    """plan() ignores Dockerfile collision when DockerModule is not enabled."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "Dockerfile").touch()
-    engine = Orchestrator([], mock_config, request=InitRequest(docker=False))
+    engine = Orchestrator([], mock_config)
 
     manifest = engine.plan()
     assert manifest.collision_strategy is None
@@ -604,9 +603,9 @@ def test_plan_resolves_docker_collision_with_force_merge(
     monkeypatch.chdir(tmp_path)
     (tmp_path / "Dockerfile").touch()
     engine = Orchestrator(
-        [],
+        [DockerModule()],
         mock_config,
-        request=InitRequest(docker=True, collision_strategy=CollisionStrategy.MERGE),
+        request=InitRequest(collision_strategy=CollisionStrategy.MERGE),
     )
 
     manifest = engine.plan()

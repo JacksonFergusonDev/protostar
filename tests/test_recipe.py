@@ -19,8 +19,10 @@ from protostar.errors import (
     UnsupportedFilesystemNodeError,
 )
 from protostar.executor import SystemExecutor
+from protostar.ide import IDEType
 from protostar.intent import TemplateOrigin, validate_configuration
 from protostar.manifest import EnvironmentManifest
+from protostar.modules import DockerModule
 from protostar.recipe import (
     RecipeIntent,
     RecipeSource,
@@ -53,7 +55,7 @@ def test_round_trip_preserves_foreign_bytes_comments_and_recipe_comments(tmp_pat
     assert read_recipe(path) == recipe()
     assert edit_recipe(first, recipe()) == first
     commented = first.replace("ruff = true", "ruff = true # my default")
-    changed = edit_recipe(commented, replace(recipe(), docker=True))
+    changed = edit_recipe(commented, replace(recipe(), ide=IDEType.VSCODE))
     assert "# my default" in changed
     assert "[tool.other]\nvalue=42" in changed
 
@@ -436,7 +438,7 @@ def test_cli_preserves_diversions_and_frozen_context(tmp_path, monkeypatch, mock
         return ExecutionResult(frozenset(), frozenset(), ())
 
     mocker.patch("protostar.cli.ui._run_engine", side_effect=capture)
-    args = argparse.Namespace(docker=None, force_merge=True)
+    args = argparse.Namespace(force_merge=True)
     handle_init(args)
     desired = engines[-1].request.recipe
     assert desired == captured
@@ -474,7 +476,6 @@ def test_template_variables_persist_and_optout_keeps_independent_contributions(
     args = argparse.Namespace(
         from_path=str(source),
         variables=["ANSWER=template-answer"],
-        docker=None,
         RuffModule=False,
     )
     handle_init(args)
@@ -516,11 +517,7 @@ def test_missing_variables_fail_without_prompt_or_mutation_off_a_terminal(
     )
 
     with pytest.raises(MissingTemplateVariablesError) as caught:
-        handle_init(
-            argparse.Namespace(
-                from_path=str(source), variables=["REGION=eu"], docker=None
-            )
-        )
+        handle_init(argparse.Namespace(from_path=str(source), variables=["REGION=eu"]))
 
     assert caught.value.variables == ("TIER",)
     prompt.assert_not_called()
@@ -543,7 +540,7 @@ def test_json_mode_never_prompts_for_variables(tmp_path, monkeypatch, mocker):
     prompt = mocker.patch("protostar.cli.main.edit_variables")
 
     with pytest.raises(MissingTemplateVariablesError):
-        handle_init(argparse.Namespace(from_path=str(source), docker=None))
+        handle_init(argparse.Namespace(from_path=str(source)))
 
     prompt.assert_not_called()
 
@@ -566,9 +563,7 @@ def test_terminal_opens_the_variables_step_for_missing_variables(
         ),
     )
 
-    handle_init(
-        argparse.Namespace(from_path=str(source), variables=["REGION=eu"], docker=None)
-    )
+    handle_init(argparse.Namespace(from_path=str(source), variables=["REGION=eu"]))
 
     step.assert_called_once()
     draft = step.call_args.args[0]
@@ -601,7 +596,7 @@ def test_reinit_reuses_recorded_variables_and_flags_override_them(
         side_effect=AssertionError("nothing is missing"),
     )
 
-    handle_init(argparse.Namespace(variables=["TIER=gold"], docker=None))
+    handle_init(argparse.Namespace(variables=["TIER=gold"]))
 
     prompt.assert_not_called()
     # RETIRED is no longer used by the template, so it is not carried forward.
@@ -632,9 +627,7 @@ def test_var_flags_are_validated_against_the_template(
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
 
     with pytest.raises(InvalidUsageError, match=match):
-        handle_init(
-            argparse.Namespace(from_path=str(source), variables=variables, docker=None)
-        )
+        handle_init(argparse.Namespace(from_path=str(source), variables=variables))
 
 
 def test_var_flags_need_a_template(tmp_path, monkeypatch, mocker):
@@ -646,7 +639,7 @@ def test_var_flags_need_a_template(tmp_path, monkeypatch, mocker):
     mocker.patch("protostar.cli.main.UserConfig.load", return_value=UserConfig())
 
     with pytest.raises(InvalidUsageError, match="needs a template"):
-        handle_init(argparse.Namespace(variables=["REGION=eu"], docker=None))
+        handle_init(argparse.Namespace(variables=["REGION=eu"]))
 
 
 def test_dry_run_has_no_recipe_or_lock_write(tmp_path, monkeypatch, mocker):
@@ -660,7 +653,7 @@ def test_dry_run_has_no_recipe_or_lock_write(tmp_path, monkeypatch, mocker):
     )
     mocker.patch("shutil.which", return_value="/mock/command")
     with pytest.raises(SystemExit) as error:
-        handle_init(argparse.Namespace(docker=None, dry_run=True))
+        handle_init(argparse.Namespace(dry_run=True))
     assert error.value.code == 0
     assert [p.name for p in tmp_path.iterdir()] == ["config.toml"]
 
@@ -755,7 +748,7 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
     target.chmod(0o640)
     lock.chmod(0o600)
     before = (target.read_bytes(), lock.read_bytes())
-    second = EnvironmentManifest(recipe=replace(recipe(), docker=True))
+    second = EnvironmentManifest(recipe=replace(recipe(), ide=IDEType.VSCODE))
     second.filesystem.add_structured(
         "pyproject.toml", "[tool.ruff]\nline-length=99", producer="module:test"
     )
@@ -768,7 +761,7 @@ def test_existing_recipe_and_lock_restore_exact_bytes(
         if path == Path("protostar.lock") or (
             failure == "recipe"
             and "[tool.protostar]" in content
-            and "docker = true" in content
+            and 'ide = "vscode"' in content
         ):
             raise OSError("late failure")
 
@@ -840,10 +833,16 @@ def test_template_docker_opinion_follows_flag_precedence(
     source.write_text(f'name="custom"\n{opinion}')
     engines = _capture_init_engines(mocker)
 
-    handle_init(argparse.Namespace(from_path=str(source), docker=flag))
+    handle_init(argparse.Namespace(from_path=str(source), DockerModule=flag))
 
-    assert engines[-1].request.docker is expected
-    assert engines[-1].request.recipe.docker is expected
+    blueprint = engines[-1].request.template_blueprint
+    assert blueprint is not None
+    selections = {
+        s.tool: s.enabled
+        for s in engines[-1].request.recipe.selections(blueprint.opinions(None))
+    }
+    assert selections[Tool.DOCKER] is expected
+    assert any(isinstance(m, DockerModule) for m in engines[-1].modules) is expected
 
 
 def test_captured_recipe_docker_wins_over_a_later_template_opinion(
@@ -856,15 +855,25 @@ def test_captured_recipe_docker_wins_over_a_later_template_opinion(
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
-        edit_recipe('[project]\nname="foreign"\n', replace(recipe(), docker=False))
+        edit_recipe(
+            '[project]\nname="foreign"\n',
+            replace(recipe(), tools=((Tool.DOCKER, False),)),
+        )
     )
     source = tmp_path / "blueprint.toml"
     source.write_text('name="custom"\ndocker=true\n')
     engines = _capture_init_engines(mocker)
 
-    handle_init(argparse.Namespace(from_path=str(source), docker=None))
+    handle_init(argparse.Namespace(from_path=str(source)))
 
-    assert engines[-1].request.docker is False
+    blueprint = engines[-1].request.template_blueprint
+    assert blueprint is not None
+    selections = {
+        s.tool: s.enabled
+        for s in engines[-1].request.recipe.selections(blueprint.opinions(None))
+    }
+    assert selections[Tool.DOCKER] is False
+    assert any(isinstance(m, DockerModule) for m in engines[-1].modules) is False
 
 
 def _cli_template_pyproject(tmp_path, monkeypatch, mocker, **flags):
@@ -874,7 +883,7 @@ def _cli_template_pyproject(tmp_path, monkeypatch, mocker, **flags):
 
     monkeypatch.chdir(tmp_path)
     engines = _capture_init_engines(mocker)
-    handle_init(argparse.Namespace(template_name="cli", docker=None, **flags))
+    handle_init(argparse.Namespace(template_name="cli", **flags))
     manifest = engines[-1].plan()
     return "\n".join(
         c.content for c in manifest.filesystem.structured["pyproject.toml"]
@@ -915,7 +924,7 @@ def _template_dev_dependencies(tmp_path, monkeypatch, mocker, template, **flags)
 
     monkeypatch.chdir(tmp_path)
     engines = _capture_init_engines(mocker)
-    handle_init(argparse.Namespace(template_name=template, docker=None, **flags))
+    handle_init(argparse.Namespace(template_name=template, **flags))
     return engines[-1].plan().dependencies.dev_dependencies
 
 
@@ -1084,9 +1093,9 @@ FOREIGN_PYPROJECT = '# mine\n[project]\nname="x"\n\n\n[tool.black]\nx = 1\n'
 def test_editing_a_recipe_leaf_changes_no_other_byte():
     first = edit_recipe(FOREIGN_PYPROJECT, recipe())
 
-    second = edit_recipe(first, replace(recipe(), docker=True))
+    second = edit_recipe(first, replace(recipe(), ide=IDEType.VSCODE))
 
-    assert second == first.replace("docker = false", "docker = true")
+    assert second == first.replace('ide = "none"', 'ide = "vscode"')
 
 
 def test_a_new_recipe_keeps_the_users_file_and_follows_their_last_tool():
@@ -1111,9 +1120,11 @@ def test_out_of_order_recipe_tables_are_edited_where_they_stand():
         "[tool.protostar.context]", "[tool.other]\nz = 1\n\n[tool.protostar.context]"
     )
 
-    updated = tomllib.loads(edit_recipe(scattered, replace(recipe(), docker=True)))
+    updated = tomllib.loads(
+        edit_recipe(scattered, replace(recipe(), ide=IDEType.VSCODE))
+    )
 
-    assert updated["tool"]["protostar"]["docker"] is True
+    assert updated["tool"]["protostar"]["ide"] == "vscode"
     assert updated["tool"]["other"] == {"z": 1}
 
 

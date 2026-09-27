@@ -29,6 +29,7 @@ python_version = "3.13"
 # readthedocs = true   # Scaffold Read the Docs configuration
 # ci = true            # Scaffold standard GitHub Actions CI workflows
 # release = true       # Scaffold GitHub Actions PyPI release workflows
+# docker = true        # Scaffold container artifacts (.dockerignore, Dockerfile)
 # just = true          # Scaffold a justfile for command execution
 # agents = true        # Scaffold a managed AGENTS.md guide for coding agents
 # community = true     # Scaffold community health files and issue templates

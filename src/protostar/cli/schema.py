@@ -14,7 +14,7 @@ def handle_export_schema(args: argparse.Namespace) -> None:
 
     from protostar.cli import ui
     from protostar.config import TemplateBlueprint
-    from protostar.modules import DOCKER_INFO, TOOLING_MODULES
+    from protostar.modules import TOOLING_MODULES
     from protostar.tiers import Tier
 
     properties: dict[str, Any] = {}
@@ -42,15 +42,10 @@ def handle_export_schema(args: argparse.Namespace) -> None:
                         "type": "boolean",
                         "description": mod.info.summary,
                     }
-            properties["docker"] = {
-                "type": "boolean",
-                "description": DOCKER_INFO.summary,
-            }
             continue
         if f.name == "tiers":
             flags = sorted(
                 [mod.config_key for mod in TOOLING_MODULES if mod.config_key]
-                + ["docker"]
             )
             tier_flags = {
                 "type": "object",

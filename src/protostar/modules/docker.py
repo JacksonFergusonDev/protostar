@@ -1,11 +1,19 @@
-"""Docker's description.
+"""Docker containerization tooling module."""
 
-Docker is a recipe flag of its own rather than a tooling module, so its
-``ToolInfo`` lives here instead of on a module. It is the one source for
-``--docker``'s help, the schema, and the TUI, as a module's ``info`` is.
-"""
+from __future__ import annotations
 
-from .base import ToolInfo
+import logging
+from typing import TYPE_CHECKING
+
+from protostar.metadata import MetadataKey
+from protostar.workflows import DOCKERFILE
+
+from .base import PathSignal, ToolInfo, ToolModule
+
+if TYPE_CHECKING:
+    from protostar.manifest import EnvironmentManifest
+
+logger = logging.getLogger("protostar")
 
 DOCKER_NAME = "Docker"
 """Docker's display name."""
@@ -26,3 +34,23 @@ DOCKER_INFO = ToolInfo(
     docs_url="https://docs.docker.com/get-started/",
 )
 """What ``--docker`` does."""
+
+
+class DockerModule(ToolModule):
+    """Configures Docker containerization artifacts (Dockerfile and .dockerignore)."""
+
+    cli_flags = ("--docker",)
+    info = DOCKER_INFO
+    config_key = "docker"
+    signals = (PathSignal(DOCKERFILE), PathSignal(".dockerignore"))
+    optional_metadata = (MetadataKey.DOCKER_PORT,)
+
+    @property
+    def name(self) -> str:
+        """Returns the human-readable module name."""
+        return DOCKER_NAME
+
+    def build(self, manifest: EnvironmentManifest) -> None:
+        """Appends Docker requirements to the environment manifest."""
+        logger.debug("Building Docker tooling layer.")
+        manifest.tooling.wants_docker = True

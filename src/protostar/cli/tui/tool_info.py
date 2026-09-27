@@ -32,7 +32,14 @@ TOOL_GROUPS: dict[str, tuple[Tool, ...]] = {
         Tool.RUMDL,
         Tool.MARKDOWNLINT,
     ),
-    "Automation": (Tool.CI, Tool.RELEASE, Tool.COMMITIZEN, Tool.RENOVATE, Tool.CODECOV),
+    "Automation": (
+        Tool.CI,
+        Tool.RELEASE,
+        Tool.DOCKER,
+        Tool.COMMITIZEN,
+        Tool.RENOVATE,
+        Tool.CODECOV,
+    ),
     "Documentation & workspace": (
         Tool.ZENSICAL,
         Tool.READTHEDOCS,

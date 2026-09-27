@@ -256,7 +256,8 @@ def test_executor_writes_dockerignore(tmp_path, monkeypatch, mock_config):
 
     manifest = EnvironmentManifest()
     manifest.filesystem.add_vcs_ignore("custom_build_artifact/")
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     executor._write_docker_artifacts()
 
@@ -303,7 +304,8 @@ def test_executor_writes_dockerignore_with_uv(mocker, mock_config):
     manifest.tasks.add_system_task(
         ["uv", "init", "--no-workspace", "--bare", "--pin-python"]
     )
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_write = mocker.patch.object(executor.fs, "write_text")
@@ -319,7 +321,8 @@ def test_executor_writes_dockerfile_default(mocker, mock_config):
     """Test that the executor writes a multi-stage Dockerfile with default configuration."""
     manifest = EnvironmentManifest()
     manifest.metadata = cast(ProjectMetadata, {"python_version": "3.12"})
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_write = mocker.patch.object(executor.fs, "write_text")
@@ -348,7 +351,8 @@ def test_executor_writes_dockerfile_with_api_template(mocker, mock_config):
     manifest.metadata = cast(
         ProjectMetadata, {"docker_port": "8080", "python_version": "3.13"}
     )
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_write = mocker.patch.object(executor.fs, "write_text")
@@ -376,7 +380,8 @@ def test_executor_writes_dockerfile_with_cli_template(mocker, mock_config):
         "[project.scripts]\nmy-cli = 'my_cli.cli:app'\n",
         producer="module:test_executor",
     )
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
     mock_write = mocker.patch.object(executor.fs, "write_text")
@@ -393,7 +398,8 @@ def test_executor_skips_docker_artifacts_on_collision(mocker, mock_config):
     """Test that preserving Dockerfile still processes additive Docker ignores."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.MERGE
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_bytes", return_value=b"custom")
@@ -415,7 +421,8 @@ def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_c
     """Test that OVERWRITE collision strategy generates .dockerignore without reading disk."""
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=True)
     mocker.patch("protostar.executor.Path.read_bytes", return_value=b"old")
@@ -439,7 +446,8 @@ def test_write_docker_artifacts_overwrite_resets_existing_content(mocker, mock_c
 def test_write_dockerfile_handles_os_error(mocker, mock_config):
     """Test that Dockerfile write errors raise FileSystemError."""
     manifest = EnvironmentManifest()
-    executor = SystemExecutor(manifest, mock_config, docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, mock_config)
 
     mocker.patch("protostar.executor.Path.exists", return_value=False)
 
@@ -1045,8 +1053,8 @@ def test_write_docker_artifacts_handles_os_error(mocker):
     manifest = EnvironmentManifest()
     manifest.collision_strategy = CollisionStrategy.OVERWRITE
     manifest.filesystem.add_vcs_ignore(".venv/")
-    # Force docker attribute to true to enter the block
-    executor = SystemExecutor(manifest, UserConfig(), docker=True)
+    manifest.tooling.wants_docker = True
+    executor = SystemExecutor(manifest, UserConfig())
 
     mocker.patch.object(Path, "exists", return_value=True)
     mocker.patch.object(Path, "read_text", return_value="")

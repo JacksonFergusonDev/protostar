@@ -45,13 +45,11 @@
  # ---- Protostar ---- #
 
  [tool.protostar]
-@@ -61,6 +81,9 @@
- origin = "built-in"
- locator = "ml"
+@@ -62,6 +82,7 @@
 
-+[tool.protostar.tools]
+ [tool.protostar.tools]
+ docker = true
 +mypy = true
-+
+
  [tool.protostar.fallback]
  agents = false
- ci = false

@@ -216,7 +216,7 @@ def test_ml_rerun_preserves_foreign_workspace_content_and_tool_order():
         < merged_tools.index("[tool.protostar]")
     )
     assert merged_tools.count("# ---- Protostar ---- #") == 1
-    assert pyproject["tool"]["protostar"]["tools"] == {"mypy": True}
+    assert pyproject["tool"]["protostar"]["tools"] == {"docker": True, "mypy": True}
     ignores = (root / ".gitignore").read_text()
     assert all(pattern in ignores for pattern in ("*.csv", "*.fits", "*.parquet"))
 

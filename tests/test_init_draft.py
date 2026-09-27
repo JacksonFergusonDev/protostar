@@ -25,8 +25,11 @@ def test_equivalent_flag_and_wizard_drafts_resolve_identically(tmp_path, monkeyp
     config = UserConfig(ruff=False, mypy=True, author_name="Ada")
     flag_draft = InitDraft(
         template=template,
-        tool_overrides=((Tool.RUFF, False), (Tool.PYTEST, True)),
-        docker=True,
+        tool_overrides=(
+            (Tool.DOCKER, True),
+            (Tool.RUFF, False),
+            (Tool.PYTEST, True),
+        ),
         python_version="3.14",
         metadata=(("author_name", "Ada"), ("description", "Example")),
         collision_strategy=CollisionStrategy.MERGE,
@@ -37,7 +40,7 @@ def test_equivalent_flag_and_wizard_drafts_resolve_identically(tmp_path, monkeyp
             False
             if tool is Tool.RUFF
             else True
-            if tool is Tool.PYTEST
+            if tool in {Tool.PYTEST, Tool.DOCKER}
             else bool(getattr(config, tool)),
         )
         for tool in Tool

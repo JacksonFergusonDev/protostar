@@ -17,7 +17,7 @@
 | `--readthedocs` | `--no-readthedocs` | Publish the documentation website on Read the Docs |
 | `--ci` | `--no-ci` | Run the checks and tests on GitHub for every push and pull request |
 | `--release` | `--no-release` | Publish the package to PyPI when you push a version tag |
+| `--docker` | `--no-docker` | Package the project as a container image that runs anywhere |
 | `--just` | `--no-just` | Give the project's common commands short names, like `just test` |
 | `--agents` | `--no-agents` | Tell coding assistants how to work on the project |
 | `--community` | `--no-community` | Add the files GitHub shows people who want to contribute |
-| `--docker` | `--no-docker` | Multi-stage `Dockerfile` and `.dockerignore` container scaffolding |

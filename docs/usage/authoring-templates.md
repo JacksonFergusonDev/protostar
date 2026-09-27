@@ -169,7 +169,7 @@ pytest = true
 ci = true
 ```
 
-A tier's flags are laid over the root flags. Set a tool at the root when both tiers agree, and in both tiers when they differ: each tier must set the same tools, and a tool set in the tiers can't also be set at the root. A tier may set any tool flag, and `docker`. Declare both tiers or neither; a template without tiers offers no tier to choose.
+A tier's flags are laid over the root flags. Set a tool at the root when both tiers agree, and in both tiers when they differ: each tier must set the same tools, and a tool set in the tiers can't also be set at the root. A tier may set any tool flag. Declare both tiers or neither; a template without tiers offers no tier to choose.
 
 Configuration follows the tools, so a payload with `requires = "mypy"` already arrives with production and leaves with workbench. Content that belongs to a tier rather than to one tool, such as a smoke test that production's `pytest` needs, requires the tier:
 

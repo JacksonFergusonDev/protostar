@@ -213,7 +213,6 @@ def handle_init(args: argparse.Namespace) -> None:
             sorted(_parse_option_flags(source, getattr(args, "options", [])).items())
         ),
         tier=_check_tier_flag(source, getattr(args, "tier", None)),
-        docker=getattr(args, "docker", None),
         python_version=getattr(args, "python_version", None),
         variables=tuple(sorted(variables.items())),
         allowed_secrets=allowed_secrets,

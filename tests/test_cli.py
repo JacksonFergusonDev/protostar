@@ -422,8 +422,7 @@ def test_intercept_interactive_wizards_success(mocker):
 
     mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
     selections = InitDraft(
-        tool_choices=tuple((tool, False) for tool in Tool),
-        docker=True,
+        tool_choices=tuple((tool, tool is Tool.DOCKER) for tool in Tool),
         variables=(("REGION", "eu"),),
         metadata=(),
     )
@@ -1589,7 +1588,7 @@ def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
     run = mocker.patch("protostar.cli.ui._run_engine")
 
     with pytest.raises(ConfigurationError, match="differs"):
-        handle_init(argparse.Namespace(from_path=str(blueprint), docker=None))
+        handle_init(argparse.Namespace(from_path=str(blueprint)))
     for screen in screens:
         screen.assert_not_called()
     run.assert_not_called()

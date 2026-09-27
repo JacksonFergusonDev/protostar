@@ -35,7 +35,7 @@ from .modules import (
     TableSignal,
 )
 from .recipe import EXCLUSIVE_TOOL_PAIRS, Tool
-from .workflows import DOCKERFILE, TargetOS
+from .workflows import TargetOS
 
 _PYTHON_VERSION_FILE = ".python-version"
 # Names a license file commonly has; only its header and copyright line are read.
@@ -167,14 +167,12 @@ class ProjectAnalysis:
         existing: Whether the directory holds a project: a ``pyproject.toml`` or
             any file a tool signal names.
         tools: Tools found, in tool order.
-        docker: What shows the project ships a container image, if anything.
         facts: Facts read from the project.
         notes: What analysis found but left out.
     """
 
     existing: bool
     tools: tuple[ToolEvidence, ...] = ()
-    docker: tuple[str, ...] = ()
     facts: ProjectFacts = field(default_factory=ProjectFacts)
     notes: tuple[AnalysisNote, ...] = ()
 
@@ -186,7 +184,6 @@ class ProjectAnalysis:
                 {"tool": evidence.tool.value, "sources": list(evidence.sources)}
                 for evidence in sorted(self.tools, key=lambda item: item.tool.value)
             ],
-            "docker": list(self.docker),
             "facts": self.facts.to_dict(),
             "notes": [
                 {"kind": note.kind.value, "path": note.path}
@@ -532,7 +529,6 @@ def analyze_project(root: Path) -> ProjectAnalysis:
     """
     workspace = _Workspace(root)
     tools = _tools(workspace)
-    docker = (DOCKERFILE,) if workspace.exists(DOCKERFILE) else ()
     facts = _facts(workspace)
     workflows = PurePosixPath(github_workflows.CI_TARGET).parent
     generated = {
@@ -544,9 +540,8 @@ def analyze_project(root: Path) -> ProjectAnalysis:
         if name.endswith((".yml", ".yaml")) and path not in generated:
             workspace.notes.append(AnalysisNote(NoteKind.OTHER_WORKFLOW, path))
     return ProjectAnalysis(
-        existing=workspace.exists(pyproject.TARGET) or bool(tools or docker),
+        existing=workspace.exists(pyproject.TARGET) or bool(tools),
         tools=tools,
-        docker=docker,
         facts=facts,
         notes=tuple(dict.fromkeys(workspace.notes)),
     )

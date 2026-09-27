@@ -49,7 +49,6 @@ class InitRequest:
         template_blueprint: An optional pre-loaded template blueprint to apply.
         python_version: An optional Python version string (e.g. '3.13'). Informational;
             the modules list is already constructed with the resolved version.
-        docker: If True, scaffolds container artifacts (.dockerignore, Dockerfile).
         collision_strategy: Explicit policy for existing workspace files.
         metadata: Pre-resolved metadata dictionary to inject into the manifest.
         is_external: If True, the template was loaded from an external source.
@@ -62,7 +61,6 @@ class InitRequest:
     template_blueprint: TemplateBlueprint | None = None
     template_reference: TemplateReference | None = None
     python_version: str | None = None
-    docker: bool = False
     collision_strategy: CollisionStrategy | None = None
     metadata: dict[str, Any] | None = field(default=None)
     is_external: bool = False
@@ -78,7 +76,6 @@ class InitRequest:
             "one_shot": self.one_shot,
             "template_reference": reference.to_dict() if reference else None,
             "python_version": self.python_version,
-            "docker": self.docker,
             "collision_strategy": self.collision_strategy.value
             if self.collision_strategy
             else None,

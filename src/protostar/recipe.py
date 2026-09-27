@@ -64,6 +64,7 @@ class Tool(StrEnum):
     READTHEDOCS = "readthedocs"
     CI = "ci"
     RELEASE = "release"
+    DOCKER = "docker"
     JUST = "just"
     AGENTS = "agents"
     COMMUNITY = "community"
@@ -240,7 +241,6 @@ class ProjectRecipe:
 
     source: RecipeSource | None
     python: str
-    docker: bool
     ide: IDEType
     tools: tuple[tuple[Tool, bool], ...]
     fallback: tuple[tuple[Tool, bool], ...]
@@ -252,7 +252,7 @@ class ProjectRecipe:
 
     def selections(self, opinions: dict[str, bool]) -> tuple[ToolSelection, ...]:
         """Resolves overrides, current template opinions, then captured defaults."""
-        known = {tool.value for tool in Tool} | {"docker"}
+        known = {tool.value for tool in Tool}
         invalid = sorted(
             key
             for key, value in opinions.items()
@@ -267,11 +267,7 @@ class ProjectRecipe:
             (SelectionLayer.PROJECT, dict(self.tools)),
             (
                 SelectionLayer.TEMPLATE,
-                {
-                    Tool(key): value
-                    for key, value in opinions.items()
-                    if key != "docker"
-                },
+                {Tool(key): value for key, value in opinions.items()},
             ),
             (SelectionLayer.FALLBACK, dict(self.fallback)),
         )
@@ -305,7 +301,6 @@ class ProjectRecipe:
             "version": 1,
             "mode": "template" if self.source else "tooling-only",
             "python": self.python,
-            "docker": self.docker,
             "ide": self.ide.value,
             **({"tier": self.tier.value} if self.tier else {}),
             **(
@@ -340,7 +335,6 @@ _RECIPE_ORDER = (
     "version",
     "mode",
     "python",
-    "docker",
     "ide",
     "tier",
     "source",
@@ -364,7 +358,7 @@ def decode_recipe(data: object) -> ProjectRecipe:
     """Strictly validates recipe fields, source identity, and template variables."""
     if not isinstance(data, dict):
         raise _invalid()
-    required = {"version", "mode", "python", "docker", "ide", "fallback", "context"}
+    required = {"version", "mode", "python", "ide", "fallback", "context"}
     if (
         set(data) - (required | _OPTIONAL_TABLES | {"source", "tier"})
         or not required <= set(data)
@@ -374,8 +368,6 @@ def decode_recipe(data: object) -> ProjectRecipe:
         raise _invalid()
     data = {**{table: {} for table in _OPTIONAL_TABLES}, **data}
     check_python_version(data["python"])
-    if type(data["docker"]) is not bool:
-        raise _invalid()
     try:
         ide = IDEType(data["ide"])
     except (ValueError, TypeError) as e:
@@ -521,7 +513,6 @@ def decode_recipe(data: object) -> ProjectRecipe:
     return ProjectRecipe(
         source,
         data["python"],
-        data["docker"],
         ide,
         tools("tools"),
         tools("fallback"),
@@ -685,7 +676,6 @@ class RecipeIntent:
 
     reference: TemplateReference | None = None
     metadata: ProjectMetadata | None = None
-    docker: bool = False
     python: str | None = None
     variables: tuple[tuple[str, str], ...] = ()
     options: tuple[tuple[str, OptionValue], ...] = ()
@@ -700,7 +690,6 @@ def establish_recipe(
     metadata = intent.metadata or {}
     reference = intent.reference
     python = intent.python
-    docker = intent.docker
     version = python if python is not None else (config.python_version or "3.13")
     project_name = resolve_project_name(metadata)
     if not Path("pyproject.toml").exists() and not any(
@@ -719,7 +708,6 @@ def establish_recipe(
         if reference
         else None,
         version,
-        docker,
         IDEType(config.ide or IDEType.NONE),
         (),
         tuple(sorted((tool, bool(getattr(config, tool))) for tool in Tool)),

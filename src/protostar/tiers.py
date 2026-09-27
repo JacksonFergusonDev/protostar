@@ -120,7 +120,7 @@ def parse_tier(raw: object, location: str) -> Tier:
 def parse_tiers(data: Mapping[str, object], source: str) -> TemplateTiers | None:
     """Parses a template's root ``tier`` and its ``[tiers]`` tables.
 
-    A tier may set any flag the template's root may: every tool, and ``docker``.
+    A tier may set any flag the template's root may: every tool.
 
     Args:
         data: The template's root table.
@@ -138,7 +138,7 @@ def parse_tiers(data: Mapping[str, object], source: str) -> TemplateTiers | None
     # Local import: recipe sits above this module in the import graph.
     from .recipe import Tool
 
-    known = {tool.value for tool in Tool} | {"docker"}
+    known = {tool.value for tool in Tool}
     where = f"configuration source '{source}'"
     hint = (
         'Declare tier = "workbench" or "production" as the default, and both '
