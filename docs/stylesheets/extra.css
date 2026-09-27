@@ -224,13 +224,26 @@
 /* Fluid, massive typography */
 .md-typeset .hero-content h1 {
     max-width: 10ch;
-    margin: 0 0 1.25rem;
+    margin: 0 0 2rem;
     font-size: clamp(2.6rem, 4.8vw, 4.2rem);
     font-weight: 800;
     letter-spacing: -0.04em;
     line-height: 1.05;
     text-wrap: balance;
     color: #0f172a;
+}
+
+.md-typeset .hero-content h2 {
+    max-width: 32ch;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin: 0 0 1.25rem;
+    font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    text-wrap: balance;
+    color: #1e293b;
 }
 
 .protostar-lede {
@@ -276,18 +289,10 @@
 }
 
 /* --- Card Grids --- */
-.protostar-grid,
 .md-typeset .grid.cards {
     margin: 1.8rem 0;
 }
 
-.protostar-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
-}
-
-.protostar-card,
 .md-typeset .grid.cards>ul>li,
 .md-typeset .grid.cards>ol>li {
     padding: 1rem;
@@ -295,11 +300,6 @@
     border: 1px solid transparent;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     transition: all 0.2s ease-in-out;
-}
-
-.protostar-card h3 {
-    margin-top: 0;
-    margin-bottom: 0.4rem;
 }
 
 /* --- Code Blocks --- */
@@ -513,9 +513,13 @@
         text-shadow: 0 0 30px rgba(255, 255, 255, 0.12);
     }
 
+    .md-typeset .hero-content h2 {
+        color: #f1f5f9;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
+    }
+
 
     /* --- Cards & Grids --- */
-    .protostar-card,
     .md-typeset .grid.cards>ul>li,
     .md-typeset .grid.cards>ol>li {
         background: var(--protostar-card-bg);
@@ -523,7 +527,6 @@
         backdrop-filter: blur(4px);
     }
 
-    .protostar-card:hover,
     .md-typeset .grid.cards>ul>li:hover,
     .md-typeset .grid.cards>ol>li:hover {
         border-color: rgba(34, 211, 238, 0.15);

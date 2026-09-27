@@ -18,8 +18,8 @@ hide:
 <div class="protostar-hero">
   <div class="hero-content">
     <h1>Safe. Predictable. Clean.</h1>
+    <h2>A plan before a single side effect.</h2>
     <p class="protostar-lede">
-      <strong>A plan before a single side effect.</strong><br>
       Deterministic, transaction-aware environment scaffolding for Python projects—setting up modern tooling without overwriting existing work or leaving half-finished setups.
     </p>
     <div class="protostar-install-header">
@@ -38,30 +38,6 @@ hide:
     <a href="usage/init.md" class="hero-preview__link" title="Explore the init workflow" aria-label="Environment initialization documentation">
       <img src="assets/terminals/cli_init.svg" alt="Protostar CLI Init" class="hero-preview__img" />
     </a>
-  </div>
-</div>
-
-## Overview
-
-Protostar is a modular CLI for initializing repositories and generating repeatable boilerplate.
-It is designed to automate environment setup while staying out of your way.
-
-<div class="protostar-grid">
-  <div class="protostar-card">
-    <h3>Manifest-first</h3>
-    <p>State is declared before side effects execute, reducing partial failures and setup drift.</p>
-  </div>
-  <div class="protostar-card">
-    <h3>Non-destructive</h3>
-    <p>Existing files are respected, merged carefully, or left untouched when collisions occur.</p>
-  </div>
-  <div class="protostar-card">
-    <h3>Composable tooling</h3>
-    <p>Modern Python tools composed dynamically via tri-state CLI flags and declarative blueprints.</p>
-  </div>
-  <div class="protostar-card">
-    <h3>Actionable diagnostics</h3>
-    <p>Errors surface clearly, with useful diagnostics instead of opaque setup failures.</p>
   </div>
 </div>
 
