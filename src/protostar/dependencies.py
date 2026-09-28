@@ -158,6 +158,24 @@ def normalized_requirement(content: str) -> str:
     return str(requirement)
 
 
+def _satisfies_unconstrained_request(local: str, request: str) -> bool:
+    """Accepts existing registry requirements for an unconstrained identity.
+
+    The caller has already matched package names and markers. Extra local
+    extras are harmless, but missing requested extras and direct sources
+    still require a decision. Constrained requests use normal reconciliation.
+    """
+    existing = Requirement(local)
+    desired = Requirement(request)
+    return (
+        not desired.specifier
+        and desired.url is None
+        and existing.url is None
+        and {canonicalize_name(extra) for extra in desired.extras}
+        <= {canonicalize_name(extra) for extra in existing.extras}
+    )
+
+
 def requirement_entries(data: dict[str, object], group: DependencyGroup) -> list[str]:
     """Reads supported groups, preserving include records outside selection."""
     table = data.get(
@@ -251,6 +269,13 @@ def select_dependencies(
         if entries and normalized_requirement(entries[0]) == normalized_requirement(
             request
         ):
+            continue
+        if (
+            record is None
+            and entries
+            and _satisfies_unconstrained_request(entries[0], request)
+        ):
+            # Existing requirements remain the user's: neither rewrite nor adopt.
             continue
         if record is None and not entries:
             if proposing:
