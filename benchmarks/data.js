@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790563558906,
+  "lastUpdate": 1790564526835,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18331,6 +18331,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 768.17,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "14ee5fd8a864cfa1da062c15726806cb8adb2044",
+          "message": "feat(cli): settle init's conflicts headlessly with --resolve (#372)\n\ninit --dry-run --json has shown conflict and proposal ids since #371, but a\nheadless init could not act on them: it kept your version of every open\nconflict and applied every proposal. init now takes sync's --resolve\nSELECTOR=CHOICE. It prepares the review, maps the selectors to ids with\nselect_resolutions, and runs with an InitDecision carrying the choices and\nthe hook snapshot the review used, so no interactive review opens.\n\nWith --dry-run, the text and JSON show the settled outcome. --resolve picks\nno collision strategy, so existing files still need --force-merge. The\ncollision error now carries that instruction as its hint.",
+          "timestamp": "2026-09-27T19:59:20-07:00",
+          "tree_id": "820dee162f8d4591d6e4a9044d9f17bc6fac9d4f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/14ee5fd8a864cfa1da062c15726806cb8adb2044"
+        },
+        "date": 1790564525880,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 282.08,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 952.58,
             "unit": "ms"
           }
         ]
