@@ -573,26 +573,17 @@ class TaskManifest:
         self,
         collection_name: str,
         collection: list[SystemTask],
-        command: list[str],
-        timeout: int | None,
-        description: str | None,
-        owned_files: list[str] | None,
-        owned_trees: list[str] | None,
+        task: SystemTask,
     ) -> None:
         self.observe(
-            (collection_name, hashlib.sha256("\0".join(command).encode()).hexdigest())
-        )
-        if any(task.command == command for task in collection):
-            return
-        collection.append(
-            SystemTask(
-                command=command,
-                timeout=timeout,
-                description=description,
-                owned_files=owned_files,
-                owned_trees=owned_trees,
+            (
+                collection_name,
+                hashlib.sha256("\0".join(task.command).encode()).hexdigest(),
             )
         )
+        if any(t.command == task.command for t in collection):
+            return
+        collection.append(task)
 
     def add_system_task(
         self,
@@ -606,11 +597,13 @@ class TaskManifest:
         self._queue_task(
             "system_tasks",
             self.system_tasks,
-            command,
-            timeout,
-            description,
-            owned_files,
-            owned_trees,
+            SystemTask(
+                command=command,
+                timeout=timeout,
+                description=description,
+                owned_files=owned_files,
+                owned_trees=owned_trees,
+            ),
         )
 
     def add_post_install_task(
@@ -625,11 +618,13 @@ class TaskManifest:
         self._queue_task(
             "post_install_tasks",
             self.post_install_tasks,
-            command,
-            timeout,
-            description,
-            owned_files,
-            owned_trees,
+            SystemTask(
+                command=command,
+                timeout=timeout,
+                description=description,
+                owned_files=owned_files,
+                owned_trees=owned_trees,
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
