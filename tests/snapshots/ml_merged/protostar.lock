@@ -10,7 +10,7 @@ hook_pins = []
 [template]
 origin = "built-in"
 locator = "ml"
-digest = "b45427e107a881f4a2dfbd9ebb1c538b84c0cfc96891cc351dab08f22501785c"
+digest = "792f51a344ac6ca9cfc71f2efe860d779a788801a29a614347573f7a8e57fc42"
 display_name = "ml"
 
 [[files]]
@@ -34,29 +34,9 @@ policy = "seed-only"
 digest = "7fa9d1491c6e7b2a27f6972c9dccb7cc36c9de263333a3ea2c3979035e32747a"
 
 [[files]]
-path = "data/01_raw/.gitkeep"
-policy = "seed-only"
-digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-[[files]]
-path = "data/02_processed/.gitkeep"
-policy = "seed-only"
-digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-[[files]]
-path = "data/03_features/.gitkeep"
-policy = "seed-only"
-digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-[[files]]
 path = "justfile"
 policy = "text"
 baseline = "set shell := [\"bash\", \"-euc\", \"-o\", \"pipefail\"]\nset unstable\nset quiet\n\n# --- ANSI Colors ---\n\nblue := '\\033[1;34m'\ngreen := '\\033[1;32m'\nnc := '\\033[0m'\n\n# Show available commands\ndefault:\n    @just --list\n\n# Sync/install dependencies using uv\nsync:\n    uv sync --quiet\n\n# Auto-format code\nformat: sync\n    @printf \"\\n{{ blue }}=== Formatting Code ==={{ nc }}\\n\"\n    uv run ruff check --fix .\n    uv run ruff format .\n    @printf \"{{ green }}✔ Formatting complete{{ nc }}\\n\"\n\n# Run linters\nlint: sync\n    @printf \"\\n{{ blue }}=== Running Linters ==={{ nc }}\\n\"\n    uv run ruff check .\n    uv run ruff format --check .\n    @printf \"{{ green }}✔ Linting passed{{ nc }}\\n\"\n\n# Run static type checking\ntypecheck: sync\n    @printf \"\\n{{ blue }}=== Running Type Checks ==={{ nc }}\\n\"\n    uv run mypy .\n    @printf \"{{ green }}✔ Type checking passed{{ nc }}\\n\"\n\n# Run the fast local CI pipeline executed before pushing\nci: lint typecheck\n    @printf \"\\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\\n\"\n\n# Remove caches, artifacts, and temp files\nclean:\n    @printf \"\\n{{ blue }}=== Cleaning Workspace ==={{ nc }}\\n\"\n    rm -rf \\\n        .ruff_cache \\\n        .mypy_cache\n    find . -type d -name \"__pycache__\" -exec rm -rf {} +\n    @printf \"{{ green }}✔ Workspace cleaned{{ nc }}\\n\"\n"
-
-[[files]]
-path = "models/weights/.gitkeep"
-policy = "seed-only"
-digest = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 [[files]]
 path = "pyproject.toml"
