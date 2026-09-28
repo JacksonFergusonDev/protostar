@@ -144,6 +144,15 @@ are preserved with warnings. Converged previously owned intent advances its
 record without a resolver call. Resolver failures remain fatal and restore the
 journaled project, lock, and state bytes and modes.
 
+Before adding an unowned requirement to an empty destination, selection checks
+the other dependency groups (including custom groups), project dependencies,
+and optional dependencies for the same normalized package and marker. An existing
+entry produces a `different-group` conflict in both review and execution. Keeping
+the current placement acknowledges the absent destination entry; taking the
+update adds to the requested group without moving or adopting the existing entry.
+Include records do not hide the entries in their source groups. Explicit overwrite
+still authorizes the addition.
+
 PR G still owns complete include-group reconciliation and final TOML/resolver
 ordering. Generated-file digests, free-form seed ledgers, and managed-region
 checksum application remain the later adapter milestones. This boundary adds no

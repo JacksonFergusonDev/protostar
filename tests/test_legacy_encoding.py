@@ -68,6 +68,31 @@ def test_glyph_falls_back_only_where_the_stream_cannot_encode(legacy_console):
     assert ui.glyph("•", "*") == "•"  # cp1252 has a bullet
 
 
+def test_dependency_group_choice_is_explicit_on_legacy_stream(legacy_console):
+    from protostar.cli.decisions import conflict_lines
+    from protostar.cli.tui.conflicts.sides import sides_diff
+
+    conflict = MergeConflict(
+        MergeLocation("pyproject.toml", ("dependencies", "dev"), "mypy:"),
+        ConflictReason.DIFFERENT_GROUP,
+        ConflictSides(
+            MISSING,
+            {"dependency-groups.ci": ["mypy<2"]},
+            {"dependency-groups.ci": ["mypy<2"], "dependency-groups.dev": ["mypy"]},
+        ),
+    )
+    ui.console.print(conflict_lines(conflict, "protostar sync --resolve"))
+    ui.console.print(sides_diff(conflict))
+    output = legacy_console()
+    assert "already in another group" in output
+    assert "keep its current placement" in output
+    assert "add it to this group too" in output
+    assert "dependency-groups.ci" in output
+    assert "dependency-groups.dev" in output
+    assert f"{conflict.id}=local" in output
+    assert f"{conflict.id}=desired" in output
+
+
 def test_glyph_keeps_the_symbol_on_a_unicode_stream(monkeypatch):
     monkeypatch.setattr(ui, "console", Console(file=io.StringIO()))
     assert ui.glyph("✓", "+") == "✓"

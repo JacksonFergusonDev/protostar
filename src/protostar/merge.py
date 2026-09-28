@@ -43,6 +43,7 @@ class ConflictReason(StrEnum):
     UNSAFE_PIN = "unsafe-pin"
     SHARED_STRUCTURE = "shared-structure"
     UNOWNED = "unowned"
+    DIFFERENT_GROUP = "different-group"
     DIVERGED = "diverged"
     TYPE_MISMATCH = "type-mismatch"
     DELETED_ANCESTOR = "deleted-ancestor"

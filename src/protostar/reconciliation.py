@@ -19,6 +19,7 @@ from .appends import (
 from .config import UserConfig
 from .dependencies import (
     normalized_requirement,
+    other_requirement_groups,
     requirement_entries,
     requirement_identity,
     retract_requirements,
@@ -2045,6 +2046,7 @@ class Reconciliation:
                 overwrite=overwrite,
                 proposing=not overwrite and proposing,
                 resolutions=self.resolutions,
+                other_groups=other_requirement_groups(data, group) if desired else None,
             )
             selected[group] = list(result.packages)
             self._report(

@@ -429,6 +429,117 @@ def test_existing_constraint_is_quiet_in_review_and_remains_unowned(
         assert not deserialize_state(Path("protostar.lock").read_text()).dependencies
 
 
+@pytest.mark.parametrize(
+    "existing",
+    [
+        '[dependency-groups]\nci = ["MyPy>=1.0"]\n',
+        '[dependency-groups]\ndocs = ["mypy>=1.0"]\n',
+        'dependencies = ["mypy>=1.0"]\n',
+        '[project.optional-dependencies]\ntyping = ["mypy>=1.0"]\n',
+        '[dependency-groups]\nci = ["mypy>=1.0"]\ndev = [{include-group = "ci"}]\n',
+    ],
+)
+def test_dependency_in_another_group_requires_a_review_decision(
+    tmp_path, monkeypatch, mocker, existing
+):
+    from protostar.merge import ConflictReason, ResolutionChoice
+    from protostar.preparation import ExecutionPolicy, prepare_review
+
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "pyproject.toml"
+    original = ('[project]\nname = "personal"\n' + existing).encode()
+    target.write_bytes(original)
+    intent = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
+    intent.dependencies.add_dev("mypy")
+
+    review = prepare_review(intent, UserConfig(), policy=ExecutionPolicy.INITIALIZATION)
+
+    assert len(review.conflicts) == 1
+    (conflict,) = review.conflicts
+    assert conflict.reason is ConflictReason.DIFFERENT_GROUP
+    assert not review.proposals
+    assert not review.resolver.dependency_manifest().dev_dependencies
+    assert target.read_bytes() == original
+
+    # An unresolved choice cannot reach uv, even outside the TUI.
+    unresolved = run(intent, mocker)
+    unresolved.process_runner.run.assert_not_called()
+    assert target.read_bytes() == original
+
+    # Keeping the old placement acknowledges the absent destination entry.
+    executor = SystemExecutor(
+        intent, UserConfig(), resolutions={conflict.id: ResolutionChoice.LOCAL}
+    )
+    runner = mocker.patch.object(executor.process_runner, "run")
+    executor.execute()
+    runner.assert_not_called()
+    repeated = run(intent, mocker)
+    repeated.process_runner.run.assert_not_called()
+    assert not prepare_review(intent, UserConfig()).conflicts
+    assert target.read_bytes() == original
+
+
+def test_cross_group_addition_is_explicit_and_preserves_existing_requirement(
+    tmp_path, monkeypatch, mocker
+):
+    from protostar.merge import ResolutionChoice
+    from protostar.preparation import prepare_review
+
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "pyproject.toml"
+    target.write_text(
+        '[project]\nname = "personal"\n[dependency-groups]\nci = ["mypy<2"]\n'
+    )
+    intent = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
+    intent.dependencies.add_dev("mypy")
+    (conflict,) = prepare_review(intent, UserConfig()).conflicts
+    resolutions = {conflict.id: ResolutionChoice.DESIRED}
+    review = prepare_review(intent, UserConfig(), resolutions=resolutions)
+    assert review.resolver.dependency_manifest().dev_dependencies == ["mypy"]
+    assert not review.conflicts
+
+    def resolve(command, **kwargs):
+        assert command == ["uv", "add", "--dev", "mypy"]
+        with target.open("a") as stream:
+            stream.write('dev = ["mypy>=1.0"]\n')
+
+    executor = SystemExecutor(
+        intent, UserConfig(), review=review, resolutions=resolutions
+    )
+    runner = mocker.patch.object(executor.process_runner, "run", side_effect=resolve)
+    executor.execute()
+    runner.assert_called_once()
+    assert tomllib.loads(target.read_text())["dependency-groups"] == {
+        "ci": ["mypy<2"],
+        "dev": ["mypy>=1.0"],
+    }
+    repeated = run(intent, mocker)
+    repeated.process_runner.run.assert_not_called()
+    assert not prepare_review(intent, UserConfig()).conflicts
+
+
+@pytest.mark.parametrize("group", list(DependencyGroup))
+def test_cross_group_conflict_tracks_existing_content_and_allows_overwrite(group):
+    from protostar.dependencies import select_dependencies
+
+    def select(existing, **kwargs):
+        return select_dependencies(
+            ["mypy"],
+            [],
+            (),
+            group,
+            other_groups={"dependency-groups.ci": [existing]},
+            **kwargs,
+        )
+
+    (original,) = select("mypy<2").conflicts
+    (changed,) = select("mypy<3").conflicts
+    assert original.id != changed.id
+    assert select("mypy<2", overwrite=True).packages == ("mypy",)
+    # Distinct environment markers represent different requirement identities.
+    assert select('mypy; sys_platform == "win32"').packages == ("mypy",)
+
+
 def test_owned_dependency_deletion_and_regression():
     from protostar.dependencies import select_dependencies
     from protostar.sync_state import DependencyState

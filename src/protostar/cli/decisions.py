@@ -38,6 +38,10 @@ MEANING = {
         "You and the update changed it to different kinds of value."
     ),
     ConflictReason.UNOWNED: "It was in your file before Protostar managed it.",
+    ConflictReason.DIFFERENT_GROUP: (
+        "This dependency is already in another group. "
+        "Keep its current placement or add it to this group too."
+    ),
     ConflictReason.DELETED_ANCESTOR: "You deleted it, and the update changed it.",
     ConflictReason.RETRACTED: "You edited it, and the update no longer includes it.",
     ConflictReason.DUPLICATE_IDENTITY: (
@@ -60,6 +64,7 @@ TAGS = {
     ConflictReason.DIVERGED: "both changed",
     ConflictReason.TYPE_MISMATCH: "both changed",
     ConflictReason.UNOWNED: "already yours",
+    ConflictReason.DIFFERENT_GROUP: "in another group",
     ConflictReason.DELETED_ANCESTOR: "you deleted it",
     ConflictReason.RETRACTED: "no longer included",
     ConflictReason.DUPLICATE_IDENTITY: "defined twice",
@@ -78,8 +83,12 @@ SETTLED = {
 """How a choice settled a decision."""
 
 # What each choice does, where the reason changes what it means.
-_KEEP = {ConflictReason.DELETED_ANCESTOR: "keep it deleted"}
+_KEEP = {
+    ConflictReason.DELETED_ANCESTOR: "keep it deleted",
+    ConflictReason.DIFFERENT_GROUP: "keep its current placement",
+}
 _TAKE = {
+    ConflictReason.DIFFERENT_GROUP: "add it to this group too",
     ConflictReason.UNOWNED: "replace it with the update's",
     ConflictReason.DELETED_ANCESTOR: "restore it",
     ConflictReason.RETRACTED: "remove it",
