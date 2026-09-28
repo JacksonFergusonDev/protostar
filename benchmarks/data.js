@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790625857584,
+  "lastUpdate": 1790627567963,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18739,6 +18739,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1221.13,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "771d6df86f78a03c46980758f693daa11d685c9c",
+          "message": "test(tui): freeze input cursor blinking during snapshot comparison",
+          "timestamp": "2026-09-28T13:28:37-07:00",
+          "tree_id": "8e7e76a9bbc6df2f5b0267ae55166b1ba1cc1970",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/771d6df86f78a03c46980758f693daa11d685c9c"
+        },
+        "date": 1790627566392,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 278.37,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1192.5,
             "unit": "ms"
           }
         ]
