@@ -143,11 +143,14 @@ Select > SelectOverlay {
     background: $panel;
 }
 
+/* A one-row field has no room for the scrollbar `*` gives it: it would cover
+   the text. The field scrolls to its cursor instead. */
 Input {
     height: 1;
     border: none;
     padding: 0 1;
     background: $panel;
+    scrollbar-size-horizontal: 0;
 }
 Input:focus {
     border: none;

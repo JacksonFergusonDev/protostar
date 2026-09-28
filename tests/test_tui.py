@@ -338,6 +338,18 @@ async def test_escape_asks_before_leaving():
 
 
 @pytest.mark.asyncio
+async def test_long_text_field_shows_its_text():
+    # A horizontal scrollbar on a one-row field would cover the value.
+    app = make_app(
+        InitDraft(metadata=(("description", "An orbital mechanics toolkit " * 8),))
+    )
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        field = app.screen.query_one("#meta-description", Input)
+        assert field.scrollbar_size_horizontal == 0
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("confirming", [False, True])
 async def test_ctrl_c_quits_without_asking(confirming):
     app = make_app()
