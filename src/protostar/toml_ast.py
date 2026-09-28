@@ -8,7 +8,7 @@ from typing import Any, cast
 import tomlkit
 import tomlkit.items
 from tomlkit.container import Container, OutOfOrderTableProxy
-from tomlkit.items import AoT, Table
+from tomlkit.items import AoT, InlineTable, Table
 
 from .errors import ConfigurationError
 from .intent import StructuredContribution, validate_configuration
@@ -47,6 +47,25 @@ class TomlLayout:
 
 
 @dataclass(frozen=True)
+class FlatNames:
+    """A table whose keys are dotted names a tool also accepts nested.
+
+    ``"a.b" = {}`` and ``a.b = {}`` are different TOML, but a tool that hoists the
+    ``a`` table reads both as the name ``a.b``. Reconciliation compares such a
+    table by name, so the two spellings never become two entries, and writes each
+    name back in the spelling the document already uses.
+
+    Attributes:
+        path: The table holding the names.
+        namespaces: Key paths, relative to the table, the tool hoists into dotted
+            names. A nested spelling wins over a quoted one, as the tool reads it.
+    """
+
+    path: tuple[str, ...]
+    namespaces: frozenset[tuple[str, ...]]
+
+
+@dataclass(frozen=True)
 class TomlDocumentSpec:
     """How one TOML document merges beyond plain tables and atomic arrays.
 
@@ -63,6 +82,7 @@ class TomlDocumentSpec:
             with settings but without this table is left alone, because adding the
             table would hide those settings from the tool.
         layout: Document layout; ``None`` keeps tomlkit's round-trip output.
+        flat_names: Tables compared by dotted name, whichever way it is spelled.
     """
 
     policy: MergePolicy = DEFAULT_POLICY
@@ -70,6 +90,7 @@ class TomlDocumentSpec:
     seed_paths: frozenset[tuple[str, ...]] = frozenset()
     root_table: str | None = None
     layout: TomlLayout | None = None
+    flat_names: tuple[FlatNames, ...] = ()
 
 
 DEFAULT_TOML_SPEC = TomlDocumentSpec()
@@ -198,6 +219,209 @@ def _hold_seeds(
     return held
 
 
+def _spellings(
+    table: dict[str, Value],
+    namespaces: frozenset[tuple[str, ...]],
+    prefix: tuple[str, ...] = (),
+) -> dict[str, list[tuple[str, ...]]]:
+    """Maps each name in a flat-names table to the key paths spelling it.
+
+    A name spelled twice lists its quoted spelling first, so the last spelling
+    is the nested one the tool reads.
+    """
+    spellings: dict[str, list[tuple[str, ...]]] = {}
+    for key, member in table.items():
+        path = (*prefix, key)
+        if path in namespaces and isinstance(member, dict):
+            for name, paths in _spellings(member, namespaces, path).items():
+                spellings.setdefault(name, []).extend(paths)
+        else:
+            spellings.setdefault(".".join(path), []).insert(0, path)
+    return spellings
+
+
+def _member(table: dict[str, Value], path: tuple[str, ...]) -> Value:
+    node: Value = table
+    for key in path:
+        node = cast(dict[str, Value], node)[key]
+    return node
+
+
+def _flat(table: dict[str, Value], namespaces: frozenset[tuple[str, ...]]) -> Value:
+    return {
+        name: deepcopy(_member(table, paths[-1]))
+        for name, paths in _spellings(table, namespaces).items()
+    }
+
+
+def _map_flat_names(
+    value: Value,
+    spec: TomlDocumentSpec,
+    convert: Callable[[FlatNames, dict[str, Value]], Value],
+) -> Value:
+    if not spec.flat_names or not isinstance(value, dict):
+        return value
+    value = deepcopy(value)
+    for names in spec.flat_names:
+        *parents, leaf = names.path
+        node: Value = value
+        for key in parents:
+            node = node.get(key, MISSING) if isinstance(node, dict) else MISSING
+        if isinstance(node, dict) and isinstance(node.get(leaf), dict):
+            node[leaf] = convert(names, cast(dict[str, Value], node[leaf]))
+    return value
+
+
+def flatten_names(value: Value, spec: TomlDocumentSpec) -> Value:
+    """Rewrites each flat-names table to one key per dotted name.
+
+    Args:
+        value: A document value, or ``MISSING``.
+        spec: The document spec naming its flat-names tables.
+
+    Returns:
+        A detached value whose flat-names tables are keyed by name.
+    """
+    return _map_flat_names(
+        value, spec, lambda names, table: _flat(table, names.namespaces)
+    )
+
+
+def _nested_path(name: str, namespaces: frozenset[tuple[str, ...]]) -> tuple[str, ...]:
+    """The nested spelling of a name, under its deepest namespace."""
+    parts = tuple(name.split("."))
+    depth = max(
+        (
+            len(ns)
+            for ns in namespaces
+            if parts[: len(ns)] == ns and len(parts) > len(ns)
+        ),
+        default=0,
+    )
+    if depth == 0:
+        return (name,)
+    return (*parts[:depth], ".".join(parts[depth:]))
+
+
+def _inline(member: dict[str, Value]) -> Value:
+    """An inline table spaced as TOML's own examples are, ``{ a = 1 }``."""
+    table = tomlkit.inline_table()
+    table.update(member)
+    body = table.as_string()[1:-1]
+    text = f"{{ {body} }}" if body else "{}"
+    return cast(Value, tomlkit.parse(f"member = {text}")["member"])
+
+
+def _dotted_key(ast: Any, key: str) -> bool:
+    """Whether a table's member is spelled with dotted keys, ``key.a = 1``.
+
+    A table spread over out-of-order headers is never dotted; its members cannot
+    be told apart, so it reads as not dotted.
+    """
+    container = ast.value if isinstance(ast, Table) else ast
+    if not isinstance(container, Container):
+        return False
+    return any(
+        k is not None and k.key == key and k.is_dotted() for k, _ in container.body
+    )
+
+
+def _place(table: dict[str, Value], path: tuple[str, ...], member: Value) -> None:
+    for key in path[:-1]:
+        table = cast(dict[str, Value], table.setdefault(key, {}))
+    table[path[-1]] = member
+
+
+def _respell(
+    flat: dict[str, Value],
+    local: dict[str, Value],
+    desired: dict[str, Value],
+    namespaces: frozenset[tuple[str, ...]],
+    inline: set[tuple[str, ...]],
+) -> dict[str, Value]:
+    """Spells each name of a flat-names table the way the document does.
+
+    A name the document has keeps its spellings: the one the tool reads takes the
+    new value, a shadowed quoted one stays as it is. A new name follows its
+    namespace's spelling in the document, else the desired spelling. A new
+    quoted table is added to ``inline``, to be written on one line.
+    """
+    local_spellings = _spellings(local, namespaces)
+    desired_spellings = _spellings(desired, namespaces)
+
+    def nests(root: str) -> bool:
+        # The document's spelling of the namespace, else the desired one.
+        for spellings in (local_spellings, desired_spellings):
+            for paths in spellings.values():
+                for path in paths:
+                    if len(path) > 1 and path[0] == root:
+                        return True
+                    if len(path) == 1 and path[0].startswith(f"{root}."):
+                        return False
+        return True
+
+    result: dict[str, Value] = {}
+    for name, member in flat.items():
+        paths = local_spellings.get(name)
+        if paths:
+            for path in paths[:-1]:
+                _place(result, path, deepcopy(_member(local, path)))
+            _place(result, paths[-1], member)
+            continue
+        nested = _nested_path(name, namespaces)
+        if nests(nested[0]):
+            _place(result, nested, member)
+        else:
+            if isinstance(member, dict):
+                inline.add((name,))
+            _place(result, (name,), member)
+    return result
+
+
+def respell_names(
+    value: Value,
+    local: Value,
+    desired: Value,
+    spec: TomlDocumentSpec,
+    inline: set[tuple[str, ...]] | None = None,
+) -> Value:
+    """Rewrites each flat-names table from names back to the document's keys.
+
+    Args:
+        value: A reconciled value whose flat-names tables are keyed by name.
+        local: The document's own value, in its own spelling.
+        desired: The desired value, in the producers' spelling.
+        spec: The document spec naming its flat-names tables.
+        inline: Collects the paths of new quoted tables, which read best on one
+            line as the document's own quoted names do.
+
+    Returns:
+        A detached value spelled as the document spells it.
+    """
+    collected: set[tuple[str, ...]] = set()
+
+    def respell(names: FlatNames, table: dict[str, Value]) -> Value:
+        found: set[tuple[str, ...]] = set()
+        spelled = _respell(
+            table,
+            table_at(local, names.path),
+            table_at(desired, names.path),
+            names.namespaces,
+            found,
+        )
+        collected.update((*names.path, *path) for path in found)
+        return spelled
+
+    def table_at(source: Value, path: tuple[str, ...]) -> dict[str, Value]:
+        node = lookup(source, path) if isinstance(source, dict) else MISSING
+        return node if isinstance(node, dict) else {}
+
+    spelled = _map_flat_names(value, spec, respell)
+    if inline is not None:
+        inline.update(collected)
+    return spelled
+
+
 def reconcile_toml(
     spec: TomlDocumentSpec,
     original: str,
@@ -239,7 +463,11 @@ def reconcile_toml(
             "Invalid structured TOML file.",
             hint="Correct the target TOML syntax before retrying.",
         ) from e
-    local = cast(dict[str, Value], doc.unwrap())
+    raw_local = cast(dict[str, Value], doc.unwrap())
+    raw_desired = desired
+    local = cast(dict[str, Value], flatten_names(raw_local, spec))
+    desired = cast(dict[str, Value], flatten_names(desired, spec))
+    base = flatten_names(base, spec)
     if overwrite or initializing:
         # Explicit target authorization owns declared leaves, never foreign siblings.
         baseline: Value = deepcopy(base) if isinstance(base, dict) else {}
@@ -263,7 +491,7 @@ def reconcile_toml(
         if result.value is MISSING:
             return TomlReconciliation(
                 original,
-                result.baseline,
+                respell_names(result.baseline, raw_local, raw_desired, spec),
                 result.conflicts,
                 resolved=result.resolved,
                 proposals=result.proposals,
@@ -315,6 +543,7 @@ def reconcile_toml(
         before: dict[str, Value],
         after: dict[str, Value],
         keys: tuple[str, ...] = (),
+        dotted: bool = False,
     ) -> None:
         # A complete policy retracts owned keys the producers stop declaring.
         for key in [key for key in before if key not in after]:
@@ -329,7 +558,19 @@ def reconcile_toml(
             if styled is not None and hasattr(styled, "unwrap"):
                 styled_value = cast(Value, styled.unwrap())
             if isinstance(previous, dict) and isinstance(value, dict):
-                patch(ast[key], previous, value, path)
+                patch(ast[key], previous, value, path, dotted or _dotted_key(ast, key))
+            elif (
+                (dotted or path in inline)
+                and isinstance(value, dict)
+                and not (
+                    isinstance(styled, InlineTable)
+                    and semantic_equal(styled_value, value)
+                )
+            ):
+                # tomlkit writes a table set inside a dotted-key table under a
+                # wrong top-level header; a dotted key holds an inline table.
+                # A new quoted name sits on one line, as the document's do.
+                ast[key] = _inline(value)
             elif (
                 previous is MISSING
                 and isinstance(value, dict)
@@ -351,9 +592,16 @@ def reconcile_toml(
             else:
                 ast[key] = tomlkit.item(value)
 
-    patch(doc, local, value)
+    # The baseline is compared by name too, but kept in the document's spelling
+    # so a lockfile never changes for a spelling alone.
+    inline: set[tuple[str, ...]] = set()
+    value = cast(
+        dict[str, Value], respell_names(value, raw_local, raw_desired, spec, inline)
+    )
+    baseline = respell_names(baseline, raw_local, raw_desired, spec)
+    patch(doc, raw_local, value)
     layout_notes: list[str] = []
-    if semantic_equal(local, value):
+    if semantic_equal(raw_local, value):
         content = original
     elif spec.layout is not None and initializing:
         content = spec.layout.create(doc, layout_notes.append)

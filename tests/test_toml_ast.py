@@ -591,3 +591,116 @@ def test_overwrite_carries_a_dotted_key_table_into_an_existing_table():
     }
     assert "pymdownx.arithmatex.generic = true\n" in result.content
     assert "pymdownx.keys = {}\n" in result.content
+
+
+ZENSICAL_EXTENSIONS = (
+    "[project.markdown_extensions]\n"
+    "toc.permalink = true\n"
+    "pymdownx.details = {}\n"
+    "pymdownx.highlight.line_spans = '__span'\n"
+    "pymdownx.keys = {}\n"
+)
+
+
+def zensical_reconcile(original, base=MISSING, **kwargs):
+    from protostar.documents import zensical
+
+    desired = tomlkit.parse(ZENSICAL_EXTENSIONS)
+    return reconcile_toml(
+        zensical.SPEC,
+        original,
+        desired.unwrap(),
+        base,
+        MergeLocation(zensical.TARGET),
+        desired_ast=desired,
+        **kwargs,
+    )
+
+
+def extensions(content):
+    return tomllib.loads(content)["project"]["markdown_extensions"]
+
+
+def test_overwrite_updates_quoted_extension_names_in_place():
+    """A quoted name and the seed's nested one are the same Zensical extension."""
+    original = (
+        "[project.markdown_extensions]\n"
+        '"pymdownx.details" = {}\n'
+        '"pymdownx.highlight" = { line_spans = "old" }\n'
+    )
+    result = zensical_reconcile(original, overwrite=True)
+    assert extensions(result.content) == {
+        "pymdownx.details": {},
+        "pymdownx.highlight": {"line_spans": "__span"},
+        "toc": {"permalink": True},
+        "pymdownx.keys": {},
+    }
+    assert '"pymdownx.keys" = {}\n' in result.content
+    # The inline spelling is layout only: the baseline holds plain values.
+    owned = result.baseline["project"]["markdown_extensions"]
+    assert type(owned["pymdownx.keys"]) is dict
+    repeated = zensical_reconcile(result.content, result.baseline, overwrite=True)
+    assert repeated.content == result.content
+
+
+def test_overwrite_keeps_a_nested_document_nested():
+    original = "[project.markdown_extensions]\npymdownx.details = {}\n"
+    result = zensical_reconcile(original, overwrite=True)
+    assert extensions(result.content) == {
+        "pymdownx": {
+            "details": {},
+            "highlight": {"line_spans": "__span"},
+            "keys": {},
+        },
+        "toc": {"permalink": True},
+    }
+    assert "pymdownx.keys = {}\n" in result.content
+    # A table added inside a dotted-key table stays on its dotted line.
+    assert 'pymdownx.highlight = { line_spans = "__span" }\n' in result.content
+    assert "[pymdownx" not in result.content
+
+
+def test_a_shadowed_quoted_spelling_is_left_as_it_is():
+    """Zensical reads the nested spelling; the quoted one it hides stays put."""
+    original = (
+        "[project.markdown_extensions]\n"
+        '"pymdownx.keys" = { hidden = true }\n'
+        "pymdownx.keys = { read = true }\n"
+    )
+    result = zensical_reconcile(original, overwrite=True)
+    table = extensions(result.content)
+    assert table["pymdownx.keys"] == {"hidden": True}
+    assert table["pymdownx"]["keys"] == {"read": True}
+
+
+def test_respelling_an_owned_extension_is_not_an_edit():
+    """Owned in the nested spelling, rewritten quoted by hand: nothing to decide."""
+    written = zensical_reconcile("", initializing=True)
+    respelled = (
+        "[project.markdown_extensions]\n"
+        "toc.permalink = true\n"
+        '"pymdownx.details" = {}\n'
+        '"pymdownx.highlight" = { line_spans = "__span" }\n'
+        '"pymdownx.keys" = {}\n'
+    )
+    result = zensical_reconcile(respelled, written.baseline)
+    assert result.content == respelled
+    assert not result.conflicts
+    assert not result.preserved
+    assert not result.proposals
+
+
+def test_a_fresh_document_keeps_the_seed_spelling():
+    result = zensical_reconcile("", initializing=True)
+    assert result.content.count("pymdownx.") == 3
+    assert '"pymdownx' not in result.content
+    assert extensions(result.content)["toc"] == {"permalink": True}
+
+
+def test_a_baseline_keeps_the_document_spelling():
+    """A lockfile never changes because names are compared flat."""
+    written = zensical_reconcile("", initializing=True)
+    assert written.baseline == tomlkit.parse(ZENSICAL_EXTENSIONS).unwrap()
+    repeated = zensical_reconcile(written.content, written.baseline)
+    assert repeated.content == written.content
+    assert repeated.baseline == written.baseline

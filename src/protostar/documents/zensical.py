@@ -9,7 +9,7 @@ entries to a document without the table would disable every other default.
 """
 
 from ..merge import MergePolicy
-from ..toml_ast import TomlDocumentSpec
+from ..toml_ast import FlatNames, TomlDocumentSpec
 from .locations import DocumentLocations
 
 TARGET = "zensical.toml"
@@ -29,6 +29,21 @@ SPEC = TomlDocumentSpec(
     # Zensical also accepts settings at the top level, and reads only [project]
     # once that table exists.
     root_table="project",
+    # Zensical hoists these tables into extension names, so the quoted
+    # "pymdownx.details" and the nested pymdownx.details are one extension.
+    flat_names=(
+        FlatNames(
+            ("project", "markdown_extensions"),
+            frozenset(
+                {
+                    ("pymdownx",),
+                    ("pymdownx", "blocks"),
+                    ("zensical",),
+                    ("zensical", "extensions"),
+                }
+            ),
+        ),
+    ),
 )
 # Zensical also reads an MkDocs configuration, which Protostar does not edit.
 LOCATIONS = DocumentLocations(TARGET, competitors=("mkdocs.yml", "mkdocs.yaml"))
