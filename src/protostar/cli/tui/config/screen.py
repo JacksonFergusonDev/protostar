@@ -8,7 +8,7 @@ from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Vertical, VerticalScroll
 from textual.widgets import (
     Button,
     Checkbox,
@@ -35,7 +35,7 @@ from protostar.errors import ConfigurationError
 from protostar.ide import IDEType
 from protostar.recipe import EXCLUSIVE_TOOL_PAIRS
 
-from ..chrome import Heading, Headline, Masthead, Panel
+from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel
 from ..code import CodeSource, DiffLabels, diff_text
 from ..keys import (
     ActionBar,
@@ -131,7 +131,7 @@ class ConfigScreen(KeyboardScreen[SaveConfig | OpenInEditor]):
         if self.from_git:
             status.append(" Name and email come from Git until you save them.")
         yield Headline("Configure Protostar", status)
-        with Horizontal(id="body"):
+        with Columns(id="body"):
             with Panel("Settings", id="editor-panel"), Form(id="editor"):
                 yield Heading("Identity")
                 yield from self._text_field("author_name")
@@ -181,7 +181,7 @@ class ConfigScreen(KeyboardScreen[SaveConfig | OpenInEditor]):
                             value=bool(self.initial[tool.value]),
                             id=f"tool-{tool}",
                         )
-            with Vertical(id="aside"):
+            with Column(id="aside"):
                 with Panel("Changes", id="changes-panel"), VerticalScroll(id="changes"):
                     yield Static("", id="changes-summary")
                     yield Static("", id="changes-diff")

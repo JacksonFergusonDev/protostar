@@ -1,4 +1,11 @@
-"""The frame every decision screen shares: a masthead, panels, and headings."""
+"""The frame every decision screen shares: a masthead, panels, and headings.
+
+Spacing belongs to the layout, never to what it holds. A screen's body is
+``Columns`` of ``Column`` stacks and panels, and every gap between blocks is
+one cell across or one row down. A panel's rule is drawn in that row, so a
+panel stacked on a panel shares its rule instead of adding a second one.
+``tests/test_tui_layout.py`` measures every screen against this.
+"""
 
 from rich.console import RenderableType
 from textual.containers import Horizontal, Vertical
@@ -54,6 +61,23 @@ class Headline(Horizontal):
         super().__init__(
             Label(f"{title}:", id="title"), Static(status, id="subtitle"), id="headline"
         )
+
+
+class Columns(Horizontal):
+    """Blocks side by side, one cell apart."""
+
+
+class Column(Vertical):
+    """Blocks stacked one row apart.
+
+    A panel's bottom rule is its row, so the panel under it draws no top rule.
+    A ``Section`` ends in a blank row, and the ``ActionBar`` last in a column
+    ends a row early, level with the last row of the panel beside it.
+    """
+
+
+class Section(Vertical):
+    """A headed group of controls that stands in a column under its panels."""
 
 
 class Panel(Vertical):

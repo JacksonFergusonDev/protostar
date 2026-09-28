@@ -1,3 +1,4 @@
+import inspect
 import os
 
 os.environ["PYTHONIOENCODING"] = "utf-8"
@@ -302,3 +303,63 @@ def forge(mocker) -> FakeForge:
     fake = FakeForge()
     mocker.patch("protostar.network._get_opener", return_value=fake)
     return fake
+
+
+def _rule(widget, edge: str) -> bool:
+    """Whether the widget's top or bottom row is a rule, its own or its panels'."""
+    from protostar.cli.tui.chrome import Columns
+
+    if isinstance(widget, Columns):
+        return all(_rule(child, edge) for child in widget.children if child.display)
+    return getattr(widget.styles, f"border_{edge}")[0] not in ("", "none")
+
+
+def check_layout(screen) -> None:
+    """Asserts the spacing rule in ``cli/tui/chrome.py`` holds on a screen.
+
+    Blocks side by side stand one cell apart, and blocks in a column one row
+    apart, where a rule drawn in the row between them counts as that row.
+    """
+    from itertools import pairwise
+
+    from protostar.cli.tui.chrome import Column, Columns, Panel
+
+    for panel in screen.query(Panel):
+        assert isinstance(panel.parent, Columns | Column), (
+            f"{panel} is placed outside the layout"
+        )
+    for row in screen.query(Columns):
+        blocks = [child for child in row.children if child.display]
+        for left, right in pairwise(blocks):
+            assert right.region.x - left.region.right == 1, (
+                f"{left} and {right} are not one cell apart"
+            )
+    for column in screen.query(Column):
+        blocks = [child for child in column.children if child.display]
+        for upper, lower in pairwise(blocks):
+            gap = lower.region.y - upper.region.bottom
+            rules = _rule(upper, "bottom") + _rule(lower, "top")
+            assert gap + rules == 1, f"{upper} and {lower} are not one row apart"
+
+
+@pytest.fixture
+def snap_compare(snap_compare):
+    """Compares a TUI snapshot after checking the screen's spacing.
+
+    Every screen with a snapshot is measured, so no screen drifts from the
+    shared layout unnoticed.
+    """
+
+    def compare(app, *args, run_before=None, **kwargs):
+        async def measured(pilot):
+            if run_before is not None and inspect.isawaitable(
+                result := run_before(pilot)
+            ):
+                await result
+            await pilot.pause()
+            for screen in pilot.app.screen_stack:
+                check_layout(screen)
+
+        return snap_compare(app, *args, run_before=measured, **kwargs)
+
+    return compare

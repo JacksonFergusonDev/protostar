@@ -111,6 +111,8 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 - **Every action has a key, shown on its own control** through `key_label`. The footer is the legend for moving. List each new key in the screen's `KEYS` or `key_rows()` so `?` shows it.
 - **Explanations are on demand.** A tool control binds `i` to `ToolInfoScreen` (`cli/tui/tool_info.py`) only while focused, so a text field never loses the letter. Build tool rows from `ToolToggle`, `ToolRadio`, and `ToolChoice`, and add `TOOL_INFO_KEY` to the screen's `KEYS`.
 - **`Esc` asks before leaving (`LeaveScreen`); `Ctrl+C` quits at once and never asks.**
+- **Spacing belongs to the layout.** Place a screen's panels, sections, and action bar in `Columns` and `Column` (`cli/tui/chrome.py`), and never give them margins of their own: blocks stand one cell apart across and one row apart down, and a panel under a panel shares its rule. Every TUI snapshot also measures its screen against this (`check_layout` in `tests/conftest.py`), so give each new screen a snapshot.
+- **A list that scrolls keeps the wheel.** An open `Picker` or a `Checklist` taller than its space stops the wheel at its ends instead of scrolling the form behind it (`HoldsWheel` in `keys.py`).
 - **All TUI source uses `cli/tui/code.py`.** Render code, structured configuration, and source diffs through its shared renderers and palette. Pass the actual display language when serialization differs from the filename. Language selection is presentation-only; screens never choose their own syntax themes. Keep the Pygments adapter lazy so opening the recipe editor loads no lexers.
 - **Drive TUI tests with `pilot.press`.** Use `pilot.click` only in tests that are about the mouse.
 
