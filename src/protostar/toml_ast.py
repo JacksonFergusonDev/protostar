@@ -7,7 +7,8 @@ from typing import Any, cast
 
 import tomlkit
 import tomlkit.items
-from tomlkit.items import AoT
+from tomlkit.container import Container, OutOfOrderTableProxy
+from tomlkit.items import AoT, Table
 
 from .errors import ConfigurationError
 from .intent import StructuredContribution, validate_configuration
@@ -286,6 +287,29 @@ def reconcile_toml(
             return None
         return node
 
+    def place_styled(
+        ast: Any, keys: tuple[str, ...], key: str, styled: Any, value: Value
+    ) -> None:
+        if not isinstance(styled, OutOfOrderTableProxy):
+            ast[key] = deepcopy(styled)
+            return
+        # Dotted keys (`a.b = 1` beside `a.c = 2`) spread one table over
+        # several entries of its parent, which tomlkit reads back as a proxy
+        # that cannot be copied. Carry the entries over one by one instead.
+        parent = desired_node(keys)
+        if isinstance(parent, Table):
+            parent = parent.value
+        body = parent.body if isinstance(parent, Container) else []
+        entries = [(k, item) for k, item in body if k is not None and k.key == key]
+        dotted = bool(entries) and all(k.is_dotted() for k, _ in entries)
+        if dotted and isinstance(ast, (Container, Table)):
+            if key in ast:
+                del ast[key]
+            for k, item in entries:
+                ast.append(deepcopy(k), deepcopy(item))
+        else:
+            ast[key] = tomlkit.item(value)
+
     def patch(
         ast: Any,
         before: dict[str, Value],
@@ -323,7 +347,7 @@ def reconcile_toml(
                 for member in value[len(previous) :]:
                     ast[key].append(tomlkit.item(member))
             elif styled is not None and semantic_equal(styled_value, value):
-                ast[key] = deepcopy(styled)
+                place_styled(ast, keys, key, styled, value)
             else:
                 ast[key] = tomlkit.item(value)
 

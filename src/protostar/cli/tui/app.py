@@ -5,6 +5,7 @@ from typing import ClassVar
 from textual.app import App
 from textual.binding import Binding, BindingType
 from textual.screen import Screen
+from textual.worker import WorkerFailed
 
 from protostar.cli.palette import ANSI
 from protostar.errors import ProtostarError
@@ -16,7 +17,9 @@ class DecisionApp[ResultT](App[ResultT]):
     """Run one decision flow and exit with its immutable result.
 
     A screen that meets an error no choice on it can fix leaves through
-    ``fail``, and ``decide`` raises it once the terminal is restored.
+    ``fail``, and ``decide`` raises it once the terminal is restored. An
+    unexpected error leaves the same way, so the CLI's crash report prints it
+    instead of Textual.
     """
 
     CSS_PATH = "protostar.tcss"
@@ -39,14 +42,18 @@ class DecisionApp[ResultT](App[ResultT]):
         self.decision_screen = screen
         self.exit_after_first_frame = exit_after_first_frame
         self.failure: ProtostarError | None = None
+        self.crash: BaseException | None = None
 
     def decide(self) -> ResultT | None:
         """Run the flow and return its result, or None on cancellation.
 
         Raises:
             ProtostarError: The error a screen left with through ``fail``.
+            BaseException: An unexpected error the app stopped on.
         """
         result = self.run()
+        if self.crash is not None:
+            raise self.crash
         if self.failure is not None:
             raise self.failure
         return result
@@ -59,6 +66,16 @@ class DecisionApp[ResultT](App[ResultT]):
         """
         self.failure = error
         self.exit(None)
+
+    def _handle_exception(self, error: Exception) -> None:
+        # Textual renders its own traceback with every frame's locals: for a
+        # review that is the whole manifest, thousands of lines. Keep the error
+        # for ``decide`` instead, which the CLI reports once, capped.
+        self.crash = error.error if isinstance(error, WorkerFailed) else error
+        super()._handle_exception(error)
+
+    def _fatal_error(self) -> None:
+        self._close_messages_no_wait()
 
     def on_mount(self) -> None:
         """Open the first decision screen without starting engine execution."""

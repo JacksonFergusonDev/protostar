@@ -561,3 +561,33 @@ def test_overwrite_reapplies_seed_paths_and_keeps_foreign_keys():
     assert tomlkit.parse(result.content).unwrap() == {
         "site": {"name": "demo", "url": "https://example.com"}
     }
+
+
+def test_overwrite_carries_a_dotted_key_table_into_an_existing_table():
+    """Dotted keys spread one table over several entries, read back as a proxy."""
+    desired = tomlkit.parse(
+        "[site.extensions]\n"
+        "abbr = {}\n"
+        "pymdownx.arithmatex.generic = true\n"
+        "toc.permalink = true\n"
+        "pymdownx.highlight.line_spans = '__span'\n"
+        "pymdownx.keys = {}\n"
+    )
+    original = '[site.extensions]\nadmonition = {}\n"pymdownx.details" = {}\n'
+    result = reconcile_toml(
+        SEEDED,
+        original,
+        desired.unwrap(),
+        MISSING,
+        MergeLocation("site.toml"),
+        overwrite=True,
+        desired_ast=desired,
+    )
+    extensions = tomlkit.parse(result.content).unwrap()["site"]["extensions"]
+    assert extensions == {
+        "admonition": {},
+        "pymdownx.details": {},
+        **desired.unwrap()["site"]["extensions"],
+    }
+    assert "pymdownx.arithmatex.generic = true\n" in result.content
+    assert "pymdownx.keys = {}\n" in result.content
