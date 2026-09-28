@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790564526835,
+  "lastUpdate": 1790567307703,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18365,6 +18365,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 952.58,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9df6d970cbac2f5bb9f9c2b0f7286305f53130fd",
+          "message": "feat(cli): show sync's pending changes as the labelled tree (#373)\n\n* feat(cli): show sync's pending changes as the labelled tree\n\nsync --dry-run, status, and diff printed a flat \"Accepted: path\" list, while\ninit's previews show each path in a tree labelled with its change. They now\ndraw the same tree:\n\n- render_review classifies sync's review with changes.classify and shows\n  only paths with pending work or a decision, under a summary line.\n- Entry gains preserved edits, labelled \"N kept edit(s)\", so a file with\n  only a kept edit still appears.\n- The conflict, resolved, proposal, preserved, migration, resolver, and hook\n  lines stay below the tree. diff prints each unified diff after it. A\n  conflict is cyan instead of bold red.\n- where and SETTLED move to changes.py, which reviews.py now imports.\n- A new cli_status.svg shows status after a recipe edit, in the lifecycle\n  docs.\n\nJSON output is unchanged.\n\n* fix(cli): say what each decision means, with the command that settles it\n\nstatus, sync, diff, and init --dry-run printed engine vocabulary:\n\"Conflict 5e89dcaf583a: justfile: retracted; resolve with local, desired.\"\nThe reason was a machine code, and local and desired weren't commands\nanyone could run. Each decision now says what happened in a sentence, what\nProtostar does unless you choose, and the full --resolve command for each\nchoice:\n\n    justfile: You edited it, and the update no longer includes it.\n      Yours stays until you choose:\n        keep yours  protostar sync --resolve 5e89dcaf583a=local\n        remove it   protostar sync --resolve 5e89dcaf583a=desired\n\n- cli/decisions.py holds one sentence per reason, including the ones only\n  fixable by hand. It also has short tags for the TUI list and the line\n  renderers. The TUI's own sentences move there, so every screen agrees.\n- The other lines drop internal terms. \"Ownership/provenance state will\n  advance\" becomes \"protostar.lock will record the update\". The resolver\n  footprint becomes the packages uv adds. \"Initialization-only tasks and\n  IDE probes are excluded\" and the migration lines are plain sentences too.\n  The applied summary now reads \"Updated 3 paths. Resolved 1 conflict.\"\n- The engine warning \"Preserving local contribution in X\" becomes \"Kept\n  your version of X: it conflicts with the update\". The diagnostics report\n  drops the internal [Executor] tag but keeps tool tags like [Direnv].\n- The TUI's conflict list shows tags such as \"both changed\" instead of\n  reason codes.\n\nJSON keeps the reason codes. AGENTS.md records the rule.",
+          "timestamp": "2026-09-27T20:45:53-07:00",
+          "tree_id": "2b9d45e35d13eb84c6125c6fecd28463fc5ec219",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/9df6d970cbac2f5bb9f9c2b0f7286305f53130fd"
+        },
+        "date": 1790567306788,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 258.22,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 887.47,
             "unit": "ms"
           }
         ]
