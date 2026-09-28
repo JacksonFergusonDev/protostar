@@ -2,11 +2,8 @@
 
 import asyncio
 import shlex
-from collections import Counter
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
-from enum import StrEnum
-from pathlib import Path
+from collections.abc import Sequence
+from dataclasses import replace
 from typing import ClassVar, cast
 
 from rich.console import Group, RenderableType
@@ -28,10 +25,10 @@ from textual.widgets import (
 )
 from textual.widgets.tree import TreeNode
 
-from protostar.cli.ui import path_style, planned_paths, untrusted_commands
+from protostar.cli.ui import untrusted_commands
 from protostar.config import UserConfig
 from protostar.errors import ProtostarError
-from protostar.init_draft import InitDecision, InitDraft, resolve_init
+from protostar.init_draft import InitDecision, InitDraft
 from protostar.intent import DependencyGroup
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.merge import (
@@ -41,16 +38,7 @@ from protostar.merge import (
     default_choice,
     describe_location,
 )
-from protostar.models import InitRequest
-from protostar.orchestrator import Orchestrator
-from protostar.preparation import (
-    ExecutionPolicy,
-    PreparedEdit,
-    PreparedReview,
-    prepare_review,
-    review_phase,
-)
-from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
+from protostar.registry import ResolvedHookRevision
 
 from ..app import DecisionApp
 from ..chrome import Heading, Headline, Masthead, Panel
@@ -71,165 +59,18 @@ from ..keys import (
     Toggle,
     key_label,
 )
-
-
-class Change(StrEnum):
-    """What happens to a planned path before any command runs."""
-
-    NEW = "new"
-    MODIFIED = "modified"
-    REMOVED = "removed"
-    CONFLICT = "conflict"
-    EXISTS = "existing"
-    LATER = "after setup"
-
-
-_STYLES = {
-    Change.NEW: "green",
-    Change.MODIFIED: "yellow",
-    Change.REMOVED: "red",
-    Change.CONFLICT: "red",
-    Change.EXISTS: "dim",
-    Change.LATER: "dim",
-}
-
-_FOLDER = path_style("", directory=True)
-
-
-@dataclass(frozen=True)
-class Entry:
-    """One planned path and what the files written before any command do to it.
-
-    Its conflicts are open or, once a choice settled them, resolved. Its
-    proposals are changes into content the user already had, applied unless
-    kept out.
-    """
-
-    path: str
-    change: Change
-    directory: bool = False
-    edit: PreparedEdit | None = None
-    conflicts: tuple[MergeConflict, ...] = ()
-    creator: tuple[str, ...] | None = None
-    merged: bool = False
-
-    @property
-    def open(self) -> tuple[MergeConflict, ...]:
-        """Returns the conflicts no choice has settled."""
-        return tuple(
-            c
-            for c in self.conflicts
-            if c.resolution is None and c.reason is not ConflictReason.PROPOSED
-        )
-
-    @property
-    def proposals(self) -> tuple[MergeConflict, ...]:
-        """Returns the changes into this file's existing content."""
-        return tuple(c for c in self.conflicts if c.reason is ConflictReason.PROPOSED)
-
-
-@dataclass(frozen=True)
-class Review:
-    """A planned draft and its first file batch."""
-
-    request: InitRequest
-    manifest: EnvironmentManifest
-    prepared: PreparedReview
-    entries: tuple[Entry, ...]
-
-
-def classify(
-    manifest: EnvironmentManifest, prepared: PreparedReview
-) -> tuple[Entry, ...]:
-    """Sorts every planned path by what the first file batch does to it.
-
-    Only the first batch's bytes are known before commands run. A path it
-    leaves alone either exists already, or is written later from command
-    output. Reads the workspace, so it runs off the main thread.
-
-    Args:
-        manifest: The planned manifest.
-        prepared: The first file batch prepared from it.
-
-    Returns:
-        One entry per planned path, sorted by path.
-    """
-    edits = {edit.path: edit for edit in prepared.edits}
-    conflicts: dict[str, list[MergeConflict]] = {}
-    for conflict in (*prepared.conflicts, *prepared.resolved, *prepared.proposals):
-        conflicts.setdefault(conflict.location.file, []).append(conflict)
-    tasks = (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
-    creators = {
-        path: tuple(task.command) for task in tasks for path in task.owned_files
-    }
-    written = {path.as_posix() for path in manifest.written_files()}
-    paths, directories = planned_paths(manifest)
-    entries: list[Entry] = []
-    for path in sorted({*paths, *edits, *prepared.directories, *conflicts}):
-        edit = edits.get(path)
-        if edit is not None:
-            change = (
-                Change.NEW
-                if edit.before is None
-                else Change.REMOVED
-                if edit.after is None
-                else Change.MODIFIED
-            )
-        elif path in prepared.directories:
-            change = Change.NEW
-        elif any(c.resolution is None for c in conflicts.get(path, ())):
-            change = Change.CONFLICT
-        elif Path(path).exists():
-            change = Change.EXISTS
-        else:
-            change = Change.LATER
-        entries.append(
-            Entry(
-                path,
-                change,
-                path in directories or path in prepared.directories,
-                edit,
-                tuple(conflicts.get(path, ())),
-                creators.get(path),
-                path in written,
-            )
-        )
-    return tuple(entries)
-
-
-def _plan(
-    draft: InitDraft, config: UserConfig
-) -> tuple[InitRequest, EnvironmentManifest]:
-    modules, request = resolve_init(draft, config)
-    return request, Orchestrator(modules, config, request=request).plan()
-
-
-def _prepare(
-    request: InitRequest,
-    manifest: EnvironmentManifest,
-    config: UserConfig,
-    hook_revisions: tuple[ResolvedHookRevision, ...],
-    choices: Mapping[str, ResolutionChoice],
-) -> Review:
-    # A project whose files no command creates shows its merges here too.
-    phase = review_phase(manifest)
-
-    def prepared_with(resolutions: Mapping[str, ResolutionChoice]) -> PreparedReview:
-        return prepare_review(
-            manifest,
-            config,
-            hook_revisions=hook_revisions,
-            policy=ExecutionPolicy.INITIALIZATION,
-            phase=phase,
-            resolutions=resolutions,
-        )
-
-    prepared = prepared_with({})
-    # Choices made for decisions a changed plan no longer has lapse.
-    kept = {c.id: choices[c.id] for c in prepared.decisions if c.id in choices}
-    if kept:
-        prepared = prepared_with(kept)
-    return Review(request, manifest, prepared, classify(manifest, prepared))
+from .model import (
+    FOLDER,
+    Change,
+    Entry,
+    Review,
+    count,
+    entry_label,
+    hook_snapshot,
+    plan_draft,
+    prepare_draft,
+    summary,
+)
 
 
 def describe(entry: Entry, *, one_shot: bool = False) -> RenderableType:
@@ -365,67 +206,6 @@ def steps_text(manifest: EnvironmentManifest) -> RenderableType:
     return Group(*parts) if parts else Text("No commands or packages.", style="dim")
 
 
-def _count(number: int, noun: str) -> str:
-    return f"{number} {noun}{'' if number == 1 else 's'}"
-
-
-def summary(review: Review) -> Text:
-    """Counts the planned files by change, then the packages and commands.
-
-    Args:
-        review: The prepared review.
-
-    Returns:
-        One line for the screen's subtitle.
-    """
-    counts = Counter(
-        entry.change
-        for entry in review.entries
-        if not (entry.directory and entry.change is Change.EXISTS)
-    )
-    dependencies = review.manifest.dependencies
-    tasks = review.manifest.tasks
-    parts = [f"{counts[change]} {change.value}" for change in Change if counts[change]]
-    parts.append(
-        _count(
-            len(dependencies.dependencies)
-            + len(dependencies.dev_dependencies)
-            + len(dependencies.docs_dependencies),
-            "package",
-        )
-    )
-    parts.append(
-        _count(len(tasks.system_tasks) + len(tasks.post_install_tasks), "command")
-    )
-    proposals = review.prepared.proposals
-    if proposals:
-        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
-        changes = _count(len(proposals), "change") + " to your files"
-        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
-    return Text(" · ".join(parts))
-
-
-def _label(entry: Entry) -> Text:
-    name = entry.path.rsplit("/", 1)[-1] + ("/" if entry.directory else "")
-    marker = (
-        "" if entry.directory and entry.change is Change.EXISTS else entry.change.value
-    )
-    if entry.open and entry.change is not Change.CONFLICT:
-        marker += " · conflict"
-    elif any(c.reason is not ConflictReason.PROPOSED for c in entry.conflicts) and (
-        not entry.open
-    ):
-        marker += " · resolved"
-    if entry.proposals:
-        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in entry.proposals)
-        marker += f" · {kept}/{len(entry.proposals)} kept out" if kept else ""
-    # Color here means change, so only directories keep their kind's color.
-    return Text.assemble(
-        (name, _FOLDER if entry.directory else ""),
-        (f"  {marker}", _STYLES[entry.change]) if marker else "",
-    )
-
-
 def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
     return Group(
         Text(
@@ -475,8 +255,25 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
     ]
 
     def __init__(
-        self, draft: InitDraft, config: UserConfig, *, can_go_back: bool = False
+        self,
+        draft: InitDraft,
+        config: UserConfig,
+        *,
+        can_go_back: bool = False,
+        review: Review | None = None,
+        hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
     ) -> None:
+        """Create the screen.
+
+        Args:
+            draft: The draft to review.
+            config: The user's configuration.
+            can_go_back: Whether ``Esc`` returns to the recipe editor.
+            review: The draft's review, already prepared by the editor's
+                preview, shown at once instead of preparing it again.
+            hook_revisions: The registry snapshot the preview took; the
+                screen takes its own only when this is ``None``.
+        """
         super().__init__()
         self.draft = draft
         self.config = config
@@ -485,7 +282,8 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.review: Review | None = None
         self.commands: tuple[tuple[str, ...], ...] = ()
         self.choices: dict[str, ResolutionChoice] = {}
-        self._hook_revisions: tuple[ResolvedHookRevision, ...] | None = None
+        self._hook_revisions = hook_revisions
+        self._handed = review
         self._loading = True
         self._shown = False
 
@@ -572,7 +370,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.query_one("#conflict-choice").display = False
         self.query_one("#keep-all").display = False
         self.query_one("#trust-gate").display = False
-        self.prepare()
+        if self._handed is None:
+            self.prepare()
+            return
+        self._loading = False
+        self._shown = True
+        self._show(self._handed)
 
     @work(exclusive=True, group="review")
     async def prepare(self) -> None:
@@ -586,16 +389,16 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self._refresh_apply()
         draft = replace(self.draft, collision_strategy=self.strategy)
         try:
-            request, manifest = await asyncio.to_thread(_plan, draft, self.config)
+            request, manifest = await asyncio.to_thread(plan_draft, draft, self.config)
             if self._hook_revisions is None:
                 # One registry snapshot per review: execution writes the pins it shows.
                 self._hook_revisions = (
-                    await asyncio.to_thread(resolve_hook_revisions)
+                    await asyncio.to_thread(hook_snapshot)
                     if manifest.tooling.wants_hooks
                     else ()
                 )
             review = await asyncio.to_thread(
-                _prepare,
+                prepare_draft,
                 request,
                 manifest,
                 self.config,
@@ -632,7 +435,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         collisions = sorted(path.as_posix() for path in manifest.collisions)
         self.query_one("#collision-choice").display = bool(collisions)
         self.query_one("#collision-note", Static).update(
-            Text(f"Already in the workspace: {', '.join(collisions)}")
+            # The files tree names each one; the note only says how many.
+            Text(
+                f"{count(len(collisions), 'file')} already "
+                f"{'exists' if len(collisions) == 1 else 'exist'}. "
+                "Choose how Protostar writes into them."
+            )
         )
         self.query_one("#trust-gate").display = bool(commands)
         self.query_one("#trust-note", Static).update(_trust_text(commands))
@@ -655,10 +463,10 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                 folder = "/".join(parts[:index])
                 if folder not in nodes:
                     nodes[folder] = nodes[parent].add(
-                        Text(f"{parts[index - 1]}/", _FOLDER), expand=True
+                        Text(f"{parts[index - 1]}/", FOLDER), expand=True
                     )
                 parent = folder
-            label = _label(entry)
+            label = entry_label(entry)
             nodes[entry.path] = (
                 nodes[parent].add(label, entry, expand=True)
                 if entry.directory

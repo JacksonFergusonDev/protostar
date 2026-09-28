@@ -255,7 +255,8 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
                 )
             with Vertical(id="aside"):
                 with Panel("Preview", id="preview-panel"):
-                    yield PlanPreview(self.config)
+                    # A sync plans against recorded state; only init has a review.
+                    yield PlanPreview(self.config, prepare=self.command == "init")
                 with ActionBar(id="actions"):
                     yield Button(key_label("Cancel", "esc"), id="cancel")
                     yield Button(

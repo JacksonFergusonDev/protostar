@@ -61,7 +61,6 @@ VariableFields, MetadataFields, .field { height: auto; }
 #changes-summary.-error { color: $error; }
 #preview-summary.-error { color: $error; }
 #changes-diff { margin-top: 1; }
-#preview-collisions { color: $warning; }
 #template-status { height: auto; color: $text-muted; }
 
 /* --- Controls ---------------------------------------------------------- */
@@ -203,7 +202,7 @@ Footer { background: $panel; }
 
 #decisions, #collision-choice, #conflict-choice, #trust-gate { height: auto; }
 #decisions { margin-bottom: 1; }
-#collision-note { color: $warning; }
+#collision-note { color: $text-muted; }
 ChoiceGroup { height: auto; }
 
 /* --- Dialogs ----------------------------------------------------------- */

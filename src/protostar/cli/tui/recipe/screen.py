@@ -128,9 +128,9 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self._selected_template: TemplateInfo | _TemplateChoice | None = None
         # A recorded recipe already says what the project uses.
         self.analysis = None if draft.existing_recipe else draft.analysis
-        # Where each found tool was seen, and which hook runner a found one
+        # Which tools analysis found and which hook runner a found one
         # switched off, until the user changes that tool.
-        self.found: dict[Tool, str] = {}
+        self.found: set[Tool] = set()
         self.displaced: dict[Tool, Tool] = {}
         self._analyzed: set[Tool] = set()
         # Nothing blocks on these: the marker only says what to install.
@@ -148,7 +148,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         runner the found one replaces. A found tool whose prerequisite is off
         stays off, still marked found, rather than leaving the tools invalid.
         """
-        self.found = {item.tool: item.sources[0] for item in analysis.tools}
+        self.found = {item.tool for item in analysis.tools}
         added = {tool for tool in self.found if not self.enabled[tool]}
         for tool in added:
             self.overrides[tool] = True
@@ -174,7 +174,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
     def _forget(self, *tools: Tool) -> None:
         """The user decided these tools, so what analysis saw no longer shows."""
         for tool in tools:
-            self.found.pop(tool, None)
+            self.found.discard(tool)
             self.displaced.pop(tool, None)
 
     def _tiers(self) -> TemplateTiers | None:
@@ -221,7 +221,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
 
     def _source(self, tool: Tool, layer: SelectionLayer) -> str:
         if tool in self.found:
-            return f"found · {self.found[tool]}"
+            return "found"
         if tool in self.displaced:
             return f"off · {_NAMES[self.displaced[tool]]} found"
         return "your choice" if tool in self.overrides else _SOURCES[layer]
@@ -273,6 +273,8 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                                 tool,
                                 value=self.enabled[tool],
                                 id=f"tool-{tool}",
+                                found=self._evidence(tool),
+                                notes=self._tool_notes(tool),
                             )
                 yield Label("Git hook manager", classes="group")
                 for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
@@ -288,6 +290,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                                 tool,
                                 value=self.enabled[tool],
                                 id=f"tool-{tool}",
+                                found=self._evidence(tool),
                             )
                 yield Heading("Project details")
                 yield MetadataFields(self._metadata_defaults)
@@ -302,26 +305,39 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         yield Footer()
 
     def _notes(self) -> Text | None:
-        """Describe what analysis saw but left out, or ``None`` if nothing."""
+        """Name the files analysis could not read, or ``None`` if it read them all."""
         if not self.analysis:
             return None
-        lines: list[str] = []
+        lines = [
+            f"Could not read {note.path}; nothing was taken from it."
+            for note in self.analysis.notes
+            if note.kind is NoteKind.UNREADABLE
+        ]
+        return Text("\n".join(lines)) if lines else None
+
+    def _evidence(self, tool: Tool) -> tuple[str, ...]:
+        """Where analysis saw the project use ``tool``, for its ``i`` popup."""
+        if not self.analysis:
+            return ()
+        return next(
+            (item.sources for item in self.analysis.tools if item.tool is tool), ()
+        )
+
+    def _tool_notes(self, tool: Tool) -> tuple[str, ...]:
+        """What else analysis saw that concerns ``tool``, for its ``i`` popup."""
+        if tool is not Tool.CI or not self.analysis:
+            return ()
         workflows = [
             note.path
             for note in self.analysis.notes
             if note.kind is NoteKind.OTHER_WORKFLOW
         ]
-        if workflows:
-            lines.append(
-                f"Other workflows: {', '.join(workflows)}. "
-                f"{_NAMES[Tool.CI]} would add its own beside them."
-            )
-        lines.extend(
-            f"Could not read {note.path}; nothing was taken from it."
-            for note in self.analysis.notes
-            if note.kind is NoteKind.UNREADABLE
+        if not workflows:
+            return ()
+        return (
+            f"Other workflows: {', '.join(workflows)}. "
+            f"{_NAMES[Tool.CI]} adds its own beside them and leaves them alone.",
         )
-        return Text("\n".join(lines)) if lines else None
 
     def _template_select(self) -> Picker[TemplateInfo | _TemplateChoice]:
         options: list[tuple[Text, TemplateInfo | _TemplateChoice]] = [
@@ -647,4 +663,14 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             return
         draft = self._current_draft(variables)
         if self._check_draft(draft):
-            self.app.push_screen(ReviewScreen(draft, self.config, can_go_back=True))
+            preview = self.query_one(PlanPreview)
+            # The preview already prepared this draft: the review opens on it.
+            self.app.push_screen(
+                ReviewScreen(
+                    draft,
+                    self.config,
+                    can_go_back=True,
+                    review=preview.review_of(draft),
+                    hook_revisions=preview.hook_revisions,
+                )
+            )
