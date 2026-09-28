@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790560100041,
+  "lastUpdate": 1790560179705,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18263,6 +18263,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 704.69,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b37286b9a80d1e7e2087a28395f8c6cecc5bb0aa",
+          "message": "chore(deps): update github-actions (#170)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-09-27T18:46:19-07:00",
+          "tree_id": "5ea7b48942380da5932a12693ccb478e836d073a",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/b37286b9a80d1e7e2087a28395f8c6cecc5bb0aa"
+        },
+        "date": 1790560178555,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 282.21,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 934.29,
             "unit": "ms"
           }
         ]
