@@ -8,7 +8,8 @@ from typing import Any, cast
 import tomlkit
 import tomlkit.items
 from tomlkit.container import Container, OutOfOrderTableProxy
-from tomlkit.items import AoT, InlineTable, Table
+from tomlkit.items import AoT, InlineTable, Item, Table
+from tomlkit.toml_document import TOMLDocument
 
 from .errors import ConfigurationError
 from .intent import StructuredContribution, validate_configuration
@@ -42,8 +43,8 @@ class TomlLayout:
         extend: Places new sections of the merged AST into the original text.
     """
 
-    create: Callable[[Any, Callable[[str], None]], str]
-    extend: Callable[[str, Any, Callable[[str], None]], str]
+    create: Callable[[TOMLDocument, Callable[[str], None]], str]
+    extend: Callable[[str, TOMLDocument, Callable[[str], None]], str]
 
 
 @dataclass(frozen=True)
@@ -101,7 +102,7 @@ class AggregatedToml:
     """Semantic desired value paired with its comment-preserving TOML AST."""
 
     value: dict[str, Value]
-    document: Any
+    document: TOMLDocument
 
 
 @dataclass(frozen=True)
@@ -155,7 +156,7 @@ def aggregate_toml_document(
                 target[key] = {}
                 add_semantic(cast(dict[str, Value], target[key]), value, producer, keys)
 
-    def overlay_ast(target: Any, incoming: Any) -> None:
+    def overlay_ast(target: Table | Container, incoming: Table | Container) -> None:
         overlap_seen = False
         separator_added = False
         for key, value in incoming.items():
@@ -167,7 +168,9 @@ def aggregate_toml_document(
                 and not isinstance(target[key], AoT)
                 and not isinstance(value, AoT)
             ):
-                overlay_ast(target[key], value)
+                overlay_ast(
+                    cast(Table | Container, target[key]), cast(Table | Container, value)
+                )
             else:
                 if (
                     not existed
@@ -312,7 +315,7 @@ def _inline(member: dict[str, Value]) -> Value:
     return cast(Value, tomlkit.parse(f"member = {text}")["member"])
 
 
-def _dotted_key(ast: Any, key: str) -> bool:
+def _dotted_key(ast: Item | Container, key: str) -> bool:
     """Whether a table's member is spelled with dotted keys, ``key.a = 1``.
 
     A table spread over out-of-order headers is never dotted; its members cannot
@@ -432,7 +435,7 @@ def reconcile_toml(
     overwrite: bool = False,
     initializing: bool = False,
     missing_file: bool = False,
-    desired_ast: Any | None = None,
+    desired_ast: TOMLDocument | None = None,
     resolutions: Resolutions = NO_RESOLUTIONS,
     proposing: bool = False,
 ) -> TomlReconciliation:
@@ -504,8 +507,8 @@ def reconcile_toml(
         proposals = result.proposals
         preserved = result.preserved
 
-    def desired_node(keys: tuple[str, ...]) -> Any | None:
-        node = desired_ast
+    def desired_node(keys: tuple[str, ...]) -> Item | Container | None:
+        node: Any = desired_ast
         if node is None:
             return None
         try:
@@ -513,10 +516,14 @@ def reconcile_toml(
                 node = node[key]
         except (KeyError, TypeError):
             return None
-        return node
+        return cast(Item | Container | None, node)
 
     def place_styled(
-        ast: Any, keys: tuple[str, ...], key: str, styled: Any, value: Value
+        ast: Table | Container,
+        keys: tuple[str, ...],
+        key: str,
+        styled: Item | Container | OutOfOrderTableProxy,
+        value: Value,
     ) -> None:
         if not isinstance(styled, OutOfOrderTableProxy):
             ast[key] = deepcopy(styled)
@@ -539,7 +546,7 @@ def reconcile_toml(
             ast[key] = tomlkit.item(value)
 
     def patch(
-        ast: Any,
+        ast: Table | Container,
         before: dict[str, Value],
         after: dict[str, Value],
         keys: tuple[str, ...] = (),

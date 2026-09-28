@@ -132,7 +132,7 @@ def _codec(style: YamlStyle = DEFAULT_STYLE) -> YAML:
     return codec
 
 
-def _load(content: str) -> Any:
+def _load(content: str) -> CommentedMap:
     if len(content.encode("utf-8")) > _MAX_BYTES:
         raise _invalid()
     try:
@@ -170,12 +170,12 @@ def _load(content: str) -> Any:
             active.remove(id(node))
 
         visit(root, 0)
-        return _codec().load(content)
+        return cast(CommentedMap, _codec().load(content))
     except (YAMLError, ValueError, TypeError, RecursionError) as error:
         raise _invalid() from error
 
 
-def _plain(node: Any) -> Value:
+def _plain(node: object) -> Value:
     if isinstance(node, dict):
         return {str(key): _plain(value) for key, value in node.items()}
     if isinstance(node, list):
@@ -309,7 +309,7 @@ def validate_yaml_baseline(spec: YamlDocumentSpec, value: Value) -> None:
     keyed_view(spec, value, strict=True)
 
 
-def _identified(record: Any, sequence: KeyedSequence) -> bool:
+def _identified(record: object, sequence: KeyedSequence) -> bool:
     return (
         isinstance(record, dict)
         and isinstance(record.get(sequence.identity), str)
@@ -607,7 +607,7 @@ def reconcile_yaml(
 
     counts: dict[int, int] = {}
 
-    def count_refs(node: Any) -> None:
+    def count_refs(node: object) -> None:
         if not isinstance(node, (dict, list)) and not getattr(node, "anchor", None):
             return
         anchor = getattr(node, "anchor", None)
@@ -627,10 +627,10 @@ def reconcile_yaml(
 
     count_refs(doc)
 
-    def hazardous(node: Any) -> bool:
+    def hazardous(node: object) -> bool:
         return counts.get(id(node), 0) > 1 or bool(getattr(node, "merge", ()))
 
-    def contains_hazard(node: Any) -> bool:
+    def contains_hazard(node: object) -> bool:
         if hazardous(node):
             return True
         children = (

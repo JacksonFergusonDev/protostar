@@ -31,7 +31,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import tomlkit
-from tomlkit.items import AoT, Table
+from tomlkit.items import AoT, Item, Key, Table
+from tomlkit.toml_document import TOMLDocument
 
 logger = logging.getLogger("protostar")
 
@@ -151,7 +152,7 @@ def _split_tail(text: str) -> tuple[str, str]:
     return text[:cut], text[cut:]
 
 
-def _render(key_path: list[Any], item: Any) -> str:
+def _render(key_path: list[Key | str | None], item: Item) -> str:
     """Renders one item on its own, using only tomlkit's public API."""
     document = tomlkit.document()
     if len(key_path) == 1:
@@ -163,14 +164,14 @@ def _render(key_path: list[Any], item: Any) -> str:
     return tomlkit.dumps(document)
 
 
-def _decomposable(tool: Any) -> bool:
+def _decomposable(tool: Item) -> bool:
     """Whether [tool] is a plain table of tables that can be split per tool."""
     return isinstance(tool, Table) and all(
         key is None or isinstance(child, (Table, AoT)) for key, child in tool.value.body
     )
 
 
-def split_sections(document: Any) -> list[Section]:
+def split_sections(document: TOMLDocument) -> list[Section]:
     """Splits a parsed document into sections whose text joins back to the original."""
     sections: list[Section] = []
 
@@ -233,7 +234,7 @@ def format_sections(sections: list[Section]) -> str:
 
 
 def format_document(
-    document: Any, on_fallback: Callable[[str], None] | None = None
+    document: TOMLDocument, on_fallback: Callable[[str], None] | None = None
 ) -> str:
     """Formats a parsed pyproject.toml, or returns it unchanged if that is unsafe.
 
@@ -284,7 +285,9 @@ def insert_section(sections: list[Section], new: Section, index: int) -> None:
     sections.insert(index, new)
 
 
-def compose_children(document: Any, path: SectionPath, order: tuple[str, ...]) -> str:
+def compose_children(
+    document: TOMLDocument, path: SectionPath, order: tuple[str, ...]
+) -> str:
     """Rebuilds one table's text: its own keys, then each child table in ``order``.
 
     Children are rendered separately and joined by exactly one blank line, so the
@@ -292,7 +295,7 @@ def compose_children(document: Any, path: SectionPath, order: tuple[str, ...]) -
     ``order`` does not name follow, in their existing order. Comments inside a child
     stay with it. The document is consumed: its child tables are removed.
     """
-    parent = document
+    parent: Any = document
     for key in path:
         parent = parent[key]
     children = {k: parent[k] for k in list(parent) if isinstance(parent[k], Table)}
@@ -303,7 +306,7 @@ def compose_children(document: Any, path: SectionPath, order: tuple[str, ...]) -
     rank = {key: position for position, key in enumerate(order)}
     for key in sorted(children, key=lambda k: rank.get(k, len(order))):
         root = tomlkit.document()
-        holder: Any = root
+        holder: Table | TOMLDocument = root
         for name in path[:-1]:
             table = tomlkit.table(is_super_table=True)
             holder.append(name, table)
@@ -452,7 +455,9 @@ def _keyless(path: SectionPath) -> bool:
 
 
 def place_new_sections(
-    original: str, merged: Any, on_fallback: Callable[[str], None] | None = None
+    original: str,
+    merged: TOMLDocument,
+    on_fallback: Callable[[str], None] | None = None,
 ) -> str:
     """Dumps a merged document, placing every table the merge added by the spec.
 
