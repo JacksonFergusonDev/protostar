@@ -1,6 +1,7 @@
 """Read-only review/apply parity and captured-input acceptance for Stage 2 PR 2."""
 
 import dataclasses
+import hashlib
 import stat
 import sys
 import tomllib
@@ -9,9 +10,11 @@ from pathlib import Path
 import pytest
 import tomlkit
 
+from protostar import __version__
 from protostar.config import UserConfig
 from protostar.errors import (
     CommandExecutionError,
+    ConfigurationError,
     StaleReviewError,
     UnsupportedFilesystemNodeError,
 )
@@ -21,7 +24,13 @@ from protostar.manifest import EnvironmentManifest, HookRunner
 from protostar.preparation import deleted, prepare_review
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
 from protostar.registry import PinProvenance, RemoteHook, ResolvedHookRevision
-from protostar.sync_state import deserialize_state
+from protostar.sync_state import (
+    FilePolicy,
+    FileState,
+    SyncState,
+    deserialize_state,
+    serialize_state,
+)
 
 
 def after(edit):
@@ -481,4 +490,57 @@ def test_changed_desired_manifest_rejects_prepared_review(
     with pytest.raises(StaleReviewError):
         executor.execute()
     assert not executor.journal.touched_paths
+    assert snapshot(tmp_path) == before
+
+
+def test_review_workspace_normalize_path(tmp_path: Path):
+    from protostar.errors import SecurityViolationError
+    from protostar.review_workspace import ReviewWorkspace
+
+    ws = ReviewWorkspace(tmp_path)
+    (tmp_path / "sub").mkdir()
+
+    assert (
+        ws.normalize_path(Path("sub/file.txt"))
+        == (tmp_path / "sub" / "file.txt").resolve()
+    )
+    assert (
+        ws.normalize_path(Path("protostar.lock"))
+        == (tmp_path / "protostar.lock").resolve()
+    )
+    assert (
+        ws.normalize_path(tmp_path / "sub" / "file.txt")
+        == (tmp_path / "sub" / "file.txt").resolve()
+    )
+
+    with pytest.raises(SecurityViolationError):
+        ws.normalize_path(Path("sub/../../outside.txt"))
+
+    with pytest.raises(SecurityViolationError):
+        ws.normalize_path(Path("/etc/passwd"))
+
+
+@pytest.mark.parametrize("directory", [".git", ".GIT", "git~1"])
+def test_review_rejects_git_seed_in_committed_state(tmp_path, monkeypatch, directory):
+    monkeypatch.chdir(tmp_path)
+    path = f"{directory}/hooks/pre-commit"
+    target = tmp_path / path
+    target.parent.mkdir(parents=True)
+    target.write_bytes(b"local hook\n")
+    state = SyncState(
+        __version__,
+        files=(
+            FileState(
+                path,
+                FilePolicy.SEED,
+                digest=hashlib.sha256(target.read_bytes()).hexdigest(),
+            ),
+        ),
+    )
+    (tmp_path / "protostar.lock").write_text(serialize_state(state))
+    before = snapshot(tmp_path)
+
+    with pytest.raises(ConfigurationError, match="Unsupported contribution target"):
+        prepare_review(EnvironmentManifest(), UserConfig())
+
     assert snapshot(tmp_path) == before

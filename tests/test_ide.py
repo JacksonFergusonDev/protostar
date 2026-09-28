@@ -1,8 +1,9 @@
-import subprocess
-from unittest.mock import MagicMock
+import pytest
 
+from protostar.errors import CommandTimeoutError, ProcessTerminationError
 from protostar.ide import IDEType, check_ide_extensions
 from protostar.manifest import Severity
+from protostar.system import ProcessRunner
 
 
 def test_ide_type_enum_properties():
@@ -11,11 +12,29 @@ def test_ide_type_enum_properties():
     assert IDEType.NONE.binary_name is None
 
 
+def test_ide_extension_probe_propagates_termination_failure(mocker, progress):
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
+    runner = ProcessRunner()
+    error = ProcessTerminationError(123, "process remained active")
+    mocker.patch.object(runner, "run", side_effect=error)
+    diagnostic = mocker.Mock()
+
+    with pytest.raises(ProcessTerminationError) as caught:
+        check_ide_extensions(
+            IDEType.VSCODE,
+            {"charliermarsh.ruff"},
+            diagnostic,
+            process_runner=runner,
+            progress=progress,
+        )
+
+    assert caught.value is error
+    diagnostic.assert_not_called()
+
+
 def test_ide_extension_check_with_enum(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mock_result = MagicMock()
-    mock_result.stdout = "charliermarsh.ruff\n"
-    mocker.patch("protostar.ide.subprocess.run", return_value=mock_result)
+    mocker.patch.object(ProcessRunner, "run", return_value="charliermarsh.ruff\n")
     diagnostics = []
 
     check_ide_extensions(
@@ -33,11 +52,11 @@ def test_ide_extension_check_with_enum(mocker):
 def test_ide_extension_probe_runs_inside_a_step(mocker, progress):
     """The IDE CLI probe is bracketed by a progress step."""
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mocker.patch(
-        "protostar.ide.subprocess.run",
+    mocker.patch.object(
+        ProcessRunner,
+        "run",
         side_effect=lambda *_, **__: (
-            progress.events.append(("run", ""))
-            or MagicMock(stdout="charliermarsh.ruff\n")
+            progress.events.append(("run", "")) or "charliermarsh.ruff\n"
         ),
     )
 
@@ -58,9 +77,10 @@ def test_ide_extension_probe_runs_inside_a_step(mocker, progress):
 def test_ide_extension_probe_failure_completes_the_step(mocker, progress):
     """A crashed probe is a skip diagnostic, so its step completes rather than fails."""
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mocker.patch(
-        "protostar.ide.subprocess.run",
-        side_effect=subprocess.TimeoutExpired(["code"], 5),
+    mocker.patch.object(
+        ProcessRunner,
+        "run",
+        side_effect=CommandTimeoutError(["code"], 5),
     )
     diagnostics = []
 
@@ -119,7 +139,7 @@ def test_ide_extension_check_bypassed_if_none_enum(mocker):
 
 def test_ide_extension_check_bypassed_if_binary_missing(mocker):
     mock_which = mocker.patch("protostar.ide.find_executable", return_value=None)
-    mock_run = mocker.patch("protostar.ide.subprocess.run")
+    mock_run = mocker.patch.object(ProcessRunner, "run")
     diagnostics = []
 
     check_ide_extensions(
@@ -136,11 +156,11 @@ def test_ide_extension_check_bypassed_if_binary_missing(mocker):
 def test_ide_extension_check_succeeds_without_warnings(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/cursor")
 
-    mock_result = MagicMock()
-    mock_result.stdout = (
-        "charliermarsh.ruff\nms-python.mypy-type-checker\nsome-other-ext\n"
+    mock_run = mocker.patch.object(
+        ProcessRunner,
+        "run",
+        return_value="charliermarsh.ruff\nms-python.mypy-type-checker\nsome-other-ext\n",
     )
-    mock_run = mocker.patch("protostar.ide.subprocess.run", return_value=mock_result)
     diagnostics = []
 
     check_ide_extensions(
@@ -151,9 +171,6 @@ def test_ide_extension_check_succeeds_without_warnings(mocker):
 
     mock_run.assert_called_once_with(
         ["/usr/local/bin/cursor", "--list-extensions"],
-        capture_output=True,
-        text=True,
-        check=True,
         timeout=5,
     )
     assert diagnostics == []
@@ -162,9 +179,7 @@ def test_ide_extension_check_succeeds_without_warnings(mocker):
 def test_ide_extension_check_flags_missing_extensions(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
 
-    mock_result = MagicMock()
-    mock_result.stdout = "charliermarsh.ruff\n"
-    mocker.patch("protostar.ide.subprocess.run", return_value=mock_result)
+    mocker.patch.object(ProcessRunner, "run", return_value="charliermarsh.ruff\n")
     diagnostics = []
 
     check_ide_extensions(
@@ -181,9 +196,10 @@ def test_ide_extension_check_flags_missing_extensions(mocker):
 
 def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mocker.patch(
-        "protostar.ide.subprocess.run",
-        side_effect=subprocess.TimeoutExpired(cmd="code", timeout=5),
+    mocker.patch.object(
+        ProcessRunner,
+        "run",
+        side_effect=CommandTimeoutError(["code"], 5),
     )
     diagnostics = []
 
@@ -201,9 +217,10 @@ def test_ide_extension_check_adds_skip_diagnostic_on_subprocess_error(mocker):
 
 def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mock_run = mocker.patch("protostar.ide.subprocess.run")
-    mock_run.return_value = MagicMock(
-        stdout="ms-python.mypy-type-checker\nother.extension\n"
+    mocker.patch.object(
+        ProcessRunner,
+        "run",
+        return_value="ms-python.mypy-type-checker\nother.extension\n",
     )
     diagnostics = []
 
@@ -218,8 +235,11 @@ def test_ide_extension_check_satisfies_primary_in_tuple(mocker):
 
 def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mock_run = mocker.patch("protostar.ide.subprocess.run")
-    mock_run.return_value = MagicMock(stdout="matangover.mypy\nother.extension\n")
+    mocker.patch.object(
+        ProcessRunner,
+        "run",
+        return_value="matangover.mypy\nother.extension\n",
+    )
     diagnostics = []
 
     check_ide_extensions(
@@ -233,8 +253,11 @@ def test_ide_extension_check_satisfies_fallback_in_tuple(mocker):
 
 def test_ide_extension_check_fails_missing_tuple(mocker):
     mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
-    mock_run = mocker.patch("protostar.ide.subprocess.run")
-    mock_run.return_value = MagicMock(stdout="charliermarsh.ruff\nother.extension\n")
+    mocker.patch.object(
+        ProcessRunner,
+        "run",
+        return_value="charliermarsh.ruff\nother.extension\n",
+    )
     diagnostics = []
 
     check_ide_extensions(
@@ -251,3 +274,22 @@ def test_ide_extension_check_fails_missing_tuple(mocker):
     assert sev == Severity.WARNING
     assert "ms-python.mypy-type-checker or matangover.mypy" in msg
     assert "charliermarsh.ruff" not in msg
+
+
+def test_ide_extension_check_uses_provided_process_runner(mocker):
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
+    runner = ProcessRunner()
+    mock_run = mocker.patch.object(runner, "run", return_value="charliermarsh.ruff\n")
+    diagnostics = []
+
+    check_ide_extensions(
+        ide="vscode",
+        ide_extensions={"charliermarsh.ruff"},
+        on_diagnostic=lambda msg, sev: diagnostics.append((msg, sev)),
+        process_runner=runner,
+    )
+
+    mock_run.assert_called_once_with(
+        ["/usr/local/bin/code", "--list-extensions"], timeout=5
+    )
+    assert diagnostics == []

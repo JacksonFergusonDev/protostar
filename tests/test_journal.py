@@ -149,6 +149,15 @@ def test_journal_rejects_path_outside_workspace(tmp_path: Path) -> None:
         journal.record_mutation(tmp_path / "outside.txt")
 
 
+def test_journal_rejects_relative_traversal_escape(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    (workspace / "sub").mkdir(parents=True)
+    journal = MutationJournal(workspace)
+
+    with pytest.raises(SecurityViolationError):
+        journal.normalize_path(Path("sub/../../outside.txt"))
+
+
 def test_journal_restores_original_mode(tmp_path: Path) -> None:
     target = tmp_path / "script.sh"
     target.write_text("original")

@@ -7,11 +7,11 @@ import stat
 from pathlib import Path
 
 from .errors import (
-    SecurityViolationError,
     TransactionStateError,
     UnsupportedFilesystemNodeError,
 )
 from .fs import atomic_write_bytes
+from .security import enforce_path_jail
 
 __all__ = [
     "MutationJournal",
@@ -105,13 +105,7 @@ class MutationJournal:
 
     def normalize_path(self, path: Path) -> Path:
         """Returns an absolute path without dereferencing its final component."""
-        candidate = path if path.is_absolute() else self._workspace_root / path
-        normalized = Path(candidate.absolute())
-        if not normalized.is_relative_to(self._workspace_root):
-            raise SecurityViolationError(
-                f"SECURITY VIOLATION: Transaction path escapes the workspace: {path}"
-            )
-        return normalized
+        return enforce_path_jail(path, self._workspace_root, dereference_leaf=False)
 
     def _format_display_path(self, path: Path, is_dir: bool = False) -> str:
         try:

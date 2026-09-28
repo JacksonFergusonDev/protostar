@@ -1,11 +1,12 @@
 """IDE extension verification."""
 
 import enum
-import subprocess
 from collections.abc import Callable
 
+from .errors import ProcessTerminationError
 from .manifest import Severity
 from .progress import ProgressStep, no_progress
+from .system import ProcessRunner
 from .system_deps import find_executable
 
 __all__ = ["IDEType", "check_ide_extensions"]
@@ -33,6 +34,7 @@ def check_ide_extensions(
     ide: IDEType | str | None,
     ide_extensions: set[str | tuple[str, ...]],
     on_diagnostic: Callable[[str, Severity], None],
+    process_runner: ProcessRunner | None = None,
     progress: ProgressStep = no_progress,
 ) -> None:
     """Verifies that the configured IDE has the recommended extensions installed.
@@ -45,6 +47,8 @@ def check_ide_extensions(
         ide_extensions: Set of required extension IDs or alternatives tuple.
         on_diagnostic: Callback invoked with (message, severity) when extensions are missing
             or check fails.
+        process_runner: Subprocess runner for executing the IDE CLI in an isolated process group.
+            If None, a default runner is created.
         progress: Brackets the IDE CLI probe, which runs only when the CLI is installed.
             A failed probe is reported as a skip and still completes the step.
     """
@@ -64,18 +68,14 @@ def check_ide_extensions(
     if ide_path is None:
         return
 
+    runner = process_runner or ProcessRunner()
+
     # A failed probe is a skip, not a failure, so it completes the step.
     with progress("Checking editor extensions"):
         try:
-            result = subprocess.run(
-                [ide_path, "--list-extensions"],
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=5,
-            )
+            stdout = runner.run([ide_path, "--list-extensions"], timeout=5)
             # Normalize to lowercase for safe diffing
-            installed = {ext.lower() for ext in result.stdout.strip().splitlines()}
+            installed = {ext.lower() for ext in stdout.strip().splitlines()}
             missing = []
 
             for ext_req in ide_extensions:
@@ -91,6 +91,9 @@ def check_ide_extensions(
                     f"Missing recommended {ide_type.value} extensions: {', '.join(missing)}",
                     Severity.WARNING,
                 )
+        except ProcessTerminationError:
+            # An unreaped process must stop execution, even for an optional probe.
+            raise
         except Exception as e:
             # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
             on_diagnostic(

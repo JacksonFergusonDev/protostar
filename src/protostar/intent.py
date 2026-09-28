@@ -7,11 +7,12 @@ import re
 import tomllib
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import PureWindowsPath
 from typing import Any
 
 from .errors import ConfigurationError
 from .options import Condition
+from .security import is_safe_relative_path, names_git_directory
 
 
 class TemplateOrigin(StrEnum):
@@ -169,34 +170,17 @@ class AppendContribution:
         return {"id": self.id, "tag": self.tag, "content": self.content}
 
 
-def _names_git_directory(part: str) -> bool:
-    """Returns whether a path component names the repository's ``.git``.
-
-    Case-insensitive filesystems (macOS, Windows) map ``.GIT`` onto it, Windows
-    drops trailing dots and spaces, and ``GIT~1`` is its 8.3 short name.
-    """
-    name = part.rstrip(". ").lower()
-    return name == ".git" or name == "git~1"
-
-
 def validate_target(path: str) -> None:
     """Rejects escaping targets, the reserved engine state paths, and ``.git/``.
 
     Git runs what ``.git/`` configures (``core.fsmonitor``, hooks, aliases), so
     no contribution may write there.
     """
-    target = Path(path)
-    posix = PurePosixPath(path)
     win = PureWindowsPath(path)
     if (
-        target.is_absolute()
-        or posix.is_absolute()
-        or bool(win.drive)
-        or bool(win.root)
-        or ".." in target.parts
-        or not target.parts
-        or any(part in ("protostar.lock", "uv.lock") for part in target.parts)
-        or any(_names_git_directory(part) for part in win.parts)
+        not is_safe_relative_path(path)
+        or any(part in ("protostar.lock", "uv.lock") for part in win.parts)
+        or any(names_git_directory(part) for part in win.parts)
     ):
         raise ConfigurationError(
             f"Unsupported contribution target '{path}'.",
