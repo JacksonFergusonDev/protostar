@@ -16,6 +16,7 @@ from protostar.system import (
     get_git_config,
     shield_sigint,
 )
+from protostar.system_deps import UV_NETWORK_HINT
 
 
 def _mock_process(mocker, *, returncode=0, output=("out", "err")):
@@ -55,6 +56,29 @@ def test_process_runner_failure_preserves_output(mocker):
     assert exc_info.value.stdout == "out"
     assert exc_info.value.stderr == "err"
     assert exc_info.value.returncode == 1
+
+
+def test_a_uv_network_failure_carries_a_hint(mocker):
+    stderr = (
+        "error: Request failed\n  cause: client error (Connect)\n  cause: dns error\n"
+    )
+    process = _mock_process(mocker, returncode=2, output=("", stderr))
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+
+    with pytest.raises(CommandExecutionError) as exc_info:
+        ProcessRunner().run(["uv", "add", "httpx"])
+
+    assert exc_info.value.hint == UV_NETWORK_HINT
+
+
+def test_an_ordinary_command_failure_carries_no_hint(mocker):
+    process = _mock_process(mocker, returncode=1, output=("out", "err"))
+    mocker.patch("protostar.system.subprocess.Popen", return_value=process)
+
+    with pytest.raises(CommandExecutionError) as exc_info:
+        ProcessRunner().run(["uv", "add", "nonexistent"])
+
+    assert exc_info.value.hint is None
 
 
 def test_process_runner_sanitizes_environment(mocker, monkeypatch):

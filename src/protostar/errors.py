@@ -406,10 +406,11 @@ class CommandExecutionError(ProtostarError):
         stdout: str = "",
         stderr: str = "",
         *,
+        hint: str | None = None,
         docs_path: DocsPage | None = None,
     ) -> None:
         message = f"Protostar failed to execute command: {' '.join(command)}"
-        super().__init__(message, docs_path=docs_path)
+        super().__init__(message, hint=hint, docs_path=docs_path)
         self.command = command
         self.returncode = returncode
         self.stdout = stdout

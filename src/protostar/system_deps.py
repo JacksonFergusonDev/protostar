@@ -246,6 +246,38 @@ def _single(
     return InstallCommand((f"{manager.install_prefix} {packages}",), reload_shell)
 
 
+# uv's cause chain for a request that never reached a server: a failed DNS
+# lookup, a refused or dropped connection, or a timeout while connecting.
+_UV_CONNECT_FAILURES = ("client error (Connect)", "dns error", "tcp connect error")
+
+UV_NETWORK_HINT = (
+    "uv couldn't reach the network. Check your connection, and any proxy or "
+    "package index settings, then run the command again. If every package is "
+    "already in uv's cache, setting UV_OFFLINE=1 lets uv work from it."
+)
+"""What to do when uv fails because it couldn't connect."""
+
+
+def network_failure_hint(command: Sequence[str], output: str) -> str | None:
+    """Returns a hint when a failed uv command couldn't reach the network.
+
+    Only a request that never reached a server counts: an index that answered
+    with an error, or a resolution that failed, is a different problem.
+
+    Args:
+        command: The command as Protostar ran it, before ``PATH`` lookup.
+        output: What the command wrote to stdout and stderr.
+
+    Returns:
+        ``UV_NETWORK_HINT`` for a uv connection failure, else ``None``.
+    """
+    if not command or command[0] != GlobalExecutable.UV:
+        return None
+    if any(failure in output for failure in _UV_CONNECT_FAILURES):
+        return UV_NETWORK_HINT
+    return None
+
+
 def check_required_executables() -> None:
     """Raises when an executable Protostar itself needs is not on ``PATH``.
 

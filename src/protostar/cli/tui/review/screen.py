@@ -38,7 +38,6 @@ from protostar.merge import (
     default_choice,
     describe_location,
 )
-from protostar.registry import ResolvedHookRevision
 
 from ..app import DecisionApp
 from ..chrome import Heading, Headline, Masthead, Panel
@@ -61,8 +60,10 @@ from ..keys import (
 )
 from .model import (
     FOLDER,
+    NETWORK_NOTE,
     Change,
     Entry,
+    HookSnapshot,
     Review,
     count,
     entry_label,
@@ -261,7 +262,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         *,
         can_go_back: bool = False,
         review: Review | None = None,
-        hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
+        hooks: HookSnapshot | None = None,
     ) -> None:
         """Create the screen.
 
@@ -271,8 +272,8 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             can_go_back: Whether ``Esc`` returns to the recipe editor.
             review: The draft's review, already prepared by the editor's
                 preview, shown at once instead of preparing it again.
-            hook_revisions: The registry snapshot the preview took; the
-                screen takes its own only when this is ``None``.
+            hooks: The registry snapshot the preview took; the screen takes
+                its own only when this is ``None``.
         """
         super().__init__()
         self.draft = draft
@@ -282,7 +283,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.review: Review | None = None
         self.commands: tuple[tuple[str, ...], ...] = ()
         self.choices: dict[str, ResolutionChoice] = {}
-        self._hook_revisions = hook_revisions
+        self._hooks = hooks
         self._handed = review
         self._loading = True
         self._shown = False
@@ -299,6 +300,7 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                     Panel("Commands & packages", id="steps-panel"),
                     VerticalScroll(id="steps"),
                 ):
+                    yield Static(Text(NETWORK_NOTE), id="network-note")
                     yield Static("", id="steps-list")
             with Vertical(id="diff-column"):
                 with Panel("Diff", id="diff-panel"), VerticalScroll(id="diff-pane"):
@@ -390,19 +392,16 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         draft = replace(self.draft, collision_strategy=self.strategy)
         try:
             request, manifest = await asyncio.to_thread(plan_draft, draft, self.config)
-            if self._hook_revisions is None:
-                # One registry snapshot per review: execution writes the pins it shows.
-                self._hook_revisions = (
-                    await asyncio.to_thread(hook_snapshot)
-                    if manifest.tooling.wants_hooks
-                    else ()
-                )
+            if self._hooks is None:
+                # One registry snapshot per review: execution writes the pins
+                # it shows. Taken even without hooks, to warn when offline.
+                self._hooks = await asyncio.to_thread(hook_snapshot)
             review = await asyncio.to_thread(
                 prepare_draft,
                 request,
                 manifest,
                 self.config,
-                self._hook_revisions,
+                self._hooks.pins(manifest),
                 dict(self.choices),
             )
         except ProtostarError as exc:
@@ -444,6 +443,9 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         )
         self.query_one("#trust-gate").display = bool(commands)
         self.query_one("#trust-note", Static).update(_trust_text(commands))
+        self.query_one("#network-note").display = bool(
+            self._hooks and self._hooks.unreachable
+        )
         self.query_one("#steps-list", Static).update(steps_text(manifest))
         self._status(summary(review))
         self.query_one("#keep-all").display = bool(self._keepable())

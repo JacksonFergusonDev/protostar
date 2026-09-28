@@ -1,5 +1,6 @@
 import json
 import urllib.error
+from email.message import Message
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,6 +11,7 @@ from protostar.registry import (
     HookRegistry,
     RemoteHook,
     clear_hook_registry_cache,
+    hook_registry_unreachable,
 )
 
 
@@ -223,3 +225,55 @@ def test_plan_phase_makes_zero_network_requests(mocker):
     assert manifest is not None
     # No network requests must be made during plan()
     assert mock_urlopen.call_count == 0
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        urllib.error.URLError(OSError("nodename nor servname provided")),
+        TimeoutError("timed out"),
+        ConnectionResetError("reset mid-read"),
+    ],
+)
+def test_a_fetch_that_never_connects_is_unreachable(mocker, error):
+    mocker.patch("urllib.request.urlopen", side_effect=error)
+
+    assert hook_registry_unreachable()
+    rev = HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    assert rev == DEFAULT_REVISIONS[RemoteHook.PRE_COMMIT_HOOKS]
+
+
+def test_a_registry_that_answers_with_an_error_is_reachable(mocker):
+    error = urllib.error.HTTPError(
+        "https://example.invalid", 503, "Unavailable", Message(), None
+    )
+    mocker.patch("urllib.request.urlopen", side_effect=error)
+
+    assert not hook_registry_unreachable()
+
+
+def test_an_unreadable_registry_is_reachable(mocker):
+    mock_response = MagicMock()
+    mock_response.read.return_value = b"invalid json"
+    mock_urlopen = mocker.patch("urllib.request.urlopen")
+    mock_urlopen.return_value.__enter__.return_value = mock_response
+
+    assert not hook_registry_unreachable()
+
+
+def test_offline_registry_mode_is_not_unreachable(mocker, monkeypatch):
+    monkeypatch.setenv("PROTOSTAR_OFFLINE_HOOK_REGISTRY", "1")
+    urlopen = mocker.patch("urllib.request.urlopen")
+
+    assert not hook_registry_unreachable()
+    urlopen.assert_not_called()
+
+
+def test_reachability_shares_the_one_fetch(mocker):
+    urlopen = mocker.patch(
+        "urllib.request.urlopen", side_effect=urllib.error.URLError("down")
+    )
+
+    HookRegistry.get_revision(RemoteHook.PRE_COMMIT_HOOKS)
+    assert hook_registry_unreachable()
+    urlopen.assert_called_once()

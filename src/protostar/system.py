@@ -10,7 +10,11 @@ from contextlib import contextmanager
 from typing import Any
 
 from .errors import CommandExecutionError, CommandTimeoutError, ProcessTerminationError
-from .system_deps import NO_CURRENT_DIRECTORY_SEARCH, find_executable
+from .system_deps import (
+    NO_CURRENT_DIRECTORY_SEARCH,
+    find_executable,
+    network_failure_hint,
+)
 
 logger = logging.getLogger("protostar")
 
@@ -173,6 +177,7 @@ class ProcessRunner:
                 returncode=process.returncode,
                 stdout=stdout,
                 stderr=stderr,
+                hint=network_failure_hint(cmd, f"{stdout}\n{stderr}"),
             )
         return stdout or ""
 

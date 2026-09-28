@@ -1289,11 +1289,39 @@ async def test_the_editor_takes_the_hook_snapshot_as_it_opens(mocker):
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
         take.assert_called_once()
-        assert app.screen.query_one(PlanPreview).hook_revisions is None
+        assert app.screen.query_one(PlanPreview).hooks.revisions == ()
         app.screen.query_one("#tool-prek", RadioButton).value = True
         await settle(pilot)
-        assert app.screen.query_one(PlanPreview).hook_revisions == ()
     take.assert_called_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("unreachable", [True, False])
+async def test_the_editor_and_review_warn_when_offline(mocker, unreachable):
+    mocker.patch(
+        "protostar.cli.tui.review.model.hook_registry_unreachable",
+        return_value=unreachable,
+    )
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert app.screen.query_one("#preview-network").display is unreachable
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        assert isinstance(app.screen, ReviewScreen)
+        assert app.screen.query_one("#network-note").display is unreachable
+
+
+@pytest.mark.asyncio
+async def test_a_review_on_its_own_warns_when_offline(mocker):
+    # Without hooks, the review still takes the snapshot, to learn it is offline.
+    mocker.patch(
+        "protostar.cli.tui.review.model.hook_registry_unreachable", return_value=True
+    )
+    app = make_review(config=UserConfig(pre_commit=False, prek=False))
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert app.screen.query_one("#network-note").display
 
 
 @pytest.mark.asyncio

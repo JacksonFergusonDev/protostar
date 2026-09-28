@@ -60,6 +60,7 @@ VariableFields, MetadataFields, .field { height: auto; }
 #preview-summary, #changes-summary { color: $text-muted; }
 #changes-summary.-error { color: $error; }
 #preview-summary.-error { color: $error; }
+#preview-network, #network-note { color: $warning; margin-bottom: 1; }
 #changes-diff { margin-top: 1; }
 #template-status { height: auto; color: $text-muted; }
 
