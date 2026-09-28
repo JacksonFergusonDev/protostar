@@ -3,6 +3,7 @@
 import enum
 from collections.abc import Callable
 
+from .errors import ProcessTerminationError
 from .manifest import Severity
 from .progress import ProgressStep, no_progress
 from .system import ProcessRunner
@@ -90,6 +91,9 @@ def check_ide_extensions(
                     f"Missing recommended {ide_type.value} extensions: {', '.join(missing)}",
                     Severity.WARNING,
                 )
+        except ProcessTerminationError:
+            # An unreaped process must stop execution, even for an optional probe.
+            raise
         except Exception as e:
             # Reached if the CLI crashes, hangs past 5s, or throws an unexpected I/O error.
             on_diagnostic(

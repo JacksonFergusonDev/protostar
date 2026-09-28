@@ -1,4 +1,6 @@
-from protostar.errors import CommandTimeoutError
+import pytest
+
+from protostar.errors import CommandTimeoutError, ProcessTerminationError
 from protostar.ide import IDEType, check_ide_extensions
 from protostar.manifest import Severity
 from protostar.system import ProcessRunner
@@ -8,6 +10,26 @@ def test_ide_type_enum_properties():
     assert IDEType.VSCODE.binary_name == "code"
     assert IDEType.CURSOR.binary_name == "cursor"
     assert IDEType.NONE.binary_name is None
+
+
+def test_ide_extension_probe_propagates_termination_failure(mocker, progress):
+    mocker.patch("protostar.ide.find_executable", return_value="/usr/local/bin/code")
+    runner = ProcessRunner()
+    error = ProcessTerminationError(123, "process remained active")
+    mocker.patch.object(runner, "run", side_effect=error)
+    diagnostic = mocker.Mock()
+
+    with pytest.raises(ProcessTerminationError) as caught:
+        check_ide_extensions(
+            IDEType.VSCODE,
+            {"charliermarsh.ruff"},
+            diagnostic,
+            process_runner=runner,
+            progress=progress,
+        )
+
+    assert caught.value is error
+    diagnostic.assert_not_called()
 
 
 def test_ide_extension_check_with_enum(mocker):
