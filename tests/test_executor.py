@@ -412,8 +412,7 @@ def test_executor_skips_docker_artifacts_on_collision(mocker, mock_config):
     assert Path(".dockerignore") in written_paths
     assert Path("Dockerfile") not in written_paths
     assert any(
-        "Preserving local contribution in Dockerfile" in d.message
-        for d in executor.diagnostics
+        "Kept your version of Dockerfile" in d.message for d in executor.diagnostics
     )
 
 
@@ -1397,7 +1396,7 @@ def test_executor_write_ci_workflow_leaves_foreign_workflow_merge(
     assert executor.diagnostics
     assert all(d.phase == DiagnosticPhase.EXECUTOR for d in executor.diagnostics)
     assert all(d.severity == Severity.WARNING for d in executor.diagnostics)
-    assert any("ci.yml: jobs.test" in d.message for d in executor.diagnostics)
+    assert any("ci.yml at jobs.test" in d.message for d in executor.diagnostics)
 
 
 def test_executor_write_ci_workflow_overwrite_keeps_foreign_job(

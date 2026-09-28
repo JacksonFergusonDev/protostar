@@ -93,6 +93,7 @@ Full contract: `docs/developer/built-in-templates.md`. Invariants when touching 
 - **Text from templates, users, or the filesystem is data.** Render it as `rich.text.Text` or with `rich.markup.escape()`. Never interpolate it into markup.
 - **Decorative symbols go through `ui.glyph(symbol, ascii_fallback)`** (`src/protostar/cli/ui.py`). Windows encodes redirected stdout as cp1252. `main()` calls `ui.replace_unencodable_output()`, so characters it can't encode print as `?` instead of crashing, but a bare `✓` would then read as `?`.
 - **Test new output against a strict cp1252 stream** (see `tests/test_legacy_encoding.py`). macOS and Linux runs never hit this; only the Windows CI smoke jobs do.
+- **Decisions read in plain words.** Reason codes (`diverged`, `retracted`, …) and bare choice names (`local`, `desired`) are for JSON only. Every screen that shows a conflict, proposal, or kept edit takes its sentence from `cli/decisions.py`, says what happens by default, and prints the full `--resolve` command for each choice. Don't show engine vocabulary (ownership, provenance, resolver footprint) in human output.
 
 ### 8. Template Variables Are Not Secrets
 
@@ -213,7 +214,8 @@ Scale or omit these sections based on the scope of the PR.
 
 - `src/protostar/cli/tui/`: Decision-only Textual app (recipe editor, change review, sync conflict resolution, and the configuration form), accessed by the CLI exclusively through the lazy `launch.py` entry point.
 - `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
-- `src/protostar/cli/changes.py`: What init changes: the `Review` model (plan, prepare, classify each path) and its Rich renderers, shared by the recipe preview, the change review, and `init --dry-run`.
+- `src/protostar/cli/decisions.py`: How a decision reads in plain words: one sentence per conflict reason, the TUI's short tags, and the lines `status`, `diff`, `sync`, and `init --dry-run` print with the command for each choice.
+- `src/protostar/cli/changes.py`: What init changes: the `Review` model (plan, prepare, classify each path) and its Rich renderers, shared by the recipe preview, the change review, and `init --dry-run`. `sync`, `status`, and `diff` draw their pending paths with the same `classify` and `entry_tree`.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).
 - `src/protostar/config_edit.py`: The configuration form's save: applies its values to the file's text through `tomlkit`, writing only keys whose value changed. Pure; the CLI writes the result after the form exits, and never touches Git's configuration.
 - `src/protostar/init_draft.py`: Shared init draft and resolver for flags and interactive choices.

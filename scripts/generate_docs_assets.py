@@ -32,6 +32,7 @@ from protostar.cli.changes import (
     print_dry_run,
 )
 from protostar.cli.palette import ANSI
+from protostar.cli.reviews import handle_review
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
@@ -1192,6 +1193,77 @@ def generate_cli_missing_tools_svg() -> None:
         protostar.cli.ui.console = original_global_console
 
 
+def _stub_subprocess_adding(
+    runner: ProcessRunner, command: list[str], **kwargs: Any
+) -> None:
+    """Records each ``uv add`` in pyproject.toml, as uv would, so none reads as pending."""
+    if command[:2] != ["uv", "add"]:
+        _stub_subprocess(runner, command, **kwargs)
+        return
+    packages = command[2:]
+    group = None
+    if packages[0] == "--dev":
+        group, packages = "dev", packages[1:]
+    elif packages[0] == "--group":
+        group, packages = packages[1], packages[2:]
+    document = tomlkit.parse(Path("pyproject.toml").read_text())
+    if group is None:
+        requirements = document["project"].setdefault("dependencies", tomlkit.array())
+    else:
+        groups = document.setdefault("dependency-groups", tomlkit.table())
+        requirements = groups.setdefault(group, tomlkit.array())
+    requirements.extend(packages)
+    Path("pyproject.toml").write_text(tomlkit.dumps(document))
+
+
+def generate_cli_status_svg() -> None:
+    """Captures status after a recipe edit, over a file and a value edited by hand.
+
+    Turning off just retracts the edited justfile, a conflict; turning on Docker
+    adds its files; the edited line length is a kept edit.
+    """
+    original_global_console = protostar.cli.ui.console
+    record_console = _recording_console()
+    _print_prompt(record_console, "status")
+
+    try:
+        with (
+            _demo_project(),
+            mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}),
+            mock.patch.object(ProcessRunner, "run", _stub_subprocess_adding),
+            mock.patch("shutil.which", _stub_which),
+        ):
+            engine, request = _cli_template_engine()
+            protostar.cli.ui.console = _recording_console(terminal=False)
+            protostar.cli.ui._run_engine(engine, request)
+
+            justfile = Path("justfile")
+            justfile.write_text(
+                justfile.read_text().replace("uv run pytest", "uv run pytest -x", 1)
+            )
+            pyproject = Path("pyproject.toml")
+            pyproject.write_text(
+                pyproject.read_text()
+                .replace("line-length = 88", "line-length = 100")
+                .replace(
+                    "[tool.protostar.fallback]",
+                    "[tool.protostar.tools]\ndocker = true\njust = false\n\n"
+                    "[tool.protostar.fallback]",
+                )
+            )
+            protostar.cli.ui.console = record_console
+            handle_review(argparse.Namespace(command="status"))
+
+        _render_and_write_svg(
+            record_console,
+            title="zsh",
+            filename="cli_status.svg",
+            unique_id="cli_status",
+        )
+    finally:
+        protostar.cli.ui.console = original_global_console
+
+
 def generate_guide_svgs() -> None:
     """Captures `protostar guide` for a library, a CLI, and a workbench project.
 
@@ -1453,6 +1525,7 @@ def generate_docs_assets() -> None:
     generate_cli_dry_run_svg()
     generate_cli_init_svg()
     generate_cli_missing_tools_svg()
+    generate_cli_status_svg()
     generate_guide_svgs()
     generate_tui_svgs()
     generate_default_config()

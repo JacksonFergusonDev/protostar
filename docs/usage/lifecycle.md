@@ -26,12 +26,24 @@ protostar sync
 protostar sync --check
 ```
 
-`status` summarizes accepted updates, conflicts, preserved edits/deletions, and
-ownership advancement. `diff` and `sync --dry-run` show the same accepted byte
-changes. Conflicts appear separately with file, key, identity, and line
-diagnostics; a conflicted file can still have independent accepted edits. Resolver actions list
-accepted requirements and their `pyproject.toml`/`uv.lock` footprint. Their output
-is unknown until application, so previews do not invent a resulting lockfile diff.
+`status` shows the files with pending work as the same labelled tree `init`
+previews: each is `new`, `modified`, `removed`, or `conflict`, and a file marks
+what was resolved, the proposals kept out, and your kept edits. Files the update
+leaves alone are not listed. Below the tree, each conflict, proposal, and kept
+edit says in a sentence what happened, what Protostar does unless you choose,
+and the `sync --resolve` command for each choice, ready to copy. A conflicted
+file can still have independent accepted edits. `diff` and `sync --dry-run` add
+each accepted byte change as a unified diff. `status` also lists the packages uv
+will add. What uv then changes in `pyproject.toml` and `uv.lock` is unknown
+until it runs, so previews do not invent a resulting lockfile diff.
+
+![Protostar status after a recipe edit](../assets/terminals/cli_status.svg)
+
+Here the recipe turns Docker on and `just` off. Docker's files are new, and
+`CONTRIBUTING.md` changes to match the new tools. The justfile was edited by
+hand, so removing it is a conflict: it stays until you choose to keep it or
+remove it. The hand-edited Ruff line length is kept, and one command takes
+Protostar's value instead.
 
 `sync` applies safe edits and composite ownership state transactionally. It never
 reruns project initialization, Git initialization, arbitrary template tasks, or IDE
@@ -197,8 +209,8 @@ terminal, and never for preserved edits alone.
 
 ![Protostar sync conflict screen](../assets/terminals/tui_sync_conflicts.svg)
 
-Each conflict has an `id` covering its location and content. `status` prints it
-with the choices it offers, and JSON reviews list both with every side under
+Each conflict has an `id` covering its location and content. `status` prints the
+`sync --resolve` command for each choice it offers, and JSON reviews list both with every side under
 `review.conflicts`. Pass `--resolve SELECTOR=CHOICE` to `sync`, where the selector
 is an `id` or a file path that selects every conflict and proposal in that file:
 
@@ -246,7 +258,7 @@ protostar init --force-merge --resolve pyproject.toml=local
 ## Take a kept change later
 
 Every preserved edit or deletion is a decision you can revisit. `status` prints
-each with its `id`, and JSON reviews list them under `review.preserved` with
+the command that takes the update for each, and JSON reviews list them under `review.preserved` with
 their sides. Taking the update writes Protostar's version there, through the
 resolver for a dependency:
 

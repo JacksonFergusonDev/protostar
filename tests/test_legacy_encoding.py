@@ -139,7 +139,8 @@ def test_open_conflicts_with_a_choice_point_to_sync(legacy_console, mocker):
     events = tuple(
         DiagnosticEvent(
             DiagnosticPhase.EXECUTOR,
-            f"Preserving local contribution in {conflict.location.file}.",
+            f"Kept your version of {conflict.location.file}: "
+            "it conflicts with the update.",
             Severity.WARNING,
             conflict=conflict,
         )
@@ -260,12 +261,16 @@ def test_review_lists_proposals_and_kept_edits(legacy_console, tmp_path, monkeyp
         manifest, UserConfig(), policy=ExecutionPolicy.INITIALIZATION
     )
 
-    render_review(review)
+    render_review(manifest, review)
 
     written = legacy_console()
-    assert "1 changes to your files" in written
-    assert "Proposed " in written
-    assert "pyproject.toml tool: applies; decline with local." in written
+    assert "1 modified · 1 change to your files" in written
+    # The tree's guides fall back to ASCII on a stream that can't encode them.
+    assert "`-- pyproject.toml  modified" in written
+    assert "pyproject.toml tool: Protostar adds it; your file doesn't have it yet." in (
+        written
+    )
+    assert "    keep it out  protostar sync --resolve " in written
 
 
 def test_template_check_marks(legacy_console, monkeypatch, tmp_path):

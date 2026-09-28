@@ -28,6 +28,7 @@ from protostar.errors import (
 from protostar.guide import Entrypoint, read_entrypoints
 from protostar.manifest import (
     DiagnosticEvent,
+    DiagnosticPhase,
     EnvironmentManifest,
     MissingTool,
     Severity,
@@ -599,16 +600,17 @@ def diagnostics_report(events: Sequence[DiagnosticEvent]) -> Group:
     warning = glyph("⚠", "!")
     lines: list[Text] = []
     for event in events:
-        # Messages can quote template text: data, never markup.
-        tag = f"[{event.phase}]"
+        # Messages can quote template text: data, never markup. A tool's name
+        # says where an event came from; the executor is no one's tool.
+        tag = "" if event.phase is DiagnosticPhase.EXECUTOR else f" [{event.phase}]"
         if event.severity == Severity.WARNING:
             lines.append(
-                Text.assemble((f"{warning} {tag}", "yellow"), f" {event.message}")
+                Text.assemble((f"{warning}{tag}", "yellow"), f" {event.message}")
             )
         elif event.severity == Severity.SKIP:
-            lines.append(Text(f"[i] {tag} {event.message}", "dim"))
+            lines.append(Text(f"[i]{tag} {event.message}", "dim"))
         else:
-            lines.append(Text.assemble((f"• {tag}", "cyan"), f" {event.message}"))
+            lines.append(Text.assemble((f"•{tag}", "cyan"), f" {event.message}"))
         if event.detail:
             lines.append(Text(f"  {event.detail}", "dim"))
     return Group(heading("Diagnostics"), indented(Group(*lines)))

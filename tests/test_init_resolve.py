@@ -136,9 +136,11 @@ def test_dry_run_with_resolve_shows_the_settled_outcome(project, monkeypatch, ca
 
     assert exit_.value.code == 0
     output = capsys.readouterr().out
-    assert f"Resolved {conflict['id']}: " in output
-    assert "took the update" in output
-    assert f"Conflict {conflict['id']}" not in output
+    assert (
+        "pyproject.toml tool.ruff.line-length: resolved; you took the update." in output
+    )
+    # Settled, so it no longer offers its choices.
+    assert f"--resolve {conflict['id']}=" not in output
     assert (project / "pyproject.toml").read_text() == LOCAL
 
 

@@ -21,6 +21,7 @@ from textual.content import Content
 from textual.widgets import Button, Footer, RadioButton, RadioSet, Static, Tree
 from textual.widgets.tree import TreeNode
 
+from protostar.cli.decisions import TAGS
 from protostar.errors import ProtostarError
 from protostar.lifecycle import PreparedProject
 from protostar.merge import (
@@ -62,7 +63,7 @@ class Node:
 def _label(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
     where = describe_location(conflict.location) or "whole file"
     return Text.assemble(
-        where, ("  ", ""), (conflict.reason.value, "dim"), "  ", tag(conflict, choice)
+        where, ("  ", ""), (TAGS[conflict.reason], "dim"), "  ", tag(conflict, choice)
     )
 
 

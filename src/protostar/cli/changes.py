@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from rich.console import Group, RenderableType
 from rich.padding import Padding
@@ -20,19 +20,29 @@ from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import ui
-from protostar.cli.reviews import SETTLED, where
+from protostar.cli.decisions import (
+    conflict_lines,
+    preserved_lines,
+    proposal_lines,
+    resolved_line,
+)
 from protostar.cli.ui import path_style, planned_paths
 from protostar.config import UserConfig
 from protostar.init_draft import InitDraft, resolve_init
 from protostar.intent import DependencyGroup
 from protostar.manifest import EnvironmentManifest
-from protostar.merge import ConflictReason, MergeConflict, ResolutionChoice
+from protostar.merge import (
+    ConflictReason,
+    MergeConflict,
+    ResolutionChoice,
+)
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
 from protostar.preparation import (
     ExecutionPolicy,
     PreparedEdit,
     PreparedReview,
+    deleted,
     prepare_review,
     review_phase,
 )
@@ -49,6 +59,7 @@ __all__ = [
     "Entry",
     "HookSnapshot",
     "Review",
+    "changes_to_your_files",
     "classify",
     "count",
     "entries_record",
@@ -56,6 +67,7 @@ __all__ = [
     "entry_tree",
     "hook_snapshot",
     "indented_lines",
+    "pending_entries",
     "plan_draft",
     "prepare_draft",
     "print_dry_run",
@@ -101,7 +113,8 @@ class Entry:
 
     Its conflicts are open or, once a choice settled them, resolved. Its
     proposals are changes into content the user already had, applied unless
-    kept out.
+    kept out. Its preserved edits are the user's own, kept under an update
+    that has not changed there.
     """
 
     path: str
@@ -111,6 +124,7 @@ class Entry:
     conflicts: tuple[MergeConflict, ...] = ()
     creator: tuple[str, ...] | None = None
     merged: bool = False
+    preserved: tuple[MergeConflict, ...] = ()
 
     @property
     def open(self) -> tuple[MergeConflict, ...]:
@@ -157,6 +171,9 @@ def classify(
     conflicts: dict[str, list[MergeConflict]] = {}
     for conflict in (*prepared.conflicts, *prepared.resolved, *prepared.proposals):
         conflicts.setdefault(conflict.location.file, []).append(conflict)
+    preserved: dict[str, list[MergeConflict]] = {}
+    for item in prepared.preserved:
+        preserved.setdefault(item.location.file, []).append(item)
     tasks = (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
     creators = {
         path: tuple(task.command) for task in tasks for path in task.owned_files
@@ -164,7 +181,7 @@ def classify(
     written = {path.as_posix() for path in manifest.written_files()}
     paths, directories = planned_paths(manifest)
     entries: list[Entry] = []
-    for path in sorted({*paths, *edits, *prepared.directories, *conflicts}):
+    for path in sorted({*paths, *edits, *prepared.directories, *conflicts, *preserved}):
         edit = edits.get(path)
         if edit is not None:
             change = (
@@ -191,9 +208,32 @@ def classify(
                 tuple(conflicts.get(path, ())),
                 creators.get(path),
                 path in written,
+                tuple(preserved.get(path, ())),
             )
         )
     return tuple(entries)
+
+
+_PENDING = frozenset({Change.NEW, Change.MODIFIED, Change.REMOVED, Change.CONFLICT})
+
+
+def pending_entries(entries: Sequence[Entry]) -> tuple[Entry, ...]:
+    """Keeps the paths a sync changes or asks about.
+
+    A managed file the update leaves alone would otherwise fill the tree as
+    ``existing``, so only a change or a decision earns a path its place.
+
+    Args:
+        entries: Every classified path, sorted by path.
+
+    Returns:
+        The paths with a change, a conflict, a proposal, or a preserved edit.
+    """
+    return tuple(
+        entry
+        for entry in entries
+        if entry.change in _PENDING or entry.conflicts or entry.preserved
+    )
 
 
 def plan_draft(
@@ -328,11 +368,8 @@ def summary(review: Review) -> Text:
     ]
     if conflicts := sum(len(entry.open) for entry in review.entries):
         parts.append(count(conflicts, "conflict"))
-    proposals = review.prepared.proposals
-    if proposals:
-        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
-        changes = count(len(proposals), "change") + " to your files"
-        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
+    if proposals := review.prepared.proposals:
+        parts.append(changes_to_your_files(proposals))
     parts.append(
         count(
             len(dependencies.dependencies)
@@ -345,6 +382,13 @@ def summary(review: Review) -> Text:
         count(len(tasks.system_tasks) + len(tasks.post_install_tasks), "command")
     )
     return Text(" · ".join(parts))
+
+
+def changes_to_your_files(proposals: Sequence[MergeConflict]) -> str:
+    """Counts the proposals, and how many were kept out, for a summary line."""
+    kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
+    changes = count(len(proposals), "change") + " to your files"
+    return f"{changes} ({kept} kept out)" if kept else changes
 
 
 def entry_label(entry: Entry) -> Text:
@@ -371,6 +415,8 @@ def entry_label(entry: Entry) -> Text:
         kept = sum(p.resolution is ResolutionChoice.LOCAL for p in entry.proposals)
         if kept:
             marker.append((f" · {kept}/{len(entry.proposals)} kept out", style))
+    if entry.preserved:
+        marker.append((f" · {count(len(entry.preserved), 'kept edit')}", "dim"))
     # Color here means change, so only directories keep their kind's color.
     return Text.assemble(
         (name, FOLDER if entry.directory else ""),
@@ -484,8 +530,11 @@ def print_dry_run(review: Review, *, unreachable: bool = False) -> None:
     if review.entries:
         sections.append(("Files", entry_tree(review.entries)))
     sections.append(("Commands & packages", steps_text(manifest)))
-    if lines := _decision_lines(review):
-        sections.append(("Decisions", Group(*lines)))
+    if blocks := _decision_lines(review):
+        note = Text("Add a --resolve to init for each choice you make.", "dim")
+        # A decision spans lines, so a blank line tells one from the next.
+        spaced = [part for block in blocks for part in (block, Text())]
+        sections.append(("Decisions", Group(*spaced, note)))
     for title, body in sections:
         ui.console.print()
         ui.console.print(ui.heading(title))
@@ -504,36 +553,19 @@ def print_dry_run(review: Review, *, unreachable: bool = False) -> None:
     ui.console.print(Text("No changes were made to your system.", "dim"))
 
 
-def _decision_lines(review: Review) -> list[Text]:
-    """One line per conflict and proposal, with the id that settles it.
+def _decision_lines(review: Review) -> list[RenderableType]:
+    """Says what each decision is, and the ``--resolve`` that chooses otherwise.
 
-    A conflict or proposal ``--resolve`` settled says how it was settled.
+    A dry-run shows how ``--resolve`` settled a decision once it did.
     """
     prepared = review.prepared
-    lines = [
-        Text.assemble(
-            (f"Conflict {conflict.id}: ", "cyan"),
-            (where(conflict), "bold"),
-            f": {conflict.reason.value}; your version is kept.",
-        )
-        for conflict in prepared.conflicts
+    resolve = "--resolve"
+    return [
+        *(conflict_lines(conflict, resolve) for conflict in prepared.conflicts),
+        *(resolved_line(conflict) for conflict in prepared.resolved),
+        *(proposal_lines(proposal, resolve) for proposal in prepared.proposals),
+        *(
+            preserved_lines(item, resolve, deletion=deleted(item))
+            for item in prepared.preserved
+        ),
     ]
-    lines.extend(
-        Text.assemble(
-            (f"Resolved {conflict.id}: ", "bold"),
-            (where(conflict), "bold"),
-            f": {SETTLED[cast(ResolutionChoice, conflict.resolution)]}.",
-        )
-        for conflict in prepared.resolved
-    )
-    lines.extend(
-        Text.assemble(
-            (f"Proposed {proposal.id}: ", "bold"),
-            (where(proposal), "bold"),
-            ": kept out; your content stays."
-            if proposal.resolution is ResolutionChoice.LOCAL
-            else ": applies to content you already have.",
-        )
-        for proposal in prepared.proposals
-    )
-    return lines

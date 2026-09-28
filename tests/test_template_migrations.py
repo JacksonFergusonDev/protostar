@@ -333,7 +333,7 @@ def test_status_previews_migrations_without_writing(project, monkeypatch, capsys
     out = capsys.readouterr().out
     assert "Migration 2.0.0: settings.py moves to config.py." in out
     assert "Migration 2.0.0: setup.cfg is removed." in out
-    assert "Removed: setup.cfg" in out
+    assert "setup.cfg  removed" in out
     assert "+++ /dev/null" in out
     assert {path: path.read_bytes() for path in Path.cwd().rglob("*.*")} == before
 
