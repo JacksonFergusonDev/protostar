@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790560179705,
+  "lastUpdate": 1790563558906,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18297,6 +18297,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 934.29,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0444aae918a697cdf7755b4b4f409f1b75840b75",
+          "message": "feat(cli): show init's review in --dry-run (#371)\n\n* perf(sync): take the registry snapshot only for projects with hooks\n\nprepare_project fetched the hook registry on every sync, status, and diff,\neven for a project with no hook manager, whose review reads no pin. It now\nfetches only when the manifest wants hooks, as the executor and the TUI do.\n\n* feat(cli): show init's review in --dry-run\n\ninit --dry-run planned only, so it listed existing files as collisions and\ncould not say which would merge cleanly, conflict, or take proposals. It now\nprepares the same Review as the recipe preview and the change review:\n\n- The review model moves from cli/tui/review/model.py to cli/changes.py, so\n  the CLI renders it without Textual; steps_text moves with it.\n- Text output shows the summary, the labelled file tree, commands and\n  packages, and every open conflict and proposal with its id.\n- JSON output replaces paths with entries (each path's change and decision\n  ids) and the review in the shape sync status returns. CLI_API_VERSION is 2.\n- print_dry_run_summary and planned_paths_record are deleted; the snapshot\n  runner reads entries.\n- where() drops the empty marker from a requirement's identity.",
+          "timestamp": "2026-09-27T19:43:38-07:00",
+          "tree_id": "0738d702c7d9c1675fbe43b5aa951b40909215b3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0444aae918a697cdf7755b4b4f409f1b75840b75"
+        },
+        "date": 1790563557389,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 231.24,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 768.17,
             "unit": "ms"
           }
         ]
