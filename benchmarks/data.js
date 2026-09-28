@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790627567963,
+  "lastUpdate": 1790630998229,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18773,6 +18773,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1192.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a6516270ca7c100f61f3d46b327678da180a253c",
+          "message": "refactor: tighten enum types and use NamedTuples for compound returns (#383)",
+          "timestamp": "2026-09-28T14:26:33-07:00",
+          "tree_id": "96149998ffd1013cd876a8c5602dfca754eb9a9c",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a6516270ca7c100f61f3d46b327678da180a253c"
+        },
+        "date": 1790630996264,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 267.31,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1205.12,
             "unit": "ms"
           }
         ]
