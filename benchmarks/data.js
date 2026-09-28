@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790567924356,
+  "lastUpdate": 1790568881200,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18433,6 +18433,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 789.28,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "51e245c521562a4e1d176ccd3e1d3bc4d5d73370",
+          "message": "refactor(scripts): break up generate_docs_assets into modular package (#375)\n\n* refactor(scripts): break up generate_docs_assets into modular package\n\n* chore: remove redundant scripts/*.py from ruff per-file-ignores",
+          "timestamp": "2026-09-27T21:11:49-07:00",
+          "tree_id": "5eb95498e8d7337d0338d5f6bf4598045d1ca364",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/51e245c521562a4e1d176ccd3e1d3bc4d5d73370"
+        },
+        "date": 1790568879361,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 282.8,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 945,
             "unit": "ms"
           }
         ]
