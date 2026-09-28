@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790568881200,
+  "lastUpdate": 1790608572514,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18467,6 +18467,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 945,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "957dde6ff9f879bb32515fc521a20dbe70e5f369",
+          "message": "refactor: consolidate duplicate helpers and models across engine and cli (#376)",
+          "timestamp": "2026-09-28T08:13:21-07:00",
+          "tree_id": "ef465152a7136b9bd0c852ab1ff51f075778fb74",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/957dde6ff9f879bb32515fc521a20dbe70e5f369"
+        },
+        "date": 1790608571231,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 271.59,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1010.91,
             "unit": "ms"
           }
         ]
