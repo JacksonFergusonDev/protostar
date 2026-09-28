@@ -3,7 +3,7 @@ import json
 import sys
 from typing import Any
 
-CLI_API_VERSION = 1
+CLI_API_VERSION = 2
 
 
 def handle_export_schema(args: argparse.Namespace) -> None:

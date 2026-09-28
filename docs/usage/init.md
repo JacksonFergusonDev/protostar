@@ -337,7 +337,7 @@ content, then repeats the ML template with `--mypy --docker --force-merge`:
 
 ## Advanced Flags
 
-- __Dry-Run Simulation__: Append `--dry-run` to preview the planned filesystem structure, dependencies, and tasks without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`).
+- __Dry-Run Simulation__: Append `--dry-run` to see what a run would do without writing files or running shell commands (e.g., `protostar init --template cli --dry-run`). It shows the same review as the recipe editor: each file labelled `new`, `modified`, or `conflict`, the commands and packages, and every conflict and proposal with its id.
     ![Protostar Dry Run](../assets/terminals/cli_dry_run.svg)
 - __Machine-Readable Output__: Pass the position-independent `--json` flag to emit structured JSON envelopes to `stdout` and route logs to `stderr` (e.g., `protostar init --template cli --json`). See the __[Agent & Machine Interface](./agent-interface.md)__ for the full protocol specification.
 - __Template Shorthand__: Use `-t` as shorthand for `--template` (e.g., `protostar init -t cli`).

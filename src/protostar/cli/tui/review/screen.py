@@ -7,7 +7,6 @@ from dataclasses import replace
 from typing import ClassVar, cast
 
 from rich.console import Group, RenderableType
-from rich.padding import Padding
 from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
@@ -25,12 +24,27 @@ from textual.widgets import (
 )
 from textual.widgets.tree import TreeNode
 
+from protostar.cli.changes import (
+    FOLDER,
+    NETWORK_NOTE,
+    Change,
+    Entry,
+    HookSnapshot,
+    Review,
+    count,
+    entry_label,
+    hook_snapshot,
+    indented_lines,
+    plan_draft,
+    prepare_draft,
+    steps_text,
+    summary,
+)
 from protostar.cli.ui import untrusted_commands
 from protostar.config import UserConfig
 from protostar.errors import ProtostarError
 from protostar.init_draft import InitDecision, InitDraft
-from protostar.intent import DependencyGroup
-from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.manifest import CollisionStrategy
 from protostar.merge import (
     ConflictReason,
     MergeConflict,
@@ -57,20 +71,6 @@ from ..keys import (
     KeyRows,
     Toggle,
     key_label,
-)
-from .model import (
-    FOLDER,
-    NETWORK_NOTE,
-    Change,
-    Entry,
-    HookSnapshot,
-    Review,
-    count,
-    entry_label,
-    hook_snapshot,
-    plan_draft,
-    prepare_draft,
-    summary,
 )
 
 
@@ -163,57 +163,13 @@ def describe(entry: Entry, *, one_shot: bool = False) -> RenderableType:
     return Group(*parts)
 
 
-def _indented(lines: Sequence[str], style: str = "") -> list[RenderableType]:
-    # Padding keeps a wrapped command's continuation under its first line.
-    return [Padding(Text(line, style), (0, 0, 0, 2)) for line in lines]
-
-
-def steps_text(manifest: EnvironmentManifest) -> RenderableType:
-    """Lists the commands and package installs that follow the first batch.
-
-    Args:
-        manifest: The planned manifest.
-
-    Returns:
-        Commands, packages by group, the commands that run after install, and
-        the steps planning skipped, such as one whose tool is not installed.
-    """
-    dependencies = manifest.dependencies
-    packages = (
-        (DependencyGroup.MAIN, dependencies.dependencies),
-        (DependencyGroup.DEV, dependencies.dev_dependencies),
-        (DependencyGroup.DOCS, dependencies.docs_dependencies),
-    )
-    sections = (
-        (
-            "Commands",
-            [shlex.join(task.command) for task in manifest.tasks.system_tasks],
-        ),
-        (
-            "Packages",
-            [f"{group}: {', '.join(names)}" for group, names in packages if names],
-        ),
-        (
-            "After install",
-            [shlex.join(task.command) for task in manifest.tasks.post_install_tasks],
-        ),
-        ("Skipped", [event.message for event in manifest.diagnostics]),
-    )
-    parts: list[RenderableType] = []
-    for title, lines in sections:
-        if lines:
-            parts.append(Text(title, style="bold"))
-            parts.extend(_indented(lines))
-    return Group(*parts) if parts else Text("No commands or packages.", style="dim")
-
-
 def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
     return Group(
         Text(
             "This template comes from an external source that isn't marked "
             "trusted. Applying runs these commands on your system:"
         ),
-        *_indented([shlex.join(command) for command in commands], "bold"),
+        *indented_lines([shlex.join(command) for command in commands], "bold"),
         Text(
             "Configure it as an alias with trusted = true to skip this check.",
             style="dim",

@@ -629,22 +629,6 @@ def planned_paths(manifest: EnvironmentManifest) -> tuple[list[str], set[str]]:
     return paths, directories
 
 
-def planned_paths_record(manifest: EnvironmentManifest) -> dict[str, list[str]]:
-    """Serializes the planned files and directories for the dry-run payload.
-
-    Args:
-        manifest: The planned environment manifest.
-
-    Returns:
-        The sorted POSIX paths of planned ``files`` and ``directories``.
-    """
-    paths, directories = planned_paths(manifest)
-    return {
-        "files": [path for path in paths if path not in directories],
-        "directories": sorted(directories),
-    }
-
-
 def plan_tree(manifest: EnvironmentManifest) -> Tree:
     """Builds the workspace tree of every path the manifest creates or updates.
 
@@ -687,70 +671,6 @@ def _facts(rows: list[tuple[str, str]]) -> Table:
         # Values name packages and commands from templates: data, never markup.
         table.add_row(label, Text(value))
     return table
-
-
-def _section(title: str, body: RenderableType) -> None:
-    console.print()
-    console.print(heading(title))
-    console.print(indented(body))
-
-
-def print_dry_run_summary(manifest: EnvironmentManifest) -> None:
-    """Renders a human-readable summary of the planned environment manifest."""
-    paths, _ = planned_paths(manifest)
-    dependencies = manifest.dependencies
-    deps_total = (
-        len(dependencies.dependencies)
-        + len(dependencies.dev_dependencies)
-        + len(dependencies.docs_dependencies)
-    )
-    tasks = (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
-    collisions = (
-        manifest.collision_strategy.value.title()
-        if manifest.collision_strategy
-        else "Unresolved"
-        if manifest.collisions
-        else "Not needed"
-    )
-
-    _section(
-        "Summary",
-        _facts(
-            [
-                ("Filesystem", f"{len(paths)} files/directories to create or update"),
-                ("Dependencies", f"{deps_total} packages to install"),
-                ("Tasks", f"{len(tasks)} system commands to execute"),
-                ("Collision strategy", collisions),
-            ]
-        ),
-    )
-
-    if deps_total > 0:
-        groups = (
-            ("Standard", dependencies.dependencies),
-            ("Development", dependencies.dev_dependencies),
-            ("Documentation", dependencies.docs_dependencies),
-        )
-        _section(
-            "Dependencies",
-            _facts([(label, ", ".join(names)) for label, names in groups if names]),
-        )
-
-    if tasks:
-        _section(
-            "Tasks",
-            _facts(
-                [
-                    (f"{number}.", shlex.join(task.command))
-                    for number, task in enumerate(tasks, 1)
-                ]
-            ),
-        )
-
-    if paths:
-        _section("Filesystem", plan_tree(manifest))
-
-    console.print("\n[dim]No changes were made to your system.[/dim]")
 
 
 def warn_credential_names(names: tuple[str, ...]) -> None:

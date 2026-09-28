@@ -573,7 +573,7 @@ def test_terminal_settles_a_flagged_var_on_the_variables_screen(
             draft, allowed_secrets=frozenset(flagged)
         ),
     )
-    summary = mocker.patch("protostar.cli.ui.print_dry_run_summary")
+    summary = mocker.patch("protostar.cli.main.print_dry_run")
 
     with pytest.raises(SystemExit) as exc:
         handle_init(_flagged_var_args(tmp_path, TOKENS["github-pat"]))

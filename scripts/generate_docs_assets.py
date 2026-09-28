@@ -24,8 +24,14 @@ from rich.text import Text
 from tomlkit.items import String, StringType, Trivia
 
 import protostar.cli
+from protostar.cli.changes import (
+    classify,
+    entries_record,
+    hook_snapshot,
+    prepare_draft,
+    print_dry_run,
+)
 from protostar.cli.palette import ANSI
-from protostar.cli.ui import planned_paths_record
 from protostar.config import (
     DEFAULT_CONFIG_CONTENT,
     TemplateBlueprint,
@@ -53,6 +59,7 @@ from protostar.modules import (
 )
 from protostar.options import Condition
 from protostar.orchestrator import Orchestrator
+from protostar.preparation import ExecutionPolicy, prepare_review, review_phase
 from protostar.system import ProcessRunner
 
 _repo_root = Path(__file__).resolve().parent.parent
@@ -894,11 +901,18 @@ def generate_agent_payloads() -> None:
             (existing / "LICENSE").write_text(
                 "MIT License\n\nCopyright (c) 2024 Demo Author\n"
             )
+            prepared = prepare_review(
+                manifest,
+                UserConfig(),
+                policy=ExecutionPolicy.INITIALIZATION,
+                phase=review_phase(manifest),
+            )
             planned_payload = {
                 "api_version": protostar.cli.schema.CLI_API_VERSION,
                 "status": "planned",
                 "manifest": manifest.to_dict(),
-                "paths": planned_paths_record(manifest),
+                "entries": entries_record(classify(manifest, prepared)),
+                "review": prepared.to_dict(),
                 "analysis": analyze_project(existing).to_dict(),
             }
             _write_generated_doc(
@@ -909,7 +923,6 @@ def generate_agent_payloads() -> None:
 
     # Lifecycle examples use the shipped preparation and presentation path.
     from protostar.cli.reviews import review_payload
-    from protostar.preparation import prepare_review
     from protostar.sync_state import serialize_state
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1114,8 +1127,14 @@ def generate_cli_dry_run_svg() -> None:
     try:
         protostar.cli.ui.console = record_console
         with _demo_project():
-            engine, _ = _cli_template_engine()
-            protostar.cli.ui.print_dry_run_summary(engine.plan())
+            engine, request = _cli_template_engine()
+            with mock.patch.dict(os.environ, {"PROTOSTAR_OFFLINE_HOOK_REGISTRY": "1"}):
+                manifest = engine.plan()
+                print_dry_run(
+                    prepare_draft(
+                        request, manifest, UserConfig(), hook_snapshot().revisions, {}
+                    )
+                )
 
         _render_and_write_svg(
             record_console,
@@ -1380,7 +1399,6 @@ async def _capture_conflict_screen() -> None:
     from protostar.cli.tui.conflicts.screen import ConflictScreen
     from protostar.executor import SystemExecutor
     from protostar.lifecycle import PreparedProject
-    from protostar.preparation import prepare_review
 
     config = UserConfig()
     baseline = _conflict_manifest("config:recommended", 88, "just test")

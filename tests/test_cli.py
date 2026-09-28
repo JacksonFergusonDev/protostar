@@ -1697,21 +1697,32 @@ def test_list_templates_surfaces_a_broken_config(mocker, tmp_path):
         discover_templates()
 
 
-def _render_dry_run(manifest, monkeypatch):
+def _render_dry_run(manifest, monkeypatch, tmp_path):
     import io
 
     from rich.console import Console
 
     from protostar.cli import ui
+    from protostar.cli.changes import Review, classify, print_dry_run
+    from protostar.models import InitRequest
+    from protostar.preparation import ExecutionPolicy, prepare_review, review_phase
 
+    monkeypatch.chdir(tmp_path)
+    prepared = prepare_review(
+        manifest,
+        UserConfig(),
+        policy=ExecutionPolicy.INITIALIZATION,
+        phase=review_phase(manifest),
+    )
+    review = Review(InitRequest(), manifest, prepared, classify(manifest, prepared))
     buf = io.StringIO()
     monkeypatch.setattr(ui, "console", Console(file=buf, width=120))
-    ui.print_dry_run_summary(manifest)
+    print_dry_run(review)
     return buf.getvalue()
 
 
-def test_dry_run_count_includes_every_declared_path(monkeypatch):
-    """The summary counts merged documents and regions, matching the tree."""
+def test_dry_run_count_includes_every_declared_path(monkeypatch, tmp_path):
+    """The summary counts merged documents and regions, as the tree shows them."""
     from protostar.intent import StructuredFormat
     from protostar.manifest import EnvironmentManifest
 
@@ -1729,9 +1740,9 @@ def test_dry_run_count_includes_every_declared_path(monkeypatch):
     )
     manifest.filesystem.add_region("AGENTS.md", "# Agents\n", identity="agents")
 
-    output = _render_dry_run(manifest, monkeypatch)
+    output = _render_dry_run(manifest, monkeypatch, tmp_path)
 
-    assert "6 files/directories to create or update" in output
+    assert "5 new · 1 after setup" in output
     for leaf in (
         "protostar.lock",
         "docs/",
@@ -1743,16 +1754,16 @@ def test_dry_run_count_includes_every_declared_path(monkeypatch):
         assert leaf in output
 
 
-def test_dry_run_without_paths_omits_the_filesystem_tree(monkeypatch):
+def test_dry_run_without_paths_omits_the_filesystem_tree(monkeypatch, tmp_path):
     from protostar.manifest import EnvironmentManifest
 
-    output = _render_dry_run(EnvironmentManifest(one_shot=True), monkeypatch)
+    output = _render_dry_run(EnvironmentManifest(one_shot=True), monkeypatch, tmp_path)
 
-    assert "0 files/directories to create or update" in output
+    assert "0 packages · 0 commands" in output
     assert "Workspace Root" not in output
 
 
-def test_dry_run_renders_placeholder_paths(monkeypatch):
+def test_dry_run_renders_placeholder_paths(monkeypatch, tmp_path):
     from typing import cast
 
     from protostar.manifest import EnvironmentManifest, ProjectMetadata
@@ -1762,14 +1773,16 @@ def test_dry_run_renders_placeholder_paths(monkeypatch):
     manifest.filesystem.add_directory("src/<% PACKAGE_NAME %>")
     manifest.filesystem.add_file_injection("src/<% PACKAGE_NAME %>/cli.py", "")
 
-    output = _render_dry_run(manifest, monkeypatch)
+    output = _render_dry_run(manifest, monkeypatch, tmp_path)
 
     assert "demo_project/" in output
     assert "<%" not in output
-    assert "3 files/directories to create or update" in output
+    assert "2 new · 1 after setup" in output
 
 
-def test_dry_run_lists_files_generated_outside_the_filesystem_slice(monkeypatch):
+def test_dry_run_lists_files_generated_outside_the_filesystem_slice(
+    monkeypatch, tmp_path
+):
     """Generated files, .gitignore, and IDE settings are written, so they are listed."""
     from protostar.manifest import EnvironmentManifest, HookRunner
 
@@ -1782,9 +1795,9 @@ def test_dry_run_lists_files_generated_outside_the_filesystem_slice(monkeypatch)
     manifest.filesystem.add_vcs_ignore(".venv/")
     manifest.add_ide_setting("python.terminal.activateEnvironment", True)
 
-    output = _render_dry_run(manifest, monkeypatch)
+    output = _render_dry_run(manifest, monkeypatch, tmp_path)
 
-    assert "9 files/directories to create or update" in output
+    assert "4 new · 5 after setup" in output
     for leaf in (
         "protostar.lock",
         ".pre-commit-config.yaml",
@@ -1926,3 +1939,50 @@ def test_rolled_back_paths_are_shown_literally_not_as_markup(mocker):
 
     assert "docs/[/x].md" in buf.getvalue()
     assert "[bold]b.md" in buf.getvalue()
+
+
+def test_dry_run_json_labels_each_file_and_its_decisions(tmp_path, run_cli):
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "existing"\n\n[tool.ruff]\nlint = "E"\n'
+    )
+
+    code, stdout, _stderr, _ = run_cli(
+        "init", "--dry-run", "--json", "--ruff", "--no-prek", "--no-pre-commit"
+    )
+
+    assert code == 0, stdout
+    payload = json.loads(stdout)
+    assert payload["api_version"] == 2
+    assert "paths" not in payload
+    entries = {entry["path"]: entry for entry in payload["entries"]}
+    pyproject = entries["pyproject.toml"]
+    assert pyproject["change"] == "modified"
+    # The ids are the review's, so --resolve could name them.
+    assert pyproject["conflicts"] == [
+        conflict["id"] for conflict in payload["review"]["conflicts"]
+    ]
+    assert entries["uv.lock"]["change"] == "after-setup"
+
+
+@pytest.mark.parametrize(("flag", "fetches"), [("--prek", True), ("--no-prek", False)])
+def test_dry_run_takes_the_registry_snapshot_only_for_hooks(
+    tmp_path, monkeypatch, mocker, flag, fetches
+):
+    from protostar.cli.main import handle_init
+    from protostar.cli.parser import build_parser
+
+    monkeypatch.chdir(tmp_path)
+    registry = mocker.patch(
+        "protostar.cli.changes.resolve_hook_revisions", return_value=()
+    )
+    shown = mocker.patch("protostar.cli.main.print_dry_run")
+    args = build_parser().parse_args(
+        ["init", "--dry-run", "--no-pre-commit", flag, "--no-direnv"]
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        handle_init(args)
+
+    assert exc.value.code == 0
+    assert registry.called is fetches
+    shown.assert_called_once()

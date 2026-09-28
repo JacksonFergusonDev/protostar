@@ -188,7 +188,7 @@ def render_review(
         ui.console.print(
             Text.assemble(
                 (f"Conflict {conflict.id}: ", "bold red"),
-                (_where(conflict), "bold"),
+                (where(conflict), "bold"),
                 (f": {conflict.reason.value}; {choice_text}"),
             ),
             soft_wrap=True,
@@ -198,7 +198,7 @@ def render_review(
         ui.console.print(
             Text.assemble(
                 (f"Resolved {conflict.id}: ", "bold green" if applied else "bold"),
-                (_where(conflict), "bold"),
+                (where(conflict), "bold"),
                 (f": {settled}."),
             ),
             soft_wrap=True,
@@ -208,7 +208,7 @@ def render_review(
         ui.console.print(
             Text.assemble(
                 (f"Proposed {proposal.id}: ", "bold"),
-                (_where(proposal), "bold"),
+                (where(proposal), "bold"),
                 (
                     ": declined; kept your content."
                     if declined
@@ -222,7 +222,7 @@ def render_review(
         ui.console.print(
             Text.assemble(
                 f"Preserved {action} {item.id}: ",
-                (_where(item), "bold"),
+                (where(item), "bold"),
                 (": take the update with desired.", "dim"),
             ),
             soft_wrap=True,
@@ -303,12 +303,13 @@ def _migration_line(step: MigrationStep, *, applied: bool) -> Text:
     )
 
 
-def _where(conflict: MergeConflict) -> str:
+def where(conflict: MergeConflict) -> str:
     """Returns the file, position, and identity of a conflict on one line."""
     parts = (
         conflict.location.file,
         describe_location(conflict.location),
-        conflict.location.identity or "",
+        # A requirement's identity is its package and marker.
+        (conflict.location.identity or "").rstrip(":"),
     )
     return " ".join(part for part in parts if part)
 

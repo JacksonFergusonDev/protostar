@@ -152,7 +152,7 @@ def test_existing_svg_documentation_fixtures():
     terminals_dir = Path("docs/assets/terminals")
     expected_fixtures = {
         "cli_config_help.svg": 909,  # 73 cols
-        "cli_dry_run.svg": 1141,  # 92 cols (the dev dependency list wraps)
+        "cli_dry_run.svg": 1129,  # 91 cols (the dev dependency list wraps)
         "diagnostic_panel.svg": 958,  # 77 cols
         "cli_help.svg": 1153,  # 93 cols (widened by the --config <path> flag)
         "cli_init_help.svg": 1202,  # 97 cols

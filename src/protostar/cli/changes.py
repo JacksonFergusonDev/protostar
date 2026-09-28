@@ -1,23 +1,30 @@
-"""What init changes, shared by the recipe editor's preview and the change review.
+"""What init changes: one model for the recipe preview, the change review, and --dry-run.
 
-Both screens plan a draft, prepare its first file batch, and label each
-planned path the same way. The preview only shows the result; the review
-settles its decisions. Planning and preparation read the workspace, so
-callers run them off the main thread.
+Each plans a draft, prepares its first file batch, and labels every planned
+path the same way. The recipe preview and ``init --dry-run`` only show the
+result; the change review settles its decisions. Planning and preparation
+read the workspace, so the TUI runs them off the main thread.
 """
 
+import shlex
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
+from rich.console import Group, RenderableType
+from rich.padding import Padding
 from rich.text import Text
 from rich.tree import Tree
 
+from protostar.cli import ui
+from protostar.cli.reviews import where
 from protostar.cli.ui import path_style, planned_paths
 from protostar.config import UserConfig
 from protostar.init_draft import InitDraft, resolve_init
+from protostar.intent import DependencyGroup
 from protostar.manifest import EnvironmentManifest
 from protostar.merge import ConflictReason, MergeConflict, ResolutionChoice
 from protostar.models import InitRequest
@@ -44,11 +51,15 @@ __all__ = [
     "Review",
     "classify",
     "count",
+    "entries_record",
     "entry_label",
     "entry_tree",
     "hook_snapshot",
+    "indented_lines",
     "plan_draft",
     "prepare_draft",
+    "print_dry_run",
+    "steps_text",
     "summary",
 ]
 
@@ -61,7 +72,12 @@ class Change(StrEnum):
     REMOVED = "removed"
     CONFLICT = "conflict"
     EXISTS = "existing"
-    LATER = "after setup"
+    LATER = "after-setup"
+
+    @property
+    def label(self) -> str:
+        """Returns how the change reads beside a path."""
+        return self.value.replace("-", " ")
 
 
 # Color says what needs you, not how much changed: modifying a file is the
@@ -306,7 +322,7 @@ def summary(review: Review) -> Text:
     # A file with an open conflict counts by its change; the conflicts count
     # the decisions, as the review's choices do.
     parts = [
-        f"{counts[change]} {change.value}"
+        f"{counts[change]} {change.label}"
         for change in Change
         if counts[change] and change is not Change.CONFLICT
     ]
@@ -344,7 +360,7 @@ def entry_label(entry: Entry) -> Text:
     style = _STYLES[entry.change]
     marker: list[tuple[str, str]] = []
     if not (entry.directory and entry.change is Change.EXISTS):
-        marker.append((entry.change.value, style))
+        marker.append((entry.change.label, style))
     if entry.open and entry.change is not Change.CONFLICT:
         marker.append((" · conflict", _DECISION))
     elif any(c.reason is not ConflictReason.PROPOSED for c in entry.conflicts) and (
@@ -386,3 +402,124 @@ def entry_tree(entries: Sequence[Entry]) -> Tree:
             parent = folder
         nodes[entry.path] = nodes[parent].add(entry_label(entry))
     return tree
+
+
+def indented_lines(lines: Sequence[str], style: str = "") -> list[RenderableType]:
+    """Indents each line; a wrapped line continues under its own start."""
+    return [Padding(Text(line, style), (0, 0, 0, 2)) for line in lines]
+
+
+def steps_text(manifest: EnvironmentManifest) -> RenderableType:
+    """Lists the commands and package installs that follow the first batch.
+
+    Args:
+        manifest: The planned manifest.
+
+    Returns:
+        Commands, packages by group, the commands that run after install, and
+        the steps planning skipped, such as one whose tool is not installed.
+    """
+    dependencies = manifest.dependencies
+    packages = (
+        (DependencyGroup.MAIN, dependencies.dependencies),
+        (DependencyGroup.DEV, dependencies.dev_dependencies),
+        (DependencyGroup.DOCS, dependencies.docs_dependencies),
+    )
+    sections = (
+        (
+            "Commands",
+            [shlex.join(task.command) for task in manifest.tasks.system_tasks],
+        ),
+        (
+            "Packages",
+            [f"{group}: {', '.join(names)}" for group, names in packages if names],
+        ),
+        (
+            "After install",
+            [shlex.join(task.command) for task in manifest.tasks.post_install_tasks],
+        ),
+        ("Skipped", [event.message for event in manifest.diagnostics]),
+    )
+    parts: list[RenderableType] = []
+    for title, lines in sections:
+        if lines:
+            parts.append(Text(title, style="bold"))
+            parts.extend(indented_lines(lines))
+    return Group(*parts) if parts else Text("No commands or packages.", style="dim")
+
+
+def entries_record(entries: Sequence[Entry]) -> list[dict[str, Any]]:
+    """Serializes each planned path and its change for the dry-run payload.
+
+    Args:
+        entries: The review's entries, sorted by path.
+
+    Returns:
+        One record per path, sorted by path: its change, whether it is a
+        directory, and the ids of its conflicts and proposals.
+    """
+    return [
+        {
+            "path": entry.path,
+            "change": entry.change.value,
+            "directory": entry.directory,
+            "conflicts": [conflict.id for conflict in entry.open],
+            "proposals": [proposal.id for proposal in entry.proposals],
+        }
+        for entry in entries
+    ]
+
+
+def print_dry_run(review: Review, *, unreachable: bool = False) -> None:
+    """Prints what an init would change, the same way the change review shows it.
+
+    Args:
+        review: The prepared review of the planned init.
+        unreachable: Whether the registry fetch never reached the network.
+    """
+    manifest = review.manifest
+    sections: list[tuple[str, RenderableType]] = [
+        ("Summary", summary(review)),
+    ]
+    if review.entries:
+        sections.append(("Files", entry_tree(review.entries)))
+    sections.append(("Commands & packages", steps_text(manifest)))
+    if lines := _decision_lines(review):
+        sections.append(("Decisions", Group(*lines)))
+    for title, body in sections:
+        ui.console.print()
+        ui.console.print(ui.heading(title))
+        ui.console.print(ui.indented(body))
+    ui.console.print()
+    if unreachable:
+        ui.console.print(Text(NETWORK_NOTE, "yellow"))
+    if manifest.collisions and manifest.collision_strategy is None:
+        ui.console.print(
+            Text(
+                "Files already exist, so a run needs --force-merge or "
+                "--force-replace; this shows a merge.",
+                "yellow",
+            )
+        )
+    ui.console.print(Text("No changes were made to your system.", "dim"))
+
+
+def _decision_lines(review: Review) -> list[Text]:
+    """One line per open conflict and proposal, with the id that settles it."""
+    lines = [
+        Text.assemble(
+            (f"Conflict {conflict.id}: ", "cyan"),
+            (where(conflict), "bold"),
+            f": {conflict.reason.value}; your version is kept.",
+        )
+        for conflict in review.prepared.conflicts
+    ]
+    lines.extend(
+        Text.assemble(
+            (f"Proposed {proposal.id}: ", "bold"),
+            (where(proposal), "bold"),
+            ": applies to content you already have.",
+        )
+        for proposal in review.prepared.proposals
+    )
+    return lines

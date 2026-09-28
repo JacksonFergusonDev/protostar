@@ -20,7 +20,7 @@ By passing the position-independent `--json` flag and utilizing the `--dry-run` 
 
 - :material-play-speed: __Deterministic Simulation (`--dry-run`)__
 
-    The `--dry-run` flag executes the headless `plan()` phase without writing files or running shell subprocesses, returning the full `EnvironmentManifest` as a structured dictionary.
+    The `--dry-run` flag plans the run and prepares its review without writing files or running shell subprocesses, returning the full `EnvironmentManifest`, what happens to every file, and each conflict and proposal with its id.
 
 - :material-file-code: __Template Schema Validation__
 
@@ -39,7 +39,7 @@ The CLI uses a position-independent `--json` flag that can appear anywhere in th
 Every JSON response emitted to `stdout` follows one of three structured envelopes:
 
 === "1. Planned (`status: "planned"`)"
-    Emitted when running `protostar init --dry-run --json`. Returns the complete planned `manifest`, the `paths` the run leaves in the workspace (`files` and `directories`, the same set the dry-run tree shows, including files that commands and the resolver create), and, in a directory with no recipe yet, the `analysis` of what the project already has: the tools found with their `sources`, the `facts` read with where each came from, and `notes` about anything left out. `analysis` is `null` once a recipe exists. Analysis never selects a tool for a headless run; pass the flags for the tools you want.
+    Emitted when running `protostar init --dry-run --json`. Returns the complete planned `manifest`; the `entries` the run leaves in the workspace, one per path, each with its `change` (`new`, `modified`, `removed`, `conflict`, `existing`, or `after-setup` for files commands and the resolver create), whether it is a `directory`, and the ids of its open `conflicts` and `proposals`; the `review` that computed them, in the same shape `protostar status --json` returns; and, in a directory with no recipe yet, the `analysis` of what the project already has: the tools found with their `sources`, the `facts` read with where each came from, and `notes` about anything left out. `analysis` is `null` once a recipe exists. Analysis never selects a tool for a headless run; pass the flags for the tools you want.
 
     With `--one-shot`, `manifest.one_shot` is `true`. Execution still resolves
     dependencies and may write `uv.lock`, but omits `[tool.protostar]` and
@@ -108,7 +108,7 @@ Before touching the filesystem, an agent should run with `--dry-run --json` to i
 protostar init --template astro --dry-run --json
 ```
 
-The resulting payload exposes all directories, injected file contents, dependencies, and shell commands that Protostar plans to execute.
+The resulting payload exposes all directories, injected file contents, dependencies, and shell commands that Protostar plans to execute, and what the run does to each file. In a project that already has files, `entries` marks each one `modified` or `conflict`, and `review` lists every conflict (your version is kept) and every proposal (a change into content you already have, which applies) with its id. It is the same review the terminal's change review shows. A draft with a hook manager fetches the latest hook versions first, so the pins shown are the ones a run writes.
 
 #### Collision Handling & Recovery
 
