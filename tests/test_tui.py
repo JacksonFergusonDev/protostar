@@ -1279,6 +1279,24 @@ async def test_the_editor_review_and_execution_share_one_hook_snapshot(
 
 
 @pytest.mark.asyncio
+async def test_the_editor_takes_the_hook_snapshot_as_it_opens(mocker):
+    take = mocker.patch(
+        "protostar.cli.tui.review.model.resolve_hook_revisions", return_value=()
+    )
+    # No hook runner: no plan needs the snapshot, yet it is taken up front, so
+    # switching one on never waits for the network.
+    app = make_app(config=UserConfig(pre_commit=False, prek=False))
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        take.assert_called_once()
+        assert app.screen.query_one(PlanPreview).hook_revisions is None
+        app.screen.query_one("#tool-prek", RadioButton).value = True
+        await settle(pilot)
+        assert app.screen.query_one(PlanPreview).hook_revisions == ()
+    take.assert_called_once()
+
+
+@pytest.mark.asyncio
 async def test_tool_info_shows_where_the_project_uses_the_tool(workspace):
     config = UserConfig(just=False, prek=False, pre_commit=False, ci=True)
     app = make_app(InitDraft(analysis=existing_project(workspace)), config)

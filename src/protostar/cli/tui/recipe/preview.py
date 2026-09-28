@@ -1,6 +1,10 @@
 """Live preview of what the draft changes, re-planned off the main thread."""
 
 import asyncio
+import contextlib
+import functools
+import threading
+from collections.abc import Callable
 from dataclasses import replace
 
 from rich.console import RenderableType
@@ -143,10 +147,15 @@ class PlanPreview(VerticalScroll):
             )
         self.post_message(self.PlanUpdated(error=None))
 
+    def on_mount(self) -> None:
+        """Start taking the registry snapshot while the user reads the screen."""
+        if self.prepare:
+            self._fetch = _in_background(hook_snapshot)
+
     async def _snapshot(
         self, manifest: EnvironmentManifest
     ) -> tuple[ResolvedHookRevision, ...]:
-        """Takes the registry snapshot once, the first time a plan wants hooks.
+        """Returns the one registry snapshot, waiting only if it is still being taken.
 
         The fetch outlives a cancelled preview, so one snapshot serves the
         preview, the review, and execution.
@@ -154,9 +163,7 @@ class PlanPreview(VerticalScroll):
         if not manifest.tooling.wants_hooks:
             return ()
         if self._fetch is None:
-            self._fetch = asyncio.ensure_future(
-                asyncio.to_thread(hook_snapshot, manifest)
-            )
+            self._fetch = _in_background(hook_snapshot)
         self.hook_revisions = await asyncio.shield(self._fetch)
         return self.hook_revisions
 
@@ -180,6 +187,34 @@ class PlanPreview(VerticalScroll):
         # Most plans skip nothing, so the line takes no room until one does.
         self._notes.display = bool(notes and notes.plain)
         self._tree.update(tree)
+
+
+def _in_background[T](function: Callable[[], T]) -> asyncio.Future[T]:
+    """Runs ``function`` on a daemon thread and returns a future of its result.
+
+    Unlike ``asyncio.to_thread``, a daemon thread never holds up the app's
+    exit: a DNS lookup that hangs offline has no timeout of its own.
+    """
+    loop = asyncio.get_running_loop()
+    future: asyncio.Future[T] = loop.create_future()
+
+    def settle(outcome: Callable[[], None]) -> None:
+        if not future.done():
+            outcome()
+
+    def run() -> None:
+        try:
+            result = function()
+        except Exception as error:
+            report = functools.partial(future.set_exception, error)
+        else:
+            report = functools.partial(future.set_result, result)
+        # The app may have exited, closing the loop, while this ran.
+        with contextlib.suppress(RuntimeError):
+            loop.call_soon_threadsafe(settle, report)
+
+    threading.Thread(target=run, name="hook-registry", daemon=True).start()
+    return future
 
 
 def _totals(manifest: EnvironmentManifest, paths: int) -> Text:

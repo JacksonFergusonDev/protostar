@@ -392,7 +392,11 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             request, manifest = await asyncio.to_thread(plan_draft, draft, self.config)
             if self._hook_revisions is None:
                 # One registry snapshot per review: execution writes the pins it shows.
-                self._hook_revisions = await asyncio.to_thread(hook_snapshot, manifest)
+                self._hook_revisions = (
+                    await asyncio.to_thread(hook_snapshot)
+                    if manifest.tooling.wants_hooks
+                    else ()
+                )
             review = await asyncio.to_thread(
                 prepare_draft,
                 request,

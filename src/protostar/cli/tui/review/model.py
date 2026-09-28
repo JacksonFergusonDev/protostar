@@ -190,19 +190,17 @@ def plan_draft(
     return request, Orchestrator(modules, config, request=request).plan()
 
 
-def hook_snapshot(manifest: EnvironmentManifest) -> tuple[ResolvedHookRevision, ...]:
-    """Takes the registry snapshot a planned draft's hooks are pinned from.
+def hook_snapshot() -> tuple[ResolvedHookRevision, ...]:
+    """Takes the registry snapshot hooks are pinned from.
 
     Take it once per session and pass it on: execution writes the pins the
     preview and the review showed. It fetches, so run it off the main thread.
 
-    Args:
-        manifest: The planned manifest.
-
     Returns:
-        One revision per remote hook, or nothing when no hooks are wanted.
+        One revision per remote hook, with fallbacks when the registry is
+        unreachable.
     """
-    return resolve_hook_revisions() if manifest.tooling.wants_hooks else ()
+    return resolve_hook_revisions()
 
 
 def prepare_draft(
