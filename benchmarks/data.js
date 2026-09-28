@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790611380943,
+  "lastUpdate": 1790612657103,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18535,6 +18535,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1099.35,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7f5334edc084e644814cfcf301e1b34463f42a25",
+          "message": "fix: carry dotted-key TOML tables and report TUI crashes compactly (#378)\n\nOverwriting zensical.toml crashed: deepcopy of tomlkit's\nOutOfOrderTableProxy (a table spread over dotted keys) fails. Copy each\ndotted entry instead. Unexpected TUI errors now reach the CLI's capped\ncrash report instead of Textual's locals-laden traceback.",
+          "timestamp": "2026-09-28T09:21:07-07:00",
+          "tree_id": "bd56afe934541de017a197a1f71dceab7c4113df",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7f5334edc084e644814cfcf301e1b34463f42a25"
+        },
+        "date": 1790612655755,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 263.71,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1135.53,
             "unit": "ms"
           }
         ]
