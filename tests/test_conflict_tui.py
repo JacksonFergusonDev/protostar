@@ -116,6 +116,12 @@ def pressed(app):
     return [b.id for b in app.screen.query("#choice RadioButton") if b.value]
 
 
+def highlighted(app):
+    """The highlighted row's file and, for a conflict's row, its location."""
+    node = app.screen.query_one("#conflicts", Tree).cursor_node.data
+    return node.path, node.conflict and node.conflict.location.file
+
+
 async def select(pilot, file, *, conflict=True):
     """Highlight a file's row, or its first conflict."""
     tree = pilot.app.screen.query_one("#conflicts", Tree)
@@ -131,9 +137,9 @@ async def test_lists_conflicts_by_file_with_both_sides(conflicted):
         await settle(pilot)
         assert rows(app) == [
             f"{RENOVATE}  1",
-            "value  both changed  open",
+            "open         value  both changed",
             f"{NOTES}  1",
-            "line 2  both changed  open",
+            "open         line 2  both changed",
         ]
         assert "2 conflicts · 0 resolved · 2 open" in plain(app, "#subtitle")
         await select(pilot, RENOVATE)
@@ -156,12 +162,15 @@ async def test_keys_choose_sides_and_apply_exits_with_the_choices(conflicted):
         assert "open" in rows(app)[1]
         await pilot.press("u")
         await settle(pilot)
-        assert rows(app)[1] == "value  both changed  take update"
+        assert rows(app)[1] == "take update  value  both changed"
+        # Settling a conflict moves on to the next open one.
+        assert highlighted(app) == (NOTES, NOTES)
+        await select(pilot, RENOVATE)
         assert '+{"value": "remote"}' in plain(app, "#result")
         await select(pilot, NOTES)
         await pilot.press("b")
         await settle(pilot)
-        assert rows(app)[3] == "line 2  both changed  keep both"
+        assert rows(app)[3] == "keep both    line 2  both changed"
         # Exactly one lamp is lit, though RadioSet re-presses one switched off.
         assert pressed(app) == ["choice-both"]
         assert "+remote" in plain(app, "#result")
@@ -178,10 +187,12 @@ async def test_a_file_row_settles_every_conflict_in_it_and_x_reopens(conflicted)
         await settle(pilot)
         await select(pilot, RENOVATE, conflict=False)
         await pilot.press("k")
-        assert rows(app)[1] == "value  both changed  keep mine"
+        assert rows(app)[1] == "keep mine    value  both changed"
+        assert highlighted(app) == (NOTES, NOTES)
+        await select(pilot, RENOVATE, conflict=False)
         assert pressed(app) == ["choice-local"]
         await pilot.press("x")
-        assert rows(app)[1] == "value  both changed  open"
+        assert rows(app)[1] == "open         value  both changed"
         assert pressed(app) == ["choice-open"]
         await pilot.press("n")
         cursor = app.screen.query_one("#conflicts", Tree).cursor_node
@@ -199,22 +210,22 @@ async def test_a_kept_edit_takes_the_update_only_from_its_own_row(conflicted):
         await settle(pilot)
         assert rows(app) == [
             f"{RENOVATE}  1",
-            "value  your edit  keep mine",
+            "keep mine    value  your edit",
             f"{NOTES}  1",
-            "whole file  your edit  keep mine",
+            "keep mine    whole file  your edit",
         ]
         assert "2 kept edits" in plain(app, "#subtitle")
         # A file row never takes the update for a deliberate local edit.
         await select(pilot, RENOVATE, conflict=False)
         await pilot.press("u")
-        assert rows(app)[1] == "value  your edit  keep mine"
+        assert rows(app)[1] == "keep mine    value  your edit"
         await select(pilot, RENOVATE)
         assert pressed(app) == ["choice-local"]
         assert app.screen.query_one("#choice-open", RadioButton).disabled
         assert "update is still Protostar's version" in plain(app, "#meaning")
         await pilot.press("u")
         await settle(pilot)
-        assert rows(app)[1] == "value  your edit  take update"
+        assert rows(app)[1] == "take update  value  your edit"
         assert "2 kept edits (1 updated)" in plain(app, "#subtitle")
         assert '+{"value": "original"}' in plain(app, "#result")
         await pilot.press("a")
@@ -264,8 +275,10 @@ async def test_choice_buttons_follow_the_highlighted_conflict(conflicted):
         assert "open" in rows(app)[3]
         await pilot.press("space")
         await settle(pilot)
-        assert not leave.value
         assert "open" not in rows(app)[3]
+        # The choice moved on to the conflict still open, and shows its state.
+        assert highlighted(app) == (RENOVATE, RENOVATE)
+        assert leave.value
 
 
 @pytest.mark.asyncio
