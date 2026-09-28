@@ -319,7 +319,8 @@ def prepare_project(
         tier=tier,
         check_executables=check_executables,
     )
-    revisions = resolve_hook_revisions()
+    # Only hook pins need the registry.
+    revisions = resolve_hook_revisions() if manifest.tooling.wants_hooks else ()
     return PreparedProject(
         manifest,
         config,

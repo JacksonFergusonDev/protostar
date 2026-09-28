@@ -299,9 +299,27 @@ def test_registry_frozen_once_and_tasks_reported_without_execution(project, mock
         "protostar.lifecycle.resolve_hook_revisions", return_value=()
     )
     review = inspect_project()
-    registry.assert_called_once_with()
+    # No hook manager: nothing the review writes needs a pin.
+    registry.assert_not_called()
     assert ("untrusted", "system") in review.initialization_only
     assert ("untrusted", "post") in review.initialization_only
+
+
+def test_a_project_with_hooks_takes_one_registry_snapshot(project, mocker):
+    from protostar.manifest import HookRunner
+
+    manifest = EnvironmentManifest()
+    manifest.tooling.set_hook_runner(HookRunner.PREK)
+    mocker.patch(
+        "protostar.lifecycle.plan_project", return_value=(manifest, UserConfig())
+    )
+    prepare = mocker.patch("protostar.lifecycle.prepare_review")
+    registry = mocker.patch(
+        "protostar.lifecycle.resolve_hook_revisions", return_value=("pin",)
+    )
+    inspect_project()
+    registry.assert_called_once_with()
+    assert prepare.call_args.kwargs["hook_revisions"] == ("pin",)
 
 
 def test_structured_conflict_has_safe_sibling_and_state_only_advancement(
