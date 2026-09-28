@@ -11,7 +11,6 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical
 from textual.content import Content
 from textual.widgets import (
     Button,
@@ -44,7 +43,7 @@ from protostar.recipe import (
 from protostar.templates import TemplateInfo
 from protostar.tiers import TemplateTiers, Tier
 
-from ..chrome import Heading, Headline, Masthead, Panel
+from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel
 from ..keys import (
     FORM_KEYS,
     ActionBar,
@@ -251,7 +250,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             if self.analysis and self.analysis.existing
             else "Choose a starting point, tools, and project details.",
         )
-        with Horizontal(id="body"):
+        with Columns(id="body"):
             with Panel("Recipe", id="editor-panel"), Form(id="editor"):
                 yield Heading("Template")
                 yield self._template_select()
@@ -294,7 +293,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                             )
                 yield Heading("Project details")
                 yield MetadataFields(self._metadata_defaults)
-            with Vertical(id="aside"):
+            with Column(id="aside"):
                 with Panel("Preview", id="preview-panel"):
                     yield PlanPreview(self.config)
                 with ActionBar(id="actions"):

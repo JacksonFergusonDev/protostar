@@ -10,6 +10,7 @@ key, shown on the control itself; the footer is the legend for moving.
 from typing import Any, ClassVar
 
 from rich.text import Text
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -109,12 +110,37 @@ class Field(Input):
     ]
 
 
+class HoldsWheel:
+    """Keeps the mouse wheel in a list that scrolls, even at either end.
+
+    A widget that can't scroll further hands the wheel to the one around it,
+    so running off a list's end would scroll the form away under the pointer.
+    """
+
+    def holds_wheel(self) -> bool:
+        """Whether the wheel stays here instead of scrolling what is around it."""
+        raise NotImplementedError
+
+    def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        """Stop the wheel here; this widget still scrolls itself."""
+        if self.holds_wheel():
+            event.stop()
+
+    def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        """Stop the wheel here; this widget still scrolls itself."""
+        if self.holds_wheel():
+            event.stop()
+
+
 # The list widgets below don't inherit bindings: the footer keeps a key's
 # inherited position, which would split the up and down group.
 
 
-class Picker[ValueT](Select[ValueT], inherit_bindings=False):
-    """A dropdown that opens on space or enter, so arrows can pass over it."""
+class Picker[ValueT](HoldsWheel, Select[ValueT], inherit_bindings=False):
+    """A dropdown that opens on space or enter, so arrows can pass over it.
+
+    An open menu holds the wheel, which reaches it from the options inside.
+    """
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("up", "screen.move(-1)", "Up", group=MOVE),
@@ -122,6 +148,10 @@ class Picker[ValueT](Select[ValueT], inherit_bindings=False):
         Binding("space", "show_overlay", "Open"),
         Binding("enter", "show_overlay", "Open", show=False),
     ]
+
+    def holds_wheel(self) -> bool:
+        """Whether the menu is open."""
+        return self.expanded
 
 
 class Choice(RadioSet, inherit_bindings=False):
@@ -176,8 +206,11 @@ class Choice(RadioSet, inherit_bindings=False):
         self._pressed_button = pressed
 
 
-class Checklist[ValueT](SelectionList[ValueT], inherit_bindings=False):
-    """A selection list that hands off to the neighbouring row at its ends."""
+class Checklist[ValueT](HoldsWheel, SelectionList[ValueT], inherit_bindings=False):
+    """A selection list that hands off to the neighbouring row at its ends.
+
+    A list too long for its height holds the wheel; a shorter one passes it on.
+    """
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("up", "step(-1)", "Up", group=MOVE),
@@ -190,6 +223,10 @@ class Checklist[ValueT](SelectionList[ValueT], inherit_bindings=False):
         return [
             index for index, option in enumerate(self.options) if not option.disabled
         ]
+
+    def holds_wheel(self) -> bool:
+        """Whether the list scrolls on its own."""
+        return self.allow_vertical_scroll
 
     def action_step(self, direction: int) -> None:
         """Move the highlight, or leave the list from its first or last option."""

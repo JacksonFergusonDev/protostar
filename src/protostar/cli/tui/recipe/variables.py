@@ -8,7 +8,7 @@ from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical
+from textual.containers import Vertical
 from textual.message import Message
 from textual.validation import ValidationResult, Validator
 from textual.widgets import Button, Checkbox, Footer, Input, Label, Static
@@ -18,7 +18,7 @@ from protostar.errors import ConfigurationError, ProtostarError, SecretDetectedE
 from protostar.init_draft import InitDraft
 from protostar.secret_guard import check_variable_values, credential_named
 
-from ..chrome import Heading, Headline, Masthead, Panel
+from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel
 from ..keys import ActionBar, Field, Form, KeyboardScreen, Toggle, key_label, move
 from .preview import PlanPreview
 
@@ -248,12 +248,12 @@ class VariablesScreen(KeyboardScreen[InitDraft]):
                 "Template needs values",
                 Text(f"{name} uses variables that have no value yet."),
             )
-        with Horizontal(id="body"):
+        with Columns(id="body"):
             with Panel("Recipe", id="editor-panel"), Form(id="editor"):
                 yield VariableFields(
                     draft_variables(self.draft), self.draft.allowed_secrets
                 )
-            with Vertical(id="aside"):
+            with Column(id="aside"):
                 with Panel("Preview", id="preview-panel"):
                     # A sync plans against recorded state; only init has a review.
                     yield PlanPreview(self.config, prepare=self.command == "init")

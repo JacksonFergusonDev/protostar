@@ -11,7 +11,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import VerticalScroll
 from textual.content import Content
 from textual.widgets import (
     Button,
@@ -56,7 +56,7 @@ from protostar.merge import (
 )
 
 from ..app import DecisionApp
-from ..chrome import Heading, Headline, Masthead, Panel
+from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel, Section
 from ..code import edit_text
 from ..conflicts.sides import (
     KEYS,
@@ -250,8 +250,8 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         """Compose the file tree and steps beside the diff, the decisions below it."""
         yield Masthead("init", "review")
         yield Headline("Review changes", "Preparing review…")
-        with Horizontal(id="body"):
-            with Vertical(id="review"):
+        with Columns(id="body"):
+            with Column(id="review"):
                 with Panel("Files", id="files-panel"):
                     yield FileTree(Text("."), id="files")
                 with (
@@ -260,51 +260,48 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
                 ):
                     yield Static(Text(NETWORK_NOTE), id="network-note")
                     yield Static("", id="steps-list")
-            with Vertical(id="diff-column"):
+            with Column(id="diff-column"):
                 with Panel("Diff", id="diff-panel"), VerticalScroll(id="diff-pane"):
                     yield Static("", id="diff")
-                with Vertical(id="decisions"):
-                    with Vertical(id="collision-choice"):
-                        yield Heading("Existing files")
-                        yield Static("", id="collision-note")
-                        with Choice(id="collision"):
-                            yield RadioButton(
-                                key_label(
-                                    "Merge · keep your values and add what's missing",
-                                    "m",
-                                ),
-                                value=self.strategy is CollisionStrategy.MERGE,
-                                id="strategy-merge",
-                            )
-                            yield RadioButton(
-                                key_label(
-                                    "Overwrite · replace them with Protostar's version",
-                                    "o",
-                                ),
-                                value=self.strategy is CollisionStrategy.OVERWRITE,
-                                id="strategy-overwrite",
-                            )
-                    with Vertical(id="conflict-choice"):
-                        yield Heading("Conflicts").set_class(True, "choice-heading")
-                        yield Static("", id="conflict-note")
-                        with Choice(id="resolution"):
-                            for choice in ResolutionChoice:
-                                yield RadioButton(
-                                    key_label(SAID[choice].capitalize(), KEYS[choice]),
-                                    id=f"resolve-{choice.value}",
-                                )
-                            yield RadioButton(
-                                key_label("Leave open", "x"), id=f"resolve-{OPEN}"
-                            )
-                    with Vertical(id="trust-gate"):
-                        yield Heading("Untrusted template")
-                        yield Static("", id="trust-note")
-                        yield Toggle(
+                with Section(id="collision-choice"):
+                    yield Heading("Existing files")
+                    yield Static("", id="collision-note")
+                    with Choice(id="collision"):
+                        yield RadioButton(
                             key_label(
-                                "I trust this template to run these commands", "t"
+                                "Merge · keep your values and add what's missing",
+                                "m",
                             ),
-                            id="trust",
+                            value=self.strategy is CollisionStrategy.MERGE,
+                            id="strategy-merge",
                         )
+                        yield RadioButton(
+                            key_label(
+                                "Overwrite · replace them with Protostar's version",
+                                "o",
+                            ),
+                            value=self.strategy is CollisionStrategy.OVERWRITE,
+                            id="strategy-overwrite",
+                        )
+                with Section(id="conflict-choice"):
+                    yield Heading("Conflicts").set_class(True, "choice-heading")
+                    yield Static("", id="conflict-note")
+                    with Choice(id="resolution"):
+                        for choice in ResolutionChoice:
+                            yield RadioButton(
+                                key_label(SAID[choice].capitalize(), KEYS[choice]),
+                                id=f"resolve-{choice.value}",
+                            )
+                        yield RadioButton(
+                            key_label("Leave open", "x"), id=f"resolve-{OPEN}"
+                        )
+                with Section(id="trust-gate"):
+                    yield Heading("Untrusted template")
+                    yield Static("", id="trust-note")
+                    yield Toggle(
+                        key_label("I trust this template to run these commands", "t"),
+                        id="trust",
+                    )
                 with ActionBar(id="actions"):
                     if self.can_go_back:
                         yield Button(key_label("Back", "esc"), id="back")

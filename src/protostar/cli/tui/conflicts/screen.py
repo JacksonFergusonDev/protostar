@@ -16,7 +16,7 @@ from rich.text import Text
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import VerticalScroll
 from textual.content import Content
 from textual.widgets import Button, Footer, RadioButton, RadioSet, Static, Tree
 from textual.widgets.tree import TreeNode
@@ -34,7 +34,7 @@ from protostar.merge import (
 )
 from protostar.preparation import PreparedReview
 
-from ..chrome import Heading, Headline, Masthead, Panel
+from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel, Section
 from ..code import edit_text
 from ..keys import MOVE, ActionBar, Choice, KeyboardScreen, KeyRows, key_label
 from .sides import (
@@ -191,11 +191,11 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         """Compose the conflict list beside both sides, the choices below them."""
         yield Masthead("sync", "conflicts")
         yield Headline("Review sync", summary(self.conflicts, self.choices))
-        with Horizontal(id="body"):
+        with Columns(id="body"):
             with Panel("Decisions", id="conflicts-panel"):
                 yield ConflictTree(Text("."), id="conflicts")
-            with Vertical(id="sides-column"):
-                with Horizontal(id="sides"):
+            with Column(id="sides-column"):
+                with Columns(id="sides"):
                     with (
                         Panel("Yours", id="local-panel"),
                         VerticalScroll(id="local-pane", classes="side"),
@@ -211,7 +211,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
                     VerticalScroll(id="result-pane"),
                 ):
                     yield Static("", id="result")
-                with Vertical(id="decisions"):
+                with Section(id="decisions"):
                     yield Heading("Resolution")
                     yield Static("", id="meaning")
                     with Choice(id="choice"):

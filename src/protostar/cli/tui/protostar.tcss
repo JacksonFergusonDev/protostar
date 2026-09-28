@@ -16,7 +16,6 @@ Masthead { height: 1; padding: 0 2; background: $panel; }
 #title { width: auto; text-style: bold; color: $foreground; }
 #subtitle { width: 1fr; margin-left: 1; color: $text-muted; }
 #subtitle.-error { color: $error; }
-#body { height: 1fr; margin: 0 1; }
 
 /* A panel is ruled above and below only. It stays transparent so the rules,
    drawn on the inner edge of their rows, sit flush on the filled contents. */
@@ -43,11 +42,29 @@ Panel:focus-within > .panel-title { color: $accent; }
 #editor > .section, #editor > .group { margin: 1 2 0 0; }
 /* The editor runs to the bottom; the buttons sit under the panel beside it. */
 /* Each column is at least as wide as its buttons, which never overhang it. */
-#aside { width: 2fr; min-width: 33; margin-left: 1; }
+#aside { width: 2fr; min-width: 33; }
 #review { width: 2fr; }
 /* The files take two thirds of the column; commands scroll in the rest. */
 #files-panel { height: 2fr; }
-#diff-column { width: 3fr; min-width: 45; margin-left: 1; }
+#diff-column { width: 3fr; min-width: 45; }
+
+/* --- Layout -------------------------------------------------------------
+   Spacing belongs to the layout, never to the blocks it holds (chrome.py):
+   one cell between columns, one row between the blocks of a column. Only
+   this section sets a block's margin; sizes stay with each screen. */
+
+#body { height: 1fr; margin: 0 1; }
+Columns > * { margin: 0 0 0 1; }
+Columns > *:first-child { margin: 0; }
+/* A panel's bottom rule is the row between it and the panel under it. */
+Column > Panel, Column > Panel:focus-within { border-top: none; }
+Column > Panel:first-child { border-top: wide $hairline; }
+Column > Panel:first-child:focus-within { border-top: wide $accent; }
+Section { height: auto; margin: 0 0 1 0; }
+Section > .section { margin: 0; }
+/* The buttons end a row early, level with the last row of the panel beside
+   them, whose bottom rule falls in the row below. */
+Column > ActionBar { margin: 0 0 1 0; }
 
 .section { height: 1; margin-top: 1; }
 .group { margin-top: 1; padding-left: 1; text-style: bold; color: $text-muted; }
@@ -186,9 +203,8 @@ Button:disabled, Button.-primary:disabled {
     color: $text-disabled;
     text-opacity: 100%;
 }
-/* The buttons end where the editor's bottom rule is drawn, a row up. */
-#actions { height: 1; margin-bottom: 1; align-horizontal: right; }
-#actions Button { margin-left: 1; }
+ActionBar { height: 1; align-horizontal: right; }
+ActionBar Button { margin-left: 1; }
 
 Tree { padding: 0; }
 Tree:focus { background-tint: $foreground 0%; }
@@ -201,8 +217,6 @@ Footer { background: $panel; }
 
 /* --- Review decisions -------------------------------------------------- */
 
-#decisions, #collision-choice, #conflict-choice, #trust-gate { height: auto; }
-#decisions { margin-bottom: 1; }
 #collision-note { color: $text-muted; }
 ChoiceGroup { height: auto; }
 
@@ -245,8 +259,7 @@ TierFields { height: auto; }
     padding: 0 0 0 1;
     background: $surface;
 }
-#sides-column { width: 3fr; min-width: 45; margin-left: 1; }
+#sides-column { width: 3fr; min-width: 45; }
 #sides { height: 1fr; }
 #sides > Panel { width: 1fr; }
-#desired-panel { margin-left: 1; }
 #meaning { height: auto; }

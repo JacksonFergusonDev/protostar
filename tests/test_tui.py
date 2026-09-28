@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from rich.console import Console
+from textual import events
 from textual.widgets import (
     Button,
     Checkbox,
@@ -26,12 +27,13 @@ from textual.widgets import (
     Static,
     Tree,
 )
+from textual.widgets._select import SelectOverlay
 from textual.worker import WorkerCancelled
 
 from protostar.analysis import analyze_project
 from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
-from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
+from protostar.cli.tui.keys import Form, KeybindingsScreen, LeaveScreen
 from protostar.cli.tui.recipe.preview import PlanPreview
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.tier import TierFields, TierInfoScreen
@@ -419,6 +421,28 @@ async def test_menus_open_on_space_and_close_on_escape():
         await pilot.press("escape")
         assert not template.expanded
         assert isinstance(app.screen, RecipeScreen)
+
+
+async def wheel(pilot, widget, times):
+    """Turn the mouse wheel down over a widget."""
+    # Pilot has no public wheel; this is how its clicks reach the screen.
+    await pilot._post_mouse_events([events.MouseScrollDown], widget, times=times)
+
+
+@pytest.mark.asyncio
+async def test_an_open_menu_keeps_the_wheel_past_its_end():
+    app = make_app()
+    async with app.run_test(size=(110, 30)) as pilot:
+        await settle(pilot)
+        form = app.screen.query_one(Form)
+        template = app.screen.query_one("#template", Select)
+        await pilot.press("space")
+        await wheel(pilot, template.query_one(SelectOverlay), times=30)
+        assert template.expanded
+        assert form.scroll_y == 0
+        await pilot.press("escape")
+        await wheel(pilot, template, times=3)
+        assert form.scroll_y > 0
 
 
 @pytest.mark.asyncio
