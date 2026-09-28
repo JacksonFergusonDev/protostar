@@ -12,7 +12,7 @@
   "additionalProperties": false,
   "properties": {
     "api_version": {
-      "const": 1
+      "const": 2
     },
     "status": {
       "enum": [

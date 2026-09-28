@@ -15,14 +15,7 @@ from textual.containers import VerticalScroll
 from textual.message import Message
 from textual.widgets import Static
 
-from protostar.cli.ui import plan_tree, planned_paths
-from protostar.config import UserConfig
-from protostar.errors import MissingTemplateVariablesError, ProtostarError
-from protostar.init_draft import InitDraft
-from protostar.manifest import CollisionStrategy, EnvironmentManifest
-from protostar.registry import ResolvedHookRevision
-
-from ..review.model import (
+from protostar.cli.changes import (
     NETWORK_NOTE,
     HookSnapshot,
     Review,
@@ -33,6 +26,12 @@ from ..review.model import (
     prepare_draft,
     summary,
 )
+from protostar.cli.ui import plan_tree, planned_paths
+from protostar.config import UserConfig
+from protostar.errors import MissingTemplateVariablesError, ProtostarError
+from protostar.init_draft import InitDraft
+from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.registry import ResolvedHookRevision
 
 # A warm plan() takes 1-11 ms and preparing up to ~100 ms, so the pause only
 # folds a burst of changes into one run.

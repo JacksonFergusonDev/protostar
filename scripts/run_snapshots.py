@@ -195,8 +195,16 @@ def _planned_paths(flags: list[str], cwd: Path, env: dict[str, str]) -> TreePath
         capture_output=True,
         text=True,
     )
-    paths = json.loads(result.stdout)["paths"]
-    return TreePaths(frozenset(paths["files"]), frozenset(paths["directories"]))
+    # A removed path is one the run deletes, so the scaffold never has it.
+    entries = [
+        entry
+        for entry in json.loads(result.stdout)["entries"]
+        if entry["change"] != "removed"
+    ]
+    return TreePaths(
+        frozenset(entry["path"] for entry in entries if not entry["directory"]),
+        frozenset(entry["path"] for entry in entries if entry["directory"]),
+    )
 
 
 class PlanDriftError(Exception):

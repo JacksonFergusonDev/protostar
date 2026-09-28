@@ -1,5 +1,5 @@
 {
-  "api_version": 1,
+  "api_version": 2,
   "status": "planned",
   "manifest": {
     "one_shot": false,
@@ -148,17 +148,110 @@
       "post_install_tasks": []
     }
   },
-  "paths": {
-    "files": [
-      ".gitignore",
-      ".python-version",
-      ".vscode/settings.json",
-      "LICENSE",
-      "protostar.lock",
-      "pyproject.toml",
-      "uv.lock"
+  "entries": [
+    {
+      "path": ".gitignore",
+      "change": "after-setup",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    },
+    {
+      "path": ".python-version",
+      "change": "after-setup",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    },
+    {
+      "path": ".vscode/settings.json",
+      "change": "after-setup",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    },
+    {
+      "path": "LICENSE",
+      "change": "new",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    },
+    {
+      "path": "protostar.lock",
+      "change": "after-setup",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    },
+    {
+      "path": "pyproject.toml",
+      "change": "after-setup",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    },
+    {
+      "path": "uv.lock",
+      "change": "after-setup",
+      "directory": false,
+      "conflicts": [],
+      "proposals": []
+    }
+  ],
+  "review": {
+    "edits": [
+      {
+        "path": "LICENSE",
+        "before": null,
+        "after": "MIT License\n\nCopyright (c) 2026 Demo Author\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+      }
     ],
-    "directories": []
+    "directories": [],
+    "migrations": [],
+    "conflicts": [],
+    "resolved": [],
+    "proposals": [],
+    "preserved": [],
+    "state_changed": true,
+    "resolver": {
+      "requirements": {
+        "main": [],
+        "dev": [],
+        "docs": []
+      },
+      "lock_required": false,
+      "footprint": {
+        "paths": [
+          "pyproject.toml",
+          "uv.lock"
+        ]
+      },
+      "output": null
+    },
+    "initialization_only": [
+      [
+        "git",
+        "init"
+      ],
+      [
+        "uv",
+        "init",
+        "--no-workspace",
+        "--bare",
+        "--pin-python",
+        "--python",
+        "3.13"
+      ]
+    ],
+    "initialization_only_ide_probe": true,
+    "hooks": {
+      "install": null,
+      "remove": []
+    },
+    "missing_tools": [],
+    "selections": [],
+    "producers": []
   },
   "analysis": {
     "existing": true,

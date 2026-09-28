@@ -21,6 +21,12 @@ from rich.markup import escape
 from rich.text import Text
 
 from protostar.cli import parser, schema, ui
+from protostar.cli.changes import (
+    entries_record,
+    hook_snapshot,
+    prepare_draft,
+    print_dry_run,
+)
 from protostar.cli.docs_links import format_docs_link
 from protostar.cli.tui.launch import edit_settings, edit_variables, review_changes
 from protostar.config import (
@@ -253,18 +259,24 @@ def handle_init(args: argparse.Namespace) -> None:
 
     if getattr(args, "dry_run", False):
         manifest = engine.plan()
+        # Only hook pins need the registry; the review shows the ones a run writes.
+        hooks = hook_snapshot() if manifest.tooling.wants_hooks else None
+        review = prepare_draft(
+            request, manifest, user_config, hooks.revisions if hooks else (), {}
+        )
         if ui.is_json_mode:
             ui.emit_json(
                 {
                     "api_version": schema.CLI_API_VERSION,
                     "status": "planned",
                     "manifest": manifest.to_dict(),
-                    "paths": ui.planned_paths_record(manifest),
+                    "entries": entries_record(review.entries),
+                    "review": review.prepared.to_dict(),
                     "analysis": analysis.to_dict() if analysis else None,
                 }
             )
         else:
-            ui.print_dry_run_summary(manifest)
+            print_dry_run(review, unreachable=bool(hooks and hooks.unreachable))
         sys.exit(0)
 
     decision = None
