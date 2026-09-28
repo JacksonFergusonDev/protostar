@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790554348140,
+  "lastUpdate": 1790554783994,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18127,6 +18127,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 885.78,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "0d16d976907d366892a59618450842a1a80b8f29",
+          "message": "fix(tui): suppress horizontal scrollbar on single-line inputs",
+          "timestamp": "2026-09-27T17:15:52-07:00",
+          "tree_id": "1a5ff44bacf7ac0fb174ef4f51da90fd2114681e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0d16d976907d366892a59618450842a1a80b8f29"
+        },
+        "date": 1790554782211,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 282.72,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 981.01,
             "unit": "ms"
           }
         ]
