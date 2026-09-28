@@ -11,7 +11,7 @@ from protostar.errors import ConfigurationError, FileSystemError
 from protostar.executor import SystemExecutor
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.sync_state import FilePolicy, deserialize_state
-from protostar.workflows import generate_release_workflow
+from protostar.workflows import CIFlag, generate_release_workflow
 from protostar.yaml_ast import decode_yaml_baseline
 
 CI = Path(CI_TARGET)
@@ -24,7 +24,9 @@ def manifest(*, codecov: bool = False) -> EnvironmentManifest:
     intent.metadata = {"supported_os": ["Linux"], "minimum_python": "3.14"}
     intent.tooling.wants_ci = True
     intent.tooling.wants_release = True
-    intent.tooling.ci_flags = {"pytest", "codecov"} if codecov else {"pytest"}
+    intent.tooling.ci_flags = (
+        {CIFlag.PYTEST, CIFlag.CODECOV} if codecov else {CIFlag.PYTEST}
+    )
     intent.tooling.ci_steps = [
         "      - name: Run Ruff Linter\n        run: uv run ruff check ."
     ]

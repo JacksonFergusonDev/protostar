@@ -10,6 +10,7 @@ from protostar.workflows import (
     GuideSpec,
     HookRunner,
     JustfileSpec,
+    TargetOS,
     YAMLBuilder,
     generate_agents_md,
     generate_ci_workflow,
@@ -190,7 +191,7 @@ def test_generate_pre_commit_config_mypy_dependencies_interpolation():
 def test_generate_ci_workflow_default():
     content = generate_ci_workflow(
         CIWorkflowSpec(
-            supported_os=["Linux"],
+            supported_os=[TargetOS.LINUX],
             min_python="3.13",
             ci_flags=set(),
             ci_steps=[],
@@ -207,7 +208,7 @@ def test_generate_ci_workflow_default():
 def test_generate_ci_workflow_matrix():
     content = generate_ci_workflow(
         CIWorkflowSpec(
-            supported_os=["Linux", "MacOS", "Windows"],
+            supported_os=[TargetOS.LINUX, TargetOS.MACOS, TargetOS.WINDOWS],
             min_python="3.11",
             ci_flags=set(),
             ci_steps=[],
@@ -225,9 +226,9 @@ def test_generate_ci_workflow_pytest_and_codecov():
     # Pytest alone
     content_pytest = generate_ci_workflow(
         CIWorkflowSpec(
-            supported_os=["Linux"],
+            supported_os=[TargetOS.LINUX],
             min_python="3.13",
-            ci_flags={"pytest"},
+            ci_flags={CIFlag.PYTEST},
             ci_steps=[],
         )
     )
@@ -237,9 +238,9 @@ def test_generate_ci_workflow_pytest_and_codecov():
     # Pytest with Codecov
     content_codecov = generate_ci_workflow(
         CIWorkflowSpec(
-            supported_os=["Linux", "MacOS"],
+            supported_os=[TargetOS.LINUX, TargetOS.MACOS],
             min_python="3.12",
-            ci_flags={"pytest", "codecov"},
+            ci_flags={CIFlag.PYTEST, CIFlag.CODECOV},
             ci_steps=["      - name: Lint\n        run: uv run ruff check"],
         )
     )
@@ -270,7 +271,7 @@ def test_generate_justfile():
             format_commands=["uv run ruff format src tests"],
             lint_commands=["uv run ruff check src tests"],
             typecheck_commands=["uv run mypy ."],
-            ci_flags={"pytest", "zensical"},
+            ci_flags={CIFlag.PYTEST, CIFlag.ZENSICAL},
             clean_paths=["dist", "build"],
         )
     )
@@ -402,9 +403,9 @@ def test_generate_workflows_no_trailing_whitespace():
     """Verifies that generated workflow templates contain zero trailing whitespace and valid newlines."""
     ci_content = generate_ci_workflow(
         CIWorkflowSpec(
-            supported_os=["Linux", "MacOS"],
+            supported_os=[TargetOS.LINUX, TargetOS.MACOS],
             min_python="3.12",
-            ci_flags={"pytest", "codecov"},
+            ci_flags={CIFlag.PYTEST, CIFlag.CODECOV},
             ci_steps=["      - name: Lint\n        run: uv run ruff check"],
         )
     )
@@ -658,15 +659,15 @@ def _all_ci_variants():
         "      - name: Run Mypy\n        run: uv run mypy src/",
     ]
     for systems, python, pytest_on, codecov_on, lint in product(
-        (["Linux"], ["Linux", "MacOS", "Windows"]),
+        ([TargetOS.LINUX], [TargetOS.LINUX, TargetOS.MACOS, TargetOS.WINDOWS]),
         ("3.14", "3.12"),
         (False, True),
         (False, True),
         ([], lint_steps[:1], lint_steps),
     ):
-        flags = {"pytest"} if pytest_on else set()
+        flags: set[CIFlag] = {CIFlag.PYTEST} if pytest_on else set()
         if codecov_on:
-            flags.add("codecov")
+            flags.add(CIFlag.CODECOV)
         yield generate_ci_workflow(CIWorkflowSpec(systems, python, flags, lint))
 
 

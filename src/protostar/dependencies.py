@@ -3,6 +3,7 @@
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import NamedTuple
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
@@ -26,7 +27,7 @@ from .progress import ProgressStep, no_progress
 from .sync_state import DependencyState
 from .system import ProcessRunner
 
-__all__ = ["DependencyGroup", "install_dependencies"]
+__all__ = ["DependencyGroup", "RequirementIdentity", "install_dependencies"]
 
 
 def _install_group(
@@ -136,7 +137,14 @@ def preserved_requirement(
     )
 
 
-def requirement_identity(content: str) -> tuple[str, str]:
+class RequirementIdentity(NamedTuple):
+    """Canonical package name and normalized marker identity."""
+
+    name: str
+    marker: str
+
+
+def requirement_identity(content: str) -> RequirementIdentity:
     """Returns canonical package and normalized marker identity."""
     try:
         requirement = Requirement(content)
@@ -144,9 +152,10 @@ def requirement_identity(content: str) -> tuple[str, str]:
         raise ConfigurationError(
             "Invalid dependency requirement.", hint="Use a valid PEP 508 requirement."
         ) from e
-    return canonicalize_name(requirement.name), str(
-        requirement.marker
-    ) if requirement.marker else ""
+    return RequirementIdentity(
+        canonicalize_name(requirement.name),
+        str(requirement.marker) if requirement.marker else "",
+    )
 
 
 def normalized_requirement(content: str) -> str:

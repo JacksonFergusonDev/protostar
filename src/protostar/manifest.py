@@ -51,6 +51,8 @@ class DiagnosticPhase(enum.StrEnum):
     EXECUTOR = "Executor"
     DOCKER = "Docker"
     CI = "CI"
+    GIT = "Git"
+    MARKDOWNLINT = "MarkdownLint"
 
 
 class Severity(enum.StrEnum):
@@ -74,7 +76,7 @@ class DiagnosticEvent:
         resolved: A conflict settled by a resolution.
     """
 
-    phase: DiagnosticPhase | str
+    phase: DiagnosticPhase
     message: str
     severity: Severity
     detail: str | None = None
@@ -451,7 +453,7 @@ class ToolingManifest:
     wants_ci: bool = False
     wants_release: bool = False
     wants_docker: bool = False
-    ci_flags: set[CIFlag | str] = field(default_factory=set)
+    ci_flags: set[CIFlag] = field(default_factory=set)
     ci_steps: list[str] = field(default_factory=list)
     wants_just: bool = False
     just_format_commands: list[str] = field(default_factory=list)
@@ -502,9 +504,9 @@ class ToolingManifest:
         self.observe(("pre_commit_install_hook_types", hook_type))
         self.pre_commit_install_hook_types.add(hook_type)
 
-    def add_ci_flag(self, key: CIFlag | str) -> None:
+    def add_ci_flag(self, key: CIFlag) -> None:
         """Adds a CI flag to trigger specialized executor generation logic."""
-        self.observe(("ci_flags", str(key)))
+        self.observe(("ci_flags", key.value))
         self.ci_flags.add(key)
 
     def add_ci_step(self, step_yaml: str) -> None:
@@ -539,9 +541,7 @@ class ToolingManifest:
             "wants_ci": self.wants_ci,
             "wants_release": self.wants_release,
             "wants_docker": self.wants_docker,
-            "ci_flags": sorted(
-                f.value if isinstance(f, CIFlag) else str(f) for f in self.ci_flags
-            ),
+            "ci_flags": sorted(f.value for f in self.ci_flags),
             "ci_steps": list(self.ci_steps),
             "wants_just": self.wants_just,
             "just_format_commands": list(self.just_format_commands),

@@ -154,9 +154,9 @@ class HookRunner(enum.StrEnum):
 class CIWorkflowSpec:
     """CI Workflow specification."""
 
-    supported_os: list[TargetOS | str]
+    supported_os: Sequence[TargetOS]
     min_python: PythonVersion | str
-    ci_flags: set[CIFlag | str]
+    ci_flags: set[CIFlag]
     ci_steps: list[str]
 
 
@@ -167,7 +167,7 @@ class JustfileSpec:
     format_commands: list[str]
     lint_commands: list[str]
     typecheck_commands: list[str]
-    ci_flags: set[CIFlag | str]
+    ci_flags: set[CIFlag]
     clean_paths: list[str]
 
 
@@ -185,7 +185,7 @@ class GuideSpec:
     format_commands: list[str]
     lint_commands: list[str]
     typecheck_commands: list[str]
-    ci_flags: set[CIFlag | str]
+    ci_flags: set[CIFlag]
     conventional_commits: bool = False
     wants_ci: bool = False
     one_shot: bool = False
@@ -318,18 +318,7 @@ def generate_pre_commit_config(
 
 def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     """Assembles and formats the .github/workflows/ci.yml content."""
-    runner_map = {
-        "MacOS": "macos-latest",
-        "Linux": "ubuntu-latest",
-        "Windows": "windows-latest",
-    }
-    os_matrix = []
-    for os_name in spec.supported_os:
-        if (target_os := TargetOS.from_string(os_name)) is not None:
-            os_matrix.append(target_os.runner_name)
-        else:
-            os_matrix.append(runner_map.get(str(os_name), "ubuntu-latest"))
-
+    os_matrix = [target_os.runner_name for target_os in spec.supported_os]
     if not os_matrix:
         os_matrix = ["ubuntu-latest"]
 
@@ -343,8 +332,8 @@ def generate_ci_workflow(spec: CIWorkflowSpec) -> str:
     baseline_python = python_matrix[0]
 
     # Build the pytest/codecov logic
-    has_pytest = CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags
-    has_codecov = CIFlag.CODECOV in spec.ci_flags or "codecov" in spec.ci_flags
+    has_pytest = CIFlag.PYTEST in spec.ci_flags
+    has_codecov = CIFlag.CODECOV in spec.ci_flags
 
     is_single_matrix = len(os_matrix) == 1 and len(python_matrix) == 1
 
@@ -649,7 +638,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
     )
 
     all_clean_paths = list(spec.clean_paths)
-    if CIFlag.PYTEST in spec.ci_flags or "pytest" in spec.ci_flags:
+    if CIFlag.PYTEST in spec.ci_flags:
         all_clean_paths.extend(["htmlcov", ".coverage", "coverage.xml"])
 
     if all_clean_paths:
@@ -666,7 +655,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
     )
 
     # Serve recipe (Zensical)
-    if CIFlag.ZENSICAL in spec.ci_flags or "zensical" in spec.ci_flags:
+    if CIFlag.ZENSICAL in spec.ci_flags:
         justfile_content.extend(
             [
                 "",
@@ -683,7 +672,7 @@ def generate_justfile(spec: JustfileSpec) -> str:
 def _just_ci_dependencies(
     lint_commands: list[str],
     typecheck_commands: list[str],
-    ci_flags: set[CIFlag | str],
+    ci_flags: set[CIFlag],
 ) -> list[str]:
     """Returns the recipes the justfile's ``ci`` recipe depends on, in run order."""
     deps = []

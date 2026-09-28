@@ -18,6 +18,7 @@ from protostar.intent import (
 from protostar.manifest import (
     CollisionStrategy,
     DiagnosticEvent,
+    DiagnosticPhase,
     EnvironmentManifest,
     HookRunner,
     Severity,
@@ -372,7 +373,9 @@ def test_execute_returns_touched_paths_and_diagnostics(mocker, mock_config):
     mock_executor_instance.journal.created_paths = frozenset({"pyproject.toml"})
     mock_executor_instance.journal.mutated_paths = frozenset()
     mock_executor_instance.diagnostics = [
-        DiagnosticEvent(phase="Test", message="something", severity=Severity.INFO)
+        DiagnosticEvent(
+            phase=DiagnosticPhase.EXECUTOR, message="something", severity=Severity.INFO
+        )
     ]
 
     engine = Orchestrator([], mock_config)

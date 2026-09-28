@@ -21,7 +21,7 @@ import protostar.cli
 from protostar.cli.changes import hook_snapshot, prepare_draft, print_dry_run
 from protostar.cli.reviews import handle_review
 from protostar.config import TemplateSource, UserConfig
-from protostar.manifest import DiagnosticEvent, Severity
+from protostar.manifest import DiagnosticEvent, DiagnosticPhase, Severity
 from protostar.models import InitRequest
 from protostar.modules import (
     TOOLING_MODULES,
@@ -359,18 +359,18 @@ def generate_diagnostic_panel_svg() -> None:
 
     events = [
         DiagnosticEvent(
-            phase="Git",
+            phase=DiagnosticPhase.GIT,
             message="Initialized fresh git repository in workspace.",
             severity=Severity.INFO,
         ),
         DiagnosticEvent(
-            phase="Direnv",
+            phase=DiagnosticPhase.DIRENV,
             message="Auto-activation hook skipped; binary not found in PATH.",
             severity=Severity.SKIP,
             detail="Install direnv to enable seamless directory traversal activation.",
         ),
         DiagnosticEvent(
-            phase="MarkdownLint",
+            phase=DiagnosticPhase.MARKDOWNLINT,
             message="Linter configuration scaffolded with relaxed schema rules.",
             severity=Severity.WARNING,
             detail="Install markdownlint-cli2 to enable git hook verification.",

@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from .config import TemplateSource, UserConfig
 from .errors import (
@@ -329,6 +329,18 @@ def prepare_project(
     )
 
 
+class PlanResult(NamedTuple):
+    """The result of planning a project's recipe.
+
+    Attributes:
+        manifest: The planned manifest.
+        config: The configuration the recipe records.
+    """
+
+    manifest: EnvironmentManifest
+    config: UserConfig
+
+
 def plan_project(
     located: LocatedProject,
     *,
@@ -337,7 +349,7 @@ def plan_project(
     options: Mapping[str, OptionValue] | None = None,
     tier: Tier | None = None,
     check_executables: bool = True,
-) -> tuple[EnvironmentManifest, UserConfig]:
+) -> PlanResult:
     """Plans a located project's recipe exactly as ``sync`` applies it.
 
     Planning is read-only, so a caller that only reads the plan, such as
@@ -422,4 +434,4 @@ def plan_project(
     manifest = Orchestrator(modules, config, request).plan(
         check_executables=check_executables
     )
-    return manifest, config
+    return PlanResult(manifest, config)
