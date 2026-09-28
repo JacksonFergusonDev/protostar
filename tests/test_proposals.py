@@ -233,34 +233,34 @@ def test_new_requirements_of_an_unowned_project_are_proposals():
 
 def test_a_differing_unowned_requirement_can_be_kept_or_taken():
     (conflict,) = select_dependencies(
-        ["ruff"], ["ruff>=0.5"], (), DependencyGroup.DEV
+        ["ruff>=0.6"], ["ruff>=0.5"], (), DependencyGroup.DEV
     ).conflicts
     assert conflict.reason is ConflictReason.UNOWNED
     assert conflict.choices == (LOCAL, DESIRED)
 
     kept = select_dependencies(
-        ["ruff"],
+        ["ruff>=0.6"],
         ["ruff>=0.5"],
         (),
         DependencyGroup.DEV,
         resolutions={conflict.id: LOCAL},
     )
     assert kept.packages == ()
-    assert kept.records == (record("ruff", "ruff>=0.5"),)
+    assert kept.records == (record("ruff>=0.6", "ruff>=0.5"),)
     # Kept, the requirement stands for the request: nothing is pending after.
     again = select_dependencies(
-        ["ruff"], ["ruff>=0.5"], kept.records, DependencyGroup.DEV
+        ["ruff>=0.6"], ["ruff>=0.5"], kept.records, DependencyGroup.DEV
     )
     assert (again.packages, again.conflicts, again.preserved) == ((), (), ())
 
     taken = select_dependencies(
-        ["ruff"],
+        ["ruff>=0.6"],
         ["ruff>=0.5"],
         (),
         DependencyGroup.DEV,
         resolutions={conflict.id: DESIRED},
     )
-    assert taken.packages == ("ruff",)
+    assert taken.packages == ("ruff>=0.6",)
 
 
 def test_a_removed_owned_requirement_can_take_the_update():

@@ -335,10 +335,14 @@ def test_dependency_materialized_bounds_repeat_edit_and_update(
 @pytest.mark.parametrize(
     ("local", "desired"),
     [
-        (["requests>=5"], ["requests"]),
+        (["requests>=5"], ["requests>=6"]),
         (["requests>=2", "Requests<4"], ["requests>=3"]),
         ([], ["Requests>=2", "requests>=3"]),
         (["requests[security]>=2"], ["requests>=2"]),
+        (["requests>=2"], ["requests[security]"]),
+        (["requests[security]>=2"], ["requests[socks]"]),
+        (["requests>=2"], ["requests @ https://example.com/a.whl"]),
+        (["requests>=2", "Requests<4"], ["requests"]),
         (["requests @ https://example.com/a.whl"], ["requests"]),
         (
             ["requests>=2; python_version < '3.14'"],
@@ -352,6 +356,77 @@ def test_unowned_dependency_constraints_and_duplicate_identities(local, desired)
     result = select_dependencies(desired, local, (), DependencyGroup.MAIN)
     assert not result.packages
     assert result.conflicts
+
+
+@pytest.mark.parametrize("proposing", [False, True])
+@pytest.mark.parametrize(
+    ("local", "desired"),
+    [
+        ("prek>=0.4.11", "prek"),
+        ("prek==0.4.11", "prek"),
+        ("prek>=0.4.11,<1,!=0.5", "prek"),
+        ("prek~=0.4.11", "prek"),
+        ("Requests[security]>=2", "requests"),
+        ("requests[security,socks]>=2", "requests[security]"),
+        ("some_pkg[extra_name]>=2", "some-pkg[extra-name]"),
+        (
+            "requests>=2; python_version < '3.14'",
+            "requests; python_version < '3.14'",
+        ),
+    ],
+)
+def test_unowned_constraints_satisfy_unconstrained_requests(local, desired, proposing):
+    from protostar.dependencies import DependencySelection, select_dependencies
+
+    assert select_dependencies(
+        [desired], [local], (), DependencyGroup.DEV, proposing=proposing
+    ) == DependencySelection((), ())
+
+
+def test_different_marker_does_not_satisfy_unconstrained_request():
+    from protostar.dependencies import select_dependencies
+
+    selected = select_dependencies(
+        ["prek"], ["prek>=0.4.11; sys_platform == 'win32'"], (), DependencyGroup.DEV
+    )
+    assert selected.packages == ("prek",)
+
+
+def test_explicit_overwrite_still_replaces_existing_constraints():
+    from protostar.dependencies import select_dependencies
+
+    selected = select_dependencies(
+        ["prek"], ["prek>=0.4.11"], (), DependencyGroup.DEV, overwrite=True
+    )
+    assert selected.packages == ("prek",)
+
+
+def test_existing_constraint_is_quiet_in_review_and_remains_unowned(
+    tmp_path, monkeypatch, mocker
+):
+    from protostar.preparation import ExecutionPolicy, prepare_review
+
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "pyproject.toml"
+    original = (
+        b'[project]\nname = "personal"\n'
+        b'[dependency-groups]\ndev = ["prek>=0.4.11"] # my constraint\n'
+    )
+    target.write_bytes(original)
+    intent = EnvironmentManifest(collision_strategy=CollisionStrategy.MERGE)
+    intent.dependencies.add_dev("prek")
+    review = prepare_review(intent, UserConfig(), policy=ExecutionPolicy.INITIALIZATION)
+    assert not review.conflicts
+    assert not review.proposals
+    assert not review.preserved
+
+    # Initial application, repeat, and tool removal never adopt or remove it.
+    for current in (intent, intent, EnvironmentManifest()):
+        executor = run(current, mocker)
+        executor.process_runner.run.assert_not_called()
+        assert not executor.diagnostics
+        assert target.read_bytes() == original
+        assert not deserialize_state(Path("protostar.lock").read_text()).dependencies
 
 
 def test_owned_dependency_deletion_and_regression():
