@@ -26,12 +26,21 @@ protostar sync
 protostar sync --check
 ```
 
-`status` summarizes accepted updates, conflicts, preserved edits/deletions, and
-ownership advancement. `diff` and `sync --dry-run` show the same accepted byte
-changes. Conflicts appear separately with file, key, identity, and line
-diagnostics; a conflicted file can still have independent accepted edits. Resolver actions list
-accepted requirements and their `pyproject.toml`/`uv.lock` footprint. Their output
-is unknown until application, so previews do not invent a resulting lockfile diff.
+`status` shows the files with pending work as the same labelled tree `init`
+previews: each is `new`, `modified`, `removed`, or `conflict`, and a file marks
+what was resolved, the proposals kept out, and your kept edits. Files the update
+leaves alone are not listed. Below the tree, every conflict, proposal, and kept
+edit is listed with its id and file, key, identity, or lines; a conflicted file
+can still have independent accepted edits. `diff` and `sync --dry-run` add each
+accepted byte change as a unified diff. Resolver actions list accepted
+requirements and their `pyproject.toml`/`uv.lock` footprint. Their output is
+unknown until application, so previews do not invent a resulting lockfile diff.
+
+![Protostar status after a recipe edit](../assets/terminals/cli_status.svg)
+
+Here the recipe turns Docker on and `just` off. Docker's files are new, and
+`CONTRIBUTING.md` changes to match the new tools. The justfile was edited by hand, so removing
+it is a conflict, and the hand-edited Ruff line length is kept.
 
 `sync` applies safe edits and composite ownership state transactionally. It never
 reruns project initialization, Git initialization, arbitrary template tasks, or IDE

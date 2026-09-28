@@ -727,7 +727,7 @@ def test_review_reports_line_conflicts_and_preserved_edits(
             },
         }
     ]
-    render_review(review)
+    render_review(desired(), review)
     assert (
         f"Conflict {conflict.id}: justfile line 5: diverged; "
         "resolve with local, desired, both."

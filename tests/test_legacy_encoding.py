@@ -260,10 +260,12 @@ def test_review_lists_proposals_and_kept_edits(legacy_console, tmp_path, monkeyp
         manifest, UserConfig(), policy=ExecutionPolicy.INITIALIZATION
     )
 
-    render_review(review)
+    render_review(manifest, review)
 
     written = legacy_console()
-    assert "1 changes to your files" in written
+    assert "1 modified · 1 change to your files" in written
+    # The tree's guides fall back to ASCII on a stream that can't encode them.
+    assert "`-- pyproject.toml  modified" in written
     assert "Proposed " in written
     assert "pyproject.toml tool: applies; decline with local." in written
 

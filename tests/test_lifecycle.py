@@ -808,7 +808,7 @@ def test_sync_human_rendering_agrees_with_review(project, monkeypatch, capsys, m
     else:
         main()
     output = capsys.readouterr().out
-    assert "Accepted: .github/renovate.json" in output
+    assert "renovate.json  modified" in output
     if mode == ["--dry-run"]:
         assert "--- a/.github/renovate.json" in output
         assert (

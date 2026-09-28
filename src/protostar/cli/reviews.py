@@ -4,11 +4,24 @@ import argparse
 import difflib
 import shlex
 import sys
+from collections import Counter
+from collections.abc import Sequence
 from typing import Any, cast
 
 from rich.text import Text
 
 from protostar.cli import schema, ui
+from protostar.cli.changes import (
+    SETTLED,
+    Change,
+    Entry,
+    changes_to_your_files,
+    classify,
+    count,
+    entry_tree,
+    pending_entries,
+    where,
+)
 from protostar.cli.diff import format_diff, normalize_newlines
 from protostar.cli.tui.launch import resolve_conflicts
 from protostar.config import UserConfig
@@ -20,12 +33,8 @@ from protostar.lifecycle import (
     locate_project,
     prepare_project,
 )
-from protostar.merge import (
-    ConflictReason,
-    MergeConflict,
-    ResolutionChoice,
-    describe_location,
-)
+from protostar.manifest import EnvironmentManifest
+from protostar.merge import ConflictReason, ResolutionChoice
 from protostar.migrations import MigrationOutcome, MigrationStep
 from protostar.preparation import (
     PreparedEdit,
@@ -35,12 +44,6 @@ from protostar.preparation import (
 )
 from protostar.system import is_interactive
 from protostar.system_deps import check_required_executables
-
-SETTLED = {
-    ResolutionChoice.LOCAL: "kept local content",
-    ResolutionChoice.DESIRED: "took the update",
-    ResolutionChoice.BOTH: "kept both",
-}
 
 
 def _diff_lines(content: bytes | None) -> list[str]:
@@ -86,7 +89,7 @@ def handle_review(args: argparse.Namespace) -> None:
         ui.emit_json(review_payload(project.review, project.upstream))
         return
     render_upstream(project.upstream)
-    render_review(project.review, show_diffs=args.command == "diff")
+    render_review(project.manifest, project.review, show_diffs=args.command == "diff")
 
 
 def render_upstream(upstream: TemplateUpstream | None) -> None:
@@ -123,71 +126,60 @@ def render_upstream(upstream: TemplateUpstream | None) -> None:
     ui.console.print(line, soft_wrap=True)
 
 
+def _summary(entries: Sequence[Entry], review: PreparedReview) -> Text:
+    """Counts the pending paths by change, then every decision by kind."""
+    counts = Counter(entry.change for entry in entries)
+    parts = [
+        f"{counts[change]} {change.label}"
+        for change in (Change.NEW, Change.MODIFIED, Change.REMOVED)
+        if counts[change]
+    ]
+    if review.conflicts:
+        parts.append(count(len(review.conflicts), "conflict"))
+    if review.resolved:
+        parts.append(f"{len(review.resolved)} resolved")
+    if review.proposals:
+        parts.append(changes_to_your_files(review.proposals))
+    if review.preserved:
+        parts.append(count(len(review.preserved), "kept edit"))
+    return Text(" · ".join(parts))
+
+
 def render_review(
-    review: PreparedReview, *, show_diffs: bool = False, applied: bool = False
+    manifest: EnvironmentManifest,
+    review: PreparedReview,
+    *,
+    show_diffs: bool = False,
+    applied: bool = False,
 ) -> None:
-    """Renders shared decisions for inspection, checks, and application."""
-    ui.console.print(
-        Text.assemble(
-            (
-                f"{len(review.edits)} accepted file edits",
-                ("green" if applied else "") if review.edits else "dim",
-            ),
-            ("; ", "dim"),
-            (
-                f"{len(review.conflicts)} conflicts",
-                "bold red" if review.conflicts else "dim",
-            ),
-            ("; ", "dim"),
-            (
-                f"{len(review.resolved)} resolved",
-                "" if review.resolved else "dim",
-            ),
-            ("; ", "dim"),
-            (
-                f"{len(review.proposals)} changes to your files",
-                "" if review.proposals else "dim",
-            ),
-            ("; ", "dim"),
-            (
-                f"{len(review.preserved)} preserved local deviations.",
-                "" if review.preserved else "dim",
-            ),
-        )
-    )
+    """Renders shared decisions for inspection, checks, and application.
+
+    The paths a sync changes or asks about show as init's labelled tree; the
+    lines below it name each decision by id and the work beyond the files.
+
+    Args:
+        manifest: The manifest the review was prepared from.
+        review: The prepared review.
+        show_diffs: Whether to print each edit's unified diff after the tree.
+        applied: Whether the review was just applied, which words the
+            follow-up work as done.
+    """
+    entries = pending_entries(classify(manifest, review))
+    if entries:
+        ui.console.print(_summary(entries, review))
+        ui.console.print(entry_tree(entries))
+        ui.console.print()
+    if show_diffs:
+        for edit in review.edits:
+            ui.console.print(format_diff(unified_diff(edit)), end="")
     for step in review.migrations:
         ui.console.print(_migration_line(step, applied=applied), soft_wrap=True)
-    for edit in review.edits:
-        ui.console.print(
-            Text.assemble(
-                (
-                    "Accepted: " if edit.after is not None else "Removed: ",
-                    "green" if applied else "",
-                ),
-                (
-                    edit.path,
-                    ui.path_style(edit.path.rsplit("/", 1)[-1], directory=False),
-                ),
-            )
-        )
-        if show_diffs:
-            ui.console.print(format_diff(unified_diff(edit)), end="")
-    for path in review.directories:
-        ui.console.print(
-            Text.assemble(
-                ("Accepted directory: ", "green" if applied else ""),
-                (
-                    path,
-                    ui.path_style(path.rsplit("/", 1)[-1], directory=True),
-                ),
-            )
-        )
     for conflict in review.conflicts:
         choices = ", ".join(choice.value for choice in conflict.choices)
         choice_text = f"resolve with {choices}." if choices else "resolve by hand."
         ui.console.print(
             Text.assemble(
-                (f"Conflict {conflict.id}: ", "bold red"),
+                (f"Conflict {conflict.id}: ", "cyan"),
                 (where(conflict), "bold"),
                 (f": {conflict.reason.value}; {choice_text}"),
             ),
@@ -197,7 +189,7 @@ def render_review(
         settled = SETTLED[cast(ResolutionChoice, conflict.resolution)]
         ui.console.print(
             Text.assemble(
-                (f"Resolved {conflict.id}: ", "bold green" if applied else "bold"),
+                (f"Resolved {conflict.id}: ", "bold"),
                 (where(conflict), "bold"),
                 (f": {settled}."),
             ),
@@ -303,17 +295,6 @@ def _migration_line(step: MigrationStep, *, applied: bool) -> Text:
     )
 
 
-def where(conflict: MergeConflict) -> str:
-    """Returns the file, position, and identity of a conflict on one line."""
-    parts = (
-        conflict.location.file,
-        describe_location(conflict.location),
-        # A requirement's identity is its package and marker.
-        (conflict.location.identity or "").rstrip(":"),
-    )
-    return " ".join(part for part in parts if part)
-
-
 def _asks(args: argparse.Namespace, review: PreparedReview) -> bool:
     """Returns whether to ask how conflicts and proposals are settled first.
 
@@ -404,7 +385,7 @@ def handle_sync(args: argparse.Namespace) -> None:
             ui.emit_json(payload)
         else:
             render_upstream(project.upstream)
-            render_review(review, show_diffs=args.dry_run)
+            render_review(project.manifest, review, show_diffs=args.dry_run)
             if args.check:
                 if not review.pending:
                     ui.console.print(
@@ -442,7 +423,7 @@ def handle_sync(args: argparse.Namespace) -> None:
         )
     else:
         render_upstream(project.upstream)
-        render_review(review, applied=True)
+        render_review(project.manifest, review, applied=True)
         settled = [
             c for c in review.resolved if c.reason is not ConflictReason.PRESERVED
         ]

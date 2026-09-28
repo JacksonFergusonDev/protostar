@@ -92,9 +92,10 @@ protostar diff --json
 
 ![Diff command help](../assets/terminals/cli_diff_help.svg)
 
-`status` summarizes accepted edits, conflicts, preserved local edits/deletions,
+`status` shows the files with pending work as a tree labelled like `init`'s
+preview, then lists conflicts, proposals, preserved local edits/deletions,
 ownership advancement, and resolver actions. `diff` also displays unified diffs
-of accepted direct edits. Conflicting content is preserved; conflict details give
+of accepted direct edits after the tree. Conflicting content is preserved; conflict details give
 the file, semantic keys or region identity, and reason. Resolver output is unknown
 until application; no predicted dependency or lockfile diff is shown.
 

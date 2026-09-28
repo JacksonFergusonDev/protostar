@@ -20,13 +20,17 @@ from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import ui
-from protostar.cli.reviews import SETTLED, where
 from protostar.cli.ui import path_style, planned_paths
 from protostar.config import UserConfig
 from protostar.init_draft import InitDraft, resolve_init
 from protostar.intent import DependencyGroup
 from protostar.manifest import EnvironmentManifest
-from protostar.merge import ConflictReason, MergeConflict, ResolutionChoice
+from protostar.merge import (
+    ConflictReason,
+    MergeConflict,
+    ResolutionChoice,
+    describe_location,
+)
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
 from protostar.preparation import (
@@ -45,10 +49,12 @@ from protostar.registry import (
 __all__ = [
     "FOLDER",
     "NETWORK_NOTE",
+    "SETTLED",
     "Change",
     "Entry",
     "HookSnapshot",
     "Review",
+    "changes_to_your_files",
     "classify",
     "count",
     "entries_record",
@@ -56,11 +62,13 @@ __all__ = [
     "entry_tree",
     "hook_snapshot",
     "indented_lines",
+    "pending_entries",
     "plan_draft",
     "prepare_draft",
     "print_dry_run",
     "steps_text",
     "summary",
+    "where",
 ]
 
 
@@ -94,6 +102,24 @@ _DECISION = "cyan"
 
 FOLDER = path_style("", directory=True)
 
+SETTLED = {
+    ResolutionChoice.LOCAL: "kept local content",
+    ResolutionChoice.DESIRED: "took the update",
+    ResolutionChoice.BOTH: "kept both",
+}
+"""How each choice settled a conflict, for the lines that list them."""
+
+
+def where(conflict: MergeConflict) -> str:
+    """Returns the file, position, and identity of a conflict on one line."""
+    parts = (
+        conflict.location.file,
+        describe_location(conflict.location),
+        # A requirement's identity is its package and marker.
+        (conflict.location.identity or "").rstrip(":"),
+    )
+    return " ".join(part for part in parts if part)
+
 
 @dataclass(frozen=True)
 class Entry:
@@ -101,7 +127,8 @@ class Entry:
 
     Its conflicts are open or, once a choice settled them, resolved. Its
     proposals are changes into content the user already had, applied unless
-    kept out.
+    kept out. Its preserved edits are the user's own, kept under an update
+    that has not changed there.
     """
 
     path: str
@@ -111,6 +138,7 @@ class Entry:
     conflicts: tuple[MergeConflict, ...] = ()
     creator: tuple[str, ...] | None = None
     merged: bool = False
+    preserved: tuple[MergeConflict, ...] = ()
 
     @property
     def open(self) -> tuple[MergeConflict, ...]:
@@ -157,6 +185,9 @@ def classify(
     conflicts: dict[str, list[MergeConflict]] = {}
     for conflict in (*prepared.conflicts, *prepared.resolved, *prepared.proposals):
         conflicts.setdefault(conflict.location.file, []).append(conflict)
+    preserved: dict[str, list[MergeConflict]] = {}
+    for item in prepared.preserved:
+        preserved.setdefault(item.location.file, []).append(item)
     tasks = (*manifest.tasks.system_tasks, *manifest.tasks.post_install_tasks)
     creators = {
         path: tuple(task.command) for task in tasks for path in task.owned_files
@@ -164,7 +195,7 @@ def classify(
     written = {path.as_posix() for path in manifest.written_files()}
     paths, directories = planned_paths(manifest)
     entries: list[Entry] = []
-    for path in sorted({*paths, *edits, *prepared.directories, *conflicts}):
+    for path in sorted({*paths, *edits, *prepared.directories, *conflicts, *preserved}):
         edit = edits.get(path)
         if edit is not None:
             change = (
@@ -191,9 +222,32 @@ def classify(
                 tuple(conflicts.get(path, ())),
                 creators.get(path),
                 path in written,
+                tuple(preserved.get(path, ())),
             )
         )
     return tuple(entries)
+
+
+_PENDING = frozenset({Change.NEW, Change.MODIFIED, Change.REMOVED, Change.CONFLICT})
+
+
+def pending_entries(entries: Sequence[Entry]) -> tuple[Entry, ...]:
+    """Keeps the paths a sync changes or asks about.
+
+    A managed file the update leaves alone would otherwise fill the tree as
+    ``existing``, so only a change or a decision earns a path its place.
+
+    Args:
+        entries: Every classified path, sorted by path.
+
+    Returns:
+        The paths with a change, a conflict, a proposal, or a preserved edit.
+    """
+    return tuple(
+        entry
+        for entry in entries
+        if entry.change in _PENDING or entry.conflicts or entry.preserved
+    )
 
 
 def plan_draft(
@@ -328,11 +382,8 @@ def summary(review: Review) -> Text:
     ]
     if conflicts := sum(len(entry.open) for entry in review.entries):
         parts.append(count(conflicts, "conflict"))
-    proposals = review.prepared.proposals
-    if proposals:
-        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
-        changes = count(len(proposals), "change") + " to your files"
-        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
+    if proposals := review.prepared.proposals:
+        parts.append(changes_to_your_files(proposals))
     parts.append(
         count(
             len(dependencies.dependencies)
@@ -345,6 +396,13 @@ def summary(review: Review) -> Text:
         count(len(tasks.system_tasks) + len(tasks.post_install_tasks), "command")
     )
     return Text(" · ".join(parts))
+
+
+def changes_to_your_files(proposals: Sequence[MergeConflict]) -> str:
+    """Counts the proposals, and how many were kept out, for a summary line."""
+    kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
+    changes = count(len(proposals), "change") + " to your files"
+    return f"{changes} ({kept} kept out)" if kept else changes
 
 
 def entry_label(entry: Entry) -> Text:
@@ -371,6 +429,8 @@ def entry_label(entry: Entry) -> Text:
         kept = sum(p.resolution is ResolutionChoice.LOCAL for p in entry.proposals)
         if kept:
             marker.append((f" · {kept}/{len(entry.proposals)} kept out", style))
+    if entry.preserved:
+        marker.append((f" · {count(len(entry.preserved), 'kept edit')}", "dim"))
     # Color here means change, so only directories keep their kind's color.
     return Text.assemble(
         (name, FOLDER if entry.directory else ""),

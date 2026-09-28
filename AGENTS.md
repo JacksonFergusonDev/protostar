@@ -213,7 +213,7 @@ Scale or omit these sections based on the scope of the PR.
 
 - `src/protostar/cli/tui/`: Decision-only Textual app (recipe editor, change review, sync conflict resolution, and the configuration form), accessed by the CLI exclusively through the lazy `launch.py` entry point.
 - `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
-- `src/protostar/cli/changes.py`: What init changes: the `Review` model (plan, prepare, classify each path) and its Rich renderers, shared by the recipe preview, the change review, and `init --dry-run`.
+- `src/protostar/cli/changes.py`: What init changes: the `Review` model (plan, prepare, classify each path) and its Rich renderers, shared by the recipe preview, the change review, and `init --dry-run`. `sync`, `status`, and `diff` draw their pending paths with the same `classify` and `entry_tree`.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).
 - `src/protostar/config_edit.py`: The configuration form's save: applies its values to the file's text through `tomlkit`, writing only keys whose value changed. Pure; the CLI writes the result after the form exits, and never touches Git's configuration.
 - `src/protostar/init_draft.py`: Shared init draft and resolver for flags and interactive choices.
