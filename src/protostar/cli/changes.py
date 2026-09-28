@@ -8,7 +8,7 @@ read the workspace, so the TUI runs them off the main thread.
 
 import shlex
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -73,6 +73,7 @@ __all__ = [
     "print_dry_run",
     "steps_text",
     "summary",
+    "walk_entry_hierarchy",
 ]
 
 
@@ -424,6 +425,28 @@ def entry_label(entry: Entry) -> Text:
     )
 
 
+def walk_entry_hierarchy(
+    entries: Sequence[Entry],
+) -> Iterator[tuple[str, str, str, Entry | None]]:
+    """Yields (parent_path, path, segment_name, entry_or_none) for building tree nodes.
+
+    For intermediate directory folders, entry_or_none is None and segment_name includes trailing '/'.
+    For the entries themselves, entry_or_none is the Entry object.
+    """
+    seen: set[str] = set()
+    for entry in entries:
+        parts = entry.path.split("/")
+        parent = ""
+        for index in range(1, len(parts)):
+            folder = "/".join(parts[:index])
+            if folder not in seen:
+                seen.add(folder)
+                yield parent, folder, f"{parts[index - 1]}/", None
+            parent = folder
+        seen.add(entry.path)
+        yield parent, entry.path, parts[-1], entry
+
+
 def entry_tree(entries: Sequence[Entry]) -> Tree:
     """Draws the planned paths as a static tree, each labelled with its change.
 
@@ -438,15 +461,11 @@ def entry_tree(entries: Sequence[Entry]) -> Tree:
         guide_style="bright_black",
     )
     nodes: dict[str, Tree] = {"": tree}
-    for entry in entries:
-        parts = entry.path.split("/")
-        parent = ""
-        for index in range(1, len(parts)):
-            folder = "/".join(parts[:index])
-            if folder not in nodes:
-                nodes[folder] = nodes[parent].add(Text(f"{parts[index - 1]}/", FOLDER))
-            parent = folder
-        nodes[entry.path] = nodes[parent].add(entry_label(entry))
+    for parent, path, name, entry in walk_entry_hierarchy(entries):
+        if entry is None:
+            nodes[path] = nodes[parent].add(Text(name, FOLDER))
+        else:
+            nodes[path] = nodes[parent].add(entry_label(entry))
     return tree
 
 

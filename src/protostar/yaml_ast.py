@@ -29,6 +29,7 @@ from .merge import (
     MergePolicy,
     ResolutionChoice,
     Resolutions,
+    StructuredReconciliation,
     Value,
     hold,
     lookup,
@@ -37,6 +38,7 @@ from .merge import (
     reconcile,
     retract_undeclared,
     semantic_equal,
+    sort_value_keys,
     validate_value,
 )
 
@@ -211,17 +213,9 @@ def _decode_yaml_baseline(content: str) -> dict[str, Value]:
 def encode_yaml_baseline(value: dict[str, Value]) -> str:
     """Encodes owned values deterministically without local comments or aliases."""
     validate_value(value)
-
-    def ordered(node: Value) -> Value:
-        if isinstance(node, dict):
-            return {key: ordered(node[key]) for key in sorted(node)}
-        if isinstance(node, list):
-            return [ordered(child) for child in node]
-        return node
-
     stream = StringIO()
     try:
-        _codec().dump(ordered(value), stream)
+        _codec().dump(sort_value_keys(value), stream)
     except (YAMLError, ValueError, TypeError, RecursionError) as error:
         raise _invalid() from error
     content = stream.getvalue()
@@ -230,15 +224,8 @@ def encode_yaml_baseline(value: dict[str, Value]) -> str:
 
 
 @dataclass(frozen=True)
-class YamlReconciliation:
+class YamlReconciliation(StructuredReconciliation):
     """Round-trip output, owned composite baseline, and structured conflicts."""
-
-    content: str
-    baseline: Value
-    conflicts: tuple[MergeConflict, ...]
-    resolved: tuple[MergeConflict, ...] = ()
-    proposals: tuple[MergeConflict, ...] = ()
-    preserved: tuple[MergeConflict, ...] = ()
 
 
 class Wildcard(Enum):

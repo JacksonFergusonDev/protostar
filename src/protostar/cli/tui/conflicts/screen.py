@@ -21,6 +21,7 @@ from textual.content import Content
 from textual.widgets import Button, Footer, RadioButton, RadioSet, Static, Tree
 from textual.widgets.tree import TreeNode
 
+from protostar.cli.changes import count
 from protostar.cli.decisions import TAGS
 from protostar.errors import ProtostarError
 from protostar.lifecycle import PreparedProject
@@ -67,12 +68,8 @@ def _label(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
     )
 
 
-def _file_label(path: str, count: int) -> Text:
-    return Text.assemble(path, (f"  {count}", "dim"))
-
-
-def _count(number: int, noun: str) -> str:
-    return f"{number} {noun}{'' if number == 1 else 's'}"
+def _file_label(path: str, count_num: int) -> Text:
+    return Text.assemble(path, (f"  {count_num}", "dim"))
 
 
 def summary(
@@ -96,19 +93,19 @@ def summary(
     )
     parts = []
     if conflicts:
-        parts.append(_count(len(conflicts), "conflict"))
+        parts.append(count(len(conflicts), "conflict"))
         parts.extend(f"{counts[kind]} {kind}" for kind in ("resolved", OPEN))
         if counts["by hand"]:
             parts.append(f"{counts['by hand']} by hand")
     proposals = [d for d in decisions if d.reason is ConflictReason.PROPOSED]
     if proposals:
         kept = sum(choices.get(p.id) is ResolutionChoice.LOCAL for p in proposals)
-        changes = _count(len(proposals), "change") + " to your files"
+        changes = count(len(proposals), "change") + " to your files"
         parts.append(f"{changes} ({kept} kept out)" if kept else changes)
     preserved = [d for d in decisions if d.reason is ConflictReason.PRESERVED]
     if preserved:
         restored = sum(choices.get(p.id) is ResolutionChoice.DESIRED for p in preserved)
-        edits = _count(len(preserved), "kept edit")
+        edits = count(len(preserved), "kept edit")
         parts.append(f"{edits} ({restored} updated)" if restored else edits)
     note = "Open conflicts keep your content; safe changes apply either way."
     return Text(f"{' · '.join(parts)}. {note}")

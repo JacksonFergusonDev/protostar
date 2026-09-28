@@ -104,6 +104,16 @@ def declare_contribution(
     return StructuredContribution(producer, content, resolver_footprint=footprint)
 
 
+def _parse_toml_document(original: str, *, action: str) -> tomlkit.TOMLDocument:
+    try:
+        return tomlkit.parse(original)
+    except tomlkit.exceptions.ParseError as e:
+        raise ConfigurationError(
+            "Invalid dependency configuration.",
+            hint=f"Correct pyproject.toml before {action}.",
+        ) from e
+
+
 def remove_requirements(
     original: str, group: DependencyGroup, entries: Collection[str]
 ) -> str:
@@ -120,13 +130,7 @@ def remove_requirements(
     Raises:
         ConfigurationError: If the document or its dependency tables are invalid.
     """
-    try:
-        doc = tomlkit.parse(original)
-    except tomlkit.exceptions.ParseError as e:
-        raise ConfigurationError(
-            "Invalid dependency configuration.",
-            hint="Correct pyproject.toml before removing requirements.",
-        ) from e
+    doc = _parse_toml_document(original, action="removing requirements")
     table = doc.get(
         "project" if group is DependencyGroup.MAIN else "dependency-groups", {}
     )
@@ -141,13 +145,7 @@ def remove_requirements(
 
 def apply_dependency_includes(original: str, edges: list[DependencyInclude]) -> str:
     """Returns an AST-preserving additive application of typed group includes."""
-    try:
-        doc = tomlkit.parse(original)
-    except tomlkit.exceptions.ParseError as e:
-        raise ConfigurationError(
-            "Invalid dependency configuration.",
-            hint="Correct pyproject.toml before applying dependency includes.",
-        ) from e
+    doc = _parse_toml_document(original, action="applying dependency includes")
     groups = doc.get("dependency-groups")
     if groups is not None and not isinstance(groups, tomlkit.items.AbstractTable):
         raise ConfigurationError(
