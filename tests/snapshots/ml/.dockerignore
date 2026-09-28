@@ -1,4 +1,3 @@
-!data/**/.gitkeep
 *.log
 *.onnx
 *.pt

@@ -39,7 +39,6 @@ vcs_ignores = [
     "data/01_raw/*",
     "data/02_processed/*",
     "data/03_features/*",
-    "!data/**/.gitkeep",
     ".ipynb_checkpoints/",
 ]
 
@@ -163,11 +162,6 @@ def test_every_sample_lands_in_exactly_one_split() -> None:
     assert len(test) == 3
     np.testing.assert_array_equal(np.sort(np.concatenate([train, test])), np.arange(10))
 '''
-
-"data/01_raw/.gitkeep" = ""
-"data/02_processed/.gitkeep" = ""
-"data/03_features/.gitkeep" = ""
-"models/weights/.gitkeep" = ""
 
 ".gitattributes" = '''
 # Improve Jupyter Notebook diffs
