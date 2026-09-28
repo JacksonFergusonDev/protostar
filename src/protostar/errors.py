@@ -558,10 +558,17 @@ class WorkspaceCollisionError(ProtostarError):
         bulleted = "\n".join(f"  - {p}" for p in sorted(paths))
         message = (
             "Workspace collision detected: existing configuration files found in the workspace:\n"
-            f"{bulleted}\n"
-            "Use --force-merge or --force-replace to bypass, or resolve interactively."
+            f"{bulleted}"
         )
-        super().__init__(message, docs_path=DocsPage.TROUBLESHOOTING_COLLISIONS)
+        super().__init__(
+            message,
+            hint=(
+                "Re-run with --force-merge to merge into the existing files or "
+                "--force-replace to overwrite them, or run init in a terminal "
+                "to choose in the change review."
+            ),
+            docs_path=DocsPage.TROUBLESHOOTING_COLLISIONS,
+        )
         self.paths = paths
 
     def details(self) -> dict[str, Any]:

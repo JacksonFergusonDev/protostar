@@ -3,7 +3,8 @@
   "status": "error",
   "error": {
     "type": "WorkspaceCollisionError",
-    "message": "Workspace collision detected: existing configuration files found in the workspace:\n  - pyproject.toml\nUse --force-merge or --force-replace to bypass, or resolve interactively.",
+    "message": "Workspace collision detected: existing configuration files found in the workspace:\n  - pyproject.toml",
+    "hint": "Re-run with --force-merge to merge into the existing files or --force-replace to overwrite them, or run init in a terminal to choose in the change review.",
     "docs_url": "https://protostar.jacksonferguson.me/usage/troubleshooting/#workspace-collisions",
     "paths": [
       "pyproject.toml"

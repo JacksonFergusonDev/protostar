@@ -233,7 +233,13 @@ creates them, as in a project that already has a `pyproject.toml`, the review
 shows the configuration merges and dependency choices too, so every change to an
 existing file is decided before anything runs. `status` and JSON reviews list
 proposals under `review.proposals`; a proposal without a `resolution` applies.
-`--force-merge` without a review applies every proposal, as before.
+`--force-merge` without a review applies every proposal, as before. To choose
+without the review, `init` takes the same `--resolve` as `sync`, with the ids
+`init --dry-run` prints:
+
+```bash
+protostar init --force-merge --resolve pyproject.toml=local
+```
 
 `.gitignore` additions stay automatic: they only add missing lines.
 

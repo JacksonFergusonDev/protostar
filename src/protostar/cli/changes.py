@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from rich.console import Group, RenderableType
 from rich.padding import Padding
@@ -20,7 +20,7 @@ from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import ui
-from protostar.cli.reviews import where
+from protostar.cli.reviews import SETTLED, where
 from protostar.cli.ui import path_style, planned_paths
 from protostar.config import UserConfig
 from protostar.init_draft import InitDraft, resolve_init
@@ -505,21 +505,35 @@ def print_dry_run(review: Review, *, unreachable: bool = False) -> None:
 
 
 def _decision_lines(review: Review) -> list[Text]:
-    """One line per open conflict and proposal, with the id that settles it."""
+    """One line per conflict and proposal, with the id that settles it.
+
+    A conflict or proposal ``--resolve`` settled says how it was settled.
+    """
+    prepared = review.prepared
     lines = [
         Text.assemble(
             (f"Conflict {conflict.id}: ", "cyan"),
             (where(conflict), "bold"),
             f": {conflict.reason.value}; your version is kept.",
         )
-        for conflict in review.prepared.conflicts
+        for conflict in prepared.conflicts
     ]
+    lines.extend(
+        Text.assemble(
+            (f"Resolved {conflict.id}: ", "bold"),
+            (where(conflict), "bold"),
+            f": {SETTLED[cast(ResolutionChoice, conflict.resolution)]}.",
+        )
+        for conflict in prepared.resolved
+    )
     lines.extend(
         Text.assemble(
             (f"Proposed {proposal.id}: ", "bold"),
             (where(proposal), "bold"),
-            ": applies to content you already have.",
+            ": kept out; your content stays."
+            if proposal.resolution is ResolutionChoice.LOCAL
+            else ": applies to content you already have.",
         )
-        for proposal in review.prepared.proposals
+        for proposal in prepared.proposals
     )
     return lines

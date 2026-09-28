@@ -225,7 +225,9 @@ def test_workspace_collision_error():
     assert err.paths == paths
     assert ".gitignore" in str(err)
     assert "pyproject.toml" in str(err)
-    assert "--force-merge or --force-replace" in str(err)
+    assert err.hint is not None
+    assert "--force-merge" in err.hint
+    assert "--force-replace" in err.hint
     assert err.docs_url == f"{DOCS_BASE_URL}usage/troubleshooting/#workspace-collisions"
 
 

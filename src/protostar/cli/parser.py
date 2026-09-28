@@ -228,8 +228,11 @@ class _VersionAction(argparse.Action):
         parser.exit()
 
 
+_RESOLVE_HELP = "Settle conflicts by id, or every conflict in a file by path. CHOICE is local (keep yours), desired (take the update), or both (text lines only). Repeatable."
+
+
 def _resolution_request(value: str) -> "ResolutionRequest":
-    """Parses one ``SELECTOR=CHOICE`` resolution for ``sync --resolve``."""
+    """Parses one ``SELECTOR=CHOICE`` resolution for ``--resolve``."""
     from protostar.merge import ResolutionChoice
     from protostar.preparation import ResolutionRequest
 
@@ -364,7 +367,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         type=_resolution_request,
         metavar="SELECTOR=CHOICE",
-        help="Settle conflicts by id, or every conflict in a file by path. CHOICE is local (keep yours), desired (take the update), or both (text lines only). Repeatable.",
+        help=_RESOLVE_HELP,
     )
     sync_parser.add_argument(
         "--to",
@@ -556,6 +559,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--force-replace",
         action="store_true",
         help="Bypass interactive prompts and forcibly overwrite file collisions.",
+    )
+
+    tooling_group.add_argument(
+        "--resolve",
+        action="append",
+        default=[],
+        type=_resolution_request,
+        metavar="SELECTOR=CHOICE",
+        help=_RESOLVE_HELP,
     )
 
     for mod in TOOLING_MODULES:

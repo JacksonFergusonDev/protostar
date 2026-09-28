@@ -61,7 +61,12 @@ from protostar.errors import (
     TemplateResolutionError,
 )
 from protostar.fs import atomic_write_text
-from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
+from protostar.init_draft import (
+    DraftTemplate,
+    InitDecision,
+    InitDraft,
+    resolve_init,
+)
 from protostar.intent import TemplateOrigin
 from protostar.interpolation import VARIABLE_NAME
 from protostar.lifecycle import migrate_variables
@@ -72,6 +77,7 @@ from protostar.modules import (
     BootstrapModule,
 )
 from protostar.options import OptionValue
+from protostar.preparation import select_resolutions
 from protostar.secret_guard import credential_named
 from protostar.sync_state import (
     check_one_shot_workspace,
@@ -257,13 +263,18 @@ def handle_init(args: argparse.Namespace) -> None:
     orchestrator_cls: type[Orchestrator] = sys.modules[__name__].Orchestrator
     engine = orchestrator_cls(modules, user_config, request=request)
 
-    if getattr(args, "dry_run", False):
+    requests = getattr(args, "resolve", [])
+    if getattr(args, "dry_run", False) or requests:
         manifest = engine.plan()
         # Only hook pins need the registry; the review shows the ones a run writes.
         hooks = hook_snapshot() if manifest.tooling.wants_hooks else None
-        review = prepare_draft(
-            request, manifest, user_config, hooks.revisions if hooks else (), {}
-        )
+        revisions = hooks.revisions if hooks else ()
+        review = prepare_draft(request, manifest, user_config, revisions, {})
+        choices = select_resolutions(review.prepared.decisions, requests)
+        if choices:
+            review = prepare_draft(request, manifest, user_config, revisions, choices)
+
+    if getattr(args, "dry_run", False):
         if ui.is_json_mode:
             ui.emit_json(
                 {
@@ -280,7 +291,10 @@ def handle_init(args: argparse.Namespace) -> None:
         sys.exit(0)
 
     decision = None
-    if interactive and ui.needs_review(request, engine.plan()):
+    if requests:
+        # The choices were made headlessly, so no review opens, as in sync.
+        decision = InitDecision(draft, hook_revisions=revisions, resolutions=choices)
+    elif interactive and ui.needs_review(request, engine.plan()):
         decision = review_changes(draft, user_config)
         if decision is None:
             raise ExecutionAbortedError("Change review cancelled by user.")
