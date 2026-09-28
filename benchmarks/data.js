@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790608572514,
+  "lastUpdate": 1790611380943,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18501,6 +18501,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1010.91,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1d3522a677004de2a0622d6d238962dd46c9e96",
+          "message": "feat(tui): shared layout spacing and wheel-holding selection lists (#377)",
+          "timestamp": "2026-09-28T08:59:53-07:00",
+          "tree_id": "1522eeca62804d6e0a0ad666b93cbcc0cba7f482",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/c1d3522a677004de2a0622d6d238962dd46c9e96"
+        },
+        "date": 1790611379505,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 275.33,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1099.35,
             "unit": "ms"
           }
         ]
