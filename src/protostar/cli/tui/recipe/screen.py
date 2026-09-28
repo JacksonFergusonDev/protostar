@@ -30,6 +30,7 @@ from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDecision, InitDraft, check_draft
 from protostar.intent import TemplateOrigin
+from protostar.manifest import CollisionStrategy
 from protostar.metadata import MetadataKey
 from protostar.modules import TOOLING_MODULES
 from protostar.recipe import (
@@ -47,6 +48,7 @@ from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel
 from ..keys import (
     FORM_KEYS,
     ActionBar,
+    Choice,
     ChoiceGroup,
     Form,
     KeyboardScreen,
@@ -108,6 +110,8 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self.draft = draft
         self.config = config
         self._recorded_template = draft.template
+        self.strategy = draft.collision_strategy or CollisionStrategy.MERGE
+        self._strategy_chosen = draft.collision_strategy is not None
         self._template_error: ProtostarError | None = None
         self._loading = False
         self._tools_invalid = False
@@ -251,48 +255,62 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             else "Choose a starting point, tools, and project details.",
         )
         with Columns(id="body"):
-            with Panel("Recipe", id="editor-panel"), Form(id="editor"):
-                yield Heading("Template")
-                yield self._template_select()
-                yield Static("", id="template-status", markup=False)
-                yield TierFields()
-                yield VariableFields(
-                    draft_variables(self.draft), self.draft.allowed_secrets
-                )
-                yield OptionFields(draft_options(self.draft))
-                yield Heading("Tools", key=("Tool info", "i"))
-                if notes := self._notes():
-                    yield Static(notes, id="analysis-notes", classes="note")
-                with ChoiceGroup(id="tools"):
-                    for title, tools in TOOL_GROUPS.items():
-                        yield Label(title, classes="group")
-                        for tool in tools:
-                            yield ToolToggle(
-                                self._label(tool),
-                                tool,
-                                value=self.enabled[tool],
-                                id=f"tool-{tool}",
-                                found=self._evidence(tool),
-                                notes=self._tool_notes(tool),
+            with Column(id="recipe-column"):
+                with Panel("Recipe", id="editor-panel"), Form(id="editor"):
+                    yield Heading("Template")
+                    yield self._template_select()
+                    yield Static("", id="template-status", markup=False)
+                    yield TierFields()
+                    yield VariableFields(
+                        draft_variables(self.draft), self.draft.allowed_secrets
+                    )
+                    yield OptionFields(draft_options(self.draft))
+                    yield Heading("Tools", key=("Tool info", "i"))
+                    if notes := self._notes():
+                        yield Static(notes, id="analysis-notes", classes="note")
+                    with ChoiceGroup(id="tools"):
+                        for title, tools in TOOL_GROUPS.items():
+                            yield Label(title, classes="group")
+                            for tool in tools:
+                                yield ToolToggle(
+                                    self._label(tool),
+                                    tool,
+                                    value=self.enabled[tool],
+                                    id=f"tool-{tool}",
+                                    found=self._evidence(tool),
+                                    notes=self._tool_notes(tool),
+                                )
+                    yield Label("Git hook manager", classes="group")
+                    for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
+                        with ToolChoice(id=f"exclusive-{index}"):
+                            yield RadioButton(
+                                "None",
+                                value=not any(self.enabled[tool] for tool in pair),
+                                id=f"none-{index}",
                             )
-                yield Label("Git hook manager", classes="group")
-                for index, pair in enumerate(EXCLUSIVE_TOOL_PAIRS):
-                    with ToolChoice(id=f"exclusive-{index}"):
+                            for tool in sorted(pair):
+                                yield ToolRadio(
+                                    self._label(tool),
+                                    tool,
+                                    value=self.enabled[tool],
+                                    id=f"tool-{tool}",
+                                    found=self._evidence(tool),
+                                )
+                    yield Heading("Project details")
+                    yield MetadataFields(self._metadata_defaults)
+                with Panel("Existing files", id="existing-panel"):
+                    yield Static("", id="existing-note")
+                    with Choice(id="collision"):
                         yield RadioButton(
-                            "None",
-                            value=not any(self.enabled[tool] for tool in pair),
-                            id=f"none-{index}",
+                            "Merge · keep your values and add what's missing",
+                            value=self.strategy is CollisionStrategy.MERGE,
+                            id="strategy-merge",
                         )
-                        for tool in sorted(pair):
-                            yield ToolRadio(
-                                self._label(tool),
-                                tool,
-                                value=self.enabled[tool],
-                                id=f"tool-{tool}",
-                                found=self._evidence(tool),
-                            )
-                yield Heading("Project details")
-                yield MetadataFields(self._metadata_defaults)
+                        yield RadioButton(
+                            "Overwrite · replace them with Protostar's version",
+                            value=self.strategy is CollisionStrategy.OVERWRITE,
+                            id="strategy-overwrite",
+                        )
             with Column(id="aside"):
                 with Panel("Preview", id="preview-panel"):
                     yield PlanPreview(self.config)
@@ -375,6 +393,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         Focus starts on the first variable without a value; otherwise it
         stays on the first row, the template.
         """
+        self.query_one("#existing-panel").display = False
         fields = self.query_one(VariableFields)
         source = self.draft.template.source if self.draft.template else None
         await fields.show(source)
@@ -464,6 +483,11 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
             metadata=tuple(sorted(metadata.items())),
             # An empty minimum leaves the configured or detected default.
             python_version=str(minimum) if minimum else None,
+            collision_strategy=(
+                self.strategy
+                if self._strategy_chosen
+                else self.draft.collision_strategy
+            ),
         )
 
     @on(VariableFields.Committed)
@@ -490,6 +514,29 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
     def _plan_updated(self, event: PlanPreview.PlanUpdated) -> None:
         self._plan_error = event.error is not None
         self._refresh_continue()
+        if event.error is None:
+            # An error keeps the last answer: whether files exist is unknown.
+            self._show_existing(event.collisions)
+
+    def _show_existing(self, collisions: int) -> None:
+        """Offer the strategy only while the plan writes into existing files."""
+        self.query_one("#existing-panel").display = bool(collisions)
+        self.query_one("#existing-note", Static).update(
+            Text(
+                f"{collisions} planned {'file already exists' if collisions == 1 else 'files already exist'}. "
+                "Choose how Protostar writes into them; the review then shows "
+                "each decision this leaves."
+            )
+        )
+
+    @on(RadioSet.Changed, "#collision")
+    def choose_strategy(self, event: RadioSet.Changed) -> None:
+        """Re-plan, since merge and overwrite write different bytes."""
+        self.strategy = CollisionStrategy(
+            str(event.pressed.id).removeprefix("strategy-")
+        )
+        self._strategy_chosen = True
+        self._changed()
 
     @on(Select.Changed, "#template")
     def select_template(self, event: Select.Changed) -> None:
@@ -632,7 +679,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         self._refresh_tools()
         self._changed()
 
-    @on(RadioSet.Changed)
+    @on(RadioSet.Changed, "ToolChoice")
     def choose_exclusive(self, event: RadioSet.Changed) -> None:
         """A radio choice always clears every other member of its pair."""
         pair = EXCLUSIVE_TOOL_PAIRS[

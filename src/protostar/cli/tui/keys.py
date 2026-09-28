@@ -380,12 +380,26 @@ class KeyboardScreen[ResultT](Screen[ResultT]):
     LEAVE: ClassVar[str] = "Leave without setting up the project?"
     """What escape asks before leaving."""
 
+    ROOMY: ClassVar[tuple[int, int] | None] = None
+    """The terminal size below which the masthead suggests a larger one."""
+
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("tab", "step(1)", "Next"),
         Binding("shift+tab", "step(-1)", "Previous", show=False),
         Binding("question_mark", "keybindings", "Keybindings"),
         Binding("f1", "keybindings", "Keybindings", show=False),
     ]
+
+    def on_resize(self, event: events.Resize) -> None:
+        """Suggest a larger terminal while the screen is short of room."""
+        if self.ROOMY is None:
+            return
+        from .chrome import Masthead
+
+        width, height = self.ROOMY
+        for masthead in self.query(Masthead):
+            masthead.cramped = event.size.width < width or event.size.height < height
+            masthead.refresh()
 
     def action_move(self, direction: int) -> None:
         """Focus the form's previous or next row."""

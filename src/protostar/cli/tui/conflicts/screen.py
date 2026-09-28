@@ -8,7 +8,6 @@ preserved edit stays unless chosen otherwise; only a conflict can be left open.
 import asyncio
 from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
 from typing import ClassVar
 
 from rich.console import Group, RenderableType
@@ -19,10 +18,8 @@ from textual.binding import Binding, BindingType
 from textual.containers import VerticalScroll
 from textual.content import Content
 from textual.widgets import Button, Footer, RadioButton, RadioSet, Static, Tree
-from textual.widgets.tree import TreeNode
 
 from protostar.cli.changes import count
-from protostar.cli.decisions import TAGS
 from protostar.errors import ProtostarError
 from protostar.lifecycle import PreparedProject
 from protostar.merge import (
@@ -30,13 +27,13 @@ from protostar.merge import (
     MergeConflict,
     ResolutionChoice,
     default_choice,
-    describe_location,
 )
 from protostar.preparation import PreparedReview
 
 from ..chrome import Column, Columns, Heading, Headline, Masthead, Panel, Section
 from ..code import edit_text
-from ..keys import MOVE, ActionBar, Choice, KeyboardScreen, KeyRows, key_label
+from ..keys import ActionBar, Choice, KeyboardScreen, KeyRows, key_label
+from .decision_list import DecisionList, Node
 from .sides import (
     KEYS,
     OPEN,
@@ -44,32 +41,8 @@ from .sides import (
     describe_conflict,
     is_conflict,
     side_text,
-    tag,
+    waiting_note,
 )
-
-
-@dataclass(frozen=True)
-class Node:
-    """A row of the conflict list: a file, or one conflict in it.
-
-    Attributes:
-        path: The file.
-        conflict: The conflict, or ``None`` for the file's own row.
-    """
-
-    path: str
-    conflict: MergeConflict | None = None
-
-
-def _label(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
-    where = describe_location(conflict.location) or "whole file"
-    return Text.assemble(
-        where, ("  ", ""), (TAGS[conflict.reason], "dim"), "  ", tag(conflict, choice)
-    )
-
-
-def _file_label(path: str, count_num: int) -> Text:
-    return Text.assemble(path, (f"  {count_num}", "dim"))
 
 
 def summary(
@@ -127,13 +100,7 @@ def _result(
     }
     parts: list[RenderableType] = []
     if waiting & choices.keys():
-        parts.append(
-            Text(
-                f"Choose for every conflict in {path} to apply any of them: "
-                "its overlapping lines change together.",
-                style="yellow",
-            )
-        )
+        parts.append(waiting_note(path))
     if edit is not None:
         parts.append(edit_text(edit))
     else:
@@ -144,12 +111,10 @@ def _result(
 _SCROLL = Binding.Group("Scroll sides")
 
 
-class ConflictTree(Tree[Node]):
-    """The conflicts by file; page keys scroll both sides together."""
+class ConflictTree(DecisionList):
+    """The decisions by file; page keys scroll both sides together."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("up", "cursor_up", "Up", group=MOVE),
-        Binding("down", "cursor_down", "Down", group=MOVE),
         Binding("pageup", "screen.scroll_sides(-1)", "Up", group=_SCROLL),
         Binding("pagedown", "screen.scroll_sides(1)", "Down", group=_SCROLL),
     ]
@@ -163,6 +128,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
     """
 
     LEAVE = "Leave without syncing?"
+    ROOMY = (100, 30)
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("k", "choose('local')", "Keep mine", show=False),
@@ -185,7 +151,6 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         self.choices: dict[str, ResolutionChoice] = {}
         self.preview: PreparedReview | None = None
         self._failed = False
-        self._rows: dict[str, TreeNode[Node]] = {}
 
     def compose(self) -> ComposeResult:
         """Compose the conflict list beside both sides, the choices below them."""
@@ -193,7 +158,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         yield Headline("Review sync", summary(self.conflicts, self.choices))
         with Columns(id="body"):
             with Panel("Decisions", id="conflicts-panel"):
-                yield ConflictTree(Text("."), id="conflicts")
+                yield ConflictTree(self.choices, id="conflicts")
             with Column(id="sides-column"):
                 with Columns(id="sides"):
                     with (
@@ -211,7 +176,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
                     VerticalScroll(id="result-pane"),
                 ):
                     yield Static("", id="result")
-                with Section(id="decisions"):
+                with Section(id="resolution"):
                     yield Heading("Resolution")
                     yield Static("", id="meaning")
                     with Choice(id="choice"):
@@ -231,26 +196,8 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
     def on_mount(self) -> None:
         """List the conflicts, highlight the first, and prepare the result."""
         tree = self.query_one("#conflicts", ConflictTree)
-        tree.show_root = False
         tree.focus()
-        by_file: dict[str, list[MergeConflict]] = {}
-        for conflict in self.conflicts:
-            by_file.setdefault(conflict.location.file, []).append(conflict)
-        first = None
-        for path, conflicts in by_file.items():
-            parent = tree.root.add(
-                _file_label(path, len(conflicts)), Node(path), expand=True
-            )
-            self._rows[path] = parent
-            for conflict in conflicts:
-                self._rows[conflict.id] = parent.add_leaf(
-                    _label(conflict, None), Node(path, conflict)
-                )
-                if first is None and conflict.choices:
-                    first = self._rows[conflict.id]
-        target = first or next(iter(self._rows.values()), None)
-        if target is not None:
-            tree.call_after_refresh(tree.move_cursor, target)
+        tree.show(self.conflicts)
         self.refresh_preview()
 
     @work(exclusive=True, group="preview")
@@ -274,21 +221,14 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         self._show(self._highlighted())
         self._refresh_apply()
 
+    def _tree(self) -> ConflictTree:
+        return self.query_one("#conflicts", ConflictTree)
+
     def _highlighted(self) -> Node | None:
-        cursor = self.query_one("#conflicts", ConflictTree).cursor_node
-        return cursor.data if cursor is not None else None
+        return self._tree().highlighted()
 
     def _targets(self, node: Node | None) -> list[MergeConflict]:
-        if node is None:
-            return []
-        if node.conflict is not None:
-            return [node.conflict]
-        # A preserved edit is deliberate, so only its own row takes the update.
-        return [
-            c
-            for c in self.conflicts
-            if c.location.file == node.path and c.reason is not ConflictReason.PRESERVED
-        ]
+        return self._tree().targets(node) if node is not None else []
 
     def _show(self, node: Node | None) -> None:
         targets = self._targets(node)
@@ -339,8 +279,9 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         self.query_one("#choice", Choice).show(pressed)
 
     def _choose(self, choice: ResolutionChoice | None) -> None:
+        """Settle the highlighted row's decisions; a settled conflict moves on."""
         node = self._highlighted()
-        changed = False
+        settled: list[MergeConflict] = []
         for conflict in self._targets(node):
             if choice is not None and choice not in conflict.choices:
                 continue
@@ -352,12 +293,16 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
                 del self.choices[conflict.id]
             else:
                 self.choices[conflict.id] = choice
-            self._rows[conflict.id].set_label(_label(conflict, choice))
-            changed = True
-        if changed:
-            self._status(summary(self.conflicts, self.choices))
-            self._show(node)
-            self.refresh_preview()
+            settled.append(conflict)
+        if not settled:
+            return
+        tree = self._tree()
+        tree.relabel()
+        self._status(summary(self.conflicts, self.choices))
+        if choice is not None and any(is_conflict(c) for c in settled):
+            tree.next_open()
+        self._show(self._highlighted())
+        self.refresh_preview()
 
     def _status(self, message: Text, *, error: bool = False) -> None:
         subtitle = self.query_one("#subtitle", Static)
@@ -413,18 +358,7 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
 
     def action_next_open(self) -> None:
         """Highlight the next conflict that is still open, wrapping around."""
-        tree = self.query_one("#conflicts", ConflictTree)
-        node = self._highlighted()
-        order = [c for c in self.conflicts if c.choices and is_conflict(c)]
-        start = (
-            order.index(node.conflict) + 1
-            if node is not None and node.conflict in order
-            else 0
-        )
-        for conflict in order[start:] + order[:start]:
-            if conflict.id not in self.choices:
-                tree.move_cursor(self._rows[conflict.id])
-                return
+        self._tree().next_open()
 
     def action_scroll_sides(self, direction: int) -> None:
         """Page both sides together without leaving the list."""

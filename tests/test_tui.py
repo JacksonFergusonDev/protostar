@@ -46,7 +46,7 @@ from protostar.executor import SystemExecutor
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.intent import TemplateOrigin, TemplateReference
 from protostar.manifest import CollisionStrategy
-from protostar.merge import ResolutionChoice
+from protostar.merge import ConflictReason, ResolutionChoice, describe_location
 from protostar.modules import DOCKER_INFO, MypyModule, PrekModule
 from protostar.orchestrator import Orchestrator
 from protostar.recipe import Tool, establish_recipe
@@ -1636,6 +1636,9 @@ def file_nodes(app):
 
 
 async def highlight(pilot, path):
+    """Highlight a planned path in the files tab, showing the tab first."""
+    if pilot.app.screen.query_one("#review-panel").active != "files":
+        await pilot.press("f")
     pilot.app.screen.query_one("#files", Tree).move_cursor(file_nodes(pilot.app)[path])
     await pilot.pause()
 
@@ -1665,7 +1668,7 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
             "uv.lock": "uv.lock  after setup",
             "protostar.lock": "protostar.lock  after setup",
         }
-        assert "3 files already exist." in plain(app, "#collision-note")
+        assert "Merging into 3 existing files" in plain(app, "#subtitle")
         await highlight(pilot, ".pre-commit-config.yaml")
         diff = plain(app, "#diff")
         assert "+++ b/.pre-commit-config.yaml" in diff
@@ -1687,11 +1690,15 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         await highlight(pilot, "protostar.lock")
         assert "Written after the commands and packages run." in plain(app, "#diff")
 
-        await highlight(pilot, "justfile")
-        await pilot.click("#strategy-overwrite")
+    # The recipe editor chose to overwrite: the review shows that batch.
+    app = make_review(
+        InitDraft(collision_strategy=CollisionStrategy.OVERWRITE), collisions
+    )
+    async with app.run_test(size=(120, 45)) as pilot:
         await settle(pilot)
         assert file_nodes(app)["justfile"].label.plain == "justfile  modified"
-        # The highlighted file stays in view while the batch is re-prepared.
+        assert "Overwriting 3 existing files" in plain(app, "#subtitle")
+        await highlight(pilot, "justfile")
         diff = plain(app, "#diff")
         assert "-    echo hi" in diff
         assert "+    @just --list" in diff
@@ -1802,13 +1809,173 @@ async def test_leaving_a_conflict_open_drops_its_choice(collisions):
     assert app.return_value.resolutions == {}
 
 
+@pytest.fixture
+def conflicts(collisions, workspace):
+    """The collisions, plus a CI workflow whose name and trigger conflict."""
+    workflows = workspace / ".github" / "workflows"
+    workflows.mkdir(parents=True)
+    (workflows / "ci.yml").write_text("name: mine\non: push\njobs: {}\n", newline="\n")
+    return collisions
+
+
+def decision_rows(app):
+    """Each row of the decision list, files and their decisions, in order."""
+    tree = app.screen.query_one("#decisions", Tree)
+    return [
+        child.label.plain
+        for file in tree.root.children
+        for child in (file, *file.children)
+    ]
+
+
+def tabs(app):
+    """The left panel's title: every tab with its note and key."""
+    title = app.screen.query_one("#review-panel .panel-title", Static)
+    return title.visual.plain
+
+
+def highlighted_decision(app):
+    node = app.screen.query_one("#decisions", Tree).cursor_node.data
+    where = node.conflict and (
+        describe_location(node.conflict.location) or "whole file"
+    )
+    return node.path, where
+
+
+@pytest.mark.asyncio
+async def test_review_lists_its_decisions_and_settles_them_one_by_one(conflicts):
+    ci = ".github/workflows/ci.yml"
+    app = make_review(config=conflicts)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        assert app.focused is app.screen.query_one("#decisions", Tree)
+        assert tabs(app) == "DECISIONS 3 open d   FILES f   SETUP s"
+        rows = decision_rows(app)
+        # Conflicts first, each row led by what happens to it.
+        assert rows[:6] == [
+            f"{ci}  4",
+            "open         name  already yours",
+            "open         on  both changed",
+            "adds         jobs.lint  new to your file",
+            "adds         jobs.test  new to your file",
+            "justfile  1",
+        ]
+        assert highlighted_decision(app) == (ci, "name")
+        # The diff shows the highlighted decision alone, above its file's diff.
+        diff = plain(app, "#diff")
+        assert "name  It was in your file" in diff
+        assert "on  You and the update" not in diff
+        await pilot.press("k")
+        # The row changes at once and the cursor moves to the next open conflict.
+        assert decision_rows(app)[1] == "keep mine    name  already yours"
+        assert tabs(app).startswith("DECISIONS 2 open d")
+        assert highlighted_decision(app) == (ci, "on")
+        await settle(pilot)
+        await pilot.press("u")
+        await settle(pilot)
+        assert highlighted_decision(app) == ("justfile", "whole file")
+        await pilot.press("k")
+        await settle(pilot)
+        assert tabs(app).startswith("DECISIONS d")
+        # Nothing is left open, so the cursor stays on the last choice.
+        assert highlighted_decision(app) == ("justfile", "whole file")
+        assert (
+            file_nodes(app)["justfile"].label.plain == "justfile  existing · resolved"
+        )
+        await pilot.press("a")
+    chosen = sorted(app.return_value.resolutions.values())
+    assert chosen == sorted([ResolutionChoice.LOCAL] * 2 + [ResolutionChoice.DESIRED])
+
+
+@pytest.mark.asyncio
+async def test_a_proposal_row_keeps_out_that_change_alone(conflicts):
+    app = make_review(config=conflicts)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        tree = app.screen.query_one("#decisions", Tree)
+        lint = next(
+            node
+            for node in tree.root.children[0].children
+            if node.data.conflict.reason is ConflictReason.PROPOSED
+        )
+        tree.move_cursor(lint)
+        await pilot.pause()
+        # A proposal applies unless kept out, so it is never left open.
+        await pilot.press("x")
+        assert not app.screen.choices
+        await pilot.press("k")
+        # Keeping a change out settles no conflict, so the cursor stays.
+        assert tree.cursor_node.data.conflict.id == lint.data.conflict.id
+        await settle(pilot)
+        assert tree.cursor_node.label.plain.startswith("kept out     jobs.lint")
+        await pilot.press("a")
+    assert list(app.return_value.resolutions.values()) == [ResolutionChoice.LOCAL]
+
+
+@pytest.mark.asyncio
+async def test_a_file_row_settles_every_decision_in_it(conflicts):
+    app = make_review(config=conflicts)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        tree = app.screen.query_one("#decisions", Tree)
+        tree.move_cursor(tree.root.children[0])
+        await pilot.pause()
+        await pilot.press("k")
+        assert [row.split()[:2] for row in decision_rows(app)[1:5]] == [
+            ["keep", "mine"]
+        ] * 2 + [["kept", "out"]] * 2
+        # The next open conflict is in the next file.
+        assert highlighted_decision(app) == ("justfile", "whole file")
+        await settle(pilot)
+        await pilot.press("a")
+    assert len(app.return_value.resolutions) == 4
+
+
+@pytest.mark.asyncio
+async def test_tabs_switch_by_key_and_n_returns_to_the_open_conflicts(conflicts):
+    app = make_review(config=conflicts)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        await pilot.press("s")
+        assert app.focused is app.screen.query_one("#setup")
+        assert tabs(app) == "DECISIONS 3 open d   FILES f   SETUP s"
+        assert "git init" in plain(app, "#steps-list")
+        await pilot.press("f")
+        assert app.focused is app.screen.query_one("#files", Tree)
+        await highlight(pilot, "justfile")
+        # From the files, a choice settles the highlighted file's decisions.
+        await pilot.press("k")
+        await settle(pilot)
+        assert "keep mine    whole file  already yours" in decision_rows(app)
+        await pilot.press("n")
+        assert app.focused is app.screen.query_one("#decisions", Tree)
+        assert highlighted_decision(app) == (".github/workflows/ci.yml", "name")
+
+
+def test_review_decisions_snapshot(snap_compare, monkeypatch, mocker, conflicts):
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    mocker.patch(
+        "protostar.cli.changes.resolve_hook_revisions",
+        return_value=tuple(
+            ResolvedHookRevision(hook, "v1.0.0", PinProvenance.REGISTRY)
+            for hook in RemoteHook
+        ),
+    )
+
+    async def one_settled(pilot):
+        await settle(pilot)
+        await pilot.press("k")
+        await settle(pilot)
+
+    app = make_review(config=conflicts)
+    assert snap_compare(app, terminal_size=(110, 45), run_before=one_settled)
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("strategy", list(CollisionStrategy))
 async def test_the_chosen_strategy_reaches_execution(collisions, mocker, strategy):
-    app = make_review(config=collisions)
+    app = make_review(InitDraft(collision_strategy=strategy), collisions)
     async with app.run_test(size=(120, 45)) as pilot:
-        await settle(pilot)
-        await pilot.press(strategy.value[0])
         await settle(pilot)
         await pilot.press("a")
     decision = app.return_value
@@ -1862,8 +2029,9 @@ async def test_review_and_execution_share_one_hook_snapshot(collisions, mocker):
         await settle(pilot)
         await highlight(pilot, ".pre-commit-config.yaml")
         assert "+  - rev: v9.9.9" in plain(app, "#diff")
-        # Re-preparing for another strategy reuses the snapshot.
-        await pilot.click("#strategy-overwrite")
+        # Re-preparing for a choice reuses the snapshot.
+        await highlight(pilot, "justfile")
+        await pilot.press("k")
         await settle(pilot)
         await pilot.click("#apply")
     take.assert_called_once()
@@ -1913,10 +2081,11 @@ async def test_review_keys_scroll_the_diff_from_the_file_tree(collisions):
     app = make_review(config=collisions)
     async with app.run_test(size=(120, 30)) as pilot:
         await settle(pilot)
-        tree = app.screen.query_one("#files", Tree)
-        assert app.focused is tree
+        # The review opens on its decisions, which page the diff too.
+        assert app.focused is app.screen.query_one("#decisions", Tree)
         assert legend(app) == {"Move", "Scroll diff", "Next", "Keybindings"}
         await highlight(pilot, ".pre-commit-config.yaml")
+        tree = app.screen.query_one("#files", Tree)
         pane = app.screen.query_one("#diff-pane")
         assert pane.max_scroll_y > 0
         await pilot.press("pagedown")

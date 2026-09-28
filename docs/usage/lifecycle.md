@@ -237,10 +237,12 @@ Protostar's version as the baseline without writing it, exactly like keeping
 your side of a conflict, so it reads as your deletion from then on: it is
 preserved, `sync --check` passes, and you can take it later.
 
-The `init` change review lists every proposal per file beside the file's diff,
-with the conflicts. Press `k` or `u` on a file to keep yours or take the update
-for all of its changes, and `K` to keep yours for every conflict and change in
-the review, which adopts the project exactly as it is. When no setup command
+The `init` change review opens on its __Decisions__ tab: every conflict and
+proposal by file, the conflicts first, each row led by what happens to it. Press
+`k` or `u` on a row to keep yours or take the update for that change, or on a
+file's row for all of its changes; settling a conflict moves on to the next open
+one, and `n` jumps there from anywhere. `K` keeps yours for every conflict and
+change in the review, which adopts the project exactly as it is. When no setup command
 creates them, as in a project that already has a `pyproject.toml`, the review
 shows the configuration merges and dependency choices too, so every change to an
 existing file is decided before anything runs. `status` and JSON reviews list

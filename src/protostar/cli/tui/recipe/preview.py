@@ -57,9 +57,13 @@ class PlanPreview(VerticalScroll):
     class PlanUpdated(Message):
         """Posted when planning finishes or fails."""
 
-        def __init__(self, *, error: ProtostarError | None = None) -> None:
+        def __init__(
+            self, *, error: ProtostarError | None = None, collisions: int = 0
+        ) -> None:
             super().__init__()
             self.error = error
+            self.collisions = collisions
+            """How many planned files already exist."""
 
     def __init__(self, config: UserConfig, *, prepare: bool = True) -> None:
         super().__init__()
@@ -148,7 +152,7 @@ class PlanPreview(VerticalScroll):
                 notes=notes,
                 tree=entry_tree(review.entries) if review.entries else "",
             )
-        self.post_message(self.PlanUpdated(error=None))
+        self.post_message(self.PlanUpdated(collisions=len(manifest.collisions)))
 
     def on_mount(self) -> None:
         """Start taking the registry snapshot while the user reads the screen."""

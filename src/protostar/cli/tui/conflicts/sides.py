@@ -132,6 +132,22 @@ def describe_conflict(conflict: MergeConflict) -> Text:
     return Text.assemble((where, "bold"), f"  {meaning}")
 
 
+def waiting_note(path: str) -> Text:
+    """Says why a choice made for part of a text file doesn't apply yet.
+
+    Args:
+        path: The file.
+
+    Returns:
+        The note.
+    """
+    return Text(
+        f"Choose for every conflict in {path} to apply any of them: "
+        "its overlapping lines change together.",
+        style="yellow",
+    )
+
+
 def tag(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
     """Returns what happens to a decision, as its list row says it.
 
@@ -144,6 +160,11 @@ def tag(conflict: MergeConflict, choice: ResolutionChoice | None) -> Text:
     """
     if not conflict.choices:
         return Text("by hand", "dim")
+    if conflict.reason is ConflictReason.PROPOSED:
+        # A proposal adds to your file unless kept out; nothing of yours changes.
+        if choice is LOCAL:
+            return Text("kept out", _TAG_STYLES[LOCAL])
+        return Text("adds", "green" if choice is DESIRED else "dim")
     if choice is not None:
         return Text(SAID[choice], _TAG_STYLES[choice])
     default = default_choice(conflict)

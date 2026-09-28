@@ -7,11 +7,14 @@ panel stacked on a panel shares its rule instead of adding a second one.
 ``tests/test_tui_layout.py`` measures every screen against this.
 """
 
+from collections.abc import Sequence
+from dataclasses import dataclass
+
 from rich.console import RenderableType
 from textual.containers import Horizontal, Vertical
 from textual.content import Content
 from textual.widget import Widget
-from textual.widgets import Label, Static
+from textual.widgets import ContentSwitcher, Label, Static
 
 from protostar.cli.palette import MARK
 
@@ -27,6 +30,8 @@ class Masthead(Static):
         """
         super().__init__()
         self.path = path
+        self.cramped = False
+        """Whether the screen needs more room than the terminal gives it."""
 
     def render(self) -> Content:
         """Render the mark and the product, then the path with its last step lit."""
@@ -41,6 +46,10 @@ class Masthead(Static):
                 parts.append(("  /  ", "$hairline"))
             last = index == len(self.path) - 1
             parts.append((step, "$foreground" if last else "$text-faint"))
+        if self.cramped:
+            parts.append(
+                ("   ·   A larger terminal shows more of each change", "$text-faint")
+            )
         return Content.assemble(*parts)
 
 
@@ -110,6 +119,110 @@ class Panel(Vertical):
             title: The new title; Content never reads its text as markup.
         """
         self.query_one(".panel-title", Static).update(title)
+
+
+@dataclass(frozen=True)
+class Tab:
+    """One pane of a ``TabbedPanel``.
+
+    Attributes:
+        id: The pane's widget id.
+        title: The pane's name in the panel's title.
+        key: The key that shows it, bound by the screen to ``tab(id)``.
+    """
+
+    id: str
+    title: str
+    key: str
+
+
+class TabbedPanel(Panel):
+    """A panel showing one of its panes, every pane named in its title.
+
+    Each name carries its key; the screen binds that key, and a click on the
+    name, to its ``tab`` action. A pane can carry a short note beside its name,
+    such as how many of its rows still wait on the user.
+    """
+
+    def __init__(
+        self,
+        tabs: Sequence[Tab],
+        *panes: Widget,
+        id: str | None = None,  # noqa: A002 - Textual's name
+    ) -> None:
+        """Create the panel, showing the first pane.
+
+        Args:
+            tabs: One tab per pane, in the same order.
+            *panes: The panes, each with its tab's id.
+            id: The widget's id.
+        """
+        super().__init__("", ContentSwitcher(*panes, initial=tabs[0].id), id=id)
+        self.tabs = tuple(tabs)
+        self.active = tabs[0].id
+        self._hidden: set[str] = set()
+        self._notes: dict[str, str] = {}
+
+    def on_mount(self) -> None:
+        """Name the tabs."""
+        self._retitle()
+
+    def show(self, tab: str) -> None:
+        """Show a pane.
+
+        Args:
+            tab: The pane's id.
+        """
+        self.active = tab
+        self.query_one(ContentSwitcher).current = tab
+        self._retitle()
+
+    def hide(self, tab: str, hidden: bool = True) -> None:
+        """Hide or restore a pane's tab; hiding the shown pane shows the first left.
+
+        Args:
+            tab: The pane's id.
+            hidden: Whether to hide it.
+        """
+        if hidden:
+            self._hidden.add(tab)
+        else:
+            self._hidden.discard(tab)
+        if self.active in self._hidden:
+            self.show(next(t.id for t in self.tabs if t.id not in self._hidden))
+        else:
+            self._retitle()
+
+    def is_shown(self, tab: str) -> bool:
+        """Returns whether a pane's tab is offered."""
+        return tab not in self._hidden
+
+    def note(self, tab: str, note: str) -> None:
+        """Set the note beside a pane's name, or clear it with an empty one.
+
+        Args:
+            tab: The pane's id.
+            note: The note.
+        """
+        self._notes[tab] = note
+        self._retitle()
+
+    def _retitle(self) -> None:
+        parts: list[Content | tuple[str, str] | str] = []
+        for tab in self.tabs:
+            if tab.id in self._hidden:
+                continue
+            if parts:
+                parts.append("   ")
+            click = f" @click=screen.tab('{tab.id}')"
+            lit = tab.id == self.active
+            parts.append(
+                (tab.title.upper(), ("$foreground" if lit else "$text-faint") + click)
+            )
+            if note := self._notes.get(tab.id):
+                parts.append((f" {note}", "$accent" + click))
+            parts.append((f" {tab.key}", "dim not bold" + click))
+        self.retitle(Content.assemble(*parts))
 
 
 class Heading(Static):

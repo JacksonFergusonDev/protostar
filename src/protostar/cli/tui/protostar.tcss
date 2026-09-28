@@ -29,14 +29,16 @@ Panel:focus-within { border-top: wide $accent; border-bottom: wide $accent; }
 Panel > * { background: $surface; }
 Panel > .panel-title { height: 1; padding: 0 1; color: $text-faint; text-style: bold; }
 Panel:focus-within > .panel-title { color: $accent; }
+TabbedPanel > ContentSwitcher { height: 1fr; }
 /* The scrollbar meets the panel's edge. */
-#editor, PlanPreview, #changes, #files, #steps, #diff-pane {
+#editor, PlanPreview, #changes, #decisions, #files, #setup, #diff-pane {
     height: 1fr;
     padding: 0 0 0 1;
     background: $surface;
 }
 
-#editor-panel { width: 3fr; }
+#editor-panel, #recipe-column { width: 3fr; }
+#recipe-column > Panel { width: 1fr; }
 /* Rows keep clear of the scrollbar; margins are set whole in Textual. */
 #editor > * { margin: 0 2 0 0; }
 #editor > .section, #editor > .group { margin: 1 2 0 0; }
@@ -44,8 +46,6 @@ Panel:focus-within > .panel-title { color: $accent; }
 /* Each column is at least as wide as its buttons, which never overhang it. */
 #aside { width: 2fr; min-width: 33; }
 #review { width: 2fr; }
-/* The files take two thirds of the column; commands scroll in the rest. */
-#files-panel { height: 2fr; }
 #diff-column { width: 3fr; min-width: 45; }
 
 /* --- Layout -------------------------------------------------------------
@@ -217,7 +217,11 @@ Footer { background: $panel; }
 
 /* --- Review decisions -------------------------------------------------- */
 
-#collision-note { color: $text-muted; }
+/* One row of choices, so the diff above keeps the height. */
+#resolution, #choice { layout: horizontal; height: auto; width: 1fr; }
+#resolution RadioButton, #choice RadioButton { width: auto; }
+#existing-panel { height: auto; }
+#existing-note { color: $text-muted; }
 ChoiceGroup { height: auto; }
 
 /* --- Dialogs ----------------------------------------------------------- */

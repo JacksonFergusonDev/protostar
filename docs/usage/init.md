@@ -247,7 +247,7 @@ The editor is built for the keyboard; the mouse works too. Moving never changes 
 | `Ctrl+C` | Quit immediately. |
 | `?` | Show all keybindings. |
 
-__Continue__ opens the change review. It lists every planned path as new, modified, conflict, existing, or after setup, shows a diff for each file Protostar writes before running commands, and then the commands and packages that follow. Nothing runs until you choose __Apply__ (`A`). `↑` `↓` move between files, `PgUp` `PgDn` scroll the diff, and `Esc` goes back to the editor.
+__Continue__ opens the change review. Its left panel has three tabs. __Decisions__ (`D`) appears when something needs you: every conflict and change to a file you already have, each row led by what happens to it, with the count still open beside the tab. __Files__ (`F`) lists every planned path as new, modified, conflict, existing, or after setup, and __Setup__ (`S`) lists the commands and packages that follow. The diff beside them shows the highlighted decision or file. Settling a conflict moves on to the next open one, and `N` jumps there from any tab. Nothing runs until you choose __Apply__ (`A`). `↑` `↓` move through the list, `PgUp` `PgDn` scroll the diff, and `Esc` goes back to the editor.
 
 ![Protostar change review](../assets/terminals/tui_change_review.svg)
 
@@ -287,7 +287,7 @@ The change review that follows lists every change Protostar would make to a file
 
 ## Progressive Scaffolding & Collisions
 
-When Protostar detects existing configuration files (like `pyproject.toml`), the change review marks them as conflicts and asks how to handle them under __Existing files__:
+When Protostar detects existing configuration files (like `pyproject.toml`), the recipe editor asks how to handle them in its __Existing files__ panel, under the recipe, and the change review lists each decision that leaves:
 
 - __Merge__ (`M`) safely injects missing configs and preserves existing user data.
 - __Overwrite__ (`O`) forces injection and updates existing keys to match Protostar.
