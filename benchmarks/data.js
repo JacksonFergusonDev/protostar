@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790554783994,
+  "lastUpdate": 1790559396905,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18161,6 +18161,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 981.01,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ff2e1ceff6a0f3bb11b54da016edfd8d5e5ac31c",
+          "message": "feat(tui): show each file's change in the recipe preview (#368)\n\n* refactor(tui): extract the review model\n\nMove Change, Entry, Review, classify, planning and preparation, the summary,\nand the row label out of the review screen into review/model.py, so the\nrecipe editor's preview can show the same model. hook_snapshot() takes the\nregistry snapshot in one place. No behaviour change.\n\n* feat(tui): show each file's change in the recipe preview\n\nThe recipe editor's preview now prepares the draft's review and labels every\nplanned file as the change review does (new, modified, existing, after setup,\nor a conflict), so the \"Already exist\" list of paths is gone. Continue hands\nthe prepared review and its hook snapshot to the review screen, which opens\non it instead of preparing again.\n\nColour now says what needs you: new is green, modified is plain, a conflict is\nthe cyan accent, and amber stays for real problems. The review's existing-files\nnote becomes a muted count.\n\nFound tools read just \"found\"; their i popup says where the project uses\nthem, and CI's popup lists the other workflows it runs beside, so the note\nunder Tools only names unreadable files.\n\n* perf(tui): take the hook snapshot as the recipe editor opens\n\nThe preview took the registry snapshot the first time a plan wanted hooks,\nso the user waited on the network right when they switched a hook runner on.\nIt now starts on mount, on a daemon thread so a DNS lookup that hangs\noffline never holds up the app's exit; a plan waits only if it needs the\nsnapshot before the fetch finishes. hook_snapshot() is a plain fetch, and\ncallers decide whether hooks are wanted.",
+          "timestamp": "2026-09-27T18:33:53-07:00",
+          "tree_id": "e5d6ffb664280f685dd52f90ed6091681cac95c7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/ff2e1ceff6a0f3bb11b54da016edfd8d5e5ac31c"
+        },
+        "date": 1790559395227,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 266.35,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 914.27,
             "unit": "ms"
           }
         ]
