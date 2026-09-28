@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790559396905,
+  "lastUpdate": 1790560081747,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18195,6 +18195,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 914.27,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "361ecee343fb0c88d4116cdd2dafb168ef88718b",
+          "message": "feat: say when uv or Protostar couldn't reach the network (#370)\n\nA uv command that fails because it never connected (a failed DNS lookup, a\nrefused or dropped connection) now carries a hint saying so, with what to\ncheck and UV_OFFLINE=1 for packages already in uv's cache. The hook registry\nfetch records whether it reached a server, and the recipe preview and change\nreview warn before applying when it didn't.",
+          "timestamp": "2026-09-27T18:45:47-07:00",
+          "tree_id": "65a328015b173135d38156ffafe2f4405bc945aa",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/361ecee343fb0c88d4116cdd2dafb168ef88718b"
+        },
+        "date": 1790560079781,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 213.59,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 717.86,
             "unit": "ms"
           }
         ]
