@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790613894933,
+  "lastUpdate": 1790622266315,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18603,6 +18603,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1123.47,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "988c8aa5a1c6750b8daa1bc1d945ba90635f085d",
+          "message": "feat(tui): decisions checklist in the change review; strategy moves to the recipe editor (#380)",
+          "timestamp": "2026-09-28T12:01:29-07:00",
+          "tree_id": "c41e7874e6dfc52274f80079ff32cee366ee3791",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/988c8aa5a1c6750b8daa1bc1d945ba90635f085d"
+        },
+        "date": 1790622264356,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 235.33,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 977.94,
             "unit": "ms"
           }
         ]
