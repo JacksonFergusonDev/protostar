@@ -197,6 +197,49 @@ def requirement_entries(data: dict[str, object], group: DependencyGroup) -> list
     return [entry for entry in entries if isinstance(entry, str)]
 
 
+def other_requirement_groups(
+    data: dict[str, object], group: DependencyGroup
+) -> dict[str, list[str]]:
+    """Reads direct requirements outside a destination, including custom groups.
+
+    Include records are not requirements. Their source group's direct entries
+    still participate, so an included dependency cannot be duplicated silently.
+    """
+    result: dict[str, list[str]] = {}
+    if group is not DependencyGroup.MAIN:
+        result["project.dependencies"] = requirement_entries(data, DependencyGroup.MAIN)
+    project = data.get("project", {})
+    optional = (
+        project.get("optional-dependencies", {}) if isinstance(project, dict) else {}
+    )
+    groups = data.get("dependency-groups", {})
+    for prefix, table in (
+        ("dependency-groups", groups),
+        ("project.optional-dependencies", optional),
+    ):
+        if not isinstance(table, dict):
+            raise ConfigurationError(
+                "Invalid dependency table.",
+                hint="Use TOML tables for dependency groups and optional dependencies.",
+            )
+        for name, entries in table.items():
+            if (
+                prefix == "dependency-groups"
+                and group is not DependencyGroup.MAIN
+                and name == group.value
+            ):
+                continue
+            if not isinstance(entries, list):
+                raise ConfigurationError(
+                    "Invalid dependency group.",
+                    hint="Use arrays of requirements and include-group records.",
+                )
+            result[f"{prefix}.{name}"] = [
+                entry for entry in entries if isinstance(entry, str)
+            ]
+    return result
+
+
 def select_dependencies(
     desired: list[str],
     local: list[str],
@@ -206,6 +249,7 @@ def select_dependencies(
     overwrite: bool = False,
     proposing: bool = False,
     resolutions: Resolutions = NO_RESOLUTIONS,
+    other_groups: Mapping[str, Sequence[str]] | None = None,
 ) -> DependencySelection:
     """Selects safe uv requests before any resolver can reset user constraints.
 
@@ -218,6 +262,8 @@ def select_dependencies(
         proposing: Whether the project existed before Protostar owned any of
             it, so each new request is a proposal that can be declined.
         resolutions: Choices settling decisions, keyed by identity.
+        other_groups: Requirements outside the destination group, keyed by
+            their TOML location, including custom groups and optional extras.
 
     Returns:
         The requests to resolve and every other decision.
@@ -278,6 +324,44 @@ def select_dependencies(
             # Existing requirements remain the user's: neither rewrite nor adopt.
             continue
         if record is None and not entries:
+            elsewhere: dict[str, Value] = {
+                name: list(matches)
+                for name, requirements in (other_groups or {}).items()
+                if (
+                    matches := [
+                        entry
+                        for entry in requirements
+                        if requirement_identity(entry) == identity
+                    ]
+                )
+            }
+            if elsewhere:
+                destination = (
+                    "project.dependencies"
+                    if group is DependencyGroup.MAIN
+                    else f"dependency-groups.{group.value}"
+                )
+                found = MergeConflict(
+                    location,
+                    ConflictReason.DIFFERENT_GROUP,
+                    ConflictSides(
+                        MISSING, elsewhere, {**elsewhere, destination: [request]}
+                    ),
+                )
+                settled = found.settle(resolutions)
+                if settled is None:
+                    conflicts.append(found)
+                else:
+                    resolved.append(settled)
+                    if settled.resolution is ResolutionChoice.DESIRED:
+                        accepted.append(request)
+                    else:
+                        kept.append(
+                            DependencyState(
+                                "pyproject.toml", group, *identity, request, request
+                            )
+                        )
+                continue
             if proposing:
                 found = MergeConflict(
                     location,

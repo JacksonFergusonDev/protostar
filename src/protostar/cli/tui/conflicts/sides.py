@@ -36,7 +36,11 @@ OPEN = "open"
 def _structured(conflict: MergeConflict, value: Value) -> CodeSource:
     """Renders a value in its file's own format, keyed by its last key."""
     keys = conflict.location.keys
-    data: Any = {keys[-1]: value} if keys else value
+    data: Any = (
+        {keys[-1]: value}
+        if keys and conflict.reason is not ConflictReason.DIFFERENT_GROUP
+        else value
+    )
     suffix = Path(conflict.location.file).suffix
     try:
         if suffix == ".toml" and isinstance(data, dict):
