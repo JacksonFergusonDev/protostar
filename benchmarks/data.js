@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790567307703,
+  "lastUpdate": 1790567924356,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18399,6 +18399,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 887.47,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5796127ba149acd7ba1f0c5be453ef47c4312366",
+          "message": "refactor(templates): remove .gitkeep files from ml template (#374)\n\n- Remove empty .gitkeep placeholder files from ml.toml\n- Remove `!data/**/.gitkeep` carve-outs from vcs_ignores\n- Remove `.gitkeep` exclusion from end-of-file-fixer in pre-commit config\n- Regenerate snapshot fixtures and documentation tree assets",
+          "timestamp": "2026-09-27T20:56:20-07:00",
+          "tree_id": "718b4384c17178d724026b016fc0ee3a47effd21",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/5796127ba149acd7ba1f0c5be453ef47c4312366"
+        },
+        "date": 1790567922068,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 222.95,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 789.28,
             "unit": "ms"
           }
         ]
