@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790630998229,
+  "lastUpdate": 1790632163216,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18807,6 +18807,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1205.12,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2d0ea148dbef861cad27b91c3c50ab8e882f696b",
+          "message": "refactor: type AST engine interfaces with concrete tomlkit and ruamel types (#384)",
+          "timestamp": "2026-09-28T14:45:52-07:00",
+          "tree_id": "f69cd8a35408bf7d8e5572aa60480c482c0832ca",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2d0ea148dbef861cad27b91c3c50ab8e882f696b"
+        },
+        "date": 1790632161532,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 287.72,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1277.69,
             "unit": "ms"
           }
         ]
