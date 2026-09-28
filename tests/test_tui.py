@@ -1974,6 +1974,39 @@ def test_decide_raises_the_error_a_screen_left_with(mocker):
         app.decide()
 
 
+def test_decide_raises_the_error_the_app_stopped_on(mocker):
+    from textual.screen import Screen
+
+    app: DecisionApp[None] = DecisionApp(Screen())
+    mocker.patch.object(app, "run", return_value=None)
+    app.crash = KeyError("inlinehilite")
+    with pytest.raises(KeyError, match="inlinehilite"):
+        app.decide()
+
+
+@pytest.mark.asyncio
+async def test_an_unexpected_error_is_kept_for_the_cli_not_printed_by_textual():
+    """Textual's own traceback prints every frame's locals: the whole manifest."""
+    from textual import work
+    from textual.screen import Screen
+    from textual.worker import WorkerFailed
+
+    class Broken(Screen[None]):
+        def on_mount(self) -> None:
+            self.explode()
+
+        @work
+        async def explode(self) -> None:
+            raise KeyError("inlinehilite")
+
+    app: DecisionApp[None] = DecisionApp(Broken())
+    with pytest.raises(WorkerFailed):
+        async with app.run_test() as pilot:
+            await pilot.pause()
+    assert isinstance(app.crash, KeyError)
+    assert not app._exit_renderables
+
+
 @pytest.mark.asyncio
 async def test_a_review_with_an_editor_behind_it_shows_the_error_and_hint(
     tmp_path, workspace
