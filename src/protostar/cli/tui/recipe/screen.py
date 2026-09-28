@@ -671,6 +671,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                     self.config,
                     can_go_back=True,
                     review=preview.review_of(draft),
-                    hook_revisions=preview.hook_revisions,
+                    hooks=preview.hooks,
                 )
             )

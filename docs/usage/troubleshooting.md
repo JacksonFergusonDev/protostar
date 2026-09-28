@@ -60,6 +60,14 @@ The command comes from the package manager Protostar finds. Where it finds none,
 
 direnv does nothing until it is [hooked into your shell](https://direnv.net/docs/hook.html): add its hook line to your shell's startup file, open a new terminal, and run `direnv allow` in the project. From then on, entering the project's folder activates its virtual environment.
 
+## Working Offline
+
+Installing packages needs the network: `uv` fetches them from the package index. Everything before that works offline, including the recipe editor, `--dry-run`, and the change review. Protostar doesn't test your connection before a run. A proxy or a private package index can make a probe wrong, and `uv` can install from its cache without the network.
+
+- **Before applying**, the recipe editor and the change review say when Protostar couldn't reach the network. It noticed while fetching the latest git hook versions; without them, it pins the versions it shipped with.
+- **If `uv` fails** because it couldn't connect, the error says so, and the run rolls back as it does for any failed install. Reconnect and run the command again, or check your proxy or index settings.
+- **With packages already in `uv`'s cache**, set `UV_OFFLINE=1` so `uv` installs from the cache instead of the network.
+
 ## Workspace Collisions
 
 When Protostar detects pre-existing files (such as an existing `pyproject.toml` or `README.md`) matching planned manifest targets in the target workspace, it raises a `WorkspaceCollisionError` to protect your existing work.

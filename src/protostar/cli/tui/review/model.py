@@ -29,12 +29,18 @@ from protostar.preparation import (
     prepare_review,
     review_phase,
 )
-from protostar.registry import ResolvedHookRevision, resolve_hook_revisions
+from protostar.registry import (
+    ResolvedHookRevision,
+    hook_registry_unreachable,
+    resolve_hook_revisions,
+)
 
 __all__ = [
     "FOLDER",
+    "NETWORK_NOTE",
     "Change",
     "Entry",
+    "HookSnapshot",
     "Review",
     "classify",
     "count",
@@ -190,17 +196,49 @@ def plan_draft(
     return request, Orchestrator(modules, config, request=request).plan()
 
 
-def hook_snapshot() -> tuple[ResolvedHookRevision, ...]:
+NETWORK_NOTE = (
+    "Protostar couldn't reach the network. Installing packages needs it unless "
+    "they're already in uv's cache."
+)
+"""Shown before applying when the registry fetch never connected."""
+
+
+@dataclass(frozen=True)
+class HookSnapshot:
+    """The registry snapshot hooks are pinned from, and whether it connected.
+
+    Attributes:
+        revisions: One revision per remote hook, with fallbacks when the
+            registry couldn't be read.
+        unreachable: Whether the fetch never reached a server, a sign that
+            installing packages will fail too.
+    """
+
+    revisions: tuple[ResolvedHookRevision, ...]
+    unreachable: bool
+
+    def pins(self, manifest: EnvironmentManifest) -> tuple[ResolvedHookRevision, ...]:
+        """Returns the revisions a planned draft pins: none unless it wants hooks.
+
+        Args:
+            manifest: The planned manifest.
+
+        Returns:
+            The revisions, or nothing when the draft has no hooks.
+        """
+        return self.revisions if manifest.tooling.wants_hooks else ()
+
+
+def hook_snapshot() -> HookSnapshot:
     """Takes the registry snapshot hooks are pinned from.
 
     Take it once per session and pass it on: execution writes the pins the
     preview and the review showed. It fetches, so run it off the main thread.
 
     Returns:
-        One revision per remote hook, with fallbacks when the registry is
-        unreachable.
+        The snapshot, and whether its fetch reached the network.
     """
-    return resolve_hook_revisions()
+    return HookSnapshot(resolve_hook_revisions(), hook_registry_unreachable())
 
 
 def prepare_draft(

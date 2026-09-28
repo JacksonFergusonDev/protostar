@@ -200,3 +200,41 @@ def test_windows_lookups_disable_the_current_directory_search(mocker, monkeypatc
     assert system_deps.find_executable("git") is None
     assert seen == ["1"]
     assert os.environ[system_deps.NO_CURRENT_DIRECTORY_SEARCH] == "0"
+
+
+# uv 0.12's output when the index can't be reached, as captured.
+UV_DNS_FAILURE = """error: Request failed after 3 retries in 6.8s
+  cause: Failed to fetch: `https://pypi.org/simple/httpx/`
+  cause: error sending request for url (https://pypi.org/simple/httpx/)
+  cause: client error (Connect)
+  cause: dns error
+  cause: failed to lookup address information: nodename nor servname provided, or not known
+"""
+UV_REFUSED = """error: Request failed after 3 retries in 9.5s
+  cause: Failed to fetch: `http://127.0.0.1:9/simple/httpx/`
+  cause: error sending request for url (http://127.0.0.1:9/simple/httpx/)
+  cause: client error (Connect)
+  cause: tcp connect error
+  cause: Connection refused (os error 61)
+"""
+UV_UNSATISFIABLE = """  x No solution found when resolving dependencies:
+  `-> Because there is no version of nonexistent and your project depends on
+      nonexistent, we can conclude that your project's requirements are unsatisfiable.
+"""
+
+
+@pytest.mark.parametrize("output", [UV_DNS_FAILURE, UV_REFUSED])
+def test_a_uv_connection_failure_gets_the_network_hint(output):
+    hint = system_deps.network_failure_hint(["uv", "add", "httpx"], output)
+    assert hint == system_deps.UV_NETWORK_HINT
+
+
+def test_a_uv_failure_that_reached_the_index_gets_no_hint():
+    assert (
+        system_deps.network_failure_hint(["uv", "add", "x"], UV_UNSATISFIABLE) is None
+    )
+
+
+def test_only_uv_output_is_read_for_network_failures():
+    assert system_deps.network_failure_hint(["git", "fetch"], UV_DNS_FAILURE) is None
+    assert system_deps.network_failure_hint([], UV_DNS_FAILURE) is None

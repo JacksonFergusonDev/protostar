@@ -23,6 +23,8 @@ from protostar.manifest import CollisionStrategy, EnvironmentManifest
 from protostar.registry import ResolvedHookRevision
 
 from ..review.model import (
+    NETWORK_NOTE,
+    HookSnapshot,
     Review,
     count,
     entry_tree,
@@ -64,19 +66,21 @@ class PlanPreview(VerticalScroll):
         super().__init__()
         self.config = config
         self.prepare = prepare
-        self.hook_revisions: tuple[ResolvedHookRevision, ...] | None = None
-        """The registry snapshot the preview pinned hooks from, once it needed one."""
-        self._fetch: asyncio.Future[tuple[ResolvedHookRevision, ...]] | None = None
+        self.hooks: HookSnapshot | None = None
+        """The registry snapshot, once its fetch has finished."""
+        self._fetch: asyncio.Future[HookSnapshot] | None = None
         self._review: Review | None = None
         self._reviewed: InitDraft | None = None
         # Held, not queried: a plan can finish while the app tears its
         # children down, and updating a removed line is harmless.
+        self._network = Static(Text(NETWORK_NOTE), id="preview-network")
         self._summary = Static("Planning…", id="preview-summary")
         self._notes = Static("", id="preview-notes")
         self._tree = Static("", id="preview-tree")
 
     def compose(self) -> ComposeResult:
-        """Compose the summary, skipped steps, and tree."""
+        """Compose the network warning, summary, skipped steps, and tree."""
+        yield self._network
         yield self._summary
         yield self._notes
         yield self._tree
@@ -149,23 +153,34 @@ class PlanPreview(VerticalScroll):
 
     def on_mount(self) -> None:
         """Start taking the registry snapshot while the user reads the screen."""
+        self._network.display = False
         if self.prepare:
+            self._start_fetch()
+
+    def _start_fetch(self) -> asyncio.Future[HookSnapshot]:
+        if self._fetch is None:
             self._fetch = _in_background(hook_snapshot)
+            self._fetch.add_done_callback(self._fetched)
+        return self._fetch
+
+    def _fetched(self, fetch: asyncio.Future[HookSnapshot]) -> None:
+        """Keep the snapshot, and warn at once if it never reached the network."""
+        if fetch.cancelled() or fetch.exception() is not None:
+            return
+        self.hooks = fetch.result()
+        self._network.display = self.hooks.unreachable
 
     async def _snapshot(
         self, manifest: EnvironmentManifest
     ) -> tuple[ResolvedHookRevision, ...]:
-        """Returns the one registry snapshot, waiting only if it is still being taken.
+        """Returns the snapshot's pins, waiting only if it is still being taken.
 
         The fetch outlives a cancelled preview, so one snapshot serves the
         preview, the review, and execution.
         """
         if not manifest.tooling.wants_hooks:
             return ()
-        if self._fetch is None:
-            self._fetch = _in_background(hook_snapshot)
-        self.hook_revisions = await asyncio.shield(self._fetch)
-        return self.hook_revisions
+        return (await asyncio.shield(self._start_fetch())).revisions
 
     def show_error(self, error: ProtostarError) -> None:
         """Show an error the editor found before planning, in place of the plan."""

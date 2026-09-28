@@ -21,13 +21,20 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from urllib.error import URLError
+from http.client import HTTPException
+from urllib.error import HTTPError, URLError
 
 from ._fallbacks import DEFAULT_REVISIONS
 
 logger = logging.getLogger("protostar")
 
-__all__ = ["HookRegistry", "PinProvenance", "RemoteHook", "clear_hook_registry_cache"]
+__all__ = [
+    "HookRegistry",
+    "PinProvenance",
+    "RemoteHook",
+    "clear_hook_registry_cache",
+    "hook_registry_unreachable",
+]
 
 
 class PinProvenance(enum.StrEnum):
@@ -81,12 +88,18 @@ _REGISTRY_URL = (
 )
 
 
+@dataclass(frozen=True)
+class _Fetch:
+    hooks: dict[str, str]
+    unreachable: bool = False
+
+
 @functools.cache
-def _fetch_hook_registry() -> dict[str, str]:
+def _fetch() -> _Fetch:
     """Performs a single HTTP GET to the static registry CDN, cached in-memory."""
     if os.environ.get("PROTOSTAR_OFFLINE_HOOK_REGISTRY") == "1":
         logger.debug("Offline hook registry mode active, using fallback revisions.")
-        return {}
+        return _Fetch({})
 
     try:
         import urllib.request
@@ -98,18 +111,44 @@ def _fetch_hook_registry() -> dict[str, str]:
                 logger.debug("Successfully resolved remote hook registry.")
                 hooks = data.get("hooks", {})
                 if isinstance(hooks, dict):
-                    return {str(k): str(v) for k, v in hooks.items()}
-    except (URLError, json.JSONDecodeError, TimeoutError) as e:
+                    return _Fetch({str(k): str(v) for k, v in hooks.items()})
+    except HTTPError as e:
+        # The server answered: the network works, the registry didn't.
+        logger.debug(f"Remote registry answered {e.code}, using offline fallbacks.")
+    except (URLError, OSError) as e:
+        # URLError wraps a failed lookup or connection; OSError covers timeouts
+        # and a connection dropped mid-read.
+        logger.debug(f"Remote registry unreachable, using offline fallbacks: {e}")
+        return _Fetch({}, unreachable=True)
+    except (json.JSONDecodeError, UnicodeDecodeError, HTTPException) as e:
         logger.debug(
             f"Remote registry unavailable, using offline fallbacks. Reason: {e}"
         )
 
-    return {}
+    return _Fetch({})
+
+
+def _fetch_hook_registry() -> dict[str, str]:
+    """Returns the registry's revisions, or nothing when it can't be read."""
+    return _fetch().hooks
+
+
+def hook_registry_unreachable() -> bool:
+    """Returns whether the registry fetch failed to reach any server.
+
+    It shares the one cached fetch, taking it if no snapshot has yet. A
+    registry that answered with an error still reached the network, and an
+    offline registry mode never counts.
+
+    Returns:
+        True when the request never connected, as when the machine is offline.
+    """
+    return _fetch().unreachable
 
 
 def clear_hook_registry_cache() -> None:
     """Clears the memoized remote hook registry cache."""
-    _fetch_hook_registry.cache_clear()
+    _fetch.cache_clear()
 
 
 class HookRegistry:
