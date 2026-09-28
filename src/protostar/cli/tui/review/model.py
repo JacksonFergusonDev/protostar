@@ -7,12 +7,13 @@ callers run them off the main thread.
 """
 
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
 from rich.text import Text
+from rich.tree import Tree
 
 from protostar.cli.ui import path_style, planned_paths
 from protostar.config import UserConfig
@@ -38,6 +39,7 @@ __all__ = [
     "classify",
     "count",
     "entry_label",
+    "entry_tree",
     "hook_snapshot",
     "plan_draft",
     "prepare_draft",
@@ -56,14 +58,17 @@ class Change(StrEnum):
     LATER = "after setup"
 
 
+# Color says what needs you, not how much changed: modifying a file is the
+# expected outcome, and a conflict is a choice in the accent, never a failure.
 _STYLES = {
     Change.NEW: "green",
-    Change.MODIFIED: "yellow",
+    Change.MODIFIED: "",
     Change.REMOVED: "red",
-    Change.CONFLICT: "red",
+    Change.CONFLICT: "cyan",
     Change.EXISTS: "dim",
     Change.LATER: "dim",
 }
+_DECISION = "cyan"
 
 FOLDER = path_style("", directory=True)
 
@@ -262,7 +267,20 @@ def summary(review: Review) -> Text:
     )
     dependencies = review.manifest.dependencies
     tasks = review.manifest.tasks
-    parts = [f"{counts[change]} {change.value}" for change in Change if counts[change]]
+    # A file with an open conflict counts by its change; the conflicts count
+    # the decisions, as the review's choices do.
+    parts = [
+        f"{counts[change]} {change.value}"
+        for change in Change
+        if counts[change] and change is not Change.CONFLICT
+    ]
+    if conflicts := sum(len(entry.open) for entry in review.entries):
+        parts.append(count(conflicts, "conflict"))
+    proposals = review.prepared.proposals
+    if proposals:
+        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
+        changes = count(len(proposals), "change") + " to your files"
+        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
     parts.append(
         count(
             len(dependencies.dependencies)
@@ -274,11 +292,6 @@ def summary(review: Review) -> Text:
     parts.append(
         count(len(tasks.system_tasks) + len(tasks.post_install_tasks), "command")
     )
-    proposals = review.prepared.proposals
-    if proposals:
-        kept = sum(p.resolution is ResolutionChoice.LOCAL for p in proposals)
-        changes = count(len(proposals), "change") + " to your files"
-        parts.append(f"{changes} ({kept} kept out)" if kept else changes)
     return Text(" · ".join(parts))
 
 
@@ -292,20 +305,48 @@ def entry_label(entry: Entry) -> Text:
         The path's name, then its change and any open or settled decisions.
     """
     name = entry.path.rsplit("/", 1)[-1] + ("/" if entry.directory else "")
-    marker = (
-        "" if entry.directory and entry.change is Change.EXISTS else entry.change.value
-    )
+    style = _STYLES[entry.change]
+    marker: list[tuple[str, str]] = []
+    if not (entry.directory and entry.change is Change.EXISTS):
+        marker.append((entry.change.value, style))
     if entry.open and entry.change is not Change.CONFLICT:
-        marker += " · conflict"
+        marker.append((" · conflict", _DECISION))
     elif any(c.reason is not ConflictReason.PROPOSED for c in entry.conflicts) and (
         not entry.open
     ):
-        marker += " · resolved"
+        marker.append((" · resolved", style))
     if entry.proposals:
         kept = sum(p.resolution is ResolutionChoice.LOCAL for p in entry.proposals)
-        marker += f" · {kept}/{len(entry.proposals)} kept out" if kept else ""
+        if kept:
+            marker.append((f" · {kept}/{len(entry.proposals)} kept out", style))
     # Color here means change, so only directories keep their kind's color.
     return Text.assemble(
         (name, FOLDER if entry.directory else ""),
-        (f"  {marker}", _STYLES[entry.change]) if marker else "",
+        *((("  ", ""), *marker) if marker else ()),
     )
+
+
+def entry_tree(entries: Sequence[Entry]) -> Tree:
+    """Draws the planned paths as a static tree, each labelled with its change.
+
+    Args:
+        entries: The review's entries, sorted by path.
+
+    Returns:
+        A tree rooted at the workspace.
+    """
+    tree = Tree(
+        Text.assemble((".", "bold blue"), (" (Workspace Root)", "dim")),
+        guide_style="bright_black",
+    )
+    nodes: dict[str, Tree] = {"": tree}
+    for entry in entries:
+        parts = entry.path.split("/")
+        parent = ""
+        for index in range(1, len(parts)):
+            folder = "/".join(parts[:index])
+            if folder not in nodes:
+                nodes[folder] = nodes[parent].add(Text(f"{parts[index - 1]}/", FOLDER))
+            parent = folder
+        nodes[entry.path] = nodes[parent].add(entry_label(entry))
+    return tree

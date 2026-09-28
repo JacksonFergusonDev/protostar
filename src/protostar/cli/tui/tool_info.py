@@ -83,37 +83,62 @@ def prose(text: str) -> Content:
     )
 
 
+def _joined(items: tuple[str, ...]) -> list[tuple[str, str] | str]:
+    """Lists paths in the accent colour, as data, never markup."""
+    parts: list[tuple[str, str] | str] = []
+    for index, item in enumerate(items):
+        if index:
+            parts.append(", ")
+        parts.append((item, "$accent"))
+    return parts
+
+
 class ToolInfoScreen(ModalScreen[None]):
-    """A tool's summary, what it adds, what changes day to day, and its docs."""
+    """A tool's summary, where the project already uses it, what it adds, and its docs."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "dismiss", "Close"),
         Binding("o", "open_docs", "Open docs"),
     ]
 
-    def __init__(self, name: str, info: ToolInfo) -> None:
+    def __init__(
+        self,
+        name: str,
+        info: ToolInfo,
+        *,
+        found: tuple[str, ...] = (),
+        notes: tuple[str, ...] = (),
+    ) -> None:
         """Create the popup.
 
         Args:
             name: The tool's display name.
             info: What the tool does.
+            found: What shows the project already uses it.
+            notes: What else analysis saw that concerns it.
         """
         super().__init__()
         self.tool_name = name
         self.info = info
+        self.found = found
+        self.notes = notes
 
     @classmethod
-    def of(cls, tool: Tool) -> "ToolInfoScreen":
+    def of(
+        cls, tool: Tool, *, found: tuple[str, ...] = (), notes: tuple[str, ...] = ()
+    ) -> "ToolInfoScreen":
         """Create the popup for a tooling module's tool.
 
         Args:
             tool: The tool.
+            found: What shows the project already uses it.
+            notes: What else analysis saw that concerns it.
 
         Returns:
             The popup, showing its module's ``info``.
         """
         module = tool_module(tool)
-        return cls(module.name, module.info)
+        return cls(module.name, module.info, found=found, notes=notes)
 
     def compose(self) -> ComposeResult:
         """Compose the information and the two keys that leave it."""
@@ -121,6 +146,21 @@ class ToolInfoScreen(ModalScreen[None]):
         with Vertical(id="dialog"):
             yield Static(Text(self.tool_name.upper()), classes="dialog-title")
             yield Label(prose(info.summary), classes="question")
+            if self.found or self.notes:
+                yield Static(
+                    Text("IN THIS PROJECT", style="bold"), classes="info-heading"
+                )
+                if self.found:
+                    yield Static(
+                        Content.assemble(
+                            "Found in ",
+                            *_joined(self.found),
+                            ". Protostar merges its settings into what is "
+                            "there and keeps yours.",
+                        )
+                    )
+                for note in self.notes:
+                    yield Static(Content(note))
             yield Static(Text("ADDS", style="bold"), classes="info-heading")
             yield Static(prose(info.adds))
             yield Static(Text("DAY TO DAY", style="bold"), classes="info-heading")
@@ -161,6 +201,8 @@ class InfoToggle(Toggle):
         *,
         value: bool = False,
         id: str | None = None,  # noqa: A002 - Textual's name
+        found: tuple[str, ...] = (),
+        notes: tuple[str, ...] = (),
     ) -> None:
         """Create the checkbox.
 
@@ -170,15 +212,23 @@ class InfoToggle(Toggle):
             info: What that tool does.
             value: Whether it starts checked.
             id: The widget's id.
+            found: What shows the project already uses the tool.
+            notes: What else analysis saw that concerns it.
         """
         super().__init__(label, value, id=id)
         self.tool_name = name
         self.info = info
+        self.found = found
+        self.notes = notes
         self.tooltip = info.summary
 
     def action_tool_info(self) -> None:
-        """Show what the tool does."""
-        self.app.push_screen(ToolInfoScreen(self.tool_name, self.info))
+        """Show what the tool does, and where the project already uses it."""
+        self.app.push_screen(
+            ToolInfoScreen(
+                self.tool_name, self.info, found=self.found, notes=self.notes
+            )
+        )
 
 
 class ToolToggle(InfoToggle):
@@ -191,6 +241,8 @@ class ToolToggle(InfoToggle):
         *,
         value: bool = False,
         id: str | None = None,  # noqa: A002 - Textual's name
+        found: tuple[str, ...] = (),
+        notes: tuple[str, ...] = (),
     ) -> None:
         """Create the checkbox.
 
@@ -199,9 +251,19 @@ class ToolToggle(InfoToggle):
             tool: The tool it switches on or off.
             value: Whether it starts checked.
             id: The widget's id.
+            found: What shows the project already uses the tool.
+            notes: What else analysis saw that concerns it.
         """
         module = tool_module(tool)
-        super().__init__(label, module.name, module.info, value=value, id=id)
+        super().__init__(
+            label,
+            module.name,
+            module.info,
+            value=value,
+            id=id,
+            found=found,
+            notes=notes,
+        )
         self.tool = tool
 
 
@@ -215,6 +277,7 @@ class ToolRadio(RadioButton):
         *,
         value: bool = False,
         id: str | None = None,  # noqa: A002 - Textual's name
+        found: tuple[str, ...] = (),
     ) -> None:
         """Create the button.
 
@@ -223,9 +286,11 @@ class ToolRadio(RadioButton):
             tool: The tool it chooses.
             value: Whether it starts pressed.
             id: The widget's id.
+            found: What shows the project already uses the tool.
         """
         super().__init__(label, value, id=id)
         self.tool = tool
+        self.found = found
         self.tooltip = tool_module(tool).info.summary
 
 
@@ -256,4 +321,4 @@ class ToolChoice(Choice):
     def action_tool_info(self) -> None:
         """Show what the highlighted tool does."""
         if button := self._highlighted():
-            self.app.push_screen(ToolInfoScreen.of(button.tool))
+            self.app.push_screen(ToolInfoScreen.of(button.tool, found=button.found))

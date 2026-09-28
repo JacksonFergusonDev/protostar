@@ -32,6 +32,7 @@ from protostar.analysis import analyze_project
 from protostar.cli import parser, ui
 from protostar.cli.tui.app import DecisionApp
 from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
+from protostar.cli.tui.recipe.preview import PlanPreview
 from protostar.cli.tui.recipe.screen import RecipeScreen, _TemplateChoice
 from protostar.cli.tui.recipe.tier import TierFields, TierInfoScreen
 from protostar.cli.tui.recipe.variables import VariablesScreen
@@ -1113,10 +1114,13 @@ async def test_an_existing_project_prefills_its_tools_and_details(workspace):
         assert "Existing project" in plain(app, "#subtitle")
         just = screen.query_one("#tool-just", Checkbox)
         assert just.value
-        assert "found · justfile" in just.label.plain
+        # The row says only that it was found; its popup says where.
+        assert just.label.plain.rstrip().endswith("found")
+        assert just.found == ("justfile",)
         prek = screen.query_one("#tool-prek", RadioButton)
         assert prek.value
-        assert "found · .pre-commit-config.yaml" in prek.label.plain
+        assert prek.label.plain.rstrip().endswith("found")
+        assert prek.found[0] == ".pre-commit-config.yaml"
         # Found tools are only added: a configured default stays on.
         ruff = screen.query_one("#tool-ruff", Checkbox)
         assert ruff.value
@@ -1124,12 +1128,13 @@ async def test_an_existing_project_prefills_its_tools_and_details(workspace):
         # Read the Docs needs Zensical, which the project does not use.
         rtd = screen.query_one("#tool-readthedocs", Checkbox)
         assert not rtd.value
-        assert "found · .readthedocs.yaml" in rtd.label.plain
-        assert "requires Zensical" in rtd.label.plain
+        assert "found · requires Zensical" in rtd.label.plain
         docker = screen.query_one("#tool-docker", Checkbox)
         assert docker.value
-        assert "found · Dockerfile" in docker.label.plain
-        assert "deploy.yml" in plain(app, "#analysis-notes")
+        assert docker.found == ("Dockerfile",)
+        # Other workflows concern CI alone, so only its popup names them.
+        assert not screen.query("#analysis-notes")
+        assert "deploy.yml" in screen.query_one("#tool-ci", Checkbox).notes[0]
         assert screen.query_one("#meta-author_name", Input).value == "Ada Lovelace"
         assert screen.query_one("#meta-author_email", Input).value == "ada@example.com"
         assert screen.query_one("#meta-license", Select).value == "Apache-2.0"
@@ -1175,7 +1180,7 @@ async def test_a_template_keeps_its_opinions_beside_found_tools(workspace):
         just = app.screen.query_one("#tool-just", Checkbox)
         mypy = app.screen.query_one("#tool-mypy", Checkbox)
         assert just.value
-        assert "found · justfile" in just.label.plain
+        assert just.label.plain.rstrip().endswith("found")
         assert mypy.value
         assert "from template" in mypy.label.plain
 
@@ -1208,12 +1213,96 @@ async def test_toggling_a_tool_updates_the_preview():
 
 
 @pytest.mark.asyncio
-async def test_preview_lists_collisions(workspace):
+async def test_preview_labels_an_existing_file_it_merges(workspace):
     (workspace / "pyproject.toml").write_text('[project]\nname = "existing"\n')
     app = make_app()
     async with app.run_test(size=(110, 45)) as pilot:
         await settle(pilot)
-        assert "Already exist: pyproject.toml" in plain(app, "#preview-collisions")
+        assert "pyproject.toml  modified" in plain(app, "#preview-tree")
+        summary = plain(app, "#preview-summary")
+        assert "1 modified" in summary
+        assert "conflict" not in summary
+        assert "Settled on the next screen" in summary
+
+
+@pytest.mark.asyncio
+async def test_preview_shows_a_conflict_the_review_settles(workspace):
+    (workspace / "pyproject.toml").write_text(
+        '[project]\nname = "existing"\n\n[tool.ruff]\nlint = "E"\n'
+    )
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert "pyproject.toml  modified · conflict" in plain(app, "#preview-tree")
+        assert "1 conflict" in plain(app, "#preview-summary")
+        prepared = app.screen.query_one(PlanPreview)._review
+        await pilot.press("ctrl+s")
+        await settle(pilot)
+        review = app.screen
+        assert isinstance(review, ReviewScreen)
+        # The review opens on the preview's review rather than preparing again.
+        assert review.review is prepared
+        assert "1 conflict" in plain(app, "#subtitle")
+
+
+@pytest.mark.asyncio
+async def test_a_preparation_error_disables_continue(workspace):
+    (workspace / "pyproject.toml").write_text("[tool]\nprotostar = 1\n")
+    app = make_app()
+    async with app.run_test(size=(110, 45)) as pilot:
+        await settle(pilot)
+        assert app.screen.query_one("#preview-summary", Static).has_class("-error")
+        assert app.screen.query_one("#continue", Button).disabled
+
+
+@pytest.mark.asyncio
+async def test_the_editor_review_and_execution_share_one_hook_snapshot(
+    collisions, mocker
+):
+    snapshot = tuple(
+        ResolvedHookRevision(hook, "v9.9.9", PinProvenance.REGISTRY)
+        for hook in RemoteHook
+    )
+    take = mocker.patch(
+        "protostar.cli.tui.review.model.resolve_hook_revisions",
+        return_value=snapshot,
+    )
+    app = make_app(config=collisions)
+    async with app.run_test(size=(120, 45)) as pilot:
+        await settle(pilot)
+        # Re-planning after an edit reuses the snapshot.
+        app.screen.query_one("#tool-zensical", Checkbox).value = True
+        await settle(pilot)
+        await apply(pilot)
+    take.assert_called_once()
+    assert app.return_value.hook_revisions is snapshot
+
+
+@pytest.mark.asyncio
+async def test_tool_info_shows_where_the_project_uses_the_tool(workspace):
+    config = UserConfig(just=False, prek=False, pre_commit=False, ci=True)
+    app = make_app(InitDraft(analysis=existing_project(workspace)), config)
+    async with app.run_test(size=(110, 55)) as pilot:
+        await settle(pilot)
+        app.screen.query_one("#tool-just", Checkbox).focus()
+        await pilot.press("i")
+        await settle(pilot)
+        assert isinstance(app.screen, ToolInfoScreen)
+        text = " ".join(str(item.render()) for item in app.screen.query(Static))
+        assert "IN THIS PROJECT" in text
+        assert "justfile" in text
+        await pilot.press("escape")
+        app.screen.query_one("#tool-ci", Checkbox).focus()
+        await pilot.press("i")
+        await settle(pilot)
+        text = " ".join(str(item.render()) for item in app.screen.query(Static))
+        assert "deploy.yml" in text
+        await pilot.press("escape")
+        app.screen.query_one("#tool-ruff", Checkbox).focus()
+        await pilot.press("i")
+        await settle(pilot)
+        text = " ".join(str(item.render()) for item in app.screen.query(Static))
+        assert "IN THIS PROJECT" not in text
 
 
 @pytest.mark.asyncio
@@ -1404,8 +1493,8 @@ def test_existing_project_snapshot(snap_compare, monkeypatch, workspace):
             await settle(pilot)
             while "Planning" in plain(pilot.app, "#preview-summary"):
                 await pilot.pause(0.05)
-            notes = pilot.app.screen.query_one("#analysis-notes")
-            notes.scroll_visible(top=True, animate=False, immediate=True)
+            tools = pilot.app.screen.query_one("#tools")
+            tools.scroll_visible(top=True, animate=False, immediate=True)
         await settle(pilot)
 
     assert snap_compare(app, terminal_size=(110, 50), run_before=tools)
@@ -1510,9 +1599,7 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
             "uv.lock": "uv.lock  after setup",
             "protostar.lock": "protostar.lock  after setup",
         }
-        assert "Already in the workspace: .pre-commit-config.yaml, justfile, " in (
-            plain(app, "#collision-note")
-        )
+        assert "3 files already exist." in plain(app, "#collision-note")
         await highlight(pilot, ".pre-commit-config.yaml")
         diff = plain(app, "#diff")
         assert "+++ b/.pre-commit-config.yaml" in diff

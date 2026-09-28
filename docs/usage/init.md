@@ -229,7 +229,7 @@ Running `just` in your project root provides standard developer workflows immedi
 
 ## Recipe Editor & Metadata
 
-When running `protostar init` without a `--template` flag in a terminal, Protostar opens the recipe editor. Pick a template, toggle tools, and fill in project details while a live preview shows the planned file tree.
+When running `protostar init` without a `--template` flag in a terminal, Protostar opens the recipe editor. Pick a template, toggle tools, and fill in project details while a live preview shows the planned file tree. Each file in the preview says what `init` does to it: `new`, `modified`, `existing`, `after setup` (written once the commands run), or a `conflict` to settle. The change review that follows is where conflicts and changes to your files are decided.
 
 ![Protostar recipe editor](../assets/terminals/tui_recipe_editor.svg)
 
@@ -279,9 +279,9 @@ with the one command that installs it; see
 When `init` runs in a directory that already holds a project but has no recipe yet, Protostar first reads what the project has. It only reads: nothing is written and no command runs.
 
 - __Facts__ fill the recipe in place of defaults and placeholders. The Python version and minimum come from `requires-python` (or `.python-version`), the author, description, and GitHub account from `[project]`, the license from `[project].license`, its classifiers, or the license file's heading, the supported operating systems from the classifiers, and the copyright year from the license file, so a regenerated license keeps its year. A value you pass or type always wins over a fact. Headless runs use the facts too, for the metadata the selected tools read.
-- __Tools__ the project already uses start switched on in the recipe editor, each marked `found` with what showed it, such as `found · justfile` or `found · pyproject.toml [tool.ruff]`. Found tools are only ever added: a template's opinions and your configured defaults still apply to everything else, except that a found hook runner replaces the configured one. A found tool whose prerequisite is off stays off, still marked, so you can decide. Headless runs never switch a tool on because it was found; flags stay the only selection there.
+- __Tools__ the project already uses start switched on in the recipe editor, each marked `found`. Press `i` on a tool to see what showed it, such as `justfile` or `pyproject.toml [tool.ruff]`. Found tools are only ever added: a template's opinions and your configured defaults still apply to everything else, except that a found hook runner replaces the configured one. A found tool whose prerequisite is off stays off, still marked, so you can decide. Headless runs never switch a tool on because it was found; flags stay the only selection there.
 
-The editor's headline says when it has filled in an existing project, and a note under __Tools__ names anything it left out, such as other GitHub Actions workflows the CI tool would run beside, or a file it could not read. `protostar init --dry-run --json` reports the same analysis for agents (see the [machine interface](agent-interface.md)).
+The editor's headline says when it has filled in an existing project, and a note under __Tools__ names any file it could not read. Other GitHub Actions workflows the CI tool would run beside are listed in its `i` popup. `protostar init --dry-run --json` reports the same analysis for agents (see the [machine interface](agent-interface.md)).
 
 The change review that follows lists every change Protostar would make to a file you already have, and each can be kept out; __Keep all mine__ (`K`) adopts the project exactly as it is, and `protostar sync` can take any kept-out change later (see [changes to files you already have](lifecycle.md#changes-to-files-you-already-have)).
 

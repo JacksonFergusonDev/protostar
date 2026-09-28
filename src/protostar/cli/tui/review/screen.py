@@ -64,6 +64,7 @@ from .model import (
     Change,
     Entry,
     Review,
+    count,
     entry_label,
     hook_snapshot,
     plan_draft,
@@ -254,8 +255,25 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
     ]
 
     def __init__(
-        self, draft: InitDraft, config: UserConfig, *, can_go_back: bool = False
+        self,
+        draft: InitDraft,
+        config: UserConfig,
+        *,
+        can_go_back: bool = False,
+        review: Review | None = None,
+        hook_revisions: tuple[ResolvedHookRevision, ...] | None = None,
     ) -> None:
+        """Create the screen.
+
+        Args:
+            draft: The draft to review.
+            config: The user's configuration.
+            can_go_back: Whether ``Esc`` returns to the recipe editor.
+            review: The draft's review, already prepared by the editor's
+                preview, shown at once instead of preparing it again.
+            hook_revisions: The registry snapshot the preview took; the
+                screen takes its own only when this is ``None``.
+        """
         super().__init__()
         self.draft = draft
         self.config = config
@@ -264,7 +282,8 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.review: Review | None = None
         self.commands: tuple[tuple[str, ...], ...] = ()
         self.choices: dict[str, ResolutionChoice] = {}
-        self._hook_revisions: tuple[ResolvedHookRevision, ...] | None = None
+        self._hook_revisions = hook_revisions
+        self._handed = review
         self._loading = True
         self._shown = False
 
@@ -351,7 +370,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         self.query_one("#conflict-choice").display = False
         self.query_one("#keep-all").display = False
         self.query_one("#trust-gate").display = False
-        self.prepare()
+        if self._handed is None:
+            self.prepare()
+            return
+        self._loading = False
+        self._shown = True
+        self._show(self._handed)
 
     @work(exclusive=True, group="review")
     async def prepare(self) -> None:
@@ -407,7 +431,12 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         collisions = sorted(path.as_posix() for path in manifest.collisions)
         self.query_one("#collision-choice").display = bool(collisions)
         self.query_one("#collision-note", Static).update(
-            Text(f"Already in the workspace: {', '.join(collisions)}")
+            # The files tree names each one; the note only says how many.
+            Text(
+                f"{count(len(collisions), 'file')} already "
+                f"{'exists' if len(collisions) == 1 else 'exist'}. "
+                "Choose how Protostar writes into them."
+            )
         )
         self.query_one("#trust-gate").display = bool(commands)
         self.query_one("#trust-note", Static).update(_trust_text(commands))
