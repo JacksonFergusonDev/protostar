@@ -1700,7 +1700,7 @@ async def test_review_and_execution_share_one_hook_snapshot(collisions, mocker):
         for hook in RemoteHook
     )
     take = mocker.patch(
-        "protostar.cli.tui.review.screen.resolve_hook_revisions",
+        "protostar.cli.tui.review.model.resolve_hook_revisions",
         return_value=snapshot,
     )
     fresh = mocker.patch("protostar.executor.resolve_hook_revisions")
@@ -1860,7 +1860,7 @@ def test_review_snapshot(snap_compare, monkeypatch, mocker, collisions):
     monkeypatch.delenv("NO_COLOR", raising=False)
     # Fixed pins: fallback revisions move with every registry bump.
     mocker.patch(
-        "protostar.cli.tui.review.screen.resolve_hook_revisions",
+        "protostar.cli.tui.review.model.resolve_hook_revisions",
         return_value=tuple(
             ResolvedHookRevision(hook, "v1.0.0", PinProvenance.REGISTRY)
             for hook in RemoteHook
@@ -2018,7 +2018,8 @@ def test_credential_name_warning_is_cp1252_safe(mocker):
 
 
 def test_line_conflicts_name_the_kept_lines():
-    from protostar.cli.tui.review.screen import Change, Entry, describe
+    from protostar.cli.tui.review.model import Change, Entry
+    from protostar.cli.tui.review.screen import describe
     from protostar.merge import ConflictReason, LineSpan, MergeConflict, MergeLocation
 
     def conflict(lines):
@@ -2048,7 +2049,8 @@ def test_line_conflicts_name_the_kept_lines():
     ],
 )
 def test_a_command_output_says_whether_protostar_merges_into_it(merged, origin):
-    from protostar.cli.tui.review.screen import Change, Entry, describe
+    from protostar.cli.tui.review.model import Change, Entry
+    from protostar.cli.tui.review.screen import describe
 
     entry = Entry(
         ".python-version", Change.LATER, creator=("uv", "init"), merged=merged

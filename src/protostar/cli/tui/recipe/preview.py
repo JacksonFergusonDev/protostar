@@ -13,21 +13,12 @@ from textual.widgets import Static
 from protostar.cli.ui import plan_tree, planned_paths
 from protostar.config import UserConfig
 from protostar.errors import MissingTemplateVariablesError, ProtostarError
-from protostar.init_draft import InitDraft, resolve_init
-from protostar.manifest import EnvironmentManifest
-from protostar.orchestrator import Orchestrator
+from protostar.init_draft import InitDraft
+
+from ..review.model import count, plan_draft
 
 # A warm plan() takes 1-7 ms, so the pause only folds a burst of changes into one run.
 DEBOUNCE_SECONDS = 0.1
-
-
-def _plan(draft: InitDraft, config: UserConfig) -> EnvironmentManifest:
-    modules, request = resolve_init(draft, config)
-    return Orchestrator(modules, config, request=request).plan()
-
-
-def _count(number: int, noun: str) -> str:
-    return f"{number} {noun}{'' if number == 1 else 's'}"
 
 
 def _error(error: ProtostarError) -> Text:
@@ -73,7 +64,7 @@ class PlanPreview(VerticalScroll):
         """
         await asyncio.sleep(DEBOUNCE_SECONDS)
         try:
-            manifest = await asyncio.to_thread(_plan, draft, self.config)
+            _, manifest = await asyncio.to_thread(plan_draft, draft, self.config)
         except MissingTemplateVariablesError as exc:
             self._show(Text(f"Waiting for values: {', '.join(exc.variables)}."))
             self.post_message(self.PlanUpdated(error=None))
@@ -96,7 +87,7 @@ class PlanPreview(VerticalScroll):
         self._show(
             Text(
                 " · ".join(
-                    _count(number, noun)
+                    count(number, noun)
                     for number, noun in (
                         (len(paths), "path"),
                         (packages, "package"),
