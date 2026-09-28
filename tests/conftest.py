@@ -352,11 +352,21 @@ def snap_compare(snap_compare):
 
     def compare(app, *args, run_before=None, **kwargs):
         async def measured(pilot):
+            from textual.widgets import Input
+
+            def freeze_cursor() -> None:
+                for screen in pilot.app.screen_stack:
+                    for widget in screen.query(Input):
+                        widget.cursor_blink = False
+                        widget._cursor_visible = True
+
+            freeze_cursor()
             if run_before is not None and inspect.isawaitable(
                 result := run_before(pilot)
             ):
                 await result
             await pilot.pause()
+            freeze_cursor()
             for screen in pilot.app.screen_stack:
                 check_layout(screen)
 
