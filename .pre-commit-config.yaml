@@ -127,7 +127,7 @@ repos:
         entry: uv run python scripts/run_snapshots.py
         language: system
         pass_filenames: false
-        files: ^(src/|scripts/(run_snapshots|generate_docs_assets)\.py|tests/snapshots/|docs/generated/|docs/assets/terminals/|pyproject\.toml|uv\.lock)
+        files: ^(src/|scripts/(run_snapshots\.py|generate_docs_assets/)|tests/snapshots/|docs/generated/|docs/assets/terminals/|pyproject\.toml|uv\.lock)
         stages: [pre-push]
 
   # Check for accidental commits of secrets

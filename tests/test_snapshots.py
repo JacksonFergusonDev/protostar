@@ -1,4 +1,3 @@
-import importlib.util
 import io
 import re
 import tomllib
@@ -10,18 +9,11 @@ from rich.console import Console
 from rich.style import Style
 from rich.text import Text
 
-# Dynamically import generate_docs_assets script
-_docs_script_path = Path(__file__).parent.parent / "scripts" / "generate_docs_assets.py"
-_spec = importlib.util.spec_from_file_location(
-    "generate_docs_assets", _docs_script_path
+from scripts.generate_docs_assets import svg
+from scripts.generate_docs_assets.svg import (
+    _calculate_content_width,
+    _render_and_write_svg,
 )
-assert _spec
-assert _spec.loader
-_docs_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_docs_mod)
-
-_calculate_content_width = _docs_mod._calculate_content_width
-_render_and_write_svg = _docs_mod._render_and_write_svg
 
 SCENARIO_FIXTURES = (
     "api",
@@ -92,7 +84,7 @@ def test_calculate_content_width_wide_characters():
 
 def test_render_and_write_svg_shrinkwraps(tmp_path, monkeypatch):
     """Verify that _render_and_write_svg shrinkwraps terminal width to content."""
-    monkeypatch.setattr(_docs_mod, "DOCS_TERMINALS_DIR", tmp_path)
+    monkeypatch.setattr(svg, "DOCS_TERMINALS_DIR", tmp_path)
 
     console = Console(record=True, width=100, file=io.StringIO())
     console.print("A" * 40)
@@ -121,7 +113,7 @@ def test_render_and_write_svg_shrinkwraps(tmp_path, monkeypatch):
 
 def test_render_and_write_svg_deterministic(tmp_path, monkeypatch):
     """Verify that SVG generation produces byte-for-byte identical output across runs."""
-    monkeypatch.setattr(_docs_mod, "DOCS_TERMINALS_DIR", tmp_path)
+    monkeypatch.setattr(svg, "DOCS_TERMINALS_DIR", tmp_path)
 
     def render_output():
         console = Console(record=True, width=100, file=io.StringIO())
