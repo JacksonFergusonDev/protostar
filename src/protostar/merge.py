@@ -326,6 +326,18 @@ class MergeResult:
     preserved: tuple[MergeConflict, ...] = ()
 
 
+@dataclass(frozen=True)
+class StructuredReconciliation:
+    """Round-trip output, owned composite baseline, and structured conflicts."""
+
+    content: str
+    baseline: Value
+    conflicts: tuple[MergeConflict, ...] = ()
+    resolved: tuple[MergeConflict, ...] = ()
+    proposals: tuple[MergeConflict, ...] = ()
+    preserved: tuple[MergeConflict, ...] = ()
+
+
 def validate_value(value: Value) -> None:
     """Rejects unsupported shapes, cyclic containers, and excessive nesting."""
     active: set[int] = set()
@@ -377,6 +389,15 @@ def validate_value(value: Value) -> None:
         active.remove(id(node))
 
     visit(value, 0)
+
+
+def sort_value_keys(node: Value) -> Value:
+    """Recursively sorts dictionary keys for deterministic baseline serialization."""
+    if isinstance(node, dict):
+        return {key: sort_value_keys(node[key]) for key in sorted(node)}
+    if isinstance(node, list):
+        return [sort_value_keys(child) for child in node]
+    return node
 
 
 def semantic_equal(left: Value, right: Value) -> bool:

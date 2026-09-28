@@ -569,6 +569,31 @@ class TaskManifest:
     system_tasks: list[SystemTask] = field(default_factory=list)
     post_install_tasks: list[SystemTask] = field(default_factory=list)
 
+    def _queue_task(
+        self,
+        collection_name: str,
+        collection: list[SystemTask],
+        command: list[str],
+        timeout: int | None,
+        description: str | None,
+        owned_files: list[str] | None,
+        owned_trees: list[str] | None,
+    ) -> None:
+        self.observe(
+            (collection_name, hashlib.sha256("\0".join(command).encode()).hexdigest())
+        )
+        if any(task.command == command for task in collection):
+            return
+        collection.append(
+            SystemTask(
+                command=command,
+                timeout=timeout,
+                description=description,
+                owned_files=owned_files,
+                owned_trees=owned_trees,
+            )
+        )
+
     def add_system_task(
         self,
         command: list[str],
@@ -578,19 +603,14 @@ class TaskManifest:
         owned_trees: list[str] | None = None,
     ) -> None:
         """Queues a shell command for execution during the realization phase."""
-        self.observe(
-            ("system_tasks", hashlib.sha256("\0".join(command).encode()).hexdigest())
-        )
-        if any(task.command == command for task in self.system_tasks):
-            return
-        self.system_tasks.append(
-            SystemTask(
-                command=command,
-                timeout=timeout,
-                description=description,
-                owned_files=owned_files,
-                owned_trees=owned_trees,
-            )
+        self._queue_task(
+            "system_tasks",
+            self.system_tasks,
+            command,
+            timeout,
+            description,
+            owned_files,
+            owned_trees,
         )
 
     def add_post_install_task(
@@ -602,22 +622,14 @@ class TaskManifest:
         owned_trees: list[str] | None = None,
     ) -> None:
         """Queues a shell command for execution after dependencies are fully installed."""
-        self.observe(
-            (
-                "post_install_tasks",
-                hashlib.sha256("\0".join(command).encode()).hexdigest(),
-            )
-        )
-        if any(task.command == command for task in self.post_install_tasks):
-            return
-        self.post_install_tasks.append(
-            SystemTask(
-                command=command,
-                timeout=timeout,
-                description=description,
-                owned_files=owned_files,
-                owned_trees=owned_trees,
-            )
+        self._queue_task(
+            "post_install_tasks",
+            self.post_install_tasks,
+            command,
+            timeout,
+            description,
+            owned_files,
+            owned_trees,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -630,19 +642,9 @@ class TaskManifest:
         Returns:
             A JSON-serializable dictionary representation.
         """
-
-        def _task_to_dict(task: SystemTask) -> dict[str, object]:
-            return {
-                "command": task.command,
-                "description": task.description,
-                "timeout": task.timeout,
-                "owned_files": task.owned_files,
-                "owned_trees": task.owned_trees,
-            }
-
         return {
-            "system_tasks": [_task_to_dict(t) for t in self.system_tasks],
-            "post_install_tasks": [_task_to_dict(t) for t in self.post_install_tasks],
+            "system_tasks": [task.to_dict() for task in self.system_tasks],
+            "post_install_tasks": [task.to_dict() for task in self.post_install_tasks],
         }
 
 

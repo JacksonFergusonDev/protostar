@@ -19,6 +19,7 @@ from .merge import (
     MergeLocation,
     MergePolicy,
     Resolutions,
+    StructuredReconciliation,
     Value,
     hold,
     lookup,
@@ -82,16 +83,10 @@ class AggregatedToml:
 
 
 @dataclass(frozen=True)
-class TomlReconciliation:
+class TomlReconciliation(StructuredReconciliation):
     """AST output, owned composite baseline, and concrete conflicts."""
 
-    content: str
-    baseline: Value
-    conflicts: tuple[MergeConflict, ...]
     layout_notes: tuple[str, ...] = ()
-    resolved: tuple[MergeConflict, ...] = ()
-    proposals: tuple[MergeConflict, ...] = ()
-    preserved: tuple[MergeConflict, ...] = ()
 
 
 def aggregate_toml_document(
@@ -349,8 +344,8 @@ def reconcile_toml(
         content,
         baseline,
         conflicts,
-        tuple(layout_notes),
-        resolved,
-        proposals,
-        preserved,
+        resolved=resolved,
+        proposals=proposals,
+        preserved=preserved,
+        layout_notes=tuple(layout_notes),
     )

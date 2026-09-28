@@ -135,3 +135,9 @@ class ToolModule(BootstrapModule):
     @abc.abstractmethod
     def info(self) -> ToolInfo:
         """What the tool does, for ``--help``, the schema, and the TUI."""
+
+    def add_pyproject_config(self, manifest: EnvironmentManifest, config: str) -> None:
+        """Injects a structured configuration payload into pyproject.toml."""
+        manifest.filesystem.add_structured(
+            "pyproject.toml", config, producer=f"module:{self.__class__.__name__}"
+        )

@@ -25,7 +25,7 @@ from .intent import (
     validate_region_id,
 )
 from .jsonc_ast import decode_jsonc_baseline, encode_jsonc_baseline
-from .merge import Value, validate_value
+from .merge import Value, sort_value_keys, validate_value
 from .registry import PinProvenance as PinProvenance
 from .review_workspace import capture_node
 
@@ -436,16 +436,8 @@ def _decode_toml_baseline(content: str) -> dict[str, Value]:
 def encode_toml_baseline(value: dict[str, Value]) -> str:
     """Encodes only supplied owned values, with canonical mapping order and no trivia."""
     validate_value(value)
-
-    def ordered(node: Value) -> Value:
-        if isinstance(node, dict):
-            return {key: ordered(node[key]) for key in sorted(node)}
-        if isinstance(node, list):
-            return [ordered(child) for child in node]
-        return node
-
     try:
-        content = tomlkit.dumps(cast(dict[str, object], ordered(value)))
+        content = tomlkit.dumps(cast(dict[str, object], sort_value_keys(value)))
     except (TOMLKitError, ValueError, TypeError, RecursionError) as e:
         raise _invalid("baseline contains values unsupported by TOML.") from e
     decode_toml_baseline(content)

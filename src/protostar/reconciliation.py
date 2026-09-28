@@ -52,7 +52,6 @@ from .intent import (
 )
 from .interpolation import render_template
 from .jsonc_ast import (
-    JsoncReconciliation,
     decode_jsonc,
     decode_jsonc_baseline,
     dumps_jsonc,
@@ -77,6 +76,7 @@ from .merge import (
     MergeLocation,
     ResolutionChoice,
     Resolutions,
+    StructuredReconciliation,
     Value,
     describe_location,
 )
@@ -99,7 +99,6 @@ from .sync_state import (
 from .text_merge import is_edited, reconcile_text
 from .toml_ast import (
     TomlDocumentSpec,
-    TomlReconciliation,
     aggregate_toml,
     aggregate_toml_document,
     reconcile_toml,
@@ -127,7 +126,6 @@ from .yaml_ast import (
     NO_GUARD,
     YamlDocumentSpec,
     YamlGuardPolicy,
-    YamlReconciliation,
     decode_yaml_baseline,
     encode_yaml_baseline,
     reconcile_yaml,
@@ -648,7 +646,7 @@ class Reconciliation:
             baseline = record.baseline or ""
             decode: Callable[[str], dict[str, Value]]
             encode: Callable[[dict[str, Value]], str]
-            result: TomlReconciliation | YamlReconciliation | JsoncReconciliation
+            result: StructuredReconciliation
             if record.policy is FilePolicy.TOML:
                 spec = toml_spec(record.path)
                 decode, encode = tomllib.loads, encode_toml_baseline
@@ -850,7 +848,7 @@ class Reconciliation:
         *,
         indent: str = "  ",
         guard: YamlGuardPolicy | None = None,
-    ) -> YamlReconciliation | JsoncReconciliation:
+    ) -> StructuredReconciliation:
         """Applies a YAML or JSONC document through the transaction and candidate state.
 
         Args:
@@ -887,7 +885,7 @@ class Reconciliation:
             overwrite = self.manifest.collision_strategy is CollisionStrategy.OVERWRITE
             proposing = not overwrite and self._proposing(target, record)
             if policy is FilePolicy.YAML:
-                result: YamlReconciliation | JsoncReconciliation = reconcile_yaml(
+                result: StructuredReconciliation = reconcile_yaml(
                     YAML_DOCUMENTS[located.target],
                     original,
                     desired,

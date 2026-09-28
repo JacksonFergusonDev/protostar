@@ -327,9 +327,7 @@ style = "one"
     "MD046", # code block style - MkDocs extensions mix fenced and indented blocks
 ]
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:RumdlModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class RuffModule(ToolModule):
@@ -419,9 +417,7 @@ ignore = [
     "E501", # Line too long - handled automatically by `ruff format`
 ]
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:RuffModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class MypyModule(ToolModule):
@@ -492,9 +488,7 @@ warn_unused_configs = true
 check_untyped_defs = true
 explicit_package_bases = true
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:MypyModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class TyModule(ToolModule):
@@ -543,9 +537,7 @@ missing-type-argument = "error"
 redundant-cast = "warn"
 unused-ignore-comment = "warn"
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:TyModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class PytestModule(ToolModule):
@@ -616,9 +608,7 @@ pythonpath = [
     ".",
 ]
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:PytestModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class PreCommitModule(ToolModule):
@@ -776,9 +766,7 @@ tag_format = "v$version"
 update_changelog_on_bump = true
 changelog_incremental = true
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:CommitizenModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class PyreflyModule(ToolModule):
@@ -830,9 +818,7 @@ class PyreflyModule(ToolModule):
 # "strict" enables the full suite of type error diagnostics
 type-checking-mode = "strict"
 """
-        manifest.filesystem.add_structured(
-            "pyproject.toml", config, producer="module:PyreflyModule"
-        )
+        self.add_pyproject_config(manifest, config)
 
 
 class RenovateModule(ToolModule):

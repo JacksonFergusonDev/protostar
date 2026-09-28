@@ -39,6 +39,7 @@ from protostar.cli.changes import (
     prepare_draft,
     steps_text,
     summary,
+    walk_entry_hierarchy,
 )
 from protostar.cli.decisions import MEANING
 from protostar.cli.ui import untrusted_commands
@@ -415,22 +416,16 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
         current = cursor.data.path if cursor and cursor.data else None
         files.clear()
         nodes: dict[str, TreeNode[Entry]] = {"": files.root}
-        for entry in entries:
-            parts = entry.path.split("/")
-            parent = ""
-            for index in range(1, len(parts)):
-                folder = "/".join(parts[:index])
-                if folder not in nodes:
-                    nodes[folder] = nodes[parent].add(
-                        Text(f"{parts[index - 1]}/", FOLDER), expand=True
-                    )
-                parent = folder
-            label = entry_label(entry)
-            nodes[entry.path] = (
-                nodes[parent].add(label, entry, expand=True)
-                if entry.directory
-                else nodes[parent].add_leaf(label, entry)
-            )
+        for parent, path, name, entry in walk_entry_hierarchy(entries):
+            if entry is None:
+                nodes[path] = nodes[parent].add(Text(name, FOLDER), expand=True)
+            else:
+                label = entry_label(entry)
+                nodes[path] = (
+                    nodes[parent].add(label, entry, expand=True)
+                    if entry.directory
+                    else nodes[parent].add_leaf(label, entry)
+                )
         # Keep the file in view across a strategy change, else open the first diff.
         target = next(
             (entry for entry in entries if entry.path == current),

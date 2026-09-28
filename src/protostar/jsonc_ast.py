@@ -22,11 +22,13 @@ from .merge import (
     MergeLocation,
     MergePolicy,
     Resolutions,
+    StructuredReconciliation,
     Value,
     overlay_declared,
     prune_unapplied,
     reconcile,
     semantic_equal,
+    sort_value_keys,
     validate_value,
 )
 
@@ -748,29 +750,14 @@ def dumps_jsonc(value: dict[str, Value], indent: str = "  ") -> str:
 
 def encode_jsonc_baseline(value: dict[str, Value]) -> str:
     """Encodes owned values deterministically, without local comments."""
-
-    def ordered(node: Value) -> Value:
-        if isinstance(node, dict):
-            return {key: ordered(node[key]) for key in sorted(node)}
-        if isinstance(node, list):
-            return [ordered(child) for child in node]
-        return node
-
-    content = dumps_jsonc(cast(dict[str, Value], ordered(value)))
+    content = dumps_jsonc(cast(dict[str, Value], sort_value_keys(value)))
     decode_jsonc_baseline(content)
     return content
 
 
 @dataclass(frozen=True)
-class JsoncReconciliation:
+class JsoncReconciliation(StructuredReconciliation):
     """Round-trip output, owned composite baseline, and structured conflicts."""
-
-    content: str
-    baseline: Value
-    conflicts: tuple[MergeConflict, ...]
-    resolved: tuple[MergeConflict, ...] = ()
-    proposals: tuple[MergeConflict, ...] = ()
-    preserved: tuple[MergeConflict, ...] = ()
 
 
 def reconcile_jsonc(
