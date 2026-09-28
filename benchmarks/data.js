@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790612657103,
+  "lastUpdate": 1790613894933,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18569,6 +18569,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1135.53,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f7f2913ce233a78f28b693acbb502e47e3cbe53f",
+          "message": "fix(toml): compare Zensical extension names by name, not spelling (#379)\n\nZensical hoists nested pymdownx.* (and pymdownx.blocks.*, zensical.*,\nzensical.extensions.*) into flat extension names, and the nested spelling\noverrides a quoted one. Protostar compared the raw TOML, so overwriting a\ndocument with quoted names added a second, nested spelling that silently\nreplaced the user's settings.\n\nTomlDocumentSpec gains flat_names: reconcile_toml compares local, desired\nand baseline by name and writes each name back in the document's spelling.\nA table added inside a dotted-key table is written inline, since tomlkit\ngives it a wrong top-level header.",
+          "timestamp": "2026-09-28T09:41:43-07:00",
+          "tree_id": "d1d069f4667fb0d60ee76d1cc7288649f65b7adb",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/f7f2913ce233a78f28b693acbb502e47e3cbe53f"
+        },
+        "date": 1790613893233,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 263.46,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1123.47,
             "unit": "ms"
           }
         ]
