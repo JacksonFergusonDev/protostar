@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790625435796,
+  "lastUpdate": 1790625857584,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18705,6 +18705,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1011.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a9fc867006715169f7d2c1c174d9e359c7f9a0f4",
+          "message": "docs: disallow autonomous demo regeneration in AGENTS.md",
+          "timestamp": "2026-09-28T13:00:55-07:00",
+          "tree_id": "9dad74df4592b1fd94b190e11d48866068c79877",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a9fc867006715169f7d2c1c174d9e359c7f9a0f4"
+        },
+        "date": 1790625856522,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 276.48,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 1221.13,
             "unit": "ms"
           }
         ]
