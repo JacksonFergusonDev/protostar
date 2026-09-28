@@ -12,7 +12,7 @@ import math
 from copy import deepcopy
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import cast
+from typing import NamedTuple, cast
 
 from .errors import ConfigurationError
 from .merge import (
@@ -407,6 +407,14 @@ def _apply(text: str, edits: list[TextEdit]) -> str:
     return "".join(out)
 
 
+class _LookupResult(NamedTuple):
+    """The traversed containers, the last item reached, and resolved element count."""
+
+    parents: list[Node]
+    item: Item | None
+    matched: int
+
+
 @dataclass(frozen=True)
 class JsoncDocument:
     """A parsed document; editing methods return new documents.
@@ -491,7 +499,7 @@ class JsoncDocument:
             hint="Use existing object keys and array indexes; objects can be created.",
         )
 
-    def _lookup(self, path: Path) -> tuple[list[Node], Item | None, int]:
+    def _lookup(self, path: Path) -> _LookupResult:
         """Resolves as much of ``path`` as exists.
 
         Returns the traversed containers (root first), the last item reached, and how
@@ -522,7 +530,7 @@ class JsoncDocument:
             matched += 1
         if matched < len(path) and node is not None:
             parents.append(node)
-        return parents, item, matched
+        return _LookupResult(parents, item, matched)
 
     def _reparse(self, text: str) -> JsoncDocument:
         return parse_jsonc(text, allow_empty=True, default_indent=self.indent_unit)

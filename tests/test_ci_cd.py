@@ -2,6 +2,7 @@ from protostar.config import UserConfig
 from protostar.executor import SystemExecutor
 from protostar.manifest import EnvironmentManifest
 from protostar.modules.ci_layer import CIModule, ReleaseModule
+from protostar.workflows import CIFlag
 
 
 def test_cimodule_build(manifest: EnvironmentManifest) -> None:
@@ -27,7 +28,7 @@ def test_executor_ci_assembly(
         "supported_os": ["Linux", "MacOS"],
         "minimum_python": "3.11",
     }
-    manifest.tooling.ci_flags = {"pytest", "codecov"}
+    manifest.tooling.ci_flags = {CIFlag.PYTEST, CIFlag.CODECOV}
     manifest.tooling.ci_steps = [
         "      - name: Run Ruff\n        run: uv run ruff check"
     ]
@@ -64,7 +65,7 @@ def test_executor_ci_assembly_no_codecov(
         "supported_os": ["Linux"],
         "minimum_python": "3.11",
     }
-    manifest.tooling.ci_flags = {"pytest"}
+    manifest.tooling.ci_flags = {CIFlag.PYTEST}
     manifest.tooling.ci_steps = [
         "      - name: Run Ruff\n        run: uv run ruff check"
     ]

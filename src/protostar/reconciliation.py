@@ -109,6 +109,7 @@ from .workflows import (
     CIWorkflowSpec,
     DockerfileSpec,
     JustfileSpec,
+    TargetOS,
     generate_ci_workflow,
     generate_dockerfile,
     generate_dockerignore,
@@ -194,7 +195,7 @@ class Reconciliation:
 
     def add_diagnostic(
         self,
-        phase: DiagnosticPhase | str,
+        phase: DiagnosticPhase,
         message: str,
         severity: Severity = Severity.INFO,
         detail: str | None = None,
@@ -800,7 +801,9 @@ class Reconciliation:
             return
         workflow = generate_ci_workflow(
             CIWorkflowSpec(
-                supported_os=self.manifest.metadata.get("supported_os", ["Linux"]),
+                supported_os=TargetOS.from_iterable(
+                    self.manifest.metadata.get("supported_os", ["Linux"])
+                ),
                 min_python=resolve_python_version(self.manifest.metadata),
                 ci_flags=self.manifest.tooling.ci_flags,
                 ci_steps=self.manifest.tooling.ci_steps,

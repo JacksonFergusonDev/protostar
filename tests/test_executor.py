@@ -1275,7 +1275,7 @@ def test_executor_diagnostic_collection(mock_config):
     assert len(executor.diagnostics) == 0
 
     executor.add_diagnostic(
-        phase="TestPhase",
+        phase=DiagnosticPhase.CONFIG,
         message="A test warning occurred.",
         severity=Severity.WARNING,
         detail="Some traceback or detail",
@@ -1284,7 +1284,7 @@ def test_executor_diagnostic_collection(mock_config):
     assert len(executor.diagnostics) == 1
     event = executor.diagnostics[0]
     assert isinstance(event, DiagnosticEvent)
-    assert event.phase == "TestPhase"
+    assert event.phase == DiagnosticPhase.CONFIG
     assert event.message == "A test warning occurred."
     assert event.severity == Severity.WARNING
     assert event.detail == "Some traceback or detail"
@@ -1303,7 +1303,7 @@ def test_executor_diagnostic_collection_with_enum(mock_config):
     assert len(executor.diagnostics) == 1
     event = executor.diagnostics[0]
     assert event.phase == DiagnosticPhase.EXECUTOR
-    assert event.phase == "Executor"
+    assert event.phase.value == "Executor"
 
 
 def test_executor_skips_injected_files_when_file_exists(mocker, mock_config):

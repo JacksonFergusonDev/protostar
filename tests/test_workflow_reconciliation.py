@@ -20,7 +20,9 @@ from protostar.merge import (
     Resolutions,
 )
 from protostar.workflows import (
+    CIFlag,
     CIWorkflowSpec,
+    TargetOS,
     generate_ci_workflow,
     generate_release_workflow,
 )
@@ -36,9 +38,18 @@ SETUP_UV = "astral-sh/setup-uv@v10.0.0"
 BUMPED_UV = "astral-sh/setup-uv@v11.0.0"
 
 
-def ci(*flags: str, systems: tuple[str, ...] = ("Linux",), python: str = "3.14") -> str:
+def ci(
+    *flags: str | CIFlag,
+    systems: tuple[str | TargetOS, ...] = ("Linux",),
+    python: str = "3.14",
+) -> str:
     return generate_ci_workflow(
-        CIWorkflowSpec(list(systems), python, set(flags), [RUFF])
+        CIWorkflowSpec(
+            TargetOS.from_iterable(systems),
+            python,
+            {CIFlag(f) for f in flags},
+            [RUFF],
+        )
     )
 
 
