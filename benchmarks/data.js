@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790534343475,
+  "lastUpdate": 1790554348140,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18093,6 +18093,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 859.79,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4814fb5d76ef82c834c33de831458f5b366d2b07",
+          "message": "fix: unify path jail validation and route IDE checks through ProcessRunner (#367)\n\n* fix(system): route ide extension checks through ProcessRunner\n\n* fix(security): unify workspace path jail and escape validation\n\n* fix: preserve protected targets and propagate termination failures",
+          "timestamp": "2026-09-27T17:09:49-07:00",
+          "tree_id": "c744c91212670776c45c32d00fcba58b36c7044d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4814fb5d76ef82c834c33de831458f5b366d2b07"
+        },
+        "date": 1790554346119,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 245.77,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar TUI Wizard Latency",
+            "value": 885.78,
             "unit": "ms"
           }
         ]
