@@ -373,8 +373,8 @@ def _run_engine(
 
         raise ProtostarError(
             "Workspace collision detected: The target workspace is not empty.\n"
-            "Aborting to prevent destructive mutations in a non-interactive context.\n"
-            "Use the --force-merge or --force-replace flag to bypass this check."
+            "Aborting to prevent destructive mutations in a non-interactive context.",
+            hint=error.hint,
         ) from error
 
     # --- Trust Boundary ---

@@ -79,7 +79,7 @@ sequenceDiagram
     CLI-->>Agent: Return capabilities schema
 
     Agent->>CLI: Phase 2: Request Dry-Run Plan
-    CLI-->>Agent: Return planned manifest
+    CLI-->>Agent: Return planned manifest and decision ids
 
     Agent->>CLI: Phase 3: Execute Scaffold
     CLI->>Disk: Apply disk mutations & tasks
@@ -124,6 +124,27 @@ The agent can parse the `"paths"` array and choose how to proceed:
   adopting existing content, and append missing ignore rules.
 - Pass `--force-replace` to overwrite existing configuration files.
 
+#### Settling Conflicts and Proposals
+
+A headless run keeps your version for every open conflict and applies every
+proposal. To choose otherwise, take the ids from the dry-run's `review` (or each
+entry's `conflicts` and `proposals`) and pass one `--resolve SELECTOR=CHOICE` per
+decision, as `sync --resolve` takes them:
+
+```bash
+protostar init --template astro --dry-run --json
+protostar init --template astro --force-merge --resolve 89cd01278762=desired --json
+```
+
+`desired` takes the update, `local` keeps your version (or keeps a proposal out),
+and `both` keeps both sides of a text hunk. A file path settles every conflict and
+proposal in that file. Add `--dry-run` to check the outcome first: the settled
+conflicts move to `review.resolved`, and a proposal kept out carries its
+`resolution`. `--resolve` chooses no collision strategy, so a project with
+existing files still needs `--force-merge`. A selector that names no decision
+returns an `UnmatchedResolutionError` payload listing it in
+`unmatched_resolutions`; ids cover content, so plan again after the files change.
+
 #### Template Variables
 
 A template's custom variables are supplied with `--var NAME=VALUE`, once per
@@ -157,6 +178,9 @@ Once the plan is verified, the agent executes initialization:
 ```bash
 protostar init --template astro --force-merge --json
 ```
+
+Add a `--resolve` for each decision the dry-run showed that the agent settles
+differently from the default.
 
 Upon completion, the agent receives deterministic `created_paths` and `mutated_paths`
 lists. The `touched_paths` list is their derived union.
