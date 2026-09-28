@@ -6,13 +6,13 @@ import shlex
 import sys
 from collections import Counter
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import Any
 
+from rich.console import RenderableType
 from rich.text import Text
 
 from protostar.cli import schema, ui
 from protostar.cli.changes import (
-    SETTLED,
     Change,
     Entry,
     changes_to_your_files,
@@ -20,13 +20,19 @@ from protostar.cli.changes import (
     count,
     entry_tree,
     pending_entries,
-    where,
+)
+from protostar.cli.decisions import (
+    conflict_lines,
+    preserved_lines,
+    proposal_lines,
+    resolved_line,
 )
 from protostar.cli.diff import format_diff, normalize_newlines
 from protostar.cli.tui.launch import resolve_conflicts
 from protostar.config import UserConfig
 from protostar.errors import ExecutionAbortedError
 from protostar.init_draft import DraftTemplate, InitDraft
+from protostar.intent import DependencyGroup
 from protostar.lifecycle import (
     PreparedProject,
     TemplateUpstream,
@@ -34,7 +40,7 @@ from protostar.lifecycle import (
     prepare_project,
 )
 from protostar.manifest import EnvironmentManifest
-from protostar.merge import ConflictReason, ResolutionChoice
+from protostar.merge import ConflictReason
 from protostar.migrations import MigrationOutcome, MigrationStep
 from protostar.preparation import (
     PreparedEdit,
@@ -172,97 +178,70 @@ def render_review(
     if show_diffs:
         for edit in review.edits:
             ui.console.print(format_diff(unified_diff(edit)), end="")
-    for step in review.migrations:
-        ui.console.print(_migration_line(step, applied=applied), soft_wrap=True)
-    for conflict in review.conflicts:
-        choices = ", ".join(choice.value for choice in conflict.choices)
-        choice_text = f"resolve with {choices}." if choices else "resolve by hand."
-        ui.console.print(
-            Text.assemble(
-                (f"Conflict {conflict.id}: ", "cyan"),
-                (where(conflict), "bold"),
-                (f": {conflict.reason.value}; {choice_text}"),
-            ),
-            soft_wrap=True,
-        )
-    for conflict in review.resolved:
-        settled = SETTLED[cast(ResolutionChoice, conflict.resolution)]
-        ui.console.print(
-            Text.assemble(
-                (f"Resolved {conflict.id}: ", "bold"),
-                (where(conflict), "bold"),
-                (f": {settled}."),
-            ),
-            soft_wrap=True,
-        )
-    for proposal in review.proposals:
-        declined = proposal.resolution is ResolutionChoice.LOCAL
-        ui.console.print(
-            Text.assemble(
-                (f"Proposed {proposal.id}: ", "bold"),
-                (where(proposal), "bold"),
-                (
-                    ": declined; kept your content."
-                    if declined
-                    else f": {'applied' if applied else 'applies'}; decline with local."
-                ),
-            ),
-            soft_wrap=True,
-        )
-    for item in review.preserved:
-        action = "deletion" if deleted(item) else "local edit"
-        ui.console.print(
-            Text.assemble(
-                f"Preserved {action} {item.id}: ",
-                (where(item), "bold"),
-                (": take the update with desired.", "dim"),
-            ),
-            soft_wrap=True,
-        )
+    resolve = "protostar sync --resolve"
+    blocks: list[RenderableType] = [
+        *(_migration_line(step, applied=applied) for step in review.migrations),
+        *(conflict_lines(conflict, resolve) for conflict in review.conflicts),
+        *(resolved_line(conflict) for conflict in review.resolved),
+        *(
+            proposal_lines(proposal, None if applied else resolve, applied=applied)
+            for proposal in review.proposals
+        ),
+        *(
+            preserved_lines(item, resolve, deletion=deleted(item))
+            for item in review.preserved
+        ),
+    ]
+    # A decision spans lines, so a blank line tells one from the next.
+    for block in blocks:
+        ui.console.print(block, soft_wrap=isinstance(block, Text))
+        ui.console.print()
     if review.state_changed:
         msg = (
-            "Ownership/provenance state advanced."
+            "protostar.lock recorded the update."
             if applied
-            else "Ownership/provenance state will advance (may require no content write)."
+            else "protostar.lock will record the update."
         )
-        ui.console.print(Text(msg, "green" if applied else ""))
+        ui.console.print(Text(msg, "dim"))
     if review.resolver.pending:
-        for group, requirements in review.resolver.requirements:
-            if requirements:
-                ui.console.print(
-                    Text(f"Resolver {group.value}: {', '.join(requirements)}")
-                )
-        ui.console.print(
-            Text.assemble(
-                f"Resolver footprint: {', '.join(review.resolver.footprint.paths)}; ",
-                (
-                    "executed." if applied else "output unknown.",
-                    "green" if applied else "dim",
-                ),
-            )
-        )
-        if review.resolver.lock_required:
-            msg = (
-                "Lock refreshed after accepted metadata changes."
-                if applied
-                else "Lock refresh required after accepted metadata changes."
-            )
-            ui.console.print(Text(msg, "green" if applied else ""))
+        _render_resolver(review, applied=applied)
     if review.hooks.install is not None:
         command = shlex.join(review.hooks.install.command)
-        msg = "Ran" if applied else "Will run"
-        ui.console.print(Text(f"Git hooks: {msg} {command}."))
+        msg = "Installed" if applied else "Will install"
+        ui.console.print(Text(f"{msg} git hooks with {command}."))
     for path in review.hooks.remove:
         msg = "Removed" if applied else "Will remove"
         ui.console.print(
-            Text(f"Git hooks: {msg} {path}; its hook manager is no longer set up.")
+            Text(f"{msg} the git hook {path}: its hook manager is no longer set up.")
         )
     if review.initialization_only or review.initialization_only_ide_probe:
         ui.console.print(
-            Text("Initialization-only tasks and IDE probes are excluded.", "dim")
+            Text("Setup that only init does, like git init, doesn't run again.", "dim")
         )
     if not review.pending and not review.hooks.pending:
         ui.console.print(Text("No pending work.", "dim"))
+
+
+def _render_resolver(review: PreparedReview, *, applied: bool) -> None:
+    """Says which packages uv adds, and whether it refreshes the lock."""
+    groups = [
+        ", ".join(requirements)
+        if group is DependencyGroup.MAIN
+        else f"{group.value}: {', '.join(requirements)}"
+        for group, requirements in review.resolver.requirements
+        if requirements
+    ]
+    if groups:
+        verb = "uv added" if applied else "uv will add"
+        ui.console.print(Text(f"{verb} packages: {'; '.join(groups)}."))
+    if review.resolver.lock_required:
+        verb = "uv refreshed" if applied else "uv will refresh"
+        ui.console.print(Text(f"{verb} uv.lock, since the project's metadata changed."))
+    if not applied:
+        paths = " and ".join(review.resolver.footprint.paths)
+        ui.console.print(
+            Text(f"What uv changes in {paths} shows only once it runs.", "dim")
+        )
 
 
 _MIGRATED = {
@@ -273,13 +252,13 @@ _MIGRATED = {
     ),
     MigrationOutcome.REMOVED: ("removed", "is removed"),
     MigrationOutcome.RETIRED: (
-        "has your edits; keep it with local or delete it with desired",
-        "has your edits; keep it with local or delete it with desired",
+        "has your edits, so it stays until you choose; see its conflict below",
+        "has your edits, so it stays until you choose; see its conflict below",
     ),
     MigrationOutcome.FORGOTTEN: ("already deleted", "already deleted"),
     MigrationOutcome.NOT_OWNED: (
-        "not a Protostar seed; left alone",
-        "not a Protostar seed; left alone",
+        "wasn't created by Protostar, so it's left alone",
+        "wasn't created by Protostar, so it's left alone",
     ),
 }
 
@@ -428,24 +407,28 @@ def handle_sync(args: argparse.Namespace) -> None:
             c for c in review.resolved if c.reason is not ConflictReason.PRESERVED
         ]
         updated = len(review.resolved) - len(settled)
-        ui.console.print(
-            Text.assemble(
-                (
-                    f"Applied changes to {len(result.touched_paths)} paths; ",
-                    "bold green" if result.touched_paths else "dim",
-                ),
-                (
-                    f"{len(settled)} conflicts resolved",
-                    "" if settled else "dim",
-                ),
-                (f"; {updated} kept edits updated" if updated else "", ""),
-                ("; ", "dim"),
-                (
-                    f"{len(review.conflicts)} conflicts retained.",
-                    "bold red" if review.conflicts else "dim",
-                ),
+        touched = len(result.touched_paths)
+        parts = [
+            (
+                f"Updated {count(touched, 'path')}."
+                if touched
+                else "No files changed.",
+                "bold green" if touched else "dim",
             )
-        )
+        ]
+        if settled:
+            parts.append((f" Resolved {count(len(settled), 'conflict')}.", ""))
+        if updated:
+            parts.append((f" Took the update for {count(updated, 'kept edit')}.", ""))
+        if review.conflicts:
+            parts.append(
+                (
+                    f" {count(len(review.conflicts), 'conflict')} still open;"
+                    " yours stays until you choose.",
+                    "cyan",
+                )
+            )
+        ui.console.print(Text.assemble(*parts))
         ui.print_missing_tools(result.missing_tools)
     if partial:
         sys.exit(1)

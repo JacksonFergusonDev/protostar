@@ -133,7 +133,9 @@ def test_overlapping_edits_keep_the_whole_file_and_report_lines(
     (event,) = [d for d in result.diagnostics if d.conflict]
     assert event.conflict.reason is ConflictReason.DIVERGED
     assert event.conflict.location.lines == LineSpan(5, 1)
-    assert event.message == "Preserving local contribution in justfile: line 5."
+    assert event.message == (
+        "Kept your version of justfile at line 5: it conflicts with the update."
+    )
     payload = ExecutionResult(
         result.journal.created_paths,
         result.journal.mutated_paths,
@@ -728,10 +730,10 @@ def test_review_reports_line_conflicts_and_preserved_edits(
         }
     ]
     render_review(desired(), review)
-    assert (
-        f"Conflict {conflict.id}: justfile line 5: diverged; "
-        "resolve with local, desired, both."
-    ) in capsys.readouterr().out
+    output = capsys.readouterr().out
+    assert "justfile line 5: You and the update both changed it." in output
+    for choice in ("local", "desired", "both"):
+        assert f"protostar sync --resolve {conflict.id}={choice}\n" in output
 
 
 @pytest.mark.parametrize(

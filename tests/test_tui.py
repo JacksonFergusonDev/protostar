@@ -1649,7 +1649,7 @@ async def test_review_marks_collisions_and_shows_first_batch_diffs(collisions):
         assert "+    repo: https://github.com/gitleaks/gitleaks" in diff
         await highlight(pilot, "justfile")
         diff = plain(app, "#diff")
-        assert "Whole file  It was already there before Protostar managed it." in diff
+        assert "Whole file  It was in your file before Protostar managed it." in diff
         assert "--- yours\n+++ update\n" in diff
         assert "-    echo hi" in diff
         await highlight(pilot, "pyproject.toml")
@@ -2165,8 +2165,8 @@ def test_line_conflicts_name_the_kept_lines():
     console.print(describe(entry))
 
     assert console.export_text().splitlines() == [
-        "Lines 5-7: your edit is kept (diverged).",
-        "After line 9: your edit is kept (diverged).",
+        "Lines 5-7: your edit is kept. You and the update both changed it.",
+        "After line 9: your edit is kept. You and the update both changed it.",
     ]
 
 

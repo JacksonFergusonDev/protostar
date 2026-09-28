@@ -40,6 +40,7 @@ from protostar.cli.changes import (
     steps_text,
     summary,
 )
+from protostar.cli.decisions import MEANING
 from protostar.cli.ui import untrusted_commands
 from protostar.config import UserConfig
 from protostar.errors import ProtostarError
@@ -97,7 +98,6 @@ def describe(entry: Entry, *, one_shot: bool = False) -> RenderableType:
         parts.append(Text(note))
     for conflict in entry.conflicts:
         where = describe_location(conflict.location)
-        reason = conflict.reason.value
         if conflict.reason is ConflictReason.PROPOSED:
             # One line each; the file's diff below shows the exact bytes.
             kept = conflict.resolution is ResolutionChoice.LOCAL
@@ -126,11 +126,12 @@ def describe(entry: Entry, *, one_shot: bool = False) -> RenderableType:
             parts.append(describe_conflict(conflict))
             parts.append(sides_diff(conflict))
             continue
+        meaning = MEANING[conflict.reason]
         if conflict.location.lines is not None:
             # Both sides edited these lines, so the whole file is kept.
-            message = f"{where[:1].upper()}{where[1:]}: your edit is kept ({reason})."
+            message = f"{where[:1].upper()}{where[1:]}: your edit is kept. {meaning}"
         else:
-            message = f"Your version of {where or 'the file'} is kept ({reason})."
+            message = f"Your version of {where or 'the file'} is kept. {meaning}"
         parts.append(Text(message, "red"))
     if entry.edit is not None:
         parts.append(edit_text(entry.edit))

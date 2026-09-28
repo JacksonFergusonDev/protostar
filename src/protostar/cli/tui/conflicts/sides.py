@@ -8,6 +8,7 @@ import tomlkit
 from rich.console import Group, RenderableType
 from rich.text import Text
 
+from protostar.cli.decisions import MEANING
 from protostar.errors import ProtostarError
 from protostar.merge import (
     MISSING,
@@ -121,22 +122,13 @@ def describe_conflict(conflict: MergeConflict) -> Text:
     """
     # A key path is data, so it keeps its case.
     where = describe_location(conflict.location) or "Whole file"
-    reason = conflict.reason.value
+    meaning = MEANING[conflict.reason]
     if not conflict.choices:
         return Text(
-            f"{where} ({reason}) can only be fixed by hand. "
+            f"{where}: {meaning} It can only be fixed by hand. "
             "Edit the file, then run sync again.",
             style="dim",
         )
-    meaning = {
-        "diverged": "You and the update both changed it.",
-        "type-mismatch": "You and the update changed it to different kinds of value.",
-        "unowned": "It was already there before Protostar managed it.",
-        "deleted-ancestor": "You deleted it, and the update changed it.",
-        "retracted": "You edited it, and the update no longer generates it.",
-        "proposed": "Protostar adds it; your file doesn't have it yet.",
-        "preserved": "You changed it, and the update is still Protostar's version.",
-    }.get(reason, "")
     return Text.assemble((where, "bold"), f"  {meaning}")
 
 

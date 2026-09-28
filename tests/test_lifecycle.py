@@ -124,9 +124,9 @@ def test_json_and_human_review_exit_zero_even_with_conflicts(
     monkeypatch.setattr("sys.argv", ["protostar", command])
     main()
     (conflict,) = payload["review"]["conflicts"]
-    assert (
-        f"Conflict {conflict['id']}: .github/renovate.json" in capsys.readouterr().out
-    )
+    output = capsys.readouterr().out
+    assert ".github/renovate.json value: You and the update both changed it." in output
+    assert f"protostar sync --resolve {conflict['id']}=desired" in output
 
 
 @pytest.mark.parametrize("target", ["pyproject.toml", "protostar.lock"])
@@ -817,7 +817,7 @@ def test_sync_human_rendering_agrees_with_review(project, monkeypatch, capsys, m
     elif mode == ["--check"]:
         assert "Check failed" in output
     else:
-        assert "Applied changes" in output
+        assert "Updated 3 paths." in output
         assert (
             json.loads(Path(".github/renovate.json").read_text())["value"] == "updated"
         )

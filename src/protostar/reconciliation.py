@@ -1741,8 +1741,8 @@ class Reconciliation:
         self.diagnostics.append(
             DiagnosticEvent(
                 DiagnosticPhase.EXECUTOR,
-                f"Preserving local contribution in {conflict.location.file}"
-                f"{f': {where}' if where else ''}.",
+                f"Kept your version of {conflict.location.file}"
+                f"{f' at {where}' if where else ''}: it conflicts with the update.",
                 Severity.WARNING,
                 conflict=conflict,
             )

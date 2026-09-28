@@ -93,16 +93,17 @@ protostar diff --json
 ![Diff command help](../assets/terminals/cli_diff_help.svg)
 
 `status` shows the files with pending work as a tree labelled like `init`'s
-preview, then lists conflicts, proposals, preserved local edits/deletions,
-ownership advancement, and resolver actions. `diff` also displays unified diffs
-of accepted direct edits after the tree. Conflicting content is preserved; conflict details give
+preview. Below it, each conflict, proposal, and kept edit says what happened and
+gives the `sync --resolve` command for each choice, followed by the packages uv
+will add and any git hook changes. `diff` also displays unified diffs of accepted
+direct edits after the tree. Conflicting content is preserved; conflict details give
 the file, semantic keys or region identity, and reason. Resolver output is unknown
 until application; no predicted dependency or lockfile diff is shown.
 
 Both commands support `--json`, `--verbose`, and help. They never prompt, execute
 subprocesses, write workspace files, or populate disk caches. Remote template
 acquisition may use the network and reads archive data entirely in memory.
-Initialization-only tasks and IDE probes are reported as excluded. For a
+They say when setup that only `init` does, like `git init`, is skipped. For a
 repository template, the first line names the applied ref and commit, and any newer
 release or moved ref the repository offers; see
 [template versions](templates.md#template-versions).

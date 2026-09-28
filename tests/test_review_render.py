@@ -78,7 +78,8 @@ def tree_lines(text: str) -> list[str]:
     return [
         line.rstrip()
         for line in text.splitlines()
-        if line.strip() and line.lstrip()[0] in "│├└."
+        if line.startswith(". (Workspace Root)")
+        or (line.strip() and line.lstrip()[0] in "│├└")
     ]
 
 
@@ -122,10 +123,15 @@ def test_a_conflict_is_labelled_and_listed_with_its_id(project, output):
     text = output()
     assert text.splitlines()[0] == "1 conflict"
     assert "renovate.json  conflict" in text
-    assert (
-        f"Conflict {conflict.id}: {RENOVATE} value: diverged; "
-        "resolve with local, desired."
-    ) in text
+    lines = text.splitlines()
+    # What happened, that yours stays, and the command for each choice.
+    block = lines.index(f"{RENOVATE} value: You and the update both changed it.")
+    assert lines[block + 1 : block + 4] == [
+        "  Yours stays until you choose:",
+        f"    {'keep yours':16}  protostar sync --resolve {conflict.id}=local",
+        f"    use the update's  protostar sync --resolve {conflict.id}=desired",
+    ]
+    assert "diverged" not in text
 
 
 def test_a_preserved_edit_is_marked_on_its_file(project, output):
@@ -141,7 +147,11 @@ def test_a_preserved_edit_is_marked_on_its_file(project, output):
         "└── .github/",
         "    └── renovate.json  existing · 1 kept edit",
     ]
-    assert f"Preserved local edit {item.id}: {RENOVATE} value" in text
+    lines = text.splitlines()
+    block = lines.index(f"{RENOVATE} value: your edit is kept.")
+    assert lines[block + 1] == (
+        f"    use Protostar's version  protostar sync --resolve {item.id}=desired"
+    )
     assert text.rstrip().endswith("No pending work.")
 
 
@@ -162,9 +172,14 @@ def test_a_proposal_is_counted_and_listed(tmp_path, monkeypatch, output):
     text = output()
     assert text.splitlines()[0] == "1 modified · 1 change to your files"
     assert "pyproject.toml  modified" in text
-    assert (
-        f"Proposed {proposal.id}: pyproject.toml tool: applies; decline with local."
-    ) in text
+    lines = text.splitlines()
+    block = lines.index(
+        "pyproject.toml tool: Protostar adds it; your file doesn't have it yet."
+    )
+    assert lines[block + 1 : block + 3] == [
+        "  It applies unless you keep it out:",
+        f"    keep it out  protostar sync --resolve {proposal.id}=local",
+    ]
 
 
 def test_a_migration_is_listed_below_the_tree(project, output):
@@ -188,6 +203,6 @@ def test_applied_sync_reads_as_done(project, output, monkeypatch):
 
     text = output()
     assert "renovate.json  modified" in text
-    assert "Ownership/provenance state advanced." in text
-    assert "Applied changes to" in text
+    assert "protostar.lock recorded the update." in text
+    assert "Updated 2 paths." in text
     assert json.loads(Path(RENOVATE).read_text()) == {"value": "updated"}

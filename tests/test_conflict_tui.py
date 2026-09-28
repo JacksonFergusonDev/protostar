@@ -131,9 +131,9 @@ async def test_lists_conflicts_by_file_with_both_sides(conflicted):
         await settle(pilot)
         assert rows(app) == [
             f"{RENOVATE}  1",
-            "value  diverged  open",
+            "value  both changed  open",
             f"{NOTES}  1",
-            "line 2  diverged  open",
+            "line 2  both changed  open",
         ]
         assert "2 conflicts · 0 resolved · 2 open" in plain(app, "#subtitle")
         await select(pilot, RENOVATE)
@@ -156,12 +156,12 @@ async def test_keys_choose_sides_and_apply_exits_with_the_choices(conflicted):
         assert "open" in rows(app)[1]
         await pilot.press("u")
         await settle(pilot)
-        assert rows(app)[1] == "value  diverged  take update"
+        assert rows(app)[1] == "value  both changed  take update"
         assert '+{"value": "remote"}' in plain(app, "#result")
         await select(pilot, NOTES)
         await pilot.press("b")
         await settle(pilot)
-        assert rows(app)[3] == "line 2  diverged  keep both"
+        assert rows(app)[3] == "line 2  both changed  keep both"
         # Exactly one lamp is lit, though RadioSet re-presses one switched off.
         assert pressed(app) == ["choice-both"]
         assert "+remote" in plain(app, "#result")
@@ -178,10 +178,10 @@ async def test_a_file_row_settles_every_conflict_in_it_and_x_reopens(conflicted)
         await settle(pilot)
         await select(pilot, RENOVATE, conflict=False)
         await pilot.press("k")
-        assert rows(app)[1] == "value  diverged  keep mine"
+        assert rows(app)[1] == "value  both changed  keep mine"
         assert pressed(app) == ["choice-local"]
         await pilot.press("x")
-        assert rows(app)[1] == "value  diverged  open"
+        assert rows(app)[1] == "value  both changed  open"
         assert pressed(app) == ["choice-open"]
         await pilot.press("n")
         cursor = app.screen.query_one("#conflicts", Tree).cursor_node
@@ -199,22 +199,22 @@ async def test_a_kept_edit_takes_the_update_only_from_its_own_row(conflicted):
         await settle(pilot)
         assert rows(app) == [
             f"{RENOVATE}  1",
-            "value  preserved  keep mine",
+            "value  your edit  keep mine",
             f"{NOTES}  1",
-            "whole file  preserved  keep mine",
+            "whole file  your edit  keep mine",
         ]
         assert "2 kept edits" in plain(app, "#subtitle")
         # A file row never takes the update for a deliberate local edit.
         await select(pilot, RENOVATE, conflict=False)
         await pilot.press("u")
-        assert rows(app)[1] == "value  preserved  keep mine"
+        assert rows(app)[1] == "value  your edit  keep mine"
         await select(pilot, RENOVATE)
         assert pressed(app) == ["choice-local"]
         assert app.screen.query_one("#choice-open", RadioButton).disabled
         assert "update is still Protostar's version" in plain(app, "#meaning")
         await pilot.press("u")
         await settle(pilot)
-        assert rows(app)[1] == "value  preserved  take update"
+        assert rows(app)[1] == "value  your edit  take update"
         assert "2 kept edits (1 updated)" in plain(app, "#subtitle")
         assert '+{"value": "original"}' in plain(app, "#result")
         await pilot.press("a")
@@ -333,9 +333,7 @@ def test_interactive_sync_applies_the_chosen_resolutions(
     main()
 
     launch.assert_called_once()
-    assert "2 conflicts resolved; 0 conflicts retained" in " ".join(
-        capsys.readouterr().out.split()
-    )
+    assert "Resolved 2 conflicts." in " ".join(capsys.readouterr().out.split())
     assert json.loads(Path(RENOVATE).read_text()) == {"value": "mine"}
     assert "remote" in Path(NOTES).read_text()
     assert not prepare_project().review.pending

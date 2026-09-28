@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from rich.console import Group, RenderableType
 from rich.padding import Padding
@@ -20,6 +20,12 @@ from rich.text import Text
 from rich.tree import Tree
 
 from protostar.cli import ui
+from protostar.cli.decisions import (
+    conflict_lines,
+    preserved_lines,
+    proposal_lines,
+    resolved_line,
+)
 from protostar.cli.ui import path_style, planned_paths
 from protostar.config import UserConfig
 from protostar.init_draft import InitDraft, resolve_init
@@ -29,7 +35,6 @@ from protostar.merge import (
     ConflictReason,
     MergeConflict,
     ResolutionChoice,
-    describe_location,
 )
 from protostar.models import InitRequest
 from protostar.orchestrator import Orchestrator
@@ -37,6 +42,7 @@ from protostar.preparation import (
     ExecutionPolicy,
     PreparedEdit,
     PreparedReview,
+    deleted,
     prepare_review,
     review_phase,
 )
@@ -49,7 +55,6 @@ from protostar.registry import (
 __all__ = [
     "FOLDER",
     "NETWORK_NOTE",
-    "SETTLED",
     "Change",
     "Entry",
     "HookSnapshot",
@@ -68,7 +73,6 @@ __all__ = [
     "print_dry_run",
     "steps_text",
     "summary",
-    "where",
 ]
 
 
@@ -101,24 +105,6 @@ _STYLES = {
 _DECISION = "cyan"
 
 FOLDER = path_style("", directory=True)
-
-SETTLED = {
-    ResolutionChoice.LOCAL: "kept local content",
-    ResolutionChoice.DESIRED: "took the update",
-    ResolutionChoice.BOTH: "kept both",
-}
-"""How each choice settled a conflict, for the lines that list them."""
-
-
-def where(conflict: MergeConflict) -> str:
-    """Returns the file, position, and identity of a conflict on one line."""
-    parts = (
-        conflict.location.file,
-        describe_location(conflict.location),
-        # A requirement's identity is its package and marker.
-        (conflict.location.identity or "").rstrip(":"),
-    )
-    return " ".join(part for part in parts if part)
 
 
 @dataclass(frozen=True)
@@ -544,8 +530,11 @@ def print_dry_run(review: Review, *, unreachable: bool = False) -> None:
     if review.entries:
         sections.append(("Files", entry_tree(review.entries)))
     sections.append(("Commands & packages", steps_text(manifest)))
-    if lines := _decision_lines(review):
-        sections.append(("Decisions", Group(*lines)))
+    if blocks := _decision_lines(review):
+        note = Text("Add a --resolve to init for each choice you make.", "dim")
+        # A decision spans lines, so a blank line tells one from the next.
+        spaced = [part for block in blocks for part in (block, Text())]
+        sections.append(("Decisions", Group(*spaced, note)))
     for title, body in sections:
         ui.console.print()
         ui.console.print(ui.heading(title))
@@ -564,36 +553,19 @@ def print_dry_run(review: Review, *, unreachable: bool = False) -> None:
     ui.console.print(Text("No changes were made to your system.", "dim"))
 
 
-def _decision_lines(review: Review) -> list[Text]:
-    """One line per conflict and proposal, with the id that settles it.
+def _decision_lines(review: Review) -> list[RenderableType]:
+    """Says what each decision is, and the ``--resolve`` that chooses otherwise.
 
-    A conflict or proposal ``--resolve`` settled says how it was settled.
+    A dry-run shows how ``--resolve`` settled a decision once it did.
     """
     prepared = review.prepared
-    lines = [
-        Text.assemble(
-            (f"Conflict {conflict.id}: ", "cyan"),
-            (where(conflict), "bold"),
-            f": {conflict.reason.value}; your version is kept.",
-        )
-        for conflict in prepared.conflicts
+    resolve = "--resolve"
+    return [
+        *(conflict_lines(conflict, resolve) for conflict in prepared.conflicts),
+        *(resolved_line(conflict) for conflict in prepared.resolved),
+        *(proposal_lines(proposal, resolve) for proposal in prepared.proposals),
+        *(
+            preserved_lines(item, resolve, deletion=deleted(item))
+            for item in prepared.preserved
+        ),
     ]
-    lines.extend(
-        Text.assemble(
-            (f"Resolved {conflict.id}: ", "bold"),
-            (where(conflict), "bold"),
-            f": {SETTLED[cast(ResolutionChoice, conflict.resolution)]}.",
-        )
-        for conflict in prepared.resolved
-    )
-    lines.extend(
-        Text.assemble(
-            (f"Proposed {proposal.id}: ", "bold"),
-            (where(proposal), "bold"),
-            ": kept out; your content stays."
-            if proposal.resolution is ResolutionChoice.LOCAL
-            else ": applies to content you already have.",
-        )
-        for proposal in prepared.proposals
-    )
-    return lines
