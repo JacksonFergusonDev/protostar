@@ -282,6 +282,23 @@ async def test_choice_buttons_follow_the_highlighted_conflict(conflicted):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("width", [80, 120])
+async def test_every_choice_and_its_meaning_show_within_the_screen(conflicted, width):
+    app = make_app()
+    async with app.run_test(size=(width, 36)) as pilot:
+        await settle(pilot)
+        screen = app.screen.region
+        shown = [
+            app.screen.query_one("#meaning", Static),
+            *app.screen.query("#choice RadioButton"),
+        ]
+        for widget in shown:
+            region = widget.region
+            assert region.area, f"{widget} is not shown"
+            assert screen.contains_region(region), f"{widget} runs off the screen"
+
+
+@pytest.mark.asyncio
 async def test_escape_asks_before_leaving_and_question_mark_lists_the_keybindings(
     conflicted,
 ):
