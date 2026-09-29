@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790717986905,
+  "lastUpdate": 1790719663850,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19011,6 +19011,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1141.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "2f2c877240e3e399077a9541dc7c867260aaba5c",
+          "message": "feat(dev): add sandbox lifecycle scenarios\n\nSeed disposable repositories for existing-project and template-update testing.\n\nInclude two sync conflicts alongside safe changes to exercise the resolution TUI.",
+          "timestamp": "2026-09-29T15:04:15-07:00",
+          "tree_id": "2e83e52f7157fb4a2b820f7b8e88f0d923396df5",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/2f2c877240e3e399077a9541dc7c867260aaba5c"
+        },
+        "date": 1790719662878,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 265.13,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1261.03,
             "unit": "ms"
           }
         ]
