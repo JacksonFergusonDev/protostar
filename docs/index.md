@@ -46,7 +46,7 @@ hide:
 ```bash
 mkdir hyperdrive-cli
 cd hyperdrive-cli
-protostar init --template cli  # (a Typer-based CLI application)
+protostar init  # choose a template and tools in the recipe editor
 ```
 
 <div class="protostar-demo-shell">
@@ -56,16 +56,16 @@ protostar init --template cli  # (a Typer-based CLI application)
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
     </span>
-    <span class="terminal-title">PROTOSTAR / INIT / HEADLESS</span>
+    <span class="terminal-title">PROTOSTAR / INIT / INTERACTIVE</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="./assets/demo_init_headless.cast">
+  <div class="protostar-asciinema" data-asciinema="./assets/demo_init_interactive.cast">
     <noscript>
-      <a href="./assets/demo_init_headless.cast">Download the Protostar terminal recording</a>
+      <a href="./assets/demo_init_interactive.cast">Download the Protostar terminal recording</a>
     </noscript>
   </div>
 </div>
 
-This initializes a working environment quickly while preserving explicit control over tools and context.
+The recipe editor lets you choose a template and tools, previews the resulting files, and asks you to review changes before applying them.
 
 ## Next steps
 

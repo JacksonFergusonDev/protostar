@@ -33,9 +33,9 @@ Setting up a new python project often requires the same manual steps: configurin
 
 <div align="center">
 <picture>
-  <img alt="Protostar init headless demo"
-       src="docs/assets/demo_init_headless.gif"
-       width="900"
+  <img alt="Protostar init interactive demo"
+       src="docs/assets/demo_init_interactive.gif"
+       width="750"
        style="max-width:100%; height:auto;">
 </picture>
 </div>
