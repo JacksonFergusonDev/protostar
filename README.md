@@ -49,7 +49,18 @@ While general-purpose template engines like **Copier** and **Cookiecutter** are 
 - **Scalable Templates:** Define entire organizational standards in a single, shareable `.toml` file, or scale up to a full Git repository for complex multi-file architectures.
 - **Agent & Machine Ready:** Manifest-first architecture enables atomic `--dry-run` simulations and position-independent `--json` output for AI workflows.
 
-*Use Copier for complex, multi-language codebases needing long-term 3-way git sync. Use Protostar for fast, modular, zero-friction Python environment bootstrapping.*
+## Stays in sync
+
+When the template changes, `protostar sync` brings the update into your project with a three-way merge. What only the template changed applies on its own; where you both changed the same thing, you see both sides and choose, before anything is written.
+
+<div align="center">
+<picture>
+  <img alt="Protostar sync resolving conflicts"
+       src="docs/assets/demo_sync.gif"
+       width="750"
+       style="max-width:100%; height:auto;">
+</picture>
+</div>
 
 ---
 
