@@ -16,9 +16,9 @@ Protostar needs `uv` and `git`. [Installation](installation.md) covers both on e
 
 `protostar init` is designed to be executed immediately after you `mkdir` a new project directory. It offers two distinct operational modes: an **interactive TUI** for discovery, and a **headless CLI** for speed.
 
-## The Interactive Wizard
+## Interactive Setup
 
-If you run `protostar init` without any arguments, it will launch an interactive Terminal User Interface (TUI). This wizard allows you to visually map out your languages, tools, and built-in templates using the spacebar—no CLI flag memorization required.
+If you run `protostar init` without any arguments, it will launch an interactive Terminal User Interface (TUI). The recipe editor lets you visually map out your languages, tools, and built-in templates using the spacebar—no CLI flag memorization required.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -33,11 +33,11 @@ protostar init
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
     </span>
-    <span class="terminal-title">PROTOSTAR / INTERACTIVE WIZARD</span>
+    <span class="terminal-title">PROTOSTAR / INTERACTIVE DEMO</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="../assets/demo_wizard.cast">
+  <div class="protostar-asciinema" data-asciinema="../assets/demo_interactive.cast">
     <noscript>
-      <a href="../assets/demo_wizard.cast">Download the Protostar terminal recording</a>
+      <a href="../assets/demo_interactive.cast">Download the Protostar terminal recording</a>
     </noscript>
   </div>
 </div>

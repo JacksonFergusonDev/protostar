@@ -140,7 +140,7 @@ A payload that configures a tool declares it with `requires`, so `protostar init
 1. Add it to the `template-hooks-smoke` matrix in `.github/workflows/ci.yml`.
 1. Add a `RegressionScenario` to `scripts/run_snapshots.py` and its name to `SCENARIO_FIXTURES` in `tests/test_snapshots.py`, then run `just check-snapshots` and review every generated file by hand.
 
-The contract tests, template discovery, the wizard, shell completion, and the generated template table pick it up automatically.
+The contract tests, template discovery, the template picker, shell completion, and the generated template table pick it up automatically.
 
 **Changing one.** Treat a flag flip as a behavior change: it alters what every future user of that template gets. Regenerate snapshots and read the diff, including lock files and generated trees. CI scaffolds only each built-in's default tier, so after changing the other tier, scaffold it with `--tier` and run its gates by hand. When a change tightens a module baseline, update the guard in `tests/test_modules.py` deliberately and check that no template now repeats the new value.
 

@@ -40,7 +40,7 @@ jobs:
       run: |
         hyperfine --warmup 30 --runs 90 --export-json benchmark.json \
           '.venv/bin/protostar help init' \
-          'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
+          'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
 
     - name: Convert hyperfine output for benchmark action
       run: uv run python scripts/parse_benchmarks.py --input benchmark.json --output benchmark-gh.json

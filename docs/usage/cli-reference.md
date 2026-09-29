@@ -4,7 +4,7 @@ description: "Comprehensive command-line interface reference for the Protostar C
 
 # Command Line Interface (CLI) Reference
 
-Protostar provides a composable, deterministic command-line interface. Commands can be run interactively through terminal wizards (TUI) or headlessly via flags.
+Protostar provides a composable, deterministic command-line interface. Commands can be run interactively through the terminal interface (TUI) or headlessly via flags.
 
 ```bash
 protostar [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]

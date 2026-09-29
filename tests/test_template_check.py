@@ -260,7 +260,7 @@ def test_the_json_form_is_stable(tmp_path):
                 "line": None,
                 "key": "name",
                 "hint": 'Set name = "..." at the top of the template; '
-                "protostar init --list-templates and the wizard show it.",
+                "protostar init --list-templates and the template picker show it.",
             }
         ],
     }

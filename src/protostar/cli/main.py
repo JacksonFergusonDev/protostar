@@ -716,7 +716,7 @@ def main() -> None:
     parser._dispatch_preparser_flags(arg_parser)
 
     try:
-        parser.intercept_interactive_wizards(arg_parser)
+        parser.maybe_run_interactive_init(arg_parser)
         args = arg_parser.parse_args()
 
         # Applied before any handler reads configuration.

@@ -148,11 +148,11 @@ This detects your current shell and outputs a zero-overhead one-liner to enable 
 
 Protostar is designed to be run right after you `mkdir` a new project.
 
-### The Interactive Wizard
+### Interactive Setup
 
 If you run `protostar` without any arguments, it launches an interactive Terminal User Interface (TUI).
 
-The wizard will first ask if you want to scaffold using a **Template**. Templates are the fastest way to use Protostar, instantly wiring together tools, dependencies, and directory structures. You can choose from built-in domain templates (like `astro` or `cli`), select your own custom global aliases, or build an environment from scratch.
+The recipe editor first lets you choose a **Template**. Templates are the fastest way to use Protostar, instantly wiring together tools, dependencies, and directory structures. You can choose from built-in domain templates (like `astro` or `cli`), select your own custom global aliases, or build an environment from scratch.
 
 ```bash
 mkdir orbital-mechanics-sim
@@ -231,7 +231,7 @@ description = "Internal microservice standard with FastAPI and tracing"
 trusted = true
 ```
 
-Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in `protostar init --list-templates`, shell auto-completion, and your interactive wizard.
+Now you can run `protostar init --template backend` anywhere, and it will automatically appear alongside built-ins in `protostar init --list-templates`, shell auto-completion, and the interactive template picker.
 
 *Note: To prevent unauthorized remote code execution, external templates containing shell tasks prompt for user confirmation. Templates explicitly configured with `trusted = true` bypass this prompt automatically.*
 

@@ -43,7 +43,7 @@ name = "Enterprise FastAPI"
 description = "FastAPI web application scaffold with Uvicorn, Pydantic, and Docker"
 ```
 
-Protostar's zero-network template discovery engine reads these top-level fields locally to populate `protostar init --list-templates`, shell autocompletion hints, and interactive wizard options.
+Protostar's zero-network template discovery engine reads these top-level fields locally to populate `protostar init --list-templates`, shell autocompletion hints, and interactive template picker options.
 
 ### AST Injections & Appends
 
@@ -72,7 +72,7 @@ dependency_includes = [{ group = "dev", include = "docs" }]
 
 Includes support the `dev` and `docs` groups and reject cycles. Execution applies them before `uv add`; include-only changes declare a conditional `uv lock` action. Dependency resolver writes are bounded to `pyproject.toml` and `uv.lock` and journaled before invocation. Ordinary dependency additions need no extra lock action.
 
-Templates may declare an informational root `version` string. CLI and wizard resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and a repository template's locator is its canonical repository URL, with its path inside the repository alongside. The ref it was applied at and the commit that ref named are recorded separately, so they never change the template's identity. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance.
+Templates may declare an informational root `version` string. CLI and template picker resolution retain the origin, canonical locator, and SHA-256 of the selected TOML bytes before interpolation. Built-in locators are stable IDs, local locators are normalized TOML paths, and a repository template's locator is its canonical repository URL, with its path inside the repository alongside. The ref it was applied at and the commit that ref named are recorded separately, so they never change the template's identity. Remote source URLs must omit credentials and query parameters so provenance cannot persist secrets. Display aliases are descriptive; trust authorization and interpolation answers are excluded from serialized provenance.
 
 ### Optional Content
 
@@ -296,7 +296,7 @@ It reports two kinds of finding:
 | Rule | What it reports |
 | :--- | :--- |
 | `unknown-key` | A root key Protostar ignores, such as a misspelled field, or a tooling flag whose value isn't `true` or `false` |
-| `missing-metadata` | No `name` or `description`, which `--list-templates` and the wizard show |
+| `missing-metadata` | No `name` or `description`, which `--list-templates` and the template picker show |
 | `undescribed-variable` | A custom variable with no `[variables]` description |
 | `credential-variable` | A custom variable named like a credential |
 | `restated-baseline` | A `[dev.pyproject]` payload that repeats a module's baseline value, or redefines a baseline list instead of using an additive key |
@@ -343,7 +343,7 @@ You can invoke your template directly:
 protostar init --from https://github.com/YourOrg/data-science-template
 ```
 
-Or, you can register it as a global alias in your `~/.config/protostar/config.toml` to access it natively in your interactive wizard:
+Or, you can register it as a global alias in your `~/.config/protostar/config.toml` to access it natively in the interactive template picker:
 
 ```toml
 [templates]

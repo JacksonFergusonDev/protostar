@@ -64,7 +64,7 @@ test-benchmark: sync
     @printf "\n{{ blue }}=== Running Quick Hyperfine Benchmarks ==={{ nc }}\n"
     hyperfine --warmup 5 --runs 30 --export-json benchmark.json \
         '.venv/bin/protostar help init' \
-        'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
+        'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run slower, more accurate Hyperfine benchmarks
@@ -72,7 +72,7 @@ test-benchmark-slower: sync
     @printf "\n{{ blue }}=== Running Full Hyperfine Benchmarks ==={{ nc }}\n"
     hyperfine --warmup 30 --runs 90 --export-json benchmark.json \
         '.venv/bin/protostar help init' \
-        'PROTOSTAR_BENCHMARK_WIZARD=1 .venv/bin/protostar init'
+        'PROTOSTAR_BENCHMARK_RECIPE_EDITOR=1 .venv/bin/protostar init'
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
@@ -91,7 +91,7 @@ clean:
         coverage.xml \
         coverage_annotations \
         tmp_demo \
-        tmp_wizard \
+        tmp_interactive \
         tmp_headless \
         tmp_gen \
         site \
@@ -165,18 +165,18 @@ demo-headless trials="5": (_demo-run "Headless" "headless" trials)
 # Generate headless demo draft (single trial)
 demo-headless-draft: (_demo-run "Headless (Draft)" "headless" "1")
 
-# Generate wizard demo (production, best of 5 trials)
-demo-wizard trials="5": (_demo-run "Wizard" "wizard" trials)
+# Generate interactive demo (production, best of 5 trials)
+demo-interactive trials="5": (_demo-run "Interactive" "interactive" trials)
 
-# Generate wizard demo draft (single trial)
-demo-wizard-draft: (_demo-run "Wizard (Draft)" "wizard" "1")
+# Generate interactive demo draft (single trial)
+demo-interactive-draft: (_demo-run "Interactive (Draft)" "interactive" "1")
 
 # Generate all demos (production, best of 5 trials)
-demo-all trials="5": (demo-wizard trials) (demo-headless trials)
+demo-all trials="5": (demo-interactive trials) (demo-headless trials)
     @printf "\n{{ blue }}=== All production demos generated ==={{ nc }}\n"
 
 # Generate all demo drafts (single trial)
-demo-all-draft: demo-wizard-draft demo-headless-draft
+demo-all-draft: demo-interactive-draft demo-headless-draft
     @printf "\n{{ blue }}=== All demo drafts generated ==={{ nc }}\n"
 
 # Build documentation site in strict mode

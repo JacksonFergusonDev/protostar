@@ -30,7 +30,7 @@ def edit_recipe(
         catalog: Templates the editor offers.
         config: The user's configuration.
         exit_after_first_frame: Exit with None once the first frame is drawn,
-            which the wizard benchmark measures.
+            which the recipe editor benchmark measures.
     """
     from .app import DecisionApp
     from .recipe.screen import RecipeScreen

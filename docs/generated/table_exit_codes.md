@@ -10,4 +10,4 @@
 | `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` | Transient network failure during remote template download |
 | `77` | `os.EX_NOPERM` | `SecurityViolationError` | Security violation (e.g., path traversal Zip Slip, or a template variable value that looks like a credential) |
 | `78` | `os.EX_CONFIG` | `ConfigurationError` | Invalid TOML syntax or conflicting CLI configuration |
-| `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You aborted interactive wizard prompt or interrupted execution (Ctrl+C) |
+| `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You cancelled interactive setup or interrupted execution (Ctrl+C) |

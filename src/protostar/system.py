@@ -270,7 +270,7 @@ def execute_subprocess(
 
 def is_interactive() -> bool:
     """Evaluates if the environment supports interactive TTY prompts."""
-    if "PROTOSTAR_BENCHMARK_WIZARD" in os.environ:
+    if "PROTOSTAR_BENCHMARK_RECIPE_EDITOR" in os.environ:
         return True
     return sys.stdin.isatty() and sys.stdout.isatty()
 

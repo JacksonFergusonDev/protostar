@@ -2246,7 +2246,7 @@ except SystemExit:
 assert not any(name == "textual" or name.startswith("textual.") for name in sys.modules)
 """
     env = {**os.environ, "HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path)}
-    env.pop("PROTOSTAR_BENCHMARK_WIZARD", None)
+    env.pop("PROTOSTAR_BENCHMARK_RECIPE_EDITOR", None)
     result = subprocess.run(
         [sys.executable, "-c", probe, *args],
         cwd=tmp_path,
@@ -2260,13 +2260,13 @@ assert not any(name == "textual" or name.startswith("textual.") for name in sys.
 
 def test_benchmark_exits_after_first_frame(mocker, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("PROTOSTAR_BENCHMARK_WIZARD", "1")
+    monkeypatch.setenv("PROTOSTAR_BENCHMARK_RECIPE_EDITOR", "1")
     monkeypatch.setattr(sys, "argv", ["protostar", "init"])
     mocker.patch.object(UserConfig, "load", return_value=UserConfig())
     launch = mocker.patch.object(parser, "edit_recipe", return_value=None)
     execute = mocker.patch.object(ui, "_run_engine")
     with pytest.raises(SystemExit) as exc:
-        parser.intercept_interactive_wizards(mocker.Mock())
+        parser.maybe_run_interactive_init(mocker.Mock())
     assert exc.value.code == 0
     assert launch.call_args.kwargs["exit_after_first_frame"] is True
     execute.assert_not_called()
@@ -2290,11 +2290,11 @@ def test_cancelled_editor_never_executes(mocker, monkeypatch, tmp_path):
     mocker.patch.object(parser, "edit_recipe", return_value=None)
     execute = mocker.patch.object(ui, "_run_engine")
     with pytest.raises(ExecutionAbortedError):
-        parser.intercept_interactive_wizards(mocker.Mock())
+        parser.maybe_run_interactive_init(mocker.Mock())
     execute.assert_not_called()
 
 
-def test_the_wizard_hands_the_editor_its_analysis(mocker, monkeypatch, tmp_path):
+def test_interactive_init_hands_the_editor_its_analysis(mocker, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "justfile").write_text("test:\n")
     monkeypatch.setattr(sys, "argv", ["protostar"])
@@ -2302,7 +2302,7 @@ def test_the_wizard_hands_the_editor_its_analysis(mocker, monkeypatch, tmp_path)
     mocker.patch.object(UserConfig, "load", return_value=UserConfig())
     edit = mocker.patch.object(parser, "edit_recipe", return_value=None)
     with pytest.raises(ExecutionAbortedError):
-        parser.intercept_interactive_wizards(mocker.Mock())
+        parser.maybe_run_interactive_init(mocker.Mock())
     draft = edit.call_args.args[0]
     assert draft.analysis == analyze_project(tmp_path)
     assert draft.analysis.existing

@@ -16,7 +16,7 @@ from protostar.recipe import (
 )
 
 
-def test_equivalent_flag_and_wizard_drafts_resolve_identically(tmp_path, monkeypatch):
+def test_equivalent_flag_and_editor_drafts_resolve_identically(tmp_path, monkeypatch):
     """Equivalent selections produce the same modules, recipe, and request."""
     monkeypatch.chdir(tmp_path)
     template_path = tmp_path / "template.toml"
@@ -34,7 +34,7 @@ def test_equivalent_flag_and_wizard_drafts_resolve_identically(tmp_path, monkeyp
         metadata=(("author_name", "Ada"), ("description", "Example")),
         collision_strategy=CollisionStrategy.MERGE,
     )
-    wizard_choices = tuple(
+    editor_choices = tuple(
         (
             tool,
             False
@@ -45,22 +45,22 @@ def test_equivalent_flag_and_wizard_drafts_resolve_identically(tmp_path, monkeyp
         )
         for tool in Tool
     )
-    wizard_draft = replace(
+    editor_draft = replace(
         flag_draft,
         tool_overrides=(),
-        tool_choices=wizard_choices,
+        tool_choices=editor_choices,
         metadata=(("description", "Example"), ("author_name", "Ada")),
     )
 
     flag_modules, flag_request = resolve_init(flag_draft, config)
-    wizard_modules, wizard_request = resolve_init(wizard_draft, config)
+    editor_modules, editor_request = resolve_init(editor_draft, config)
 
     assert [type(module) for module in flag_modules] == [
-        type(module) for module in wizard_modules
+        type(module) for module in editor_modules
     ]
-    assert flag_request.recipe == wizard_request.recipe
-    assert flag_request.to_dict() == wizard_request.to_dict()
-    assert flag_request.is_external == wizard_request.is_external
+    assert flag_request.recipe == editor_request.recipe
+    assert flag_request.to_dict() == editor_request.to_dict()
+    assert flag_request.is_external == editor_request.is_external
 
 
 def test_exclusive_tool_table_rejects_each_pair():

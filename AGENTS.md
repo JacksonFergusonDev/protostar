@@ -35,7 +35,7 @@ Execution is strictly split into two decoupled phases:
 
 - The core engine (`Orchestrator`, `SystemExecutor`, `BootstrapModule`, etc.) is **strictly headless**.
 - **Never** import or call UI/terminal interaction packages (`rich.console`, `textual`, progress spinners) inside engine modules. `tests/test_headless_boundary.py` enforces this: importing any module outside `protostar.cli` must not load `rich` or `textual`.
-- Terminal prompts, wizards, interactive conflict resolvers (`Merge`, `Overwrite`, `Abort`), and the progress trail belong exclusively to the CLI layer (`src/protostar/cli/`).
+- Terminal prompts, recipe editing, interactive conflict resolvers (`Merge`, `Overwrite`, `Abort`), and the progress trail belong exclusively to the CLI layer (`src/protostar/cli/`).
 - Engine code communicates via immutable request/result models and raises domain exceptions.
 - **The engine never prompts or calls back into the CLI for input.** Missing input is a domain error carrying structured data (e.g., `MissingTemplateVariablesError.variables`), and the CLI decides whether to ask. Split an operation so the CLI can learn what's needed first, as `TemplateSource.load()` / `.variables` / `.render()` do.
 - **No Textual app runs while `execute()` runs.** The app exits with an immutable decision result first; execution then runs on the main thread under the Rich progress trail so signal handling and rollback remain intact. The app may call the read-only `plan()` and `prepare_review()` from a worker thread (the live preview and change review do); it never calls `execute()`.
@@ -126,7 +126,7 @@ The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated g
 
 > **Agent Rule:** **Do NOT redundantly run `ruff`, `mypy`, `rumdl`, `just lint`, or `just ci` immediately before committing or pushing.** Let the hooks do the work. If a hook fails or formats a file, inspect the failure, adjust the code, and re-stage. Only run manual commands during active development/debugging (e.g. running a specific test file like `uv run pytest tests/test_foo.py`).
 >
-> **Agent Rule:** **Do NOT regenerate demos (`just demo-headless`, `just demo-wizard`, `just demo-all`) unless explicitly prompted to do so.** Re-recording demos runs multi-trial live installations and takes several minutes; agents must never run demo generation autonomously.
+> **Agent Rule:** **Do NOT regenerate demos (`just demo-headless`, `just demo-interactive`, `just demo-all`) unless explicitly prompted to do so.** Re-recording demos runs multi-trial live installations and takes several minutes; agents must never run demo generation autonomously.
 
 ## Development & Inspection Commands
 
@@ -162,11 +162,11 @@ Use these commands when targeted verification or debugging is necessary:
   just check-doc-links                # Validate embedded documentation URLs in error hints
   just check-schemas                  # Validate pre-commit, action, renovate, and metaschemas
   just demo-headless                  # Re-record the headless demo cast and GIF (explicit prompt only)
-  just demo-wizard                    # Re-record the wizard demo cast and GIF (explicit prompt only)
+  just demo-interactive             # Re-record the interactive demo cast and GIF (explicit prompt only)
   just sync-secret-rules              # Regenerate _secret_rules.py after the pinned gitleaks tag changes
   ```
 
-  `check-snapshots` regenerates the terminal SVGs but not the demo casts and GIFs. **Do NOT regenerate demos (`just demo-headless`, `just demo-wizard`, `just demo-all`) unless explicitly prompted to.** They perform real installs across multiple trials and take several minutes. When explicitly requested to record demos, don't `git add -A docs` while a recording runs: it leaves `.demo_*.tmp.cast` files there.
+  `check-snapshots` regenerates the terminal SVGs but not the demo casts and GIFs. **Do NOT regenerate demos (`just demo-headless`, `just demo-interactive`, `just demo-all`) unless explicitly prompted to.** They perform real installs across multiple trials and take several minutes. When explicitly requested to record demos, don't `git add -A docs` while a recording runs: it leaves `.demo_*.tmp.cast` files there.
 
 - **Full CI Emulation (Debugging only):**
 
@@ -218,7 +218,7 @@ Scale or omit these sections based on the scope of the PR.
 ## Repository Layout Map
 
 - `src/protostar/cli/tui/`: Decision-only Textual app (recipe editor, change review, sync conflict resolution, and the configuration form), accessed by the CLI exclusively through the lazy `launch.py` entry point.
-- `src/protostar/cli/`: CLI entry points, argument parsers, wizards, and TUI formatting.
+- `src/protostar/cli/`: CLI entry points, argument parsers, interactive screens, and TUI formatting.
 - `src/protostar/cli/decisions.py`: How a decision reads in plain words: one sentence per conflict reason, the TUI's short tags, and the lines `status`, `diff`, `sync`, and `init --dry-run` print with the command for each choice.
 - `src/protostar/cli/changes.py`: What init changes: the `Review` model (plan, prepare, classify each path) and its Rich renderers, shared by the recipe preview, the change review, and `init --dry-run`. `sync`, `status`, and `diff` draw their pending paths with the same `classify` and `entry_tree`.
 - `src/protostar/orchestrator.py`: Coordinates the 2-phase lifecycle (`plan()` and `execute()`).

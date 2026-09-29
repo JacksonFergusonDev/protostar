@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 from typing import Any, TypedDict
@@ -76,13 +75,10 @@ def process_benchmarks(input_file: Path) -> list[BenchmarkOutput]:
         mean_ms = result.get("mean", 0.0) * 1000
         command: str = result.get("command", "")
 
-        is_wizard = bool(
-            re.search(r"\bPROTOSTAR_BENCHMARK_WIZARD\b", command)
-            or re.search(r"\bwizard\b", command, re.IGNORECASE)
-        )
+        is_recipe_editor_benchmark = "PROTOSTAR_BENCHMARK_RECIPE_EDITOR" in command
         name: str = (
-            "Protostar TUI Wizard Latency"
-            if is_wizard
+            "Protostar Recipe Editor First Frame Latency"
+            if is_recipe_editor_benchmark
             else "Protostar Headless Latency"
         )
 

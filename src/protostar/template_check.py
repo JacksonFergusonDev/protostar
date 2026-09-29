@@ -367,7 +367,7 @@ def _missing_metadata(raw: dict[str, Any], where: _Where) -> Iterator[Finding]:
                 where.file,
                 key,
                 hint=f'Set {key} = "..." at the top of the template; '
-                "protostar init --list-templates and the wizard show it.",
+                "protostar init --list-templates and the template picker show it.",
             )
 
 

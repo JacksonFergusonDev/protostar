@@ -124,9 +124,9 @@ def test_discover_templates_execution_speed() -> None:
 def test_discovered_aliases_are_unique() -> None:
     """Discovery never emits two templates under one alias.
 
-    Consumers index the result by alias (the wizard) or scan it for the first
-    match (``--template``). Those disagree whenever an alias appears twice, so
-    uniqueness is the invariant that keeps every call site resolving alike.
+    Consumers index the result by alias (the template picker) or scan it for
+    the first match (``--template``). Those disagree whenever an alias appears
+    twice, so uniqueness is the invariant that keeps every call site resolving alike.
     """
     config = UserConfig(
         templates={

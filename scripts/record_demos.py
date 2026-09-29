@@ -39,8 +39,8 @@ DEFAULT_COLS = 78
 DEFAULT_ROWS = 32
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 EXCERPT_LINES = 24  # Lines of the target file shown after the tree
-WIZARD_TEMPLATE_INDEX = 3  # "cli" in the template picker, after "No template"
-WIZARD_DOCKER_ROW = 9  # Docker's distance below Ruff, the first tool row
+CLI_TEMPLATE_INDEX = 3  # "cli" in the template picker, after "No template"
+DOCKER_TOOL_ROW_OFFSET = 9  # Docker's distance below Ruff, the first tool row
 CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J", "\x1b[2J")
 
 
@@ -448,7 +448,7 @@ def record_headless(session: PTYSession) -> None:
     inspect_project_file(session, template="cli")
 
 
-def record_wizard(session: PTYSession) -> None:
+def record_interactive(session: PTYSession) -> None:
     """Script for the interactive recipe editor demo: the CLI template plus Docker."""
     # Textual reads Enter as a carriage return; a bare newline is ctrl+j.
     enter = b"\r"
@@ -464,7 +464,7 @@ def record_wizard(session: PTYSession) -> None:
 
     # 1. The template picker has focus: open it and pick "cli".
     session.key(enter, wait=0.25)
-    session.down(count=WIZARD_TEMPLATE_INDEX, wait=0.25)
+    session.down(count=CLI_TEMPLATE_INDEX, wait=0.25)
     session.key(enter, wait=0.25)
     # The template loads in a worker, and the preview re-plans.
     session.sleep(1.0)
@@ -474,7 +474,7 @@ def record_wizard(session: PTYSession) -> None:
     #    its files.
     session.key(tab, wait=0.25)
     session.key(tab, wait=0.25)
-    session.down(count=WIZARD_DOCKER_ROW, wait=0.12)
+    session.down(count=DOCKER_TOOL_ROW_OFFSET, wait=0.12)
     session.sleep(0.4)
     session.key(b"i", wait=0.3)
     session.sleep(2.0)  # Hold the explanation long enough to read
@@ -505,7 +505,7 @@ def record_wizard(session: PTYSession) -> None:
 
 SCENARIOS: dict[str, Callable[[PTYSession], None]] = {
     "headless": record_headless,
-    "wizard": record_wizard,
+    "interactive": record_interactive,
 }
 
 
@@ -516,7 +516,7 @@ def main() -> None:
     )
     parser.add_argument(
         "scenario",
-        choices=["headless", "wizard", "all"],
+        choices=["headless", "interactive", "all"],
         help="Which demo scenario to record",
     )
     parser.add_argument(
@@ -540,7 +540,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    targets = ["headless", "wizard"] if args.scenario == "all" else [args.scenario]
+    targets = ["headless", "interactive"] if args.scenario == "all" else [args.scenario]
     trials_count = max(1, args.trials)
 
     for target in targets:

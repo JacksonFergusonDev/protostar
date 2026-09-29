@@ -777,8 +777,8 @@ def _dispatch_preparser_flags(parser: argparse.ArgumentParser) -> None:
         schema.emit_capabilities(parser)
 
 
-def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
-    """Evaluates sys.argv to route execution to TUI wizards if parameters are omitted."""
+def maybe_run_interactive_init(parser: argparse.ArgumentParser) -> None:
+    """Run interactive initialization when no CLI options select a headless path."""
     if ui.is_json_mode:
         return
 
@@ -788,7 +788,7 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
     elif len(sys.argv) == 2:
         cmd = sys.argv[1]
 
-    # Intercept parameter-less subcommands for interactive wizards
+    # Open interactive initialization for a bare command.
     if cmd == "init":
         if not is_interactive():
             return
@@ -806,8 +806,8 @@ def intercept_interactive_wizards(parser: argparse.ArgumentParser) -> None:
             template = DraftTemplate(
                 source, is_external=external, is_trusted=not external
             )
-        # The wizard benchmark measures time to the editor's first frame.
-        benchmark = "PROTOSTAR_BENCHMARK_WIZARD" in os.environ
+        # The recipe editor benchmark measures time to its first frame.
+        benchmark = "PROTOSTAR_BENCHMARK_RECIPE_EDITOR" in os.environ
         analysis = None if existing_recipe else analyze_project(Path.cwd())
         decision = edit_recipe(
             InitDraft(

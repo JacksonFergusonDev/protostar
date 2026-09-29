@@ -207,8 +207,9 @@ def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> Non
 
     Template lookup is case-insensitive and built-in templates are discovered
     ahead of user aliases, so a shadowing alias resolves differently depending
-    on the call site (``--template`` finds the built-in, the wizard finds the
-    alias). Neither answer is correct, so the ambiguity is refused at load time.
+    on the call site (``--template`` finds the built-in, the template picker
+    finds the alias). Neither answer is correct, so the ambiguity is refused
+    at load time.
 
     Args:
         templates: The normalized user alias table.
@@ -231,7 +232,7 @@ def _validate_template_aliases(templates: dict[str, TemplateAliasConfig]) -> Non
                 hint=(
                     f"Rename the alias in {config_path}. Built-in template names "
                     "cannot be reused, because '--template' and the interactive "
-                    "wizard would resolve them to different templates."
+                    "template picker would resolve them to different templates."
                 ),
             )
         if folded in seen:

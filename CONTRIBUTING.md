@@ -74,7 +74,7 @@ To guarantee that the workspace remains deterministic, error management follows 
   - `UnsupportedFilesystemNodeError`: For transaction targets that are unsupported node types such as symbolic links or special files.
   - `TransactionStateError`: For invalid lifecycle transitions on a mutation journal (e.g. attempting writes after commit or rollback).
   - `SecurityViolationError`: For unauthorized path traversal attempts (e.g. Zip Slip).
-  - `ExecutionAbortedError`: For explicit cancellations during interactive wizard prompts.
+  - `ExecutionAbortedError`: For explicit cancellations during interactive setup.
   - `ExecutionInterruptedError`: For interruptions occurring mid-execution when Protostar successfully rolls back tracked workspace changes (stores immutable `frozenset[str]` of touched paths; notes that external commands may have also modified files).
   - `RollbackFailedError`: For interrupted or failed executions where automated rollback was only partially successful (stores failed paths and chains the root exception).
 - **Respect POSIX Exit Code Mappings:**
@@ -93,7 +93,7 @@ To guarantee that the workspace remains deterministic, error management follows 
 | `75` | `os.EX_TEMPFAIL` | `NetworkFetchError` | Transient network failure during remote template download |
 | `77` | `os.EX_NOPERM` | `SecurityViolationError` | Security violation (e.g., path traversal Zip Slip, or a template variable value that looks like a credential) |
 | `78` | `os.EX_CONFIG` | `ConfigurationError` | Invalid TOML syntax or conflicting CLI configuration |
-| `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You aborted interactive wizard prompt or interrupted execution (Ctrl+C) |
+| `130` | Shell Signal | `ExecutionAbortedError`<br>`ExecutionInterruptedError` | You cancelled interactive setup or interrupted execution (Ctrl+C) |
 
 <!-- END_EXIT_CODES -->
 - **Enforce Exception Chaining:** When catching lower-level subprocess or OS errors and raising domain exceptions, always preserve the original traceback using the `raise NewException(...) from e` syntax.

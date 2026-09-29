@@ -290,7 +290,7 @@ def generate_capability_tables() -> None:
         "table_templates.md", _format_markdown_table(template_headers, template_rows)
     )
 
-    # Interactive wizard project metadata fields matrix
+    # Interactive setup project metadata fields matrix
     metadata_headers = ["Key", "Label", "Prompt Type", "Default"]
     metadata_rows = []
     for key, field in METADATA_FIELDS.items():
@@ -622,7 +622,7 @@ def generate_capability_tables() -> None:
             "`130`",
             "Shell Signal",
             "`ExecutionAbortedError`<br>`ExecutionInterruptedError`",
-            "You aborted interactive wizard prompt or interrupted execution (Ctrl+C)",
+            "You cancelled interactive setup or interrupted execution (Ctrl+C)",
         ],
     ]
     _write_generated_doc(

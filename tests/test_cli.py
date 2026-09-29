@@ -19,7 +19,7 @@ from protostar.cli.parser import (
     JsonAwareParser,
     _resolve_usage_doc_path,
     build_parser,
-    intercept_interactive_wizards,
+    maybe_run_interactive_init,
 )
 from protostar.config import DEFAULT_CONFIG_CONTENT, UserConfig
 from protostar.docs_registry import DocsPage
@@ -77,23 +77,25 @@ def test_dispatch_help(mocker):
     mock_print_help.assert_called_once()
 
 
-def test_intercept_interactive_wizards_cancellations(mocker):
-    """Test that cancelling wizards propagates ExecutionAbortedError."""
+def test_maybe_run_interactive_init_cancellations(mocker):
+    """Test that cancelling interactive setup propagates ExecutionAbortedError."""
     parser = mocker.Mock()
 
     mocker.patch("protostar.cli.parser.is_interactive", return_value=True)
-    # Init Wizard Cancellation
+    # Interactive Init Cancellation
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch(
         "protostar.cli.parser.edit_recipe",
-        side_effect=ExecutionAbortedError("Initialization wizard cancelled by user."),
+        side_effect=ExecutionAbortedError(
+            "Interactive initialization cancelled by user."
+        ),
     )
     with pytest.raises(ExecutionAbortedError):
-        intercept_interactive_wizards(parser)
+        maybe_run_interactive_init(parser)
     parser.parse_args.assert_not_called()
 
 
-def test_wizard_rejects_unreadable_state_before_the_editor(
+def test_interactive_init_rejects_unreadable_state_before_the_editor(
     mocker, tmp_path, monkeypatch
 ):
     """Every preview would fail on unreadable state, so the editor never opens."""
@@ -104,18 +106,18 @@ def test_wizard_rejects_unreadable_state_before_the_editor(
     editor = mocker.patch("protostar.cli.parser.edit_recipe")
 
     with pytest.raises(ConfigurationError, match="ownership state"):
-        intercept_interactive_wizards(mocker.Mock())
+        maybe_run_interactive_init(mocker.Mock())
     editor.assert_not_called()
 
 
-def test_intercept_interactive_wizards_non_interactive_fallback(mocker):
+def test_maybe_run_interactive_init_non_interactive_fallback(mocker):
     """Test that non-interactive execution returns cleanly without running orchestrator."""
     parser = mocker.Mock()
     mocker.patch.object(sys, "argv", ["protostar", "init"])
     mocker.patch("protostar.cli.parser.is_interactive", return_value=False)
     mock_orch = mocker.patch("protostar.cli.main.Orchestrator")
 
-    intercept_interactive_wizards(parser)
+    maybe_run_interactive_init(parser)
     mock_orch.assert_not_called()
 
 
@@ -297,7 +299,7 @@ def test_handle_config_errors(mocker, tmp_path):
 def test_main_no_command(mocker):
     """Test main gracefully exits if no subcommand is parsed."""
     mocker.patch.object(sys, "argv", ["protostar"])
-    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mocker.patch("protostar.cli.parser.maybe_run_interactive_init")
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 
     with pytest.raises(SystemExit):
@@ -308,7 +310,7 @@ def test_main_no_command(mocker):
 def test_main_value_error_handling(mocker):
     """Test that TOML parsing ValueErrors are gracefully handled without crashing."""
     mocker.patch.object(sys, "argv", ["protostar", "init"])
-    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mocker.patch("protostar.cli.parser.maybe_run_interactive_init")
     mocker.patch(
         "protostar.cli.main.handle_init", side_effect=ValueError("Syntax Error in TOML")
     )
@@ -382,7 +384,7 @@ def test_main_keyboard_interrupt_handling(mocker):
 
     # Trigger the interrupt early in the main execution block
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=KeyboardInterrupt,
     )
     mock_print = mocker.patch("protostar.cli.ui.console.print")
@@ -413,8 +415,8 @@ def test_dispatch_help_topic(mocker):
     mock_sub_help.assert_called_once()
 
 
-def test_intercept_interactive_wizards_success(mocker):
-    """Test successful execution pathway of the terminal UI wizard."""
+def test_maybe_run_interactive_init_success(mocker):
+    """Test successful execution pathway of the interactive terminal UI."""
     parser = mocker.Mock()
 
     # Emulate running `protostar` with no arguments
@@ -458,7 +460,7 @@ def test_intercept_interactive_wizards_success(mocker):
     )
 
     with pytest.raises(SystemExit):
-        intercept_interactive_wizards(parser)
+        maybe_run_interactive_init(parser)
 
     mock_orchestrator.return_value.plan.assert_called_once()
     mock_orchestrator.return_value.execute.assert_called_once()
@@ -466,7 +468,7 @@ def test_intercept_interactive_wizards_success(mocker):
     execute = mock_orchestrator.return_value.execute
     assert execute.call_args.kwargs["hook_revisions"] is snapshot
     mock_exit.assert_called_once_with(0)
-    # Values entered in the wizard are recorded in the recipe, like --var values.
+    # Values entered in the recipe editor are recorded in the recipe, like --var values.
     request = mock_orchestrator.call_args.kwargs["request"]
     assert dict(request.recipe.variables) == {"REGION": "eu"}
 
@@ -504,7 +506,7 @@ def test_handle_config_parent_dir_creation(mocker, tmp_path):
 def test_main_verbose_flag_before_subcommand(mocker):
     """Test that the --verbose flag correctly triggers logging configuration before the subcommand."""
     mocker.patch.object(sys, "argv", ["protostar", "--verbose", "init"])
-    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mocker.patch("protostar.cli.parser.maybe_run_interactive_init")
     mock_configure_logging = mocker.patch("protostar.cli.main.configure_logging")
     mocker.patch("protostar.cli.main.handle_init")
 
@@ -516,7 +518,7 @@ def test_main_verbose_flag_before_subcommand(mocker):
 def test_main_verbose_flag_after_subcommand(mocker):
     """Test that the --verbose flag correctly triggers logging configuration after the subcommand."""
     mocker.patch.object(sys, "argv", ["protostar", "init", "--verbose"])
-    mocker.patch("protostar.cli.parser.intercept_interactive_wizards")
+    mocker.patch("protostar.cli.parser.maybe_run_interactive_init")
     mock_configure_logging = mocker.patch("protostar.cli.main.configure_logging")
     mocker.patch("protostar.cli.main.handle_init")
 
@@ -533,7 +535,7 @@ def test_main_handles_expected_operational_errors(mocker):
     mocker.patch("protostar.cli.main.parser.build_parser")
     # Simulate an error raised from deep within the execution sequence
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=ProtostarError("Known config collision"),
     )
     mock_print = mocker.patch("protostar.cli.ui.console.print")
@@ -580,7 +582,7 @@ def test_main_handles_rollback_error_with_documentation_hyperlink(mocker):
         is_external=False,
     )
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=err,
     )
     mock_print = mocker.patch("protostar.cli.ui.console.print")
@@ -624,7 +626,7 @@ def test_main_handles_rollback_error_json_mode(mocker, monkeypatch):
         is_external=False,
     )
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=err,
     )
     mock_emit = mocker.patch("protostar.cli.ui.emit_json")
@@ -650,7 +652,7 @@ def test_main_handles_unexpected_bugs(mocker):
     mocker.patch("protostar.cli.main.parser.build_parser")
     # Simulate an unhandled Python bug (e.g., dictionary lookup failure)
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=KeyError("Random dictionary crash"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -669,7 +671,7 @@ def test_main_handles_keyboard_interrupt(mocker):
     mocker.patch("protostar.cli.main.parser.build_parser")
     # Simulate the user aborting the prompt
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=KeyboardInterrupt,
     )
     mock_print = mocker.patch("protostar.cli.ui.console.print")
@@ -688,7 +690,7 @@ def test_main_handles_keyboard_interrupt(mocker):
 def test_main_routes_invalid_usage_error_to_posix_status(mocker):
     """Verify that an InvalidUsageError returns ExitCode.USAGE (64)."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=InvalidUsageError("bad flag"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -718,7 +720,7 @@ def test_main_routes_configuration_error_to_posix_status(mocker):
     """Verify that a ConfigurationError returns ExitCode.CONFIG (78)."""
     # Mock an operation *inside* the try-except frame to catch the error correctly
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=ConfigurationError("Malformed config"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -732,7 +734,7 @@ def test_main_routes_configuration_error_to_posix_status(mocker):
 def test_main_routes_template_resolution_error_to_posix_status(mocker):
     """Verify that a TemplateResolutionError returns ExitCode.DATAERR (65)."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=TemplateResolutionError("my-template", "Malformed archive"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -746,7 +748,7 @@ def test_main_routes_template_resolution_error_to_posix_status(mocker):
 def test_main_routes_network_fetch_error_to_posix_status(mocker):
     """Verify that a NetworkFetchError returns ExitCode.TEMPFAIL (75)."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=NetworkFetchError("https://example.com"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -760,7 +762,7 @@ def test_main_routes_network_fetch_error_to_posix_status(mocker):
 def test_main_routes_missing_dependency_to_posix_status(mocker):
     """Verify that a MissingDependencyError returns ExitCode.UNAVAILABLE (69)."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=MissingDependencyError((GlobalExecutable.UV,), None),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -774,7 +776,7 @@ def test_main_routes_missing_dependency_to_posix_status(mocker):
 def test_main_routes_execution_aborted_to_posix_status(mocker):
     """Verify that an ExecutionAbortedError returns code 130."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=ExecutionAbortedError("Interactive prompt aborted"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -788,7 +790,7 @@ def test_main_routes_execution_aborted_to_posix_status(mocker):
 def test_main_routes_filesystem_error_to_posix_status(mocker):
     """Verify that a FileSystemError returns ExitCode.IOERR (74)."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=FileSystemError("write", "foo.txt", OSError("Permission denied")),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -802,7 +804,7 @@ def test_main_routes_filesystem_error_to_posix_status(mocker):
 def test_main_routes_generic_crash_to_software_status(mocker):
     """Verify that a standard unhandled exception returns ExitCode.SOFTWARE (70)."""
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=ZeroDivisionError("Unexpected math fault"),
     )
     mock_exit = mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
@@ -816,7 +818,7 @@ def test_main_routes_generic_crash_to_software_status(mocker):
 
 def test_cli_handles_command_execution_error_output(mocker):
     """Test that the CLI extracts and displays stdout/stderr from CommandExecutionError."""
-    # Mock CLI arguments to bypass the TUI wizard
+    # Mock CLI arguments to bypass the interactive TUI
     mocker.patch("sys.argv", ["protostar", "init", "--force-merge"])
 
     # Force _run_engine to throw the specific error we want to format
@@ -1634,7 +1636,7 @@ def test_main_renders_bracketed_error_text_literally(mocker):
 
     mocker.patch("protostar.cli.main.parser.build_parser")
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=ConfigurationError(
             "Unrecognized fields in '[templates.backend]': bogus.",
             hint="Fix '[templates.backend]' and re-run.",
@@ -1922,7 +1924,7 @@ def test_rolled_back_paths_are_shown_literally_not_as_markup(mocker):
         interrupted_task=None,
         is_external=False,
     )
-    mocker.patch("protostar.cli.parser.intercept_interactive_wizards", side_effect=err)
+    mocker.patch("protostar.cli.parser.maybe_run_interactive_init", side_effect=err)
     mock_print = mocker.patch("protostar.cli.ui.console.print")
     mocker.patch("protostar.cli.main.sys.exit", side_effect=SystemExit)
 

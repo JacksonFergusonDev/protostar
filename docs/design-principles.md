@@ -96,7 +96,7 @@ flowchart LR
 
     subgraph CLI ["CLI Presentation Layer (cli.py)"]
         direction LR
-        TUI["Interactive Wizard"]:::cli
+        TUI["Interactive Setup"]:::cli
         Trail["Progress Trail"]:::cli
         Collision["Collision Prompts"]:::cli
         JSON["--json Envelope Serializer"]:::cli

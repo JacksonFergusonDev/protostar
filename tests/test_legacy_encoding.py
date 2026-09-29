@@ -58,9 +58,7 @@ def legacy_console(monkeypatch):
 def raise_from_cli(mocker, error: BaseException) -> None:
     """Runs main() with its first dispatch step raising ``error``."""
     mocker.patch("protostar.cli.main.parser.build_parser")
-    mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards", side_effect=error
-    )
+    mocker.patch("protostar.cli.parser.maybe_run_interactive_init", side_effect=error)
 
 
 def test_glyph_falls_back_only_where_the_stream_cannot_encode(legacy_console):

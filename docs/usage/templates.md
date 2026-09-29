@@ -178,7 +178,7 @@ When declaring a template via `[templates.<alias>]`, you can specify:
 
 - __`source`__ *(required)*: The remote URL (`https://`, `git@`) or local filesystem path (`~/...`).
 - __`name`__ *(optional)*: A human-readable display name for the template.
-- __`description`__ *(optional)*: A short explanation of the stack, displayed in `protostar init --list-templates`, shell auto-completion, and the interactive wizard.
+- __`description`__ *(optional)*: A short explanation of the stack, displayed in `protostar init --list-templates`, shell auto-completion, and the interactive template picker.
 - __`trusted`__ *(optional, default: `false`)*: Set to `true` to explicitly trust this template and bypass the interactive remote execution warning dialog.
 
 Alias names are case-insensitive and must be unique: an alias may not reuse a built-in template name (`api`, `astro`, `cli`, `lib`, `ml`), and two aliases may not differ only by letter case. Protostar rejects either collision when it loads your configuration, because the alias would otherwise resolve to a different template depending on how it was looked up.
@@ -191,7 +191,7 @@ protostar init --template enterprise-api
 protostar init -t enterprise-api
 ```
 
-In the interactive TUI wizard, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category with their custom descriptions. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
+In the interactive template picker, your aliases are automatically discovered and displayed under a dedicated __External Aliases__ category with their custom descriptions. You can also run `protostar init --list-templates` to view all configured aliases alongside built-in templates.
 
 ## Supplying Template Parameters
 

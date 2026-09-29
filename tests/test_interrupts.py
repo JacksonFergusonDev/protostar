@@ -103,7 +103,7 @@ def test_cli_routes_execution_interrupted_to_exit_130(
     mocker: MockerFixture,
 ) -> None:
     mocker.patch(
-        "protostar.cli.parser.intercept_interactive_wizards",
+        "protostar.cli.parser.maybe_run_interactive_init",
         side_effect=ExecutionInterruptedError(
             RollbackContext(frozenset({"pyproject.toml"}), (), None, False)
         ),
