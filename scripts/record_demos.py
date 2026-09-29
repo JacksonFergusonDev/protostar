@@ -20,6 +20,7 @@ import signal
 import struct
 import subprocess
 import sys
+import tempfile
 import termios
 import time
 import types
@@ -38,6 +39,8 @@ DEFAULT_COLS = 78
 DEFAULT_ROWS = 32
 DEFAULT_WORKSPACE = "/tmp/demo_project"
 EXCERPT_LINES = 24  # Lines of the target file shown after the tree
+WIZARD_TEMPLATE_INDEX = 3  # "cli" in the template picker, after "No template"
+WIZARD_DOCKER_ROW = 9  # Docker's distance below Ruff, the first tool row
 CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J", "\x1b[2J")
 
 
@@ -102,6 +105,7 @@ class PTYSession:
         self.master_fd: int = -1
         self.slave_fd: int = -1
         self.proc: subprocess.Popen[bytes] | None = None
+        self._direnv_config: tempfile.TemporaryDirectory[str] | None = None
         self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
 
     def start(self) -> None:
@@ -124,8 +128,19 @@ class PTYSession:
         env["COLORTERM"] = "truecolor"
         env["BAT_PAGING"] = "always"
         env["BAT_THEME"] = "Catppuccin Mocha"
+        env["DIRENV_LOG_FORMAT"] = ""
         env["LINES"] = str(self.rows)
         env["COLUMNS"] = str(self.cols)
+
+        # direnv 2.36+ uses its config file for logging. Keep the demo's
+        # setting separate from the user's direnv configuration.
+        self._direnv_config = tempfile.TemporaryDirectory(
+            prefix="protostar-demo-direnv-"
+        )
+        Path(self._direnv_config.name, "direnv.toml").write_text(
+            '[global]\nlog_format = "-"\n', encoding="utf-8"
+        )
+        env["DIRENV_CONFIG"] = self._direnv_config.name
 
         # Inherit host venv bin and tools on PATH
         venv_bin = str(VENV_BIN)
@@ -358,6 +373,10 @@ class PTYSession:
                 os.close(self.master_fd)
             self.master_fd = -1
 
+        if self._direnv_config is not None:
+            self._direnv_config.cleanup()
+            self._direnv_config = None
+
     def save(self, output_path: str | Path) -> None:
         """Closes the shell and saves the recorded events to an asciicast v2 file."""
         self.close()
@@ -430,41 +449,58 @@ def record_headless(session: PTYSession) -> None:
 
 
 def record_wizard(session: PTYSession) -> None:
-    """Script for the interactive recipe editor demo using the Astro template."""
+    """Script for the interactive recipe editor demo: the CLI template plus Docker."""
     # Textual reads Enter as a carriage return; a bare newline is ctrl+j.
     enter = b"\r"
+    tab = b"\t"
     shift_tab = b"\x1b[Z"
+    escape = b"\x1b"
+    ctrl_s = b"\x13"
 
     session.sleep(0.5)
     session.type("protostar init", char_delay=0.035, post_delay=0.3)
     session.enter(wait=0.0)
     session.wait_for("Build your recipe", timeout=8.0, post_wait=0.6)
 
-    # 1. The template picker has focus: open it and pick "Astro" (after
-    #    "No template" and "FastAPI").
-    session.key(enter, wait=0.5)
-    session.down(count=2, wait=0.25)
-    session.key(enter, wait=0.4)
+    # 1. The template picker has focus: open it and pick "cli".
+    session.key(enter, wait=0.25)
+    session.down(count=WIZARD_TEMPLATE_INDEX, wait=0.25)
+    session.key(enter, wait=0.25)
     # The template loads in a worker, and the preview re-plans.
-    session.sleep(1.6)
+    session.sleep(1.0)
 
-    # 2. Focus wraps backwards from the picker to "Continue".
-    session.key(shift_tab, wait=0.5)
-    session.key(enter, wait=0.0)
+    # 2. Tab past the tier to the tools and move down to Docker. Show what it
+    #    does long enough to read, then switch it on and let the preview gain
+    #    its files.
+    session.key(tab, wait=0.25)
+    session.key(tab, wait=0.25)
+    session.down(count=WIZARD_DOCKER_ROW, wait=0.12)
+    session.sleep(0.4)
+    session.key(b"i", wait=0.3)
+    session.sleep(2.0)  # Hold the explanation long enough to read
+    session.key(escape, wait=0.5)
+    session.space(wait=0.4)
+    session.sleep(0.5)  # The preview re-plans with the Dockerfile
+
+    # 3. Continue.
+    session.key(ctrl_s, wait=0.0)
     session.wait_for("Review changes:", timeout=15.0, post_wait=0.6)
 
-    # 3. The change review focuses the file tree: step down it to show diffs.
-    session.down(count=3, wait=0.5)
-    session.sleep(1.2)
+    # 4. The change review focuses the file tree: step down to the bug report
+    #    form, a new file with a real diff.
+    session.down(count=3, wait=0.4)
+    session.sleep(2.5)
 
-    # 4. Focus wraps backwards from the file tree to "Apply".
+    # 5. Focus wraps backwards from the file tree to "Apply".
     session.key(shift_tab, wait=0.5)
     session.key(enter, wait=0.0)
-    session.wait_for("Project ready.", timeout=20.0, post_wait=0.4)
-    session.sleep(0.6)  # Viewing pause after initialization completes
+    session.wait_for("Project ready.", timeout=30.0, post_wait=0.4)
+    session.sleep(0.8)  # Viewing pause after initialization completes
 
-    # 5. Post-generation inspection using astro fixture line metrics
-    inspect_project_file(session, template="astro")
+    # 6. Show what the project offers next.
+    session.type("protostar guide", char_delay=0.035, post_delay=0.2)
+    session.enter(wait=0.5)
+    session.sleep(3.5)  # Hold the guide long enough to read
 
 
 SCENARIOS: dict[str, Callable[[PTYSession], None]] = {

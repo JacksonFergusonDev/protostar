@@ -23,6 +23,7 @@ def test_pty_session_start_sets_isolated_process_group(
     """Verifies that PTYSession launches the shell with start_new_session=True."""
     monkeypatch.setenv("NO_COLOR", "1")
     monkeypatch.setenv("PAGER", "cat")
+    monkeypatch.setattr("scripts.record_demos.tempfile.tempdir", str(tmp_path))
     session = PTYSession(workspace=str(tmp_path))
 
     with (
@@ -45,8 +46,15 @@ def test_pty_session_start_sets_isolated_process_group(
         assert "NO_COLOR" not in kwargs["env"]
         assert kwargs["env"]["PAGER"] == "less"
         assert kwargs["env"]["BAT_PAGER"] == "less"
+        config_path = Path(kwargs["env"]["DIRENV_CONFIG"])
+        assert config_path.parent == tmp_path
+        assert (config_path / "direnv.toml").read_text() == (
+            '[global]\nlog_format = "-"\n'
+        )
         assert session.proc is mock_proc
         assert session.slave_fd == -1
+        session.close()
+        assert not config_path.exists()
 
 
 def test_pty_session_close_signals_process_group_when_running(tmp_path: Path) -> None:
