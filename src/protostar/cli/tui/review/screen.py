@@ -41,7 +41,7 @@ from protostar.cli.changes import (
     summary,
     walk_entry_hierarchy,
 )
-from protostar.cli.decisions import MEANING
+from protostar.cli.decisions import MEANING, identity
 from protostar.cli.ui import untrusted_commands
 from protostar.config import UserConfig
 from protostar.errors import ProtostarError
@@ -121,8 +121,7 @@ def describe(
         if conflict.reason is ConflictReason.PROPOSED:
             # One line each; the file's diff below shows the exact bytes.
             kept = conflict.resolution is ResolutionChoice.LOCAL
-            # A requirement's identity is its package and marker.
-            identity = (conflict.location.identity or "").rstrip(":")
+            named = identity(conflict)
             parts.append(
                 Text.assemble(
                     (
@@ -130,7 +129,7 @@ def describe(
                         "cyan" if kept else "green",
                     ),
                     (where or "the file", "bold"),
-                    (f" {identity}" if identity else "", "bold"),
+                    (f" {named}" if named else "", "bold"),
                 )
             )
             if only is not None and conflict.sides is not None:

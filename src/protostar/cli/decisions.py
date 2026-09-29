@@ -24,6 +24,7 @@ __all__ = [
     "SETTLED",
     "TAGS",
     "conflict_lines",
+    "identity",
     "preserved_lines",
     "proposal_lines",
     "resolved_line",
@@ -95,13 +96,30 @@ _TAKE = {
 }
 
 
+def identity(conflict: MergeConflict) -> str:
+    """Returns the identity that says which item a keyed location means, or ``""``.
+
+    A requirement's identity is its package and marker, and a sequence item's
+    its key. A text region's is internal, and its lines already say where it
+    is, so only a location with keys shows one.
+
+    Args:
+        conflict: The decision to name.
+
+    Returns:
+        The identity to show beside its keys.
+    """
+    if not conflict.location.keys:
+        return ""
+    return (conflict.location.identity or "").rstrip(":")
+
+
 def where(conflict: MergeConflict) -> str:
     """Returns the file, position, and identity of a conflict on one line."""
     parts = (
         conflict.location.file,
         describe_location(conflict.location),
-        # A requirement's identity is its package and marker.
-        (conflict.location.identity or "").rstrip(":"),
+        identity(conflict),
     )
     return " ".join(part for part in parts if part)
 

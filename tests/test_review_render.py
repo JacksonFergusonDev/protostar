@@ -9,11 +9,13 @@ import pytest
 from rich.console import Console
 
 from protostar.cli import main, ui
+from protostar.cli.decisions import where
 from protostar.cli.reviews import render_review
 from protostar.config import TemplateSource, UserConfig
 from protostar.executor import SystemExecutor
 from protostar.lifecycle import inspect_project, prepare_project
 from protostar.manifest import CollisionStrategy, EnvironmentManifest
+from protostar.merge import ConflictReason, LineSpan, MergeConflict, MergeLocation
 from protostar.migrations import MigrationOutcome, MigrationStep
 from protostar.preparation import ExecutionPolicy, prepare_review
 from protostar.recipe import RecipeIntent, Tool, establish_recipe
@@ -206,3 +208,29 @@ def test_applied_sync_reads_as_done(project, output, monkeypatch):
     assert "protostar.lock recorded the update." in text
     assert "Updated 2 paths." in text
     assert json.loads(Path(RENOVATE).read_text()) == {"value": "updated"}
+
+
+@pytest.mark.parametrize(
+    ("location", "expected"),
+    [
+        # A text region's identity is internal: its lines say where it is.
+        (
+            MergeLocation(
+                "docs/development.md",
+                identity=f"template:{'a' * 64}:setup",
+                lines=LineSpan(4, 1),
+            ),
+            "docs/development.md line 4",
+        ),
+        # A requirement's identity says which package its keys mean.
+        (
+            MergeLocation(
+                "pyproject.toml", ("dependencies", "dev"), "ruff:", LineSpan(9, 1)
+            ),
+            "pyproject.toml dependencies.dev ruff",
+        ),
+    ],
+)
+def test_a_decision_names_only_identities_a_reader_knows(location, expected):
+    conflict = MergeConflict(location, ConflictReason.DIVERGED)
+    assert where(conflict) == expected

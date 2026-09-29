@@ -14,7 +14,7 @@ from textual.binding import Binding, BindingType
 from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
-from protostar.cli.decisions import TAGS
+from protostar.cli.decisions import TAGS, identity
 from protostar.merge import (
     ConflictReason,
     MergeConflict,
@@ -53,11 +53,8 @@ def decision_label(conflict: MergeConflict, choice: ResolutionChoice | None) -> 
         The row's label.
     """
     where = describe_location(conflict.location) or "whole file"
-    # A requirement's identity is its package and marker; a region's is
-    # internal, and its lines already say where it is.
-    identity = (conflict.location.identity or "").rstrip(":")
-    if identity and conflict.location.keys:
-        where = f"{where} {identity}"
+    if named := identity(conflict):
+        where = f"{where} {named}"
     status = tag(conflict, choice)
     status.pad_right(_STATUS_WIDTH - status.cell_len)
     return Text.assemble(status, where, "  ", (TAGS[conflict.reason], "dim"))
