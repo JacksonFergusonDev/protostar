@@ -3,7 +3,10 @@
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
+
+import pytest
 
 # Terminal UI libraries that belong to the CLI layer (protostar.cli) only.
 UI_PACKAGES = frozenset({"rich", "textual"})
@@ -39,7 +42,10 @@ print(json.dumps({"engine": engine, "culprits": culprits}))
 """
 
 
-def test_engine_modules_import_no_terminal_ui_packages(tmp_path: Path) -> None:
+@pytest.mark.integration
+def test_engine_modules_import_no_terminal_ui_packages(
+    tmp_path: Path, real_tool_env: Callable[[], dict[str, str]]
+) -> None:
     """Importing every module outside protostar.cli loads no terminal UI package."""
     result = subprocess.run(
         [sys.executable, "-c", _PROBE, json.dumps(sorted(UI_PACKAGES))],
@@ -47,6 +53,7 @@ def test_engine_modules_import_no_terminal_ui_packages(tmp_path: Path) -> None:
         text=True,
         check=True,
         cwd=tmp_path,
+        env=real_tool_env(),
     )
     probe = json.loads(result.stdout)
 

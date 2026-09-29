@@ -1,5 +1,4 @@
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -220,12 +219,13 @@ def test_parser_action_completers() -> None:
     assert hasattr(python_version_action, "completer")
 
 
-def test_powershell_tempfile_completion_protocol(tmp_path: Path) -> None:
+@pytest.mark.integration
+def test_powershell_tempfile_completion_protocol(tmp_path: Path, real_tool_env) -> None:
     """End-to-end simulation of Windows PowerShell completion protocol via tempfile IPC."""
     completion_file = tmp_path / "completion.out"
     completion_file.touch()
 
-    env = os.environ.copy()
+    env = real_tool_env()
     env["_ARGCOMPLETE"] = "1"
     env["ARGCOMPLETE_USE_TEMPFILES"] = "1"
     env["_ARGCOMPLETE_STDOUT_FILENAME"] = str(completion_file)
@@ -237,6 +237,7 @@ def test_powershell_tempfile_completion_protocol(tmp_path: Path) -> None:
     proc = subprocess.run(
         [sys.executable, "-m", "protostar.cli"],
         env=env,
+        cwd=tmp_path,
         capture_output=True,
         text=True,
     )
@@ -248,12 +249,15 @@ def test_powershell_tempfile_completion_protocol(tmp_path: Path) -> None:
     assert "cli" not in content
 
 
-def test_powershell_tempfile_python_version_completion(tmp_path: Path) -> None:
+@pytest.mark.integration
+def test_powershell_tempfile_python_version_completion(
+    tmp_path: Path, real_tool_env
+) -> None:
     """End-to-end simulation of PowerShell completion for '--python-version' choices."""
     completion_file = tmp_path / "completion.out"
     completion_file.touch()
 
-    env = os.environ.copy()
+    env = real_tool_env()
     env["_ARGCOMPLETE"] = "1"
     env["ARGCOMPLETE_USE_TEMPFILES"] = "1"
     env["_ARGCOMPLETE_STDOUT_FILENAME"] = str(completion_file)
@@ -265,6 +269,7 @@ def test_powershell_tempfile_python_version_completion(tmp_path: Path) -> None:
     proc = subprocess.run(
         [sys.executable, "-m", "protostar.cli"],
         env=env,
+        cwd=tmp_path,
         capture_output=True,
         text=True,
     )
@@ -279,9 +284,10 @@ def test_powershell_tempfile_python_version_completion(tmp_path: Path) -> None:
 @pytest.mark.skipif(
     sys.platform == "win32", reason="POSIX fd 8 protocol is Unix-specific"
 )
-def test_posix_fd8_completion_protocol() -> None:
+@pytest.mark.integration
+def test_posix_fd8_completion_protocol(tmp_path: Path, real_tool_env) -> None:
     """End-to-end simulation of POSIX (Bash/Zsh) completion protocol streaming over fd 8."""
-    env = os.environ.copy()
+    env = real_tool_env()
     env["_ARGCOMPLETE"] = "1"
     env["COMP_LINE"] = "protostar init --template a"
     env["COMP_POINT"] = str(len(env["COMP_LINE"]))
@@ -291,6 +297,7 @@ def test_posix_fd8_completion_protocol() -> None:
         cmd,
         shell=True,
         env=env,
+        cwd=tmp_path,
         capture_output=True,
         text=True,
     )
@@ -306,9 +313,10 @@ def test_posix_fd8_completion_protocol() -> None:
 @pytest.mark.skipif(
     sys.platform == "win32", reason="POSIX fd 8 protocol is Unix-specific"
 )
-def test_posix_fd8_template_flag_completion() -> None:
+@pytest.mark.integration
+def test_posix_fd8_template_flag_completion(tmp_path: Path, real_tool_env) -> None:
     """Verify that completing after '-t ' only returns templates and not options."""
-    env = os.environ.copy()
+    env = real_tool_env()
     env["_ARGCOMPLETE"] = "1"
     env["_ARGCOMPLETE_SHELL"] = "zsh"
     env["COMP_LINE"] = "protostar init -t "
@@ -319,6 +327,7 @@ def test_posix_fd8_template_flag_completion() -> None:
         cmd,
         shell=True,
         env=env,
+        cwd=tmp_path,
         capture_output=True,
         text=True,
     )

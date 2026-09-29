@@ -1604,6 +1604,7 @@ def test_template_switch_fails_before_any_screen(mocker, tmp_path, monkeypatch):
     run.assert_not_called()
 
 
+@pytest.mark.integration
 def test_malformed_cli_arguments(run_cli):
     """Verifies the CLI parser intercepts invalid boundaries and returns non-zero codes."""
     # 1. Unrecognized CLI flag
@@ -1814,6 +1815,7 @@ def test_dry_run_lists_files_generated_outside_the_filesystem_slice(
         assert leaf in output
 
 
+@pytest.mark.integration
 def test_init_invalid_python_version_headless_json_mode(run_cli):
     code, stdout, _stderr, _ = run_cli("init", "--python-version", "invalid", "--json")
     assert code != 0
@@ -1827,6 +1829,7 @@ def test_init_invalid_python_version_headless_json_mode(run_cli):
     )
 
 
+@pytest.mark.integration
 def test_init_python_2_version_headless_json_mode(run_cli):
     code, stdout, _stderr, _ = run_cli("init", "--python-version", "2.7", "--json")
     assert code != 0
@@ -1840,6 +1843,7 @@ def test_init_python_2_version_headless_json_mode(run_cli):
     )
 
 
+@pytest.mark.integration
 def test_init_invalid_python_version_headless_terminal_mode(run_cli):
     code, stdout, stderr, _ = run_cli("init", "--python-version", "invalid")
     assert code != 0
@@ -1848,6 +1852,7 @@ def test_init_invalid_python_version_headless_terminal_mode(run_cli):
     assert "Hint: Write the Python version as major.minor, such as '3.13'." in output
 
 
+@pytest.mark.integration
 def test_sync_invalid_metadata_headless_json_mode(tmp_path, run_cli, monkeypatch):
     monkeypatch.chdir(tmp_path)
     from protostar.config import UserConfig
@@ -1872,6 +1877,7 @@ def test_sync_invalid_metadata_headless_json_mode(tmp_path, run_cli, monkeypatch
     )
 
 
+@pytest.mark.integration
 def test_sync_invalid_github_username_headless_json_mode(
     tmp_path, run_cli, monkeypatch
 ):
@@ -1894,6 +1900,7 @@ def test_sync_invalid_github_username_headless_json_mode(
     assert payload["error"]["hint"] == "Drop the leading '@': use 'octocat'."
 
 
+@pytest.mark.integration
 def test_init_adopts_a_project_supporting_an_old_python(tmp_path, run_cli, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
@@ -1943,6 +1950,7 @@ def test_rolled_back_paths_are_shown_literally_not_as_markup(mocker):
     assert "[bold]b.md" in buf.getvalue()
 
 
+@pytest.mark.integration
 def test_dry_run_json_labels_each_file_and_its_decisions(tmp_path, run_cli):
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "existing"\n\n[tool.ruff]\nlint = "E"\n'

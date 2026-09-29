@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tomllib
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -19,23 +20,14 @@ from protostar.init_draft import InitDecision
 from protostar.manifest import CollisionStrategy
 from protostar.system import GIT_REPOSITORY_VARIABLES
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
-@pytest.mark.parametrize(
-    ("flags", "expected_tools"),
-    [
-        (["--ruff", "--pytest"], ["ruff", "pytest"]),
-        (["--mypy"], ["mypy"]),
-        (["--ruff", "--mypy", "--pytest"], ["ruff", "mypy", "pytest"]),
-    ],
-    ids=["ruff_pytest", "mypy_only", "full_suite"],
-)
-def test_python_environment_scaffolding(
-    run_cli: Any, flags: list[str], expected_tools: list[str]
-) -> None:
-    """Verifies core Python tools scaffold correctly using the new implicit baseline."""
+def test_python_environment_scaffolding(run_cli: Any) -> None:
+    """A real init installs the combined Python quality toolchain."""
     code, stdout, stderr, workspace = run_cli(
-        "init", "--python-version", "3.12", *flags
+        "init", "--python-version", "3.12", "--ruff", "--mypy", "--pytest"
     )
 
     assert code == 0, f"CLI Failed.\nSTDOUT: {stdout}\nSTDERR: {stderr}"
@@ -54,7 +46,7 @@ def test_python_environment_scaffolding(
         config = tomllib.load(f)
 
     project_deps = config.get("dependency-groups", {}).get("dev", [])
-    for tool in expected_tools:
+    for tool in ("ruff", "mypy", "pytest"):
         assert any(tool in dep for dep in project_deps), (
             f"Missing {tool} in dev dependencies"
         )
@@ -92,12 +84,16 @@ def test_orchestrator_idempotency(run_cli: Any, seed_global_config: Any) -> None
 
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv executable required")
 def test_python_version_cohesion_e2e(
-    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+    tmp_path: Path,
+    real_tool_env: Callable[[], dict[str, str]],
 ) -> None:
     """Verifies Python version flags correctly propagate to subprocesses and config interpolations."""
 
     # Natively isolate all pathlib disk I/O to the sandbox
     monkeypatch.chdir(tmp_path)
+    mocker.patch.dict(os.environ, real_tool_env(), clear=True)
     mocker.patch("protostar.config.CONFIG_FILE", tmp_path / "mock_config.toml")
 
     # Construct mock CLI arguments matching: `protostar init --python-version 3.10 --mypy --ruff`
@@ -232,14 +228,17 @@ def test_inherited_git_dir_cannot_redirect_git_init(
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git executable required")
-def test_scrubbed_variables_cover_gits_repository_variables() -> None:
+def test_scrubbed_variables_cover_gits_repository_variables(
+    tmp_path: Path, real_tool_env: Callable[[], dict[str, str]]
+) -> None:
     """Every variable git clears when entering another repository is scrubbed."""
     listed = subprocess.run(
         ["git", "rev-parse", "--local-env-vars"],
         capture_output=True,
         text=True,
         check=True,
-        env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1"},
+        cwd=tmp_path,
+        env={**real_tool_env(), "GIT_CONFIG_NOSYSTEM": "1"},
     ).stdout.split()
 
     assert set(listed) <= GIT_REPOSITORY_VARIABLES
@@ -276,7 +275,9 @@ def test_crash_reporter_e2e(run_cli: Any) -> None:
     assert code == 70
 
 
-def test_api_dockerfile_targets_an_importable_app(run_cli: Any) -> None:
+def test_api_dockerfile_targets_an_importable_app(
+    run_cli: Any, real_tool_env: Callable[[], dict[str, str]]
+) -> None:
     """The container's uvicorn target must resolve inside the scaffolded project."""
     # No --docker: the api template opts in to container scaffolding on its own.
     code, stdout, stderr, workspace = run_cli(
@@ -290,7 +291,6 @@ def test_api_dockerfile_targets_an_importable_app(run_cli: Any) -> None:
     module, attribute = match.groups()
 
     # The image runs `uv sync --no-dev` and then starts uvicorn from that environment.
-    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
     result = subprocess.run(
         [
             "uv",
@@ -304,7 +304,7 @@ def test_api_dockerfile_targets_an_importable_app(run_cli: Any) -> None:
         capture_output=True,
         text=True,
         check=False,
-        env=env,
+        env=real_tool_env(),
     )
     assert result.returncode == 0, (
         f"Dockerfile starts uvicorn on '{module}:{attribute}', which cannot be "

@@ -3,7 +3,6 @@
 import contextlib
 import importlib.resources
 import io
-import os
 import random
 import shutil
 import string
@@ -2234,7 +2233,8 @@ def test_trust_gate_snapshot(snap_compare, monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     "args", [["help", "init"], ["init", "--json", "--dry-run"], ["init", "--dry-run"]]
 )
-def test_non_tui_cli_never_imports_textual(tmp_path, args):
+@pytest.mark.integration
+def test_non_tui_cli_never_imports_textual(tmp_path, args, real_tool_env):
     # A fresh interpreter is essential: the Pilot tests above import Textual.
     probe = """
 import sys
@@ -2245,7 +2245,8 @@ except SystemExit:
     pass
 assert not any(name == "textual" or name.startswith("textual.") for name in sys.modules)
 """
-    env = {**os.environ, "HOME": str(tmp_path), "XDG_CONFIG_HOME": str(tmp_path)}
+    env = real_tool_env()
+    env["XDG_CONFIG_HOME"] = str(tmp_path)
     env.pop("PROTOSTAR_BENCHMARK_RECIPE_EDITOR", None)
     result = subprocess.run(
         [sys.executable, "-c", probe, *args],
@@ -2416,7 +2417,8 @@ def test_a_command_output_says_whether_protostar_merges_into_it(merged, origin):
     assert origin in console.export_text()
 
 
-def test_recipe_import_defers_pygments_until_code_is_rendered(tmp_path):
+@pytest.mark.integration
+def test_recipe_import_defers_pygments_until_code_is_rendered(tmp_path, real_tool_env):
     probe = """
 import sys
 from protostar.cli.tui.recipe.screen import RecipeScreen
@@ -2430,6 +2432,7 @@ assert "pygments.lexers" in sys.modules
     result = subprocess.run(
         [sys.executable, "-c", probe],
         cwd=tmp_path,
+        env=real_tool_env(),
         capture_output=True,
         text=True,
     )

@@ -4,10 +4,13 @@ from dataclasses import replace
 
 import pytest
 
+from protostar.cli.parser import build_parser
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError
 from protostar.init_draft import DraftTemplate, InitDraft, resolve_init
 from protostar.manifest import CollisionStrategy
+from protostar.modules import TOOLING_MODULES
+from protostar.orchestrator import Orchestrator
 from protostar.recipe import (
     EXCLUSIVE_TOOL_PAIRS,
     TOOL_REQUIREMENTS,
@@ -61,6 +64,41 @@ def test_equivalent_flag_and_editor_drafts_resolve_identically(tmp_path, monkeyp
     assert flag_request.recipe == editor_request.recipe
     assert flag_request.to_dict() == editor_request.to_dict()
     assert flag_request.is_external == editor_request.is_external
+
+
+@pytest.mark.parametrize(
+    ("flags", "expected_tools"),
+    [
+        (("--ruff", "--pytest"), {Tool.RUFF, Tool.PYTEST}),
+        (("--mypy",), {Tool.MYPY}),
+    ],
+)
+def test_tool_flag_combinations_plan_dev_dependencies_without_running_commands(
+    tmp_path, monkeypatch, mocker, flags, expected_tools
+):
+    """CLI tool flags select their modules and packages during read-only planning."""
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("subprocess.run", side_effect=AssertionError("subprocess.run"))
+    mocker.patch("subprocess.Popen", side_effect=AssertionError("subprocess.Popen"))
+    args = build_parser().parse_args(["init", *flags])
+    overrides = tuple(
+        (Tool(module.config_key), value)
+        for module in TOOLING_MODULES
+        if (value := getattr(args, module.__class__.__name__, None)) is not None
+    )
+    config = UserConfig(ruff=False, mypy=False, pytest=False)
+    modules, request = resolve_init(
+        InitDraft(tool_overrides=overrides, metadata=()), config
+    )
+
+    manifest = Orchestrator(modules, config, request=request).plan()
+
+    assert {
+        Tool(module.config_key) for module in modules if module.config_key
+    } == expected_tools
+    assert set(manifest.dependencies.dev_dependencies) & {"ruff", "mypy", "pytest"} == {
+        tool.value for tool in expected_tools
+    }
 
 
 def test_exclusive_tool_table_rejects_each_pair():

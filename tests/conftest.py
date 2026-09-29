@@ -77,17 +77,14 @@ def mock_path(mocker):
 
 
 @pytest.fixture
-def run_cli(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Callable[..., tuple[int, str, str, Path]]:
-    def _execute(*args: str) -> tuple[int, str, str, Path]:
-        monkeypatch.chdir(tmp_path)
+def real_tool_env(tmp_path: Path) -> Callable[[], dict[str, str]]:
+    """Build an isolated environment when a real-tool test starts a process."""
 
-        # Sandbox the subprocess environment to prevent reading the user's global config
+    def _environment() -> dict[str, str]:
         env = os.environ.copy()
 
-        # Preserve the uv cache so we don't redownload massive ML libraries
-        # when the HOME directory changes
+        # The shared uv cache is the one deliberate write outside tmp_path. Real
+        # integration tests may also fetch dependencies when the cache is cold.
         if "UV_CACHE_DIR" not in env:
             if sys.platform == "darwin":
                 env["UV_CACHE_DIR"] = str(Path.home() / "Library" / "Caches" / "uv")
@@ -98,17 +95,31 @@ def run_cli(
             else:
                 env["UV_CACHE_DIR"] = str(Path.home() / ".cache" / "uv")
 
-        # Isolate the Protostar configuration and Git configurations
         env["HOME"] = str(tmp_path)
         env["USERPROFILE"] = str(tmp_path)
+        for name in (
+            "VIRTUAL_ENV",
+            "PRE_COMMIT_HOME",
+            "XDG_CACHE_HOME",
+            "XDG_CONFIG_HOME",
+            "PROTOSTAR_CONFIG",
+            "GIT_CONFIG_GLOBAL",
+            "GIT_CONFIG_SYSTEM",
+        ):
+            env.pop(name, None)
+        return env
 
-        # Remove any leaked environment variables that might interfere with isolation
-        env.pop("VIRTUAL_ENV", None)
-        env.pop("PRE_COMMIT_HOME", None)
-        env.pop("XDG_CACHE_HOME", None)
-        env.pop("XDG_CONFIG_HOME", None)  # Ensure XDG_CONFIG_HOME doesn't leak
-        env.pop("GIT_CONFIG_GLOBAL", None)
-        env.pop("GIT_CONFIG_SYSTEM", None)
+    return _environment
+
+
+@pytest.fixture
+def run_cli(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    real_tool_env: Callable[[], dict[str, str]],
+) -> Callable[..., tuple[int, str, str, Path]]:
+    def _execute(*args: str) -> tuple[int, str, str, Path]:
+        monkeypatch.chdir(tmp_path)
 
         # Force execution via the local python module instead of the global binary
         result = subprocess.run(
@@ -117,7 +128,7 @@ def run_cli(
             text=True,
             encoding="utf-8",
             check=False,
-            env=env,  # Inject the sandboxed environment
+            env=real_tool_env(),
         )
         return result.returncode, result.stdout, result.stderr, tmp_path
 

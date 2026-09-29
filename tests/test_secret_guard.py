@@ -603,7 +603,8 @@ def test_flagged_var_off_a_terminal_never_opens_a_screen(mocker, monkeypatch, tm
     screen.assert_not_called()
 
 
-def test_cli_startup_does_not_load_the_rule_set(tmp_path):
+@pytest.mark.integration
+def test_cli_startup_does_not_load_the_rule_set(tmp_path, real_tool_env):
     """The generated rules load only when a value is scanned."""
     probe = (
         "import sys, protostar.cli.main; "
@@ -615,6 +616,7 @@ def test_cli_startup_does_not_load_the_rule_set(tmp_path):
         text=True,
         check=True,
         cwd=tmp_path,
+        env=real_tool_env(),
     )
 
     assert result.stdout.strip() == "False"
