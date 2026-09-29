@@ -26,6 +26,7 @@ from textual.widgets import (
 
 from protostar import system_deps
 from protostar.analysis import NoteKind, ProjectAnalysis
+from protostar.cli.changes import plan_draft
 from protostar.config import TemplateSource, UserConfig
 from protostar.errors import ConfigurationError, ProtostarError
 from protostar.init_draft import DraftTemplate, InitDecision, InitDraft, check_draft
@@ -87,6 +88,15 @@ _SOURCES = {
     SelectionLayer.PROJECT: "from recipe",
     SelectionLayer.FALLBACK: "from config",
 }
+
+
+def _existing_note(collisions: int) -> Text:
+    """Say how many planned files exist and what the strategy decides."""
+    return Text(
+        f"{collisions} planned {'file already exists' if collisions == 1 else 'files already exist'}. "
+        "Choose how Protostar writes into them; the review then shows "
+        "each decision this leaves."
+    )
 
 
 class _TemplateChoice(Enum):
@@ -298,8 +308,11 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                                 )
                     yield Heading("Project details")
                     yield MetadataFields(self._metadata_defaults)
-                with Panel("Existing files", id="existing-panel"):
-                    yield Static("", id="existing-note")
+                collisions = self._initial_collisions()
+                existing = Panel("Existing files", id="existing-panel")
+                existing.display = bool(collisions)
+                with existing:
+                    yield Static(_existing_note(collisions), id="existing-note")
                     with Choice(id="collision"):
                         yield RadioButton(
                             "Merge · keep your values and add what's missing",
@@ -320,6 +333,25 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
                         key_label("Continue", "^s"), variant="primary", id="continue"
                     )
         yield Footer()
+
+    def _initial_collisions(self) -> int:
+        """How many planned files already exist, before the first paint.
+
+        Planning is pure and needs no network, so the editor opens with the
+        strategy panel already in place; the live preview corrects it after
+        each change. A draft that can't plan yet shows no panel: the preview
+        says why.
+        """
+        draft = replace(
+            self.draft,
+            tool_choices=tuple(sorted(self.enabled.items())),
+            collision_strategy=self.strategy,
+        )
+        try:
+            _, manifest = plan_draft(draft, self.config)
+        except ProtostarError:
+            return 0
+        return len(manifest.collisions)
 
     def _notes(self) -> Text | None:
         """Name the files analysis could not read, or ``None`` if it read them all."""
@@ -393,7 +425,6 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
         Focus starts on the first variable without a value; otherwise it
         stays on the first row, the template.
         """
-        self.query_one("#existing-panel").display = False
         fields = self.query_one(VariableFields)
         source = self.draft.template.source if self.draft.template else None
         await fields.show(source)
@@ -521,13 +552,7 @@ class RecipeScreen(KeyboardScreen[InitDecision]):
     def _show_existing(self, collisions: int) -> None:
         """Offer the strategy only while the plan writes into existing files."""
         self.query_one("#existing-panel").display = bool(collisions)
-        self.query_one("#existing-note", Static).update(
-            Text(
-                f"{collisions} planned {'file already exists' if collisions == 1 else 'files already exist'}. "
-                "Choose how Protostar writes into them; the review then shows "
-                "each decision this leaves."
-            )
-        )
+        self.query_one("#existing-note", Static).update(_existing_note(collisions))
 
     @on(RadioSet.Changed, "#collision")
     def choose_strategy(self, event: RadioSet.Changed) -> None:

@@ -149,7 +149,8 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         self.project = project
         self.conflicts = project.review.decisions
         self.choices: dict[str, ResolutionChoice] = {}
-        self.preview: PreparedReview | None = None
+        # With nothing chosen yet, the sync's own review is the result.
+        self.preview: PreparedReview | None = project.review
         self._failed = False
 
     def compose(self) -> ComposeResult:
@@ -194,11 +195,15 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
         yield Footer()
 
     def on_mount(self) -> None:
-        """List the conflicts, highlight the first, and prepare the result."""
+        """List the conflicts and show the first one complete before the first paint.
+
+        The review the sync already prepared is the result until a choice
+        changes it, so nothing waits on a worker here.
+        """
         tree = self.query_one("#conflicts", ConflictTree)
         tree.focus()
-        tree.show(self.conflicts)
-        self.refresh_preview()
+        # The cursor lands after the list refreshes; show its row now.
+        self._show(tree.show(self.conflicts))
 
     @work(exclusive=True, group="preview")
     async def refresh_preview(self) -> None:
@@ -315,6 +320,10 @@ class ConflictScreen(KeyboardScreen[dict[str, ResolutionChoice]]):
     @on(Tree.NodeHighlighted, "#conflicts")
     def show_conflict(self, event: Tree.NodeHighlighted[Node]) -> None:
         """Show the highlighted conflict's sides and the file's result."""
+        # A root is never a row: listing the decisions replaces the hidden
+        # root, and its late highlight must not blank the row shown at mount.
+        if event.node.parent is None:
+            return
         self._show(event.node.data)
 
     @on(RadioSet.Changed, "#choice")

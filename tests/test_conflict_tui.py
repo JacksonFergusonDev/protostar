@@ -21,7 +21,7 @@ from protostar.cli.tui.conflicts.sides import side_text
 from protostar.cli.tui.keys import KeybindingsScreen, LeaveScreen
 from protostar.config import TemplateSource, UserConfig
 from protostar.executor import SystemExecutor
-from protostar.lifecycle import prepare_project
+from protostar.lifecycle import PreparedProject, prepare_project
 from protostar.manifest import EnvironmentManifest
 from protostar.merge import (
     MISSING,
@@ -279,6 +279,24 @@ async def test_choice_buttons_follow_the_highlighted_conflict(conflicted):
         # The choice moved on to the conflict still open, and shows its state.
         assert highlighted(app) == (RENOVATE, RENOVATE)
         assert leave.value
+
+
+@pytest.mark.asyncio
+async def test_the_first_frame_is_complete_without_reviewing_again(conflicted, mocker):
+    app = make_app()
+    resolve = mocker.spy(PreparedProject, "resolve")
+    async with app.run_test(size=(120, 40)) as pilot:
+        # No settle: what the screen shows before any worker could finish.
+        assert '"mine"' in plain(app, "#local")
+        assert '"remote"' in plain(app, "#desired")
+        assert "The file stays as it is." in plain(app, "#result")
+        assert "both changed" in plain(app, "#meaning")
+        assert pressed(app) == ["choice-open"]
+        resolve.assert_not_called()
+        # A choice is what reviews the sync again.
+        await pilot.press("u")
+        await settle(pilot)
+        resolve.assert_called_once()
 
 
 @pytest.mark.asyncio

@@ -1308,6 +1308,22 @@ async def test_the_editor_review_and_execution_share_one_hook_snapshot(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("existing", [True, False])
+async def test_the_existing_files_panel_is_in_place_on_the_first_frame(
+    request, workspace, existing
+):
+    config = request.getfixturevalue("collisions") if existing else UserConfig()
+    app = make_app(config=config)
+    async with app.run_test(size=(120, 45)):
+        # No settle: the preview's plan has not reported yet.
+        panel = app.screen.query_one("#existing-panel")
+        assert panel.display is existing
+        if existing:
+            note = str(app.screen.query_one("#existing-note", Static).content)
+            assert "already exist" in note
+
+
+@pytest.mark.asyncio
 async def test_the_editor_takes_the_hook_snapshot_as_it_opens(mocker):
     take = mocker.patch("protostar.cli.changes.resolve_hook_revisions", return_value=())
     # No hook runner: no plan needs the snapshot, yet it is taken up front, so
