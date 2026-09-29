@@ -94,6 +94,41 @@ We utilize `just` to standardize test execution, abstracting the underlying `uv`
 !!! tip "Self-Documenting Tooling"
     For the complete list of available development, formatting, and benchmarking commands, simply run `just` in the root of the repository.
 
+### Manual Sandbox Scenarios (macOS)
+
+Each recipe builds the current Protostar source in a temporary virtual environment,
+uses a separate HOME, and opens a shell in a disposable Git repository. Exit the
+shell to remove the entire sandbox.
+
+```bash
+just sandbox                # Empty workspace
+just sandbox-existing       # Existing Python project with no Protostar recipe
+just sandbox-sync           # Tracked project with a pending local template update
+just sandbox-sync-conflict  # Tracked project with a conflicting template update
+```
+
+In `sandbox-existing`, try `protostar init --dry-run` to inspect how Protostar
+handles user-owned `pyproject.toml`, source files, and a justfile. In
+`sandbox-sync`, try `protostar status`, `protostar diff`, and `protostar sync` in
+that order. The scenario starts with a committed Protostar initialization and a
+committed local edit. Its template then updates managed TOML in `pyproject.toml`
+and adds a setup document; the project's local notes should remain intact.
+The template and its trusted alias exist only inside the sandbox.
+
+Use `just sandbox-sync-conflict` to practice the interactive sync screen. The
+project's committed coverage threshold differs from both its recorded baseline
+and the updated template. The team also edited a setup instruction that the
+template changed on the same line. `protostar sync` opens the TUI for those two
+decisions, while the template's new setup document and updated coverage reporting
+setting can apply safely. A project note outside the managed instructions stays
+in place.
+Run bare `protostar sync` inside the sandbox shell; `--json`, `--dry-run`,
+`--check`, and `--resolve` skip the TUI.
+
+Pass Protostar arguments to run one command without entering a shell, such as
+`just sandbox-sync status`. Each recipe invocation creates a new sandbox, so use
+the interactive shell when testing a sequence of commands against one project.
+
 === "Pre-Push CI Emulation"
     Runs the exact pipeline executed by GitHub Actions, sequentially triggering `lint`, `typecheck`, and `test-cov`. Run this before opening a pull request.
     ```bash

@@ -199,8 +199,20 @@ bump part:
     uv run python scripts/sync_secret_rules.py --check
     uv run --refresh https://raw.githubusercontent.com/JacksonFergusonDev/ci-cd-release-infrastructure/refs/heads/main/scripts/release.py {{ part }}
 
-# Drop into an isolated macOS sandbox shell with a freshly built local Protostar on $PATH
-sandbox *args: sync
+# Drop into an empty isolated macOS sandbox shell
+sandbox *args: (_sandbox "empty" args)
+
+# Open an existing Python repository that has never used Protostar
+sandbox-existing *args: (_sandbox "existing" args)
+
+# Open a Protostar project whose local template has a pending update
+sandbox-sync *args: (_sandbox "sync" args)
+
+# Open a Protostar project whose template update conflicts with a local change
+sandbox-sync-conflict *args: (_sandbox "sync-conflict" args)
+
+# Build a local Protostar and prepare the requested sandbox scenario
+_sandbox scenario *args: sync
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -233,6 +245,13 @@ sandbox *args: sync
     printf "{{ yellow }}Workspace:  {{ nc }} %s\n" "$WORKSPACE"
     printf "{{ yellow }}Binary:     {{ nc }} %s\n\n" "$SANDBOX_VENV/bin/protostar"
 
+    if [[ "{{ scenario }}" != "empty" ]]; then
+        HOME="$MOCK_HOME" XDG_CONFIG_HOME="$MOCK_HOME/.config" \
+            UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" \
+            "$SANDBOX_VENV/bin/python" "$REPO_ROOT/scripts/prepare_sandbox.py" \
+            "{{ scenario }}" "$WORKSPACE"
+    fi
+
     cd "$WORKSPACE"
 
     # Evaluate the expanded just parameter directly
@@ -240,11 +259,14 @@ sandbox *args: sync
 
     if [[ -n "$RAW_ARGS" ]]; then
         # Single-command mode: run the specified arguments with mocked HOME, host UV cache, and overridden PATH
-        HOME="$MOCK_HOME" UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" protostar {{ args }}
+        HOME="$MOCK_HOME" XDG_CONFIG_HOME="$MOCK_HOME/.config" \
+            UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" protostar {{ args }}
     else
         # Interactive shell mode: drop into sub-shell where 'protostar' points to the sandbox build
         printf "{{ blue }}Entering interactive sandbox shell (type 'exit' or Ctrl+D when done):{{ nc }}\n\n"
-        HOME="$MOCK_HOME" UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" PROTOSANDBOX=1 $SHELL -i || true
+        HOME="$MOCK_HOME" XDG_CONFIG_HOME="$MOCK_HOME/.config" \
+            UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" \
+            PROTOSANDBOX=1 $SHELL -i || true
     fi
 
 # Build the local test container with inspection CLI tools, runtime dependencies, and shell aliases
