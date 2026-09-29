@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790708243909,
+  "lastUpdate": 1790716298642,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18943,6 +18943,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 746.51,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "22cdf2a6589021d31e291a0e8dfc761b6d001113",
+          "message": "test(integration): define real-process test boundary",
+          "timestamp": "2026-09-29T14:01:51-07:00",
+          "tree_id": "a5b16a04c0c8ed1c1318c876b84c51ae971f7ee7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/22cdf2a6589021d31e291a0e8dfc761b6d001113"
+        },
+        "date": 1790716296186,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 213.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 950.27,
             "unit": "ms"
           }
         ]
