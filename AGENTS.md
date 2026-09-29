@@ -127,7 +127,7 @@ The repository uses **`prek`** hooks (`.pre-commit-config.yaml`) for automated g
 
 > **Agent Rule:** **Do NOT redundantly run `ruff`, `mypy`, `rumdl`, `just lint`, or `just ci` immediately before committing or pushing.** Let the hooks do the work. If a hook fails or formats a file, inspect the failure, adjust the code, and re-stage. Only run manual commands during active development/debugging (e.g. running a specific test file like `uv run pytest tests/test_foo.py`).
 >
-> **Agent Rule:** **Do NOT regenerate demos (`just demo-init-headless`, `just demo-init-interactive`, `just demo-all`) unless explicitly prompted to do so.** Re-recording demos runs multi-trial live installations and takes several minutes; agents must never run demo generation autonomously.
+> **Agent Rule:** **Do NOT regenerate demos (`just demo-init-headless`, `just demo-init-interactive`, `just demo-sync`, `just demo-all`) unless explicitly prompted to do so.** Re-recording demos runs multi-trial live installations and takes several minutes; agents must never run demo generation autonomously.
 
 ## Development & Inspection Commands
 
@@ -164,10 +164,11 @@ Use these commands when targeted verification or debugging is necessary:
   just check-schemas                  # Validate pre-commit, action, renovate, and metaschemas
   just demo-init-headless           # Re-record the headless init demo cast and GIF (explicit prompt only)
   just demo-init-interactive        # Re-record the interactive init demo cast and GIF (explicit prompt only)
+  just demo-sync                    # Re-record the sync conflict demo cast and GIF (explicit prompt only)
   just sync-secret-rules              # Regenerate _secret_rules.py after the pinned gitleaks tag changes
   ```
 
-  `check-snapshots` regenerates the terminal SVGs but not the demo casts and GIFs. **Do NOT regenerate demos (`just demo-init-headless`, `just demo-init-interactive`, `just demo-all`) unless explicitly prompted to.** They perform real installs across multiple trials and take several minutes. When explicitly requested to record demos, don't `git add -A docs` while a recording runs: it leaves `.demo_*.tmp.cast` files there.
+  `check-snapshots` regenerates the terminal SVGs but not the demo casts and GIFs. **Do NOT regenerate demos (`just demo-init-headless`, `just demo-init-interactive`, `just demo-sync`, `just demo-all`) unless explicitly prompted to.** They perform real installs across multiple trials and take several minutes. When explicitly requested to record demos, don't `git add -A docs` while a recording runs: it leaves `.demo_*.tmp.cast` files there.
 
 - **Full CI Emulation (Debugging only):**
 

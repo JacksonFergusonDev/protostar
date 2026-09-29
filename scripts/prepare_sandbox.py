@@ -1,10 +1,18 @@
-"""Seed disposable sandbox repositories for manual lifecycle testing."""
+"""Seed disposable repositories for manual lifecycle testing and demo recordings.
+
+Every scenario writes only below the directories it is given, so the sandbox
+and the demo recorder can build the same fixture without touching the host's
+home directory or Protostar configuration.
+"""
 
 import argparse
+import os
 import subprocess
 from pathlib import Path
 
 import tomlkit
+
+CONFIG_ENV_VAR = "PROTOSTAR_CONFIG"
 
 ORIGINAL_SETUP = "Run `uv sync` before running checks."
 LOCAL_SETUP = "Run `uv sync --group dev` before running checks."
@@ -12,15 +20,18 @@ UPDATED_SETUP = "Run `uv sync --all-groups` before running checks."
 
 
 def write_file(root: Path, name: str, content: str) -> None:
-    """Write one fixture file below a sandbox-owned directory."""
+    """Write one fixture file below a scenario-owned directory."""
     target = root / name
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
 
 
-def run(*args: str, cwd: Path) -> None:
-    """Run a fixture setup command in the disposable repository."""
-    subprocess.run(args, cwd=cwd, check=True)
+def run(*args: str, cwd: Path, config: Path | None = None) -> None:
+    """Run a fixture setup command, optionally against the scenario's own configuration."""
+    env = os.environ.copy()
+    if config is not None:
+        env[CONFIG_ENV_VAR] = str(config)
+    subprocess.run(args, cwd=cwd, env=env, check=True)
 
 
 def commit(workspace: Path, message: str) -> None:
@@ -86,10 +97,10 @@ def template_text(
     show_missing: bool,
     setup: str | None = None,
 ) -> str:
-    """Render the local template's managed TOML contribution."""
+    """Render the team template's managed TOML contribution."""
     content = (
-        'name = "Sandbox Template"\n'
-        'description = "A small local template for practicing sync"\n'
+        'name = "Team Template"\n'
+        'description = "The shared starting point for the team\'s Python services"\n'
         f'version = "{version}"\n'
         "ruff = false\n\n"
         "[dev.pyproject]\n"
@@ -110,9 +121,28 @@ def template_text(
     return content
 
 
-def sync_project(workspace: Path, *, conflict: bool = False) -> None:
-    """Initialize from a local template, then make its next revision available."""
-    template = workspace.parent / "template"
+def sync_project(workspace: Path, fixture: Path, *, conflict: bool = False) -> Path:
+    """Initialize from a local template, then make its next revision available.
+
+    Args:
+        workspace: The empty project directory to initialize.
+        fixture: A scenario-owned directory for the template and the
+            Protostar configuration the project is initialized with.
+        conflict: Whether the project also edits what the update changes.
+
+    Returns:
+        The configuration file to point ``PROTOSTAR_CONFIG`` at, so later
+        commands see the configuration the project was initialized with.
+    """
+    template = fixture / "team-template"
+    config = fixture / "config.toml"
+    # Only a configured template is trusted to run its setup commands headlessly.
+    write_file(
+        fixture,
+        "config.toml",
+        f'[templates.team-template]\nsource = "{template.as_posix()}"\n'
+        'trusted = true\n\n[env]\npython_version = "3.13"\n',
+    )
     run("git", "init", "--quiet", "-b", "main", cwd=workspace)
     write_file(
         template,
@@ -129,14 +159,15 @@ def sync_project(workspace: Path, *, conflict: bool = False) -> None:
         "template/notes/maintenance.md",
         "# Maintenance\n\nTemplate guidance for maintainers.\n",
     )
-    write_file(
-        Path.home(),
-        ".config/protostar/config.toml",
-        f'[templates.sandbox-upgrade]\nsource = "{template.as_posix()}"\n'
-        "trusted = true\n",
+    run(
+        "protostar",
+        "init",
+        "--template",
+        "team-template",
+        cwd=workspace,
+        config=config,
     )
-    run("protostar", "init", "--template", "sandbox-upgrade", cwd=workspace)
-    commit(workspace, "chore: initialize with sandbox template")
+    commit(workspace, "chore: initialize from the team template")
 
     write_file(
         workspace,
@@ -152,6 +183,10 @@ def sync_project(workspace: Path, *, conflict: bool = False) -> None:
             + "\nProject note: Check the macOS smoke tests before release.\n",
             encoding="utf-8",
         )
+        target = workspace / "pyproject.toml"
+        document = tomlkit.parse(target.read_text(encoding="utf-8"))
+        document["tool"]["coverage"]["report"]["fail_under"] = 85
+        target.write_text(tomlkit.dumps(document), encoding="utf-8")
     commit(workspace, "docs: add local maintenance guidance")
 
     write_file(
@@ -169,23 +204,7 @@ def sync_project(workspace: Path, *, conflict: bool = False) -> None:
         "template/docs/setup.md",
         "# Setup\n\nThe updated template now includes setup guidance.\n",
     )
-    print(f"Updated local template: {template}")
-    if not conflict:
-        print(
-            "Managed project ready. Try `protostar status`, `protostar diff`, "
-            "or `protostar sync`."
-        )
-
-
-def sync_conflict_project(workspace: Path) -> None:
-    """Make coverage policy and instructions conflict with the template."""
-    sync_project(workspace, conflict=True)
-    target = workspace / "pyproject.toml"
-    document = tomlkit.parse(target.read_text(encoding="utf-8"))
-    document["tool"]["coverage"]["report"]["fail_under"] = 85
-    target.write_text(tomlkit.dumps(document), encoding="utf-8")
-    commit(workspace, "test: raise the project's coverage threshold")
-    print("Conflict ready. Run `protostar sync` in this shell to choose a resolution.")
+    return config
 
 
 def main() -> None:
@@ -193,13 +212,25 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scenario", choices=("existing", "sync", "sync-conflict"))
     parser.add_argument("workspace", type=Path)
+    parser.add_argument(
+        "--fixture",
+        type=Path,
+        help="Directory for the scenario's template and configuration "
+        "(defaults to a 'fixture' directory beside the workspace).",
+    )
     args = parser.parse_args()
     if args.scenario == "existing":
         existing_project(args.workspace)
-    elif args.scenario == "sync":
-        sync_project(args.workspace)
+        return
+    fixture = args.fixture or args.workspace.parent / "fixture"
+    sync_project(args.workspace, fixture, conflict=args.scenario == "sync-conflict")
+    print(f"Updated template: {fixture / 'team-template'}")
+    if args.scenario == "sync":
+        print(
+            "Managed project ready. Try `protostar status`, `protostar diff`, or `protostar sync`."
+        )
     else:
-        sync_conflict_project(args.workspace)
+        print("Conflict ready. Run `protostar sync` to choose a resolution.")
 
 
 if __name__ == "__main__":

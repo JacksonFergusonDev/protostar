@@ -171,12 +171,18 @@ demo-init-interactive trials="5": (_demo-run "Init Interactive" "init_interactiv
 # Generate interactive init demo draft (single trial)
 demo-init-interactive-draft: (_demo-run "Init Interactive (Draft)" "init_interactive" "1")
 
+# Generate sync demo (production, best of 5 trials)
+demo-sync trials="5": (_demo-run "Sync" "sync" trials)
+
+# Generate sync demo draft (single trial)
+demo-sync-draft: (_demo-run "Sync (Draft)" "sync" "1")
+
 # Generate all demos (production, best of 5 trials)
-demo-all trials="5": (demo-init-interactive trials) (demo-init-headless trials)
+demo-all trials="5": (demo-init-interactive trials) (demo-init-headless trials) (demo-sync trials)
     @printf "\n{{ blue }}=== All production demos generated ==={{ nc }}\n"
 
 # Generate all demo drafts (single trial)
-demo-all-draft: demo-init-interactive-draft demo-init-headless-draft
+demo-all-draft: demo-init-interactive-draft demo-init-headless-draft demo-sync-draft
     @printf "\n{{ blue }}=== All demo drafts generated ==={{ nc }}\n"
 
 # Build documentation site in strict mode
@@ -249,7 +255,11 @@ _sandbox scenario *args: sync
         HOME="$MOCK_HOME" XDG_CONFIG_HOME="$MOCK_HOME/.config" \
             UV_CACHE_DIR="$HOST_UV_CACHE" PATH="$SANDBOX_VENV/bin:$PATH" \
             "$SANDBOX_VENV/bin/python" "$REPO_ROOT/scripts/prepare_sandbox.py" \
-            "{{ scenario }}" "$WORKSPACE"
+            "{{ scenario }}" "$WORKSPACE" --fixture "$SANDBOX_DIR/fixture"
+    fi
+    # A lifecycle scenario trusts its template in its own configuration
+    if [[ -f "$SANDBOX_DIR/fixture/config.toml" ]]; then
+        export PROTOSTAR_CONFIG="$SANDBOX_DIR/fixture/config.toml"
     fi
 
     cd "$WORKSPACE"

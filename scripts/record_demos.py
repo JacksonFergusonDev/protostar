@@ -34,6 +34,7 @@ if str(_repo_root) not in sys.path:
 
 from protostar.cli.palette import INK
 from scripts._common import SNAPSHOTS_DIR, VENV_BIN
+from scripts.prepare_sandbox import CONFIG_ENV_VAR, sync_project
 
 DEFAULT_COLS = 78
 DEFAULT_ROWS = 32
@@ -42,6 +43,11 @@ EXCERPT_LINES = 24  # Lines of the target file shown after the tree
 CLI_TEMPLATE_INDEX = 3  # "cli" in the template picker, after "No template"
 DOCKER_TOOL_ROW_OFFSET = 9  # Docker's distance below Ruff, the first tool row
 CLEAR_SCREEN_MARKERS = ("\x1b[3J\x1b[H\x1b[2J", "\x1b[H\x1b[2J", "\x1b[2J")
+
+
+Setup = Callable[[Path, Path], dict[str, str]]
+"""Prepares a workspace off camera, given it and a fixture directory, and
+returns the environment the recorded shell needs."""
 
 
 @dataclass(frozen=True)
@@ -95,6 +101,7 @@ class PTYSession:
         workspace: str = DEFAULT_WORKSPACE,
         cols: int = DEFAULT_COLS,
         rows: int = DEFAULT_ROWS,
+        setup: Setup | None = None,
     ) -> None:
         self.workspace = workspace
         self.cols = cols
@@ -106,6 +113,8 @@ class PTYSession:
         self.slave_fd: int = -1
         self.proc: subprocess.Popen[bytes] | None = None
         self._direnv_config: tempfile.TemporaryDirectory[str] | None = None
+        self.setup = setup
+        self._fixture: tempfile.TemporaryDirectory[str] | None = None
         self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
 
     def start(self) -> None:
@@ -113,6 +122,11 @@ class PTYSession:
         # Ensure fresh clean workspace
         shutil.rmtree(self.workspace, ignore_errors=True)
         os.makedirs(self.workspace, exist_ok=True)
+        # Built before the shell starts, so none of it is recorded.
+        setup_env: dict[str, str] = {}
+        if self.setup is not None:
+            self._fixture = tempfile.TemporaryDirectory(prefix="protostar-demo-")
+            setup_env = self.setup(Path(self.workspace), Path(self._fixture.name))
 
         self.master_fd, self.slave_fd = pty.openpty()  # type: ignore[attr-defined, unused-ignore]
         set_winsize(self.master_fd, self.rows, self.cols)
@@ -131,6 +145,7 @@ class PTYSession:
         env["DIRENV_LOG_FORMAT"] = ""
         env["LINES"] = str(self.rows)
         env["COLUMNS"] = str(self.cols)
+        env.update(setup_env)
 
         # direnv 2.36+ uses its config file for logging. Keep the demo's
         # setting separate from the user's direnv configuration.
@@ -171,10 +186,6 @@ class PTYSession:
         self._silent_write('export BAT_THEME="Catppuccin Mocha"\n')
         self._drain(0.05)
         self._silent_write('export COLORTERM="truecolor"\n')
-        self._drain(0.05)
-        self._silent_write(
-            "git config --global --add safe.directory '*' 2>/dev/null || true\n"
-        )
         self._drain(0.05)
         self._silent_write("source <(direnv hook zsh)\n")
         self._drain(0.15)
@@ -377,6 +388,10 @@ class PTYSession:
             self._direnv_config.cleanup()
             self._direnv_config = None
 
+        if self._fixture is not None:
+            self._fixture.cleanup()
+            self._fixture = None
+
     def save(self, output_path: str | Path) -> None:
         """Closes the shell and saves the recorded events to an asciicast v2 file."""
         self.close()
@@ -503,9 +518,52 @@ def record_init_interactive(session: PTYSession) -> None:
     session.sleep(3.5)  # Hold the guide long enough to read
 
 
-SCENARIOS: dict[str, Callable[[PTYSession], None]] = {
-    "init_headless": record_init_headless,
-    "init_interactive": record_init_interactive,
+def setup_sync(workspace: Path, fixture: Path) -> dict[str, str]:
+    """Initialize from the team template, edit locally, then update the template."""
+    config = sync_project(workspace, fixture, conflict=True)
+    return {CONFIG_ENV_VAR: str(config)}
+
+
+def record_sync(session: PTYSession) -> None:
+    """Script for the sync demo: a template update meets the team's own edits."""
+    session.sleep(0.5)
+    session.type("protostar sync", char_delay=0.035, post_delay=0.3)
+    session.enter(wait=0.0)
+    session.wait_for("Review sync", timeout=10.0, post_wait=0.6)
+    session.sleep(2.5)  # Read the first conflict and both sides
+
+    # 1. The setup instructions conflict line by line: keep both.
+    #    Settling a conflict moves on to the next open one.
+    session.key(b"b", wait=0.5)
+    session.sleep(2.5)
+
+    # 2. The coverage floor: take the template's stricter one.
+    session.key(b"u", wait=0.5)
+    session.sleep(1.5)
+
+    # 3. Apply.
+    session.key(b"a", wait=0.0)
+    session.wait_for("Updated", timeout=20.0, post_wait=0.4)
+    session.sleep(2.0)
+
+    # 4. Nothing is left pending.
+    session.type("protostar sync --check", char_delay=0.035, post_delay=0.2)
+    session.enter(wait=1.0)
+    session.sleep(2.0)
+
+
+@dataclass(frozen=True)
+class Scenario:
+    """A recorded demo and the off-camera setup it starts from."""
+
+    record: Callable[[PTYSession], None]
+    setup: Setup | None = None
+
+
+SCENARIOS: dict[str, Scenario] = {
+    "init_headless": Scenario(record_init_headless),
+    "init_interactive": Scenario(record_init_interactive),
+    "sync": Scenario(record_sync, setup_sync),
 }
 
 
@@ -549,8 +607,10 @@ def main() -> None:
 
         if trials_count == 1:
             print(f"🎬 Recording demo '{target}' -> {out_path} ...")
-            with PTYSession(cols=args.cols, rows=args.rows) as session:
-                SCENARIOS[target](session)
+            with PTYSession(
+                cols=args.cols, rows=args.rows, setup=SCENARIOS[target].setup
+            ) as session:
+                SCENARIOS[target].record(session)
                 session.save(out_path)
             duration = float(session.events[-1][0]) if session.events else 0.0
             print(
@@ -573,8 +633,10 @@ def main() -> None:
                 trial_paths.append(tmp_cast)
                 print(f"  ↳ [Trial {trial_idx}/{trials_count}] Recording ...")
                 try:
-                    with PTYSession(cols=args.cols, rows=args.rows) as session:
-                        SCENARIOS[target](session)
+                    with PTYSession(
+                        cols=args.cols, rows=args.rows, setup=SCENARIOS[target].setup
+                    ) as session:
+                        SCENARIOS[target].record(session)
                         session.save(tmp_cast)
                     duration = float(session.events[-1][0]) if session.events else 0.0
                     event_count = len(session.events)
