@@ -56,11 +56,11 @@ protostar init --template cli  # (a Typer-based CLI application)
       <span class="dot dot-minimize"></span>
       <span class="dot dot-maximize"></span>
     </span>
-    <span class="terminal-title">PROTOSTAR / HEADLESS DEMO</span>
+    <span class="terminal-title">PROTOSTAR / INIT / HEADLESS</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="./assets/demo_headless.cast">
+  <div class="protostar-asciinema" data-asciinema="./assets/demo_init_headless.cast">
     <noscript>
-      <a href="./assets/demo_headless.cast">Download the Protostar terminal recording</a>
+      <a href="./assets/demo_init_headless.cast">Download the Protostar terminal recording</a>
     </noscript>
   </div>
 </div>

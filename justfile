@@ -159,24 +159,24 @@ _demo-run name target trials="5": demo-prewarm
     rm -rf /tmp/demo_project
     @printf "{{ green }}✔ {{ name }} demo generated in docs/assets/demo_{{ target }}.gif{{ nc }}\n"
 
-# Generate headless demo (production, best of 5 trials)
-demo-headless trials="5": (_demo-run "Headless" "headless" trials)
+# Generate headless init demo (production, best of 5 trials)
+demo-init-headless trials="5": (_demo-run "Init Headless" "init_headless" trials)
 
-# Generate headless demo draft (single trial)
-demo-headless-draft: (_demo-run "Headless (Draft)" "headless" "1")
+# Generate headless init demo draft (single trial)
+demo-init-headless-draft: (_demo-run "Init Headless (Draft)" "init_headless" "1")
 
-# Generate interactive demo (production, best of 5 trials)
-demo-interactive trials="5": (_demo-run "Interactive" "interactive" trials)
+# Generate interactive init demo (production, best of 5 trials)
+demo-init-interactive trials="5": (_demo-run "Init Interactive" "init_interactive" trials)
 
-# Generate interactive demo draft (single trial)
-demo-interactive-draft: (_demo-run "Interactive (Draft)" "interactive" "1")
+# Generate interactive init demo draft (single trial)
+demo-init-interactive-draft: (_demo-run "Init Interactive (Draft)" "init_interactive" "1")
 
 # Generate all demos (production, best of 5 trials)
-demo-all trials="5": (demo-interactive trials) (demo-headless trials)
+demo-all trials="5": (demo-init-interactive trials) (demo-init-headless trials)
     @printf "\n{{ blue }}=== All production demos generated ==={{ nc }}\n"
 
 # Generate all demo drafts (single trial)
-demo-all-draft: demo-interactive-draft demo-headless-draft
+demo-all-draft: demo-init-interactive-draft demo-init-headless-draft
     @printf "\n{{ blue }}=== All demo drafts generated ==={{ nc }}\n"
 
 # Build documentation site in strict mode

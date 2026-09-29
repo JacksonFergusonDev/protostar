@@ -436,7 +436,7 @@ def inspect_project_file(
     session.sleep(3.0)  # Hold the excerpt long enough to read
 
 
-def record_headless(session: PTYSession) -> None:
+def record_init_headless(session: PTYSession) -> None:
     """Script for the non-interactive (headless) CLI initialization demo."""
     session.sleep(0.5)
     session.type("protostar init --template cli", char_delay=0.035, post_delay=0.3)
@@ -448,7 +448,7 @@ def record_headless(session: PTYSession) -> None:
     inspect_project_file(session, template="cli")
 
 
-def record_interactive(session: PTYSession) -> None:
+def record_init_interactive(session: PTYSession) -> None:
     """Script for the interactive recipe editor demo: the CLI template plus Docker."""
     # Textual reads Enter as a carriage return; a bare newline is ctrl+j.
     enter = b"\r"
@@ -504,8 +504,8 @@ def record_interactive(session: PTYSession) -> None:
 
 
 SCENARIOS: dict[str, Callable[[PTYSession], None]] = {
-    "headless": record_headless,
-    "interactive": record_interactive,
+    "init_headless": record_init_headless,
+    "init_interactive": record_init_interactive,
 }
 
 
@@ -516,7 +516,7 @@ def main() -> None:
     )
     parser.add_argument(
         "scenario",
-        choices=["headless", "interactive", "all"],
+        choices=[*SCENARIOS, "all"],
         help="Which demo scenario to record",
     )
     parser.add_argument(
@@ -540,7 +540,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    targets = ["headless", "interactive"] if args.scenario == "all" else [args.scenario]
+    targets = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
     trials_count = max(1, args.trials)
 
     for target in targets:

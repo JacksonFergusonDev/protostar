@@ -36,10 +36,10 @@ function initAsciinemaPlayers() {
       var customTitle = el.getAttribute("data-title");
       if (customTitle) {
         title.textContent = customTitle;
-      } else if (src.indexOf("demo_interactive") !== -1) {
-        title.textContent = "PROTOSTAR / INTERACTIVE DEMO";
-      } else if (src.indexOf("headless") !== -1) {
-        title.textContent = "PROTOSTAR / HEADLESS DEMO";
+      } else if (src.indexOf("demo_init_interactive") !== -1) {
+        title.textContent = "PROTOSTAR / INIT / INTERACTIVE";
+      } else if (src.indexOf("demo_init_headless") !== -1) {
+        title.textContent = "PROTOSTAR / INIT / HEADLESS";
       } else {
         title.textContent = "PROTOSTAR / TERMINAL";
       }
