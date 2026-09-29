@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790639324663,
+  "lastUpdate": 1790708068889,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18875,6 +18875,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar TUI Wizard Latency",
             "value": 1215.67,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "580024e0895b596f76bea176fd26e715f444792a",
+          "message": "refactor(demo): name recordings by command and mode",
+          "timestamp": "2026-09-29T11:49:38-07:00",
+          "tree_id": "7bfdcf3d602eb94dbe23daecec3e79f9e93def5d",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/580024e0895b596f76bea176fd26e715f444792a"
+        },
+        "date": 1790708067928,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 292.11,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1285.29,
             "unit": "ms"
           }
         ]
