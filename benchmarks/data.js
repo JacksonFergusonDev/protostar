@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790716298642,
+  "lastUpdate": 1790717986905,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -18977,6 +18977,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 950.27,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "887d090dbca8c7a0d83cbd097e0a2d502f0e72ab",
+          "message": "test: trim redundant TUI navigation and template cycles\n\nKeep keyboard coverage while removing repeated Textual key paths.\n\nRun each built-in template lifecycle once, retaining no-mutation checks.",
+          "timestamp": "2026-09-29T14:35:55-07:00",
+          "tree_id": "29f1bd57474084223f82d4181bb40ef289903c0f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/887d090dbca8c7a0d83cbd097e0a2d502f0e72ab"
+        },
+        "date": 1790717985630,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 265.22,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1141.57,
             "unit": "ms"
           }
         ]
