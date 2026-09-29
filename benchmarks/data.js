@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790724699642,
+  "lastUpdate": 1790725565473,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19113,6 +19113,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1216.34,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a7ded4a80286de1d41d3a8e91857cf678503c899",
+          "message": "docs: show the sync demo in the README and lifecycle guide\n\nThe README told readers to choose Copier for three-way sync, which\nProtostar now does; that line gives way to a short section with the\nsync demo. The lifecycle guide shows the same recording where it\nexplains resolving conflicts.",
+          "timestamp": "2026-09-29T16:40:25-07:00",
+          "tree_id": "b5202db14a89294301b8be351217ee077796a621",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a7ded4a80286de1d41d3a8e91857cf678503c899"
+        },
+        "date": 1790725563513,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 282.83,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1273.2,
             "unit": "ms"
           }
         ]
