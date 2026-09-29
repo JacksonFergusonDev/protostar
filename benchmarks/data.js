@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790724479105,
+  "lastUpdate": 1790724699642,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19079,6 +19079,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1242.08,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "7d1a4f239a6f0b0eb1db2b93f4e3d8ef8570e99a",
+          "message": "fix(cli): keep internal region ids out of decision locations\n\n`status`, `diff`, `sync`, and `init --dry-run` named a decision in a\ntemplate's text region by its internal id, such as\n`template:<sha256>:setup`. An identity says which item a location's keys\nmean, like a requirement's package; a region's lines already say where\nit is. The decisions list in the TUI already followed that rule, and the\nchange review and the text output now share it through one function.",
+          "timestamp": "2026-09-29T16:25:29-07:00",
+          "tree_id": "84e15956ac39fbcb6bcbfb636dc1298e7720b39b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7d1a4f239a6f0b0eb1db2b93f4e3d8ef8570e99a"
+        },
+        "date": 1790724697898,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 272.33,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1216.34,
             "unit": "ms"
           }
         ]
