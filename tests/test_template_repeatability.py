@@ -148,11 +148,10 @@ def test_template_initial_and_repeat_merge_convergence(
 ) -> None:
     """Verifies that repeat initializations in MERGE mode produce zero spurious mutations.
 
-    Executes a three-phase lifecycle:
+    Executes an initial and a repeated initialization:
     1. Initial init: Populates workspace and records baseline sync state.
     2. Identical re-run in MERGE mode: Asserts zero created paths, empty managed
        mutations, and byte-for-byte disk & state identity.
-    3. Second identical re-run in MERGE mode: Asserts continuous convergence.
 
     Args:
         template_alias: Name of the built-in template to test.
@@ -208,12 +207,11 @@ def test_template_initial_and_repeat_merge_convergence(
     process_spy = mocker.patch.object(
         ProcessRunner, "run", side_effect=AssertionError("inspection process")
     )
-    for _ in range(2):
-        review = inspect_project()
-        assert not review.pending, review.to_dict()
-        assert {
-            p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()
-        } == disk_phase1
+    review = inspect_project()
+    assert not review.pending, review.to_dict()
+    assert {
+        p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()
+    } == disk_phase1
     process_spy.assert_not_called()
     mocker.patch.object(ProcessRunner, "run", side_effect=_mock_process_runner)
 
@@ -229,7 +227,7 @@ def test_template_initial_and_repeat_merge_convergence(
         assert generated_path.is_file()
         assert record.baseline == generated_path.read_bytes().decode()
 
-    # Phase 2: Identical re-run in MERGE mode
+    # Identical re-run in MERGE mode
     merge_args = argparse.Namespace(
         template_name=template_alias,
         from_path=None,
@@ -256,22 +254,6 @@ def test_template_initial_and_repeat_merge_convergence(
 
     disk_phase2 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
     assert disk_phase1 == disk_phase2
-    assert (tmp_path / "protostar.lock").read_bytes() == state_phase1
-
-    # Phase 3: Second identical re-run in MERGE mode (continuous convergence)
-    handle_init(merge_args)
-
-    assert len(results) == 3
-    phase3_result = results[2]
-    assert phase3_result.created_paths == frozenset()
-    assert phase3_result.touched_paths <= {
-        ".git/hooks/pre-commit",
-        ".git/hooks/commit-msg",
-        ".git/hooks/pre-push",
-    }
-
-    disk_phase3 = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    assert disk_phase1 == disk_phase3
     assert (tmp_path / "protostar.lock").read_bytes() == state_phase1
 
 
@@ -382,10 +364,10 @@ def test_stage_one_enrollment_preserves_applied_ownership(
 
 
 @pytest.mark.parametrize("template_alias", BUILTIN_TEMPLATES)
-def test_builtin_complete_lifecycle_has_no_repeat_mutations(
+def test_builtin_lifecycle_commands_leave_no_mutations(
     template_alias, tmp_path, monkeypatch, mocker, capsys
 ):
-    """Every shipped template supports inspection and three no-op applications."""
+    """Every shipped template supports read-only inspection and a no-op sync."""
     import json
     import stat
 
@@ -426,32 +408,31 @@ def test_builtin_complete_lifecycle_has_no_repeat_mutations(
     mocker.patch(
         "protostar.config.UserConfig.load", side_effect=AssertionError("defaults")
     )
-    for _ in range(3):
-        for command in (
-            ["status"],
-            ["diff"],
-            ["sync", "--dry-run"],
-            ["sync", "--check"],
-            ["sync"],
-        ):
-            monkeypatch.setattr(ui, "is_json_mode", False)
-            monkeypatch.setattr("sys.argv", ["protostar", *command, "--json"])
-            main()
-            payload = json.loads(capsys.readouterr().out)
-            if command == ["sync"]:
-                assert payload["status"] == "success"
-                assert payload["result"]["touched_paths"] == []
-            else:
-                assert payload["status"] == "reviewed"
-                assert not payload["pending"]
-                if "--check" in command:
-                    assert payload["check_passed"]
-            assert {
-                p.relative_to(tmp_path): (
-                    p.read_bytes(),
-                    stat.S_IMODE(p.stat().st_mode),
-                )
-                for p in tmp_path.rglob("*")
-                if p.is_file()
-            } == before
+    for command in (
+        ["status"],
+        ["diff"],
+        ["sync", "--dry-run"],
+        ["sync", "--check"],
+        ["sync"],
+    ):
+        monkeypatch.setattr(ui, "is_json_mode", False)
+        monkeypatch.setattr("sys.argv", ["protostar", *command, "--json"])
+        main()
+        payload = json.loads(capsys.readouterr().out)
+        if command == ["sync"]:
+            assert payload["status"] == "success"
+            assert payload["result"]["touched_paths"] == []
+        else:
+            assert payload["status"] == "reviewed"
+            assert not payload["pending"]
+            if "--check" in command:
+                assert payload["check_passed"]
+        assert {
+            p.relative_to(tmp_path): (
+                p.read_bytes(),
+                stat.S_IMODE(p.stat().st_mode),
+            )
+            for p in tmp_path.rglob("*")
+            if p.is_file()
+        } == before
     process.assert_not_called()

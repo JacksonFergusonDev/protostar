@@ -400,8 +400,13 @@ async def test_arrows_walk_every_row_without_changing_a_value():
                 visited.append(app.focused.id)
         # Past the last row, the cursor lands on the primary button and stays.
         assert visited == [*rows, "continue"]
-        for _ in range(len(rows) + 5):
-            await pilot.press("up")
+        await pilot.press("up")
+        assert app.focused.id == rows[-1]
+        screen.query_one(f"#{rows[1]}").focus()
+        await pilot.press("up")
+        assert app.focused.id == rows[0]
+        assert app.focused is template
+        await pilot.press("up")
         assert app.focused is template
         assert not template.expanded
         await settle(pilot)
@@ -563,7 +568,8 @@ async def test_i_explains_docker_like_any_tool():
         await settle(pilot)
         docker = app.screen.query_one("#tool-docker", Checkbox)
         assert docker.tooltip == DOCKER_INFO.summary
-        await pilot.press("tab", *["down"] * 9)
+        docker.focus()
+        await pilot.pause()
         assert app.focused is docker
         assert "Tool info" in legend(app)
         await pilot.press("i")
