@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790728718216,
+  "lastUpdate": 1790746075321,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19215,6 +19215,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1114.44,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "59f63e792900c9b7bf53ba20f20bacdc637f92c7",
+          "message": "chore(docs): stop generating fixtures no page uses (#387)\n\nThree scenario trees (ml_merged, astro_production, cli_workbench) and the\nlib guide image were regenerated on every run but embedded nowhere. A\nscenario now publishes its tree only when it opts in with publishes_tree,\nand the guide images cover just the CLI and workbench projects the docs\nshow.\n\ncheck_docs_drift.py fails when a file in docs/generated or\ndocs/assets/terminals is used by no page, so a fixture that loses its last\nreference is caught instead of lingering.",
+          "timestamp": "2026-09-29T22:24:06-07:00",
+          "tree_id": "79412b13c8d1b90a111630e30423dae45201613e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/59f63e792900c9b7bf53ba20f20bacdc637f92c7"
+        },
+        "date": 1790746073761,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 308.46,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1390.55,
             "unit": "ms"
           }
         ]
