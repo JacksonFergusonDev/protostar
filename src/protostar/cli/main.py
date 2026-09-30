@@ -51,14 +51,10 @@ from protostar.errors import (
     ExecutionAbortedError,
     ExecutionInterruptedError,
     ExitCode,
-    FileSystemError,
     InvalidUsageError,
-    MissingDependencyError,
-    NetworkFetchError,
     ProtostarError,
     SecretDetectedError,
-    SecurityViolationError,
-    TemplateResolutionError,
+    exit_code_for,
 )
 from protostar.fs import atomic_write_text
 from protostar.init_draft import (
@@ -862,31 +858,7 @@ def main() -> None:
             ui.console.print(ui.heading(title, "bold red"))
             ui.console.print(ui.indented(body_renderable))
 
-        # Route specific domain exceptions to standard POSIX status codes
-        if isinstance(e, InvalidUsageError):
-            sys.exit(ExitCode.USAGE)  # 64: Command line usage error
-        if isinstance(e, SecurityViolationError):
-            sys.exit(ExitCode.NOPERM)  # 77: Permission denied / Security constraint
-        if isinstance(e, ConfigurationError):
-            sys.exit(ExitCode.CONFIG)  # 78: Malformed configuration tables
-        if isinstance(e, TemplateResolutionError):
-            sys.exit(
-                ExitCode.DATAERR
-            )  # 65: Data format error (e.g., bad zip, missing variables)
-        if isinstance(e, NetworkFetchError):
-            sys.exit(ExitCode.TEMPFAIL)  # 75: Temporary failure (network drop)
-        if isinstance(e, MissingDependencyError):
-            sys.exit(
-                ExitCode.UNAVAILABLE
-            )  # 69: Expected background tool executable missing
-        if isinstance(e, FileSystemError):
-            sys.exit(ExitCode.IOERR)  # 74: Critical disk access or storage write faults
-        if isinstance(e, (ExecutionAbortedError, ExecutionInterruptedError)):
-            sys.exit(
-                130
-            )  # User aborted via interactive prompt or interrupted execution
-
-        sys.exit(1)  # Generic operational failure fallback
+        sys.exit(exit_code_for(type(e)))
 
     except KeyboardInterrupt:
         # Catch Ctrl+C cleanly
@@ -894,7 +866,7 @@ def main() -> None:
             ui._stderr_console.print("\n[bold red]Aborted by user.[/bold red]")
         else:
             ui.console.print("\n[bold red]Aborted by user.[/bold red]")
-        sys.exit(130)
+        sys.exit(ExitCode.INTERRUPTED)
 
     except Exception as e:
         if ui.is_json_mode:

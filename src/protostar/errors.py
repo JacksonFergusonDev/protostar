@@ -21,15 +21,16 @@ class ExitCode(IntEnum):
     """Standardized cross-platform exit codes."""
 
     OK = getattr(os, "EX_OK", 0)
+    FAILURE = 1
     USAGE = getattr(os, "EX_USAGE", 64)
     DATAERR = getattr(os, "EX_DATAERR", 65)
     UNAVAILABLE = getattr(os, "EX_UNAVAILABLE", 69)
     SOFTWARE = getattr(os, "EX_SOFTWARE", 70)
-    OSERR = getattr(os, "EX_OSERR", 71)
     IOERR = getattr(os, "EX_IOERR", 74)
     TEMPFAIL = getattr(os, "EX_TEMPFAIL", 75)
     NOPERM = getattr(os, "EX_NOPERM", 77)
     CONFIG = getattr(os, "EX_CONFIG", 78)
+    INTERRUPTED = 130
 
 
 class ProtostarError(Exception):
@@ -654,3 +655,33 @@ class RollbackFailedError(ProtostarError):
         super().__init__(message, hint=hint, docs_path=docs_path)
         self.rollback_result = rollback_result
         self.original_error = original_error
+
+
+# First match wins, so a subclass listed before its base takes its own code.
+EXIT_CODE_ROUTES: tuple[tuple[type[ProtostarError], ExitCode], ...] = (
+    (InvalidUsageError, ExitCode.USAGE),
+    (SecurityViolationError, ExitCode.NOPERM),
+    (ConfigurationError, ExitCode.CONFIG),
+    (TemplateResolutionError, ExitCode.DATAERR),
+    (NetworkFetchError, ExitCode.TEMPFAIL),
+    (MissingDependencyError, ExitCode.UNAVAILABLE),
+    (FileSystemError, ExitCode.IOERR),
+    (ExecutionAbortedError, ExitCode.INTERRUPTED),
+    (ExecutionInterruptedError, ExitCode.INTERRUPTED),
+)
+
+
+def exit_code_for(error_type: type[ProtostarError]) -> ExitCode:
+    """Returns the process exit code the CLI uses for a domain error.
+
+    Args:
+        error_type: The error class, or any subclass of one.
+
+    Returns:
+        The code of the first route the class belongs to, or
+        ``ExitCode.FAILURE`` for an operational failure with no route.
+    """
+    for route_type, code in EXIT_CODE_ROUTES:
+        if issubclass(error_type, route_type):
+            return code
+    return ExitCode.FAILURE
