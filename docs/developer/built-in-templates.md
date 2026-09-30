@@ -4,7 +4,7 @@ description: "What a built-in Protostar template is, what deserves to ship as on
 
 # Built-in Templates
 
-Protostar ships five built-in templates: `api`, `astro`, `cli`, `lib`, and `ml`. This page is the contract they share. It exists so that maintainers, contributors, and reviewers can answer three questions the same way every time:
+Protostar ships these built-in templates: `api`, `astro`, `cli`, `lib`, and `ml`. This page is the contract they share. It exists so that maintainers, contributors, and reviewers can answer three questions the same way every time:
 
 - What deserves to be a built-in template?
 - What must a built-in template look like?
@@ -152,7 +152,7 @@ Most of the contract is checked by tests, parametrized over discovered built-ins
 
 | Rule | Enforced by |
 | :--- | :--- |
-| All eight quality flags declared explicitly | `test_declares_every_quality_flag_explicitly` |
+| Every quality flag declared explicitly | `test_declares_every_quality_flag_explicitly` |
 | Both tiers declared, with the right default | `test_offers_both_tiers_with_its_default` |
 | The tiers switch production infrastructure as a whole | `test_tiers_switch_production_infrastructure_as_a_whole` |
 | No version pins | `test_dependencies_carry_no_version_pins` |

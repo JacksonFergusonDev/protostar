@@ -51,7 +51,7 @@ Modules and templates divide the work:
 - **Modules ship a baseline tuned for casual projects.** A default must never make a small script painful, so `MypyModule` has no `strict` and `RuffModule` selects only a gentle rule set.
 - **Templates state only the delta that defines their shape**, such as `strict = true` for the `cli` template. Use a tool's additive keys (`extend-select`) rather than redefining a list, because sequences merge atomically.
 - **Tool configuration follows the tool.** A payload that configures a tool declares `requires = "<tool>"`, and dev packages only a tool needs (such as `pytest-cov`) go in an `[[optional]]` block that requires the tool, so `--no-<tool>` leaves none of it behind. Tool-agnostic payloads (such as `[build-system]`) stay plain strings.
-- **Every built-in declares all eight quality flags explicitly** (`ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, `just`) as `true` or `false`.
+- **Every built-in declares every quality flag explicitly** (`ruff`, `mypy`, `pytest`, `prek`, `ci`, `rumdl`, `direnv`, `just`) as `true` or `false`.
 - **A fresh scaffold passes the gates its flags enable.** Do not enable `pytest` without shipping a test.
 
 `tests/test_builtin_template_contract.py` and the exhaustive suite enforce this. The full contract, the two tiers, and how to add or retire a built-in are in `docs/developer/built-in-templates.md`.

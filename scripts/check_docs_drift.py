@@ -61,19 +61,6 @@ UNLISTED_PAGES = frozenset({"development/semantic-reconciliation.md"})
 # Paths a maintainer page shows as examples of the pattern, not as files.
 PLACEHOLDER_PATHS = frozenset({"tests/path/to/test.py", "tests/test_foo.py"})
 
-NUMBER_WORDS = {
-    "one": 1,
-    "two": 2,
-    "three": 3,
-    "four": 4,
-    "five": 5,
-    "six": 6,
-    "seven": 7,
-    "eight": 8,
-    "nine": 9,
-    "ten": 10,
-}
-
 
 def _hand_written_pages() -> list[Path]:
     """Returns every Markdown page a person writes, excluding generated fixtures."""
@@ -222,32 +209,23 @@ def check_exit_code_table() -> list[str]:
 # ── Project facts ────────────────────────────────────────────────────────────
 
 
-def _number(token: str) -> int | None:
-    return int(token) if token.isdigit() else NUMBER_WORDS.get(token.lower())
-
-
 def check_built_in_templates() -> list[str]:
     """built-in-templates.md names exactly the templates that ship."""
     from protostar.templates.discovery import builtin_template_aliases
 
     shipped = set(builtin_template_aliases())
     text = BUILT_IN_TEMPLATES.read_text(encoding="utf-8")
-    match = re.search(r"ships (\w+) built-in templates: ([^.]+)\.", text)
+    match = re.search(r"ships these built-in templates: ([^.]+)\.", text)
     if match is None:
         return [
-            f"{_rel(BUILT_IN_TEMPLATES)}: no 'ships N built-in templates: ...' sentence"
+            f"{_rel(BUILT_IN_TEMPLATES)}: no 'ships these built-in templates: ...' sentence"
         ]
-    named = set(re.findall(r"`([\w-]+)`", match.group(2)))
-    problems: list[str] = []
-    if named != shipped:
-        problems.append(
-            f"{_rel(BUILT_IN_TEMPLATES)}: names {sorted(named)}, but {sorted(shipped)} ship"
-        )
-    if _number(match.group(1)) != len(shipped):
-        problems.append(
-            f"{_rel(BUILT_IN_TEMPLATES)}: says '{match.group(1)}' templates, but {len(shipped)} ship"
-        )
-    return problems
+    named = set(re.findall(r"`([\w-]+)`", match.group(1)))
+    if named == shipped:
+        return []
+    return [
+        f"{_rel(BUILT_IN_TEMPLATES)}: names {sorted(named)}, but {sorted(shipped)} ship"
+    ]
 
 
 def _contract_quality_flags() -> tuple[str, ...]:
@@ -263,23 +241,19 @@ def _contract_quality_flags() -> tuple[str, ...]:
 
 
 def check_quality_flags() -> list[str]:
-    """Pages that count or list the built-in quality flags agree with the contract test."""
+    """The quality flags CONTRIBUTING.md and AGENTS.md list match the contract test."""
     flags = _contract_quality_flags()
     problems: list[str] = []
-    for page in (CONTRIBUTING, BUILT_IN_TEMPLATES):
+    for page in (CONTRIBUTING, AGENTS):
         text = page.read_text(encoding="utf-8")
-        for count in re.findall(r"\b(\w+) quality flags", text):
-            if _number(count) != len(flags):
-                problems.append(
-                    f"{_rel(page)}: says '{count} quality flags', but the contract has {len(flags)}"
-                )
-    contributing = CONTRIBUTING.read_text(encoding="utf-8")
-    listed = re.search(r"quality flags explicitly\*\* \(([^)]+)\)", contributing)
-    if listed and tuple(re.findall(r"`(\w+)`", listed.group(1))) != flags:
-        problems.append(
-            f"{_rel(CONTRIBUTING)}: lists {re.findall(r'`(\w+)`', listed.group(1))}, "
-            f"but the contract has {list(flags)}"
-        )
+        listed = re.search(r"quality flag explicitly\*\* \(([^)]+)\)", text)
+        if listed is None:
+            problems.append(f"{_rel(page)}: no 'quality flag explicitly (...)' list")
+        elif tuple(re.findall(r"`(\w+)`", listed.group(1))) != flags:
+            problems.append(
+                f"{_rel(page)}: lists {re.findall(r'`(\w+)`', listed.group(1))}, "
+                f"but the contract has {list(flags)}"
+            )
     return problems
 
 
