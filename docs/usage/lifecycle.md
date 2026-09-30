@@ -259,7 +259,7 @@ Protostar's version as the baseline without writing it, exactly like keeping
 your side of a conflict, so it reads as your deletion from then on: it is
 preserved, `sync --check` passes, and you can take it later.
 
-The `init` change review opens on its __Decisions__ tab: every conflict and
+The `init` change review opens on its **Decisions** tab: every conflict and
 proposal by file, the conflicts first, each row led by what happens to it. Press
 `k` or `u` on a row to keep yours or take the update for that change, or on a
 file's row for all of its changes; settling a conflict moves on to the next open
@@ -354,6 +354,90 @@ envelope; diagnostics and subprocess output go to stderr. Check includes
 `check_passed`; review uses `status: "reviewed"`; application uses `"success"` or
 `"partial"`. See the [machine interface](agent-interface.md) for generated examples
 and schema discovery.
+
+## Open update pull requests on a schedule
+
+Protostar doesn't open pull requests on its own, but a scheduled workflow can:
+it runs `protostar sync` and opens a pull request with whatever changed. Save
+this as `.github/workflows/protostar-sync.yml`:
+
+```yaml
+name: Protostar sync
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  # The release that syncs. Keep it at least as new as the one your team uses.
+  PROTOSTAR_VERSION: "0.9.0"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+
+      - name: Sync with the template
+        run: |
+          set +e
+          # For a repository template, add --to latest to move to its newest release.
+          uvx "protostar@${PROTOSTAR_VERSION}" sync --json > "$RUNNER_TEMP/sync.json"
+          code=$?
+          set -e
+          # 0: in step. 1: safe changes applied, conflicts left for a person.
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+          conflicts=$(jq '.review.conflicts | length' "$RUNNER_TEMP/sync.json")
+          {
+            echo "Protostar $PROTOSTAR_VERSION synced this project with its template."
+            if [ "$conflicts" -gt 0 ]; then
+              echo
+              echo "$conflicts conflict(s) kept your version. Run \`protostar status\`"
+              echo "locally to see each one and the command that settles it."
+            fi
+          } > "$RUNNER_TEMP/body.md"
+          # sync installs this clone's git hooks; keep them off the bot's commit.
+          git config core.hooksPath /dev/null
+
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          branch: protostar/sync
+          commit-message: "chore: sync with the project template"
+          title: "chore: sync with the project template"
+          body-path: ${{ runner.temp }}/body.md
+          delete-branch: true
+```
+
+- **What it updates.** Built-in output follows `PROTOSTAR_VERSION`, so raising
+  it is how the project takes a new Protostar release. Keep it at least as new
+  as the release that last wrote `protostar.lock`, or the run
+  [refuses](#keep-protostar-versions-in-step). A repository template stays on
+  the commit the lock records; add `--to latest` to the `sync` command to move
+  to its newest release each week. When a new release adds a variable, add
+  `--var NAME=VALUE` too, or the run stops asking for it.
+- **Conflicts.** A sync that keeps your version somewhere exits `1` with the
+  safe changes applied, and the workflow still opens the pull request. Its body
+  says how many conflicts were kept. Settle them locally with
+  `protostar status` and `protostar sync --resolve`; `sync --check` fails until
+  you do.
+- **Repeat runs.** A run with nothing new changes nothing and opens nothing. A
+  pull request that is still open is updated in place, on the `protostar/sync`
+  branch.
+- **Git hooks.** `sync` installs the clone's hooks, so the workflow switches
+  them off before the pull request's commit, which would otherwise run every
+  check.
+- **Repository settings.** Allow the workflow to open pull requests under
+  **Settings** → **Actions** → **General** → **Workflow permissions**. A pull
+  request opened with the default `GITHUB_TOKEN` doesn't trigger other
+  workflows, so your CI won't run on it. To have it run, give
+  `create-pull-request` a `token` from a GitHub App or a fine-grained personal
+  access token.
 
 ## Security and rollback boundaries
 

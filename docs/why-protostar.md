@@ -256,7 +256,7 @@ These are the gaps known today:
 - GitHub Actions is the only CI it generates.
 - A project inside a uv workspace isn't supported.
 - A project follows one template; templates can't be layered, such as an organization's base under a team's template.
-- Nothing opens update pull requests for you yet. Copier has a Renovate manager that does; with Protostar, a scheduled workflow runs `protostar sync` and opens the pull request itself.
+- Nothing opens update pull requests for you yet. Copier has a Renovate manager that does; with Protostar, a [scheduled workflow](usage/lifecycle.md#open-update-pull-requests-on-a-schedule) runs `protostar sync` and opens the pull request itself.
 - There are few community templates so far.
 
 Until 1.0, a release may still change a command or the template format when that makes Protostar simpler.
