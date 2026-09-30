@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790803082834,
+  "lastUpdate": 1790803101244,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19691,6 +19691,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1235.86,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "92b3e219deaca3c2793a39e4094a13d35155f965",
+          "message": "docs(why): record the comparison rerun on the 0.10.0 code\n\nRerun the Copier and Protostar update comparison from scratch on the\nfinal pre-release code. Every output the page shows reproduced exactly,\nincluding both conflict ids, so only the note changes: it names\nProtostar 0.10.0 and says the Protostar template was a trusted alias,\nwhich a reproduction now needs since sync confirms an untrusted\ntemplate's installs.",
+          "timestamp": "2026-09-30T14:16:02-07:00",
+          "tree_id": "c1922fdd2c1ca1b5dd2713139be46a95d7996001",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/92b3e219deaca3c2793a39e4094a13d35155f965"
+        },
+        "date": 1790803099286,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 173.75,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 771.17,
             "unit": "ms"
           }
         ]
