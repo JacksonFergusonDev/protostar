@@ -714,6 +714,79 @@ def test_sync_accepted_dependencies_resolve_once(project, mocker, progress):
     process.assert_not_called()
 
 
+def _dependency_update(project, mocker):
+    """Moves the template to a revision that adds a dependency; returns the resolver."""
+    import tomlkit
+
+    project.write_text('dependencies = ["example"]\n' + source_text("updated"))
+
+    def resolve(_runner, command, *, timeout):
+        doc = tomlkit.parse(Path("pyproject.toml").read_text())
+        doc["project"]["dependencies"] = ["example>=3"]
+        Path("pyproject.toml").write_text(tomlkit.dumps(doc))
+        Path("uv.lock").write_text("resolved")
+
+    return mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
+    )
+
+
+def test_sync_refuses_an_untrusted_templates_install_without_a_terminal(
+    project, mocker, monkeypatch, capsys
+):
+    """uv builds the project the template shaped, so nothing runs unconfirmed."""
+    process = _dependency_update(project, mocker)
+    mocker.patch("protostar.config.UserConfig.load", return_value=UserConfig())
+    before = snapshot(Path.cwd())
+    payload = invoke_sync(monkeypatch, capsys, code=77)
+
+    assert payload["error"]["type"] == "SecurityViolationError"
+    assert "--trust" in payload["error"]["hint"]
+    process.assert_not_called()
+    assert snapshot(Path.cwd()) == before
+
+
+def test_sync_runs_a_template_a_trusted_alias_names(
+    project, mocker, monkeypatch, capsys
+):
+    from protostar.config import TemplateAliasConfig
+
+    process = _dependency_update(project, mocker)
+    trusted = UserConfig(
+        templates={"team": TemplateAliasConfig(source=str(project), trusted=True)}
+    )
+    mocker.patch("protostar.config.UserConfig.load", return_value=trusted)
+    assert invoke_sync(monkeypatch, capsys)["status"] == "success"
+    process.assert_called_once()
+
+
+@pytest.mark.parametrize("confirmed", [True, False])
+def test_interactive_sync_confirms_an_untrusted_templates_commands(
+    project, mocker, monkeypatch, capsys, confirmed
+):
+    from protostar.cli import reviews
+
+    process = _dependency_update(project, mocker)
+    mocker.patch("protostar.config.UserConfig.load", return_value=UserConfig())
+    confirm = mocker.patch.object(
+        reviews,
+        "confirm_commands",
+        side_effect=lambda commands: commands if confirmed else None,
+    )
+    monkeypatch.setattr(reviews, "is_interactive", lambda: True)
+    monkeypatch.setattr(ui, "is_json_mode", False)
+    monkeypatch.setattr("sys.argv", ["protostar", "sync"])
+    if confirmed:
+        main()
+        process.assert_called_once()
+    else:
+        with pytest.raises(SystemExit) as caught:
+            main()
+        assert caught.value.code == 130
+        process.assert_not_called()
+    confirm.assert_called_once_with((("uv", "add", "example"),))
+
+
 def test_human_sync_leaves_resolver_steps_on_screen(
     project, mocker, monkeypatch, capsys
 ):
@@ -731,9 +804,13 @@ def test_human_sync_leaves_resolver_steps_on_screen(
         "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
     )
     monkeypatch.setattr(ui, "is_json_mode", False)
-    monkeypatch.setattr("sys.argv", ["protostar", "sync"])
+    monkeypatch.setattr("sys.argv", ["protostar", "sync", "--trust"])
     main()
-    assert capsys.readouterr().out.startswith("  ✔ Installing 1 standard dependency\n")
+    assert capsys.readouterr().out.startswith(
+        "Running 1 command(s) without asking, as --trust allows:\n"
+        "  - uv add example\n"
+        "  ✔ Installing 1 standard dependency\n"
+    )
 
 
 def test_sync_metadata_only_resolves_lock_once(project, mocker, progress):
@@ -818,7 +895,7 @@ def test_sync_resolver_failure_restores_entire_transaction(
     terminate = mocker.patch(
         "protostar.system.ProcessRunner.terminate_active_process_tree"
     )
-    payload = invoke_sync(monkeypatch, capsys, code=1)
+    payload = invoke_sync(monkeypatch, capsys, "--trust", code=1)
     terminate.assert_called_once()
     assert payload["error"]["type"] == type(error).__name__
     assert payload["error"]["rollback_context"]
@@ -921,7 +998,7 @@ def test_same_source_evolution_combines_conflicts_deletions_regions_and_resolver
     process = mocker.patch(
         "protostar.system.ProcessRunner.run", autospec=True, side_effect=resolve
     )
-    result = invoke_sync(monkeypatch, capsys, code=1)
+    result = invoke_sync(monkeypatch, capsys, "--trust", code=1)
     assert result["status"] == "partial"
     process.assert_called_once()
     assert not Path("deleted.txt").exists()

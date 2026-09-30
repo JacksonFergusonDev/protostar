@@ -34,7 +34,6 @@ from protostar.cli.changes import (
     count,
     entry_label,
     hook_snapshot,
-    indented_lines,
     plan_draft,
     prepare_draft,
     steps_text,
@@ -88,6 +87,7 @@ from ..keys import (
     Toggle,
     key_label,
 )
+from ..trust import trust_text
 
 
 def describe(
@@ -186,20 +186,10 @@ def describe(
     return Group(*parts)
 
 
-def _trust_text(commands: tuple[tuple[str, ...], ...]) -> RenderableType:
-    return Group(
-        Text(
-            "This template comes from a source you haven't marked trusted. "
-            "Applying runs these commands in the files it writes, and those files "
-            "can make them run the template's code:"
-        ),
-        *indented_lines([shlex.join(command) for command in commands], "bold"),
-        Text(
-            "Configure it as an alias with trusted = true to skip this check.",
-            style="dim",
-        ),
-    )
-
+INIT_HINT = (
+    "Configure it as an alias with trusted = true to skip this check, "
+    "or pass --trust to skip it for one run."
+)
 
 _SCROLL_DIFF = Binding.Group("Scroll diff")
 _PAGE_DIFF: list[BindingType] = [
@@ -417,7 +407,9 @@ class ReviewScreen(KeyboardScreen[InitDecision]):
             with trust.prevent(Checkbox.Changed):
                 trust.value = False
         self.query_one("#trust-gate").display = bool(commands)
-        self.query_one("#trust-note", Static).update(_trust_text(commands))
+        self.query_one("#trust-note", Static).update(
+            trust_text(commands, hint=INIT_HINT)
+        )
         self.query_one("#network-note").display = bool(
             self._hooks and self._hooks.unreachable
         )

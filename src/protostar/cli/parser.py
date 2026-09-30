@@ -403,6 +403,11 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="NAME",
         help="Keep a variable's value even though it looks like a credential; repeat for each.",
     )
+    sync_parser.add_argument(
+        "--trust",
+        action="store_true",
+        help="Run the commands an untrusted template needs without asking, for this run only. They are still listed. Never saved; to trust a template every time, configure it as an alias with trusted = true.",
+    )
     sync_modes = sync_parser.add_mutually_exclusive_group()
     sync_modes.add_argument(
         "--dry-run",
@@ -532,6 +537,12 @@ def build_parser() -> argparse.ArgumentParser:
         dest="allowed_secrets",
         metavar="NAME",
         help="Keep a variable's value even though it looks like a credential; repeat for each.",
+    )
+
+    base_group.add_argument(
+        "--trust",
+        action="store_true",
+        help="Run the commands an untrusted template needs without asking, for this run only. They are still listed. Never saved; to trust a template every time, configure it as an alias with trusted = true.",
     )
 
     python_version_action = base_group.add_argument(

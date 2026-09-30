@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import UserConfig
+from .dependencies import LOCK_COMMAND, resolver_commands
 from .documents import pyproject, vscode
 from .errors import (
     ConfigurationError,
@@ -102,6 +103,18 @@ class ResolverAction:
     def pending(self) -> bool:
         """Returns whether execution needs a resolver action."""
         return self.lock_required or any(packages for _, packages in self.requirements)
+
+    @property
+    def commands(self) -> tuple[tuple[str, ...], ...]:
+        """Returns the resolver commands execution runs, in order.
+
+        One ``uv add`` per group with accepted requests, or ``uv lock`` when
+        only the lock needs refreshing, exactly as the executor decides.
+        """
+        added = resolver_commands(self.dependency_manifest())
+        if added:
+            return added
+        return (LOCK_COMMAND,) if self.lock_required else ()
 
 
 @dataclass(frozen=True)
@@ -276,6 +289,21 @@ class PreparedReview:
             or self.conflicts
             or self.state_changed
             or self.resolver.pending
+        )
+
+    @property
+    def commands(self) -> tuple[tuple[str, ...], ...]:
+        """Returns every command applying this review runs, in execution order.
+
+        The resolver's commands run after the file edits, then the hook
+        install. uv builds the project as it installs, which runs code the
+        project's files declare, so a caller gating an untrusted template's
+        run confirms exactly these.
+        """
+        install = self.hooks.install
+        return (
+            *self.resolver.commands,
+            *((tuple(install.command),) if install is not None else ()),
         )
 
     def validate_inputs(self) -> None:

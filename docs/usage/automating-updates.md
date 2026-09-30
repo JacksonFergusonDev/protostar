@@ -28,10 +28,6 @@ permissions:
   contents: write
   pull-requests: write
 
-env:
-  # The release that syncs. Keep it at least as new as the one your team uses.
-  PROTOSTAR_VERSION: "0.9.0"
-
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -41,16 +37,20 @@ jobs:
 
       - name: Sync with the template
         run: |
+          # The release that last wrote protostar.lock, so CI matches your team.
+          version=$(sed -n 's/^producer_version = "\(.*\)"$/\1/p' protostar.lock)
           set +e
+          # --trust runs the uv and hook commands the update needs without asking.
+          # The template's files decide what they run, so keep it to a template you trust.
           # For a repository template, add --to latest to move to its newest release.
-          uvx "protostar@${PROTOSTAR_VERSION}" sync --json > "$RUNNER_TEMP/sync.json"
+          uvx "protostar@$version" sync --trust --json > "$RUNNER_TEMP/sync.json"
           code=$?
           set -e
           # 0: in step. 1: safe changes applied, conflicts left for a person.
           if [ "$code" -gt 1 ]; then exit "$code"; fi
           conflicts=$(jq '.review.conflicts | length' "$RUNNER_TEMP/sync.json")
           {
-            echo "Protostar $PROTOSTAR_VERSION synced this project with its template."
+            echo "Protostar $version synced this project with its template."
             if [ "$conflicts" -gt 0 ]; then
               echo
               echo "$conflicts conflict(s) kept your version. Run \`protostar status\`"
@@ -69,13 +69,20 @@ jobs:
           delete-branch: true
 ```
 
-- **What it updates.** Built-in output follows `PROTOSTAR_VERSION`, so raising
-  it is how the project takes a new Protostar release. Keep it at least as new
-  as the release that last wrote `protostar.lock`, or the run
-  [refuses](#keep-protostar-versions-in-step). A repository template stays on
-  the commit the lock records; add `--to latest` to the `sync` command to move
-  to its newest release each week. When a new release adds a variable, add
-  `--var NAME=VALUE` too, or the run stops asking for it.
+- **What it updates.** The workflow runs the Protostar release that last wrote
+  `protostar.lock`, so it never [refuses](#keep-protostar-versions-in-step) and
+  never changes built-in output behind your back. Built-in updates arrive when
+  someone syncs with a newer Protostar locally and commits the lock; the next
+  run follows. A repository template stays on the commit the lock records; add
+  `--to latest` to the `sync` command to move to its newest release each week.
+  When a new release adds a variable, add `--var NAME=VALUE` too, or the run
+  stops asking for it.
+- **Trust.** When an update changes dependencies or the hooks to install, the
+  run executes `uv add`, `uv lock`, or a hook install in files the template
+  wrote, and those can run the template's code on the runner, which holds a
+  token that can write to the repository. `--trust` allows that without asking,
+  so use this workflow only with a template you trust. Without `--trust`, a run
+  that needs a command stops with exit code `77` instead.
 - **Conflicts.** A sync that keeps your version somewhere exits `1` with the
   safe changes applied, and the workflow still opens the pull request. Its body
   says how many conflicts were kept. Settle them locally with
@@ -126,8 +133,13 @@ instead of treating the older output as an update. Upgrade Protostar, for
 example with `uv tool upgrade protostar`, and run the command again. In
 `--json` mode, the error carries `recorded_version` and `installed_version`.
 
-Pin the same release in CI, for example with `uvx protostar@0.9.0 sync --check`,
-so a new release doesn't change the check before the project is synced with it.
+In CI, run the release that last wrote the lock, which it records as
+`producer_version`, so a new release never changes the check before the project
+is synced with it:
+
+```bash
+uvx "protostar@$(sed -n 's/^producer_version = "\(.*\)"$/\1/p' protostar.lock)" sync --check
+```
 
 ## Upgrade a repository template
 

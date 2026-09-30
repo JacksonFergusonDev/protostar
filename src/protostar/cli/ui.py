@@ -316,6 +316,42 @@ def untrusted_commands(
     )
 
 
+def untrusted_refusal(command: str) -> SecurityViolationError:
+    """Returns the error that stops an untrusted template's unconfirmed run.
+
+    Args:
+        command: The command that was refused, such as ``init`` or ``sync``.
+    """
+    config = active_config_source().path
+    return SecurityViolationError(
+        "Execution aborted: this template isn't trusted, and the commands "
+        "its run executes need your confirmation.",
+        hint=(
+            f"Review and confirm them by running {command} in an interactive "
+            f"terminal, pass --trust to run them for this {command} only, or "
+            "configure the template as an alias in "
+            f"{config or 'your global configuration'} with 'trusted = true'."
+        ),
+    )
+
+
+def print_trusted_commands(commands: tuple[tuple[str, ...], ...]) -> None:
+    """Lists the commands --trust lets an untrusted template run.
+
+    Args:
+        commands: The commands, in the order they run.
+    """
+    target = _stderr_console if is_json_mode else console
+    target.print(
+        Text(
+            f"Running {len(commands)} command(s) without asking, as --trust allows:",
+            style="yellow",
+        )
+    )
+    for command in commands:
+        target.print(Text.assemble(("  - ", "dim"), (shlex.join(command), "cyan")))
+
+
 def needs_review(request: InitRequest, manifest: EnvironmentManifest) -> bool:
     """Returns whether a collision or trust decision is still open.
 
@@ -389,16 +425,7 @@ def _run_engine(
     # --- Trust Boundary ---
     commands = untrusted_commands(request, manifest)
     if commands and (decision is None or decision.confirmed_commands != commands):
-        config = active_config_source().path
-        refusal = SecurityViolationError(
-            "Execution aborted: this template isn't trusted, and the commands "
-            "its run executes need your confirmation.",
-            hint=(
-                "Review and confirm them by running init in an interactive "
-                "terminal, or configure the template as an alias in "
-                f"{config or 'your global configuration'} with 'trusted = true'."
-            ),
-        )
+        refusal = untrusted_refusal("init")
         # JSON mode: reject immediately without prompting to avoid blocking agents.
         if is_json_mode:
             raise refusal

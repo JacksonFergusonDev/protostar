@@ -964,6 +964,53 @@ def test_handle_init_cli_template_resolution(mocker):
     assert "rich" in blueprint.dependencies
 
 
+def test_init_trust_runs_an_untrusted_templates_commands_for_one_run(
+    mocker, capsys
+) -> None:
+    """--trust lists the commands, then trusts the template for this run only."""
+    from protostar.config import TemplateAliasConfig
+    from protostar.manifest import SystemTask
+
+    config = UserConfig(
+        templates={"corp": TemplateAliasConfig(source="https://example.com/t.toml")}
+    )
+    mocker.patch("protostar.cli.main.UserConfig.load", return_value=config)
+    orchestrator = mocker.patch("protostar.cli.main.Orchestrator")
+    orchestrator.return_value.plan.return_value = mocker.MagicMock(
+        diagnostics=[],
+        tasks=mocker.MagicMock(
+            system_tasks=[SystemTask(["git", "init"])], post_install_tasks=[]
+        ),
+        dependencies=DependencyManifest(dependencies=["fastapi"]),
+    )
+    mocker.patch(
+        "protostar.cli.main.TemplateSource.load",
+        return_value=mocker.Mock(
+            variables=frozenset(), options={}, render=mocker.Mock(return_value=None)
+        ),
+    )
+    run = mocker.patch("protostar.cli.main.ui._run_engine")
+    args = argparse.Namespace(
+        template_name="corp",
+        from_path=None,
+        docker=False,
+        force_merge=False,
+        force_replace=False,
+        python_version=None,
+        crash_test=False,
+        trust=True,
+    )
+
+    handle_init(args)
+
+    request = run.call_args.args[1]
+    assert request.is_trusted is True
+    out = capsys.readouterr().out
+    assert "as --trust allows" in out
+    assert "git init" in out
+    assert "uv add fastapi" in out
+
+
 def test_cli_resolves_user_template_aliases(mocker) -> None:
     """Verifies that --template successfully resolves keys from the global config alias table."""
 

@@ -93,6 +93,23 @@ def resolve_conflicts(project: PreparedProject) -> dict[str, ResolutionChoice] |
     return DecisionApp(ConflictScreen(project)).decide()
 
 
+def confirm_commands(
+    commands: tuple[tuple[str, ...], ...],
+) -> tuple[tuple[str, ...], ...] | None:
+    """Confirm an untrusted template's commands before a sync, or return None.
+
+    Args:
+        commands: The commands the sync runs, in order.
+
+    Returns:
+        The confirmed commands, exactly as listed, or None on cancellation.
+    """
+    from .app import DecisionApp
+    from .trust import TrustScreen
+
+    return DecisionApp(TrustScreen(commands)).decide()
+
+
 def edit_settings(
     content: str, path: Path, prefill: Mapping[str, EnvValue]
 ) -> ConfigDecision | None:
