@@ -137,9 +137,12 @@ updates commit. Deleted tracked files stay deleted. Removing a tool, or choosing
 template option that drops content, retracts what it added: unedited files,
 dependencies, configuration tables, and regions are removed, and edited ones are
 kept as `retracted` conflicts.
-Initialization tasks, hook installation, arbitrary template tasks, and IDE probes
-never run. Only accepted dependency requests and required metadata lock refreshes
-invoke the resolver; unchanged repeats write nothing and run no subprocesses.
+Initialization tasks, arbitrary template tasks, and IDE probes never run. Only
+accepted dependency requests and required metadata lock refreshes invoke the
+resolver, and a missing git hook is installed; unchanged repeats write nothing and
+run no subprocesses. For a template you haven't trusted, those commands need your
+confirmation first: a screen in an interactive terminal, or `--trust` for one run;
+otherwise `sync` stops with exit code `77` before writing anything.
 
 `--to REF` moves a repository template to a tag, branch, full commit SHA, or
 `latest` (the newest release), records the ref in the recipe, and reviews the new

@@ -306,7 +306,7 @@ Inspection does not write workspace files, populate source caches, run subproces
 or prompt. Remote acquisition can access the network outside pure planning and
 holds source data in memory. Each invocation captures one source revision and hook
 registry snapshot; apply uses those captured decisions without a second fetch.
-Trust is not inherited from the recipe or lock. Initialization-only tasks remain
+Trust is not inherited from the recipe or lock: when an update from a template you haven't trusted needs `uv add`, `uv lock`, or a hook install, `sync` asks you to confirm those commands first, or takes `--trust` (see [the trust model](templates.md#security-model-the-remote-trust-dialog)). Initialization-only tasks remain
 excluded even for trusted external templates.
 
 Template variable values are recorded in the recipe after passing the secret guard

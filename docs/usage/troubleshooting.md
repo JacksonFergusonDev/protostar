@@ -99,7 +99,7 @@ protostar init --template cli --force-replace
 
 ## Remote Template Security Alerts
 
-When you load a template you haven't marked trusted (`--from`, or an alias without `trusted = true`), Protostar lists every command the run executes under **Untrusted template** in the change review: setup commands such as `git init`, each dependency install, and the template's own tasks. They run in the files the template wrote, which can make them run its code, for example through a build hook `uv add` triggers. **Apply** stays disabled until you tick the checkbox confirming those commands, and only the commands you confirmed run. Without an interactive terminal, the run aborts with exit code `77`.
+When you load a template you haven't marked trusted (`--from`, or an alias without `trusted = true`), Protostar lists every command the run executes under **Untrusted template** in the change review: setup commands such as `git init`, each dependency install, and the template's own tasks. They run in the files the template wrote, which can make them run its code, for example through a build hook `uv add` triggers. **Apply** stays disabled until you tick the checkbox confirming those commands, and only the commands you confirmed run. Without an interactive terminal, the run aborts with exit code `77`; pass `--trust` to run the listed commands for that run only. `protostar sync` asks the same way when a template update needs `uv add`, `uv lock`, or a hook install.
 
 ### Bypassing Prompts for Trusted Templates
 

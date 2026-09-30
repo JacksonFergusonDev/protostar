@@ -137,6 +137,62 @@ class RecipeSource:
 
         return replace(parse_remote_url(self.locator).source, path=self.path)
 
+    def trusted_by(self, config: UserConfig, root: Path) -> bool:
+        """Returns whether this template may run commands without asking.
+
+        A built-in template is always trusted. Any other is trusted only by an
+        alias with ``trusted = true`` that names the same template: the same
+        local ``protostar.toml``, or the same repository and path. Trust is
+        never read from the recipe or the ledger. When an alias's URL leaves
+        the split between its ref and path to the repository's refs, it
+        matches only when its tail ends in this template's path, so an
+        ambiguous alias trusts nothing rather than too much.
+
+        Args:
+            config: The user's configuration, whose aliases grant trust.
+            root: The project root, which local locators are relative to.
+        """
+        if self.origin is TemplateOrigin.BUILT_IN:
+            return True
+        return any(
+            self._named_by(alias.source, root)
+            for alias in config.templates.values()
+            if alias.trusted
+        )
+
+    def _named_by(self, target: str, root: Path) -> bool:
+        """Returns whether an alias source names this template."""
+        from .errors import ProtostarError
+        from .network import parse_remote_url, template_path
+
+        remote = target.startswith("https://")
+        if self.origin is TemplateOrigin.LOCAL:
+            if remote:
+                return False
+
+            def manifest(path: Path) -> Path:
+                path = path.expanduser().resolve()
+                return path / "protostar.toml" if path.is_dir() else path
+
+            return manifest(Path(target)) == manifest(root / self.locator)
+        if not remote:
+            return False
+        try:
+            request = parse_remote_url(target)
+        except ProtostarError:
+            return False
+        if request.source.locator != self.locator:
+            return False
+        tail = request.ref_and_path
+        if tail is None:
+            return template_path(request.source.path) == self.path
+        if not self.path:
+            # The ref alone, or the ref and the root's protostar.toml.
+            return "/" not in tail.removesuffix("/protostar.toml")
+        return tail.endswith(f"/{self.path}") or tail.endswith(
+            f"/{self.path}/protostar.toml"
+        )
+
     def acquire(
         self,
         root: Path,

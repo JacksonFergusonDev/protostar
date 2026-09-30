@@ -276,6 +276,22 @@ def check_python_version() -> list[str]:
     return problems
 
 
+def check_release_pins() -> list[str]:
+    """No page pins a Protostar release, which would go stale with the next one."""
+    pin = re.compile(r"protostar@\d[\w.]*")
+    problems: list[str] = []
+    for page in _hand_written_pages():
+        for number, line in enumerate(
+            page.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            for match in pin.finditer(line):
+                problems.append(
+                    f"{_rel(page)}:{number}: pins {match.group(0)}; read the "
+                    "release from protostar.lock's producer_version instead"
+                )
+    return problems
+
+
 # ── References ───────────────────────────────────────────────────────────────
 
 
@@ -604,6 +620,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_built_in_templates,
     check_quality_flags,
     check_python_version,
+    check_release_pins,
     check_repository_paths,
     check_test_names,
     check_just_recipes,

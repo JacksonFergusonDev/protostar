@@ -6,6 +6,7 @@ import shlex
 import sys
 from collections import Counter
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 from rich.console import RenderableType
@@ -28,7 +29,7 @@ from protostar.cli.decisions import (
     resolved_line,
 )
 from protostar.cli.diff import format_diff, normalize_newlines
-from protostar.cli.tui.launch import resolve_conflicts
+from protostar.cli.tui.launch import confirm_commands, resolve_conflicts
 from protostar.config import UserConfig
 from protostar.errors import ExecutionAbortedError
 from protostar.init_draft import DraftTemplate, InitDraft
@@ -336,6 +337,42 @@ def _prepare_sync(args: argparse.Namespace) -> PreparedProject:
     )
 
 
+def _trusts(project: PreparedProject) -> bool:
+    """Returns whether the project's template may run commands without asking."""
+    recipe = project.manifest.recipe
+    source = recipe.source if recipe is not None else None
+    if source is None:
+        # Tooling-only projects run only Protostar's own modules.
+        return True
+    return source.trusted_by(UserConfig.load(), Path.cwd())
+
+
+def _confirm_trust(args: argparse.Namespace, project: PreparedProject) -> None:
+    """Settles trust for the commands a sync of an untrusted template runs.
+
+    The template's files decide what ``uv add`` builds and what a hook install
+    runs, so an update from a template the user hasn't trusted runs them only
+    once confirmed: on a screen in an interactive terminal, by ``--trust``
+    anywhere, and never otherwise.
+
+    Raises:
+        ExecutionAbortedError: If the user cancels the confirmation.
+        SecurityViolationError: If no confirmation is possible.
+    """
+    commands = project.review.commands
+    if not commands:
+        return
+    if args.trust:
+        ui.print_trusted_commands(commands)
+        return
+    if _trusts(project):
+        return
+    if ui.is_json_mode or not is_interactive():
+        raise ui.untrusted_refusal("sync")
+    if confirm_commands(commands) is None:
+        raise ExecutionAbortedError("Sync cancelled by user.")
+
+
 def handle_sync(args: argparse.Namespace) -> None:
     """Reviews or applies the current recipe without task replay.
 
@@ -383,6 +420,7 @@ def handle_sync(args: argparse.Namespace) -> None:
         if args.check and review.pending:
             sys.exit(1)
         return
+    _confirm_trust(args, project)
     if ui.is_json_mode:
         result = project.apply()
     else:

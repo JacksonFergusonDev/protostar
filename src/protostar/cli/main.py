@@ -173,7 +173,8 @@ def handle_init(args: argparse.Namespace) -> None:
             Path.cwd(), state.template if state else None
         )
         is_external = existing_recipe.source.origin is not TemplateOrigin.BUILT_IN
-        is_trusted = not is_external
+        # Trust comes from a matching alias, never from the recipe or the lock.
+        is_trusted = existing_recipe.source.trusted_by(user_config, Path.cwd())
     elif override_target:
         source = TemplateSource.load(
             override_target, built_in=built_in, display_name=template_name
@@ -285,6 +286,14 @@ def handle_init(args: argparse.Namespace) -> None:
         else:
             print_dry_run(review, unreachable=bool(hooks and hooks.unreachable))
         sys.exit(0)
+
+    if getattr(args, "trust", False) and (
+        commands := ui.untrusted_commands(request, engine.plan())
+    ):
+        # Trusted for this run only: listed, never recorded.
+        ui.print_trusted_commands(commands)
+        request = replace(request, is_trusted=True)
+        engine.request = request
 
     decision = None
     if requests:
