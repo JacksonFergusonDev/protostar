@@ -74,7 +74,7 @@ Retraction happens once, at the highest key that disappeared, so a partly edited
 
 `retained_paths` names owned paths that another writer manages; these are never retracted.
 
-The complete-document adapters are GitHub Actions workflows, `.readthedocs.yaml`, and `pyproject.toml`. For `pyproject.toml`, the aggregated contributions of its producers are the complete declaration: `[tool]` is its namespace, and its seed paths and `dependency-groups` (which the include writer owns) are retained. Every other adapter keeps the no-pruning default.
+The complete-document adapters are GitHub Actions workflows, `.pre-commit-config.yaml`, `.readthedocs.yaml`, and `pyproject.toml`. A hook configuration retracts each hook by `id` and each repository by `repo`, and a repository's pin leaves `protostar.lock` with it. For `pyproject.toml`, the aggregated contributions of its producers are the complete declaration: `[tool]` is its namespace, and its seed paths and `dependency-groups` (which the include writer owns) are retained. Every other adapter keeps the no-pruning default.
 
 ### Documents nothing declares any more
 

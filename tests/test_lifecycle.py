@@ -1309,6 +1309,91 @@ def test_sync_reports_a_retracted_document_removal(project, monkeypatch, capsys)
     assert not Path(".github/renovate.json").exists()
 
 
+def _hook_ids(path=".pre-commit-config.yaml"):
+    from ruamel.yaml import YAML
+
+    config = YAML(typ="safe").load(Path(path).read_text())
+    return {hook["id"] for repo in config["repos"] for hook in repo["hooks"]}
+
+
+def test_a_switched_off_tools_hook_is_retracted_and_the_users_stay(project, mocker):
+    """Turning mypy off removes its hook, so no commit runs a tool that is gone."""
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(
+        project, "prek = true\nmypy = true\n", "prek = true\nmypy = false\n"
+    )
+    assert "mypy" in _hook_ids()
+    from ruamel.yaml import YAML
+
+    yaml = YAML(typ="rt")
+    config = Path(".pre-commit-config.yaml")
+    data = yaml.load(config.read_text())
+    local = next(repo for repo in data["repos"] if repo["repo"] == "local")
+    local["hooks"].append(
+        {"id": "mine", "name": "mine", "entry": "true", "language": "system"}
+    )
+    with config.open("w") as stream:
+        yaml.dump(data, stream)
+    prepared = reprepare()
+    assert not prepared.review.conflicts
+    prepared.apply()
+
+    hooks = _hook_ids()
+    assert "mypy" not in hooks
+    assert {"mine", "check-yaml"} <= hooks
+
+
+@pytest.mark.parametrize(
+    ("choice", "kept"),
+    [(ResolutionChoice.LOCAL, True), (ResolutionChoice.DESIRED, False)],
+)
+def test_an_edited_hook_of_a_switched_off_tool_is_retracted(
+    project, mocker, choice, kept
+):
+    from protostar.lifecycle import prepare_project
+
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    reprepare = _released(
+        project, "prek = true\nmypy = true\n", "prek = true\nmypy = false\n"
+    )
+    config = Path(".pre-commit-config.yaml")
+    config.write_text(
+        config.read_text().replace("entry: uv run mypy .", "entry: uv run mypy src")
+    )
+    prepared = reprepare()
+
+    (conflict,) = prepared.review.conflicts
+    assert conflict.reason is ConflictReason.RETRACTED
+    prepared.apply()
+    assert "mypy" in _hook_ids()
+
+    prepare_project().resolve({conflict.id: choice}).apply()
+    assert ("mypy" in _hook_ids()) is kept
+    assert not prepare_project().review.conflicts
+
+
+def test_a_switched_off_tools_hook_repository_takes_its_pin(project, mocker):
+    mocker.patch(
+        "protostar.system.ProcessRunner.run", autospec=True, side_effect=_any_resolved
+    )
+    repository = "https://github.com/DavidAnson/markdownlint-cli2"
+    reprepare = _released(
+        project,
+        "prek = true\nmarkdownlint = true\n",
+        "prek = true\nmarkdownlint = false\n",
+    )
+    assert repository in {pin.repo for pin in _state().hook_pins}
+    reprepare().apply()
+
+    assert "markdownlint-cli2" not in _hook_ids()
+    assert repository not in {pin.repo for pin in _state().hook_pins}
+    assert "check-yaml" in _hook_ids()
+
+
 def test_a_generated_file_whose_tool_is_switched_off_is_released(project, mocker):
     """An unedited justfile leaves with just; one already deleted is forgotten."""
     mocker.patch(
