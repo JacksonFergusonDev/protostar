@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790798956705,
+  "lastUpdate": 1790799691768,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19555,6 +19555,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1052.26,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7b733ab85f2e6fb96dc252c307d642ac0d9c675c",
+          "message": "docs(readme): rewrite the README for a general audience (#394)\n\nReplace everything below \"Why Protostar?\" with a README a newcomer can\nfollow and an experienced reader can skip through: install and first\nrun, the built-in templates and their two tiers, the tools Protostar\nsets up, the everyday commands, a short template example, a table that\nsends experienced readers to the right docs page, and a plain account\nof how Protostar is built and tested. The opening paragraph now matches\nthe landing page.\n\nFlag-level detail (tri-state toggles, --one-shot, --force-merge, JSON\nenvelopes, aliases and trust, schema export, shell completion) and the\nstale design and performance sections move out to the docs they\nalready duplicated.",
+          "timestamp": "2026-09-30T13:18:07-07:00",
+          "tree_id": "0e3f2aa3c1c169a2b00571473a58826445beef9f",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7b733ab85f2e6fb96dc252c307d642ac0d9c675c"
+        },
+        "date": 1790799689639,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 272.74,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1247.87,
             "unit": "ms"
           }
         ]
