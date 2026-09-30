@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790746075321,
+  "lastUpdate": 1790746214294,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19249,6 +19249,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1390.55,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "e636ed3f1a25ae6dba9e7db6478d68e33c5a5d78",
+          "message": "docs: drop the counts beside the template and quality-flag lists\n\n\"Five built-in templates\" and \"eight quality flags\" sat next to the lists\nthey counted, so they added nothing and made every new template or flag an\nedit in two places. The lists stay, and check_docs_drift.py still fails when\nthey differ from the code.\n\nThe flag check now also covers AGENTS.md, and fails when a page loses its\nlist instead of skipping it.",
+          "timestamp": "2026-09-29T22:26:48-07:00",
+          "tree_id": "bf83f6076c0161a161eedfb8c50e3c521960f097",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/e636ed3f1a25ae6dba9e7db6478d68e33c5a5d78"
+        },
+        "date": 1790746212551,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 265.67,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1214.62,
             "unit": "ms"
           }
         ]
