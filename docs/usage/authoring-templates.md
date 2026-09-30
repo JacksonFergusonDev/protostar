@@ -335,7 +335,7 @@ protostar init --from ~/Developer/templates/my-custom-template
 
 Once your template is ready, push it to a repository on GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut. Protostar accepts the repository's web, raw, and archive URLs, and a path inside the repository, so one repository can hold several templates.
 
-Publish releases as tags that are [PEP 440](https://peps.python.org/pep-0440/) versions, such as `v1.3.0`. A new project starts on your newest release, `protostar status` tells existing projects when a newer one exists, and `protostar sync --to v1.3.0` moves them to it with a three-way merge that keeps their local edits. Tag pre-releases as such (`v2.0.0rc1`): they are offered only to projects already on a pre-release. Never move a published tag. Projects stay on the commit they applied, and `status` reports the moved tag as an update.
+Publish releases as tags that are [PEP 440](https://peps.python.org/pep-0440/) versions, such as `v1.3.0`. A new project starts on your newest release, `protostar status` tells existing projects when a newer one exists, and `protostar sync --to v1.3.0` moves them to it, merging your changes into their configuration while keeping their local edits. Tag pre-releases as such (`v2.0.0rc1`): they are offered only to projects already on a pre-release. Never move a published tag. Projects stay on the commit they applied, and `status` reports the moved tag as an update.
 
 You can invoke your template directly:
 
@@ -352,7 +352,7 @@ org-ds-base = "https://github.com/YourOrg/data-science-template"
 
 ### Migrations
 
-Most changes between your releases need nothing extra: `sync --to` merges each file three ways, so your changes arrive and your users' edits stay. A few changes can't be expressed that way, because they're about files and names rather than their contents. Declare those as migrations:
+Most changes between your releases need nothing extra: `sync --to` merges your changes to `[dev.pyproject]` payloads, dependencies, and named append regions into each project, and your users' edits stay. Starter files are different. A file in `[files]` or `template/` is written once and then belongs to the project, so a later release's edits to it don't reach existing projects. A few changes are about files and names rather than their contents, including moving or retiring a starter file. Declare those as migrations:
 
 ```toml
 version = "2.0.0"
