@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790726832792,
+  "lastUpdate": 1790728718216,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19181,6 +19181,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1017.61,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0ae6d0ed5978d33508b13ad4cf5ad134eefb2958",
+          "message": "docs: check hand-written pages against the code before every push (#386)\n\n* refactor(errors): route every exit code through exit_code_for\n\nThe CLI picked its exit code with an isinstance chain in main(), while the\nexit-code table in the docs was typed by hand in the asset generator, so\nnothing tied the two together. The routes now live beside the errors as\nEXIT_CODE_ROUTES, read through exit_code_for(), and main() exits with it.\n\nExitCode gains FAILURE (1) and INTERRUPTED (130), replacing the bare\nliterals. OSERR is removed: no error ever exited with it.\n\n* docs: check hand-written pages against the code before every push\n\nSeveral pages restate facts the code already decides, and had drifted: the\nexception tree and api-reference missed 11 errors, and the first-project\nwalkthrough printed 8 standard dependencies and skipped a step a real run\nshows.\n\nscripts/check_docs_drift.py derives each fact from the code and fails with\nthe fix instead of generating another fixture. It checks the exception\ntree, error sections, api-reference and exit-code table; the built-in\ntemplate and quality-flag counts; the minimum Python version; the source\npaths, tests and just recipes pages cite; the site nav and links; that every\ndocumented protostar command still parses; and that the walkthrough's steps\nmatch a dry run of the template it uses. It runs on pre-push, in CI and as\n`just check-docs-drift`.\n\nThe walkthrough's guide and missing-tools blocks are now the existing\nterminal SVGs instead of hand-typed text.",
+          "timestamp": "2026-09-29T17:35:37-07:00",
+          "tree_id": "92c8c3a9234d27cc4d71a53bcbfc699f6ca37bdd",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0ae6d0ed5978d33508b13ad4cf5ad134eefb2958"
+        },
+        "date": 1790728717329,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 248.47,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1114.44,
             "unit": "ms"
           }
         ]
