@@ -194,7 +194,7 @@ If you encounter an issue or behavior not covered in this guide:
 
 - **Search Existing Issues:** Check the [GitHub Issues tracker](https://github.com/jacksonfergusondev/protostar/issues) to see if a workaround or fix already exists.
 - **Open a Bug Report:** If you've found a bug or unexpected behavior, [open a new issue](https://github.com/jacksonfergusondev/protostar/issues/new) with your environment details and `--verbose` output attached.
-- **Community Support:** For general questions, configuration help, or workflow ideas, start a thread in [GitHub Discussions](https://github.com/jacksonfergusondev/protostar/discussions).
+- **Ask a Question or Request a Feature:** Open an issue for general questions and configuration help, or use the [feature request form](https://github.com/jacksonfergusondev/protostar/issues/new?template=feature_request.yml) for ideas.
 
 ## Related Resources
 

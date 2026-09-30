@@ -40,18 +40,23 @@ Setting up a new python project often requires the same manual steps: configurin
 </picture>
 </div>
 
-## Why Protostar? (vs. Copier/Cookiecutter)
+## Why Protostar?
 
-While general-purpose template engines like **Copier** and **Cookiecutter** are incredibly powerful for cross-language scaffolding, they treat configuration files as raw text templates. Protostar is deeply specialized for the modern Python ecosystem:
+> Already know Cookiecutter or Copier? The [detailed comparison](https://protostar.jacksonferguson.me/why-protostar/) runs the same template and the same update through both tools and compares them in more depth.
 
-- **Semantic AST Merging:** Instead of brittle string templates (`{{ dependencies }}`), Protostar natively parses and merges `pyproject.toml` and `.gitignore` files, preserving your comments and formatting.
-- **Composable Tooling:** No more sprawling template repos with nested Jinja conditionals. Toggle tools dynamically at runtime (`--no-direnv --docker`).
-- **Scalable Templates:** Define entire organizational standards in a single, shareable `.toml` file, or scale up to a full Git repository for complex multi-file architectures.
-- **Agent & Machine Ready:** Manifest-first architecture enables atomic `--dry-run` simulations and position-independent `--json` output for AI workflows.
+Plenty of tools can create a Python project. What sets Protostar apart is that it understands the tools it sets up and the files they live in, and that keeps everything simple:
 
-## Stays in sync
+- **Say what you want, not how to build it.** A template is a short list of the tools you want and the packages you need. Protostar writes every configuration file, commit hook, and CI step those tools require.
 
-When the template changes, `protostar sync` brings the update into your project with a three-way merge. What only the template changed applies on its own; where you both changed the same thing, you see both sides and choose, before anything is written.
+- **Every tool is a switch.** Want Docker but not direnv? Pass `--docker --no-direnv`. Change your mind a year later, and Protostar adds or removes that tool's setup cleanly.
+
+- **Updates that understand your files.** When a template improves, Protostar merges the change into your project by meaning, not line by line. Your own edits stay, and if you and the update changed the same setting, you get one clear choice instead of a mess to untangle.
+
+- **Nothing breaks halfway.** Protostar shows you every change before making it, and undoes everything if a step fails.
+
+- **Fits the project you already have**, and runs from scripts, CI, and coding agents without stopping to ask questions.
+
+In a terminal, `protostar sync` shows each conflict with both sides before anything is applied:
 
 <div align="center">
 <picture>
@@ -61,6 +66,8 @@ When the template changes, `protostar sync` brings the update into your project 
        style="max-width:100%; height:auto;">
 </picture>
 </div>
+
+Protostar is Python-only and builds on uv. It's young, and it grows with the people using it: [feature requests](https://github.com/jacksonfergusondev/protostar/issues/new?template=feature_request.yml) shape what comes next.
 
 ---
 
