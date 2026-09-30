@@ -297,5 +297,6 @@ schema through `protostar help sync --json` in `capabilities.application_schema`
 
 --8<-- "table_schema_result.md"
 
-See the [lifecycle walkthrough](lifecycle.md) for check outcomes, recipe edits,
+See [Automating Updates](automating-updates.md#use-checks-in-ci) for check outcomes
+and exit codes, and the [lifecycle walkthrough](lifecycle.md) for recipe edits,
 enrollment, and security and rollback boundaries.

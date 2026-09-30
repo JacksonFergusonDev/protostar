@@ -15,6 +15,10 @@ To stop tracking the project, run `protostar eject`. It shows the pending remova
 interactive terminal is available. Other files, including `uv.lock`, remain.
 After ejection, the lifecycle commands on this page no longer apply.
 
+To keep projects current without running these commands by hand, with a
+scheduled update pull request, a check in CI, and template releases, see
+[Automating Updates](automating-updates.md).
+
 ## Review, apply, repeat
 
 ```bash
@@ -69,43 +73,6 @@ records until you move it with `sync --to <ref>`; see
 identity can update the project. Changing template identity, switching to
 tooling-only mode, or retargeting an alias is not a supported lifecycle update.
 Missing sources fail visibly rather than falling back to cached content.
-
-## Keep Protostar versions in step
-
-Built-in output comes from the installed Protostar, so every contributor needs
-a release at least as new as the one that last wrote `protostar.lock`. The lock
-records that release as `producer_version`. When the installed Protostar is
-older, `init`, `status`, `diff`, and `sync` (including `--check`) refuse to run
-instead of treating the older output as an update. Upgrade Protostar, for
-example with `uv tool upgrade protostar`, and run the command again. In
-`--json` mode, the error carries `recorded_version` and `installed_version`.
-
-Pin the same release in CI, for example with `uvx protostar@0.9.0 sync --check`,
-so a new release doesn't change the check before the project is synced with it.
-
-## Upgrade a repository template
-
-`status` starts with the template's ref and what its repository offers:
-
-```bash
-protostar status
-# Template v1.2.0 @ 4f0b8c2d1e9a; v1.3.0 available (sync --to v1.3.0).
-protostar sync --to v1.3.0 --dry-run
-protostar sync --to v1.3.0
-```
-
-`sync --to` records the new ref in the recipe, downloads that revision, and
-reviews it like any other update, in the same transaction. When the template
-declares [migrations](authoring-templates.md#migrations) between the two
-releases, they run first: seeded files it moved keep your edits at their new
-path, files it retired are deleted when unedited and kept as a `retracted`
-conflict otherwise, and renamed variables keep their values. `status` lists each
-step as `Migration <version>: ...`. A project can't move back before a migration
-it has run. It accepts a tag, a
-branch, a full commit SHA, or `latest`. Variables the new version adds come from
-`--var NAME=VALUE`, or from the variables screen in an interactive terminal. When
-the repository can't be reached, `status` says so and still reviews the recorded
-commit.
 
 ## Preserve local intent and handle partial updates
 
@@ -332,112 +299,6 @@ reconstruct a request from the ownership lock. Enrollment preserves existing
 ownership and does not adopt equal foreign content. Template variable values come
 from the recipe; see [template variables](project-recipes.md#template-variables).
 Missing recipes, malformed state, and missing variable values fail before mutation.
-
-## Use checks in CI
-
-```bash
-protostar sync --check --json > review.json
-```
-
-| Invocation/outcome | Exit code |
-| --- | --- |
-| Valid status, diff, or dry-run review, including conflicts | `0` |
-| Sync completes with no unresolved conflicts, including a no-op | `0` |
-| Sync commits safe work and retains unresolved conflicts | `1` |
-| Check finds accepted edits, resolver work, state advancement, or conflicts | `1` |
-| Check finds only preserved local deviations or no work | `0` |
-| Fatal error | Domain-specific code; interruption uses `130` |
-
-`--check` and `--dry-run` are mutually exclusive. Check never applies work. All
-commands accept `--json` without prompts: stdout contains one deterministic JSON
-envelope; diagnostics and subprocess output go to stderr. Check includes
-`check_passed`; review uses `status: "reviewed"`; application uses `"success"` or
-`"partial"`. See the [machine interface](agent-interface.md) for generated examples
-and schema discovery.
-
-## Open update pull requests on a schedule
-
-Protostar doesn't open pull requests on its own, but a scheduled workflow can:
-it runs `protostar sync` and opens a pull request with whatever changed. Save
-this as `.github/workflows/protostar-sync.yml`:
-
-```yaml
-name: Protostar sync
-
-on:
-  schedule:
-    - cron: "0 6 * * 1" # Mondays at 06:00 UTC
-  workflow_dispatch:
-
-permissions:
-  contents: write
-  pull-requests: write
-
-env:
-  # The release that syncs. Keep it at least as new as the one your team uses.
-  PROTOSTAR_VERSION: "0.9.0"
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
-
-      - name: Sync with the template
-        run: |
-          set +e
-          # For a repository template, add --to latest to move to its newest release.
-          uvx "protostar@${PROTOSTAR_VERSION}" sync --json > "$RUNNER_TEMP/sync.json"
-          code=$?
-          set -e
-          # 0: in step. 1: safe changes applied, conflicts left for a person.
-          if [ "$code" -gt 1 ]; then exit "$code"; fi
-          conflicts=$(jq '.review.conflicts | length' "$RUNNER_TEMP/sync.json")
-          {
-            echo "Protostar $PROTOSTAR_VERSION synced this project with its template."
-            if [ "$conflicts" -gt 0 ]; then
-              echo
-              echo "$conflicts conflict(s) kept your version. Run \`protostar status\`"
-              echo "locally to see each one and the command that settles it."
-            fi
-          } > "$RUNNER_TEMP/body.md"
-          # sync installs this clone's git hooks; keep them off the bot's commit.
-          git config core.hooksPath /dev/null
-
-      - uses: peter-evans/create-pull-request@v8
-        with:
-          branch: protostar/sync
-          commit-message: "chore: sync with the project template"
-          title: "chore: sync with the project template"
-          body-path: ${{ runner.temp }}/body.md
-          delete-branch: true
-```
-
-- **What it updates.** Built-in output follows `PROTOSTAR_VERSION`, so raising
-  it is how the project takes a new Protostar release. Keep it at least as new
-  as the release that last wrote `protostar.lock`, or the run
-  [refuses](#keep-protostar-versions-in-step). A repository template stays on
-  the commit the lock records; add `--to latest` to the `sync` command to move
-  to its newest release each week. When a new release adds a variable, add
-  `--var NAME=VALUE` too, or the run stops asking for it.
-- **Conflicts.** A sync that keeps your version somewhere exits `1` with the
-  safe changes applied, and the workflow still opens the pull request. Its body
-  says how many conflicts were kept. Settle them locally with
-  `protostar status` and `protostar sync --resolve`; `sync --check` fails until
-  you do.
-- **Repeat runs.** A run with nothing new changes nothing and opens nothing. A
-  pull request that is still open is updated in place, on the `protostar/sync`
-  branch.
-- **Git hooks.** `sync` installs the clone's hooks, so the workflow switches
-  them off before the pull request's commit, which would otherwise run every
-  check.
-- **Repository settings.** Allow the workflow to open pull requests under
-  **Settings** → **Actions** → **General** → **Workflow permissions**. A pull
-  request opened with the default `GITHUB_TOKEN` doesn't trigger other
-  workflows, so your CI won't run on it. To have it run, give
-  `create-pull-request` a `token` from a GitHub App or a fine-grained personal
-  access token.
 
 ## Security and rollback boundaries
 

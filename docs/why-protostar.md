@@ -232,7 +232,7 @@ Declarative [migrations](usage/authoring-templates.md#migrations) handle what a 
 - `--dry-run` shows the complete plan without writing a file or running a command.
 - `protostar.lock` records the Protostar release that wrote it. An older release refuses to run instead of quietly rolling the project back, so a teammate on an old version can't undo an update.
 
-The same commands let a coding agent plan, review, and apply changes; see the [agent interface](usage/agent-interface.md).
+[Automating Updates](usage/automating-updates.md) has a ready-made workflow that opens a weekly update pull request. The same commands let a coding agent plan, review, and apply changes; see the [agent interface](usage/agent-interface.md).
 
 ## Why Not Ask a Coding Agent?
 
@@ -256,7 +256,7 @@ These are the gaps known today:
 - GitHub Actions is the only CI it generates.
 - A project inside a uv workspace isn't supported.
 - A project follows one template; templates can't be layered, such as an organization's base under a team's template.
-- Nothing opens update pull requests for you yet. Copier has a Renovate manager that does; with Protostar, a [scheduled workflow](usage/lifecycle.md#open-update-pull-requests-on-a-schedule) runs `protostar sync` and opens the pull request itself.
+- Nothing opens update pull requests for you yet. Copier has a Renovate manager that does; with Protostar, a [scheduled workflow](usage/automating-updates.md#open-update-pull-requests-on-a-schedule) runs `protostar sync` and opens the pull request itself.
 - There are few community templates so far.
 
 Until 1.0, a release may still change a command or the template format when that makes Protostar simpler.
