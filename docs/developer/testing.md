@@ -141,7 +141,9 @@ the interactive shell when testing a sequence of commands against one project.
     Scenario snapshot directories include `protostar.lock` alongside the
     generated workspace files. Dependency versions are frozen consistently across
     the state record and `pyproject.toml`, so snapshot review covers ownership changes
-    as well as user-visible output.
+    as well as user-visible output. The snapshot's `producer_version` is normalized
+    to `0.0.0`, so a package version bump alone does not cause drift. Real project
+    lock files still record the installed version.
 
     Before each scenario command, the runner also takes the `--dry-run --json`
     plan and fails when the finished scaffold's tree (the one the docs show)

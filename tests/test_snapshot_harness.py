@@ -456,6 +456,29 @@ def test_extract_and_write_targets_preserves_exact_bytes(
     ) == "mock tree\n"
 
 
+@pytest.mark.parametrize("version", ["0.9.0", "0.10.0"])
+def test_snapshot_lock_version_is_stable_across_releases(
+    version: str, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Release metadata does not cause drift; scaffold content stays exact."""
+    source = tmp_path / "source"
+    source.mkdir()
+    lock = f'# Recorded state\nschema_version = 1\nproducer_version = "{version}"\n\n[[files]]\npath = "config.toml"\nbaseline = "version = {version}"\n'
+    (source / "protostar.lock").write_text(lock, encoding="utf-8")
+    snapshots = tmp_path / "snapshots"
+    mocker.patch("scripts.run_snapshots.SNAPSHOTS_DIR", snapshots)
+
+    _extract_and_write_targets(source, "fixture", publish_tree=False)
+
+    expected = lock.replace(
+        f'producer_version = "{version}"', 'producer_version = "0.0.0"'
+    )
+    assert (snapshots / "fixture" / "protostar.lock").read_text(
+        encoding="utf-8"
+    ) == expected
+    assert (source / "protostar.lock").read_text(encoding="utf-8") == lock
+
+
 def test_extract_skips_the_tree_for_a_scenario_no_page_embeds(
     tmp_path: Path, mocker: MockerFixture
 ) -> None:

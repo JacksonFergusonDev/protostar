@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import tomlkit
+
 _repo_root = Path(__file__).resolve().parent.parent
 if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
@@ -343,7 +345,13 @@ def _extract_and_write_targets(
 
         target_path = SNAPSHOTS_DIR / fixture_name / target_rel_path
         written_targets.add(target_path.resolve())
-        _write_snapshot_file(target_path, file_path.read_bytes())
+        content = file_path.read_bytes()
+        if rel_path == Path("protostar.lock"):
+            # Package metadata changes on releases without changing the scaffold.
+            document = tomlkit.parse(content.decode("utf-8"))
+            document["producer_version"] = "0.0.0"
+            content = tomlkit.dumps(document).encode("utf-8")
+        _write_snapshot_file(target_path, content)
 
     fixture_root = SNAPSHOTS_DIR / fixture_name
     if fixture_root.exists():
