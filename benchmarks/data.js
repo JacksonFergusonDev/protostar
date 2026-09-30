@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790804688220,
+  "lastUpdate": 1790805370472,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19759,6 +19759,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1211.52,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "06fb042993a477c4ae354baaa182c88441544425",
+          "message": "fix(release): refresh generated inputs before version bumps\n\nRegenerate registry fallbacks and secret rules in sequence, then stop\nfor review while either input has uncommitted changes. Keep read-only\nchecks in release CI to verify the tagged source.",
+          "timestamp": "2026-09-30T14:51:59-07:00",
+          "tree_id": "9f091be9de53416b46978507bb25db468318fd89",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/06fb042993a477c4ae354baaa182c88441544425"
+        },
+        "date": 1790805368853,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 266.64,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1199.41,
             "unit": "ms"
           }
         ]
