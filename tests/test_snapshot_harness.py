@@ -456,6 +456,25 @@ def test_extract_and_write_targets_preserves_exact_bytes(
     ) == "mock tree\n"
 
 
+def test_extract_skips_the_tree_for_a_scenario_no_page_embeds(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Verifies that publish_tree=False writes the snapshot but no docs tree."""
+    source_dir = tmp_path / "source"
+    source_dir.mkdir()
+    (source_dir / "file.txt").write_text("content", encoding="utf-8")
+    fake_snapshots_dir = tmp_path / "snapshots"
+    fake_docs_dir = tmp_path / "docs_generated"
+    mocker.patch("scripts.run_snapshots.SNAPSHOTS_DIR", fake_snapshots_dir)
+    mocker.patch("scripts.run_snapshots.DOCS_GENERATED_DIR", fake_docs_dir)
+    mocker.patch("scripts.run_snapshots.generate_tree", return_value="mock tree\n")
+
+    _extract_and_write_targets(source_dir, "quiet", publish_tree=False)
+
+    assert (fake_snapshots_dir / "quiet" / "file.txt").read_text() == "content"
+    assert not (fake_docs_dir / "tree_quiet.txt").exists()
+
+
 def test_harness_main_filtered_scenario_scope(
     monkeypatch: pytest.MonkeyPatch,
     mocker: MockerFixture,

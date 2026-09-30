@@ -612,6 +612,19 @@ def check_walkthrough_output() -> list[str]:
     return problems
 
 
+def check_generated_fixtures_are_used() -> list[str]:
+    """Every generated fixture and terminal image is used by a page."""
+    text = "\n".join(page.read_text(encoding="utf-8") for page in _hand_written_pages())
+    problems: list[str] = []
+    for folder in (DOCS_DIR / "generated", DOCS_DIR / "assets" / "terminals"):
+        for fixture in sorted(folder.iterdir()):
+            if fixture.is_file() and fixture.name not in text:
+                problems.append(
+                    f"{_rel(fixture)}: no page uses it. Stop generating it, or embed it"
+                )
+    return problems
+
+
 CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_error_tree,
     check_error_sections,
@@ -627,6 +640,7 @@ CHECKS: tuple[Callable[[], list[str]], ...] = (
     check_site_links,
     check_documented_commands,
     check_walkthrough_output,
+    check_generated_fixtures_are_used,
 )
 
 
