@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790806885017,
+  "lastUpdate": 1790808591424,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19827,6 +19827,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1195.31,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "a83e42d7789ac655910496fc6037f3cd4f98bdc2",
+          "message": "feat(scripts): highlight diffs and structured output\n\nRender snapshot diffs and JSON summaries through a shared Rich syntax\nrenderer. Keep CI output plain and dependency-free, preserve long lines,\nand support FORCE_COLOR for locally captured hook output.",
+          "timestamp": "2026-09-30T15:44:48-07:00",
+          "tree_id": "bb6f4a1dfefec79f99a4943078a988ade2b3ff31",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/a83e42d7789ac655910496fc6037f3cd4f98bdc2"
+        },
+        "date": 1790808590547,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 273.84,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1236.63,
             "unit": "ms"
           }
         ]
