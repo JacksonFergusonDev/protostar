@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790796557276,
+  "lastUpdate": 1790796845425,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19453,6 +19453,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 794.09,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "59a5d421ed78264eadbd8b4a1e5549aca60d2a86",
+          "message": "docs: unify the project description and simplify the landing page\n\nReplace \"High-velocity, zero-friction Python environment scaffolding\"\nand the landing page's \"Safe. Predictable. Clean.\" with one description,\n\"Simple Python project scaffolding that understands your tools.\", in\npyproject.toml (the PyPI summary), zensical.toml, the package docstring,\nthe CLI help, the feature request form, and the README heading.\n\nThe landing page hero is now that heading and a short body. The heading\ntakes a wider measure and a slightly smaller size, and the unused\nsubheading styles are gone. cli_help.svg is regenerated.",
+          "timestamp": "2026-09-30T12:29:25-07:00",
+          "tree_id": "5d663fa886f1e946de7dc09a8ecd4c5ff18c5e02",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/59a5d421ed78264eadbd8b4a1e5549aca60d2a86"
+        },
+        "date": 1790796843912,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 290.86,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1311.59,
             "unit": "ms"
           }
         ]
