@@ -279,7 +279,7 @@ def generate_cli_status_svg() -> None:
 
 
 def generate_guide_svgs() -> None:
-    """Captures `protostar guide` for a library, a CLI, and a workbench project.
+    """Captures `protostar guide` for a CLI and a workbench project.
 
     Each project is scaffolded by the real engine on stubbed subprocesses, so
     the guide reads the recipe, ledger, and pyproject.toml execution wrote.
@@ -289,7 +289,7 @@ def generate_guide_svgs() -> None:
 
     original_global_console = protostar.cli.ui.console
     try:
-        for alias in ("lib", "cli", "ml"):
+        for alias in ("cli", "ml"):
             record_console = _recording_console(terminal=False)
             with (
                 _demo_project(),

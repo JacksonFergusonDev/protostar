@@ -44,6 +44,7 @@ class RegressionScenario:
     commands: tuple[tuple[str, ...], ...]
     description: str
     seed_fn: Callable[[Path, dict[str, str]], None] | None = None
+    publishes_tree: bool = True
 
 
 def _seed_ml_merged_foreign_content(cwd: Path, env: dict[str, str]) -> None:
@@ -95,6 +96,7 @@ SCENARIOS: dict[str, RegressionScenario] = {
         ),
         description="Same-template reinitialization exercising foreign workspace preservation and tooling adoption.",
         seed_fn=_seed_ml_merged_foreign_content,
+        publishes_tree=False,
     ),
     "api": RegressionScenario(
         name="api",
@@ -110,11 +112,13 @@ SCENARIOS: dict[str, RegressionScenario] = {
         name="astro_production",
         commands=(("--template", "astro", "--tier", "production"),),
         description="Astronomy template in its non-default production tier: the full quality gate and a tested package.",
+        publishes_tree=False,
     ),
     "cli_workbench": RegressionScenario(
         name="cli_workbench",
         commands=(("--template", "cli", "--tier", "workbench"),),
         description="CLI template in its non-default workbench tier: the same package with lean tooling.",
+        publishes_tree=False,
     ),
 }
 
@@ -286,12 +290,21 @@ def _execute_fixture_scenario(
     return planned, existing
 
 
-def _extract_and_write_targets(source_dir: Path, fixture_name: str) -> None:
-    """Extracts target files from a completed execution scenario and writes them to disk."""
-    tree_output = generate_tree(source_dir)
-    tree_file = DOCS_GENERATED_DIR / f"tree_{fixture_name}.txt"
-    tree_file.parent.mkdir(parents=True, exist_ok=True)
-    atomic_write_text(tree_file, tree_output.rstrip() + "\n")
+def _extract_and_write_targets(
+    source_dir: Path, fixture_name: str, *, publish_tree: bool = True
+) -> None:
+    """Extracts target files from a completed execution scenario and writes them to disk.
+
+    Args:
+        source_dir: The scaffolded project to snapshot.
+        fixture_name: The scenario's name.
+        publish_tree: Whether to also write ``docs/generated/tree_<name>.txt``. Only a
+            scenario whose tree a page embeds needs one.
+    """
+    if publish_tree:
+        tree_file = DOCS_GENERATED_DIR / f"tree_{fixture_name}.txt"
+        tree_file.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_text(tree_file, generate_tree(source_dir).rstrip() + "\n")
 
     written_targets: set[Path] = set()
     for file_path in sorted(source_dir.rglob("*")):
@@ -390,7 +403,9 @@ def _build_fixture_scenario(
             planned, existing = _execute_fixture_scenario(
                 [list(c) for c in scenario.commands], static_cwd, isolated_env
             )
-        _extract_and_write_targets(static_cwd, scenario.name)
+        _extract_and_write_targets(
+            static_cwd, scenario.name, publish_tree=scenario.publishes_tree
+        )
         check_planned_tree(scenario.name, static_cwd, planned, existing)
         print(f"  ✔ Scenario [{scenario.name}] snapshots generated")
 
@@ -659,10 +674,11 @@ def main() -> None:
         if not args.no_check:
             print("\nVerifying snapshot drift against git HEAD...")
             if args.scenario:
-                targets_to_check = [
-                    SNAPSHOTS_DIR / args.scenario,
-                    DOCS_GENERATED_DIR / f"tree_{args.scenario}.txt",
-                ]
+                targets_to_check = [SNAPSHOTS_DIR / args.scenario]
+                if SCENARIOS[args.scenario].publishes_tree:
+                    targets_to_check.append(
+                        DOCS_GENERATED_DIR / f"tree_{args.scenario}.txt"
+                    )
             else:
                 targets_to_check = [SNAPSHOTS_DIR, DOCS_GENERATED_DIR]
                 if not args.skip_docs:
