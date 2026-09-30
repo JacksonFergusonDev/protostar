@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790801844527,
+  "lastUpdate": 1790801967115,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19623,6 +19623,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1204.04,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "7b8de945c52c594dd43de0d8985a148c033a8b1f",
+          "message": "test(templates): relax discovery timing limit for CI\n\nAllow 250 ms for template discovery so shared macOS runner variability\n does not fail the speed check. Update the docstring to match the budget.",
+          "timestamp": "2026-09-30T13:55:17-07:00",
+          "tree_id": "ed2920d9b34aa8d32a20e533a928f06be0a956e9",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/7b8de945c52c594dd43de0d8985a148c033a8b1f"
+        },
+        "date": 1790801966067,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 288.95,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1256.56,
             "unit": "ms"
           }
         ]
