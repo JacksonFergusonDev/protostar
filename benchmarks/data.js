@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790749032107,
+  "lastUpdate": 1790795624983,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19351,6 +19351,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1245.28,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4c7928e6e8572b42d3b38cb6660bfa2d17fcc809",
+          "message": "fix(sync): retract a disabled tool's commit hooks (#391)\n\nTurning a tool off removed its dependency, configuration, and CI step but\nleft its hook in .pre-commit-config.yaml. After uv sync removed the tool,\nevery commit failed (\"Failed to spawn: mypy\") while status reported no\npending work.\n\nThe hook configuration is one generator's complete output, like a\nworkflow, so its spec now uses the complete policy: an unedited hook or\nrepository Protostar stops generating is removed, an edited one becomes a\nretracted conflict, and the user's own hooks stay. A retracted\nrepository's pin leaves protostar.lock with it.",
+          "timestamp": "2026-09-30T12:10:24-07:00",
+          "tree_id": "8f5561898fb1b8e3dd4e2fc9bed2a64be4d7ee34",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/4c7928e6e8572b42d3b38cb6660bfa2d17fcc809"
+        },
+        "date": 1790795623149,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 262.95,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1217.57,
             "unit": "ms"
           }
         ]
