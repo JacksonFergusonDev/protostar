@@ -8,8 +8,8 @@ CLI are up-to-date with the latest registry state.
 # Immutable fallback state guarantees zero downtime if the user is offline.
 # Formatted as string keys to avoid circular imports.
 DEFAULT_REVISIONS: dict[str, str] = {
-    "https://github.com/DavidAnson/markdownlint-cli2": "v0.23.2",
-    "https://github.com/commitizen-tools/commitizen": "v4.18.1",
+    "https://github.com/DavidAnson/markdownlint-cli2": "v0.23.3",
+    "https://github.com/commitizen-tools/commitizen": "v4.19.0",
     "https://github.com/gitleaks/gitleaks": "v8.30.1",
     "https://github.com/pre-commit/pre-commit-hooks": "v6.0.0",
 }
