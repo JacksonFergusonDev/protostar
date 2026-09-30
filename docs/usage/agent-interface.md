@@ -30,7 +30,7 @@ By passing the position-independent `--json` flag and utilizing the `--dry-run` 
 
 ## The Machine Protocol
 
-Protostar marks its machine interface with an explicit `api_version` field in all JSON payloads (`"api_version": 1` during the experimental phase).
+Protostar marks its machine interface with an explicit `api_version` field in all JSON payloads (`"api_version": 2` during the experimental phase).
 
 The CLI uses a position-independent `--json` flag that can appear anywhere in the argument list (e.g., `protostar --json`, `protostar init --template cli --json`, or `protostar --json init`).
 
@@ -112,13 +112,9 @@ The resulting payload exposes all directories, injected file contents, dependenc
 
 #### Collision Handling & Recovery
 
-If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with an error payload:
-
-```json
---8<-- "agent_payload_error.json"
-```
-
-The agent can parse the `"paths"` array and choose how to proceed:
+If the target workspace already contains files (such as an existing `pyproject.toml` or `README.md`), Protostar will not prompt interactively in JSON mode. Instead, it exits with the `WorkspaceCollisionError` payload shown under
+[Protocol States](#protocol-states). The agent can parse `error.paths` and choose
+how to proceed:
 
 - Pass `--force-merge` to reconcile previously managed configuration without
   adopting existing content, and append missing ignore rules.
@@ -222,11 +218,18 @@ the repository no longer has it), the `newer` release when one exists, the commi
 `null` for built-in, local, and plain-URL templates. A newer release is not pending
 work: move to it with `sync --to <ref>`.
 Discover its JSON Schema through `protostar help status --json` in
-`capabilities.review_schema`. The generated schema is included below.
+`capabilities.review_schema`. Every property in it carries a `description`, and
+the tables below are generated from those.
 
-```json
---8<-- "review_schema.json"
-```
+--8<-- "table_schema_review_envelope.md"
+
+`template` is `null` or holds:
+
+--8<-- "table_schema_template.md"
+
+`review` holds:
+
+--8<-- "table_schema_review.md"
 
 Both commands exit `0` for a valid review, including conflicts. Domain failures use
 the existing error envelope and domain exit code. Resolver output is explicitly
@@ -247,6 +250,15 @@ that changed since the review fails with `UnmatchedResolutionError` instead of
 applying elsewhere; a choice the conflict does not offer fails with
 `UnsupportedResolutionError` and lists the ones it does. See
 [resolve conflicts](lifecycle.md#resolve-conflicts).
+
+Conflicts, resolved conflicts, proposals, and preserved edits are all decisions
+with one shape, and each list adds at most one key:
+
+--8<-- "table_schema_decision.md"
+
+A decision's `reason` is one of:
+
+--8<-- "table_schema_reasons.md"
 
 An edit whose `after` is `null` removes the file. `review.migrations` lists what
 each template [migration](authoring-templates.md#migrations) does to one file:
@@ -279,9 +291,11 @@ Partial application exits `1` after committing safe updates; fatal failures use
 the error envelope with rollback context when available. Discover the application
 schema through `protostar help sync --json` in `capabilities.application_schema`.
 
-```json
---8<-- "application_schema.json"
-```
+--8<-- "table_schema_application_envelope.md"
+
+`result` holds:
+
+--8<-- "table_schema_result.md"
 
 See the [lifecycle walkthrough](lifecycle.md) for check outcomes, recipe edits,
 enrollment, and security and rollback boundaries.
