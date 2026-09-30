@@ -365,8 +365,18 @@ def emit_capabilities(
     sys.exit(0)
 
 
+def described(description: str, schema: dict[str, Any]) -> dict[str, Any]:
+    """Returns ``schema`` with the ``description`` agents and the docs read."""
+    return {**schema, "description": description}
+
+
 def review_schema() -> dict[str, Any]:
-    """Returns the schema for shipped status/diff JSON review envelopes."""
+    """Returns the schema for shipped status/diff JSON review envelopes.
+
+    Every property carries a description: the docs render their field tables
+    from it, and agents read it in ``capabilities.review_schema``.
+    """
+    from protostar.cli.decisions import MEANING
     from protostar.merge import ConflictReason, ResolutionChoice
     from protostar.migrations import MigrationOutcome
     from protostar.network import RefKind
@@ -389,100 +399,308 @@ def review_schema() -> dict[str, Any]:
     def records(properties: dict[str, Any]) -> dict[str, Any]:
         return {"type": "array", "items": record(properties)}
 
-    location = {"file": string, "keys": strings, "identity": nullable_string}
+    def nullable(schema: dict[str, Any]) -> dict[str, Any]:
+        return {"oneOf": [schema, {"type": "null"}]}
+
     choice = {"enum": [choice.value for choice in ResolutionChoice]}
     # A side is absent (null) or holds text or a decoded value.
-    side = {"oneOf": [record({"value": {}}), {"type": "null"}]}
+    side = nullable(
+        record(
+            {
+                "value": described(
+                    "The text of the lines, or the decoded TOML, YAML, or JSON value.",
+                    {},
+                )
+            }
+        )
+    )
     conflict = {
-        "id": string,
-        **location,
-        "lines": {
-            "oneOf": [
-                record({"start": count, "count": count}),
-                {"type": "null"},
-            ]
-        },
-        "reason": {"enum": [reason.value for reason in ConflictReason]},
-        "choices": {"type": "array", "items": choice},
-        "sides": {
-            "oneOf": [
-                record({"text": boolean, "base": side, "local": side, "desired": side}),
-                {"type": "null"},
-            ]
-        },
+        "id": described(
+            "Names this decision in `--resolve`. It covers the content, so it "
+            "changes when the files do.",
+            string,
+        ),
+        "file": described("The file the decision is in, as a POSIX path.", string),
+        "keys": described(
+            "The key path inside a structured file; empty for a text file "
+            "or a whole file.",
+            strings,
+        ),
+        "identity": described(
+            "The record it is in when the keys name a list of records, "
+            "such as a hook; otherwise `null`.",
+            nullable_string,
+        ),
+        "lines": described(
+            "The lines of a text file, numbered as in a unified diff hunk "
+            "header; `null` for a structured file.",
+            nullable(
+                record(
+                    {
+                        "start": described(
+                            "The first line, counting from 1. When `count` is 0, "
+                            "the line the span follows (0 before the first).",
+                            count,
+                        ),
+                        "count": described(
+                            "The number of local lines; 0 when your file has none there.",
+                            count,
+                        ),
+                    }
+                )
+            ),
+        ),
+        "reason": described(
+            "Why it is a decision. Each value below says what it means.",
+            {
+                "oneOf": [
+                    {"const": reason.value, "description": MEANING[reason]}
+                    for reason in ConflictReason
+                ]
+            },
+        ),
+        "choices": described(
+            "The choices that settle it: `local` keeps your version, `desired` "
+            "takes the update, and `both` keeps both sides of a text hunk.",
+            {"type": "array", "items": choice},
+        ),
+        "sides": described(
+            "What each side holds there; `null` when only a person can settle it.",
+            nullable(
+                record(
+                    {
+                        "text": described(
+                            "Whether the sides are lines of text rather than "
+                            "decoded values.",
+                            boolean,
+                        ),
+                        "base": described(
+                            "What Protostar last applied; `null` when it never did.",
+                            side,
+                        ),
+                        "local": described(
+                            "What your file holds; `null` when you deleted it.", side
+                        ),
+                        "desired": described(
+                            "What the update holds; `null` when it no longer "
+                            "includes it.",
+                            side,
+                        ),
+                    }
+                )
+            ),
+        ),
     }
     review = record(
         {
-            "edits": records(
-                {"path": string, "before": nullable_string, "after": nullable_string}
+            "edits": described(
+                "Every file the run writes or removes.",
+                records(
+                    {
+                        "path": described("The file, as a POSIX path.", string),
+                        "before": described(
+                            "The file's text now; `null` when it is new.",
+                            nullable_string,
+                        ),
+                        "after": described(
+                            "The file's text after the run; `null` when it is removed.",
+                            nullable_string,
+                        ),
+                    }
+                ),
             ),
-            "directories": strings,
-            "migrations": records(
-                {
-                    "version": string,
-                    "path": string,
-                    "target": nullable_string,
-                    "outcome": {
-                        "enum": [outcome.value for outcome in MigrationOutcome]
-                    },
-                }
+            "directories": described(
+                "Directories the run creates, as POSIX paths.", strings
             ),
-            "conflicts": records(conflict),
-            "resolved": records({**conflict, "resolution": choice}),
+            "migrations": described(
+                "What each template migration does to one file.",
+                records(
+                    {
+                        "version": described("The migration's version.", string),
+                        "path": described("The file it names in this project.", string),
+                        "target": described(
+                            "Where a rename moves the file; `null` for a removal.",
+                            nullable_string,
+                        ),
+                        "outcome": described(
+                            "What happened to the file: `moved`, `target-exists`, "
+                            "`removed`, `retired`, `forgotten`, or `not-owned`.",
+                            {"enum": [outcome.value for outcome in MigrationOutcome]},
+                        ),
+                    }
+                ),
+            ),
+            "conflicts": described(
+                "Open conflicts. Your version stays until each is resolved.",
+                records(conflict),
+            ),
+            "resolved": described(
+                "Conflicts settled by `--resolve`, each with the choice made.",
+                records(
+                    {
+                        **conflict,
+                        "resolution": described("The choice that settled it.", choice),
+                    }
+                ),
+            ),
             # A proposal without a choice applies.
-            "proposals": records(
-                {**conflict, "resolution": {"oneOf": [choice, {"type": "null"}]}}
+            "proposals": described(
+                "Changes into content Protostar never owned. Each applies "
+                "unless resolved with `local`.",
+                records(
+                    {
+                        **conflict,
+                        "resolution": described(
+                            "The choice made; `null` while it applies.",
+                            nullable(choice),
+                        ),
+                    }
+                ),
             ),
-            "preserved": records({**conflict, "deleted": boolean}),
-            "state_changed": boolean,
-            "resolver": record(
-                {
-                    "requirements": record(
-                        {"main": strings, "dev": strings, "docs": strings}
-                    ),
-                    "lock_required": boolean,
-                    "footprint": record({"paths": strings}),
-                    "output": {"enum": ["unknown", None]},
-                }
+            "preserved": described(
+                "Your edits and deletions that stay under an unchanged update. "
+                "Resolving one with `desired` takes Protostar's version there.",
+                records(
+                    {
+                        **conflict,
+                        "deleted": described(
+                            "Whether what you kept is a deletion.", boolean
+                        ),
+                    }
+                ),
             ),
-            "initialization_only": {"type": "array", "items": strings},
-            "initialization_only_ide_probe": boolean,
-            "hooks": record(
-                {"install": {"oneOf": [strings, {"type": "null"}]}, "remove": strings}
+            "state_changed": described(
+                "Whether the ownership records must advance.", boolean
+            ),
+            "resolver": described(
+                "The package work uv does; its output is never simulated.",
+                record(
+                    {
+                        "requirements": described(
+                            "The packages uv adds, by dependency group.",
+                            record(
+                                {
+                                    "main": described("Runtime dependencies.", strings),
+                                    "dev": described(
+                                        "Development dependencies.", strings
+                                    ),
+                                    "docs": described(
+                                        "Documentation dependencies.", strings
+                                    ),
+                                }
+                            ),
+                        ),
+                        "lock_required": described(
+                            "Whether uv must refresh `uv.lock`.", boolean
+                        ),
+                        "footprint": described(
+                            "The paths uv may write.",
+                            record(
+                                {
+                                    "paths": described(
+                                        "The paths, as POSIX paths.", strings
+                                    )
+                                }
+                            ),
+                        ),
+                        "output": described(
+                            "`unknown` when resolver work is pending, else `null`.",
+                            {"enum": ["unknown", None]},
+                        ),
+                    }
+                ),
+            ),
+            "initialization_only": described(
+                "Commands only `init` runs, such as `git init`; `sync` never "
+                "runs them again.",
+                {"type": "array", "items": strings},
+            ),
+            "initialization_only_ide_probe": described(
+                "Whether `init` also checks your IDE for the extensions the tools recommend.",
+                boolean,
+            ),
+            "hooks": described(
+                "What `sync` does to this clone's git hooks. They never count "
+                "as pending.",
+                record(
+                    {
+                        "install": described(
+                            "The command that installs the wanted hooks; `null` "
+                            "when none is missing.",
+                            nullable(strings),
+                        ),
+                        "remove": described(
+                            "Generated hooks that will be removed, as POSIX paths.",
+                            strings,
+                        ),
+                    }
+                ),
             ),
             "missing_tools": missing_tools_schema(),
-            "selections": records(
-                {
-                    "tool": {"enum": [tool.value for tool in Tool]},
-                    "enabled": boolean,
-                    "layer": {"enum": [layer.value for layer in SelectionLayer]},
-                }
+            "selections": described(
+                "Which tools are on, and which layer decided each.",
+                records(
+                    {
+                        "tool": described(
+                            "The tool.", {"enum": [tool.value for tool in Tool]}
+                        ),
+                        "enabled": described("Whether it is on.", boolean),
+                        "layer": described(
+                            "Where the choice came from: your `project`, the "
+                            "`template`, or a `fallback` default.",
+                            {"enum": [layer.value for layer in SelectionLayer]},
+                        ),
+                    }
+                ),
             ),
-            "producers": records(
-                {
-                    "producer": string,
-                    "tool": {"enum": [None, *[tool.value for tool in Tool]]},
-                    "path": strings,
-                }
+            "producers": described(
+                "Which module declared each part of the plan.",
+                records(
+                    {
+                        "producer": described("The module that declared it.", string),
+                        "tool": described(
+                            "The tool the module belongs to; `null` for the core.",
+                            {"enum": [None, *[tool.value for tool in Tool]]},
+                        ),
+                        "path": described(
+                            "The plan section (`dependencies`, `filesystem`, "
+                            "`tasks`, or `tooling`), then the keys declared.",
+                            strings,
+                        ),
+                    }
+                ),
             ),
         }
     )
     # A repository template's applied ref and what its repository offers.
-    template = {
-        "oneOf": [
+    template = described(
+        "The template's applied ref and what its repository offers; `null` for "
+        "a built-in, local, or plain-URL template.",
+        nullable(
             record(
                 {
-                    "ref": string,
-                    "revision": string,
-                    "kind": {"enum": [None, *[kind.value for kind in RefKind]]},
-                    "newer": nullable_string,
-                    "moved": nullable_string,
-                    "reachable": boolean,
+                    "ref": described("The tag, branch, or commit applied.", string),
+                    "revision": described("The commit the ref names.", string),
+                    "kind": described(
+                        "What the ref is; `null` when the repository no longer has it.",
+                        {"enum": [None, *[kind.value for kind in RefKind]]},
+                    ),
+                    "newer": described(
+                        "The newest release, when there is one; move to it "
+                        "with `sync --to`.",
+                        nullable_string,
+                    ),
+                    "moved": described(
+                        "The commit a tag or branch names now, when it moved.",
+                        nullable_string,
+                    ),
+                    "reachable": described(
+                        "Whether the repository could be reached.", boolean
+                    ),
                 }
-            ),
-            {"type": "null"},
-        ]
-    }
+            )
+        ),
+    )
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Protostar project review v1",
@@ -490,24 +708,36 @@ def review_schema() -> dict[str, Any]:
         "required": ["api_version", "status", "pending", "template", "review", "diffs"],
         "additionalProperties": False,
         "properties": {
-            "api_version": {"const": CLI_API_VERSION},
-            "status": {"const": "reviewed"},
-            "pending": {"type": "boolean"},
-            "check_passed": {"type": "boolean"},
+            "api_version": described(
+                "The machine protocol version.", {"const": CLI_API_VERSION}
+            ),
+            "status": described("Always `reviewed`.", {"const": "reviewed"}),
+            "pending": described(
+                "Whether the project is out of date: files, directories, "
+                "ownership, package work, or conflicts. Git hooks never count.",
+                {"type": "boolean"},
+            ),
+            "check_passed": described(
+                "Only from `sync --check`: whether nothing is pending.",
+                {"type": "boolean"},
+            ),
             "template": template,
-            "review": review,
-            "diffs": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "required": ["path", "diff"],
-                    "additionalProperties": False,
-                    "properties": {
-                        "path": {"type": "string"},
-                        "diff": {"type": "string"},
+            "review": described("What the run does and what it asks.", review),
+            "diffs": described(
+                "A unified diff for each entry in `review.edits`.",
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["path", "diff"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "path": described("The file, as a POSIX path.", string),
+                            "diff": described("Its unified diff.", string),
+                        },
                     },
                 },
-            },
+            ),
         },
     }
 
@@ -517,22 +747,33 @@ def missing_tools_schema() -> dict[str, Any]:
     from protostar.recipe import Tool
     from protostar.system_deps import GlobalExecutable
 
-    return {
-        "type": "array",
-        "items": {
-            "type": "object",
-            "required": ["executable", "tool"],
-            "additionalProperties": False,
-            "properties": {
-                "executable": {"enum": [item.value for item in GlobalExecutable]},
-                "tool": {"enum": [tool.value for tool in Tool]},
+    return described(
+        "Executables a selected tool runs that `PATH` lacks. The steps that run "
+        "them are skipped.",
+        {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["executable", "tool"],
+                "additionalProperties": False,
+                "properties": {
+                    "executable": described(
+                        "The executable that is missing.",
+                        {"enum": [item.value for item in GlobalExecutable]},
+                    ),
+                    "tool": described(
+                        "The tool that runs it.",
+                        {"enum": [tool.value for tool in Tool]},
+                    ),
+                },
             },
         },
-    }
+    )
 
 
 def application_schema() -> dict[str, Any]:
     """Returns success/partial lifecycle application envelopes with actual results."""
+    review = review_schema()["properties"]
     strings = {"type": "array", "items": {"type": "string"}}
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -541,29 +782,47 @@ def application_schema() -> dict[str, Any]:
         "required": ["api_version", "status", "template", "review", "result"],
         "additionalProperties": False,
         "properties": {
-            "api_version": {"const": CLI_API_VERSION},
-            "status": {"enum": ["success", "partial"]},
-            "template": review_schema()["properties"]["template"],
-            "review": review_schema()["properties"]["review"],
+            "api_version": review["api_version"],
+            "status": described(
+                "`success` when nothing is left to settle; `partial` when safe "
+                "updates were committed but conflicts remain.",
+                {"enum": ["success", "partial"]},
+            ),
+            "template": review["template"],
+            "review": described("What the run did and what it asks.", review["review"]),
             # Only when a command installs the tools the result lists missing.
-            "install_commands": strings,
-            "result": {
-                "type": "object",
-                "required": [
-                    "created_paths",
-                    "mutated_paths",
-                    "touched_paths",
-                    "diagnostics",
-                    "missing_tools",
-                ],
-                "additionalProperties": False,
-                "properties": {
-                    "created_paths": strings,
-                    "mutated_paths": strings,
-                    "touched_paths": strings,
-                    "diagnostics": {"type": "array", "items": {"type": "object"}},
-                    "missing_tools": missing_tools_schema(),
+            "install_commands": described(
+                "The commands that install the missing tools, in order; only "
+                "when a package manager was found.",
+                strings,
+            ),
+            "result": described(
+                "What the run wrote.",
+                {
+                    "type": "object",
+                    "required": [
+                        "created_paths",
+                        "mutated_paths",
+                        "touched_paths",
+                        "diagnostics",
+                        "missing_tools",
+                    ],
+                    "additionalProperties": False,
+                    "properties": {
+                        "created_paths": described("Paths the run created.", strings),
+                        "mutated_paths": described(
+                            "Paths that existed and the run changed.", strings
+                        ),
+                        "touched_paths": described(
+                            "Every created or mutated path.", strings
+                        ),
+                        "diagnostics": described(
+                            "Non-fatal notes from the run.",
+                            {"type": "array", "items": {"type": "object"}},
+                        ),
+                        "missing_tools": missing_tools_schema(),
+                    },
                 },
-            },
+            ),
         },
     }

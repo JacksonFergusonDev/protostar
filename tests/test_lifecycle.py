@@ -164,6 +164,35 @@ def test_capabilities_publish_review_schema():
     assert capabilities["review_schema"]["properties"]["status"]["const"] == "reviewed"
 
 
+def test_every_published_schema_property_is_described():
+    def undescribed(node, path=""):
+        if not isinstance(node, dict):
+            return
+        for key, prop in node.get("properties", {}).items():
+            description = prop.get("description", "")
+            if not description or "\n" in description or "|" in description:
+                yield f"{path}.{key}"
+            yield from undescribed(prop, f"{path}.{key}")
+        yield from undescribed(node.get("items"), f"{path}[]")
+        for option in node.get("oneOf", ()):
+            yield from undescribed(option, path)
+
+    for published in (schema.review_schema(), schema.application_schema()):
+        assert list(undescribed(published)) == []
+
+
+def test_every_conflict_reason_is_described():
+    from protostar.merge import ConflictReason
+
+    reasons = schema.review_schema()["properties"]["review"]["properties"]["conflicts"][
+        "items"
+    ]["properties"]["reason"]["oneOf"]
+    assert {option["const"] for option in reasons} == {
+        reason.value for reason in ConflictReason
+    }
+    assert all(option["description"] for option in reasons)
+
+
 def _record_variables(variables):
     import tomlkit
 
