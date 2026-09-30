@@ -76,7 +76,7 @@ test-benchmark-slower: sync
     @printf "{{ green }}✔ Benchmark complete{{ nc }}\n"
 
 # Run the fast local CI pipeline executed before pushing
-ci: lint typecheck test docs check-snapshots check-doc-links check-schemas secrets
+ci: lint typecheck test docs check-snapshots check-doc-links check-docs-drift check-schemas secrets
     @printf "\n{{ green }}✔ Local CI pipeline completed successfully. Clear to push!{{ nc }}\n"
 
 # Remove caches, artifacts, and temp files
@@ -115,6 +115,11 @@ check-doc-links: sync
     @printf "\n{{ blue }}=== Validating Embedded Documentation Links ==={{ nc }}\n"
     uv run python scripts/check_doc_links.py
     @printf "{{ green }}✔ All embedded documentation links are valid{{ nc }}\n"
+
+# Validate that hand-written documentation still agrees with the code
+check-docs-drift: sync
+    @printf "\n{{ blue }}=== Checking Documentation Against the Code ==={{ nc }}\n"
+    uv run python scripts/check_docs_drift.py
 
 # Validate repository and snapshot configurations against official schemas
 check-schemas: sync

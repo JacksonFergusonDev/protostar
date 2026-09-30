@@ -17,11 +17,15 @@ from protostar.errors import (
     FileSystemError,
     InvalidUsageError,
     MissingDependencyError,
+    MissingTemplateVariablesError,
     NetworkFetchError,
     ProtostarError,
+    SecretDetectedError,
     SecurityViolationError,
+    StaleReviewError,
     TemplateResolutionError,
     WorkspaceCollisionError,
+    exit_code_for,
 )
 from protostar.system_deps import GlobalExecutable, InstallCommand
 
@@ -33,7 +37,6 @@ def test_exit_code_values():
     assert ExitCode.DATAERR.value == 65
     assert ExitCode.UNAVAILABLE.value == 69
     assert ExitCode.SOFTWARE.value == 70
-    assert ExitCode.OSERR.value == 71
     assert ExitCode.IOERR.value == 74
     assert ExitCode.TEMPFAIL.value == 75
     assert ExitCode.NOPERM.value == 77
@@ -239,3 +242,13 @@ def test_security_violation_error():
         err.docs_url
         == f"{DOCS_BASE_URL}usage/troubleshooting/#remote-template-security-alerts"
     )
+
+
+def test_exit_code_for_routes_each_error_to_its_code():
+    """Subclasses take their base's code, and unrouted failures exit 1."""
+    assert exit_code_for(InvalidUsageError) is ExitCode.USAGE
+    assert exit_code_for(SecretDetectedError) is ExitCode.NOPERM
+    assert exit_code_for(StaleReviewError) is ExitCode.CONFIG
+    assert exit_code_for(MissingTemplateVariablesError) is ExitCode.DATAERR
+    assert exit_code_for(ExecutionInterruptedError) is ExitCode.INTERRUPTED
+    assert exit_code_for(CommandExecutionError) is ExitCode.FAILURE

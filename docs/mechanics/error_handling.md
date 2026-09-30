@@ -61,10 +61,18 @@ All domain-modeled operational exceptions inherit from `ProtostarError` in `prot
 ```text
 ProtostarError (Exception)
  ├── ConfigurationError
+ │   ├── StaleReviewError
+ │   ├── UnmatchedResolutionError
+ │   ├── UnsupportedResolutionError
+ │   ├── UnversionedTemplateError
+ │   ├── OutdatedProtostarError
+ │   └── InvalidOptionValueError
+ ├── InvalidUsageError
  ├── NetworkFetchError
  ├── TemplateResolutionError
- │    └── MissingTemplateVariablesError
- ├── WorkspaceCollisionError
+ │   ├── TemplateEncodingError
+ │   ├── TemplateRefNotFoundError
+ │   └── MissingTemplateVariablesError
  ├── MissingDependencyError
  ├── CommandExecutionError
  ├── CommandTimeoutError
@@ -72,11 +80,12 @@ ProtostarError (Exception)
  ├── FileSystemError
  ├── UnsupportedFilesystemNodeError
  ├── TransactionStateError
- ├── SecurityViolationError
- │    └── SecretDetectedError
- ├── RollbackFailedError
  ├── ExecutionAbortedError
- └── ExecutionInterruptedError
+ ├── ExecutionInterruptedError
+ ├── WorkspaceCollisionError
+ ├── SecurityViolationError
+ │   └── SecretDetectedError
+ └── RollbackFailedError
 ```
 
 ### `ProtostarError`
@@ -92,6 +101,34 @@ class ProtostarError(Exception):
 
 Raised when a configuration file (such as `protostar.toml` or `pyproject.toml`) is malformed, invalid, or contains type/syntax mismatches. Also raised for invalid configuration flags or CLI parameter collisions.
 
+### `StaleReviewError`
+
+Raised when a file the change review read has changed by the time it is applied. Protostar never applies a review against inputs it did not show you, so the hint asks for a new review. It is a `ConfigurationError`.
+
+### `UnmatchedResolutionError`
+
+Raised when a `--resolve` selector names no conflict in the current review. A conflict's identity covers its content, so a conflict that changed since you reviewed it no longer matches. Carries every unmatched selector, in the order given, as `unmatched_resolutions` in the JSON envelope. See [Resolve Conflicts](../usage/lifecycle.md#resolve-conflicts).
+
+### `UnsupportedResolutionError`
+
+Raised when a conflict cannot be settled by the choice made for it, for example `both` on a conflict that has no overlapping lines. Carries the rejected `resolution` and the `choices` the conflict does offer, which is empty when it must be settled by hand.
+
+### `UnversionedTemplateError`
+
+Raised when a revision is requested for a template that has none. Only templates in a GitHub, GitLab, Bitbucket, Codeberg, or Sourcehut repository have versions: built-in templates follow the installed Protostar, and local templates follow their files.
+
+### `OutdatedProtostarError`
+
+Raised when the installed Protostar is older than the one that wrote `protostar.lock`. Built-in modules render whatever the installed release produces, so an older release would plan older output and accept it as an update. Carries `recorded_version` and `installed_version`; the hint is to upgrade.
+
+### `InvalidOptionValueError`
+
+Raised when a template option is given a value it does not offer, as `--option NAME=VALUE`. Carries the `option` and the `values` it offers. See [Template Options](../usage/authoring-templates.md#template-options).
+
+### `InvalidUsageError`
+
+Raised when the command line is unrecognized or invalid. Its documentation link points at the CLI reference.
+
 ### `NetworkFetchError`
 
 Raised when remote configuration or template downloads fail due to network disconnection, SSL errors, or attempts to fetch resources across unencrypted `http://` protocols.
@@ -99,6 +136,14 @@ Raised when remote configuration or template downloads fail due to network disco
 ### `TemplateResolutionError`
 
 Raised when a template target is found but cannot be parsed, extracted, or resolved. Triggers on corrupt archive structures, unsupported archive formats, missing `protostar.toml` files within archives, or unsatisfied template placeholder variables.
+
+### `TemplateEncodingError`
+
+Raised when a file in a template is not UTF-8 text. Everything Protostar reads from a template is interpolated as text, so an undecodable file, such as an image, is a defect of the template itself rather than a failure to retrieve it. Carries the file's `path` within the template.
+
+### `TemplateRefNotFoundError`
+
+Raised when a remote template's repository has no tag, branch, or commit with the ref you named. The hint lists the repository's newest release tags, or says it has none.
 
 ### `MissingTemplateVariablesError`
 
