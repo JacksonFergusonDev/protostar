@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790795624983,
+  "lastUpdate": 1790795667021,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19385,6 +19385,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1217.57,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "78ea9c2c90dce109ee2de66370488897715a92fe",
+          "message": "docs: rewrite Why Protostar around declarative templates and structural merges (#390)\n\nReplace the Why Protostar page and the README comparison with a\npositioning built on verified facts: declarative, modular templates at\ninit, and updates that merge by structure. Includes a side-by-side run\nof the same update through Copier 9.18.2 and Protostar, an honest list\nof where other tools fit better, and the known gaps.\n\nCorrect the authoring guide, which said sync --to merges every file:\nstarter files are written once. Drop the troubleshooting link to GitHub\nDiscussions, which are disabled.",
+          "timestamp": "2026-09-30T12:10:35-07:00",
+          "tree_id": "e47b0c653fd3c449a60905f5e82311e46605075b",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/78ea9c2c90dce109ee2de66370488897715a92fe"
+        },
+        "date": 1790795665862,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 265.56,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1213.93,
             "unit": "ms"
           }
         ]
