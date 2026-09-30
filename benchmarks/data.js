@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790805370472,
+  "lastUpdate": 1790806885017,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19793,6 +19793,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1199.41,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": true,
+          "id": "0655492462c33012406b6a564df5c68e7545d981",
+          "message": "refactor(scripts): share terminal formatting and repository helpers\n\nMake script output easier to scan with dim details, emphasized outcomes,\nand clear commands through one shared formatter. Keep redirected CI\noutput plain and avoid importing Rich outside interactive terminals.\n\nShare bounded downloads between the release generators and reuse the\nrepository subprocess helper for snapshot inspection. Verify terminal\nencoding and release scripts under a bare Python interpreter.\n\nRefresh scaffold snapshots to reflect the updated fallback hook pins.",
+          "timestamp": "2026-09-30T15:17:06-07:00",
+          "tree_id": "82b64d9894dafc60edb403a12f628f84b7d38483",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0655492462c33012406b6a564df5c68e7545d981"
+        },
+        "date": 1790806884181,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 263.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1195.31,
             "unit": "ms"
           }
         ]
