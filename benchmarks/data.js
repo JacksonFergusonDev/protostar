@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790795667021,
+  "lastUpdate": 1790796557276,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19419,6 +19419,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1213.93,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0225ac6320f1f9295932341422f49bb3ed6f8ee6",
+          "message": "fix(security): gate an untrusted template's dependency installs (#392)\n\nThe trust gate listed an untrusted template's setup and post-install\ncommands but not the uv add or uv lock Protostar runs for it. uv builds\nthe project while it installs, which runs the build backend and any build\nhooks the template configured, so a template with no tasks could run its\ncode without a prompt, including in an existing project where no setup\ncommand runs.\n\nThe gate now lists every resolver command in execution order, built by\nthe same function the executor uses. The CLI warning and TUI note say\nwhy Protostar's own commands are listed, both paths raise the same\nSecurityViolationError (exit 77), and the hint names a real place to set\ntrusted = true. The docs described the gate as firing only for templates\nwith tasks; they now describe what it covers, and that sync asks no trust\nquestion.",
+          "timestamp": "2026-09-30T12:26:54-07:00",
+          "tree_id": "d52b1638f018827903b137f65a74825f0b95a1f7",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/0225ac6320f1f9295932341422f49bb3ed6f8ee6"
+        },
+        "date": 1790796555324,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 175.36,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 794.09,
             "unit": "ms"
           }
         ]
