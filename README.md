@@ -18,7 +18,11 @@
 [![Documentation](https://img.shields.io/badge/docs-gh--pages-22d3ee?labelColor=0A0A0A&logo=github&logoColor=white)](https://protostar.jacksonferguson.me/)
 [![License](https://img.shields.io/badge/license-MIT-22d3ee?labelColor=0A0A0A)](LICENSE)
 
-## Safe. Predictable. Clean
+---
+
+### Simple Python project scaffolding that understands your tools
+
+---
 
 | [**Get Started**](https://protostar.jacksonferguson.me/getting-started/)
 | [**Docs**](https://protostar.jacksonferguson.me/)

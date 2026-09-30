@@ -1,6 +1,6 @@
 ---
 title: Protostar
-description: "Safe, predictable, and clean Python environment scaffolding."
+description: "Simple Python project scaffolding that understands your tools."
 icon: material/home
 hide:
   - navigation
@@ -17,10 +17,9 @@ hide:
 
 <div class="protostar-hero">
   <div class="hero-content">
-    <h1>Safe. Predictable. Clean.</h1>
-    <h2>A plan before a single side effect.</h2>
+    <h1>Simple Python project scaffolding that understands your tools.</h1>
     <p class="protostar-lede">
-      Deterministic, transaction-aware environment scaffolding for Python projects—setting up modern tooling without overwriting existing work or leaving half-finished setups.
+      Pick your tools, and Protostar writes their configuration, hooks, and CI. When your template improves, updates merge into your files by meaning, so your edits stay.
     </p>
     <div class="protostar-install-header">
       <span class="protostar-command-label">Install globally</span>

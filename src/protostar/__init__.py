@@ -1,4 +1,4 @@
-"""High-velocity, zero-friction Python environment scaffolding."""
+"""Simple Python project scaffolding that understands your tools."""
 
 import logging
 from typing import TYPE_CHECKING

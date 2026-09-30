@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Protostar provides zero-friction Python environment scaffolding and lifecycle management.
+        Protostar is simple Python project scaffolding that understands your tools.
   - type: dropdown
     id: category
     attributes:

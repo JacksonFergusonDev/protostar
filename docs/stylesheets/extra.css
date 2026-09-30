@@ -223,27 +223,14 @@
 
 /* Fluid, massive typography */
 .md-typeset .hero-content h1 {
-    max-width: 10ch;
-    margin: 0 0 2rem;
-    font-size: clamp(2.6rem, 4.8vw, 4.2rem);
+    max-width: 18ch;
+    margin: 0 0 1.5rem;
+    font-size: clamp(2.2rem, 3.8vw, 3.4rem);
     font-weight: 800;
     letter-spacing: -0.04em;
     line-height: 1.05;
     text-wrap: balance;
     color: #0f172a;
-}
-
-.md-typeset .hero-content h2 {
-    max-width: 32ch;
-    border-bottom: none;
-    padding-bottom: 0;
-    margin: 0 0 1.25rem;
-    font-size: clamp(1.35rem, 2.2vw, 1.75rem);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.25;
-    text-wrap: balance;
-    color: #1e293b;
 }
 
 .protostar-lede {
@@ -523,11 +510,6 @@
     .md-typeset .hero-content h1 {
         color: #ffffff;
         text-shadow: 0 0 30px rgba(255, 255, 255, 0.12);
-    }
-
-    .md-typeset .hero-content h2 {
-        color: #f1f5f9;
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
     }
 
 

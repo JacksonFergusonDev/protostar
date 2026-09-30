@@ -1,6 +1,6 @@
 [project]
 site_name = "Protostar"
-site_description = "High-velocity, zero-friction Python environment scaffolding."
+site_description = "Simple Python project scaffolding that understands your tools."
 site_url = "https://protostar.jacksonferguson.me/"
 repo_url = "https://github.com/jacksonfergusondev/protostar"
 repo_name = "jacksonfergusondev/protostar"
