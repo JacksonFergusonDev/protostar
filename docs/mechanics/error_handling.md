@@ -147,7 +147,7 @@ Raised when a remote template's repository has no tag, branch, or commit with th
 
 ### `MissingTemplateVariablesError`
 
-Raised when a template is rendered without a value for one of its custom variables. The engine never prompts: the CLI prompts in an interactive terminal, and everywhere else, including `--json` and `sync`, this error names every missing variable at once through its `variables` attribute (`missing_variables` in the JSON envelope). See [Template variables](../development/project-recipe.md#template-variables).
+Raised when a template is rendered without a value for one of its custom variables. The engine never prompts: the CLI prompts in an interactive terminal, and everywhere else, including `--json` and `sync`, this error names every missing variable at once through its `variables` attribute (`missing_variables` in the JSON envelope). See [Template variables](../usage/project-recipes.md#template-variables).
 
 ### `WorkspaceCollisionError`
 

@@ -49,14 +49,11 @@ CONTRACT_TEST = REPO_ROOT / "tests" / "test_builtin_template_contract.py"
 MAINTAINER_PAGES = (
     CONTRIBUTING,
     AGENTS,
-    *sorted((DOCS_DIR / "developer").glob("*.md")),
+    *sorted((DOCS_DIR / "developer").rglob("*.md")),
 )
 
 # Pages the site publishes from outside docs/, so no Markdown file backs them.
 PUBLISHED_ELSEWHERE = frozenset({"benchmarks/"})
-
-# Written on purpose without a page in the navigation.
-UNLISTED_PAGES = frozenset({"development/semantic-reconciliation.md"})
 
 # Paths a maintainer page shows as examples of the pattern, not as files.
 PLACEHOLDER_PATHS = frozenset({"tests/path/to/test.py", "tests/test_foo.py"})
@@ -381,7 +378,7 @@ def check_navigation() -> list[str]:
     }
     problems = [
         f"docs/{page}: not in the zensical.toml nav"
-        for page in sorted(on_disk - in_nav - UNLISTED_PAGES)
+        for page in sorted(on_disk - in_nav)
     ]
     problems += [
         f"zensical.toml: nav entry '{page}' has no file"

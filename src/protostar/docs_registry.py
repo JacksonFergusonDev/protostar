@@ -22,7 +22,7 @@ class DocsPage(Enum):
         "Template Variables",
     )
     RECIPE_VARIABLES = (
-        "development/project-recipe/#template-variables",
+        "usage/project-recipes/#template-variables",
         "Recipe Template Variables",
     )
 

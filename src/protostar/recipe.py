@@ -351,7 +351,7 @@ _RECIPE_ORDER = (
 def _invalid() -> ConfigurationError:
     return ConfigurationError(
         "Invalid [tool.protostar] project recipe.",
-        hint="Correct the schema-v1 recipe fields; see docs/development/project-recipe.md.",
+        hint="Correct the schema-v1 recipe fields; see docs/usage/project-recipes.md.",
     )
 
 
