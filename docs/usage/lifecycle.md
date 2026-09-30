@@ -5,7 +5,7 @@ description: "Review and apply recipe-driven project updates while preserving lo
 # Review and synchronize a project
 
 After a tracked `init`, commit `pyproject.toml` and `protostar.lock`. The
-[project recipe](../development/project-recipe.md) records desired selection; the
+[project recipe](project-recipes.md) records desired selection; the
 lock records accepted ownership. Run lifecycle commands from that project's root.
 Protostar uses the current directory and never searches ancestors for a project.
 
@@ -297,7 +297,7 @@ Protostar's standards one at a time.
 ## Edit the recipe deliberately
 
 Edit entries in `[tool.protostar]` using the
-[recipe rules](../development/project-recipe.md). For example:
+[recipe rules](project-recipes.md). For example:
 
 ```toml
 [tool.protostar.tools]
@@ -328,7 +328,7 @@ protostar init --template cli --force-merge
 Include the original tooling choices and source as appropriate. Protostar does not
 reconstruct a request from the ownership lock. Enrollment preserves existing
 ownership and does not adopt equal foreign content. Template variable values come
-from the recipe; see [template variables](../development/project-recipe.md#template-variables).
+from the recipe; see [template variables](project-recipes.md#template-variables).
 Missing recipes, malformed state, and missing variable values fail before mutation.
 
 ## Use checks in CI

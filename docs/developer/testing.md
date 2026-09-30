@@ -71,7 +71,7 @@ The test suite is unified and runs rapidly (~30 seconds) across all platforms.
 
 The test suite validates AST TOML and JSONC merging algorithms, manifest deduplication logic, parser routing, generator string formatting, and transactional execution lifecycles in `tmp_path` sandboxes.
 
-Repeatability and semantic-reconciliation acceptance live in `tests/test_template_repeatability.py` and the focused reconciliation suites: a tracked workspace is re-run with the same template, not a different template. Template switching is intentionally rejected rather than treated as a generic deep merge.
+Repeatability and semantic-reconciliation acceptance live in `tests/test_template_repeatability.py` and the focused reconciliation suites (see the [acceptance suite](reconciliation/execution.md#acceptance-suite)): a tracked workspace is re-run with the same template, not a different template. Template switching is intentionally rejected rather than treated as a generic deep merge.
 
 ### Template Hooks Smoke Matrix (CI)
 

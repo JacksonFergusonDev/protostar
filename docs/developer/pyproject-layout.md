@@ -70,5 +70,5 @@ Formatting must not change a project's configuration. The formatted text is pars
 ## Related Pages
 
 - **[Built-in Templates](./built-in-templates.md):** The contract a template's tool configuration follows.
-- **[Project Recipes](../development/project-recipe.md):** What `[tool.protostar]` records.
+- **[Project Recipes](../usage/project-recipes.md):** What `[tool.protostar]` records.
 - **[Testing Architecture & Philosophy](./testing.md):** How the layout tests fit the unit and exhaustive tiers.
