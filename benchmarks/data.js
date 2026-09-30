@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790746214294,
+  "lastUpdate": 1790747273702,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19283,6 +19283,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1214.62,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "edbdb6a34bc77646a2102d64dcffd3aa15dea303",
+          "message": "docs: publish the development pages and split reconciliation into a guide (#388)\n\ndocs/development/ was a stray directory: project-recipe.md was already in the\nnav (under User Guide) and semantic-reconciliation.md was deliberately\nunlisted. Move the recipe page to docs/usage/project-recipes.md and turn the\n609-line reconciliation contract into five pages under\ndocs/developer/reconciliation/, linked from the Developer Guide.\n\nBoth are unwrapped and restructured with tables, tabs, definition lists, and\nadmonitions. The reconciliation text drops its PR-series framing and the\nclaims that no longer hold (no pruning, no sync command, deferred milestones).\nThe published recipe URL in docs_registry, the recipe error hint, and every\ninbound link follow the move. UNLISTED_PAGES is gone, and the drift check now\ncovers nested developer pages.",
+          "timestamp": "2026-09-29T22:44:16-07:00",
+          "tree_id": "15ae039d81965a02a8225097050310c98bb60990",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/edbdb6a34bc77646a2102d64dcffd3aa15dea303"
+        },
+        "date": 1790747272822,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 309.78,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1337.16,
             "unit": "ms"
           }
         ]
