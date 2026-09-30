@@ -1,4 +1,4 @@
-"""Simple Python project scaffolding that understands your tools."""
+"""Protostar's public Python API."""
 
 import logging
 from typing import TYPE_CHECKING
