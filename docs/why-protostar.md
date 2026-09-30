@@ -174,7 +174,7 @@ Here is the same template update applied by Copier and by Protostar. The project
 Nothing about this scenario is unusual. Adding a dependency is routine on both sides, which is why a line-based merge meets it so often.
 
 ??? info "How this was run"
-    Copier 9.18.2 and Protostar 0.9.0, on 2026-09-30. Each template lived in a local folder, and Copier's was a Git repository with a tag per release, as Copier's updates require. Its template ran `uv lock` as a task, as uv templates commonly do. The Protostar template declared the same dependencies and a `[tool.ruff.lint]` payload. The commands were `copier update --trust --defaults` and `protostar sync`, each run in a committed project after the same edits.
+    Copier 9.18.2 and Protostar 0.10.0, on 2026-09-30. Each template lived in a local folder, and Copier's was a Git repository with a tag per release, as Copier's updates require. Its template ran `uv lock` as a task, as uv templates commonly do. The Protostar template declared the same dependencies and a `[tool.ruff.lint]` payload, and was registered as an alias with `trusted = true`, the counterpart of Copier's `--trust`. The commands were `copier update --trust --defaults` and `protostar sync`, each run in a committed project after the same edits.
 
 ### Clear Decisions, Not Conflict Markers
 
