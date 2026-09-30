@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790797150166,
+  "lastUpdate": 1790798956705,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19521,6 +19521,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1278.5,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af294472fa2a481369a05e5c11bd2ceafb0d72b1",
+          "message": "docs: automating updates, with a scheduled sync workflow that opens update PRs (#393)\n\n* docs(lifecycle): a scheduled sync workflow that opens update PRs\n\nAdd a copyable GitHub Actions workflow that runs protostar sync weekly\nand opens a pull request with whatever changed. It treats exit 1 as\nsafe changes with conflicts kept, says so in the pull request body,\nswitches off the git hooks sync installs before the bot's commit, and\nfails on any other exit code. The notes cover pinning the release,\n--to latest for repository templates, repeat runs, and the repository\nsettings and token CI needs. Why Protostar links to it.\n\n* docs: split automation out of the lifecycle guide\n\nThe scheduled sync workflow sat 358 lines into Project Lifecycle, below\nthe conflict-resolution details, where nobody looking for automation\nwould find it. A new Automating Updates page, next in the nav, holds the\nsections about keeping projects current without anyone running sync by\n\nhand: the scheduled update pull request, checks in CI, keeping Protostar\nversions in step, and upgrading a repository template. Project Lifecycle\nkeeps the hands-on sections and points to the new page from its intro.\n\nThe version-skew error's docs link, Why Protostar, the agent interface,\nand the authoring guide's release section now point to the new page.",
+          "timestamp": "2026-09-30T13:06:15-07:00",
+          "tree_id": "1b46a81818f56489b575526baa4ba5a2df56ef2e",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/af294472fa2a481369a05e5c11bd2ceafb0d72b1"
+        },
+        "date": 1790798954550,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 252.17,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1052.26,
             "unit": "ms"
           }
         ]
