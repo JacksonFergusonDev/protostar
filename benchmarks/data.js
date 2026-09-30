@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790799691768,
+  "lastUpdate": 1790801844527,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19589,6 +19589,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1247.87,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b2169a230e943e12dd47dbfc5f6483edbd700ff",
+          "message": "fix(security): confirm an untrusted template's commands on sync (#395)\n\nsync ran uv add, uv lock, and hook installs for a template update with no\ntrust question, though uv builds the project through the template's build\nhooks as it installs. A template update from a source you don't control\ncould run its code on your machine, or on a CI runner holding a write\ntoken.\n\nsync now confirms PreparedReview.commands (resolver, then hook install)\nfor a template that isn't trusted: on a new trust screen after conflicts\nare settled, or with --trust; headless runs without it stop with exit 77\nbefore writing anything. Read-only commands never ask. Trust comes from a\nbuilt-in origin or a trusted = true alias naming the same template\n(RecipeSource.trusted_by), which init now honours for a recorded template\ntoo. init gains the same --trust for one run.\n\nThe scheduled sync workflow now passes --trust with a note on what it\nallows, and runs the release protostar.lock records instead of a pinned\nversion; the CI check example does the same, and the docs drift check\nfails on any literal protostar@X.Y.Z pin.",
+          "timestamp": "2026-09-30T13:54:06-07:00",
+          "tree_id": "f9cae596ab2803bf32e45dc056492e5451d396c3",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/6b2169a230e943e12dd47dbfc5f6483edbd700ff"
+        },
+        "date": 1790801842976,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 263.01,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1204.04,
             "unit": "ms"
           }
         ]
