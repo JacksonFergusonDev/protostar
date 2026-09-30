@@ -111,7 +111,7 @@ repos:
         entry: uv run python scripts/check_docs_drift.py
         language: system
         pass_filenames: false
-        files: ^(docs/|README\.md|CONTRIBUTING\.md|AGENTS\.md|justfile|zensical\.toml|pyproject\.toml|src/protostar/|tests/|scripts/check_docs_drift\.py)
+        files: ^(docs/|README\.md|CONTRIBUTING\.md|AGENTS\.md|justfile|zensical\.toml|pyproject\.toml|src/protostar/|tests/|scripts/check_docs_drift\.py|\.github/ISSUE_TEMPLATE/feature_request\.yml)
         stages: [pre-push]
 
       - id: check-schemas

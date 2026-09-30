@@ -197,6 +197,16 @@ def _get_version() -> str:
     return protostar.__version__
 
 
+def _get_description() -> str | None:
+    """Returns the installed application's summary from project metadata."""
+    from importlib.metadata import PackageNotFoundError, metadata
+
+    try:
+        return metadata("protostar").get("Summary")
+    except PackageNotFoundError:
+        return None
+
+
 class _VersionAction(argparse.Action):
     """Custom action to lazily resolve application version only when requested."""
 
@@ -304,7 +314,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = JsonAwareParser(
         prog="protostar",
-        description="Simple Python project scaffolding that understands your tools.",
+        description=_get_description(),
         epilog="Run 'protostar help <command>' or 'protostar <command> --help' for detailed options.",
         add_help=False,
         usage=argparse.SUPPRESS,

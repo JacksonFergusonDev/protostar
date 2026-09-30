@@ -599,6 +599,40 @@ def check_walkthrough_output() -> list[str]:
     return problems
 
 
+def check_project_description() -> list[str]:
+    """Public descriptions agree with pyproject.toml's project description."""
+    project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    description: str = project["project"]["description"]
+    site_path = REPO_ROOT / "zensical.toml"
+    site = tomllib.loads(site_path.read_text(encoding="utf-8"))
+    problems: list[str] = []
+    if site["project"].get("site_description") != description:
+        problems.append(
+            f"{_rel(site_path)}: site_description must match "
+            "pyproject.toml's project.description"
+        )
+
+    expected = {
+        README: (f"### {description.removesuffix('.')}",),
+        DOCS_DIR / "index.md": (
+            f'description: "{description}"',
+            f"<h1>{description}</h1>",
+        ),
+        REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "feature_request.yml": (
+            f"Protostar is {description[0].lower()}{description[1:]}",
+        ),
+    }
+    for path, fragments in expected.items():
+        lines = {line.strip() for line in path.read_text(encoding="utf-8").splitlines()}
+        for fragment in fragments:
+            if fragment not in lines:
+                problems.append(
+                    f"{_rel(path)}: expected {fragment!r} to agree with "
+                    "pyproject.toml's project.description"
+                )
+    return problems
+
+
 def check_generated_fixtures_are_used() -> list[str]:
     """Every generated fixture and terminal image is used by a page."""
     text = "\n".join(page.read_text(encoding="utf-8") for page in _hand_written_pages())
@@ -613,6 +647,7 @@ def check_generated_fixtures_are_used() -> list[str]:
 
 
 CHECKS: tuple[Callable[[], list[str]], ...] = (
+    check_project_description,
     check_error_tree,
     check_error_sections,
     check_api_reference_errors,
