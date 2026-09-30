@@ -178,7 +178,7 @@ written:
     </span>
     <span class="terminal-title">PROTOSTAR / SYNC / CONFLICTS</span>
   </div>
-  <div class="protostar-asciinema" data-asciinema="../assets/demo_sync.cast">
+  <div class="protostar-asciinema" data-asciinema="../../assets/demo_sync.cast">
     <noscript>
       <a href="../assets/demo_sync.cast">Download the Protostar terminal recording</a>
     </noscript>
