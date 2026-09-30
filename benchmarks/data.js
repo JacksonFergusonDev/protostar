@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790725565473,
+  "lastUpdate": 1790726832792,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19147,6 +19147,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1273.2,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "distinct": false,
+          "id": "25a7ee9d0527d42b3729106ea7d0cb1656ee8dd8",
+          "message": "fix(docs): point the lifecycle sync demo at its recording\n\nThe player's data-asciinema attribute is not rewritten by the docs build,\nso from /usage/lifecycle/ the path ../assets/demo_sync.cast resolved to\n/usage/assets/ and the player showed only its error glyph. Use ../../.",
+          "timestamp": "2026-09-29T17:02:50-07:00",
+          "tree_id": "8b4717a42d8be4db3e6e7f20b3a883c03cd7eb83",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/25a7ee9d0527d42b3729106ea7d0cb1656ee8dd8"
+        },
+        "date": 1790726830711,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 233.7,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1017.61,
             "unit": "ms"
           }
         ]
