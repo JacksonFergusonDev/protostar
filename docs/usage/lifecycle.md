@@ -15,6 +15,10 @@ To stop tracking the project, run `protostar eject`. It shows the pending remova
 interactive terminal is available. Other files, including `uv.lock`, remain.
 After ejection, the lifecycle commands on this page no longer apply.
 
+To keep projects current without running these commands by hand, with a
+scheduled update pull request, a check in CI, and template releases, see
+[Automating Updates](automating-updates.md).
+
 ## Review, apply, repeat
 
 ```bash
@@ -69,43 +73,6 @@ records until you move it with `sync --to <ref>`; see
 identity can update the project. Changing template identity, switching to
 tooling-only mode, or retargeting an alias is not a supported lifecycle update.
 Missing sources fail visibly rather than falling back to cached content.
-
-## Keep Protostar versions in step
-
-Built-in output comes from the installed Protostar, so every contributor needs
-a release at least as new as the one that last wrote `protostar.lock`. The lock
-records that release as `producer_version`. When the installed Protostar is
-older, `init`, `status`, `diff`, and `sync` (including `--check`) refuse to run
-instead of treating the older output as an update. Upgrade Protostar, for
-example with `uv tool upgrade protostar`, and run the command again. In
-`--json` mode, the error carries `recorded_version` and `installed_version`.
-
-Pin the same release in CI, for example with `uvx protostar@0.9.0 sync --check`,
-so a new release doesn't change the check before the project is synced with it.
-
-## Upgrade a repository template
-
-`status` starts with the template's ref and what its repository offers:
-
-```bash
-protostar status
-# Template v1.2.0 @ 4f0b8c2d1e9a; v1.3.0 available (sync --to v1.3.0).
-protostar sync --to v1.3.0 --dry-run
-protostar sync --to v1.3.0
-```
-
-`sync --to` records the new ref in the recipe, downloads that revision, and
-reviews it like any other update, in the same transaction. When the template
-declares [migrations](authoring-templates.md#migrations) between the two
-releases, they run first: seeded files it moved keep your edits at their new
-path, files it retired are deleted when unedited and kept as a `retracted`
-conflict otherwise, and renamed variables keep their values. `status` lists each
-step as `Migration <version>: ...`. A project can't move back before a migration
-it has run. It accepts a tag, a
-branch, a full commit SHA, or `latest`. Variables the new version adds come from
-`--var NAME=VALUE`, or from the variables screen in an interactive terminal. When
-the repository can't be reached, `status` says so and still reviews the recorded
-commit.
 
 ## Preserve local intent and handle partial updates
 
@@ -259,7 +226,7 @@ Protostar's version as the baseline without writing it, exactly like keeping
 your side of a conflict, so it reads as your deletion from then on: it is
 preserved, `sync --check` passes, and you can take it later.
 
-The `init` change review opens on its __Decisions__ tab: every conflict and
+The `init` change review opens on its **Decisions** tab: every conflict and
 proposal by file, the conflicts first, each row led by what happens to it. Press
 `k` or `u` on a row to keep yours or take the update for that change, or on a
 file's row for all of its changes; settling a conflict moves on to the next open
@@ -332,28 +299,6 @@ reconstruct a request from the ownership lock. Enrollment preserves existing
 ownership and does not adopt equal foreign content. Template variable values come
 from the recipe; see [template variables](project-recipes.md#template-variables).
 Missing recipes, malformed state, and missing variable values fail before mutation.
-
-## Use checks in CI
-
-```bash
-protostar sync --check --json > review.json
-```
-
-| Invocation/outcome | Exit code |
-| --- | --- |
-| Valid status, diff, or dry-run review, including conflicts | `0` |
-| Sync completes with no unresolved conflicts, including a no-op | `0` |
-| Sync commits safe work and retains unresolved conflicts | `1` |
-| Check finds accepted edits, resolver work, state advancement, or conflicts | `1` |
-| Check finds only preserved local deviations or no work | `0` |
-| Fatal error | Domain-specific code; interruption uses `130` |
-
-`--check` and `--dry-run` are mutually exclusive. Check never applies work. All
-commands accept `--json` without prompts: stdout contains one deterministic JSON
-envelope; diagnostics and subprocess output go to stderr. Check includes
-`check_passed`; review uses `status: "reviewed"`; application uses `"success"` or
-`"partial"`. See the [machine interface](agent-interface.md) for generated examples
-and schema discovery.
 
 ## Security and rollback boundaries
 
