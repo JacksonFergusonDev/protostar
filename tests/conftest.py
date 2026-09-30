@@ -2,6 +2,11 @@ import inspect
 import os
 
 os.environ["PYTHONIOENCODING"] = "utf-8"
+# Color forcing inherited from a shell or release hook must not change plain
+# output assertions or consoles constructed during test collection. Individual
+# rendering tests opt in explicitly with monkeypatch.
+os.environ.pop("FORCE_COLOR", None)
+os.environ.pop("CLICOLOR_FORCE", None)
 import subprocess
 import sys
 from collections.abc import Callable, Iterator

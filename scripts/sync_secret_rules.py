@@ -51,11 +51,9 @@ from protostar.secret_guard import (
 from scripts._common import (
     REPO_ROOT,
     SRC_DIR,
-    CodeLanguage,
     OutputStyle,
     fetch_bytes,
     report,
-    report_code,
 )
 
 GITLEAKS_REPO = "https://github.com/gitleaks/gitleaks"
@@ -546,10 +544,8 @@ def main() -> None:
                 stderr=True,
             )
             sys.exit(1)
-        report_code(
-            json.dumps(dataclasses.asdict(decode_rules(payload)), indent=2),
-            CodeLanguage.JSON,
-        )
+        # --dump is a data interface, including when colors are forced globally.
+        print(json.dumps(dataclasses.asdict(decode_rules(payload)), indent=2))
         return
 
     tag = DEFAULT_REVISIONS[GITLEAKS_REPO]

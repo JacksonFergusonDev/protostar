@@ -345,12 +345,17 @@ def test_read_payload(text, expected):
     assert read_payload(text) == expected
 
 
-def test_dump_prints_the_committed_rules(capsys, monkeypatch):
+@pytest.mark.parametrize("force_color", [False, True])
+def test_dump_prints_the_committed_rules(capsys, monkeypatch, force_color):
     monkeypatch.setattr("sys.argv", ["sync_secret_rules.py", "--dump"])
+    if force_color:
+        monkeypatch.setenv("FORCE_COLOR", "1")
 
     sync_secret_rules.main()
 
-    document = json.loads(capsys.readouterr().out)
+    output = capsys.readouterr().out
+    assert "\x1b" not in output
+    document = json.loads(output)
     assert len(document["rules"]) == len(load_rules().rules)
 
 
