@@ -89,11 +89,7 @@ def main() -> None:
     print("Fallbacks are out of date. Updating src/protostar/_fallbacks.py...")
     new_content = generate_fallbacks_content(remote_hooks)
     atomic_write_text(FALLBACKS_FILE, new_content)
-    print("WARNING: Fallbacks have been updated.")
-    print(
-        "Please review the changes in src/protostar/_fallbacks.py and rerun your bump/release command."
-    )
-    sys.exit(1)
+    print("Updated src/protostar/_fallbacks.py. Review and commit the changes.")
 
 
 if __name__ == "__main__":
