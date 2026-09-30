@@ -8,7 +8,7 @@ from typing import cast
 
 from packaging.version import InvalidVersion, Version
 
-from ..merge import ConflictReason, MergeConflict, MergeLocation, Value
+from ..merge import ConflictReason, MergeConflict, MergeLocation, MergePolicy, Value
 from ..registry import ResolvedHookRevision
 from ..sync_state import HookPinState, PinProvenance
 from ..workflows import HookRunner
@@ -35,12 +35,15 @@ LOCATIONS: Mapping[HookRunner, DocumentLocations] = MappingProxyType(
         ),
     }
 )
+# The configuration is one generator's complete output: a hook or repository it
+# stops generating, such as a disabled tool's, is retracted, and the user's own stay.
 SPEC = YamlDocumentSpec(
     "pre-commit",
     keyed=(
         KeyedSequence(("repos",), "repo", string_fields=("rev",)),
         KeyedSequence(("repos", WILDCARD, "hooks"), "id"),
     ),
+    policy=MergePolicy(complete=True),
 )
 
 
@@ -133,10 +136,12 @@ class HookPinPlan:
             The complete pin state, with this file's pins updated.
         """
         guarded = {held[1] for held in self.guard.holds}
+        # A repository retracted from the baseline takes its pin with it.
+        owned = {repo["repo"] for repo in _repos(baseline)}
         pins = {
             pin.repo: replace(pin, path=self.path)
             for pin in self.previous
-            if pin.path in self.sources
+            if pin.path in self.sources and pin.repo in owned
         }
         local = decode_yaml_baseline(content) if content else {}
         desired = decode_yaml_baseline(self.desired)

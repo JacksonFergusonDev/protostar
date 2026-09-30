@@ -147,8 +147,10 @@ dependency, or payload a new template version drops. An unedited copy is removed
 and an edited copy is kept with a `retracted` conflict, whose `local` choice keeps
 it as yours and `desired` removes it. This covers seeded files, owned
 dependencies (after which the lock is refreshed), each `[tool.*]` table in
-`pyproject.toml`, append regions, and each step or key of a GitHub Actions
-workflow (for example the Codecov upload steps after you turn Codecov off).
+`pyproject.toml`, append regions, each step or key of a GitHub Actions
+workflow (for example the Codecov upload steps after you turn Codecov off), and
+each hook and hook repository in the hook configuration (for example mypy's hook
+after you turn mypy off, so no commit runs a tool that is no longer installed).
 A whole configuration file whose tool you turn off, such as `zensical.toml`,
 `.github/codecov.yml`, `.readthedocs.yaml`, a workflow, the hook configuration,
 Renovate's, or the VS Code settings, is retracted key by key the same way. When
