@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790747273702,
+  "lastUpdate": 1790749032107,
   "repoUrl": "https://github.com/JacksonFergusonDev/protostar",
   "entries": {
     "Protostar Initialization Latency": [
@@ -19317,6 +19317,40 @@ window.BENCHMARK_DATA = {
           {
             "name": "Protostar Recipe Editor First Frame Latency",
             "value": 1337.16,
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "jackson.ferguson0@gmail.com",
+            "name": "Jackson Ferguson",
+            "username": "JacksonFergusonDev"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1c272f4119ac05da8bf6ecaf706a13107f2c82cd",
+          "message": "docs(agent-interface): describe the schemas and replace the inlined copies with field tables (#389)\n\nThe agent interface page inlined review_schema.json and application_schema.json\nwhole. The application schema embeds the review schema, so the two came to\nabout 2,300 of the page's roughly 3,000 rendered lines, a thousand of them\nrepeated, and neither says what any key means.\n\nEvery property in both published schemas now carries a description, each\nconflict reason is a documented const, and a test keeps every property\ndescribed. The page renders field tables from those descriptions instead, so\nthe docs and `capabilities.review_schema` read from one source. The two schema\nfixtures are no longer generated. The collision section points at the error\nenvelope above it instead of repeating it, and the page states the current\napi_version.",
+          "timestamp": "2026-09-29T23:13:50-07:00",
+          "tree_id": "3c1f2489769f7c3193fd2498452954035e0448a0",
+          "url": "https://github.com/JacksonFergusonDev/protostar/commit/1c272f4119ac05da8bf6ecaf706a13107f2c82cd"
+        },
+        "date": 1790749031087,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Protostar Headless Latency",
+            "value": 276.92,
+            "unit": "ms"
+          },
+          {
+            "name": "Protostar Recipe Editor First Frame Latency",
+            "value": 1245.28,
             "unit": "ms"
           }
         ]
