@@ -59,8 +59,9 @@ Press `A` to apply. Protostar writes the files and runs each step in turn:
   ✔ Writing project files
   ✔ Initializing git repository
   ✔ Initializing uv project
-  ✔ Installing 8 standard dependencies
+  ✔ Installing 7 standard dependencies
   ✔ Installing 2 development dependencies
+  ✔ Authorizing direnv workspace
   ✔ Running uv run nbdime config-git --enable
 ```
 
@@ -75,15 +76,9 @@ SUCCESS: Project ready.
 protostar guide shows how to test, check, and document it.
 ```
 
-The template also turned on two tools that are separate programs, [direnv](https://direnv.net/) and [just](https://just.systems/). If you haven't installed them, the output ends with the commands that install both, for example on Debian or Ubuntu:
+The template also turned on two tools that are separate programs, [direnv](https://direnv.net/) and [just](https://just.systems/). If you haven't installed them, the output ends with the commands that install both. This is what it looks like with Homebrew on macOS; on other platforms the command is the one your package manager uses:
 
-```text
-NOT INSTALLED ──────────────────────────────────────────────
-  direnv and just are not installed; their files are ready for when they are.
-  Install them with:
-      sudo apt install direnv
-      uv tool install rust-just
-```
+![A run whose direnv and just are missing](assets/terminals/cli_missing_tools.svg)
 
 Run the commands it shows you. The project is complete without them, so you can also skip this and use the longer commands the guide shows instead. direnv activates the project's virtual environment whenever you `cd` into the folder, once you have [hooked it into your shell](https://direnv.net/docs/hook.html) and run `direnv allow` in the project. See [Tool Binaries](usage/troubleshooting.md#tool-binaries-direnv-just) for other platforms.
 
@@ -95,19 +90,7 @@ protostar guide
 
 The guide lists the commands this project supports, each with what it does:
 
-```text
-GUIDE ──────────────────────────────────────────────────────
-  Check and format
-  Formatting rewrites code into one consistent style and linting flags likely bugs. `just ci` runs
-  every check.
-      just format
-      just lint
-      just ci
-
-  Everything else
-  Lists every recipe in the justfile, with what each one does.
-      just --list
-```
+![The guide for a workbench project](assets/terminals/cli_guide_ml.svg)
 
 Without `just`, it shows the `uv run ruff …` commands those recipes run instead. The guide reads the project as it is now, so run it again whenever you change the project's tools. See [`protostar guide`](usage/cli-reference.md#protostar-guide).
 

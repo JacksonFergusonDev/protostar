@@ -106,6 +106,14 @@ repos:
         files: ^(docs/|src/protostar/docs_registry\.py|src/protostar/modules/|scripts/check_doc_links\.py)
         stages: [pre-push]
 
+      - id: check-docs-drift
+        name: check docs match the code
+        entry: uv run python scripts/check_docs_drift.py
+        language: system
+        pass_filenames: false
+        files: ^(docs/|README\.md|CONTRIBUTING\.md|AGENTS\.md|justfile|zensical\.toml|pyproject\.toml|src/protostar/|tests/|scripts/check_docs_drift\.py)
+        stages: [pre-push]
+
       - id: check-schemas
         name: check schema validity
         entry: uv run python scripts/check_schemas.py

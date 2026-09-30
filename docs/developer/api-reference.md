@@ -68,133 +68,14 @@ classDiagram
 
     Strictly typed operational errors that halt the execution pipeline safely and return POSIX-compliant exit codes.
 
-    ::: protostar.errors.ProtostarError
+    ::: protostar.errors
         options:
             show_source: true
             show_bases: true
             show_root_heading: true
             show_root_toc_entry: true
             separate_signature: true
-
-    ::: protostar.errors.ConfigurationError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.NetworkFetchError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.TemplateResolutionError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.MissingDependencyError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.CommandExecutionError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.CommandTimeoutError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.ProcessTerminationError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.FileSystemError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.UnsupportedFilesystemNodeError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.TransactionStateError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.SecurityViolationError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.ExecutionAbortedError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.ExecutionInterruptedError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.RollbackFailedError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
-
-    ::: protostar.errors.WorkspaceCollisionError
-        options:
-            show_source: true
-            show_bases: true
-            show_root_heading: true
-            show_root_toc_entry: true
-            separate_signature: true
+            members_order: source
 
 !!! abstract "Core Interface: `BootstrapModule`"
 
